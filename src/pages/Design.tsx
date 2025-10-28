@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText, Clock } from 'lucide-react';
+import { Upload, FileText, Clock, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { mockDesigns } from '@/lib/mockData';
 import { Badge } from '@/components/ui/badge';
 
@@ -19,11 +20,19 @@ const statusColors = {
 };
 
 export default function Design() {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Quản lý thiết kế</h1>
-        <p className="text-muted-foreground mt-1">Theo dõi tiến độ và file thiết kế</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Quản lý thiết kế</h1>
+          <p className="text-muted-foreground mt-1">Theo dõi tiến độ và file thiết kế</p>
+        </div>
+        <Button onClick={() => navigate('/design/create')} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Tạo thiết kế mới
+        </Button>
       </div>
 
         <div className="grid gap-6">

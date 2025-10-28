@@ -7,6 +7,7 @@ const Login = lazy(() => import('@/pages/Login'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Production = lazy(() => import('@/pages/Production'));
 const Design = lazy(() => import('@/pages/Design'));
+const CreateDesign = lazy(() => import('@/pages/design/create'));
 const Orders = lazy(() => import('@/pages/Orders'));
 const Accounting = lazy(() => import('@/pages/Accounting'));
 const Attendance = lazy(() => import('@/pages/Attendance'));
@@ -62,11 +63,24 @@ export const router = createBrowserRouter([
       },
       {
         path: 'design',
-        element: (
-          <Suspense fallback={<div>Loading...</div>}>
-            <Design />
-          </Suspense>
-        )
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <Design />
+              </Suspense>
+            )
+          },
+          {
+            path: 'create',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CreateDesign />
+              </Suspense>
+            )
+          }
+        ]
       },
       {
         path: 'orders',
