@@ -11,7 +11,8 @@ export interface User {
 export interface Customer {
   id: string;
   code: string;
-  name: string;
+  companyName?: string; // Tên công ty (optional)
+  representativeName: string; // Tên người đại diện (bắt buộc)
   taxCode?: string;
   phone: string;
   address: string;
@@ -115,4 +116,85 @@ export interface Notification {
   relatedType?: 'order' | 'production' | 'payment';
   read: boolean;
   createdAt: string;
+}
+
+// Inventory Management Types
+export type ProductCategory = 'bag' | 'decal' | 'box' | 'paper' | 'label';
+
+export interface ProductCategoryInfo {
+  id: ProductCategory;
+  name: string;
+  description: string;
+  defaultMaterials: string[]; // Danh sách mã nguyên liệu thường dùng
+}
+
+export type MaterialType = 'paper' | 'plastic' | 'ink' | 'glue' | 'coating' | 'foil' | 'ribbon' | 'hardware' | 'packaging';
+
+export interface Material {
+  id: string;
+  code: string; // Mã nguyên liệu
+  name: string;
+  type: MaterialType;
+  category: string; // Phân loại chi tiết (VD: "Giấy couche", "Mực offset")
+  specification: string; // Thông số kỹ thuật (VD: "250gsm", "C0 size")
+  unit: string; // Đơn vị tính (tờ, kg, lít, cuộn, m2)
+  unitPrice: number; // Giá đơn vị
+  supplier: string; // Nhà cung cấp
+  minStock: number; // Mức tồn kho tối thiểu
+  currentStock: number; // Tồn kho hiện tại
+  location: string; // Vị trí trong kho
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockTransaction {
+  id: string;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  type: 'import' | 'export' | 'adjust'; // Nhập, xuất, điều chỉnh
+  quantity: number;
+  unit: string;
+  unitPrice?: number;
+  totalValue?: number;
+  reason: string; // Lý do (đơn hàng, nhập kho, kiểm kê...)
+  relatedOrderId?: string;
+  performedBy: string;
+  performedAt: string;
+  notes?: string;
+}
+
+export interface MaterialRequirement {
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  quantity: number;
+  unit: string;
+  estimatedCost: number;
+}
+
+export interface ProductTemplate {
+  id: string;
+  category: ProductCategory;
+  name: string; // VD: "Túi giấy kraft size nhỏ"
+  description: string;
+  specifications: Record<string, string | number>; // Thông số kỹ thuật linh hoạt
+  materialRequirements: MaterialRequirement[]; // Nguyên liệu cần thiết
+  baseQuantity: number; // Số lượng cơ sở để tính nguyên liệu
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Material Type Management
+export interface MaterialTypeCategory {
+  id: string;
+  name: string; // VD: "Giấy Kraft", "Decal PP", "Mực UV Đen"
+  description: string;
+  materialType: MaterialType; // Loại nguyên liệu chính (paper, plastic, ink...)
+  specifications: string[]; // Danh sách thông số kỹ thuật cần thiết
+  units: string[]; // Danh sách đơn vị tính phù hợp
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

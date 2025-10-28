@@ -1,4 +1,3 @@
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,14 +19,13 @@ const statusColors = {
 
 export default function Production() {
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Quản lý sản xuất</h1>
-          <p className="text-muted-foreground mt-1">Theo dõi tiến độ và phân công sản xuất</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Quản lý sản xuất</h1>
+        <p className="text-muted-foreground mt-1">Theo dõi tiến độ và phân công sản xuất</p>
+      </div>
 
-        <div className="grid gap-6">
+      <div className="grid gap-6">
           {mockProductions.map((production) => (
             <Card key={production.id}>
               <CardHeader>
@@ -113,9 +111,8 @@ export default function Production() {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+        ))}
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

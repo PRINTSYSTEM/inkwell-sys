@@ -1,5 +1,6 @@
-import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard } from 'lucide-react';
+import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -9,9 +10,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarHeader,
 } from '@/components/ui/sidebar';
-import { currentUser } from '@/lib/mockData';
+import { useAuth } from '@/hooks/use-auth';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const navigationByRole = {
   admin: [
@@ -20,48 +25,73 @@ const navigationByRole = {
     { title: 'Đơn hàng', url: '/orders', icon: FileText },
     { title: 'Thiết kế', url: '/design', icon: Palette },
     { title: 'Sản xuất', url: '/production', icon: Factory },
+    { 
+      title: 'Kho', 
+      icon: Package,
+      submenu: [
+        { title: 'Quản lý kho', url: '/inventory', icon: Package },
+        { title: 'Loại nguyên liệu thô', url: '/material-types', icon: Layers }
+      ]
+    },
     { title: 'Kế toán', url: '/accounting', icon: Calculator },
     { title: 'Chấm công', url: '/attendance', icon: Clock },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
-  ],
-  cskh: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Khách hàng', url: '/customers', icon: Users },
-    { title: 'Đơn hàng', url: '/orders', icon: FileText },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
-  ],
-  design: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Đơn hàng', url: '/orders', icon: FileText },
-    { title: 'Thiết kế', url: '/design', icon: Palette },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
-  ],
-  production: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Sản xuất', url: '/production', icon: Factory },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   production_manager: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
     { title: 'Đơn hàng', url: '/orders', icon: FileText },
     { title: 'Sản xuất', url: '/production', icon: Factory },
+    { 
+      title: 'Kho', 
+      icon: Package,
+      submenu: [
+        { title: 'Quản lý kho', url: '/inventory', icon: Package },
+        { title: 'Loại nguyên liệu thô', url: '/material-types', icon: Layers }
+      ]
+    },
+    { title: 'Chấm công', url: '/attendance', icon: Clock },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
-  accounting: [
+  designer: [
+    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { title: 'Đơn hàng', url: '/orders', icon: FileText },
+    { title: 'Thiết kế', url: '/design', icon: Palette },
+    { title: 'Thông báo', url: '/notifications', icon: Bell },
+  ],
+  accountant: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
     { title: 'Đơn hàng', url: '/orders', icon: FileText },
     { title: 'Kế toán', url: '/accounting', icon: Calculator },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
-  hr: [
+  prepress: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Chấm công', url: '/attendance', icon: Clock },
+    { title: 'Thiết kế', url: '/design', icon: Palette },
+    { title: 'Sản xuất', url: '/production', icon: Factory },
+    { title: 'Thông báo', url: '/notifications', icon: Bell },
+  ],
+  operator: [
+    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { title: 'Sản xuất', url: '/production', icon: Factory },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
 };
 
 export function AppSidebar() {
-  const menuItems = navigationByRole[currentUser.role] || navigationByRole.admin;
+  const { user } = useAuth();
+  const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
+  
+  if (!user) return null;
+  
+  const menuItems = navigationByRole[user.role] || navigationByRole.admin;
+
+  const toggleSubmenu = (title: string) => {
+    setOpenSubmenus(prev => 
+      prev.includes(title) 
+        ? prev.filter(item => item !== title)
+        : [...prev, title]
+    );
+  };
 
   return (
     <Sidebar className="border-r border-sidebar-border">
@@ -84,19 +114,61 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        isActive
-                          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-                      }
+                  {item.submenu ? (
+                    <Collapsible 
+                      open={openSubmenus.includes(item.title)}
+                      onOpenChange={() => toggleSubmenu(item.title)}
                     >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton className="w-full justify-between">
+                          <div className="flex items-center gap-2">
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </div>
+                          <ChevronRight 
+                            className={`h-4 w-4 transition-transform duration-200 ${
+                              openSubmenus.includes(item.title) ? 'rotate-90' : ''
+                            }`} 
+                          />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.submenu.map((subItem) => (
+                            <SidebarMenuSubItem key={subItem.title}>
+                              <SidebarMenuSubButton asChild>
+                                <NavLink
+                                  to={subItem.url}
+                                  className={({ isActive }) =>
+                                    isActive
+                                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                                  }
+                                >
+                                  <subItem.icon className="h-4 w-4" />
+                                  <span>{subItem.title}</span>
+                                </NavLink>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ) : (
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        className={({ isActive }) =>
+                          isActive
+                            ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                            : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

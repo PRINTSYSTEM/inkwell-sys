@@ -1,4 +1,3 @@
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,8 +40,7 @@ export default function Accounting() {
     .reduce((sum, p) => sum + p.amount, 0);
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Quản lý kế toán</h1>
           <p className="text-muted-foreground mt-1">Thanh toán, công nợ và báo cáo tài chính</p>
@@ -143,6 +141,5 @@ export default function Accounting() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }

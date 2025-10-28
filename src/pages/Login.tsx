@@ -5,23 +5,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { useAuth } from '../hooks/use-auth';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const { login, isLoading } = useAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    if (!username || !password) {
       toast.error('Vui lòng nhập đầy đủ thông tin');
       return;
     }
 
-    // Mock login - accept any credentials for demo
-    toast.success('Đăng nhập thành công!');
-    navigate('/dashboard');
+    try {
+      const success = await login(username, password);
+      if (success) {
+        toast.success('Đăng nhập thành công!');
+        navigate('/dashboard');
+      } else {
+        toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
+      }
+    } catch (error) {
+      toast.error('Có lỗi xảy ra khi đăng nhập');
+    }
   };
 
   return (
@@ -39,13 +49,13 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Tên đăng nhập</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="admin@printsys.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="admin"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -58,14 +68,16 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full">
-              Đăng nhập
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Button>
           </form>
           <div className="mt-6 p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground font-medium mb-2">Tài khoản demo:</p>
-            <p className="text-xs text-muted-foreground">Email: bất kỳ</p>
-            <p className="text-xs text-muted-foreground">Mật khẩu: bất kỳ</p>
+            <p className="text-xs text-muted-foreground">Admin: admin / admin123</p>
+            <p className="text-xs text-muted-foreground">Manager: manager1 / manager123</p>
+            <p className="text-xs text-muted-foreground">Designer: designer1 / designer123</p>
+            <p className="text-xs text-muted-foreground">Accountant: accountant1 / account123</p>
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,3 @@
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,8 +28,7 @@ const statusColors = {
 
 export default function Attendance() {
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Quản lý chấm công</h1>
@@ -140,6 +138,5 @@ export default function Attendance() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }

@@ -1,4 +1,3 @@
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, Clock } from 'lucide-react';
@@ -21,12 +20,11 @@ const statusColors = {
 
 export default function Design() {
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Quản lý thiết kế</h1>
-          <p className="text-muted-foreground mt-1">Theo dõi tiến độ và file thiết kế</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Quản lý thiết kế</h1>
+        <p className="text-muted-foreground mt-1">Theo dõi tiến độ và file thiết kế</p>
+      </div>
 
         <div className="grid gap-6">
           {mockDesigns.map((design) => (
@@ -105,7 +103,6 @@ export default function Design() {
             </Card>
           ))}
         </div>
-      </div>
-    </DashboardLayout>
+    </div>
   );
 }

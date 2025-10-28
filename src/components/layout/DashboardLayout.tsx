@@ -1,12 +1,9 @@
+import { Outlet } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
-
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -14,10 +11,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex-1 flex flex-col">
           <AppHeader />
           <main className="flex-1 p-6 bg-muted/30">
-            {children}
+            <Outlet />
           </main>
         </div>
       </div>
     </SidebarProvider>
   );
 }
+
+// Also export as named export for compatibility
+export { DashboardLayout };
