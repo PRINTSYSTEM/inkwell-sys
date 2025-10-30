@@ -96,9 +96,6 @@ export default function CreateDesign() {
   });
 
   const onSubmit = (data: FormData) => {
-    console.log('Design data:', data);
-    console.log('Generated code:', generatedCode);
-
     toast({
       title: 'Tạo thiết kế thành công',
       description: `Mã thiết kế: ${generatedCode}`,

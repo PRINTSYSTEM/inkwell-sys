@@ -5,11 +5,13 @@ import { lazy, Suspense } from 'react';
 
 const Login = lazy(() => import('@/pages/Login'));
 const Dashboard = lazy(() => import('@/pages/dashboard'));
-const Production = lazy(() => import('@/pages/Production'));
+const Production = lazy(() => import('@/pages/production/index'));
 const Design = lazy(() => import('@/pages/Design'));
 const CreateDesign = lazy(() => import('@/pages/design/create'));
-const Orders = lazy(() => import('@/pages/Orders'));
-const Accounting = lazy(() => import('@/pages/Accounting'));
+const Orders = lazy(() => import('@/pages/orders/index'));
+const OrderDetail = lazy(() => import('@/pages/orders/[id]'));
+const CreateOrder = lazy(() => import('@/pages/orders/create'));
+const Accounting = lazy(() => import('@/pages/accounting/index'));
 const Attendance = lazy(() => import('@/pages/Attendance'));
 const Customers = lazy(() => import('@/pages/customers/index'));
 const CustomerDetail = lazy(() => import('@/pages/customers/[id]'));
@@ -84,11 +86,32 @@ export const router = createBrowserRouter([
       },
       {
         path: 'orders',
-        element: (
-          <Suspense fallback={<div>Loading...</div>}>
-            <Orders />
-          </Suspense>
-        )
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <Orders />
+              </Suspense>
+            )
+          },
+          {
+            path: 'create',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CreateOrder />
+              </Suspense>
+            )
+          },
+          {
+            path: ':id',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <OrderDetail />
+              </Suspense>
+            )
+          }
+        ]
       },
       {
         path: 'accounting',

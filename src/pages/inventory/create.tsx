@@ -56,7 +56,6 @@ export default function CreateMaterial() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Implement API call to create material
-    console.log('Creating material:', formData);
     
     // Simulate success and redirect
     navigate('/inventory');

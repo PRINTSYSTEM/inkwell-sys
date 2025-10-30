@@ -25,11 +25,6 @@ export default function CreateMaterialType() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Implement API call to create material type
-    console.log('Creating material type:', {
-      ...formData,
-      specifications: formData.specifications.filter(s => s.trim() !== ''),
-      units: formData.units.filter(u => u.trim() !== '')
-    });
     
     // Simulate success and redirect
     navigate('/material-types');
