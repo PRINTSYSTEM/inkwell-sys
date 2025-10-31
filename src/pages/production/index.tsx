@@ -21,9 +21,10 @@ import {
   Package,
   Plus,
   Eye,
-  Edit
+  Edit,
+  FileText
 } from 'lucide-react';
-import { productions, orders, customers, mockUsers, mockMaterials } from '@/lib/mockData';
+import { productions, orders, customers, mockUsers, mockMaterials, mockPrepressOrders } from '@/lib/mockData';
 
 interface Production {
   id: string;
@@ -501,6 +502,147 @@ export default function ProductionManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Prepress Orders Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Lệnh bình bài sẵn sàng sản xuất
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Các lệnh bình bài đã được chuẩn bị, mỗi lệnh chứa nhiều thiết kế được tối ưu để in chung
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {mockPrepressOrders.map(prepressOrder => {
+              // Lấy thông tin các đơn hàng trong lệnh bình bài
+              const orderDetails = prepressOrder.orderIds.map(orderId => 
+                orders.find(order => order.id === orderId)
+              ).filter(Boolean);
+
+              return (
+                <Card key={prepressOrder.id} className="border-l-4 border-l-blue-500">
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+                            {prepressOrder.prepressOrderNumber}
+                          </Badge>
+                          <Badge variant={prepressOrder.status === 'completed' ? 'default' : 'secondary'}>
+                            {prepressOrder.status === 'completed' ? 'Hoàn thành' : 
+                             prepressOrder.status === 'in_progress' ? 'Đang xử lý' : 'Chờ xử lý'}
+                          </Badge>
+                          <Badge variant={prepressOrder.priority === 'high' ? 'destructive' : 'outline'}>
+                            {prepressOrder.priority === 'high' ? 'Ưu tiên cao' : 
+                             prepressOrder.priority === 'medium' ? 'Ưu tiên vừa' : 'Ưu tiên thấp'}
+                          </Badge>
+                        </div>
+
+                        {/* Thông tin in chung */}
+                        <div className="grid grid-cols-3 gap-4 text-sm bg-gray-50 p-3 rounded">
+                          <div>
+                            <span className="text-muted-foreground">📄 Loại giấy:</span>
+                            <div className="font-medium">{prepressOrder.paperType}</div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">🖨️ Máy in:</span>
+                            <div className="font-medium">{prepressOrder.printMachine}</div>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">📊 Tổng số lượng:</span>
+                            <div className="font-medium">{prepressOrder.quantity?.toLocaleString()}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Chi tiết
+                        </Button>
+                        {prepressOrder.status !== 'completed' && (
+                          <Button size="sm">
+                            <Play className="h-4 w-4 mr-1" />
+                            Bắt đầu in
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Danh sách thiết kế trong lệnh bình bài */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Thiết kế cần in ({orderDetails.length} thiết kế):
+                      </h4>
+                      <div className="grid gap-2">
+                        {orderDetails.map((order, index) => (
+                          <div key={order?.id} className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <div className="font-medium">{order?.orderNumber}</div>
+                                <div className="text-sm text-muted-foreground">{order?.description}</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium">{order?.quantity?.toLocaleString()}</div>
+                              <div className="text-sm text-muted-foreground">
+                                Khách: {customers.find(c => c.id === order?.customerId)?.representativeName}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Ghi chú */}
+                    {prepressOrder.notes && (
+                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="text-sm">
+                          <span className="font-medium text-yellow-800">💡 Ghi chú bình bài:</span>
+                          <div className="mt-1 text-yellow-700">{prepressOrder.notes}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Thông tin người tạo */}
+                    <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground border-t pt-3">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Tạo: {prepressOrder.createdAt}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        Bởi: {prepressOrder.createdBy}
+                      </div>
+                      {prepressOrder.assignedTo && (
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          Phân công: {prepressOrder.assignedTo}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {mockPrepressOrders.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Chưa có lệnh bình bài nào sẵn sàng</p>
+                <p className="text-sm">Các lệnh bình bài sẽ hiển thị ở đây sau khi được tạo từ phòng prepress</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Production Kanban Board */}
       <div className="grid gap-6 md:grid-cols-3">

@@ -4,16 +4,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Package, AlertTriangle, TrendingUp, Eye } from 'lucide-react';
+import { Plus, Search, Package, AlertTriangle, TrendingUp, Eye, ChevronLeft, ChevronRight, MoreHorizontal, Edit, Copy, Trash2, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { mockMaterials } from '@/lib/mockData';
 import { Material, MaterialType } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function InventoryIndex() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<MaterialType | 'all'>('all');
   const [filterStock, setFilterStock] = useState<'all' | 'low' | 'normal'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // 10 items per page
+
+  const handleEditMaterial = (materialId: string) => {
+    toast.success(`Đang chuyển đến chỉnh sửa nguyên liệu ${materialId}`);
+  };
+
+  const handleDeleteMaterial = (materialId: string) => {
+    toast.success(`Đã đánh dấu xóa nguyên liệu ${materialId}`);
+  };
+
+  const handleDuplicateMaterial = (materialId: string) => {
+    toast.success(`Đang sao chép nguyên liệu ${materialId}`);
+  };
+
+  const handleExportMaterial = (materialId: string) => {
+    toast.success(`Đang xuất dữ liệu nguyên liệu ${materialId}`);
+  };
 
   // Lọc nguyên liệu
   const filteredMaterials = mockMaterials.filter(material => {
@@ -29,6 +54,26 @@ export default function InventoryIndex() {
     
     return matchSearch && matchType && matchStock;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredMaterials.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedMaterials = filteredMaterials.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to page 1 when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (type: 'filterType' | 'filterStock', value: string) => {
+    if (type === 'filterType') {
+      setFilterType(value as MaterialType | 'all');
+    } else {
+      setFilterStock(value as 'all' | 'low' | 'normal');
+    }
+    setCurrentPage(1);
+  };
 
   // Thống kê
   const totalMaterials = mockMaterials.length;
@@ -123,10 +168,10 @@ export default function InventoryIndex() {
                 placeholder="Tìm kiếm theo tên, mã, hoặc loại nguyên liệu..." 
                 className="pl-10"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
             </div>
-            <Select value={filterType} onValueChange={(value) => setFilterType(value as MaterialType | 'all')}>
+            <Select value={filterType} onValueChange={(value) => handleFilterChange('filterType', value)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Loại nguyên liệu" />
               </SelectTrigger>
@@ -141,7 +186,7 @@ export default function InventoryIndex() {
                 <SelectItem value="hardware">Phụ kiện</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterStock} onValueChange={(value) => setFilterStock(value as 'all' | 'low' | 'normal')}>
+            <Select value={filterStock} onValueChange={(value) => handleFilterChange('filterStock', value)}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Tình trạng kho" />
               </SelectTrigger>
@@ -156,7 +201,7 @@ export default function InventoryIndex() {
 
         <CardContent>
           <div className="space-y-4">
-            {filteredMaterials.map((material) => (
+            {paginatedMaterials.map((material) => (
               <Card key={material.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -198,19 +243,95 @@ export default function InventoryIndex() {
                         </div>
                       </div>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate(`/inventory/${material.id}`)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Chi tiết
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/inventory/${material.id}`)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Chi tiết
+                      </Button>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditMaterial(material.id)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Chỉnh sửa
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDuplicateMaterial(material.id)}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Sao chép
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleExportMaterial(material.id)}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Xuất dữ liệu
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteMaterial(material.id)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Xóa nguyên liệu
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+
+          {/* Pagination Controls */}
+          {filteredMaterials.length > 0 && (
+            <div className="flex items-center justify-between px-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredMaterials.length)} trong tổng số {filteredMaterials.length} nguyên liệu
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Trước
+                </Button>
+                <div className="flex items-center space-x-1">
+                  <Input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={currentPage}
+                    onChange={(e) => {
+                      const page = parseInt(e.target.value);
+                      if (page >= 1 && page <= totalPages) {
+                        setCurrentPage(page);
+                      }
+                    }}
+                    className="w-16 text-center text-sm"
+                  />
+                  <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Sau
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
 
           {filteredMaterials.length === 0 && (
             <div className="text-center py-8">

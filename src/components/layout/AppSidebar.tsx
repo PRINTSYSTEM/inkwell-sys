@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { usePermissions } from '@/lib/permissions';
 
 const navigationByRole = {
   admin: [
@@ -24,6 +25,7 @@ const navigationByRole = {
     { title: 'Khách hàng', url: '/customers', icon: Users },
     { title: 'Đơn hàng', url: '/orders', icon: FileText },
     { title: 'Thiết kế', url: '/design', icon: Palette },
+    { title: 'Bình bài', url: '/prepress', icon: Layers },
     { title: 'Sản xuất', url: '/production', icon: Factory },
     { 
       title: 'Kho', 
@@ -66,6 +68,8 @@ const navigationByRole = {
   ],
   prepress: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { title: 'Bình bài', url: '/prepress', icon: Layers },
+    { title: 'Tạo lệnh bình bài', url: '/prepress/create-print-order', icon: FileText },
     { title: 'Thiết kế', url: '/design', icon: Palette },
     { title: 'Sản xuất', url: '/production', icon: Factory },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
@@ -79,11 +83,21 @@ const navigationByRole = {
 
 export function AppSidebar() {
   const { user } = useAuth();
+  const permissions = usePermissions(user?.role || 'operator');
   const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
   
   if (!user) return null;
   
-  const menuItems = navigationByRole[user.role] || navigationByRole.admin;
+  // Filter menu items based on permissions
+  const baseMenuItems = navigationByRole[user.role] || navigationByRole.admin;
+  const menuItems = baseMenuItems.filter(item => {
+    // Luôn hiển thị Dashboard
+    if (item.url === '/dashboard') return true;
+    
+    // Check permissions cho từng module
+    const module = item.url?.replace('/', '') || '';
+    return permissions.canAccessModule(module);
+  });
 
   const toggleSubmenu = (title: string) => {
     setOpenSubmenus(prev => 

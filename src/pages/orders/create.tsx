@@ -12,11 +12,13 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { ArrowLeft, Save, User, Package, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, Save, User, Package, Calendar, DollarSign, AlertTriangle } from 'lucide-react';
 import { mockCustomers } from '@/lib/mockData';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { checkDebtStatus, formatCurrency } from '@/lib/utils';
 
 export default function CreateOrder() {
   const navigate = useNavigate();
@@ -67,6 +69,19 @@ export default function CreateOrder() {
       return;
     }
 
+    // Kiểm tra trạng thái công nợ khách hàng
+    if (selectedCustomer) {
+      const debtStatus = checkDebtStatus(selectedCustomer);
+      if (!debtStatus.canCreateOrder) {
+        toast({
+          title: "Không thể tạo đơn hàng",
+          description: debtStatus.message,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // Generate order number (in real app, this would be from backend)
     const orderNumber = `DH${String(Date.now()).slice(-3).padStart(3, '0')}`;
 
@@ -97,7 +112,7 @@ export default function CreateOrder() {
     return '0';
   };
 
-  const formatCurrency = (amount: string) => {
+  const formatInputCurrency = (amount: string) => {
     if (!amount) return '';
     const number = parseFloat(amount.replace(/[^\d]/g, ''));
     return new Intl.NumberFormat('vi-VN').format(number);
@@ -159,35 +174,83 @@ export default function CreateOrder() {
               </div>
 
               {selectedCustomer && (
-                <div className="p-4 bg-muted rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">Thông tin khách hàng</h4>
-                    <Badge variant="outline">{selectedCustomer.code}</Badge>
-                  </div>
-                  <div className="grid gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Tên: </span>
-                      <span>{selectedCustomer.companyName || selectedCustomer.representativeName}</span>
+                <div className="space-y-3">
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Thông tin khách hàng</h4>
+                      <Badge variant="outline">{selectedCustomer.code}</Badge>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Người đại diện: </span>
-                      <span>{selectedCustomer.representativeName}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Điện thoại: </span>
-                      <span>{selectedCustomer.phone}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Địa chỉ: </span>
-                      <span>{selectedCustomer.address}</span>
-                    </div>
-                    {selectedCustomer.taxCode && (
+                    <div className="grid gap-2 text-sm">
                       <div>
-                        <span className="text-muted-foreground">MST: </span>
-                        <span>{selectedCustomer.taxCode}</span>
+                        <span className="text-muted-foreground">Tên: </span>
+                        <span>{selectedCustomer.companyName || selectedCustomer.representativeName}</span>
                       </div>
-                    )}
+                      <div>
+                        <span className="text-muted-foreground">Người đại diện: </span>
+                        <span>{selectedCustomer.representativeName}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Điện thoại: </span>
+                        <span>{selectedCustomer.phone}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Địa chỉ: </span>
+                        <span>{selectedCustomer.address}</span>
+                      </div>
+                      {selectedCustomer.taxCode && (
+                        <div>
+                          <span className="text-muted-foreground">MST: </span>
+                          <span>{selectedCustomer.taxCode}</span>
+                        </div>
+                      )}
+                      <Separator className="my-2" />
+                      <div>
+                        <span className="text-muted-foreground">Công nợ hiện tại: </span>
+                        <span className={`font-medium ${selectedCustomer.currentDebt > selectedCustomer.maxDebt ? 'text-red-600' : 'text-green-600'}`}>
+                          {formatCurrency(selectedCustomer.currentDebt)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Hạn mức: </span>
+                        <span className="font-medium">{formatCurrency(selectedCustomer.maxDebt)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Trạng thái: </span>
+                        <Badge 
+                          variant={
+                            selectedCustomer.debtStatus === 'good' ? 'default' : 
+                            selectedCustomer.debtStatus === 'warning' ? 'secondary' : 
+                            'destructive'
+                          }
+                          className="text-xs"
+                        >
+                          {selectedCustomer.debtStatus === 'good' ? 'Tốt' : 
+                           selectedCustomer.debtStatus === 'warning' ? 'Cảnh báo' : 
+                           'Bị chặn'}
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
+                  
+                  {(() => {
+                    const debtStatus = checkDebtStatus(selectedCustomer);
+                    if (debtStatus.status !== 'good') {
+                      return (
+                        <Alert variant={debtStatus.status === 'blocked' ? 'destructive' : 'default'}>
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            {debtStatus.message}
+                            {debtStatus.status === 'blocked' && (
+                              <div className="mt-2 font-medium">
+                                ⚠️ Không thể tạo đơn hàng mới cho khách hàng này!
+                              </div>
+                            )}
+                          </AlertDescription>
+                        </Alert>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               )}
 

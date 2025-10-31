@@ -1,10 +1,13 @@
 export type Role = 
   | 'admin' // Administrator - Full access
+  | 'shareholder' // Cổ đông - View only như admin
+  | 'designer_manager' // CSKH - Trưởng phòng thiết kế (CSKH + Design quyền)
+  | 'customer_service' // CSKH - Chăm sóc khách hàng
   | 'production_manager' // Production Manager
-  | 'accountant' // Accountant
-  | 'designer' // Designer
-  | 'prepress' // Prepress/Platemaking
-  | 'operator'; // Machine Operator
+  | 'accountant' // Accountant - Kế toán
+  | 'designer' // Designer Staff - Thiết kế
+  | 'prepress' // Prepress/Platemaking - Bình bài
+  | 'operator'; // Machine Operator - Sản xuất
 
 export interface User {
   id: string;
@@ -47,6 +50,45 @@ export const users: User[] = [
     permissions: ['manage_production', 'view_reports', 'manage_staff'],
     isActive: true,
     createdAt: '2025-01-02T00:00:00Z'
+  },
+  {
+    id: '7',
+    username: 'shareholder1',
+    password: 'shareholder123',
+    fullName: 'Nguyễn Văn A - Cổ Đông',
+    email: 'shareholder@inkwell.com',
+    role: 'shareholder',
+    department: 'Board',
+    avatar: 'https://ui-avatars.com/api/?name=Nguyen+Van+A',
+    permissions: ['view_all_readonly'],
+    isActive: true,
+    createdAt: '2025-01-07T00:00:00Z'
+  },
+  {
+    id: '8',
+    username: 'designmanager',
+    password: 'designmanager123',
+    fullName: 'Trần Thị B - Trưởng Phòng Thiết Kế',
+    email: 'design.manager@inkwell.com',
+    role: 'designer_manager',
+    department: 'Design & Customer Service',
+    avatar: 'https://ui-avatars.com/api/?name=Tran+Thi+B',
+    permissions: ['manage_customer_service', 'manage_designs', 'view_customer_info', 'manage_designers'],
+    isActive: true,
+    createdAt: '2025-01-08T00:00:00Z'
+  },
+  {
+    id: '9',
+    username: 'cskh1',
+    password: 'cskh123',
+    fullName: 'Lê Văn C - CSKH',
+    email: 'customer.service@inkwell.com',
+    role: 'customer_service',
+    department: 'Customer Service',
+    avatar: 'https://ui-avatars.com/api/?name=Le+Van+C',
+    permissions: ['manage_customers', 'view_orders', 'handle_complaints'],
+    isActive: true,
+    createdAt: '2025-01-09T00:00:00Z'
   },
   {
     id: '3',

@@ -17,6 +17,9 @@ export interface Customer {
   phone: string;
   address: string;
   folder: string;
+  maxDebt: number; // Công nợ tối đa cho phép (VNĐ)
+  currentDebt: number; // Công nợ hiện tại (VNĐ)
+  debtStatus: 'good' | 'warning' | 'blocked'; // Trạng thái công nợ
   createdAt: string;
   createdBy: string;
 }
@@ -27,8 +30,9 @@ export interface Order {
   customerId: string;
   customerName: string;
   description: string;
+  designType: 'T' | 'C' | 'D' | 'H' | 'R' | 'brochure' | 'business_card' | 'flyer' | 'poster' | 'banner' | 'sticker' | 'menu' | 'catalog' | 'other'; // Loại thiết kế
   quantity: number;
-  status: 'new' | 'designing' | 'waiting_approval' | 'waiting_deposit' | 'in_production' | 'completed' | 'cancelled';
+  status: 'new' | 'designing' | 'design_approved' | 'waiting_quote' | 'quoted' | 'deposited' | 'prepress_ready' | 'in_production' | 'completed' | 'cancelled';
   designStatus?: 'pending' | 'in_progress' | 'waiting_approval' | 'approved';
   totalAmount?: number;
   depositAmount?: number;
@@ -37,6 +41,22 @@ export interface Order {
   deliveryDate?: string;
   createdAt: string;
   createdBy: string;
+}
+
+export interface PrepressOrder {
+  id: string;
+  prepressOrderNumber: string; // Mã lệnh bình bài (VD: PP001)
+  orderIds: string[]; // Danh sách ID đơn hàng
+  orders: Order[]; // Chi tiết các đơn hàng
+  paperType: string;
+  printMachine: string;
+  quantity: number;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  notes?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  createdAt: string;
+  createdBy: string;
+  assignedTo?: string; // ID nhân viên sản xuất được giao
 }
 
 export interface Design {

@@ -12,6 +12,7 @@ const Orders = lazy(() => import('@/pages/orders/index'));
 const OrderDetail = lazy(() => import('@/pages/orders/[id]'));
 const CreateOrder = lazy(() => import('@/pages/orders/create'));
 const Accounting = lazy(() => import('@/pages/accounting/index'));
+const DebtReport = lazy(() => import('@/pages/accounting/debt-report'));
 const Attendance = lazy(() => import('@/pages/Attendance'));
 const Customers = lazy(() => import('@/pages/customers/index'));
 const CustomerDetail = lazy(() => import('@/pages/customers/[id]'));
@@ -23,6 +24,8 @@ const ProductTemplates = lazy(() => import('@/pages/inventory/templates'));
 const MaterialTypes = lazy(() => import('@/pages/material-types/index'));
 const MaterialTypeDetail = lazy(() => import('@/pages/material-types/[id]'));
 const CreateMaterialType = lazy(() => import('@/pages/material-types/create'));
+const PrepressCreatePrintOrder = lazy(() => import('@/pages/prepress/create-print-order.tsx'));
+const PrepressIndex = lazy(() => import('@/pages/prepress/index'));
 const Notifications = lazy(() => import('@/pages/Notifications'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -115,11 +118,24 @@ export const router = createBrowserRouter([
       },
       {
         path: 'accounting',
-        element: (
-          <Suspense fallback={<div>Loading...</div>}>
-            <Accounting />
-          </Suspense>
-        )
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <Accounting />
+              </Suspense>
+            )
+          },
+          {
+            path: 'debt-report',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DebtReport />
+              </Suspense>
+            )
+          }
+        ]
       },
       {
         path: 'attendance',
@@ -219,6 +235,27 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <MaterialTypeDetail />
+              </Suspense>
+            )
+          }
+        ]
+      },
+      {
+        path: 'prepress',
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <PrepressIndex />
+              </Suspense>
+            )
+          },
+          {
+            path: 'create-print-order',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <PrepressCreatePrintOrder />
               </Suspense>
             )
           }

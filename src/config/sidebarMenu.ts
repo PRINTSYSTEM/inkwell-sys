@@ -12,37 +12,55 @@ export const sidebarMenu: MenuItem[] = [
     label: 'Dashboard',
     path: '/dashboard',
     icon: 'dashboard',
-    roles: ['admin', 'production_manager', 'accountant', 'designer', 'prepress', 'operator']
+    roles: ['admin', 'shareholder', 'designer_manager', 'customer_service', 'production_manager', 'accountant', 'designer', 'prepress', 'operator']
   },
   {
     label: 'Production',
     path: '/production',
     icon: 'factory',
-    roles: ['admin', 'production_manager', 'operator']
+    roles: ['admin', 'shareholder', 'production_manager', 'operator', 'prepress']
   },
   {
     label: 'Design',
     path: '/design',
     icon: 'palette',
-    roles: ['admin', 'designer', 'prepress']
+    roles: ['admin', 'shareholder', 'designer', 'designer_manager', 'prepress']
   },
   {
-    label: 'Prepress',
+    label: 'Bình bài',
     path: '/prepress',
     icon: 'layers',
-    roles: ['admin', 'prepress', 'production_manager']
+    roles: ['admin', 'prepress']
+  },
+  {
+    label: 'Tạo lệnh bình bài',
+    path: '/prepress/create-print-order',
+    icon: 'print',
+    roles: ['admin', 'prepress']
   },
   {
     label: 'Orders',
     path: '/orders',
     icon: 'shopping_cart',
-    roles: ['admin', 'production_manager', 'accountant']
+    roles: ['admin', 'shareholder', 'designer_manager', 'customer_service', 'accountant', 'designer']
+  },
+  {
+    label: 'Customers',
+    path: '/customers',
+    icon: 'people',
+    roles: ['admin', 'shareholder', 'designer_manager', 'customer_service']
   },
   {
     label: 'Accounting',
     path: '/accounting',
     icon: 'account_balance',
-    roles: ['admin', 'accountant']
+    roles: ['admin', 'shareholder', 'accountant']
+  },
+  {
+    label: 'Báo cáo công nợ',
+    path: '/accounting/debt-report',
+    icon: 'warning',
+    roles: ['admin', 'shareholder', 'accountant']
   },
   {
     label: 'Attendance',

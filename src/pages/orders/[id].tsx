@@ -27,28 +27,41 @@ import { Progress } from '@/components/ui/progress';
 const statusLabels = {
   new: 'Mới',
   designing: 'Đang thiết kế',
-  waiting_approval: 'Chờ duyệt',
-  waiting_deposit: 'Chờ đặt cọc',
+  design_approved: 'Thiết kế đã duyệt',
+  waiting_quote: 'Chờ báo giá',
+  quoted: 'Đã báo giá',
+  deposited: 'Đã đặt cọc',
+  prepress_ready: 'Sẵn sàng bình bài',
   in_production: 'Đang sản xuất',
   completed: 'Hoàn thành',
   cancelled: 'Đã hủy',
+  waiting_approval: 'Chờ duyệt',
+  waiting_deposit: 'Chờ đặt cọc',
 };
 
 const statusColors = {
   new: 'bg-blue-100 text-blue-800 border-blue-200',
   designing: 'bg-purple-100 text-purple-800 border-purple-200',
-  waiting_approval: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  waiting_deposit: 'bg-orange-100 text-orange-800 border-orange-200',
+  design_approved: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  waiting_quote: 'bg-amber-100 text-amber-800 border-amber-200',
+  quoted: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  deposited: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  prepress_ready: 'bg-teal-100 text-teal-800 border-teal-200',
   in_production: 'bg-green-100 text-green-800 border-green-200',
   completed: 'bg-gray-100 text-gray-800 border-gray-200',
   cancelled: 'bg-red-100 text-red-800 border-red-200',
+  waiting_approval: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  waiting_deposit: 'bg-orange-100 text-orange-800 border-orange-200',
 };
 
 const workflowSteps = [
   { key: 'new', label: 'Tạo đơn', icon: FileText },
   { key: 'designing', label: 'Thiết kế', icon: Edit },
-  { key: 'waiting_approval', label: 'Duyệt mẫu', icon: CheckCircle },
-  { key: 'waiting_deposit', label: 'Đặt cọc', icon: DollarSign },
+  { key: 'design_approved', label: 'Duyệt thiết kế', icon: CheckCircle },
+  { key: 'waiting_quote', label: 'Chờ báo giá', icon: Clock },
+  { key: 'quoted', label: 'Đã báo giá', icon: DollarSign },
+  { key: 'deposited', label: 'Đã đặt cọc', icon: DollarSign },
+  { key: 'prepress_ready', label: 'Bình bài', icon: Edit },
   { key: 'in_production', label: 'Sản xuất', icon: Factory },
   { key: 'completed', label: 'Hoàn thành', icon: Package },
 ];

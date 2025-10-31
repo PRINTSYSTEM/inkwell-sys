@@ -4,6 +4,8 @@ import { Upload, FileText, Clock, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { mockDesigns } from '@/lib/mockData';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/use-auth';
+import { usePermissions } from '@/lib/permissions';
 
 const statusLabels = {
   pending: 'Chờ xử lý',
@@ -21,6 +23,24 @@ const statusColors = {
 
 export default function Design() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const permissions = usePermissions(user?.role || 'operator');
+
+  // Filter designs based on role
+  const filteredDesigns = mockDesigns.filter(design => {
+    // Designers chỉ thấy design được assign cho mình
+    if (permissions.permissions.dataScope === 'design-only') {
+      return true; // Simplified: show all for demo
+    }
+    // Prepress thấy designs đã approved ready for production
+    if (permissions.permissions.dataScope === 'technical-only') {
+      return design.status === 'approved';
+    }
+    return true; // Admin sees all
+  }).map(design => ({
+    ...design,
+    customerName: permissions.maskCustomerInfo(design.customerName)
+  }));
 
   return (
     <div className="space-y-6">
@@ -36,7 +56,7 @@ export default function Design() {
       </div>
 
         <div className="grid gap-6">
-          {mockDesigns.map((design) => (
+          {filteredDesigns.map((design) => (
             <Card key={design.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">

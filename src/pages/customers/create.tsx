@@ -15,6 +15,9 @@ interface CreateCustomerForm {
   taxCode: string;
   phone: string;
   address: string;
+  maxDebt: string;
+  currentDebt: string;
+  debtStatus: 'good' | 'warning' | 'blocked';
 }
 
 export default function CreateCustomer() {
@@ -24,7 +27,10 @@ export default function CreateCustomer() {
     representativeName: '',
     taxCode: '',
     phone: '',
-    address: ''
+    address: '',
+    maxDebt: '20000000', // Mặc định 20 triệu
+    currentDebt: '0', // Mặc định 0
+    debtStatus: 'good'
   });
   const [errors, setErrors] = useState<Partial<CreateCustomerForm>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,6 +108,18 @@ export default function CreateCustomer() {
       newErrors.taxCode = 'Mã số thuế phải có 10 chữ số';
     }
 
+    // Validation cho công nợ
+    const maxDebt = parseInt(form.maxDebt);
+    const currentDebt = parseInt(form.currentDebt);
+    
+    if (!form.maxDebt || isNaN(maxDebt) || maxDebt < 0) {
+      newErrors.maxDebt = 'Hạn mức công nợ phải là số dương';
+    }
+    
+    if (!form.currentDebt || isNaN(currentDebt) || currentDebt < 0) {
+      newErrors.currentDebt = 'Công nợ hiện tại phải là số không âm';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -129,6 +147,17 @@ export default function CreateCustomer() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Tính toán trạng thái công nợ
+      const maxDebt = parseInt(form.maxDebt);
+      const currentDebt = parseInt(form.currentDebt);
+      let debtStatus: 'good' | 'warning' | 'blocked' = 'good';
+      
+      if (currentDebt > maxDebt) {
+        debtStatus = 'blocked';
+      } else if ((currentDebt / maxDebt) >= 0.8) {
+        debtStatus = 'warning';
+      }
+      
       const newCustomer = {
         id: `c${Date.now()}`,
         code: generatedCode || generatePreviewCode(form.representativeName),
@@ -138,6 +167,9 @@ export default function CreateCustomer() {
         phone: form.phone,
         address: form.address,
         folder: generatedCode || generatePreviewCode(form.representativeName),
+        maxDebt: maxDebt,
+        currentDebt: currentDebt,
+        debtStatus: debtStatus,
         createdAt: new Date().toISOString(),
         createdBy: 'Trần Thị CSKH' // Trong thực tế sẽ lấy từ context user
       };
@@ -320,6 +352,95 @@ export default function CreateCustomer() {
                   {errors.address && (
                     <p className="text-sm text-red-500">{errors.address}</p>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Thông tin công nợ */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Thông tin công nợ
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="maxDebt">
+                      Hạn mức công nợ tối đa (VNĐ) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="maxDebt"
+                      type="number"
+                      value={form.maxDebt}
+                      onChange={(e) => handleInputChange('maxDebt', e.target.value)}
+                      placeholder="20000000"
+                      min="0"
+                      step="1000000"
+                      className={errors.maxDebt ? 'border-red-500' : ''}
+                    />
+                    {errors.maxDebt && (
+                      <p className="text-sm text-red-500">{errors.maxDebt}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Mặc định: 20,000,000₫. Có thể điều chỉnh theo quy mô khách hàng.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="currentDebt">
+                      Công nợ hiện tại (VNĐ)
+                    </Label>
+                    <Input
+                      id="currentDebt"
+                      type="number"
+                      value={form.currentDebt}
+                      onChange={(e) => handleInputChange('currentDebt', e.target.value)}
+                      placeholder="0"
+                      min="0"
+                      step="100000"
+                      className={errors.currentDebt ? 'border-red-500' : ''}
+                    />
+                    {errors.currentDebt && (
+                      <p className="text-sm text-red-500">{errors.currentDebt}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Khách hàng mới thường bắt đầu với 0₫
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium mb-2">Trạng thái công nợ dự kiến:</p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const maxDebt = parseInt(form.maxDebt) || 0;
+                      const currentDebt = parseInt(form.currentDebt) || 0;
+                      const ratio = maxDebt > 0 ? (currentDebt / maxDebt) * 100 : 0;
+                      
+                      let status: 'good' | 'warning' | 'blocked' = 'good';
+                      let statusText = 'Tốt';
+                      let statusColor = 'bg-green-500';
+                      
+                      if (currentDebt > maxDebt) {
+                        status = 'blocked';
+                        statusText = 'Bị chặn';
+                        statusColor = 'bg-red-500';
+                      } else if (ratio >= 80) {
+                        status = 'warning';
+                        statusText = 'Cảnh báo';
+                        statusColor = 'bg-yellow-500';
+                      }
+                      
+                      return (
+                        <>
+                          <div className={`w-3 h-3 rounded-full ${statusColor}`}></div>
+                          <span className="text-sm">{statusText} ({Math.round(ratio)}%)</span>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               </CardContent>
             </Card>
