@@ -332,7 +332,9 @@ export default function OrderDetail() {
                       <Badge variant="outline" className="mt-1">
                         {design.status === 'approved' ? 'Đã duyệt' : 
                          design.status === 'in_progress' ? 'Đang thực hiện' :
-                         design.status === 'waiting_approval' ? 'Chờ duyệt' : 'Chờ bắt đầu'}
+                         design.status === 'review' ? 'Chờ duyệt' : 
+                         design.status === 'revision' ? 'Yêu cầu sửa' :
+                         design.status === 'delivered' ? 'Đã giao' : 'Chờ bắt đầu'}
                       </Badge>
                     </div>
                     <Button size="sm">

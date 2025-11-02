@@ -1,4 +1,4 @@
-import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers } from 'lucide-react';
+import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers, Settings, Briefcase, Eye } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import {
@@ -22,61 +22,229 @@ import { usePermissions } from '@/lib/permissions';
 const navigationByRole = {
   admin: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Khách hàng', url: '/customers', icon: Users },
-    { title: 'Đơn hàng', url: '/orders', icon: FileText },
-    { title: 'Thiết kế', url: '/design', icon: Palette },
-    { title: 'Bình bài', url: '/prepress', icon: Layers },
-    { title: 'Sản xuất', url: '/production', icon: Factory },
     { 
-      title: 'Kho', 
+      title: 'Phòng ban thiết kế',
+      icon: Palette,
+      submenu: [
+        { title: 'Thiết kế', url: '/design', icon: Palette },
+        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
+        { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
+        { title: 'Quản lý loại thiết kế', url: '/design-types', icon: Settings },
+      ]
+    },
+    { 
+      title: 'Khách hàng & Đơn hàng',
+      icon: Users,
+      submenu: [
+        { title: 'Khách hàng', url: '/customers', icon: Users },
+        { title: 'Đơn hàng', url: '/orders', icon: FileText },
+      ]
+    },
+    { 
+      title: 'Sản xuất',
+      icon: Factory,
+      submenu: [
+        { title: 'Bình bài', url: '/prepress', icon: Layers },
+        { title: 'Sản xuất', url: '/production', icon: Factory },
+      ]
+    },
+    { 
+      title: 'Kho vật tư',
       icon: Package,
       submenu: [
         { title: 'Quản lý kho', url: '/inventory', icon: Package },
         { title: 'Loại nguyên liệu thô', url: '/material-types', icon: Layers }
       ]
     },
-    { title: 'Kế toán', url: '/accounting', icon: Calculator },
-    { title: 'Chấm công', url: '/attendance', icon: Clock },
+    { 
+      title: 'Hành chính',
+      icon: Calculator,
+      submenu: [
+        { title: 'Kế toán', url: '/accounting', icon: Calculator },
+        { title: 'Chấm công', url: '/attendance', icon: Clock },
+      ]
+    },
+    { title: 'Thông báo', url: '/notifications', icon: Bell },
+  ],
+  shareholder: [
+    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { 
+      title: 'Phòng ban thiết kế',
+      icon: Palette,
+      submenu: [
+        { title: 'Thiết kế', url: '/design', icon: Palette },
+        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
+        { title: 'Quản lý loại thiết kế', url: '/design-types', icon: Settings },
+      ]
+    },
+    { 
+      title: 'Khách hàng & Đơn hàng',
+      icon: Users,
+      submenu: [
+        { title: 'Khách hàng', url: '/customers', icon: Users },
+        { title: 'Đơn hàng', url: '/orders', icon: FileText },
+      ]
+    },
+    { 
+      title: 'Sản xuất',
+      icon: Factory,
+      submenu: [
+        { title: 'Bình bài', url: '/prepress', icon: Layers },
+        { title: 'Sản xuất', url: '/production', icon: Factory },
+      ]
+    },
+    { 
+      title: 'Kho vật tư',
+      icon: Package,
+      submenu: [
+        { title: 'Quản lý kho', url: '/inventory', icon: Package },
+        { title: 'Loại nguyên liệu thô', url: '/material-types', icon: Layers }
+      ]
+    },
+    { 
+      title: 'Hành chính',
+      icon: Calculator,
+      submenu: [
+        { title: 'Kế toán', url: '/accounting', icon: Calculator },
+      ]
+    },
+    { title: 'Thông báo', url: '/notifications', icon: Bell },
+  ],
+  designer_manager: [
+    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { 
+      title: 'Phòng ban thiết kế',
+      icon: Palette,
+      submenu: [
+        { title: 'Thiết kế', url: '/design', icon: Palette },
+        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
+        { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
+        { title: 'Quản lý loại thiết kế', url: '/design-types', icon: Settings },
+      ]
+    },
+    { 
+      title: 'Khách hàng & Đơn hàng',
+      icon: Users,
+      submenu: [
+        { title: 'Khách hàng', url: '/customers', icon: Users },
+        { title: 'Đơn hàng', url: '/orders', icon: FileText },
+      ]
+    },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   production_manager: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Đơn hàng', url: '/orders', icon: FileText },
-    { title: 'Sản xuất', url: '/production', icon: Factory },
     { 
-      title: 'Kho', 
+      title: 'Khách hàng & Đơn hàng',
+      icon: Users,
+      submenu: [
+        { title: 'Đơn hàng', url: '/orders', icon: FileText },
+      ]
+    },
+    { 
+      title: 'Sản xuất',
+      icon: Factory,
+      submenu: [
+        { title: 'Sản xuất', url: '/production', icon: Factory },
+      ]
+    },
+    { 
+      title: 'Kho vật tư',
       icon: Package,
       submenu: [
         { title: 'Quản lý kho', url: '/inventory', icon: Package },
         { title: 'Loại nguyên liệu thô', url: '/material-types', icon: Layers }
       ]
     },
-    { title: 'Chấm công', url: '/attendance', icon: Clock },
+    { 
+      title: 'Hành chính',
+      icon: Calculator,
+      submenu: [
+        { title: 'Chấm công', url: '/attendance', icon: Clock },
+      ]
+    },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   designer: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Đơn hàng', url: '/orders', icon: FileText },
-    { title: 'Thiết kế', url: '/design', icon: Palette },
+    { 
+      title: 'Phòng ban thiết kế',
+      icon: Palette,
+      submenu: [
+        { title: 'Thiết kế', url: '/design', icon: Palette },
+        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
+        { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
+      ]
+    },
+    { 
+      title: 'Khách hàng & Đơn hàng',
+      icon: Users,
+      submenu: [
+        { title: 'Đơn hàng', url: '/orders', icon: FileText },
+      ]
+    },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   accountant: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Đơn hàng', url: '/orders', icon: FileText },
-    { title: 'Kế toán', url: '/accounting', icon: Calculator },
+    { 
+      title: 'Khách hàng & Đơn hàng',
+      icon: Users,
+      submenu: [
+        { title: 'Đơn hàng', url: '/orders', icon: FileText },
+      ]
+    },
+    { 
+      title: 'Hành chính',
+      icon: Calculator,
+      submenu: [
+        { title: 'Kế toán', url: '/accounting', icon: Calculator },
+      ]
+    },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   prepress: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Bình bài', url: '/prepress', icon: Layers },
-    { title: 'Tạo lệnh bình bài', url: '/prepress/create-print-order', icon: FileText },
-    { title: 'Thiết kế', url: '/design', icon: Palette },
-    { title: 'Sản xuất', url: '/production', icon: Factory },
+    { 
+      title: 'Phòng ban thiết kế',
+      icon: Palette,
+      submenu: [
+        { title: 'Thiết kế', url: '/design', icon: Palette },
+        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
+      ]
+    },
+    { 
+      title: 'Sản xuất',
+      icon: Factory,
+      submenu: [
+        { title: 'Bình bài', url: '/prepress', icon: Layers },
+        { title: 'Tạo lệnh bình bài', url: '/prepress/create-print-order', icon: FileText },
+        { title: 'Sản xuất', url: '/production', icon: Factory },
+      ]
+    },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   operator: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Sản xuất', url: '/production', icon: Factory },
+    { 
+      title: 'Sản xuất',
+      icon: Factory,
+      submenu: [
+        { title: 'Sản xuất', url: '/production', icon: Factory },
+      ]
+    },
+    { title: 'Thông báo', url: '/notifications', icon: Bell },
+  ],
+  customer_service: [
+    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { 
+      title: 'Khách hàng & Đơn hàng',
+      icon: Users,
+      submenu: [
+        { title: 'Khách hàng', url: '/customers', icon: Users },
+        { title: 'Đơn hàng', url: '/orders', icon: FileText },
+      ]
+    },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
 };

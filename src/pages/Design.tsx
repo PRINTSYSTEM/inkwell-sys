@@ -2,23 +2,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, Clock, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockDesigns } from '@/lib/mockData';
+import { mockDesigns, statusConfig } from '@/lib/mockData';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
 import { usePermissions } from '@/lib/permissions';
 
+
 const statusLabels = {
   pending: 'Chờ xử lý',
-  in_progress: 'Đang thiết kế',
-  waiting_approval: 'Chờ duyệt',
+  in_progress: 'Đang thiết kế', 
+  review: 'Chờ duyệt',
+  revision: 'Yêu cầu sửa',
   approved: 'Đã duyệt',
+  delivered: 'Đã giao',
 };
 
 const statusColors = {
   pending: 'bg-gray-100 text-gray-800',
   in_progress: 'bg-blue-100 text-blue-800',
-  waiting_approval: 'bg-yellow-100 text-yellow-800',
+  review: 'bg-yellow-100 text-yellow-800',
+  revision: 'bg-orange-100 text-orange-800',
   approved: 'bg-green-100 text-green-800',
+  delivered: 'bg-purple-100 text-purple-800',
 };
 
 export default function Design() {
@@ -120,9 +125,9 @@ export default function Design() {
                     {design.status === 'in_progress' && (
                       <Button variant="outline">Gửi duyệt</Button>
                     )}
-                    {design.status === 'waiting_approval' && (
+                    {design.status === 'review' && (
                       <>
-                        <Button variant="outline">Từ chối</Button>
+                        <Button variant="outline">Yêu cầu sửa</Button>
                         <Button>Duyệt thiết kế</Button>
                       </>
                     )}

@@ -40,7 +40,7 @@ import {
   Filter
 } from 'lucide-react';
 import { mockOrders } from '@/lib/mockData';
-import { getDesignTypeName, getDesignTypeDescription, designTypeConfigs } from '@/lib/designTypes';
+import { getDesignTypeName, getDesignTypeDescription, designTypeConfigs } from '@/lib/mockData';
 import { useAuth } from '@/hooks/use-auth';
 import { usePermissions } from '@/lib/permissions';
 import { toast } from 'sonner';

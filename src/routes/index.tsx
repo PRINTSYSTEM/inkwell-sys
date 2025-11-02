@@ -8,6 +8,9 @@ const Dashboard = lazy(() => import('@/pages/dashboard'));
 const Production = lazy(() => import('@/pages/production/index'));
 const Design = lazy(() => import('@/pages/Design'));
 const CreateDesign = lazy(() => import('@/pages/design/create'));
+const AllDesigns = lazy(() => import('@/pages/design/all'));
+const MyWork = lazy(() => import('@/pages/design/my-work.tsx'));
+const DesignDetail = lazy(() => import('@/pages/design/detail/[id].tsx'));
 const Orders = lazy(() => import('@/pages/orders/index'));
 const OrderDetail = lazy(() => import('@/pages/orders/[id]'));
 const CreateOrder = lazy(() => import('@/pages/orders/create'));
@@ -24,6 +27,9 @@ const ProductTemplates = lazy(() => import('@/pages/inventory/templates'));
 const MaterialTypes = lazy(() => import('@/pages/material-types/index'));
 const MaterialTypeDetail = lazy(() => import('@/pages/material-types/[id]'));
 const CreateMaterialType = lazy(() => import('@/pages/material-types/create'));
+const DesignTypes = lazy(() => import('@/pages/design-types/index'));
+const DesignTypeDetail = lazy(() => import('@/pages/design-types/[id]'));
+const CreateDesignType = lazy(() => import('@/pages/design-types/create'));
 const PrepressCreatePrintOrder = lazy(() => import('@/pages/prepress/create-print-order.tsx'));
 const PrepressIndex = lazy(() => import('@/pages/prepress/index'));
 const Notifications = lazy(() => import('@/pages/Notifications'));
@@ -74,6 +80,30 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <Design />
+              </Suspense>
+            )
+          },
+          {
+            path: 'all',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <AllDesigns />
+              </Suspense>
+            )
+          },
+          {
+            path: 'my-work',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <MyWork />
+              </Suspense>
+            )
+          },
+          {
+            path: 'detail/:id',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DesignDetail />
               </Suspense>
             )
           },
@@ -235,6 +265,35 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <MaterialTypeDetail />
+              </Suspense>
+            )
+          }
+        ]
+      },
+      {
+        path: 'design-types',
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DesignTypes />
+              </Suspense>
+            )
+          },
+          {
+            path: 'create',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CreateDesignType />
+              </Suspense>
+            )
+          },
+          {
+            path: ':id',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DesignTypeDetail />
               </Suspense>
             )
           }

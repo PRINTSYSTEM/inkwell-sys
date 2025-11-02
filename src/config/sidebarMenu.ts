@@ -1,4 +1,4 @@
-import { Role } from '@/lib/mockData/users';
+import { Role } from '@/lib/mockData';
 
 interface MenuItem {
   label: string;
@@ -25,6 +25,12 @@ export const sidebarMenu: MenuItem[] = [
     path: '/design',
     icon: 'palette',
     roles: ['admin', 'shareholder', 'designer', 'designer_manager', 'prepress']
+  },
+  {
+    label: 'Quản lý loại thiết kế',
+    path: '/design-types',
+    icon: 'settings',
+    roles: ['admin', 'shareholder', 'designer_manager']
   },
   {
     label: 'Bình bài',

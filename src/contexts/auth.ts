@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import { User } from '../lib/mockData/users';
+import { User } from '@/lib/mockData';
 
 interface AuthContextType {
   user: User | null;

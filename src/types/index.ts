@@ -24,14 +24,32 @@ export interface Customer {
   createdBy: string;
 }
 
+// Design item trong đơn hàng - dành cho giai đoạn thiết kế
+export interface OrderDesign {
+  id: string;
+  designCode?: string; // Mã thiết kế tự động sinh (VD: "0001VH-T-001-021124")
+  designType: 'T' | 'C' | 'D' | 'H' | 'R' | 'brochure' | 'business_card' | 'flyer' | 'poster' | 'banner' | 'sticker' | 'menu' | 'catalog' | 'other';
+  designName: string; // Tên thiết kế (VD: "Mẫu bìa túi phân bón kali")
+  dimensions: string; // Kích thước (VD: "280x153mm")
+  quantity: number; // Số lượng
+  requirements: string; // Yêu cầu thiết kế chi tiết
+  notes?: string; // Ghi chú thêm
+  createdDate: string; // Ngày tạo yêu cầu
+  // Giá sẽ được thêm ở giai đoạn kế toán
+  unitPrice?: number; // Đơn giá (thêm ở giai đoạn kế toán)
+  totalPrice?: number; // Thành tiền (thêm ở giai đoạn kế toán)
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
   customerId: string;
   customerName: string;
-  description: string;
-  designType: 'T' | 'C' | 'D' | 'H' | 'R' | 'brochure' | 'business_card' | 'flyer' | 'poster' | 'banner' | 'sticker' | 'menu' | 'catalog' | 'other'; // Loại thiết kế
-  quantity: number;
+  designs?: OrderDesign[]; // Multi-design support
+  // Legacy fields for backward compatibility
+  description?: string;
+  designType?: 'T' | 'C' | 'D' | 'H' | 'R' | 'brochure' | 'business_card' | 'flyer' | 'poster' | 'banner' | 'sticker' | 'menu' | 'catalog' | 'other';
+  quantity?: number;
   status: 'new' | 'designing' | 'design_approved' | 'waiting_quote' | 'quoted' | 'deposited' | 'prepress_ready' | 'in_production' | 'completed' | 'cancelled';
   designStatus?: 'pending' | 'in_progress' | 'waiting_approval' | 'approved';
   totalAmount?: number;
@@ -39,6 +57,7 @@ export interface Order {
   depositPaid: boolean;
   deliveryAddress: string;
   deliveryDate?: string;
+  notes?: string;
   createdAt: string;
   createdBy: string;
 }
@@ -61,14 +80,69 @@ export interface PrepressOrder {
 
 export interface Design {
   id: string;
+  designCode: string; // Mã thiết kế tự động từ hệ thống
   orderId: string;
   orderNumber: string;
+  customerId: string;
   customerName: string;
-  files: DesignFile[];
-  status: 'pending' | 'in_progress' | 'waiting_approval' | 'approved';
+  designType: string; // T, C, D, H, R...
+  designName: string;
+  dimensions: string;
+  quantity: number;
+  requirements: string;
   notes?: string;
+  
+  // Assignment & Status
+  assignedTo: string; // ID của designer được assign
+  assignedBy: string; // ID của người assign
+  assignedAt: string;
+  status: 'pending' | 'in_progress' | 'review' | 'revision' | 'approved' | 'delivered';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  
+  // Progress Tracking với hình ảnh
+  progressImages: DesignProgressImage[];
+  
+  // File management
+  files: DesignFile[];
+  finalFiles: DesignFile[]; // Files cuối cùng gửi khách
+  designFile?: { // File bảng thiết kế chính
+    url: string;
+    fileName: string;
+    uploadedAt: string;
+    uploadedBy: string;
+  };
+  
+  // Timeline
   createdAt: string;
   updatedAt: string;
+  dueDate?: string;
+  completedAt?: string;
+  
+  // Comments & Feedback
+  comments: DesignComment[];
+  revisionCount: number;
+}
+
+export interface DesignProgressImage {
+  id: string;
+  designId: string;
+  imageUrl: string;
+  description: string;
+  status: 'drafting' | 'in_progress' | 'review_ready' | 'final';
+  uploadedBy: string;
+  uploadedAt: string;
+  isVisibleToCustomer: boolean; // Có hiển thị cho khách hàng không
+}
+
+export interface DesignComment {
+  id: string;
+  designId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  type: 'internal' | 'customer_feedback' | 'revision_request';
+  createdAt: string;
+  attachments?: string[];
 }
 
 export interface DesignFile {
@@ -218,3 +292,34 @@ export interface MaterialTypeCategory {
   createdAt: string;
   updatedAt: string;
 }
+
+// Design Type Management Interface
+export interface DesignTypeEntity {
+  id: string;
+  code: string; // VD: T, C, D, H, R
+  name: string; // VD: Túi giấy, Nhãn giấy
+  description?: string;
+  codeFormat: string; // Template cho mã thiết kế VD: "{customerCode}-{designType}-{number:3}-{date:YYMMDD}"
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+}
+
+export interface DesignTypeCreateRequest {
+  code: string;
+  name: string;
+  description?: string;
+  codeFormat: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface DesignTypeUpdateRequest extends Partial<DesignTypeCreateRequest> {
+  id: string;
+}
+
+// Keep the old DesignType as union type for backward compatibility
+export type DesignType = 'T' | 'C' | 'D' | 'H' | 'R' | 'brochure' | 'business_card' | 'flyer' | 'poster' | 'banner' | 'sticker' | 'menu' | 'catalog' | 'other';

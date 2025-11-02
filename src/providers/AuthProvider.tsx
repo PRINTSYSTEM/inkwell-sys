@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { User, authenticateUser } from '../lib/mockData/users';
+import { User, authenticateUser } from '@/lib/mockData';
 import { AuthContext } from '../contexts/auth';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

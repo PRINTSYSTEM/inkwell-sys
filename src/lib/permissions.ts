@@ -1,4 +1,4 @@
-import { Role } from '@/lib/mockData/users';
+import { Role } from '@/lib/mockData';
 import type { Order, Production } from '@/types';
 
 // Định nghĩa các quyền chi tiết cho từng role
