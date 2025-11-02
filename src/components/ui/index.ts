@@ -46,7 +46,8 @@ export * from './toggle';
 export * from './toggle-group';
 export * from './tooltip';
 
-// Toast exports with alias to avoid conflicts
-export { toast } from './sonner';
+// Toast related exports
+export * from './sonner';
+export { toast } from './toast-utils';
 export { Toaster } from './toaster';
 export { useToast } from './use-toast';
