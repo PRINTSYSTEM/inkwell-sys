@@ -116,6 +116,7 @@ export interface Design {
   createdAt: string;
   updatedAt: string;
   dueDate?: string;
+  deliveryDate?: string; // Ngày gửi khách hàng
   completedAt?: string;
   
   // Comments & Feedback

@@ -48,6 +48,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Design, DesignProgressImage, DesignComment } from '@/types';
 import { designService, users } from '@/lib/mockData';
 import { statusConfig, priorityConfig } from '@/lib/mockData';
+import AutoDesignCode from '@/components/AutoDesignCode';
 
 export default function DesignDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -63,6 +64,8 @@ export default function DesignDetailPage() {
   const [imageDescription, setImageDescription] = useState('');
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
+  const [deliveryDate, setDeliveryDate] = useState('');
 
   useEffect(() => {
     const fetchDesign = async () => {
@@ -78,6 +81,10 @@ export default function DesignDetailPage() {
           throw new Error('Design not found');
         }
         setDesign(data);
+        // Initialize delivery date if exists
+        if (data.deliveryDate) {
+          setDeliveryDate(data.deliveryDate.split('T')[0]); // Extract date part only
+        }
       } catch (error) {
         toast({
           title: "Lỗi",
@@ -95,7 +102,7 @@ export default function DesignDetailPage() {
 
   const getUserName = (userId: string) => {
     const user = users.find(u => u.id === userId);
-    return user?.fullName || 'Không xác định';
+    return user?.name || 'Không xác định';
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,6 +214,29 @@ export default function DesignDetailPage() {
     }
   };
 
+  const handleDeliveryDateUpdate = async () => {
+    if (!design) return;
+
+    try {
+      const updated = await designService.updateDesign(design.id, { 
+        deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : undefined 
+      });
+      setDesign(updated);
+      setEditingDeliveryDate(false);
+
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật ngày gửi khách hàng",
+      });
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật ngày gửi khách hàng",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDownloadFile = () => {
     if (design?.designFile) {
       const link = document.createElement('a');
@@ -283,6 +313,9 @@ export default function DesignDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Column - Main Info */}
         <div className="lg:col-span-3 space-y-6">
+          {/* Auto-generated design code (copy / save) */}
+          <AutoDesignCode design={design} onSaved={(updated) => setDesign(updated)} />
+
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -290,6 +323,38 @@ export default function DesignDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">Tên thiết kế</label>
+                  <p className="font-medium">{design.designName}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Ngày gửi khách hàng</label>
+                  {editingDeliveryDate ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="date"
+                        value={deliveryDate}
+                        onChange={(e) => setDeliveryDate(e.target.value)}
+                        className="w-40"
+                      />
+                      <Button size="sm" onClick={handleDeliveryDateUpdate}>
+                        <Save className="h-3 w-3 mr-1" />
+                        Lưu
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingDeliveryDate(false)}>
+                        Hủy
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p>{design.deliveryDate ? new Date(design.deliveryDate).toLocaleDateString('vi-VN') : 'Chưa đặt'}</p>
+                      <Button size="sm" variant="outline" onClick={() => setEditingDeliveryDate(true)}>
+                        <Edit className="h-3 w-3 mr-1" />
+                        Sửa
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Khách hàng</label>
                   <p className="font-medium">{design.customerName}</p>

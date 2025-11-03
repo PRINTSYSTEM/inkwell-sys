@@ -23,6 +23,7 @@ import {
 import { mockOrders, mockDesigns, mockProductions, mockPayments } from '@/lib/mockData';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import AutoDesignCode from '@/components/AutoDesignCode';
 
 const statusLabels = {
   new: 'Mới',
@@ -70,6 +71,52 @@ export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Helper functions to extract information from description
+  const extractDimensions = (description: string): string => {
+    const patterns = [
+      /(\d+x\d+x\d+\s*mm)/i,
+      /(\d+\s*x\s*\d+\s*x\s*\d+\s*mm)/i,
+      /(\d+\s*x\s*\d+\s*mm)/i,
+      /kích thước[:\s]*([^,\n]+)/i,
+      /KT[:\s]*([^,\n]+)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = description.match(pattern);
+      if (match) return match[1].trim();
+    }
+    return '';
+  };
+
+  const extractVolume = (description: string): string => {
+    const patterns = [
+      /(\d+\s*ml)/i,
+      /(\d+\s*lít)/i,
+      /(\d+\s*l)/i,
+      /dung tích[:\s]*([^,\n]+)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = description.match(pattern);
+      if (match) return match[1].trim();
+    }
+    return '';
+  };
+
+  const extractWeight = (description: string): string => {
+    const patterns = [
+      /(\d+\s*kg)/i,
+      /(\d+\s*g)/i,
+      /trọng lượng[:\s]*([^,\n]+)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = description.match(pattern);
+      if (match) return match[1].trim();
+    }
+    return '';
+  };
 
   // Find order data
   const order = mockOrders.find(o => o.id === id);
@@ -314,6 +361,42 @@ export default function OrderDetail() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Auto Design Code Generator */}
+            <AutoDesignCode 
+              design={{
+                id: order.id,
+                designCode: '',
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                customerId: order.customerId || '',
+                customerName: order.customerName,
+                designType: order.designType || 'H',
+                designName: order.description || '',
+                dimensions: extractDimensions(order.description || ''),
+                quantity: order.quantity || 0,
+                requirements: order.description || '',
+                notes: order.notes || '',
+                assignedTo: '',
+                assignedBy: '',
+                assignedAt: new Date().toISOString(),
+                status: 'pending' as const,
+                priority: 'medium' as const,
+                progressImages: [],
+                files: [],
+                finalFiles: [],
+                createdAt: order.createdAt,
+                updatedAt: order.createdAt,
+                dueDate: order.deliveryDate,
+                deliveryDate: order.deliveryDate,
+                comments: [],
+                revisionCount: 0,
+              }}
+              onSaved={(updated) => {
+                // Handle saving if needed
+                console.log('Design code saved:', updated.designCode);
+              }}
+            />
           </div>
         </TabsContent>
 

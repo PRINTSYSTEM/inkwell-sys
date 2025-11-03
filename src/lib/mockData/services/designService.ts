@@ -40,6 +40,21 @@ export class DesignService {
     return this.designs[index];
   }
 
+  // Update entire design (partial) - allows updating fields like designCode
+  async updateDesign(id: string, patch: Partial<Design>): Promise<Design> {
+    await this.delay(300);
+    const index = this.designs.findIndex(design => design.id === id);
+    if (index === -1) throw new Error('Design not found');
+
+    this.designs[index] = {
+      ...this.designs[index],
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
+
+    return this.designs[index];
+  }
+
   // Upload progress image
   async uploadProgressImage(designId: string, imageData: Omit<DesignProgressImage, 'id' | 'designId'>): Promise<DesignProgressImage> {
     await this.delay(500);

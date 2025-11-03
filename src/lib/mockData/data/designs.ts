@@ -113,6 +113,7 @@ export const mockDesigns: Design[] = [
     createdAt: '2024-11-01T08:00:00Z',
     updatedAt: '2024-11-02T16:45:00Z',
     dueDate: '2024-11-04T17:00:00Z',
+    deliveryDate: '2024-11-02T00:00:00Z', // Ngày gửi khách hàng
     
     comments: mockComments.filter(comment => comment.designId === '1'),
     revisionCount: 1,
@@ -143,6 +144,7 @@ export const mockDesigns: Design[] = [
     createdAt: '2024-11-01T08:30:00Z',
     updatedAt: '2024-11-01T08:30:00Z',
     dueDate: '2024-11-05T17:00:00Z',
+    deliveryDate: '2024-11-05T00:00:00Z', // Ngày gửi khách hàng
     
     comments: [],
     revisionCount: 0,

@@ -11,6 +11,7 @@ const CreateDesign = lazy(() => import('@/pages/design/create'));
 const AllDesigns = lazy(() => import('@/pages/design/all'));
 const MyWork = lazy(() => import('@/pages/design/my-work.tsx'));
 const DesignDetail = lazy(() => import('@/pages/design/detail/[id].tsx'));
+const DesignCodeGenerator = lazy(() => import('@/pages/design/code-generator'));
 const Orders = lazy(() => import('@/pages/orders/index'));
 const OrderDetail = lazy(() => import('@/pages/orders/[id]'));
 const CreateOrder = lazy(() => import('@/pages/orders/create'));
@@ -112,6 +113,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CreateDesign />
+              </Suspense>
+            )
+          },
+          {
+            path: 'code-generator',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DesignCodeGenerator />
               </Suspense>
             )
           }
