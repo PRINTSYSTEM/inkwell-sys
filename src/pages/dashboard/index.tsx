@@ -18,6 +18,7 @@ import { orders, customers, payments, productions } from '@/lib/mockData';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { usePermissions } from '@/lib/permissions';
+import { MaterialServiceTest } from '@/components/MaterialServiceTest';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -238,6 +239,11 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Material Service Test - Development Only */}
+      {process.env.NODE_ENV === 'development' && (
+        <MaterialServiceTest />
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Design } from '@/types';
 import { DesignCodeGenerator, designCodeTemplates } from '@/services/designCodeService';
 import { designService } from '@/lib/mockData';
+import MaterialSelector from '@/components/MaterialSelector';
 
 type Props = {
   design: Design;
@@ -21,6 +22,7 @@ type LocalDesignExtras = {
 
 export default function AutoDesignCode({ design, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
+  const [testMaterial, setTestMaterial] = useState<string>('');
 
   const template = useMemo(() => {
     const t = DesignCodeGenerator.getTemplateByType(design.designType);
@@ -33,7 +35,6 @@ export default function AutoDesignCode({ design, onSaved }: Props) {
       orderCode: design.orderNumber || design.orderId || '',
       designType: design.designType || '',
       productType: design.designName || '',
-      material: extras.paperType || extras.material || '',
       volume: extras.volume || extras.weight || '',
       dimensions: design.dimensions || '',
       date: design.deliveryDate 
@@ -78,11 +79,31 @@ export default function AutoDesignCode({ design, onSaved }: Props) {
   if (!generated) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Mã thiết kế (gửi khách)</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Test Material Selector</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MaterialSelector 
+            value={testMaterial}
+            onValueChange={setTestMaterial}
+            placeholder="Chọn chất liệu test"
+            showStock={true}
+          />
+          {testMaterial && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Đã chọn: {testMaterial}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Mã thiết kế (gửi khách)</CardTitle>
+        </CardHeader>
+        <CardContent>
         <div className="flex items-center justify-between gap-4">
           <code className="font-mono break-all">{generated.code}</code>
           <div className="flex gap-2">
@@ -97,5 +118,6 @@ export default function AutoDesignCode({ design, onSaved }: Props) {
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 }

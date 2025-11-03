@@ -46,6 +46,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Design, DesignProgressImage, DesignComment } from '@/types';
+import MaterialSelector from '@/components/MaterialSelector';
+import { MaterialService } from '@/services/materialService';
 import { designService, users } from '@/lib/mockData';
 import { statusConfig, priorityConfig } from '@/lib/mockData';
 import AutoDesignCode from '@/components/AutoDesignCode';
@@ -66,6 +68,9 @@ export default function DesignDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState('');
+  const [editingMaterial, setEditingMaterial] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState<string>('');
+  const [materialName, setMaterialName] = useState<string>('');
 
   useEffect(() => {
     const fetchDesign = async () => {
@@ -85,6 +90,12 @@ export default function DesignDetailPage() {
         if (data.deliveryDate) {
           setDeliveryDate(data.deliveryDate.split('T')[0]); // Extract date part only
         }
+        // Initialize material if exists
+        if (data.material) {
+          setSelectedMaterial(data.material);
+          // Load material name
+          loadMaterialName(data.material);
+        }
       } catch (error) {
         toast({
           title: "Lỗi",
@@ -100,9 +111,26 @@ export default function DesignDetailPage() {
     fetchDesign();
   }, [id, navigate, toast]);
 
+  const loadMaterialName = async (materialId: string) => {
+    try {
+      const response = await MaterialService.getMaterials({
+        page: 1,
+        pageSize: 1,
+        filters: { searchQuery: materialId }
+      });
+      const material = response.data.find(m => m.id === materialId);
+      if (material) {
+        setMaterialName(material.name);
+      }
+    } catch (error) {
+      console.error('Error loading material name:', error);
+      setMaterialName('Chưa rõ tên');
+    }
+  };
+
   const getUserName = (userId: string) => {
     const user = users.find(u => u.id === userId);
-    return user?.name || 'Không xác định';
+    return user?.fullName || 'Không xác định';
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -232,6 +260,36 @@ export default function DesignDetailPage() {
       toast({
         title: "Lỗi",
         description: "Không thể cập nhật ngày gửi khách hàng",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMaterialUpdate = async () => {
+    if (!design) return;
+
+    try {
+      const updated = await designService.updateDesign(design.id, { 
+        material: selectedMaterial || undefined 
+      });
+      setDesign(updated);
+      setEditingMaterial(false);
+      
+      // Load material name for display
+      if (selectedMaterial) {
+        loadMaterialName(selectedMaterial);
+      } else {
+        setMaterialName('');
+      }
+
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật chất liệu",
+      });
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật chất liệu",
         variant: "destructive",
       });
     }
@@ -378,6 +436,35 @@ export default function DesignDetailPage() {
                 <div>
                   <label className="text-sm text-muted-foreground">Số lượng</label>
                   <p>{design.quantity.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Chất liệu</label>
+                  {editingMaterial ? (
+                    <div className="flex items-center gap-2">
+                      <MaterialSelector 
+                        value={selectedMaterial} 
+                        onValueChange={setSelectedMaterial}
+                        placeholder="Chọn chất liệu"
+                        className="w-48"
+                        showStock={true}
+                      />
+                      <Button size="sm" onClick={handleMaterialUpdate}>
+                        <Save className="h-3 w-3 mr-1" />
+                        Lưu
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingMaterial(false)}>
+                        Hủy
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p>{materialName || design.material || 'Chưa chọn'}</p>
+                      <Button size="sm" variant="outline" onClick={() => setEditingMaterial(true)}>
+                        <Edit className="h-3 w-3 mr-1" />
+                        Sửa
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Thiết kế viên</label>

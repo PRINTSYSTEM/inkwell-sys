@@ -1,4 +1,4 @@
-import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers, Settings, Briefcase, Eye } from 'lucide-react';
+import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers, Settings, Briefcase, Eye, BarChart3 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import {
@@ -29,7 +29,6 @@ const navigationByRole = {
         { title: 'Thiết kế', url: '/design', icon: Palette },
         { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
         { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
-        { title: 'Quản lý loại thiết kế', url: '/design-types', icon: Settings },
       ]
     },
     { 
@@ -53,7 +52,17 @@ const navigationByRole = {
       icon: Package,
       submenu: [
         { title: 'Quản lý kho', url: '/inventory', icon: Package },
-        { title: 'Loại nguyên liệu thô', url: '/material-types', icon: Layers }
+        { title: 'Quản lý chất liệu', url: '/materials', icon: Package },
+      ]
+    },
+    { 
+      title: 'Quản lý hệ thống',
+      icon: Settings,
+      submenu: [
+        { title: 'Quản lý người dùng', url: '/admin/users', icon: Users },
+        { title: 'Loại chất liệu', url: '/material-types', icon: Layers },
+        { title: 'Loại thiết kế', url: '/design-types', icon: Settings },
+        { title: 'Tạo mã thiết kế', url: '/design/code-generator', icon: Settings },
       ]
     },
     { 
@@ -74,7 +83,6 @@ const navigationByRole = {
       submenu: [
         { title: 'Thiết kế', url: '/design', icon: Palette },
         { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
-        { title: 'Quản lý loại thiết kế', url: '/design-types', icon: Settings },
       ]
     },
     { 
@@ -98,7 +106,16 @@ const navigationByRole = {
       icon: Package,
       submenu: [
         { title: 'Quản lý kho', url: '/inventory', icon: Package },
-        { title: 'Loại nguyên liệu thô', url: '/material-types', icon: Layers }
+        { title: 'Quản lý chất liệu', url: '/materials', icon: Package },
+      ]
+    },
+    { 
+      title: 'Quản lý hệ thống',
+      icon: Settings,
+      submenu: [
+        { title: 'Loại chất liệu', url: '/material-types', icon: Layers },
+        { title: 'Loại thiết kế', url: '/design-types', icon: Settings },
+        { title: 'Tạo mã thiết kế', url: '/design/code-generator', icon: Settings },
       ]
     },
     { 
@@ -113,13 +130,20 @@ const navigationByRole = {
   designer_manager: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
     { 
+      title: 'Manager Dashboard',
+      icon: Users,
+      submenu: [
+        { title: 'Tổng quan phòng ban', url: '/manager/dashboard', icon: LayoutDashboard },
+        { title: 'Theo dõi hiệu suất', url: '/manager/performance', icon: BarChart3 },
+      ]
+    },
+    { 
       title: 'Phòng ban thiết kế',
       icon: Palette,
       submenu: [
         { title: 'Thiết kế', url: '/design', icon: Palette },
         { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
         { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
-        { title: 'Quản lý loại thiết kế', url: '/design-types', icon: Settings },
       ]
     },
     { 
@@ -130,10 +154,34 @@ const navigationByRole = {
         { title: 'Đơn hàng', url: '/orders', icon: FileText },
       ]
     },
+    { 
+      title: 'Kho vật tư',
+      icon: Package,
+      submenu: [
+        { title: 'Quản lý chất liệu', url: '/materials', icon: Package },
+      ]
+    },
+    { 
+      title: 'Quản lý hệ thống',
+      icon: Settings,
+      submenu: [
+        { title: 'Loại chất liệu', url: '/material-types', icon: Layers },
+        { title: 'Loại thiết kế', url: '/design-types', icon: Settings },
+        { title: 'Tạo mã thiết kế', url: '/design/code-generator', icon: Settings },
+      ]
+    },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   production_manager: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { 
+      title: 'Manager Dashboard',
+      icon: Users,
+      submenu: [
+        { title: 'Tổng quan phòng ban', url: '/manager/dashboard', icon: LayoutDashboard },
+        { title: 'Theo dõi hiệu suất', url: '/manager/performance', icon: BarChart3 },
+      ]
+    },
     { 
       title: 'Khách hàng & Đơn hàng',
       icon: Users,
@@ -153,7 +201,14 @@ const navigationByRole = {
       icon: Package,
       submenu: [
         { title: 'Quản lý kho', url: '/inventory', icon: Package },
-        { title: 'Loại nguyên liệu thô', url: '/material-types', icon: Layers }
+        { title: 'Quản lý chất liệu', url: '/materials', icon: Package },
+      ]
+    },
+    { 
+      title: 'Quản lý hệ thống',
+      icon: Settings,
+      submenu: [
+        { title: 'Loại chất liệu', url: '/material-types', icon: Layers },
       ]
     },
     { 

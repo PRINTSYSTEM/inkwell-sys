@@ -18,6 +18,7 @@ export * from './data/prepress';
 // ===== SERVICES =====
 export * from './services/designService';
 export * from './services/designTypesService';
+export * from '../../services/materialService';
 
 // ===== CONFIGURATIONS =====
 export * from './config/designTypes';

@@ -1,11 +1,122 @@
 export type UserRole = 'admin' | 'cskh' | 'design' | 'production_manager' | 'production' | 'accounting' | 'hr';
 
+// Permission types
+export type Permission = 
+  | 'users.view' | 'users.create' | 'users.edit' | 'users.delete'
+  | 'materials.view' | 'materials.create' | 'materials.edit' | 'materials.delete'
+  | 'designs.view' | 'designs.create' | 'designs.edit' | 'designs.delete' | 'designs.assign'
+  | 'orders.view' | 'orders.create' | 'orders.edit' | 'orders.delete'
+  | 'customers.view' | 'customers.create' | 'customers.edit' | 'customers.delete'
+  | 'production.view' | 'production.create' | 'production.edit' | 'production.delete'
+  | 'accounting.view' | 'accounting.create' | 'accounting.edit' | 'accounting.delete'
+  | 'reports.view' | 'reports.export'
+  | 'settings.view' | 'settings.edit';
+
+// Role permissions mapping
+export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  admin: [
+    'users.view', 'users.create', 'users.edit', 'users.delete',
+    'materials.view', 'materials.create', 'materials.edit', 'materials.delete',
+    'designs.view', 'designs.create', 'designs.edit', 'designs.delete', 'designs.assign',
+    'orders.view', 'orders.create', 'orders.edit', 'orders.delete',
+    'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
+    'production.view', 'production.create', 'production.edit', 'production.delete',
+    'accounting.view', 'accounting.create', 'accounting.edit', 'accounting.delete',
+    'reports.view', 'reports.export',
+    'settings.view', 'settings.edit'
+  ],
+  cskh: [
+    'customers.view', 'customers.create', 'customers.edit',
+    'orders.view', 'orders.create', 'orders.edit',
+    'designs.view',
+    'reports.view'
+  ],
+  design: [
+    'designs.view', 'designs.edit',
+    'materials.view',
+    'orders.view',
+    'customers.view'
+  ],
+  production_manager: [
+    'production.view', 'production.create', 'production.edit', 'production.delete',
+    'designs.view', 'designs.assign',
+    'materials.view',
+    'orders.view',
+    'users.view',
+    'reports.view'
+  ],
+  production: [
+    'production.view', 'production.edit',
+    'designs.view',
+    'materials.view',
+    'orders.view'
+  ],
+  accounting: [
+    'accounting.view', 'accounting.create', 'accounting.edit', 'accounting.delete',
+    'orders.view', 'orders.edit',
+    'customers.view', 'customers.edit',
+    'reports.view', 'reports.export'
+  ],
+  hr: [
+    'users.view', 'users.create', 'users.edit',
+    'reports.view'
+  ]
+};
+
+// Design material types
+export const DESIGN_MATERIAL_TYPES = [
+  'Nhãn Metaline',
+  'Hộp Giấy Duplex',
+  'Hộp Carton Sóng E',
+  'Hộp Giấy Ivory',
+  'Decal Giấy',
+  'Decal Metaline'
+] as const;
+
+export type DesignMaterialType = typeof DESIGN_MATERIAL_TYPES[number];
+
 export interface User {
   id: string;
+  username: string;
+  fullName: string;
   email: string;
-  name: string;
-  role: UserRole;
+  phone?: string;
   avatar?: string;
+  role: UserRole;
+  department?: string;
+  position?: string;
+  employeeId?: string;
+  joiningDate?: string;
+  birthDate?: string;
+  address?: string;
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    relationship: string;
+  };
+  bankInfo?: {
+    bankName: string;
+    accountNumber: string;
+    accountHolder: string;
+  };
+  salary?: {
+    basic: number;
+    allowances?: number;
+    bonus?: number;
+  };
+  workSchedule?: {
+    startTime: string;
+    endTime: string;
+    workDays: string[];
+  };
+  permissions: Permission[];
+  status: 'active' | 'inactive' | 'suspended';
+  lastLogin?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  notes?: string;
 }
 
 export interface Customer {
@@ -91,6 +202,7 @@ export interface Design {
   quantity: number;
   requirements: string;
   notes?: string;
+  material?: string; // Chất liệu (nhãn metaline, hộp giấy Duplex, etc.)
   
   // Assignment & Status
   assignedTo: string; // ID của designer được assign
@@ -224,6 +336,57 @@ export interface ProductCategoryInfo {
 }
 
 export type MaterialType = 'paper' | 'plastic' | 'ink' | 'glue' | 'coating' | 'foil' | 'ribbon' | 'hardware' | 'packaging';
+
+export const MATERIAL_TYPE_CATEGORIES: Omit<MaterialTypeCategory, 'id' | 'createdAt' | 'updatedAt'>[] = [
+  {
+    name: 'Giấy in ấn',
+    description: 'Các loại giấy sử dụng trong in ấn',
+    materialType: 'paper',
+    specifications: ['80gsm', '120gsm', '150gsm', '200gsm', '250gsm', '300gsm', '350gsm'],
+    units: ['tờ', 'kg', 'm2', 'cuộn'],
+    isActive: true
+  },
+  {
+    name: 'Nhựa và màng nhựa',
+    description: 'Các loại nhựa và màng nhựa',
+    materialType: 'plastic',
+    specifications: ['0.1mm', '0.2mm', '0.3mm', '0.5mm', 'PVC', 'PP', 'PE'],
+    units: ['m2', 'kg', 'cuộn', 'tờ'],
+    isActive: true
+  },
+  {
+    name: 'Mực in',
+    description: 'Mực in offset, digital và UV',
+    materialType: 'ink',
+    specifications: ['CMYK', 'Pantone', 'UV', 'Metallic'],
+    units: ['kg', 'lít', 'can'],
+    isActive: true
+  },
+  {
+    name: 'Phủ bóng và coating',
+    description: 'Varnish, UV coating và các loại phủ bóng',
+    materialType: 'coating',
+    specifications: ['Gloss', 'Matt', 'Satin', 'UV'],
+    units: ['lít', 'kg'],
+    isActive: true
+  },
+  {
+    name: 'Giấy bạc và foil',
+    description: 'Giấy bạc ép kim và các loại foil',
+    materialType: 'foil',
+    specifications: ['Gold', 'Silver', 'Hologram', 'Color'],
+    units: ['m2', 'cuộn'],
+    isActive: true
+  },
+  {
+    name: 'Phụ kiện',
+    description: 'Dây, móc, khóa và các phụ kiện khác',
+    materialType: 'hardware',
+    specifications: ['Size S', 'Size M', 'Size L'],
+    units: ['cái', 'bộ', 'kg'],
+    isActive: true
+  }
+];
 
 export interface Material {
   id: string;

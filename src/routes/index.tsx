@@ -25,15 +25,18 @@ const Inventory = lazy(() => import('@/pages/inventory/index'));
 const InventoryDetail = lazy(() => import('@/pages/inventory/[id]'));
 const CreateMaterial = lazy(() => import('@/pages/inventory/create'));
 const ProductTemplates = lazy(() => import('@/pages/inventory/templates'));
-const MaterialTypes = lazy(() => import('@/pages/material-types/index'));
-const MaterialTypeDetail = lazy(() => import('@/pages/material-types/[id]'));
-const CreateMaterialType = lazy(() => import('@/pages/material-types/create'));
+// const MaterialTypes = lazy(() => import('@/pages/material-types/index'));
+// const MaterialTypeDetail = lazy(() => import('@/pages/material-types/[id]'));
+// const CreateMaterialType = lazy(() => import('@/pages/material-types/create'));
+const Materials = lazy(() => import('@/pages/materials/index'));
 const DesignTypes = lazy(() => import('@/pages/design-types/index'));
 const DesignTypeDetail = lazy(() => import('@/pages/design-types/[id]'));
 const CreateDesignType = lazy(() => import('@/pages/design-types/create'));
 const PrepressCreatePrintOrder = lazy(() => import('@/pages/prepress/create-print-order.tsx'));
 const PrepressIndex = lazy(() => import('@/pages/prepress/index'));
 const Notifications = lazy(() => import('@/pages/Notifications'));
+const AdminRoutes = lazy(() => import('@/pages/admin'));
+const ManagerRoutes = lazy(() => import('@/pages/manager'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 export const router = createBrowserRouter([
@@ -250,30 +253,43 @@ export const router = createBrowserRouter([
           }
         ]
       },
+      // {
+      //   path: 'material-types',
+      //   children: [
+      //     {
+      //       index: true,
+      //       element: (
+      //         <Suspense fallback={<div>Loading...</div>}>
+      //           <MaterialTypes />
+      //         </Suspense>
+      //       )
+      //     },
+      //     {
+      //       path: 'create',
+      //       element: (
+      //         <Suspense fallback={<div>Loading...</div>}>
+      //           <CreateMaterialType />
+      //         </Suspense>
+      //       )
+      //     },
+      //     {
+      //       path: ':id',
+      //       element: (
+      //         <Suspense fallback={<div>Loading...</div>}>
+      //           <MaterialTypeDetail />
+      //         </Suspense>
+      //       )
+      //     }
+      //   ]
+      // },
       {
-        path: 'material-types',
+        path: 'materials',
         children: [
           {
             index: true,
             element: (
               <Suspense fallback={<div>Loading...</div>}>
-                <MaterialTypes />
-              </Suspense>
-            )
-          },
-          {
-            path: 'create',
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <CreateMaterialType />
-              </Suspense>
-            )
-          },
-          {
-            path: ':id',
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <MaterialTypeDetail />
+                <Materials />
               </Suspense>
             )
           }
@@ -334,6 +350,22 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>Loading...</div>}>
             <Notifications />
+          </Suspense>
+        )
+      },
+      {
+        path: 'admin/*',
+        element: (
+          <Suspense fallback={<div>Loading...</div>}>
+            <AdminRoutes />
+          </Suspense>
+        )
+      },
+      {
+        path: 'manager/*',
+        element: (
+          <Suspense fallback={<div>Loading...</div>}>
+            <ManagerRoutes />
           </Suspense>
         )
       }
