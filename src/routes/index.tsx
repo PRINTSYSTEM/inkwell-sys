@@ -35,6 +35,7 @@ const CreateDesignType = lazy(() => import('@/pages/design-types/create'));
 const PrepressCreatePrintOrder = lazy(() => import('@/pages/prepress/create-print-order.tsx'));
 const PrepressIndex = lazy(() => import('@/pages/prepress/index'));
 const Notifications = lazy(() => import('@/pages/Notifications'));
+const NotificationCenter = lazy(() => import('@/pages/notifications/NotificationCenter'));
 const AdminRoutes = lazy(() => import('@/pages/admin'));
 const ManagerRoutes = lazy(() => import('@/pages/manager'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -349,7 +350,7 @@ export const router = createBrowserRouter([
         path: 'notifications',
         element: (
           <Suspense fallback={<div>Loading...</div>}>
-            <Notifications />
+            <NotificationCenter />
           </Suspense>
         )
       },

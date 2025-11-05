@@ -1,9 +1,10 @@
-import { Bell, LogOut, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import NotificationBell from '@/components/NotificationBell';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,9 +42,7 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/notifications')}>
-            <Bell className="h-5 w-5" />
-          </Button>
+          <NotificationBell userId={user.id} />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

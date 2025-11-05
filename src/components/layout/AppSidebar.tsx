@@ -1,4 +1,4 @@
-import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers, Settings, Briefcase, Eye, BarChart3 } from 'lucide-react';
+import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers, Settings, Briefcase, Eye, BarChart3, Shield, UserPlus } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import {
@@ -60,6 +60,8 @@ const navigationByRole = {
       icon: Settings,
       submenu: [
         { title: 'Quản lý người dùng', url: '/admin/users', icon: Users },
+        { title: 'Quản lý vai trò', url: '/admin/roles', icon: Shield },
+        { title: 'Phân tích phòng ban', url: '/admin/analytics', icon: BarChart3 },
         { title: 'Loại chất liệu', url: '/material-types', icon: Layers },
         { title: 'Loại thiết kế', url: '/design-types', icon: Settings },
         { title: 'Tạo mã thiết kế', url: '/design/code-generator', icon: Settings },
@@ -135,6 +137,7 @@ const navigationByRole = {
       submenu: [
         { title: 'Tổng quan phòng ban', url: '/manager/dashboard', icon: LayoutDashboard },
         { title: 'Theo dõi hiệu suất', url: '/manager/performance', icon: BarChart3 },
+        { title: 'Phân công công việc', url: '/manager/assignments', icon: UserPlus },
       ]
     },
     { 
@@ -180,6 +183,7 @@ const navigationByRole = {
       submenu: [
         { title: 'Tổng quan phòng ban', url: '/manager/dashboard', icon: LayoutDashboard },
         { title: 'Theo dõi hiệu suất', url: '/manager/performance', icon: BarChart3 },
+        { title: 'Phân công công việc', url: '/manager/assignments', icon: UserPlus },
       ]
     },
     { 

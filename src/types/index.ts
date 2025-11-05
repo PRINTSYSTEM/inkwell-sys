@@ -1,5 +1,34 @@
 export type UserRole = 'admin' | 'cskh' | 'design' | 'production_manager' | 'production' | 'accounting' | 'hr';
 
+// Export employee types
+export * from './employee';
+
+// Export role types selectively
+export type { Role, RoleAssignment, RoleAnalytics, RoleConflict, RoleFormData } from './role';
+
+// Export design code types
+export * from './design-code';
+
+// Export assignment types
+export * from './assignment';
+
+// Export department analytics types
+export type { 
+  DepartmentKPI, 
+  DepartmentMetrics, 
+  PerformanceTrend, 
+  DepartmentComparison,
+  ProjectStats,
+  ResourceUtilization,
+  DepartmentGoal,
+  AnalyticsTimeframe,
+  DepartmentAnalytics,
+  AnalyticsInsight,
+  AnalyticsFilter,
+  AnalyticsReport,
+  ChartConfig
+} from './department-analytics';
+
 // Permission types
 export type Permission = 
   | 'users.view' | 'users.create' | 'users.edit' | 'users.delete'

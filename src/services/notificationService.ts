@@ -1,414 +1,349 @@
-// Smart Notification Service
-// Handles intelligent notifications for various system events
+import { 
+  Notification, 
+  NotificationPreferences, 
+  NotificationTemplate, 
+  NotificationRule,
+  NotificationStats,
+  NotificationFilter,
+  NotificationBatch,
+  NotificationHistory,
+  NotificationType,
+  NotificationPriority,
+  NotificationCategory,
+  NotificationEvent
+} from '../types/notification';
 
-import { orders, payments, mockMaterials } from '@/lib/mockData';
-
-export interface SmartNotification {
-  id: string;
-  type: 'order_deadline' | 'payment_overdue' | 'low_stock' | 'status_change' | 'material_shortage';
-  title: string;
-  message: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  relatedId?: string;
-  relatedType?: 'order' | 'payment' | 'material' | 'production';
-  read: boolean;
-  actionRequired: boolean;
-  createdAt: string;
-  expiresAt?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface NotificationRule {
-  type: SmartNotification['type'];
-  condition: () => boolean;
-  generate: () => SmartNotification[];
-  frequency: 'realtime' | 'hourly' | 'daily';
-}
-
-class SmartNotificationService {
-  private notifications: SmartNotification[] = [];
+class NotificationService {
+  private notifications: Notification[] = [];
+  private templates: NotificationTemplate[] = [];
   private rules: NotificationRule[] = [];
-  private subscribers: ((notifications: SmartNotification[]) => void)[] = [];
+  private preferences: NotificationPreferences[] = [];
+  private batches: NotificationBatch[] = [];
+  private history: NotificationHistory[] = [];
+  private listeners: ((notification: Notification) => void)[] = [];
 
   constructor() {
-    this.initializeDefaultRules();
-    this.startPeriodicCheck();
+    this.initializeMockData();
   }
 
-  private initializeDefaultRules() {
-    // Rule 1: Order deadline approaching
-    this.addRule({
-      type: 'order_deadline',
-      frequency: 'daily',
-      condition: () => true, // Always check
-      generate: () => {
-        const notifications: SmartNotification[] = [];
-        const now = new Date();
-        const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  // CRUD Operations for Notifications
+  async getNotifications(userId: string, filter?: NotificationFilter): Promise<Notification[]> {
+    let userNotifications = this.notifications.filter(n => n.userId === userId);
 
-        orders.forEach(order => {
-          if (order.deliveryDate && order.status !== 'completed') {
-            const deadline = new Date(order.deliveryDate);
-            if (deadline <= threeDaysFromNow && deadline > now) {
-              const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
-              
-              notifications.push({
-                id: `deadline-${order.id}-${Date.now()}`,
-                type: 'order_deadline',
-                title: 'Đơn hàng sắp đến hạn',
-                message: `Đơn hàng #${order.orderNumber} sẽ đến hạn trong ${daysLeft} ngày`,
-                priority: daysLeft <= 1 ? 'urgent' : daysLeft <= 2 ? 'high' : 'medium',
-                relatedId: order.id,
-                relatedType: 'order',
-                read: false,
-                actionRequired: true,
-                createdAt: new Date().toISOString(),
-                metadata: {
-                  orderNumber: order.orderNumber,
-                  deadline: order.deliveryDate,
-                  daysLeft
-                }
-              });
-            }
-          }
-        });
-
-        return notifications;
+    if (filter) {
+      if (filter.type) {
+        userNotifications = userNotifications.filter(n => filter.type!.includes(n.type));
       }
-    });
-
-    // Rule 2: Payment overdue
-    this.addRule({
-      type: 'payment_overdue',
-      frequency: 'daily',
-      condition: () => true,
-      generate: () => {
-        const notifications: SmartNotification[] = [];
-        const now = new Date();
-
-        payments.forEach(payment => {
-          if (payment.status === 'pending') {
-            // Mock due date logic - assume 30 days from creation
-            const createdDate = new Date(payment.createdAt);
-            const dueDate = new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-            if (dueDate < now) {
-              const daysOverdue = Math.ceil((now.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000));
-              
-              notifications.push({
-                id: `overdue-${payment.id}-${Date.now()}`,
-                type: 'payment_overdue',
-                title: 'Thanh toán quá hạn',
-                message: `Thanh toán #${payment.orderNumber} đã quá hạn ${daysOverdue} ngày`,
-                priority: daysOverdue > 7 ? 'urgent' : daysOverdue > 3 ? 'high' : 'medium',
-                relatedId: payment.id,
-                relatedType: 'payment',
-                read: false,
-                actionRequired: true,
-                createdAt: new Date().toISOString(),
-                metadata: {
-                  paymentAmount: payment.amount,
-                  dueDate: dueDate.toISOString(),
-                  daysOverdue
-                }
-              });
-            }
-          }
-        });
-
-        return notifications;
+      if (filter.priority) {
+        userNotifications = userNotifications.filter(n => filter.priority!.includes(n.priority));
       }
-    });
-
-    // Rule 3: Low stock materials
-    this.addRule({
-      type: 'low_stock',
-      frequency: 'daily',
-      condition: () => true,
-      generate: () => {
-        const notifications: SmartNotification[] = [];
-
-        mockMaterials.forEach(material => {
-          if (material.currentStock <= material.minStock) {
-            const shortagePercentage = Math.round(
-              ((material.minStock - material.currentStock) / material.minStock) * 100
-            );
-
-            notifications.push({
-              id: `stock-${material.id}-${Date.now()}`,
-              type: 'low_stock',
-              title: 'Nguyên liệu sắp hết',
-              message: `${material.name} chỉ còn ${material.currentStock} ${material.unit} (tối thiểu: ${material.minStock})`,
-              priority: material.currentStock === 0 ? 'urgent' : 
-                       material.currentStock < material.minStock * 0.5 ? 'high' : 'medium',
-              relatedId: material.id,
-              relatedType: 'material',
-              read: false,
-              actionRequired: true,
-              createdAt: new Date().toISOString(),
-              metadata: {
-                materialName: material.name,
-                currentStock: material.currentStock,
-                minimumStock: material.minStock,
-                shortagePercentage
-              }
-            });
-          }
-        });
-
-        return notifications;
+      if (filter.category) {
+        userNotifications = userNotifications.filter(n => filter.category!.includes(n.category));
       }
-    });
-
-    // Rule 4: Material shortage for production
-    this.addRule({
-      type: 'material_shortage',
-      frequency: 'realtime',
-      condition: () => true,
-      generate: () => {
-        // This would be triggered when production calculates material requirements
-        // For now, return empty array as this is triggered by external events
-        return [];
+      if (filter.isRead !== undefined) {
+        userNotifications = userNotifications.filter(n => n.isRead === filter.isRead);
       }
-    });
-  }
-
-  addRule(rule: NotificationRule) {
-    this.rules.push(rule);
-  }
-
-  private startPeriodicCheck() {
-    // Check daily rules every hour (in production, this would be more sophisticated)
-    setInterval(() => {
-      this.generateNotifications();
-    }, 60 * 60 * 1000); // 1 hour
-
-    // Initial check
-    this.generateNotifications();
-  }
-
-  private generateNotifications() {
-    const newNotifications: SmartNotification[] = [];
-
-    this.rules.forEach(rule => {
-      if (rule.condition()) {
-        const generated = rule.generate();
-        newNotifications.push(...generated);
+      if (filter.dateRange) {
+        userNotifications = userNotifications.filter(n => 
+          n.createdAt >= filter.dateRange!.start && n.createdAt <= filter.dateRange!.end
+        );
       }
-    });
-
-    // Remove duplicates and old notifications
-    this.cleanupNotifications();
-    
-    // Add new notifications
-    newNotifications.forEach(notification => {
-      // Check if similar notification already exists
-      const exists = this.notifications.some(existing => 
-        existing.type === notification.type &&
-        existing.relatedId === notification.relatedId &&
-        !existing.read
-      );
-
-      if (!exists) {
-        this.notifications.unshift(notification);
+      if (filter.search) {
+        const searchLower = filter.search.toLowerCase();
+        userNotifications = userNotifications.filter(n => 
+          n.title.toLowerCase().includes(searchLower) || 
+          n.message.toLowerCase().includes(searchLower)
+        );
       }
-    });
-
-    // Notify subscribers
-    this.notifySubscribers();
-  }
-
-  private cleanupNotifications() {
-    const now = new Date();
-    
-    // Remove expired notifications
-    this.notifications = this.notifications.filter(notification => {
-      if (notification.expiresAt) {
-        return new Date(notification.expiresAt) > now;
-      }
-      return true;
-    });
-
-    // Keep only last 100 notifications
-    if (this.notifications.length > 100) {
-      this.notifications = this.notifications.slice(0, 100);
     }
+
+    return userNotifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  // Public API
-  getNotifications(): SmartNotification[] {
-    return this.notifications;
+  async createNotification(notification: Omit<Notification, 'id' | 'createdAt'>): Promise<Notification> {
+    const newNotification: Notification = {
+      ...notification,
+      id: `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date()
+    };
+
+    this.notifications.push(newNotification);
+    
+    // Trigger real-time listeners
+    this.listeners.forEach(listener => listener(newNotification));
+    
+    // Log to history
+    this.addToHistory(newNotification.id, 'sent');
+
+    return newNotification;
   }
 
-  getUnreadNotifications(): SmartNotification[] {
-    return this.notifications.filter(n => !n.read);
-  }
-
-  getNotificationsByType(type: SmartNotification['type']): SmartNotification[] {
-    return this.notifications.filter(n => n.type === type);
-  }
-
-  getNotificationsByPriority(priority: SmartNotification['priority']): SmartNotification[] {
-    return this.notifications.filter(n => n.priority === priority);
-  }
-
-  markAsRead(notificationId: string): void {
+  async markAsRead(notificationId: string): Promise<void> {
     const notification = this.notifications.find(n => n.id === notificationId);
-    if (notification) {
-      notification.read = true;
-      this.notifySubscribers();
+    if (notification && !notification.isRead) {
+      notification.isRead = true;
+      notification.readAt = new Date();
+      this.addToHistory(notificationId, 'read');
     }
   }
 
-  markAllAsRead(): void {
-    this.notifications.forEach(n => n.read = true);
-    this.notifySubscribers();
+  async markAllAsRead(userId: string): Promise<void> {
+    const userNotifications = this.notifications.filter(n => n.userId === userId && !n.isRead);
+    userNotifications.forEach(notification => {
+      notification.isRead = true;
+      notification.readAt = new Date();
+      this.addToHistory(notification.id, 'read');
+    });
   }
 
-  deleteNotification(notificationId: string): void {
-    this.notifications = this.notifications.filter(n => n.id !== notificationId);
-    this.notifySubscribers();
+  async deleteNotification(notificationId: string): Promise<void> {
+    const index = this.notifications.findIndex(n => n.id === notificationId);
+    if (index > -1) {
+      this.notifications.splice(index, 1);
+    }
   }
 
-  // Manually trigger specific notification types
-  triggerMaterialShortageNotification(materialId: string, shortage: number, requiredAmount: number): void {
-    const material = mockMaterials.find(m => m.id === materialId);
-    if (!material) return;
+  // Notification Statistics
+  async getNotificationStats(userId: string): Promise<NotificationStats> {
+    const userNotifications = this.notifications.filter(n => n.userId === userId);
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
 
-    const notification: SmartNotification = {
-      id: `shortage-${materialId}-${Date.now()}`,
-      type: 'material_shortage',
-      title: 'Thiếu nguyên liệu sản xuất',
-      message: `Không đủ ${material.name} để sản xuất. Thiếu ${shortage} ${material.unit}`,
-      priority: 'high',
-      relatedId: materialId,
-      relatedType: 'material',
-      read: false,
-      actionRequired: true,
-      createdAt: new Date().toISOString(),
-      metadata: {
-        materialName: material.name,
-        shortage,
-        requiredAmount,
-        currentStock: material.currentStock
-      }
+    const stats: NotificationStats = {
+      total: userNotifications.length,
+      unread: userNotifications.filter(n => !n.isRead).length,
+      byType: {} as Record<NotificationType, number>,
+      byPriority: {} as Record<NotificationPriority, number>,
+      byCategory: {} as Record<NotificationCategory, number>,
+      last7Days: userNotifications.filter(n => n.createdAt >= last7Days).length,
+      readRate: userNotifications.length > 0 ? 
+        (userNotifications.filter(n => n.isRead).length / userNotifications.length) * 100 : 0
     };
 
-    this.notifications.unshift(notification);
-    this.notifySubscribers();
+    // Count by type
+    userNotifications.forEach(n => {
+      stats.byType[n.type] = (stats.byType[n.type] || 0) + 1;
+      stats.byPriority[n.priority] = (stats.byPriority[n.priority] || 0) + 1;
+      stats.byCategory[n.category] = (stats.byCategory[n.category] || 0) + 1;
+    });
+
+    return stats;
   }
 
-  triggerStatusChangeNotification(
-    entityType: 'order' | 'production' | 'payment',
-    entityId: string,
-    oldStatus: string,
-    newStatus: string
-  ): void {
-    const notification: SmartNotification = {
-      id: `status-${entityType}-${entityId}-${Date.now()}`,
-      type: 'status_change',
-      title: 'Thay đổi trạng thái',
-      message: `${entityType} #${entityId} đã chuyển từ "${oldStatus}" sang "${newStatus}"`,
-      priority: 'medium',
-      relatedId: entityId,
-      relatedType: entityType,
-      read: false,
-      actionRequired: false,
-      createdAt: new Date().toISOString(),
-      metadata: {
-        entityType,
-        oldStatus,
-        newStatus
-      }
-    };
-
-    this.notifications.unshift(notification);
-    this.notifySubscribers();
-  }
-
-  // Subscription management
-  subscribe(callback: (notifications: SmartNotification[]) => void): () => void {
-    this.subscribers.push(callback);
+  // User Preferences
+  async getPreferences(userId: string): Promise<NotificationPreferences> {
+    let preferences = this.preferences.find(p => p.userId === userId);
     
-    // Return unsubscribe function
+    if (!preferences) {
+      preferences = this.createDefaultPreferences(userId);
+      this.preferences.push(preferences);
+    }
+    
+    return preferences;
+  }
+
+  async updatePreferences(userId: string, updates: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    let preferences = this.preferences.find(p => p.userId === userId);
+    
+    if (!preferences) {
+      preferences = this.createDefaultPreferences(userId);
+      this.preferences.push(preferences);
+    }
+    
+    Object.assign(preferences, updates);
+    return preferences;
+  }
+
+  // Real-time functionality
+  subscribe(listener: (notification: Notification) => void): () => void {
+    this.listeners.push(listener);
     return () => {
-      this.subscribers = this.subscribers.filter(sub => sub !== callback);
-    };
-  }
-
-  private notifySubscribers(): void {
-    this.subscribers.forEach(callback => {
-      try {
-        callback(this.notifications);
-      } catch (error) {
-        console.error('Error notifying subscriber:', error);
+      const index = this.listeners.indexOf(listener);
+      if (index > -1) {
+        this.listeners.splice(index, 1);
       }
-    });
-  }
-
-  // Statistics
-  getNotificationStats(): {
-    total: number;
-    unread: number;
-    byPriority: Record<string, number>;
-    byType: Record<string, number>;
-  } {
-    const unread = this.getUnreadNotifications();
-    
-    const byPriority = this.notifications.reduce((acc, n) => {
-      acc[n.priority] = (acc[n.priority] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const byType = this.notifications.reduce((acc, n) => {
-      acc[n.type] = (acc[n.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return {
-      total: this.notifications.length,
-      unread: unread.length,
-      byPriority,
-      byType
     };
   }
-}
 
-// Singleton instance
-export const smartNotificationService = new SmartNotificationService();
+  // Helper Methods
+  async sendAssignmentNotification(
+    userId: string, 
+    assignmentTitle: string, 
+    assignmentId: string,
+    type: 'created' | 'updated' | 'due_soon' | 'overdue'
+  ): Promise<void> {
+    const titles = {
+      created: 'Nhiệm vụ mới',
+      updated: 'Nhiệm vụ đã cập nhật',
+      due_soon: 'Nhiệm vụ sắp đến hạn',
+      overdue: 'Nhiệm vụ quá hạn'
+    };
 
-// React hook for notifications
-import { useState, useEffect } from 'react';
+    const messages = {
+      created: `Bạn đã được giao nhiệm vụ: ${assignmentTitle}`,
+      updated: `Nhiệm vụ "${assignmentTitle}" đã được cập nhật`,
+      due_soon: `Nhiệm vụ "${assignmentTitle}" sắp đến hạn`,
+      overdue: `Nhiệm vụ "${assignmentTitle}" đã quá hạn`
+    };
 
-export function useSmartNotifications() {
-  const [notifications, setNotifications] = useState<SmartNotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+    const priorities: Record<string, NotificationPriority> = {
+      created: 'medium',
+      updated: 'medium',
+      due_soon: 'high',
+      overdue: 'urgent'
+    };
 
-  useEffect(() => {
-    // Subscribe to notification updates
-    const unsubscribe = smartNotificationService.subscribe((newNotifications) => {
-      setNotifications(newNotifications);
-      setUnreadCount(newNotifications.filter(n => !n.read).length);
+    await this.createNotification({
+      title: titles[type],
+      message: messages[type],
+      type: 'assignment',
+      priority: priorities[type],
+      category: 'assignment',
+      isRead: false,
+      userId,
+      data: { assignmentId, assignmentTitle },
+      actionUrl: `/assignments/${assignmentId}`
     });
+  }
 
-    // Initial load
-    setNotifications(smartNotificationService.getNotifications());
-    setUnreadCount(smartNotificationService.getUnreadNotifications().length);
+  async sendPerformanceNotification(
+    userId: string,
+    performanceData: {target?: string; achievement?: number},
+    type: 'review_due' | 'target_achieved' | 'improvement_needed'
+  ): Promise<void> {
+    const titles = {
+      review_due: 'Đánh giá hiệu suất',
+      target_achieved: 'Hoàn thành mục tiêu',
+      improvement_needed: 'Cần cải thiện hiệu suất'
+    };
 
-    return unsubscribe;
-  }, []);
+    const messages = {
+      review_due: 'Đã đến thời gian đánh giá hiệu suất định kỳ',
+      target_achieved: `Chúc mừng! Bạn đã đạt mục tiêu ${performanceData.target || ''}`,
+      improvement_needed: 'Hiệu suất làm việc cần được cải thiện'
+    };
 
-  return {
-    notifications,
-    unreadCount,
-    markAsRead: (id: string) => smartNotificationService.markAsRead(id),
-    markAllAsRead: () => smartNotificationService.markAllAsRead(),
-    deleteNotification: (id: string) => smartNotificationService.deleteNotification(id),
-    getStats: () => smartNotificationService.getNotificationStats(),
-    triggerMaterialShortage: (materialId: string, shortage: number, required: number) =>
-      smartNotificationService.triggerMaterialShortageNotification(materialId, shortage, required),
-    triggerStatusChange: (type: 'order' | 'production' | 'payment', id: string, oldStatus: string, newStatus: string) =>
-      smartNotificationService.triggerStatusChangeNotification(type, id, oldStatus, newStatus)
-  };
+    await this.createNotification({
+      title: titles[type],
+      message: messages[type],
+      type: 'performance',
+      priority: type === 'improvement_needed' ? 'high' : 'medium',
+      category: 'performance',
+      isRead: false,
+      userId,
+      data: performanceData,
+      actionUrl: '/performance'
+    });
+  }
+
+  async sendSystemNotification(
+    userIds: string[],
+    title: string,
+    message: string,
+    priority: NotificationPriority = 'medium'
+  ): Promise<void> {
+    for (const userId of userIds) {
+      await this.createNotification({
+        title,
+        message,
+        type: 'system',
+        priority,
+        category: 'system',
+        isRead: false,
+        userId
+      });
+    }
+  }
+
+  private createDefaultPreferences(userId: string): NotificationPreferences {
+    return {
+      userId,
+      emailNotifications: true,
+      pushNotifications: true,
+      categories: {
+        assignment: { enabled: true, priority: ['medium', 'high', 'urgent'] },
+        deadline: { enabled: true, priority: ['high', 'urgent'] },
+        performance: { enabled: true, priority: ['medium', 'high', 'urgent'] },
+        attendance: { enabled: true, priority: ['medium', 'high'] },
+        system: { enabled: true, priority: ['high', 'urgent'] },
+        announcement: { enabled: true, priority: ['low', 'medium', 'high'] },
+        workflow: { enabled: true, priority: ['medium', 'high'] },
+        approval: { enabled: true, priority: ['high', 'urgent'] }
+      },
+      quietHours: {
+        enabled: true,
+        startTime: '22:00',
+        endTime: '08:00'
+      }
+    };
+  }
+
+  private addToHistory(notificationId: string, action: 'sent' | 'read' | 'clicked' | 'dismissed'): void {
+    this.history.push({
+      id: `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      notificationId,
+      action,
+      timestamp: new Date()
+    });
+  }
+
+  private initializeMockData(): void {
+    // Mock notifications for demo
+    const mockNotifications: Notification[] = [
+      {
+        id: 'notif_1',
+        title: 'Nhiệm vụ mới được giao',
+        message: 'Bạn đã được giao nhiệm vụ thiết kế poster cho chiến dịch mùa hè',
+        type: 'assignment',
+        priority: 'high',
+        category: 'assignment',
+        isRead: false,
+        userId: 'user_1',
+        data: { assignmentId: 'assign_1', assignmentTitle: 'Thiết kế poster chiến dịch mùa hè' },
+        actionUrl: '/assignments/assign_1',
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
+      },
+      {
+        id: 'notif_2',
+        title: 'Đánh giá hiệu suất',
+        message: 'Đã đến thời gian đánh giá hiệu suất định kỳ tháng này',
+        type: 'performance',
+        priority: 'medium',
+        category: 'performance',
+        isRead: false,
+        userId: 'user_1',
+        actionUrl: '/performance',
+        createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000) // 4 hours ago
+      },
+      {
+        id: 'notif_3',
+        title: 'Nhiệm vụ sắp đến hạn',
+        message: 'Nhiệm vụ "Hoàn thiện thiết kế brochure" sẽ đến hạn trong 2 giờ nữa',
+        type: 'deadline',
+        priority: 'urgent',
+        category: 'deadline',
+        isRead: true,
+        userId: 'user_1',
+        data: { assignmentId: 'assign_2' },
+        actionUrl: '/assignments/assign_2',
+        createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
+        readAt: new Date(Date.now() - 5 * 60 * 60 * 1000)
+      },
+      {
+        id: 'notif_4',
+        title: 'Cập nhật hệ thống',
+        message: 'Hệ thống sẽ được bảo trì vào lúc 2:00 AM ngày mai',
+        type: 'system',
+        priority: 'medium',
+        category: 'system',
+        isRead: false,
+        userId: 'user_1',
+        createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000) // 8 hours ago
+      }
+    ];
+
+    this.notifications = mockNotifications;
+  }
 }
 
-export default SmartNotificationService;
+export const notificationService = new NotificationService();
