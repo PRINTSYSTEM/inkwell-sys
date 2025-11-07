@@ -22,7 +22,7 @@ export class AuthAPI {
       
       return loginData;
     } catch (error) {
-      console.error("❌ Login failed:", error);
+      console.error("❌ Login failed :", error);
       throw error;
     }
   }
