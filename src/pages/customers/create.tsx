@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { mockCustomers } from '@/lib/mockData';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+// TODO: Replace with Zod schema types when Customer schema is available
 interface CreateCustomerForm {
   companyName: string;
   representativeName: string;

@@ -1,4 +1,4 @@
-import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers, Settings, Briefcase, Eye, BarChart3, Shield, UserPlus } from 'lucide-react';
+import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers, Settings, Briefcase, Eye, BarChart3, Shield, UserPlus, FileBarChart } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import {
@@ -75,6 +75,7 @@ const navigationByRole = {
         { title: 'Chấm công', url: '/attendance', icon: Clock },
       ]
     },
+    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   shareholder: [
@@ -127,10 +128,20 @@ const navigationByRole = {
         { title: 'Kế toán', url: '/accounting', icon: Calculator },
       ]
     },
+    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   designer_manager: [
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { 
+      title: 'Quản lý thiết kế',
+      icon: Palette,
+      submenu: [
+        { title: 'Dashboard quản lý', url: '/design/management', icon: BarChart3 },
+        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
+        { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
+      ]
+    },
     { 
       title: 'Manager Dashboard',
       icon: Users,
@@ -138,15 +149,6 @@ const navigationByRole = {
         { title: 'Tổng quan phòng ban', url: '/manager/dashboard', icon: LayoutDashboard },
         { title: 'Theo dõi hiệu suất', url: '/manager/performance', icon: BarChart3 },
         { title: 'Phân công công việc', url: '/manager/assignments', icon: UserPlus },
-      ]
-    },
-    { 
-      title: 'Phòng ban thiết kế',
-      icon: Palette,
-      submenu: [
-        { title: 'Thiết kế', url: '/design', icon: Palette },
-        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
-        { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
       ]
     },
     { 
@@ -173,6 +175,7 @@ const navigationByRole = {
         { title: 'Tạo mã thiết kế', url: '/design/code-generator', icon: Settings },
       ]
     },
+    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   production_manager: [
@@ -222,6 +225,7 @@ const navigationByRole = {
         { title: 'Chấm công', url: '/attendance', icon: Clock },
       ]
     },
+    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   designer: [
@@ -281,6 +285,7 @@ const navigationByRole = {
         { title: 'Sản xuất', url: '/production', icon: Factory },
       ]
     },
+    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
     { title: 'Thông báo', url: '/notifications', icon: Bell },
   ],
   operator: [

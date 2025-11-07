@@ -31,7 +31,9 @@ const mockRoleTemplates: RoleTemplate[] = [
     description: 'Quản lý phòng ban thiết kế, phân công công việc và kiểm duyệt thiết kế',
     category: 'management',
     permissions: [
-      'designs.view', 'designs.create', 'designs.edit', 'designs.assign',
+      'designs.view', 'designs.create', 'designs.edit', 'designs.assign', 'designs.manage',
+      'design_assignments.view', 'design_assignments.create', 'design_assignments.edit', 'design_assignments.delete',
+      'designer_performance.view', 'designer_workload.view',
       'users.view', 'materials.view', 'orders.view', 'customers.view',
       'reports.view'
     ],

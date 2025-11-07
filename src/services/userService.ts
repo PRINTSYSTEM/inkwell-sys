@@ -1,15 +1,37 @@
-import { 
-  Employee, 
-  EmployeeMetrics, 
-  UserFilters, 
-  UserListResponse,
-  BulkUserOperation,
+import {
+  User,
+  Employee,
+  CreateUser,
+  UpdateUser,
+  UserFilter,
+  UserFilterSchema,
+  CreateEmployeeSchema,
+  UpdateEmployeeSchema,
   Department,
   EmployeeAssignment,
-  WorkTimelineEntry,
-  PerformanceComparison
-} from '@/types/employee';
-import { User, UserRole, Permission } from '@/types';
+  CreateEmployee,
+  UpdateEmployee,
+  EmployeeFilter,
+  validateSchema,
+  formatValidationErrors,
+  z
+} from '@/Schema';
+
+// Types for bulk operations
+interface BulkUserOperation {
+  operation: 'activate' | 'deactivate' | 'assign_role' | 'change_department' | 'delete';
+  userIds: string[];
+  params?: {
+    newRole?: string;
+    newDepartment?: string;
+  };
+}
+
+interface Permission {
+  id: string;
+  name: string;
+  description?: string;
+}
 
 // Mock data for development
 const mockDepartments: Department[] = [
@@ -18,168 +40,195 @@ const mockDepartments: Department[] = [
     name: 'Phòng Thiết kế',
     description: 'Bộ phận thiết kế và sáng tạo',
     managerId: 'user-dm001',
-    managerName: 'Nguyễn Văn A',
-    employeeCount: 8,
     isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    createdAt: new Date('2024-01-01T00:00:00Z'),
+    updatedAt: new Date('2024-01-01T00:00:00Z')
   },
   {
     id: 'dept-production',
     name: 'Phòng Sản xuất',
     description: 'Bộ phận sản xuất và vận hành',
     managerId: 'user-pm001',
-    managerName: 'Trần Thị B',
-    employeeCount: 12,
     isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    createdAt: new Date('2024-01-01T00:00:00Z'),
+    updatedAt: new Date('2024-01-01T00:00:00Z')
   },
   {
     id: 'dept-sales',
     name: 'Phòng Kinh doanh',
     description: 'Bộ phận chăm sóc khách hàng và bán hàng',
     managerId: 'user-sm001',
-    managerName: 'Lê Văn C',
-    employeeCount: 6,
     isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    createdAt: new Date('2024-01-01T00:00:00Z'),
+    updatedAt: new Date('2024-01-01T00:00:00Z')
   },
   {
     id: 'dept-accounting',
     name: 'Phòng Kế toán',
     description: 'Bộ phận tài chính và kế toán',
     managerId: 'user-am001',
-    managerName: 'Phạm Thị D',
-    employeeCount: 4,
     isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    createdAt: new Date('2024-01-01T00:00:00Z'),
+    updatedAt: new Date('2024-01-01T00:00:00Z')
   }
 ];
 
 const mockEmployees: Employee[] = [
   {
     id: 'user-dm001',
-    username: 'design_manager',
-    fullName: 'Nguyễn Văn A',
-    email: 'manager@company.com',
-    phone: '0901234567',
-    role: 'designer_manager',
-    department: 'dept-design',
-    departmentName: 'Phòng Thiết kế',
-    position: 'Trưởng phòng Thiết kế',
-    employeeId: 'EMP001',
-    joiningDate: '2023-01-15',
-    hireDate: '2023-01-15',
-    permissions: ['designs.view', 'designs.edit', 'designs.assign', 'users.view'],
-    status: 'active',
-    lastLogin: '2024-11-03T08:00:00Z',
-    createdAt: '2023-01-15T00:00:00Z',
-    updatedAt: '2024-11-03T08:00:00Z',
-    createdBy: 'admin',
-    updatedBy: 'admin',
-    metrics: {
-      totalDesigns: 120,
-      completedDesigns: 110,
-      inProgressDesigns: 8,
-      pendingDesigns: 2,
-      averageCompletionTime: 3.5,
-      completionRate: 91.7,
-      workloadScore: 75,
-      lastActivityDate: '2024-11-03',
-      monthlyMetrics: [
-        { month: '2024-10', designsCompleted: 25, averageTime: 3.2, qualityScore: 95 },
-        { month: '2024-09', designsCompleted: 28, averageTime: 3.1, qualityScore: 93 }
-      ]
+    employeeCode: 'EMP001',
+    userId: 'user-001',
+    positionId: 'pos-001',
+    departmentId: 'dept-design',
+    managerId: null,
+    isActive: true,
+    personalInfo: {
+      firstName: 'Nguyễn',
+      lastName: 'Văn A',
+      fullName: 'Nguyễn Văn A',
+      email: 'manager@company.com',
+      phone: '0901234567',
+      dateOfBirth: new Date('1985-05-15'),
+      gender: 'male',
+      address: '123 Đường ABC, Quận 1, TP.HCM',
+      country: 'Việt Nam',
+      emergencyContact: {
+        name: 'Nguyễn Thị X',
+        relationship: 'spouse',
+        phone: '0901234568'
+      }
     },
-    skills: ['Leadership', 'Design Review', 'Project Management'],
-    certifications: ['PMP', 'Adobe Certified Expert'],
-    currentWorkload: 75,
-    availability: 'available'
+    employmentInfo: {
+      startDate: new Date('2023-01-15'),
+      status: 'active',
+      employmentType: 'full_time',
+      workLocation: 'office'
+    },
+    skills: [
+      {
+        id: 'skill-001',
+        name: 'Leadership',
+        level: 'expert',
+        category: 'Management',
+        yearsOfExperience: 8,
+        isVerified: true
+      },
+      {
+        id: 'skill-002',
+        name: 'Design Review',
+        level: 'expert',
+        category: 'Design',
+        yearsOfExperience: 10,
+        isVerified: true
+      }
+    ],
+    createdAt: new Date('2023-01-15'),
+    updatedAt: new Date('2024-11-03T08:00:00Z'),
+    createdBy: 'admin'
   },
   {
     id: 'user-des001',
-    username: 'designer_01',
-    fullName: 'Trần Thị B',
-    email: 'designer1@company.com',
-    phone: '0901234568',
-    role: 'design',
-    department: 'dept-design',
-    departmentName: 'Phòng Thiết kế',
+    employeeCode: 'EMP002',
+    userId: 'user-002',
+    positionId: 'pos-002',
+    departmentId: 'dept-design',
     managerId: 'user-dm001',
-    managerName: 'Nguyễn Văn A',
-    position: 'Nhân viên Thiết kế',
-    employeeId: 'EMP002',
-    joiningDate: '2023-03-01',
-    hireDate: '2023-03-01',
-    permissions: ['designs.view', 'designs.edit'],
-    status: 'active',
-    lastLogin: '2024-11-03T09:30:00Z',
-    createdAt: '2023-03-01T00:00:00Z',
-    updatedAt: '2024-11-03T09:30:00Z',
-    createdBy: 'user-dm001',
-    updatedBy: 'user-dm001',
-    metrics: {
-      totalDesigns: 89,
-      completedDesigns: 82,
-      inProgressDesigns: 5,
-      pendingDesigns: 2,
-      averageCompletionTime: 2.8,
-      completionRate: 92.1,
-      workloadScore: 68,
-      lastActivityDate: '2024-11-03',
-      monthlyMetrics: [
-        { month: '2024-10', designsCompleted: 18, averageTime: 2.5, qualityScore: 88 },
-        { month: '2024-09', designsCompleted: 20, averageTime: 2.9, qualityScore: 90 }
-      ]
+    isActive: true,
+    personalInfo: {
+      firstName: 'Trần',
+      lastName: 'Thị B',
+      fullName: 'Trần Thị B',
+      email: 'designer1@company.com',
+      phone: '0901234568',
+      dateOfBirth: new Date('1990-08-20'),
+      gender: 'female',
+      address: '456 Đường DEF, Quận 2, TP.HCM',
+      country: 'Việt Nam',
+      emergencyContact: {
+        name: 'Trần Văn Y',
+        relationship: 'parent',
+        phone: '0901234569'
+      }
     },
-    skills: ['Graphic Design', 'Adobe Creative Suite', 'Print Design'],
-    certifications: ['Adobe Certified Associate'],
-    currentWorkload: 68,
-    availability: 'available'
+    employmentInfo: {
+      startDate: new Date('2023-03-01'),
+      status: 'active',
+      employmentType: 'full_time',
+      workLocation: 'office'
+    },
+    skills: [
+      {
+        id: 'skill-003',
+        name: 'Graphic Design',
+        level: 'advanced',
+        category: 'Design',
+        yearsOfExperience: 5,
+        isVerified: true
+      },
+      {
+        id: 'skill-004',
+        name: 'Adobe Creative Suite',
+        level: 'advanced',
+        category: 'Software',
+        yearsOfExperience: 5,
+        isVerified: true
+      }
+    ],
+    createdAt: new Date('2023-03-01'),
+    updatedAt: new Date('2024-11-03T09:30:00Z'),
+    createdBy: 'user-dm001'
   },
   {
     id: 'user-des002',
-    username: 'designer_02',
-    fullName: 'Lê Văn C',
-    email: 'designer2@company.com',
-    phone: '0901234569',
-    role: 'design',
-    department: 'dept-design',
-    departmentName: 'Phòng Thiết kế',
+    employeeCode: 'EMP003',
+    userId: 'user-003',
+    positionId: 'pos-002',
+    departmentId: 'dept-design',
     managerId: 'user-dm001',
-    managerName: 'Nguyễn Văn A',
-    position: 'Nhân viên Thiết kế',
-    employeeId: 'EMP003',
-    joiningDate: '2023-06-15',
-    hireDate: '2023-06-15',
-    permissions: ['designs.view', 'designs.edit'],
-    status: 'active',
-    lastLogin: '2024-11-02T16:45:00Z',
-    createdAt: '2023-06-15T00:00:00Z',
-    updatedAt: '2024-11-02T16:45:00Z',
-    createdBy: 'user-dm001',
-    updatedBy: 'user-dm001',
-    metrics: {
-      totalDesigns: 65,
-      completedDesigns: 58,
-      inProgressDesigns: 6,
-      pendingDesigns: 1,
-      averageCompletionTime: 3.2,
-      completionRate: 89.2,
-      workloadScore: 85,
-      lastActivityDate: '2024-11-02',
-      monthlyMetrics: [
-        { month: '2024-10', designsCompleted: 15, averageTime: 3.0, qualityScore: 85 },
-        { month: '2024-09', designsCompleted: 17, averageTime: 3.4, qualityScore: 87 }
-      ]
+    isActive: true,
+    personalInfo: {
+      firstName: 'Lê',
+      lastName: 'Văn C',
+      fullName: 'Lê Văn C',
+      email: 'designer2@company.com',
+      phone: '0901234570',
+      dateOfBirth: new Date('1992-12-10'),
+      gender: 'male',
+      address: '789 Đường GHI, Quận 3, TP.HCM',
+      country: 'Việt Nam',
+      emergencyContact: {
+        name: 'Lê Thị Z',
+        relationship: 'spouse',
+        phone: '0901234571'
+      }
     },
-    skills: ['UI/UX Design', 'Web Design', 'Branding'],
-    certifications: ['Google UX Design Certificate'],
-    currentWorkload: 85,
-    availability: 'busy'
+    employmentInfo: {
+      startDate: new Date('2023-06-15'),
+      status: 'active',
+      employmentType: 'full_time',
+      workLocation: 'office'
+    },
+    skills: [
+      {
+        id: 'skill-005',
+        name: 'UI/UX Design',
+        level: 'intermediate',
+        category: 'Design',
+        yearsOfExperience: 3,
+        isVerified: true
+      },
+      {
+        id: 'skill-006',
+        name: 'Web Design',
+        level: 'intermediate',
+        category: 'Design',
+        yearsOfExperience: 3,
+        isVerified: false
+      }
+    ],
+    createdAt: new Date('2023-06-15'),
+    updatedAt: new Date('2024-11-02T16:45:00Z'),
+    createdBy: 'user-dm001'
   }
 ];
 
@@ -188,17 +237,33 @@ export class UserManagementService {
   static async getUsers(params: {
     page?: number;
     pageSize?: number;
-    filters?: UserFilters;
+    filters?: UserFilter;
     sortBy?: keyof Employee;
     sortOrder?: 'asc' | 'desc';
-  }): Promise<UserListResponse> {
+  }): Promise<{
+    data: Employee[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
     const { 
       page = 1, 
       pageSize = 20, 
       filters = {}, 
-      sortBy = 'fullName', 
+      sortBy = 'id', 
       sortOrder = 'asc' 
     } = params;
+
+    // Validate filters using Zod
+    const validationResult = validateSchema(UserFilterSchema, filters);
+
+    if (!validationResult.success) {
+      const errorResult = validationResult as { success: false; errors: z.ZodError };
+      throw new Error(`Invalid parameters: ${formatValidationErrors(errorResult.errors)}`);
+    }
+
+    const validatedFilters = validationResult.data;
 
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -206,40 +271,31 @@ export class UserManagementService {
     let filteredUsers = [...mockEmployees];
 
     // Apply filters
-    if (filters.department) {
-      filteredUsers = filteredUsers.filter(user => user.department === filters.department);
-    }
-
-    if (filters.role) {
-      filteredUsers = filteredUsers.filter(user => user.role === filters.role);
-    }
-
-    if (filters.status) {
-      filteredUsers = filteredUsers.filter(user => user.status === filters.status);
-    }
-
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
+    if (validatedFilters.role) {
       filteredUsers = filteredUsers.filter(user => 
-        user.fullName.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query) ||
-        user.employeeId?.toLowerCase().includes(query) ||
-        user.phone?.includes(query)
+        // Assuming we need to check against some role mapping
+        user.positionId === validatedFilters.role
       );
     }
 
-    if (filters.skillSearch) {
-      const skillQuery = filters.skillSearch.toLowerCase();
-      filteredUsers = filteredUsers.filter(user =>
-        user.skills.some(skill => skill.toLowerCase().includes(skillQuery))
+    if (validatedFilters.status) {
+      filteredUsers = filteredUsers.filter(user => 
+        user.employmentInfo?.status === validatedFilters.status
       );
     }
 
-    if (filters.workloadRange) {
-      filteredUsers = filteredUsers.filter(user =>
-        user.currentWorkload >= filters.workloadRange!.min &&
-        user.currentWorkload <= filters.workloadRange!.max
+    if (validatedFilters.search) {
+      const query = validatedFilters.search.toLowerCase();
+      filteredUsers = filteredUsers.filter(user => 
+        user.personalInfo?.fullName?.toLowerCase().includes(query) ||
+        user.personalInfo?.email?.toLowerCase().includes(query) ||
+        user.employeeCode?.toLowerCase().includes(query) ||
+        user.personalInfo?.phone?.includes(query)
       );
+    }
+
+    if (validatedFilters.isActive !== undefined) {
+      filteredUsers = filteredUsers.filter(user => user.isActive === validatedFilters.isActive);
     }
 
     // Apply sorting
@@ -275,57 +331,43 @@ export class UserManagementService {
   }
 
   // Create new user
-  static async createUser(userData: Partial<Employee>): Promise<Employee> {
+  static async createUser(userData: unknown): Promise<Employee> {
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    const newUser: Employee = {
+    // Validate input data using Zod
+    const validationResult = validateSchema(CreateEmployeeSchema, userData);
+    if (!validationResult.success) {
+      const errorResult = validationResult as { success: false; errors: z.ZodError };
+      throw new Error(`Validation failed: ${JSON.stringify(formatValidationErrors(errorResult.errors))}`);
+    }
+
+    const validatedData = validationResult.data;
+
+    const newEmployee: Employee = {
+      ...validatedData,
       id: `user-${Date.now()}`,
-      username: userData.username || '',
-      fullName: userData.fullName || '',
-      email: userData.email || '',
-      phone: userData.phone,
-      role: userData.role || 'design',
-      department: userData.department || 'dept-design',
-      departmentName: userData.departmentName || 'Phòng Thiết kế',
-      managerId: userData.managerId,
-      managerName: userData.managerName,
-      position: userData.position || 'Nhân viên',
-      employeeId: userData.employeeId || `EMP${Math.floor(Math.random() * 1000)}`,
-      joiningDate: userData.joiningDate || new Date().toISOString().split('T')[0],
-      hireDate: userData.hireDate || new Date().toISOString().split('T')[0],
-      permissions: userData.permissions || [],
-      status: userData.status || 'active',
-      lastLogin: userData.lastLogin,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: userData.createdBy || 'admin',
-      updatedBy: userData.updatedBy || 'admin',
-      metrics: userData.metrics || {
-        totalDesigns: 0,
-        completedDesigns: 0,
-        inProgressDesigns: 0,
-        pendingDesigns: 0,
-        averageCompletionTime: 0,
-        completionRate: 0,
-        workloadScore: 0,
-        lastActivityDate: new Date().toISOString().split('T')[0],
-        monthlyMetrics: []
-      },
-      skills: userData.skills || [],
-      certifications: userData.certifications || [],
-      currentWorkload: userData.currentWorkload || 0,
-      availability: userData.availability || 'available'
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     // In real implementation, this would save to database
-    mockEmployees.push(newUser);
+    mockEmployees.push(newEmployee);
     
-    return newUser;
+    return newEmployee;
   }
 
   // Update user
-  static async updateUser(id: string, userData: Partial<Employee>): Promise<Employee> {
+  static async updateUser(id: string, userData: unknown): Promise<Employee> {
     await new Promise(resolve => setTimeout(resolve, 600));
+
+    // Validate update data using Zod
+    const validationResult = validateSchema(UpdateEmployeeSchema, userData);
+    if (!validationResult.success) {
+      const errorResult = validationResult as { success: false; errors: z.ZodError };
+      throw new Error(`Validation failed: ${JSON.stringify(formatValidationErrors(errorResult.errors))}`);
+    }
+
+    const validatedData = validationResult.data;
 
     const userIndex = mockEmployees.findIndex(emp => emp.id === id);
     if (userIndex === -1) {
@@ -334,8 +376,8 @@ export class UserManagementService {
 
     const updatedUser = {
       ...mockEmployees[userIndex],
-      ...userData,
-      updatedAt: new Date().toISOString()
+      ...validatedData,
+      updatedAt: new Date()
     };
 
     mockEmployees[userIndex] = updatedUser;
@@ -374,23 +416,25 @@ export class UserManagementService {
 
         switch (operation.operation) {
           case 'activate':
-            mockEmployees[userIndex].status = 'active';
+            if (mockEmployees[userIndex].employmentInfo) {
+              mockEmployees[userIndex].employmentInfo!.status = 'active';
+            }
+            mockEmployees[userIndex].isActive = true;
             break;
           case 'deactivate':
-            mockEmployees[userIndex].status = 'inactive';
+            if (mockEmployees[userIndex].employmentInfo) {
+              mockEmployees[userIndex].employmentInfo!.status = 'inactive';
+            }
+            mockEmployees[userIndex].isActive = false;
             break;
           case 'assign_role':
             if (operation.params?.newRole) {
-              mockEmployees[userIndex].role = operation.params.newRole;
+              mockEmployees[userIndex].positionId = operation.params.newRole;
             }
             break;
           case 'change_department':
             if (operation.params?.newDepartment) {
-              mockEmployees[userIndex].department = operation.params.newDepartment;
-              const dept = mockDepartments.find(d => d.id === operation.params!.newDepartment);
-              if (dept) {
-                mockEmployees[userIndex].departmentName = dept.name;
-              }
+              mockEmployees[userIndex].departmentId = operation.params.newDepartment;
             }
             break;
           case 'delete':
@@ -417,7 +461,7 @@ export class UserManagementService {
   // Get users by department
   static async getUsersByDepartment(departmentId: string): Promise<Employee[]> {
     await new Promise(resolve => setTimeout(resolve, 300));
-    return mockEmployees.filter(emp => emp.department === departmentId);
+    return mockEmployees.filter(emp => emp.departmentId === departmentId);
   }
 
   // Get team members for a manager
@@ -427,39 +471,36 @@ export class UserManagementService {
   }
 
   // Search users
-  static async searchUsers(query: string, filters?: UserFilters): Promise<Employee[]> {
+  static async searchUsers(query: string, filters?: UserFilter): Promise<Employee[]> {
     await new Promise(resolve => setTimeout(resolve, 400));
 
     const searchQuery = query.toLowerCase();
     let results = mockEmployees.filter(emp =>
-      emp.fullName.toLowerCase().includes(searchQuery) ||
-      emp.email.toLowerCase().includes(searchQuery) ||
-      emp.employeeId?.toLowerCase().includes(searchQuery) ||
-      emp.skills.some(skill => skill.toLowerCase().includes(searchQuery))
+      emp.personalInfo?.fullName?.toLowerCase().includes(searchQuery) ||
+      emp.personalInfo?.email?.toLowerCase().includes(searchQuery) ||
+      emp.employeeCode?.toLowerCase().includes(searchQuery) ||
+      emp.skills?.some(skill => skill.name?.toLowerCase().includes(searchQuery))
     );
 
     // Apply additional filters if provided
-    if (filters?.department) {
-      results = results.filter(emp => emp.department === filters.department);
-    }
-
     if (filters?.role) {
-      results = results.filter(emp => emp.role === filters.role);
+      results = results.filter(emp => emp.positionId === filters.role);
     }
 
     return results;
   }
 
   // Get user permissions
-  static async getUserPermissions(userId: string): Promise<Permission[]> {
+  static async getUserPermissions(userId: string): Promise<string[]> {
     await new Promise(resolve => setTimeout(resolve, 200));
     
     const user = mockEmployees.find(emp => emp.id === userId);
-    return user?.permissions || [];
+    // For now, return empty array as permissions are not in Employee schema
+    return [];
   }
 
   // Update user permissions
-  static async updateUserPermissions(userId: string, permissions: Permission[]): Promise<boolean> {
+  static async updateUserPermissions(userId: string, permissions: string[]): Promise<boolean> {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const userIndex = mockEmployees.findIndex(emp => emp.id === userId);
@@ -467,8 +508,8 @@ export class UserManagementService {
       throw new Error('User not found');
     }
 
-    mockEmployees[userIndex].permissions = permissions;
-    mockEmployees[userIndex].updatedAt = new Date().toISOString();
+    // In real implementation, this would update user permissions
+    mockEmployees[userIndex].updatedAt = new Date();
     
     return true;
   }
@@ -492,7 +533,7 @@ export class UserManagementService {
   }
 
   // Get available roles
-  static async getAvailableRoles(): Promise<Array<{ value: UserRole; label: string; permissions: Permission[] }>> {
+  static async getAvailableRoles(): Promise<Array<{ value: string; label: string; permissions: string[] }>> {
     await new Promise(resolve => setTimeout(resolve, 100));
 
     return [

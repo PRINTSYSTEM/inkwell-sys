@@ -10,6 +10,9 @@ const Design = lazy(() => import('@/pages/Design'));
 const CreateDesign = lazy(() => import('@/pages/design/create'));
 const AllDesigns = lazy(() => import('@/pages/design/all'));
 const MyWork = lazy(() => import('@/pages/design/my-work.tsx'));
+const DesignManagerDashboard = lazy(() => import('@/pages/design/DesignManagerDashboard'));
+const DesignerDetailView = lazy(() => import('@/pages/design/DesignerDetailView'));
+const DesignTestPage = lazy(() => import('@/pages/design/TestPage'));
 const DesignDetail = lazy(() => import('@/pages/design/detail/[id].tsx'));
 const DesignCodeGenerator = lazy(() => import('@/pages/design/code-generator'));
 const Orders = lazy(() => import('@/pages/orders/index'));
@@ -36,6 +39,7 @@ const PrepressCreatePrintOrder = lazy(() => import('@/pages/prepress/create-prin
 const PrepressIndex = lazy(() => import('@/pages/prepress/index'));
 const Notifications = lazy(() => import('@/pages/Notifications'));
 const NotificationCenter = lazy(() => import('@/pages/notifications/NotificationCenter'));
+const Reports = lazy(() => import('@/pages/Reports'));
 const AdminRoutes = lazy(() => import('@/pages/admin'));
 const ManagerRoutes = lazy(() => import('@/pages/manager'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -125,6 +129,30 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <DesignCodeGenerator />
+              </Suspense>
+            )
+          },
+          {
+            path: 'management',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DesignManagerDashboard />
+              </Suspense>
+            )
+          },
+          {
+            path: 'designers/:designerId',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DesignerDetailView />
+              </Suspense>
+            )
+          },
+          {
+            path: 'test',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DesignTestPage />
               </Suspense>
             )
           }
@@ -351,6 +379,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<div>Loading...</div>}>
             <NotificationCenter />
+          </Suspense>
+        )
+      },
+      {
+        path: 'reports',
+        element: (
+          <Suspense fallback={<div>Loading...</div>}>
+            <Reports />
           </Suspense>
         )
       },

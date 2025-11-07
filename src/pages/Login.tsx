@@ -6,48 +6,75 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useAuth } from '../hooks/use-auth';
+import type { LoginRequest } from '../Schema/auth.schema';
 
 export default function Login() {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [credentials, setCredentials] = useState<LoginRequest>({
+    username: '',
+    password: '',
+  });
 
-  const handleQuickLogin = async (user: string, pass: string) => {
-    setUsername(user);
-    setPassword(pass);
-    try {
-      const success = await login(user, pass);
-      if (success) {
-        toast.success('Đăng nhập thành công!');
-        navigate('/dashboard');
-      } else {
-        toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
-      }
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi đăng nhập');
-    }
+  const handleInputChange = (field: keyof LoginRequest, value: string) => {
+    setCredentials(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!username || !password) {
-      toast.error('Vui lòng nhập đầy đủ thông tin');
+  const handleLogin = async (loginCredentials: LoginRequest) => {
+    if (!loginCredentials.username || !loginCredentials.password) {
+      toast.error('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
       return;
     }
 
     try {
-      const success = await login(username, password);
-      if (success) {
-        toast.success('Đăng nhập thành công!');
-        navigate('/dashboard');
-      } else {
-        toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
+      const result = await login(loginCredentials);
+      
+      if (result) {
+        toast.success(`Chào mừng ${result.userInfo.fullName}!`);
+        
+        // Redirect based on user role or to dashboard
+        const redirectPath = getRedirectPath(result.userInfo.role);
+        navigate(redirectPath);
       }
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi đăng nhập');
+    } catch (error: unknown) {
+      console.error('Login error:', error);
+      
+      // Handle different error types
+      const errorResponse = error as { response?: { status?: number; data?: { message?: string } }; message?: string };
+      
+      if (errorResponse.response?.status === 401) {
+        toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
+      } else if (errorResponse.response?.status === 403) {
+        toast.error('Tài khoản của bạn không có quyền truy cập');
+      } else if (errorResponse.response?.status && errorResponse.response.status >= 500) {
+        toast.error('Lỗi server, vui lòng thử lại sau');
+      } else if (errorResponse.message?.includes('Network')) {
+        toast.error('Lỗi kết nối, vui lòng kiểm tra mạng');
+      } else {
+        toast.error('Có lỗi xảy ra khi đăng nhập');
+      }
     }
+  };
+
+  const handleQuickLogin = async (username: string, password: string) => {
+    const quickCredentials = { username, password };
+    setCredentials(quickCredentials);
+    await handleLogin(quickCredentials);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleLogin(credentials);
+  };
+
+  // Get redirect path based on user role
+  const getRedirectPath = (role: string): string => {
+    // Tất cả role đều chuyển đến dashboard chung
+    // Phân quyền hiển thị sidebar sẽ được xử lý trong component Layout
+    return '/dashboard';
   };
 
   return (
@@ -59,19 +86,20 @@ export default function Login() {
               PS
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">PrintSys</CardTitle>
+          <CardTitle className="text-2xl font-bold">InkWell System</CardTitle>
           <CardDescription>Hệ thống quản lý in ấn nội bộ</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">Tên đăng nhập</Label>
               <Input
                 id="username"
                 type="text"
                 placeholder="admin"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={credentials.username}
+                onChange={(e) => handleInputChange('username', e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -80,8 +108,9 @@ export default function Login() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={credentials.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                disabled={isLoading}
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>

@@ -1,7 +1,16 @@
-import { Material, MaterialType, MaterialTypeCategory } from '@/types';
+import {
+  Material,
+  CreateMaterialSchema,
+  UpdateMaterialSchema,
+  MaterialFilterSchema,
+  validateSchema,
+  formatValidationErrors,
+  z
+} from '@/Schema';
+import type { MaterialFilter } from '@/Schema';
 import { mockMaterials, mockMaterialTypeCategories } from '@/lib/mockData';
 
-// Pagination interface
+// Pagination and response types from Zod schemas
 export interface PaginationParams {
   page: number;
   pageSize: number;
@@ -15,17 +24,8 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-// Filter interfaces
-export interface MaterialFilters {
-  type?: MaterialType | MaterialType[];
-  category?: string;
-  supplier?: string;
-  lowStock?: boolean;
-  searchQuery?: string;
-}
-
 export interface MaterialSearchParams extends PaginationParams {
-  filters?: MaterialFilters;
+  filters?: MaterialFilter;
   sortBy?: 'name' | 'code' | 'currentStock' | 'unitPrice' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
 }
@@ -33,50 +33,65 @@ export interface MaterialSearchParams extends PaginationParams {
 // Simulated database storage - mutable for CRUD operations
 // eslint-disable-next-line prefer-const
 let materials: Material[] = [...mockMaterials];
-// eslint-disable-next-line prefer-const  
-let materialTypeCategories: MaterialTypeCategory[] = [...mockMaterialTypeCategories];
+// Note: MaterialTypeCategory removed as it's not in Zod schema
 
 // Material CRUD Operations
 export class MaterialService {
   // Get all materials with pagination and filtering
   static async getMaterials(params: MaterialSearchParams = { page: 1, pageSize: 10 }): Promise<PaginatedResponse<Material>> {
     await this.simulateDelay();
+
+    // Validate filters using Zod
+    if (params.filters) {
+      const validationResult = validateSchema(MaterialFilterSchema, params.filters);
+      if (!validationResult.success) {
+        const errorResult = validationResult as { success: false; errors: z.ZodError };
+        throw new Error(`Invalid filters: ${formatValidationErrors(errorResult.errors)}`);
+      }
+    }
     
     let filteredMaterials = [...materials];
     
-    // Apply filters
+    // Apply filters using validated data
     if (params.filters) {
-      const { type, category, supplier, lowStock, searchQuery } = params.filters;
+      const filters = params.filters;
       
-      if (type) {
-        const types = Array.isArray(type) ? type : [type];
-        filteredMaterials = filteredMaterials.filter(m => types.includes(m.type));
+      if (filters.category) {
+        filteredMaterials = filteredMaterials.filter(m => m.category === filters.category);
       }
       
-      if (category) {
+      if (filters.supplierId) {
+        filteredMaterials = filteredMaterials.filter(m => m.supplierId === filters.supplierId);
+      }
+      
+      if (filters.lowStock) {
         filteredMaterials = filteredMaterials.filter(m => 
-          m.category.toLowerCase().includes(category.toLowerCase())
+          m.inventory?.currentStock !== undefined && 
+          m.inventory.currentStock <= (m.inventory.minimumThreshold || 0)
+        );
+      }
+
+      if (filters.outOfStock) {
+        filteredMaterials = filteredMaterials.filter(m => 
+          m.inventory?.currentStock === 0
         );
       }
       
-      if (supplier) {
+      if (filters.search) {
+        const query = filters.search.toLowerCase();
         filteredMaterials = filteredMaterials.filter(m => 
-          m.supplier.toLowerCase().includes(supplier.toLowerCase())
+          m.name?.toLowerCase().includes(query) ||
+          m.code?.toLowerCase().includes(query) ||
+          m.description?.toLowerCase().includes(query)
         );
       }
-      
-      if (lowStock) {
-        filteredMaterials = filteredMaterials.filter(m => m.currentStock <= m.minStock);
+
+      if (filters.status) {
+        filteredMaterials = filteredMaterials.filter(m => m.status === filters.status);
       }
-      
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filteredMaterials = filteredMaterials.filter(m => 
-          m.name.toLowerCase().includes(query) ||
-          m.code.toLowerCase().includes(query) ||
-          m.category.toLowerCase().includes(query) ||
-          m.supplier.toLowerCase().includes(query)
-        );
+
+      if (filters.isActive !== undefined) {
+        filteredMaterials = filteredMaterials.filter(m => m.isActive === filters.isActive);
       }
     }
     
@@ -128,29 +143,47 @@ export class MaterialService {
   }
   
   // Create new material
-  static async createMaterial(materialData: Omit<Material, 'id' | 'createdAt' | 'updatedAt'>): Promise<Material> {
+  static async createMaterial(materialData: unknown): Promise<Material> {
     await this.simulateDelay();
+
+    // Validate input data using Zod
+    const validationResult = validateSchema(CreateMaterialSchema, materialData);
+    if (!validationResult.success) {
+      const errorResult = validationResult as { success: false; errors: z.ZodError };
+      throw new Error(`Validation failed: ${JSON.stringify(formatValidationErrors(errorResult.errors))}`);
+    }
+
+    const validatedData = validationResult.data;
     
     // Validate unique code
-    const existingMaterial = materials.find(m => m.code === materialData.code);
+    const existingMaterial = materials.find(m => m.code === validatedData.code);
     if (existingMaterial) {
-      throw new Error(`Material với mã ${materialData.code} đã tồn tại`);
+      throw new Error(`Material với mã ${validatedData.code} đã tồn tại`);
     }
     
     const newMaterial: Material = {
-      ...materialData,
+      ...validatedData,
       id: `mat${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     
     materials.push(newMaterial);
     return newMaterial;
   }
-  
+
   // Update material
-  static async updateMaterial(id: string, updates: Partial<Omit<Material, 'id' | 'createdAt'>>): Promise<Material> {
+  static async updateMaterial(id: string, updates: unknown): Promise<Material> {
     await this.simulateDelay();
+
+    // Validate update data using Zod
+    const validationResult = validateSchema(UpdateMaterialSchema, updates);
+    if (!validationResult.success) {
+      const errorResult = validationResult as { success: false; errors: z.ZodError };
+      throw new Error(`Validation failed: ${JSON.stringify(formatValidationErrors(errorResult.errors))}`);
+    }
+
+    const validatedUpdates = validationResult.data;
     
     const materialIndex = materials.findIndex(m => m.id === id);
     if (materialIndex === -1) {
@@ -158,17 +191,17 @@ export class MaterialService {
     }
     
     // Validate unique code if updating code
-    if (updates.code) {
-      const existingMaterial = materials.find(m => m.code === updates.code && m.id !== id);
+    if (validatedUpdates.code) {
+      const existingMaterial = materials.find(m => m.code === validatedUpdates.code && m.id !== id);
       if (existingMaterial) {
-        throw new Error(`Material với mã ${updates.code} đã tồn tại`);
+        throw new Error(`Material với mã ${validatedUpdates.code} đã tồn tại`);
       }
     }
     
     const updatedMaterial: Material = {
       ...materials[materialIndex],
-      ...updates,
-      updatedAt: new Date().toISOString()
+      ...validatedUpdates,
+      updatedAt: new Date()
     };
     
     materials[materialIndex] = updatedMaterial;

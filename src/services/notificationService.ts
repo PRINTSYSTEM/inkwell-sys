@@ -1,17 +1,13 @@
-import { 
-  Notification, 
-  NotificationPreferences, 
-  NotificationTemplate, 
-  NotificationRule,
-  NotificationStats,
-  NotificationFilter,
-  NotificationBatch,
-  NotificationHistory,
-  NotificationType,
-  NotificationPriority,
-  NotificationCategory,
-  NotificationEvent
-} from '../types/notification';
+import {
+  Notification,
+  CreateNotificationSchema,
+  UpdateNotificationSchema,
+  NotificationFilterSchema,
+  validateSchema,
+  formatValidationErrors,
+  z
+} from '@/Schema';
+import type { NotificationFilter } from '@/Schema';
 
 class NotificationService {
   private notifications: Notification[] = [];

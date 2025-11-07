@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Material, MaterialType } from '@/types';
+import { Material, CreateMaterialSchema } from '@/Schema';
+import type { CreateMaterial } from '@/Schema';
 import { MaterialService } from '@/services/materialService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,33 +57,28 @@ const MATERIAL_TYPE_OPTIONS: Array<{ value: MaterialType; label: string }> = [
   { value: 'ribbon', label: 'Dây/Ruy băng' }
 ];
 
-interface MaterialFormData {
-  code: string;
-  name: string;
-  type: MaterialType | '';
-  category: string;
-  specification: string;
-  unit: string;
-  unitPrice: number;
-  supplier: string;
-  minStock: number;
-  currentStock: number;
-  location: string;
-  notes?: string;
-}
+// Material form data type from Zod schema
+type MaterialFormData = CreateMaterial;
 
-const initialFormData: MaterialFormData = {
+// TODO: Update initial form data to match CreateMaterial schema structure
+const initialFormData = {
   code: '',
   name: '',
-  type: '',
-  category: '',
-  specification: '',
-  unit: '',
-  unitPrice: 0,
-  supplier: '',
-  minStock: 0,
-  currentStock: 0,
-  location: '',
+  category: 'paper' as const, // Use enum value
+  unit: 'sheet' as const, // Use enum value
+  pricing: {
+    unitPrice: 0,
+    currency: 'VND' as const
+  },
+  suppliers: [],
+  inventory: {
+    currentStock: 0,
+    minimumThreshold: 0,
+    location: ''
+  },
+  specifications: [],
+  isActive: true,
+  tags: [],
   notes: ''
 };
 

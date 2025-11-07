@@ -38,7 +38,13 @@ export const rolePermissions = {
     canViewAllOrders: true,
     canEdit: true,
     canDelete: false,
-    dataScope: 'customer-design' as const
+    dataScope: 'customer-design' as const,
+    // Design management permissions
+    canManageDesignAssignments: true,
+    canViewDesignerPerformance: true,
+    canViewDesignerWorkload: true,
+    canAssignDesignTasks: true,
+    canViewDepartmentStats: true
   },
 
   // CSKH - Chăm sóc khách hàng

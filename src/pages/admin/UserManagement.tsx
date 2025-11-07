@@ -74,20 +74,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 
-import { Employee, Department } from '@/types/employee';
+import { Employee, CreateEmployeeSchema } from '@/Schema';
+import type { CreateEmployee } from '@/Schema';
 import { UserManagementService } from '@/services/userService';
 
-// User form data type
-interface UserFormData {
-  fullName: string;
-  email: string;
-  phone: string;
-  department: string;
-  role: string;
-  status: string;
-  permissions: string[];
-  notes: string;
-}
+// User form data type from Zod schema
+type UserFormData = CreateEmployee;
 
 // User form component
 const UserForm: React.FC<{

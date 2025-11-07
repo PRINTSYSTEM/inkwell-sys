@@ -67,7 +67,7 @@ import { Employee, EmployeeMetrics, EmployeeAssignment } from '@/types/employee'
 import { EmployeePerformanceService } from '@/services/employeeService';
 import { UserManagementService } from '@/services/userService';
 
-// Chart data types
+// TODO: Chart data types - Consider moving to shared types or keeping as UI-specific interfaces
 interface ChartDataPoint {
   date: string;
   completionRate: number;

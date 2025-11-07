@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { productions, orders, customers, mockUsers, mockMaterials, mockPrepressOrders } from '@/lib/mockData';
 
+// TODO: Replace with Zod schema types when Production schema is available
 interface Production {
   id: string;
   orderId: string;
@@ -44,6 +45,7 @@ interface Production {
   materialRequirements?: MaterialRequirement[];
 }
 
+// TODO: Replace with Zod schema types when MaterialRequirement schema is available
 interface MaterialRequirement {
   materialId: string;
   materialName: string;

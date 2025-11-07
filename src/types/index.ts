@@ -9,6 +9,9 @@ export type { Role, RoleAssignment, RoleAnalytics, RoleConflict, RoleFormData } 
 // Export design code types
 export * from './design-code';
 
+// Export design monitoring types
+export * from './design-monitoring';
+
 // Export assignment types
 export * from './assignment';
 
