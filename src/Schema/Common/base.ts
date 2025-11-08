@@ -11,8 +11,8 @@ export const DateRangeSchema = z.object({
 });
 
 // Common ID schemas
-export const IdSchema = z.string().min(1, 'ID is required');
-export const OptionalIdSchema = z.string().optional();
+export const IdSchema = z.number().int().positive('ID must be positive');
+export const OptionalIdSchema = z.number().int().positive().optional();
 
 // Common string schemas
 export const NameSchema = z.string().min(1, 'Name is required').max(255, 'Name too long');

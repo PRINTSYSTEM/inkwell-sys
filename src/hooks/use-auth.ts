@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { authAPI } from "../services/authService";
+import { authAPI } from "../services";
 import type { LoginRequest, LoginResponse, UserInfo } from "../Schema/auth.schema";
 
 // Auth state interface

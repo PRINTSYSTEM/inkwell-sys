@@ -39,10 +39,11 @@ export function AppHeader() {
       <div className="flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <SidebarTrigger />
+          <h1 className="text-xl font-semibold ml-4">Dashboard</h1>
         </div>
 
-        <div className="flex items-center gap-2">
-          <NotificationBell userId={user.id} />
+        <div className="flex items-center gap-4">
+          <NotificationBell userId={user.id.toString()} />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -61,7 +62,7 @@ export function AppHeader() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/profile')}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Thông tin cá nhân</span>
               </DropdownMenuItem>

@@ -57,9 +57,8 @@ import { DashboardStatsSkeleton, DesignerCardSkeleton } from '@/components/ui/sk
 import { ErrorDisplay, EmptyState } from '@/components/ui/error-components';
 
 import { DesignAssignmentService } from '@/services/designAssignmentService';
-import { UserService } from '@/services/userService';
+import UserService from '@/services/userService';
 import { useAuth } from '@/hooks/use-auth';
-import { useDesignPermissions } from '@/hooks/use-design-permissions';
 import { 
   DesignerWorkload, 
   DepartmentDesignStats, 
@@ -108,24 +107,23 @@ const getMockDashboardData = async (): Promise<DesignMonitoringDashboard> => {
         id: 'emp-001',
         fullName: 'Nguyễn Văn A',
         email: 'designer1@company.com',
-        role: 'designer',
+        role: 'design',
         departmentId: 'dept-design',
         status: 'active',
         avatar: '',
         phoneNumber: '',
         address: '',
-        hireDate: new Date('2023-01-15'),
+        hireDate: '2023-01-15',
         currentWorkload: 85,
         metrics: {
           totalDesigns: 24,
           completedDesigns: 22,
-          completionRate: 92,
-          averageRating: 4.6
-        },
+          completionRate: 92
+        } as EmployeeMetrics,
         skills: ['UI/UX', 'Graphic Design'],
         assignments: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       },
       activeAssignments: 4,
       totalWorkload: 85,
@@ -158,24 +156,23 @@ const getMockDashboardData = async (): Promise<DesignMonitoringDashboard> => {
         id: 'emp-002',
         fullName: 'Trần Thị B',
         email: 'designer2@company.com',
-        role: 'designer',
+        role: 'design',
         departmentId: 'dept-design',
         status: 'active',
         avatar: '',
         phoneNumber: '',
         address: '',
-        hireDate: new Date('2023-03-10'),
+        hireDate: '2023-03-10',
         currentWorkload: 92,
         metrics: {
           totalDesigns: 21,
           completedDesigns: 19,
-          completionRate: 90,
-          averageRating: 4.5
-        },
+          completionRate: 90
+        } as EmployeeMetrics,
         skills: ['Packaging Design', 'Print Design'],
         assignments: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       },
       activeAssignments: 5,
       totalWorkload: 92,
@@ -235,9 +232,9 @@ const getMockDashboardData = async (): Promise<DesignMonitoringDashboard> => {
 const DesignManagerDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const designPermissions = useDesignPermissions();
   const [dashboardData, setDashboardData] = useState<DesignMonitoringDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('this_month');
 
   // Load dashboard data with useAsync hook
@@ -248,23 +245,7 @@ const DesignManagerDashboard: React.FC = () => {
     refetch
   } = useAsync(() => getMockDashboardData(), true);
 
-  // Check permissions
-  if (!designPermissions.canViewDesignManagement) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-red-500" />
-          <h3 className="text-lg font-medium mb-2">Không có quyền truy cập</h3>
-          <p className="text-muted-foreground mb-4">
-            Bạn không có quyền truy cập trang quản lý thiết kế
-          </p>
-          <Button onClick={() => navigate('/dashboard')}>
-            Về Dashboard
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Show content - backend handles authorization
 
   // Load dashboard data
   const loadDashboardData = async () => {
@@ -287,6 +268,7 @@ const DesignManagerDashboard: React.FC = () => {
   // Refresh data
   const handleRefresh = async () => {
     try {
+      setRefreshing(true);
       await refetch();
       toast({
         title: "Thành công",
@@ -294,10 +276,12 @@ const DesignManagerDashboard: React.FC = () => {
       });
     } catch (error) {
       toast({
-        title: "Lỗi",
+        title: "Lỗi", 
         description: "Không thể cập nhật dữ liệu",
         variant: "destructive",
       });
+    } finally {
+      setRefreshing(false);
     }
   };
 

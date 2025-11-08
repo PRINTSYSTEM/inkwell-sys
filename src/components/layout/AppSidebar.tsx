@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { usePermissions } from '@/lib/permissions';
 
 const navigationByRole = {
   admin: [
@@ -315,7 +314,7 @@ const navigationByRole = {
 
 export function AppSidebar() {
   const { user } = useAuth();
-  const permissions = usePermissions(user?.role || 'operator');
+  // const permissions = {};
   const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
   
   if (!user) return null;
@@ -323,12 +322,8 @@ export function AppSidebar() {
   // Filter menu items based on permissions
   const baseMenuItems = navigationByRole[user.role] || navigationByRole.admin;
   const menuItems = baseMenuItems.filter(item => {
-    // Luôn hiển thị Dashboard
-    if (item.url === '/dashboard') return true;
-    
-    // Check permissions cho từng module
-    const module = item.url?.replace('/', '') || '';
-    return permissions.canAccessModule(module);
+    // Show all items - backend handles authorization
+    return true;
   });
 
   const toggleSubmenu = (title: string) => {

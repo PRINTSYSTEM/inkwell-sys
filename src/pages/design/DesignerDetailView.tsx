@@ -1,77 +1,64 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  User,
-  Calendar,
-  Clock,
-  Target,
-  TrendingUp,
-  TrendingDown,
-  Award,
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  Eye,
-  Edit,
-  Plus,
-  RefreshCw,
-  BarChart3,
-  Timer,
-  Flag,
-  Users,
-  Mail,
-  Phone,
-  MapPin
-} from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Activity, AlertTriangle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 
 import { DesignerPerformance, DesignerWorkload, DesignAssignment } from '@/types/design-monitoring';
 import { Employee } from '@/types/employee';
 import { DesignAssignmentService } from '@/services/designAssignmentService';
-import { UserService } from '@/services/userService';
-import DesignAssignmentList from '@/components/DesignAssignmentList';
+
+// Import micro-components
+import { 
+  DesignerInfo, 
+  PerformanceMetrics, 
+  QuickStats, 
+  DesignerActions, 
+  AssignmentHistory 
+} from '@/components/design';
 
 // Mock performance data
 const getMockDesignerPerformance = (designerId: string): DesignerPerformance => ({
   designerId,
   designer: {
     id: designerId,
+    username: 'designer1',
     fullName: 'Nguyễn Văn A',
     email: 'designer1@company.com',
-    role: 'designer',
-    departmentId: 'dept-design',
+    role: 'design',
+    department: 'dept-design',
+    departmentName: 'Design Department',
     status: 'active',
     avatar: '',
-    phoneNumber: '+84 123 456 789',
+    phone: '+84 123 456 789',
     address: 'Hà Nội, Việt Nam',
-    hireDate: new Date('2023-01-15'),
+    hireDate: '2023-01-15',
     currentWorkload: 85,
+    permissions: [],
+    createdBy: 'system',
+    updatedBy: 'system',
+    certifications: ['Adobe Certified Expert', 'Figma Professional'],
+    availability: 'available' as const,
     metrics: {
       totalDesigns: 24,
       completedDesigns: 22,
+      inProgressDesigns: 2,
+      pendingDesigns: 0,
+      averageCompletionTime: 4.2,
       completionRate: 92,
-      averageRating: 4.6
+      workloadScore: 85,
+      averageScore: 8.5,
+      qualityScore: 92,
+      lastActivityDate: new Date().toISOString(),
+      monthlyMetrics: []
     },
     skills: ['UI/UX Design', 'Graphic Design', 'Packaging Design'],
-    assignments: [],
-    createdAt: new Date(),
-    updatedAt: new Date()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   periodStart: new Date('2024-10-01'),
   periodEnd: new Date('2024-11-06'),
@@ -125,26 +112,39 @@ const DesignerDetailView: React.FC = () => {
       // Load designer info (mock for now)
       const mockDesigner: Employee = {
         id: designerId,
+        username: 'designer1',
         fullName: 'Nguyễn Văn A',
         email: 'designer1@company.com',
-        role: 'designer',
-        departmentId: 'dept-design',
+        role: 'design',
+        department: 'dept-design',
+        departmentName: 'Design Department',
         status: 'active',
         avatar: '',
-        phoneNumber: '+84 123 456 789',
+        phone: '+84 123 456 789',
         address: 'Hà Nội, Việt Nam',
-        hireDate: new Date('2023-01-15'),
+        hireDate: '2023-01-15',
         currentWorkload: 85,
+        permissions: [],
+        createdBy: 'system',
+        updatedBy: 'system',
+        certifications: ['Adobe Certified Expert', 'Figma Professional'],
+        availability: 'available' as const,
         metrics: {
           totalDesigns: 24,
           completedDesigns: 22,
+          inProgressDesigns: 2,
+          pendingDesigns: 0,
+          averageCompletionTime: 4.2,
           completionRate: 92,
-          averageRating: 4.6
+          workloadScore: 85,
+          averageScore: 8.5,
+          qualityScore: 92,
+          lastActivityDate: new Date().toISOString(),
+          monthlyMetrics: []
         },
         skills: ['UI/UX Design', 'Graphic Design', 'Packaging Design'],
-        assignments: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
       // Load workload data
@@ -209,6 +209,12 @@ const DesignerDetailView: React.FC = () => {
     });
   };
 
+  const getPerformanceColor = (value: number, threshold: { good: number; warning: number }) => {
+    if (value >= threshold.good) return 'text-green-600';
+    if (value >= threshold.warning) return 'text-orange-600';
+    return 'text-red-600';
+  };
+
   useEffect(() => {
     loadDesignerData();
   }, [loadDesignerData]);
@@ -238,160 +244,21 @@ const DesignerDetailView: React.FC = () => {
     );
   }
 
-  const getPerformanceTrendIcon = () => {
-    switch (performance.performanceTrend) {
-      case 'improving':
-        return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'declining':
-        return <TrendingDown className="h-4 w-4 text-red-600" />;
-      default:
-        return <Activity className="h-4 w-4 text-blue-600" />;
-    }
-  };
 
-  const getPerformanceColor = (value: number, threshold: { good: number; warning: number }) => {
-    if (value >= threshold.good) return 'text-green-600';
-    if (value >= threshold.warning) return 'text-orange-600';
-    return 'text-red-600';
-  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => navigate('/design/management')}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Quay lại
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">Chi tiết Designer</h1>
-          <p className="text-muted-foreground mt-1">
-            Thông tin chi tiết và hiệu suất làm việc
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefresh} className="gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Làm mới
-          </Button>
-          <Button 
-            onClick={() => navigate(`/design/assignments/new?designer=${designerId}`)}
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Phân công mới
-          </Button>
-        </div>
-      </div>
+      {/* Header Actions */}
+      <DesignerActions 
+        designerId={designerId!} 
+        onRefresh={handleRefresh} 
+      />
 
-      {/* Designer Info Card */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-start gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={designer.avatar} />
-              <AvatarFallback className="text-lg">
-                {designer.fullName.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">{designer.fullName}</h2>
-                  <p className="text-lg text-muted-foreground capitalize">{designer.role}</p>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Mail className="h-4 w-4" />
-                      {designer.email}
-                    </div>
-                    {designer.phoneNumber && (
-                      <div className="flex items-center gap-1">
-                        <Phone className="h-4 w-4" />
-                        {designer.phoneNumber}
-                      </div>
-                    )}
-                    {designer.address && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        {designer.address}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="text-right">
-                  <Badge 
-                    variant={workload.availabilityStatus === 'available' ? 'default' : 
-                            workload.availabilityStatus === 'busy' ? 'secondary' : 'destructive'}
-                    className="mb-2"
-                  >
-                    {workload.availabilityStatus === 'available' && 'Rảnh'}
-                    {workload.availabilityStatus === 'busy' && 'Bận'}
-                    {workload.availabilityStatus === 'overloaded' && 'Quá tải'}
-                    {workload.availabilityStatus === 'offline' && 'Offline'}
-                  </Badge>
-                  <div className="text-sm text-muted-foreground">
-                    Gia nhập: {designer.hireDate.toLocaleDateString('vi-VN')}
-                  </div>
-                </div>
-              </div>
-
-              {/* Skills */}
-              <div className="mt-4">
-                <p className="text-sm font-medium mb-2">Kỹ năng:</p>
-                <div className="flex gap-2">
-                  {designer.skills?.map((skill, index) => (
-                    <Badge key={index} variant="outline">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Designer Info */}
+      <DesignerInfo designer={designer} workload={workload} />
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Target className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-            <div className="text-2xl font-bold">{workload.activeAssignments}</div>
-            <div className="text-sm text-muted-foreground">Assignments đang làm</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-600" />
-            <div className="text-2xl font-bold">{performance.completedAssignments}</div>
-            <div className="text-sm text-muted-foreground">Đã hoàn thành tháng này</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Clock className="h-8 w-8 mx-auto mb-2 text-orange-600" />
-            <div className="text-2xl font-bold">{performance.averageCompletionTime.toFixed(1)}</div>
-            <div className="text-sm text-muted-foreground">Ngày hoàn thành TB</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <Award className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-            <div className="text-2xl font-bold">{performance.onTimeRate}%</div>
-            <div className="text-sm text-muted-foreground">Tỷ lệ đúng hạn</div>
-          </CardContent>
-        </Card>
-      </div>
+      <QuickStats workload={workload} performance={performance} />
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -404,117 +271,17 @@ const DesignerDetailView: React.FC = () => {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Current Workload */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Workload hiện tại
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Tải công việc tổng</span>
-                      <span className={`font-bold ${
-                        workload.totalWorkload > 80 ? 'text-red-600' :
-                        workload.totalWorkload > 60 ? 'text-orange-600' : 'text-green-600'
-                      }`}>
-                        {workload.totalWorkload}%
-                      </span>
-                    </div>
-                    <Progress value={workload.totalWorkload} className="h-3" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="bg-blue-50 p-3 rounded-lg text-center">
-                      <div className="font-bold text-blue-600">{workload.assignmentsByStatus.in_progress}</div>
-                      <div className="text-blue-600">Đang làm</div>
-                    </div>
-                    <div className="bg-orange-50 p-3 rounded-lg text-center">
-                      <div className="font-bold text-orange-600">{workload.assignmentsByStatus.review}</div>
-                      <div className="text-orange-600">Đang review</div>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg text-center">
-                      <div className="font-bold text-gray-600">{workload.assignmentsByStatus.pending}</div>
-                      <div className="text-gray-600">Chờ xử lý</div>
-                    </div>
-                    <div className="bg-red-50 p-3 rounded-lg text-center">
-                      <div className="font-bold text-red-600">{workload.overdueAssignments}</div>
-                      <div className="text-red-600">Quá hạn</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Performance Trend */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {getPerformanceTrendIcon()}
-                  Xu hướng hiệu suất
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Tỷ lệ hoàn thành</div>
-                      <div className={`text-lg font-bold ${getPerformanceColor(performance.completionRate, { good: 80, warning: 60 })}`}>
-                        {performance.completionRate}%
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Tỷ lệ đúng hạn</div>
-                      <div className={`text-lg font-bold ${getPerformanceColor(performance.onTimeRate, { good: 80, warning: 60 })}`}>
-                        {performance.onTimeRate}%
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Tỷ lệ duyệt lần đầu</div>
-                      <div className={`text-lg font-bold ${getPerformanceColor(performance.approvalRate, { good: 80, warning: 60 })}`}>
-                        {performance.approvalRate}%
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Hiệu suất workload</div>
-                      <div className={`text-lg font-bold ${getPerformanceColor(performance.workloadEfficiency, { good: 80, warning: 60 })}`}>
-                        {performance.workloadEfficiency}%
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t">
-                    <div className="text-sm text-muted-foreground mb-2">Tiến trình 3 tháng gần nhất:</div>
-                    <div className="space-y-2">
-                      {performance.monthlyProgress.map((month, index) => (
-                        <div key={month.month} className="flex justify-between text-sm">
-                          <span>{month.month}</span>
-                          <span>{month.completedCount} assignments</span>
-                          <span className={getPerformanceColor(month.onTimeRate, { good: 80, warning: 60 })}>
-                            {month.onTimeRate}% đúng hạn
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <PerformanceMetrics workload={workload} performance={performance} />
         </TabsContent>
 
         {/* Assignments Tab */}
         <TabsContent value="assignments">
-          <DesignAssignmentList
+          <AssignmentHistory 
             assignments={assignments}
-            loading={false}
-            onRefresh={loadDesignerData}
-            viewMode="table"
-            allowFiltering={true}
+            onAssignmentClick={(assignment) => {
+              // Handle assignment click
+              console.log('Assignment clicked:', assignment);
+            }}
           />
         </TabsContent>
 

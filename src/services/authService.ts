@@ -1,97 +1,90 @@
-import { apiRequest, authUtils } from "../lib/http";
-import type { LoginRequest, LoginResponse, UserInfo } from "../Schema/auth.schema";
-import { validateLoginResponse } from "../Schema/auth.schema";
+/**
+ * @deprecated This file is deprecated. Use ModernAuthService instead.
+ * This file is kept for backward compatibility during migration.
+ */
 
-// Auth API service
+import type { LoginRequest, LoginResponse, UserInfo } from "../Schema/auth.schema";
+import { getAuthService } from "./index";
+
+// Auth API service - Legacy wrapper for backward compatibility
 export class AuthAPI {
   /**
+   * @deprecated Use getAuthService().login() instead
    * Login user
    * @param credentials - Username and password
    * @returns Promise with access token and user info
    */
   static async login(credentials: LoginRequest): Promise<LoginResponse> {
-    try {
-      // Make login request
-      const response = await apiRequest.post("/auth/login", credentials);
-      
-      // Validate response data
-      const loginData = validateLoginResponse(response.data);
-      
-      // Store auth data in localStorage
-      authUtils.setAuthData(loginData.accessToken, loginData.userInfo);
-      
-      return loginData;
-    } catch (error) {
-      console.error("❌ Login failed :", error);
-      throw error;
+    const authService = getAuthService();
+    const response = await authService.login(credentials);
+    
+    if (response.success && response.data) {
+      return response.data;
     }
+    
+    throw new Error(response.message || 'Login failed');
   }
 
   /**
+   * @deprecated Use getAuthService().logout() instead
    * Logout user
-   * Clear stored auth data and optionally call logout API
    */
   static async logout(): Promise<void> {
-    try {
-      // Call logout API if endpoint exists (optional)
-      // await apiRequest.post("/auth/logout");
-      
-      // Clear stored auth data
-      authUtils.clearAuthData();
-      
-      console.log("✅ Logout successful");
-    } catch (error) {
-      // Even if API call fails, still clear local data
-      authUtils.clearAuthData();
-      console.error("❌ Logout API failed but local data cleared:", error);
-    }
+    const authService = getAuthService();
+    await authService.logout(true);
   }
 
   /**
+   * @deprecated Use getAuthService().getCurrentUser() instead
    * Get current user info
    * @returns Current user info from localStorage
    */
   static getCurrentUser(): UserInfo | null {
-    return authUtils.getUserInfo();
+    const authService = getAuthService();
+    return authService.getCurrentUser();
   }
 
   /**
+   * @deprecated Use getAuthService().isAuthenticated() instead
    * Check if user is authenticated
    * @returns boolean indicating authentication status
    */
   static isAuthenticated(): boolean {
-    return authUtils.isAuthenticated();
+    const authService = getAuthService();
+    return authService.isAuthenticated();
   }
 
   /**
+   * @deprecated Use getAuthService().getAccessToken() instead
    * Get current access token
    * @returns Access token or null
    */
   static getAccessToken(): string | null {
-    return authUtils.getAccessToken();
+    const authService = getAuthService();
+    return authService.getAccessToken();
   }
 
   /**
-   * Refresh token (if refresh endpoint exists)
-   * Placeholder for future implementation
+   * @deprecated Use getAuthService().refreshToken() instead
+   * Refresh token
    */
   static async refreshToken(): Promise<LoginResponse | null> {
-    // This would be implemented if there's a refresh token endpoint
-    // const refreshToken = localStorage.getItem('refreshToken');
-    // if (!refreshToken) return null;
-    
-    // try {
-    //   const response = await apiRequest.post("/auth/refresh", { refreshToken });
-    //   const loginData = validateLoginResponse(response.data);
-    //   authUtils.setAuthData(loginData.accessToken, loginData.userInfo);
-    //   return loginData;
-    // } catch (error) {
-    //   authUtils.clearAuthData();
-    //   throw error;
-    // }
-    
-    console.warn("Refresh token not implemented yet");
-    return null;
+    try {
+      const authService = getAuthService();
+      const response = await authService.refreshToken();
+      
+      if (response.success && response.data) {
+        return {
+          accessToken: response.data.accessToken,
+          userInfo: authService.getCurrentUser()!
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Refresh token failed:", error);
+      return null;
+    }
   }
 }
 

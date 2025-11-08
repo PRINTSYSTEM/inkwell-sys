@@ -21,7 +21,7 @@ import { DesignAssignmentService } from '@/services/designAssignmentService';
 import DesignerList from '@/components/DesignerList';
 import DesignAssignmentList from '@/components/DesignAssignmentList';
 import { DesignerWorkload, DesignAssignment } from '@/types/design-monitoring';
-import { Employee } from '@/types/employee';
+import { Employee, EmployeeMetrics } from '@/types/employee';
 
 // Mock designers for testing
 const mockDesigners: Employee[] = [
@@ -29,93 +29,93 @@ const mockDesigners: Employee[] = [
     id: 'emp-001',
     fullName: 'Nguyễn Văn A',
     email: 'designer1@company.com',
-    role: 'designer',
-    departmentId: 'dept-design',
+    role: 'design',
+    department: 'dept-design',
+    departmentName: 'Thiết kế',
     status: 'active',
     avatar: '',
-    phoneNumber: '+84 123 456 789',
+    phone: '+84 123 456 789',
     address: 'Hà Nội, Việt Nam',
-    hireDate: new Date('2023-01-15'),
+    hireDate: '2023-01-15',
     currentWorkload: 85,
     metrics: {
       totalDesigns: 24,
       completedDesigns: 22,
-      completionRate: 92,
-      averageRating: 4.6
-    },
+      completionRate: 92
+    } as EmployeeMetrics,
     skills: ['UI/UX Design', 'Graphic Design'],
     assignments: [],
-    createdAt: new Date(),
-    updatedAt: new Date()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     id: 'emp-002',
     fullName: 'Trần Thị B',
     email: 'designer2@company.com',
-    role: 'designer',
-    departmentId: 'dept-design',
+    role: 'design',
+    department: 'dept-design',
+    departmentName: 'Thiết kế',
     status: 'active',
     avatar: '',
-    phoneNumber: '+84 987 654 321',
+    phone: '+84 987 654 321',
     address: 'TP.HCM, Việt Nam',
-    hireDate: new Date('2023-03-10'),
+    hireDate: '2023-03-10',
     currentWorkload: 92,
     metrics: {
       totalDesigns: 21,
       completedDesigns: 19,
-      completionRate: 90,
-      averageRating: 4.5
-    },
+      completionRate: 90
+    } as EmployeeMetrics,
     skills: ['Packaging Design', 'Print Design'],
     assignments: [],
-    createdAt: new Date(),
-    updatedAt: new Date()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     id: 'emp-003',
     fullName: 'Lê Minh C',
     email: 'designer3@company.com',
-    role: 'designer',
-    departmentId: 'dept-design',
+    role: 'design',
+    department: 'dept-design',
+    departmentName: 'Thiết kế',
     status: 'active',
     avatar: '',
-    phoneNumber: '+84 456 789 123',
+    phone: '+84 456 789 123',
     address: 'Đà Nẵng, Việt Nam',
-    hireDate: new Date('2023-06-01'),
+    hireDate: '2023-06-01',
     currentWorkload: 45,
     metrics: {
       totalDesigns: 15,
       completedDesigns: 13,
-      completionRate: 87,
-      averageRating: 4.3
-    },
+      completionRate: 87
+    } as EmployeeMetrics,
     skills: ['Web Design', 'Logo Design'],
     assignments: [],
-    createdAt: new Date(),
-    updatedAt: new Date()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   },
   {
     id: 'emp-004',
     fullName: 'Phạm Thu D',
     email: 'designer4@company.com',
-    role: 'designer',
-    departmentId: 'dept-design',
+    role: 'design',
+    department: 'dept-design',
+    departmentName: 'Thiết kế', 
     status: 'active',
     avatar: '',
-    phoneNumber: '+84 789 123 456',
+    phone: '+84 789 123 456',
     address: 'Hà Nội, Việt Nam',
-    hireDate: new Date('2023-08-15'),
+    hireDate: '2023-08-15',
     currentWorkload: 70,
     metrics: {
       totalDesigns: 18,
       completedDesigns: 16,
-      completionRate: 89,
-      averageRating: 4.4
-    },
+      completionRate: 89
+    } as EmployeeMetrics,
     skills: ['Illustration', 'Packaging Design'],
     assignments: [],
-    createdAt: new Date(),
-    updatedAt: new Date()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ];
 

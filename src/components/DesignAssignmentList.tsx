@@ -132,29 +132,29 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
       
       switch (sortBy) {
         case 'title': {
-          aValue = (a as any).title || '';
-          bValue = (b as any).title || '';
+          aValue = (a as AssignmentData).title as string || '';
+          bValue = (b as AssignmentData).title as string || '';
           break;
         }
         case 'deadline': {
-          aValue = new Date((a as any).deadline || 0);
-          bValue = new Date((b as any).deadline || 0);
+          aValue = new Date((a as AssignmentData).deadline as string || 0);
+          bValue = new Date((b as AssignmentData).deadline as string || 0);
           break;
         }
         case 'assignedAt': {
-          aValue = new Date((a as any).assignedAt || 0);
-          bValue = new Date((b as any).assignedAt || 0);
+          aValue = new Date((a as AssignmentData).assignedAt as string || 0);
+          bValue = new Date((b as AssignmentData).assignedAt as string || 0);
           break;
         }
         case 'priority': {
           const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-          aValue = priorityOrder[(a as any).priority as keyof typeof priorityOrder] || 0;
-          bValue = priorityOrder[(b as any).priority as keyof typeof priorityOrder] || 0;
+          aValue = priorityOrder[(a as AssignmentData).priority as keyof typeof priorityOrder] || 0;
+          bValue = priorityOrder[(b as AssignmentData).priority as keyof typeof priorityOrder] || 0;
           break;
         }
         case 'progress': {
-          aValue = (a as any).progressPercentage || 0;
-          bValue = (b as any).progressPercentage || 0;
+          aValue = (a as AssignmentData).progressPercentage as number || 0;
+          bValue = (b as AssignmentData).progressPercentage as number || 0;
           break;
         }
         default:

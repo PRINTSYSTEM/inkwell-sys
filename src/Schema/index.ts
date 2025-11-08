@@ -11,6 +11,7 @@ export * from './department.schema';
 export * from './notification.schema';
 export * from './design-code.schema';
 export * from './design-assignment.schema';
+export * from './design-type.schema';
 export * from './material.schema';
 export * from './order.schema';
 

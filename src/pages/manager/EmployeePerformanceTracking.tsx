@@ -7,7 +7,6 @@ import {
   Clock,
   Award,
   BarChart3,
-  PieChart,
   Calendar,
   Users,
   CheckCircle,

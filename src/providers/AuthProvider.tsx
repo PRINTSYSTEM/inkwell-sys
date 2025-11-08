@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/auth';
-import { authAPI } from '@/services/authService';
+import { authAPI } from '@/services';
 import type { UserInfo } from '@/Schema/auth.schema';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -25,8 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
       const result = await authAPI.login({ username, password });
-      setUser(result.userInfo);
-      return true;
+      // authAPI.login returns LoginResponse which has userInfo property
+      if (result && result.userInfo) {
+        setUser(result.userInfo);
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Login error:', error);
       return false;

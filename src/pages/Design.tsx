@@ -4,8 +4,7 @@ import { Upload, FileText, Clock, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { mockDesigns, statusConfig } from '@/lib/mockData';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/use-auth';
-import { usePermissions } from '@/lib/permissions';
+import { useAuth } from '@/contexts/auth';
 
 
 const statusLabels = {
@@ -29,23 +28,9 @@ const statusColors = {
 export default function Design() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const permissions = usePermissions(user?.role || 'operator');
 
-  // Filter designs based on role
-  const filteredDesigns = mockDesigns.filter(design => {
-    // Designers chỉ thấy design được assign cho mình
-    if (permissions.permissions.dataScope === 'design-only') {
-      return true; // Simplified: show all for demo
-    }
-    // Prepress thấy designs đã approved ready for production
-    if (permissions.permissions.dataScope === 'technical-only') {
-      return design.status === 'approved';
-    }
-    return true; // Admin sees all
-  }).map(design => ({
-    ...design,
-    customerName: permissions.maskCustomerInfo(design.customerName)
-  }));
+  // Show all designs - backend handles authorization
+  const filteredDesigns = mockDesigns;
 
   return (
     <div className="space-y-6">
