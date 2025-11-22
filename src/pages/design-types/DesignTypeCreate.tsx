@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { DesignTypeEntity, CreateDesignTypeRequest } from '@/Schema/design-type.schema';
-import { designTypeService } from '@/services/designTypeService';
+import { useCreateDesignType, useDesignType, useUpdateDesignType } from '@/hooks/use-material-type';
 
 export default function DesignTypeFormPage() {
   const navigate = useNavigate();
@@ -18,10 +18,11 @@ export default function DesignTypeFormPage() {
   const { toast } = useToast();
   const isEdit = Boolean(id);
 
-  const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-  const [designType, setDesignType] = useState<DesignTypeEntity | null>(null);
-  
+  const updateDesignType = useUpdateDesignType();
+  const createDesignType = useCreateDesignType();
+  const designTypeId = isEdit ? Number(id) : undefined;
+  const { data: designType, isLoading: loading } = useDesignType(designTypeId!, isEdit);
   const [formData, setFormData] = useState<CreateDesignTypeRequest>({
     code: '',
     name: '',
@@ -33,42 +34,16 @@ export default function DesignTypeFormPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const loadData = async () => {
-      if (isEdit && id) {
-        try {
-          setLoading(true);
-          const data = await designTypeService.getDesignTypeById(Number(id));
-          if (data) {
-            setDesignType(data);
-            setFormData({
-              code: data.code,
-              name: data.name,
-              description: data.description || '',
-              displayOrder: data.displayOrder,
-              status: data.status,
-            });
-          } else {
-            toast({
-              title: "Lỗi",
-              description: "Không tìm thấy loại thiết kế",
-              variant: "destructive",
-            });
-            navigate('/design-types');
-          }
-        } catch (error) {
-          toast({
-            title: "Lỗi",
-            description: "Không thể tải thông tin loại thiết kế",
-            variant: "destructive",
-          });
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    
-    loadData();
-  }, [id, isEdit, toast, navigate]);
+    if (isEdit && designType) {
+      setFormData({
+        code: designType.code,
+        name: designType.name,
+        description: designType.description || '',
+        displayOrder: designType.displayOrder,
+        status: designType.status,
+      });
+    }
+  }, [isEdit, designType]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -100,17 +75,19 @@ export default function DesignTypeFormPage() {
       setSaving(true);
       
       if (isEdit && id) {
-        await designTypeService.updateDesignType(Number(id), formData);
+        await updateDesignType.mutateAsync({ id: Number(id), data: formData });
         toast({
           title: "Thành công",
           description: "Đã cập nhật loại thiết kế",
         });
+        navigate('/design-types');
       } else {
-        await designTypeService.createDesignType(formData);
+        await createDesignType.mutateAsync(formData);
         toast({
           title: "Thành công",
           description: "Đã tạo loại thiết kế mới",
         });
+        navigate('/design-types');
       }
       
       navigate('/design-types');

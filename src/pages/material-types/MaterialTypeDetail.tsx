@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { MaterialTypeEntity } from '@/Schema/material-type.schema';
-import { materialTypeService } from '@/services/materialTypeService';
+import { useMaterialType, useUpdateMaterialType, useDeleteMaterialType } from '@/hooks/use-material-type';
 
 export default function MaterialTypeDetail() {
   const navigate = useNavigate();

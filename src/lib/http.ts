@@ -164,3 +164,102 @@ const createApiInstance = (): AxiosInstance => {
 
 // Single API instance for monolithic architecture
 export const apiRequest = createApiInstance();
+
+// Types for API utilities
+interface ApiRequestConfig {
+  headers?: Record<string, string>;
+  timeout?: number;
+  responseType?: 'json' | 'blob' | 'text' | 'arraybuffer';
+}
+
+interface PaginatedParams {
+  pageNumber?: number;
+  pageSize?: number;
+  [key: string]: unknown;
+}
+
+interface PaginatedResponse<T> {
+  items: T[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+// Enhanced API utilities for easier usage
+export const api = {
+  // GET request
+  get: async <T>(url: string, params?: Record<string, unknown>): Promise<T> => {
+    const response = await apiRequest.get<T>(url, { params });
+    return response.data;
+  },
+
+  // POST request
+  post: async <T>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<T> => {
+    const response = await apiRequest.post<T>(url, data, config);
+    return response.data;
+  },
+
+  // PUT request
+  put: async <T>(url: string, data?: unknown): Promise<T> => {
+    const response = await apiRequest.put<T>(url, data);
+    return response.data;
+  },
+
+  // PATCH request
+  patch: async <T>(url: string, data?: unknown): Promise<T> => {
+    const response = await apiRequest.patch<T>(url, data);
+    return response.data;
+  },
+
+  // DELETE request
+  delete: async <T>(url: string): Promise<T> => {
+    const response = await apiRequest.delete<T>(url);
+    return response.data;
+  },
+
+  // Upload file with FormData
+  upload: async <T>(url: string, formData: FormData): Promise<T> => {
+    const response = await apiRequest.post<T>(url, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  },
+
+  // Download file
+  download: async (url: string, filename?: string): Promise<void> => {
+    const response = await apiRequest.get(url, {
+      responseType: 'blob'
+    });
+    
+    // Create download link
+    const blob = new Blob([response.data]);
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename || 'download';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  // Paginated GET request with standard response format
+  paginated: async <T>(
+    url: string, 
+    params?: PaginatedParams
+  ): Promise<PaginatedResponse<T>> => {
+    const response = await apiRequest.get(url, { 
+      params: {
+        pageNumber: 1,
+        pageSize: 10,
+        ...params
+      }
+    });
+    return response.data;
+  }
+};

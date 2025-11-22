@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,39 +33,99 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ArrowLeft, Save, User, Package, Calendar, DollarSign, AlertTriangle, Search, Plus, Trash2, Check, ChevronsUpDown } from 'lucide-react';
-import { mockCustomers } from '@/lib/mockData';
+import { 
+  ArrowLeft, 
+  Save, 
+  User, 
+  Package, 
+  Plus, 
+  Trash2, 
+  Check, 
+  ChevronsUpDown 
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { checkDebtStatus, formatCurrency } from '@/lib/utils';
-import { designTypesService } from '@/lib/mockData';
+import { useCreateOrder } from '@/hooks/use-order';
+import { useCustomers, useCreateCustomer } from '@/hooks/use-customer';
+import { useMaterialTypes, useDesignTypes } from '@/hooks/use-material-type';
+import { useMaterialsByDesignType } from '@/hooks/use-material-type';
+import type { MaterialType } from '@/apis/material-type.api';
+import { useAuth } from '@/contexts/auth';
+
+// Helper: normalize mọi kiểu response về mảng
+const normalizeArray = <T,>(raw: unknown): T[] => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as T[];
+  if (Array.isArray(raw.data)) return raw.data as T[];
+  if (Array.isArray(raw.items)) return raw.items as T[];
+  return [];
+};
 
 export default function CreateOrder() {
+      // State to store materials for each designTypeId
+      const [materialsByTypeMap, setMaterialsByTypeMap] = useState<Record<string, MaterialType[]>>({});
+      const [loadingMaterialsByTypeMap, setLoadingMaterialsByTypeMap] = useState<Record<string, boolean>>({});
+
+      // Fetch materials when designTypeId changes for any design
+      useEffect(() => {
+        designs.forEach((design) => {
+          const designTypeId = design.designTypeId;
+          if (designTypeId && !materialsByTypeMap[designTypeId]) {
+            setLoadingMaterialsByTypeMap((prev) => ({ ...prev, [designTypeId]: true }));
+            fetch(`designs/materials/design-type/${designTypeId}?status=active`)
+              .then((res) => res.json())
+              .then((data) => {
+                setMaterialsByTypeMap((prev) => ({ ...prev, [designTypeId]: data }));
+              })
+              .finally(() => {
+                setLoadingMaterialsByTypeMap((prev) => ({ ...prev, [designTypeId]: false }));
+              });
+          }
+        });
+      }, [designs, materialsByTypeMap]);
+    const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const [showCreateCustomerDialog, setShowCreateCustomerDialog] = useState(false);
   const [customerComboOpen, setCustomerComboOpen] = useState(false);
-  const [designTypes, setDesignTypes] = useState<{ code: string; name: string; description?: string }[]>([]);
-  const [loadingDesignTypes, setLoadingDesignTypes] = useState(true);
+
+  // React Query hooks
+  const { data: designTypesData, isLoading: loadingDesignTypes } = useDesignTypes({ status: 'active' });
+  const { data: materialTypesData, isLoading: loadingMaterialTypes } = useMaterialTypes({ status: 'active' });
+  const { data: customersData, isLoading: loadingCustomers } = useCustomers({ pageSize: 100 });
+  const createOrderMutation = useCreateOrder();
+  const createCustomerMutation = useCreateCustomer();
   
+  // Chuẩn hóa data từ API
+  const designTypes = normalizeArray<{ id: number; code: string; name: string; description?: string }>(designTypesData);
+  const materialTypes = normalizeArray<{ id: number; name: string; description?: string }>(materialTypesData);
+  const customers = normalizeArray<{ id: number; companyName: string; representativeName: string; code: string; phone: string }>(customersData);
+
   const [formData, setFormData] = useState({
     customerId: '',
     notes: '',
   });
 
-  const [selectedCustomer, setSelectedCustomer] = useState<typeof mockCustomers[0] | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<{
+    id: number;
+    companyName: string;
+    representativeName: string;
+    code: string;
+    phone: string;
+  } | null>(null);
   
-  // Multi-design support cho giai đoạn thiết kế
+  // Multi-design support
   const [designs, setDesigns] = useState([
     {
       id: '1',
       designCode: '',
-      designType: '',
+      designTypeId: '',
+      materialTypeId: '',
       designName: '',
       dimensions: '',
+      width: '',
+      height: '',
       quantity: '',
       requirements: '',
       notes: ''
@@ -82,33 +142,8 @@ export default function CreateOrder() {
     maxDebt: '10000000', // Default 10M VND
   });
 
-  // Load design types on mount
-  useEffect(() => {
-    const loadDesignTypes = async () => {
-      try {
-        setLoadingDesignTypes(true);
-        const activeDesignTypes = await designTypesService.getActive();
-        setDesignTypes(activeDesignTypes.map(dt => ({
-          code: dt.code,
-          name: dt.name,
-          description: dt.description
-        })));
-      } catch (error) {
-        toast({
-          title: "Lỗi",
-          description: "Không thể tải danh sách loại thiết kế",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingDesignTypes(false);
-      }
-    };
-    
-    loadDesignTypes();
-  }, [toast]);
-
   const handleCustomerSelect = (customerId: string) => {
-    const customer = mockCustomers.find(c => c.id === customerId);
+    const customer = customers.find((c) => c.id.toString() === customerId);
     if (customer) {
       setSelectedCustomer(customer);
       setFormData(prev => ({
@@ -123,13 +158,24 @@ export default function CreateOrder() {
     setDesigns([...designs, {
       id: newId,
       designCode: '',
-      designType: '',
+      designTypeId: '',
+      materialTypeId: '',
       designName: '',
       dimensions: '',
+      width: '',
+      height: '',
       quantity: '',
       requirements: '',
       notes: ''
     }]);
+  };
+
+  // Filter material types based on selected design type
+  // Hiện tại chưa cần lọc, cứ trả về full list (nhưng vẫn nhận designTypeId cho đúng call site)
+  const getFilteredMaterialTypes = (designTypeId?: string) => {
+    // Nếu sau này API trả kèm designTypeId trong material, có thể bật filter:
+    // return materialTypes.filter((m: any) => !m.designTypeId || m.designTypeId === Number(designTypeId));
+    return materialTypes;
   };
 
   const removeDesign = (id: string) => {
@@ -143,13 +189,24 @@ export default function CreateOrder() {
       if (design.id === id) {
         const updatedDesign = { ...design, [field]: value };
         
+        // Clear material type if design type changed
+        if (field === 'designTypeId' && updatedDesign.designTypeId !== design.designTypeId) {
+          updatedDesign.materialTypeId = '';
+        }
+        
         // Tự động sinh mã thiết kế khi có đủ thông tin
-        if (selectedCustomer && updatedDesign.designType && updatedDesign.designName) {
-          updatedDesign.designCode = generateDesignCode(
-            selectedCustomer.code, 
-            updatedDesign.designType, 
-            updatedDesign.id
+        if (selectedCustomer && updatedDesign.designTypeId && updatedDesign.designName) {
+          const designType = designTypes.find(
+            (dt) => dt.id.toString() === updatedDesign.designTypeId
           );
+          if (designType) {
+              updatedDesign.designCode = generateDesignCode(
+                selectedCustomer.code, 
+                designType.code, 
+                updatedDesign.id
+              );
+              // <-- Added missing semicolon above
+          }
         }
         
         return updatedDesign;
@@ -158,36 +215,34 @@ export default function CreateOrder() {
     }));
   };
 
-  // Tự động sinh mã thiết kế theo format từ Design Type service
+  // Tự động sinh mã thiết kế theo format đơn giản
   const generateDesignCode = (customerCode: string, designType: string, designId: string) => {
-    try {
-      const designNumber = parseInt(designId) || 1;
-      return designTypesService.generateDesignCode(designType, customerCode, designNumber);
-    } catch (error) {
-      // Fallback to simple format if service fails
-      const today = new Date();
-      const dateStr = today.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD
-      const designNumber = designId.padStart(3, '0');
-      return `${customerCode}-${designType}-${designNumber}-${dateStr}`;
-    }
+    const today = new Date();
+    const dateStr = today.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD
+    const designNumber = designId.padStart(3, '0');
+    return `${customerCode}-${designType}-${designNumber}-${dateStr}`;
   };
 
   // Tạo mã thiết kế gợi ý cho người dùng (chưa submit)
-  const generateDesignCodePreview = (designType: string, designId: string) => {
+  const generateDesignCodePreview = (designTypeId: string, designId: string) => {
+    if (!designTypeId) return '';
+    const designType = designTypes.find((dt) => dt.id.toString() === designTypeId);
     if (!designType) return '';
     // Chỉ hiển thị loại thiết kế + xxx (VD: Hxxx, Txxx)
-    return `${designType}xxx`;
+    return `${designType.code}xxx`;
   };
 
   // Validate thiết kế cho giai đoạn thiết kế (không cần giá)
   const validateDesigns = () => {
     return designs.filter(design => 
-      design.designType && 
+      design.designTypeId && 
+      design.materialTypeId &&
       design.designName.trim() && 
       design.dimensions.trim() && 
       design.quantity && 
       parseInt(design.quantity) > 0 &&
-      design.requirements.trim()
+      design.requirements.trim() &&
+      design.width !== undefined && design.height !== undefined
     );
   };
 
@@ -202,34 +257,28 @@ export default function CreateOrder() {
       return;
     }
 
-    // Generate customer code
-    const customerCode = `${String(mockCustomers.length + 1).padStart(4, '0')}${newCustomerData.representativeName.split(' ').pop()?.substring(0, 2).toUpperCase()}`;
-    
-    // In real app, this would be an API call
-    console.log('Creating customer:', { 
-      ...newCustomerData, 
-      code: customerCode,
+    createCustomerMutation.mutate({
+      companyName: newCustomerData.companyName,
+      representativeName: newCustomerData.representativeName,
+      phone: newCustomerData.phone,
+      address: newCustomerData.address || undefined,
+      taxCode: newCustomerData.taxCode || undefined,
       maxDebt: parseFloat(newCustomerData.maxDebt)
-    });
-
-    toast({
-      title: "Thành công",
-      description: "Đã tạo khách hàng mới thành công",
-    });
-
-    // Close dialog and reset form
-    setShowCreateCustomerDialog(false);
-    setNewCustomerData({
-      companyName: '',
-      representativeName: '',
-      phone: '',
-      address: '',
-      taxCode: '',
-      maxDebt: '10000000',
+    }, {
+      onSuccess: () => {
+        // Close dialog and reset form
+        setShowCreateCustomerDialog(false);
+        setNewCustomerData({
+          companyName: '',
+          representativeName: '',
+          phone: '',
+          address: '',
+          taxCode: '',
+          maxDebt: '10000000',
+        });
+      }
     });
   };
-
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,49 +305,45 @@ export default function CreateOrder() {
     }
 
     try {
-      // Generate order number
-      const orderNumber = `DH${String(Date.now()).slice(-3).padStart(3, '0')}`;
-      const today = new Date().toISOString().split('T')[0];
-
-      // Tạo design data với mã thiết kế
-      const designsWithCode = validDesigns.map(design => ({
-        ...design,
-        designCode: generateDesignCode(selectedCustomer.code, design.designType, design.id),
+      // Prepare design requests for API
+      const designRequests = validDesigns.map(design => ({
+        designTypeId: parseInt(design.designTypeId),
+        materialTypeId: parseInt(design.materialTypeId),
+        assignedDesignerId: user?.id || 0,
         quantity: parseInt(design.quantity),
-        createdDate: today
+        dimensions: design.dimensions,
+        width: parseInt(design.width) || 0,
+        height: parseInt(design.height) || 0,
+        requirements: design.requirements,
+        additionalNotes: design.notes
       }));
 
-      // Order data cho giai đoạn thiết kế (chỉ gửi thông tin cần thiết)
+      // Order data theo API schema
       const orderData = {
-        orderNumber,
-        customerId: formData.customerId, // ID khách hàng
-        customerCode: selectedCustomer.code, // Mã khách hàng
-        designs: designsWithCode,
-        notes: formData.notes,
-        status: 'new', // Đơn hàng mới tạo
-        designStatus: 'pending', // Chờ thiết kế
-        createdAt: today,
-        createdBy: 'Lê Văn Thiết kế' // Thay bằng user thực tế
+        customerId: selectedCustomer.id,
+        assignedToUserId: user?.id || 0,
+        deliveryAddress: '', 
+        totalAmount: 0, 
+        depositAmount: 0, 
+        deliveryDate: new Date().toISOString(),
+        note: formData.notes,
+        designRequests
       };
 
-      console.log('Creating design order:', orderData);
-
-      toast({
-        title: "Thành công",
-        description: `Đơn hàng ${orderNumber} với ${validDesigns.length} yêu cầu thiết kế đã được tạo thành công`,
+      createOrderMutation.mutate(orderData, {
+        onSuccess: () => {
+          navigate('/orders');
+        }
       });
-
-      navigate('/orders');
     } catch (error) {
+      console.error('Error creating order:', error);
       toast({
         title: "Lỗi",
-        description: "Có lỗi xảy ra khi tạo đơn hàng",
+        description: error instanceof Error ? error.message : "Có lỗi xảy ra khi tạo đơn hàng",
         variant: "destructive",
       });
     }
   };
-
-
 
   return (
     <div className="space-y-6">
@@ -316,13 +361,15 @@ export default function CreateOrder() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Tạo yêu cầu thiết kế</h1>
-            <p className="text-sm text-muted-foreground mt-1">Nhập thông tin khách hàng và yêu cầu thiết kế</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Nhập thông tin khách hàng và yêu cầu thiết kế
+            </p>
           </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Customer Information - Full Width */}
+        {/* Customer Information */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -366,14 +413,16 @@ export default function CreateOrder() {
                     <Command>
                       <CommandInput placeholder="Tìm theo mã hoặc tên khách hàng..." />
                       <CommandList>
-                        <CommandEmpty>Không tìm thấy khách hàng nào.</CommandEmpty>
+                        <CommandEmpty>
+                          {loadingCustomers ? "Đang tải khách hàng..." : "Không tìm thấy khách hàng nào."}
+                        </CommandEmpty>
                         <CommandGroup>
-                          {mockCustomers.map((customer) => (
+                          {customers.map((customer) => (
                             <CommandItem
                               key={customer.id}
                               value={`${customer.companyName || customer.representativeName} ${customer.code} ${customer.phone}`}
                               onSelect={() => {
-                                handleCustomerSelect(customer.id);
+                                handleCustomerSelect(customer.id.toString());
                                 setCustomerComboOpen(false);
                               }}
                             >
@@ -399,7 +448,7 @@ export default function CreateOrder() {
                 </Popover>
               </div>
 
-              {/* Mã khách hàng - hiển thị mặc định */}
+              {/* Mã khách hàng */}
               <div className="space-y-2">
                 <Label className="text-sm">Mã khách hàng</Label>
                 <Input
@@ -482,8 +531,8 @@ export default function CreateOrder() {
                   <div className="space-y-2">
                     <Label>Loại thiết kế *</Label>
                     <Select 
-                      value={design.designType} 
-                      onValueChange={(value) => updateDesign(design.id, 'designType', value)}
+                      value={design.designTypeId} 
+                      onValueChange={(value) => updateDesign(design.id, 'designTypeId', value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Chọn loại thiết kế..." />
@@ -495,11 +544,48 @@ export default function CreateOrder() {
                           </SelectItem>
                         ) : (
                           designTypes.map((config) => (
-                            <SelectItem key={config.code} value={config.code}>
+                            <SelectItem key={config.id} value={config.id.toString()}>
                               {config.name}
                               {config.description && (
                                 <span className="text-sm text-muted-foreground ml-2">
                                   - {config.description}
+                                </span>
+                              )}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Loại chất liệu *</Label>
+                    <Select 
+                      value={design.materialTypeId} 
+                      onValueChange={(value) => updateDesign(design.id, 'materialTypeId', value)}
+                      disabled={!design.designTypeId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            design.designTypeId
+                              ? "Chọn loại chất liệu..."
+                              : "Chọn loại thiết kế trước"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loadingMaterialsByTypeMap[design.designTypeId] ? (
+                          <SelectItem value="loading" disabled>
+                            Đang tải...
+                          </SelectItem>
+                        ) : (
+                          (materialsByTypeMap[design.designTypeId] ?? []).map((material: MaterialType) => (
+                            <SelectItem key={material.id} value={material.id.toString()}>
+                              {material.name}
+                              {material.description && (
+                                <span className="text-sm text-muted-foreground ml-2">
+                                  - {material.description}
                                 </span>
                               )}
                             </SelectItem>
@@ -526,6 +612,24 @@ export default function CreateOrder() {
                       onChange={(e) => updateDesign(design.id, 'dimensions', e.target.value)}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Chiều rộng (mm) *</Label>
+                    <Input
+                      type="number"
+                      placeholder="Chiều rộng"
+                      value={design.width}
+                      onChange={(e) => updateDesign(design.id, 'width', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Chiều cao (mm) *</Label>
+                    <Input
+                      type="number"
+                      placeholder="Chiều cao"
+                      value={design.height}
+                      onChange={(e) => updateDesign(design.id, 'height', e.target.value)}
+                    />
+                  </div>
                   
                   <div className="space-y-2">
                     <Label>Số lượng *</Label>
@@ -537,13 +641,13 @@ export default function CreateOrder() {
                     />
                   </div>
                   
-                  {/* Hiển thị mã thiết kế gợi ý cho người dùng */}
-                  {design.designType && (
+                  {/* Mã thiết kế gợi ý */}
+                  {design.designTypeId && (
                     <div className="space-y-2">
                       <Label>Mã thiết kế (gợi ý)</Label>
                       <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-md">
                         <span className="text-amber-800 font-mono text-sm">
-                          {generateDesignCodePreview(design.designType, design.id)}
+                          {generateDesignCodePreview(design.designTypeId, design.id)}
                         </span>
                         <p className="text-xs text-amber-600 mt-1">
                           Mã thiết kế sẽ được tạo tự động khi lưu đơn hàng

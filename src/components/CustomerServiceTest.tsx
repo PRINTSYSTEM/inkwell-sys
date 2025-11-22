@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getCustomerService } from '@/services';
+import { useCustomers, useCreateCustomer } from '@/hooks/use-customer';
 import { CustomerListItem } from '@/Schema/customer.schema';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

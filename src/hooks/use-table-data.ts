@@ -105,7 +105,7 @@ export function useTableData<T extends Record<string, unknown>>(
         pageSize: state.pageSize,
         sortBy: state.sortBy || undefined,
         sortOrder: state.sortOrder,
-        search: debouncedSearchQuery || undefined,
+        search: typeof debouncedSearchQuery === 'string' ? debouncedSearchQuery : '',
         filters: Object.keys(state.filters).length > 0 ? state.filters : undefined
       });
 

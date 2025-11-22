@@ -2,7 +2,6 @@
 import { ServiceFactory } from './ServiceFactory';
 import AuthService from './ModernAuthService';
 import { EnhancedUserService } from './EnhancedUserService';
-import { CustomerService } from './CustomerService';
 import { BaseService } from './BaseService';
 import type { LoginRequest } from '../Schema/auth.schema';
 
@@ -16,10 +15,6 @@ export const getAuthService = (): AuthService => {
 
 export const getUserService = (): EnhancedUserService => {
   return serviceFactory.getUserService();
-};
-
-export const getCustomerService = (): CustomerService => {
-  return serviceFactory.getService<CustomerService>('customer');
 };
 
 // Legacy compatibility - can be deprecated later
@@ -58,5 +53,4 @@ export const serviceAPI = {
 export { BaseService, ServiceError } from './BaseService';
 export { ServiceFactory } from './ServiceFactory';
 export { EnhancedUserService } from './EnhancedUserService';
-export { CustomerService } from './CustomerService';
 export { default as ModernAuthService } from './ModernAuthService';

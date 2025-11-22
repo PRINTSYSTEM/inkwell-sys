@@ -12,8 +12,8 @@ export const UserInfoSchema = z.object({
   username: z.string(),
   fullName: z.string(),
   role: z.string(),
-  email: z.string().email(),
-  phone: z.string(),
+  email: z.string(), // Accept any string for email (API may return invalid formats)
+  phone: z.string(), // Phone as string
 });
 
 // Login Response Schema
@@ -26,6 +26,17 @@ export const LoginResponseSchema = z.object({
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 export type UserInfo = z.infer<typeof UserInfoSchema>;
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+
+// Helper function to validate email format
+export const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+// Helper function to get display email (show warning if invalid)
+export const getDisplayEmail = (email: string): string => {
+  return isValidEmail(email) ? email : `${email} ⚠️`;
+};
 
 // Auth State Schema
 export const AuthStateSchema = z.object({

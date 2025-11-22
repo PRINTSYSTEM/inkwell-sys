@@ -16,7 +16,7 @@ import {
   Eye,
   Download
 } from 'lucide-react';
-import { mockOrders, mockPayments, mockCustomers } from '@/lib/mockData';
+import { mockPayments } from '@/lib/mockData';
 import { 
   Table,
   TableBody,

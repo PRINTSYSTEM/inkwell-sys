@@ -564,17 +564,14 @@ class ReportService {
 
   async retryExportJob(jobId: string): Promise<void> {
     // In real implementation, this would retry the export job
-    console.log(`Retrying export job: ${jobId}`);
   }
 
   async cancelExportJob(jobId: string): Promise<void> {
     // In real implementation, this would cancel the export job
-    console.log(`Cancelling export job: ${jobId}`);
   }
 
   async deleteExportJob(jobId: string): Promise<void> {
     // In real implementation, this would delete the export job
-    console.log(`Deleting export job: ${jobId}`);
   }
 
   private generateMockChartData(type: string): unknown {

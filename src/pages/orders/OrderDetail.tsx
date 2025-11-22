@@ -20,7 +20,7 @@ import {
   Edit,
   Trash2
 } from 'lucide-react';
-import { mockOrders, mockDesigns, mockProductions, mockPayments } from '@/lib/mockData';
+import { useOrder, useUpdateOrder } from '@/hooks/use-order';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import AutoDesignCode from '@/components/AutoDesignCode';
@@ -118,13 +118,23 @@ export default function OrderDetail() {
     return '';
   };
 
-  // Find order data
-  const order = mockOrders.find(o => o.id === id);
-  const design = mockDesigns.find(d => d.orderId === id);
-  const production = mockProductions.find(p => p.orderId === id);
-  const payments = mockPayments.filter(p => p.orderId === id);
+  // Use real API to fetch order data
+  const { data: order, isLoading, error } = useOrder(Number(id));
+  
+  // TODO: Add hooks for design, production, and payments when available
+  const design = null; // mockDesigns.find(d => d.orderId === id);
+  const production = null; // mockProductions.find(p => p.orderId === id);
+  const payments: never[] = []; // No payments data yet
 
-  if (!order) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Đang tải thông tin đơn hàng...</div>
+      </div>
+    );
+  }
+
+  if (error || !order) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">

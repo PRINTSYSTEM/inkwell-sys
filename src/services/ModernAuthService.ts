@@ -63,7 +63,7 @@ export class AuthService extends BaseService {
 
       if (response.success) {
         // Validate response data - API returns LoginResponse directly
-        console.log('✅ Validating response data:', response.data);
+        console.log('✅ Login API response received');
         const loginData = validateLoginResponse(response.data);
         
         // Store auth data in localStorage

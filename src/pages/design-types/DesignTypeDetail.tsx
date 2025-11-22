@@ -17,56 +17,44 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { DesignTypeEntity } from '@/Schema/design-type.schema';
-import { designTypeService } from '@/services/designTypeService';
+import { ENTITY_CONFIG } from '@/config/entities.config';
+import { useDesignType, useUpdateDesignType, useDeleteDesignType } from '@/hooks/use-material-type';
+import { MaterialTypeListByDesignType } from './MaterialTypeListByDesignType';
 
 export default function DesignTypeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [designType, setDesignType] = useState<DesignTypeEntity | null>(null);
-  const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const designTypeId = Number(id);
+  const { data: designType, isLoading: loading, refetch, error } = useDesignType(designTypeId);
+  const deleteDesignType = useDeleteDesignType();
 
-  useEffect(() => {
-    const loadDesignType = async () => {
-      if (!id) {
-        navigate('/design-types');
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const data = await designTypeService.getDesignTypeById(Number(id));
-        setDesignType(data);
-      } catch (error) {
-        toast({
-          title: "Lỗi",
-          description: "Không thể tải thông tin loại thiết kế",
-          variant: "destructive",
-        });
-        navigate('/design-types');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDesignType();
-  }, [id, navigate, toast]);
+  // Kiểm tra id hợp lệ sau khi gọi hook
+  if (!id || isNaN(designTypeId) || designTypeId <= 0) {
+    navigate('/design-types');
+    return null;
+  }
+  // Nếu có lỗi hoặc không có dữ liệu, hiển thị thông báo và chuyển hướng
+  if (error || (!loading && !designType)) {
+    toast({
+      title: 'Lỗi',
+      description: 'Không thể tải thông tin loại thiết kế',
+      variant: 'destructive',
+    });
+    navigate('/design-types');
+    return null;
+  }
 
   const handleDelete = async () => {
     if (!designType) return;
-
     try {
       setDeleting(true);
-      await designTypeService.deleteDesignType(designType.id);
-      
+      await deleteDesignType.mutateAsync(designType.id);
       toast({
         title: "Thành công",
         description: "Đã xóa loại thiết kế",
       });
-      
       navigate('/design-types');
     } catch (error) {
       toast({
@@ -207,7 +195,7 @@ export default function DesignTypeDetailPage() {
                 <label className="text-sm font-medium text-gray-600">Trạng thái</label>
                 <div className="mt-1">
                   <Badge variant={designType.status === 'active' ? 'default' : 'secondary'}>
-                    {designType.status === 'active' ? 'Hoạt động' : 'Tạm dừng'}
+                    {ENTITY_CONFIG.commonStatuses.values[designType.status] || designType.status}
                   </Badge>
                 </div>
               </div>
@@ -217,6 +205,17 @@ export default function DesignTypeDetailPage() {
                   <label className="text-sm font-medium text-gray-600">Mô tả</label>
                   <p className="mt-1 text-base text-gray-900">{designType.description}</p>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+          {/* Danh sách chất liệu của loại thiết kế này */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Chất liệu của loại thiết kế này</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {designType && (
+                <MaterialTypeListByDesignType designTypeId={designType.id} />
               )}
             </CardContent>
           </Card>
@@ -236,14 +235,19 @@ export default function DesignTypeDetailPage() {
               
               <Separator />
               
+              {/* Ẩn thông tin người tạo */}
+              {/*
               <div>
                 <label className="text-sm font-medium text-gray-600">Người tạo</label>
                 <div className="mt-1">
                   <p className="font-medium">{designType.createdBy.fullName}</p>
                   <p className="text-sm text-gray-500">@{designType.createdBy.username}</p>
-                  <p className="text-sm text-gray-500">{designType.createdBy.email}</p>
+                  {designType.createdBy.email && (
+                    <p className="text-sm text-gray-500">{designType.createdBy.email}</p>
+                  )}
                 </div>
               </div>
+              */}
               
               <div>
                 <label className="text-sm font-medium text-gray-600">Ngày tạo</label>

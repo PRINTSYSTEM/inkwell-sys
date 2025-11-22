@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, Eye, Calendar, Package, Filter, ChevronDown, Factory, ChevronLeft, ChevronRight, Edit, Copy, Trash2, Printer, Download, Layers } from 'lucide-react';
-import { mockOrders } from '@/lib/mockData';
+import { useOrders } from '@/hooks/use-order';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
@@ -56,12 +56,6 @@ const statusColors = {
   cancelled: 'bg-red-100 text-red-800 border-red-200',
 };
 
-const priorityOrders = mockOrders.filter(order => 
-  order.status === 'quoted' || 
-  order.status === 'design_approved' ||
-  (order.deliveryDate && new Date(order.deliveryDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
-);
-
 export default function Orders() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -70,22 +64,30 @@ export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10; // 10 items per page
 
-  // Simplified filtering - Backend handles authorization
-  const filteredOrders = mockOrders
-    .filter(order => {
-      const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           order.description.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
-    });
+  // Use real API data
+  const { 
+    data: ordersResponse, 
+    isLoading, 
+    error 
+  } = useOrders({
+    page: currentPage,
+    pageSize: itemsPerPage,
+    search: searchTerm || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined
+  });
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
+  const orders = ordersResponse?.items || [];
+  const priorityOrders = orders.filter(order => 
+    order.status === 'quoted' || 
+    order.status === 'design_approved' ||
+    (order.deliveryDate && new Date(order.deliveryDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
+  );
+
+  // API handles filtering, so we use the returned data directly
+  const filteredOrders = orders;
+  // API handles pagination, so we use response data
+  const totalPages = ordersResponse ? Math.ceil(ordersResponse.total / itemsPerPage) : 0;
+  const paginatedOrders = filteredOrders;
 
   // Reset to page 1 when filters change
   const handleSearchChange = (value: string) => {
@@ -156,14 +158,30 @@ export default function Orders() {
     </Badge>
   );
 
-  // Calculate statistics
-  const totalOrders = mockOrders.length;
-  const newOrders = mockOrders.filter(o => o.status === 'new').length;
-  const inProductionOrders = mockOrders.filter(o => o.status === 'in_production').length;
-  const completedOrders = mockOrders.filter(o => o.status === 'completed').length;
-  const totalRevenue = mockOrders
+  // Calculate statistics from API data
+  const totalOrders = ordersResponse?.total || 0;
+  const newOrders = orders.filter(o => o.status === 'new').length;
+  const inProductionOrders = orders.filter(o => o.status === 'in_production').length;
+  const completedOrders = orders.filter(o => o.status === 'completed').length;
+  const totalRevenue = orders
     .filter(o => o.totalAmount)
     .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Đang tải danh sách đơn hàng...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-destructive">Lỗi khi tải danh sách đơn hàng</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

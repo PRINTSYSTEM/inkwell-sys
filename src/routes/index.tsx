@@ -58,7 +58,7 @@ const NotFound = lazy(() => import('@/pages/NotFound'));
 // Additional lazy imports for new pages
 const AdminPermissions = lazy(() => import('@/pages/admin/AdminPermissions.tsx'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings.tsx'));
-const Profile = lazy(() => import('@/pages/Profile'));
+const Profile = lazy(() => import('@/pages/UserProfile'));
 const ManagerReports = lazy(() => import('@/pages/manager/ManagerReports.tsx'));
 
 export const router = createBrowserRouter([
@@ -484,6 +484,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CreateDesignType />
+              </Suspense>
+            )
+          },
+          {
+            path: 'detail/:id',
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DesignTypeDetail />
               </Suspense>
             )
           },

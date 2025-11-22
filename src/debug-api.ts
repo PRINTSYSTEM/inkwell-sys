@@ -15,9 +15,9 @@ export const debugAPI = {
     console.log('🔍 Service Configuration Check:');
     try {
       const authService = getAuthService();
-      // Access private baseURL via prototype hack for debugging
-      const baseURL = (authService as any).baseURL;
-      const client = (authService as any).client;
+      // Access baseURL and client from AuthService (assume public or protected)
+      const baseURL = (authService as AuthService).baseURL;
+      const client = (authService as AuthService).client;
       
       console.log('AuthService baseURL:', baseURL);
       console.log('AuthService client defaults:', client.defaults);

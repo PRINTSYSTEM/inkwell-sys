@@ -39,50 +39,30 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { MaterialTypeEntity } from '@/Schema/material-type.schema';
-import { materialTypeService } from '@/services/materialTypeService';
+import { useMaterialTypes } from '@/hooks/use-material-type';
 
 export default function MaterialTypeListPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [materialTypes, setMaterialTypes] = useState<MaterialTypeEntity[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [deleteItem, setDeleteItem] = useState<MaterialTypeEntity | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const loadMaterialTypes = async () => {
-    try {
-      setLoading(true);
-      const response = await materialTypeService.getMaterialTypes();
-      setMaterialTypes(response.data || []);
-    } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải danh sách loại vật liệu",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Sử dụng hook mới để lấy dữ liệu
+  const { data, isLoading, isError } = useMaterialTypes();
 
-  useEffect(() => {
-    loadMaterialTypes();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
+  const items = useMemo(() => data?.items || data || [], [data]);
   const filteredMaterialTypes = useMemo(() => {
-    return materialTypes.filter(item => {
+    return items.filter(item => {
       const matchesSearch = 
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.code.toLowerCase().includes(searchTerm.toLowerCase());
-      
       const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-      
       return matchesSearch && matchesStatus;
     });
-  }, [materialTypes, searchTerm, statusFilter]);
+  }, [items, searchTerm, statusFilter]);
 
   const handleDelete = async () => {
     if (!deleteItem) return;
@@ -111,18 +91,25 @@ export default function MaterialTypeListPage() {
   };
 
   const stats = useMemo(() => {
-    const total = materialTypes.length;
-    const active = materialTypes.filter(item => item.status === 'active').length;
+    const total = items.length;
+    const active = items.filter(item => item.status === 'active').length;
     return { total, active, inactive: total - active };
-  }, [materialTypes]);
+  }, [items]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto py-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="h-96 bg-gray-200 rounded"></div>
         </div>
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="text-red-500 font-semibold">Không thể tải danh sách loại vật liệu</div>
       </div>
     );
   }

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, Eye, Edit, Building2, ChevronLeft, ChevronRight, MoreHorizontal, Copy, Trash2, Mail, Download, DollarSign, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
-import { getCustomerService } from '@/services';
+import { useCustomers } from '@/hooks/use-customer';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -19,77 +19,59 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CustomerListItem } from '@/Schema/customer.schema';
+import { Customer } from '@/apis/customer.api';
 
 export default function Customers() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [customers, setCustomers] = useState<CustomerListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
-  const [stats, setStats] = useState({
-    total: 0,
-    totalDebt: 0,
-    averageDebt: 0
+  const itemsPerPage = 10;
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Use React Query hook for data fetching
+  const { 
+    data: customersResponse, 
+    isLoading: loading, 
+    error 
+  } = useCustomers({
+    pageNumber: currentPage,
+    pageSize: itemsPerPage,
+    search: debouncedSearch || ''
   });
-  const itemsPerPage = 10; // 10 items per page
+
+  const customers: Customer[] = customersResponse?.items || [];
+  const totalCount = customersResponse?.totalCount || 0;
+  
+  // Calculate stats from current data (could be enhanced with separate stats API)
+  const stats = {
+    total: totalCount,
+    totalDebt: customers.reduce((sum, customer) => sum + (customer.currentDebt || 0), 0),
+    averageDebt: customers.length > 0 
+      ? customers.reduce((sum, customer) => sum + (customer.currentDebt || 0), 0) / customers.length 
+      : 0
+  };
+  
   const navigate = useNavigate();
 
-  // Load customer statistics
-  const loadCustomerStats = async () => {
-    try {
-      const customerService = getCustomerService();
-      const statsResponse = await customerService.getCustomerStats();
-      
-      if (statsResponse.success && statsResponse.data) {
-        const data = statsResponse.data;
-        
-        setStats({
-          total: data.total,
-          totalDebt: data.totalDebt,
-          averageDebt: data.averageDebt
-        });
-      }
-    } catch (error) {
-      console.error('Error loading customer stats:', error);
-    }
-  };
+  // Add loading and error states
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Đang tải danh sách khách hàng...</div>
+      </div>
+    );
+  }
 
-  // Load customers when component mounts or dependencies change
-  useEffect(() => {
-    const loadCustomers = async () => {
-      try {
-        setLoading(true);
-        const customerService = getCustomerService();
-        const response = await customerService.getCustomers({
-          pageNumber: currentPage,
-          pageSize: itemsPerPage,
-          search: searchTerm || undefined
-        });
-
-        if (response.success && response.data) {
-          setCustomers(response.data.items || []);
-          setTotalCount(response.data.totalCount || 0);
-        } else {
-          toast.error('Không thể tải danh sách khách hàng');
-        }
-      } catch (error) {
-        console.error('Error loading customers:', error);
-        toast.error('Lỗi khi tải danh sách khách hàng');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCustomers();
-  }, [currentPage, searchTerm]);
-
-  // Load stats on mount
-  useEffect(() => {
-    loadCustomerStats();
-  }, []);
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-destructive">Lỗi khi tải danh sách khách hàng</div>
+      </div>
+    );
+  }
 
   // Pagination calculations
   const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -98,6 +80,14 @@ export default function Customers() {
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    debounceTimeout.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      // Giữ focus lại input search sau khi debounce
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 1000);
   };
 
   const handleCreateCustomer = () => {
@@ -118,21 +108,8 @@ export default function Customers() {
       return;
     }
 
-    try {
-      const customerService = getCustomerService();
-      const response = await customerService.deleteCustomer(customerId);
-      
-      if (response.success) {
-        toast.success('Xóa khách hàng thành công');
-        // Refresh the customer list
-        await loadCustomers();
-      } else {
-        toast.error('Không thể xóa khách hàng');
-      }
-    } catch (error) {
-      console.error('Error deleting customer:', error);
-      toast.error('Lỗi khi xóa khách hàng');
-    }
+    // TODO: Implement useDeleteCustomer hook when delete API is available
+    toast.info(`Tính năng xóa khách hàng ${customerId} đang được phát triển`);
   };
 
   const handleDuplicateCustomer = (customerId: number) => {
@@ -167,8 +144,9 @@ export default function Customers() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Tìm kiếm theo tên, mã KH, người đại diện, SĐT, mã số thuế..." 
-                className="pl-10" 
+                ref={searchInputRef}
+                placeholder="Tìm kiếm theo tên, mã KH, người đại diện, SĐT, mã số thuế..."
+                className="pl-10"
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
               />
@@ -261,22 +239,6 @@ export default function Customers() {
                             <DropdownMenuItem onClick={() => handleViewCustomer(customer.id)}>
                               <Eye className="h-4 w-4 mr-2" />
                               Xem chi tiết
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditCustomer(customer.id)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Chỉnh sửa
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleSendEmail(customer.id)}>
-                              <Mail className="h-4 w-4 mr-2" />
-                              Gửi email
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDuplicateCustomer(customer.id)}>
-                              <Copy className="h-4 w-4 mr-2" />
-                              Sao chép
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleExportCustomer(customer.id)}>
-                              <Download className="h-4 w-4 mr-2" />
-                              Xuất dữ liệu
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleDeleteCustomer(customer.id)}

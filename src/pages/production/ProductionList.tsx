@@ -24,7 +24,7 @@ import {
   Edit,
   FileText
 } from 'lucide-react';
-import { productions, orders, customers, mockUsers, mockMaterials, mockPrepressOrders } from '@/lib/mockData';
+import { productions, mockUsers, mockMaterials, mockPrepressOrders } from '@/lib/mockData';
 
 // TODO: Replace with Zod schema types when Production schema is available
 interface Production {

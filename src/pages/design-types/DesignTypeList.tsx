@@ -25,61 +25,85 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { DesignTypeEntity, DesignTypeStats } from '@/Schema/design-type.schema';
-import { designTypeService } from '@/services/designTypeService';
+import { DesignTypeStats } from '@/Schema/design-type.schema';
+import { useDesignTypes, useDeleteDesignType } from '@/hooks/use-material-type';
+import type { DesignType } from '@/apis/material-type.api';
 
 export default function DesignTypesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [designTypes, setDesignTypes] = useState<DesignTypeEntity[]>([]);
-  const [stats, setStats] = useState<DesignTypeStats>({
-    total: 0,
-    active: 0,
-    inactive: 0,
-  });
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<number | null>(null);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [typesResponse, statsResponse] = await Promise.all([
-        designTypeService.getDesignTypes({ pageSize: 1000 }),
-        designTypeService.getDesignTypeStats()
-      ]);
-      
-      setDesignTypes(typesResponse.data);
-      setStats(statsResponse);
-    } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải danh sách loại thiết kế",
-        variant: "destructive",
-      });
-      console.error('Error loading design types:', error);
-    } finally {
-      setLoading(false);
-    }
+  // Use React Query hooks for data fetching
+  const { 
+    data: designTypesResponse, 
+    isLoading: loading, 
+    error,
+    refetch 
+  } = useDesignTypes({ 
+    pageNumber: 1,
+    pageSize: 1000,
+    status: 'active'
+  });
+
+  const deleteDesignTypeMutation = useDeleteDesignType();
+  
+  // Đảm bảo luôn là mảng
+  const designTypes = Array.isArray(designTypesResponse) ? designTypesResponse : (designTypesResponse?.data ?? []);
+  
+  // Calculate stats from current data
+  const stats: DesignTypeStats = {
+    total: designTypes.length,
+    active: designTypes.filter(dt => dt.status === 'active').length,
+    inactive: designTypes.filter(dt => dt.status === 'inactive').length,
   };
 
-  useEffect(() => {
-    loadData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  console.log('🔍 Design Types Debug:', {
+    designTypesResponse,
+    designTypes: designTypes.length,
+    loading,
+    error
+  });
+
+  // Add error handling
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-destructive">Lỗi khi tải danh sách loại thiết kế</div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="h-20 bg-gray-200 rounded"></div>
+            <div className="h-20 bg-gray-200 rounded"></div>
+            <div className="h-20 bg-gray-200 rounded"></div>
+          </div>
+          <div className="h-96 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   const handleDelete = async (id: number) => {
     try {
       setDeleting(id);
-      await designTypeService.deleteDesignType(id);
+      await deleteDesignTypeMutation.mutateAsync(id);
       
       toast({
         title: "Thành công",
         description: "Đã xóa loại thiết kế",
       });
       
-      // Reload data
-      await loadData();
+      // React Query will automatically refetch the data
     } catch (error) {
       toast({
         title: "Lỗi",
@@ -97,21 +121,12 @@ export default function DesignTypesPage() {
     dt.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) {
-    return (
-      <div className="container mx-auto py-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="h-20 bg-gray-200 rounded"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
-          </div>
-          <div className="h-96 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
-  }
+  console.log('🔍 Filter Debug:', {
+    originalCount: designTypes.length,
+    filteredCount: filteredDesignTypes.length,
+    searchTerm,
+    firstItem: designTypes[0]
+  });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -231,11 +246,18 @@ export default function DesignTypesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => navigate(`/design-types/detail/${designType.id}`)}
+                        >
+                          <span className="sr-only">Xem chi tiết</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => navigate(`/design-types/edit/${designType.id}`)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button

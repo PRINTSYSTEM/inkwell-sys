@@ -1,17 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DollarSign, Users, Package, Activity } from 'lucide-react';
-import { orders, customers, payments } from '@/lib/mockData';
+import { payments } from '@/lib/mockData';
+import { useOrders } from '@/hooks/use-order';
+import { useCustomers } from '@/hooks/use-customer';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 
 export default function Dashboard() {
+    // Lấy danh sách khách hàng thật
+    const { data: customersData, isLoading: loadingCustomers } = useCustomers({ pageSize: 100 });
+    const customers = customersData?.items || [];
   const navigate = useNavigate();
   const { user } = useAuth();
   
   const totalRevenue = payments
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + p.amount, 0);
+
+  // Lấy danh sách đơn hàng thật
+  const { data: ordersData, isLoading: loadingOrders } = useOrders({ pageSize: 100 });
+  const orders = ordersData?.items || [];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -46,7 +55,9 @@ export default function Dashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{orders.length}</div>
+            <div className="text-2xl font-bold">
+              {loadingOrders ? '...' : orders.length}
+            </div>
             <p className="text-xs text-muted-foreground">Tổng số đơn hàng</p>
           </CardContent>
         </Card>
@@ -57,7 +68,9 @@ export default function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{customers.length}</div>
+            <div className="text-2xl font-bold">
+              {loadingCustomers ? '...' : customers.length}
+            </div>
             <p className="text-xs text-muted-foreground">Khách hàng đang hoạt động</p>
           </CardContent>
         </Card>

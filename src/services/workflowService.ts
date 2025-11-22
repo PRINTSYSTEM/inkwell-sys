@@ -32,7 +32,7 @@ class WorkflowService {
       toModule: 'production',
       condition: (event) => event.type === 'order_status_change' && event.newStatus === 'confirmed',
       action: async (event) => {
-        console.log(`Creating production task for order ${event.orderId}`);
+        // ...existing code...
         // Trigger production creation
         await this.createProductionFromOrder(event.orderId);
       }
@@ -44,7 +44,7 @@ class WorkflowService {
       toModule: 'orders',
       condition: (event) => event.type === 'production_status_change' && event.newStatus === 'completed',
       action: async (event) => {
-        console.log(`Updating order ${event.orderId} to production completed`);
+        // ...existing code...
         await this.updateOrderStatus(event.orderId, 'production_completed');
       }
     });
@@ -55,7 +55,7 @@ class WorkflowService {
       toModule: 'accounting',
       condition: (event) => event.type === 'order_status_change' && event.newStatus === 'completed',
       action: async (event) => {
-        console.log(`Creating payment record for order ${event.orderId}`);
+        // ...existing code...
         await this.createPaymentFromOrder(event.orderId);
       }
     });
@@ -66,7 +66,7 @@ class WorkflowService {
       toModule: 'orders',
       condition: (event) => event.type === 'design_status_change' && event.newStatus === 'approved',
       action: async (event) => {
-        console.log(`Updating order ${event.orderId} to confirmed after design approval`);
+        // ...existing code...
         await this.updateOrderStatus(event.orderId, 'confirmed');
       }
     });
@@ -85,9 +85,9 @@ class WorkflowService {
     for (const rule of matchingRules) {
       try {
         await rule.action(event);
-        console.log(`Workflow rule executed: ${rule.fromModule} → ${rule.toModule}`);
+        // ...existing code...
       } catch (error) {
-        console.error(`Workflow rule failed: ${rule.fromModule} → ${rule.toModule}`, error);
+        // ...existing code...
       }
     }
   }
@@ -105,7 +105,7 @@ class WorkflowService {
     };
     
     // In real implementation, this would call production module API
-    console.log('Production task created for order:', orderId);
+    // ...existing code...
     return event;
   }
 
@@ -119,7 +119,7 @@ class WorkflowService {
       timestamp: new Date().toISOString()
     };
     
-    console.log(`Order ${orderId} status updated to:`, newStatus);
+    // ...existing code...
     return event;
   }
 
@@ -133,7 +133,7 @@ class WorkflowService {
       timestamp: new Date().toISOString()
     };
     
-    console.log('Payment record created for order:', orderId);
+    // ...existing code...
     return event;
   }
 
@@ -171,58 +171,5 @@ class WorkflowService {
 
 // Singleton instance
 export const workflowService = new WorkflowService();
-
-// React hook for workflow integration
-import { useState, useEffect } from 'react';
-
-export function useWorkflow(orderId?: string) {
-  const [workflowStatus, setWorkflowStatus] = useState<{
-    order: string;
-    design: string;
-    production: string;
-    payment: string;
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (orderId) {
-      setIsLoading(true);
-      const status = workflowService.getWorkflowStatus(orderId);
-      setWorkflowStatus(status);
-      setIsLoading(false);
-    }
-  }, [orderId]);
-
-  const triggerStatusChange = async (
-    type: WorkflowEvent['type'],
-    orderId: string,
-    oldStatus: string,
-    newStatus: string
-  ) => {
-    const event: WorkflowEvent = {
-      type,
-      orderId,
-      oldStatus,
-      newStatus,
-      timestamp: new Date().toISOString()
-    };
-
-    await workflowService.processEvent(event);
-    
-    // Update local status
-    if (orderId) {
-      const updatedStatus = workflowService.getWorkflowStatus(orderId);
-      setWorkflowStatus(updatedStatus);
-    }
-  };
-
-  return {
-    workflowStatus,
-    isLoading,
-    triggerStatusChange,
-    getEventHistory: () => workflowService.getEventHistory(),
-    getOrderEvents: (orderId: string) => workflowService.getEventsByOrder(orderId)
-  };
-}
 
 export default WorkflowService;

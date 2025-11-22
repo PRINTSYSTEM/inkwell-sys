@@ -39,7 +39,6 @@ import {
   Plus,
   Filter
 } from 'lucide-react';
-import { mockOrders } from '@/lib/mockData';
 import { getDesignTypeName, getDesignTypeDescription, designTypeConfigs } from '@/lib/mockData';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';

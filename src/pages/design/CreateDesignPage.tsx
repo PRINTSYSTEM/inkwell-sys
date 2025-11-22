@@ -24,7 +24,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { ArrowLeft, Save } from 'lucide-react';
-import { mockCustomers } from '@/lib/mockData';
 import { useToast } from '@/hooks/use-toast';
 
 // Design Types theo yêu cầu

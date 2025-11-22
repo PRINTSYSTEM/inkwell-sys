@@ -1,6 +1,5 @@
 import { BaseService, ServiceError } from './BaseService';
 import { EnhancedUserService } from './EnhancedUserService';
-import { CustomerService } from './CustomerService';
 import { ServiceConfig, HealthStatus, ServiceMetrics } from './types';
 import AuthService from './ModernAuthService';
 
@@ -51,9 +50,8 @@ export class ServiceFactory {
   private initializeServices(): void {
     // Register core services
     this.registerService('users', new EnhancedUserService());
-    this.registerService('customer', new CustomerService());
-    this.registerService('customers', new CustomerService()); // Alias
     this.registerService('auth', new AuthService());
+    // Note: Customer services replaced by React Query hooks in @/hooks/use-customer
   }
 
   // Register a service
@@ -89,10 +87,8 @@ export class ServiceFactory {
     return this.getService<EnhancedUserService>('users');
   }
 
-  // Get customer service (convenience method)
-  public getCustomerService(): CustomerService {
-    return this.getService<CustomerService>('customer');
-  }
+  // Customer service has been replaced by React Query hooks
+  // Use useCustomers, useCreateCustomer, etc. from @/hooks/use-customer
 
   // Clear cache for all services
   public clearAllCaches(): void {

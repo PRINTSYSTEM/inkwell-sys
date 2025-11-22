@@ -59,6 +59,7 @@ export const MaterialTypeStatsSchema = z.object({
 
 // Type exports
 export type MaterialTypeEntity = z.infer<typeof MaterialTypeEntitySchema>;
+export type MaterialType = MaterialTypeEntity; // Alias for compatibility
 export type CreateMaterialTypeRequest = z.infer<typeof CreateMaterialTypeSchema>;
 export type UpdateMaterialTypeRequest = z.infer<typeof UpdateMaterialTypeSchema>;
 export type MaterialTypeListResponse = z.infer<typeof MaterialTypeListSchema>;

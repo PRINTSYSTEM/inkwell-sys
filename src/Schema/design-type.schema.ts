@@ -59,6 +59,7 @@ export const DesignTypeStatsSchema = z.object({
 
 // Type exports
 export type DesignTypeEntity = z.infer<typeof DesignTypeEntitySchema>;
+export type DesignType = DesignTypeEntity; // Alias for compatibility
 export type CreateDesignTypeRequest = z.infer<typeof CreateDesignTypeSchema>;
 export type UpdateDesignTypeRequest = z.infer<typeof UpdateDesignTypeSchema>;
 export type DesignTypeListResponse = z.infer<typeof DesignTypeListSchema>;

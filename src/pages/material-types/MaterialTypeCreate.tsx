@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { MaterialTypeEntity, CreateMaterialTypeRequest } from '@/Schema/material-type.schema';
-import { materialTypeService } from '@/services/materialTypeService';
+import { useCreateMaterialType } from '@/hooks/use-material-type';
 
 export default function MaterialTypeCreate() {
   const navigate = useNavigate();

@@ -12,7 +12,9 @@ export * from './notification.schema';
 export * from './design-code.schema';
 export * from './design-assignment.schema';
 export * from './design-type.schema';
+export * from './design.schema';
 export * from './material.schema';
+export * from './material-type.schema';
 export * from './order.schema';
 
 // Re-export zod for convenience

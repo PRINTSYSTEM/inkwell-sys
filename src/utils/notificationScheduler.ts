@@ -53,9 +53,9 @@ class NotificationScheduler {
         );
       }
 
-      console.log(`Checked ${assignments.length} assignments, found ${upcomingDeadlines.length} upcoming deadlines`);
+      // ...existing code...
     } catch (error) {
-      console.error('Error checking upcoming deadlines:', error);
+      // ...existing code...
     }
   }
 
@@ -81,9 +81,9 @@ class NotificationScheduler {
         );
       }
 
-      console.log(`Checked ${assignments.length} assignments, found ${overdueAssignments.length} overdue assignments`);
+      // ...existing code...
     } catch (error) {
-      console.error('Error checking overdue assignments:', error);
+      // ...existing code...
     }
   }
 

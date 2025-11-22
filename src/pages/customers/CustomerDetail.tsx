@@ -17,11 +17,12 @@ import {
   Package,
   TrendingUp
 } from 'lucide-react';
-import { getCustomerService } from '@/services';
+import { useCustomer, useUpdateCustomer } from '@/hooks/use-customer';
 import { Badge } from '@/components/ui/badge';
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Customer, CustomerRequestSchema } from '@/Schema/customer.schema';
+import { Customer } from '@/apis/customer.api';
+import { CustomerRequestSchema } from '@/Schema/customer.schema';
 import { toast } from 'sonner';
 import { ZodError } from 'zod';
 import {
@@ -49,7 +50,6 @@ export default function CustomerDetail() {
 
       try {
         setLoading(true);
-        const customerService = getCustomerService();
         const customerId = parseInt(id);
         
         if (isNaN(customerId)) {
@@ -58,7 +58,7 @@ export default function CustomerDetail() {
           return;
         }
 
-        const response = await customerService.getCustomerById(customerId);
+        const response = await import('@/apis/customer.api').then(m => m.getCustomerById(customerId));
         
         if (response.success && response.data) {
           setCustomer(response.data);
@@ -111,8 +111,7 @@ export default function CustomerDetail() {
       // Validate data using Zod schema
       CustomerRequestSchema.parse(updateData);
 
-      const customerService = getCustomerService();
-      const response = await customerService.updateCustomer(editForm.id, updateData);
+      const response = await import('@/apis/customer.api').then(m => m.updateCustomer(editForm.id, updateData));
       
       if (response.success && response.data) {
         setCustomer(response.data);

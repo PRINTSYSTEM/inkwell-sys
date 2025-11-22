@@ -36,7 +36,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { mockPrepressOrders, mockOrders } from '@/lib/mockData';
+import { mockPrepressOrders } from '@/lib/mockData';
 import { toast } from 'sonner';
 
 const priorityColors = {

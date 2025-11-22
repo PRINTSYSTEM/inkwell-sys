@@ -6,8 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, UserPlus, Building2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCustomerService } from '@/services';
-import { CustomerRequest, CustomerRequestSchema } from '@/Schema/customer.schema';
+import { useCreateCustomer } from '@/hooks/use-customer';
+import { CreateCustomerRequest } from '@/apis/customer.api';
+import { CustomerRequestSchema } from '@/Schema/customer.schema';
 import { ZodError } from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
@@ -27,6 +28,8 @@ interface CreateCustomerForm {
 
 export default function CreateCustomer() {
   const navigate = useNavigate();
+  const createCustomerMutation = useCreateCustomer();
+  
   const [form, setForm] = useState<CreateCustomerForm>({
     name: '',
     companyName: '',
@@ -91,12 +94,12 @@ export default function CreateCustomer() {
   const validateForm = (): boolean => {
     try {
       // Prepare data for validation
-      const customerData: CustomerRequest = {
-        name: form.name || form.representativeName, // Use representative name if no name provided
-        companyName: form.companyName || undefined,
+      const customerData: CreateCustomerRequest = {
+        name: form.name || form.representativeName,
+        companyName: form.companyName,
         representativeName: form.representativeName,
         phone: form.phone,
-        taxCode: form.taxCode || undefined,
+        taxCode: form.taxCode,
         address: form.address,
         type: form.type,
         currentDebt: parseInt(form.currentDebt) || 0,
@@ -159,8 +162,8 @@ export default function CreateCustomer() {
     
     try {
       // Prepare customer data according to API schema
-      const customerData: CustomerRequest = {
-        name: form.name || form.representativeName, // Use representative name if no name provided
+      const customerData: CreateCustomerRequest = {
+        name: form.name || form.representativeName,
         companyName: form.companyName,
         representativeName: form.representativeName,
         phone: form.phone,
@@ -173,23 +176,18 @@ export default function CreateCustomer() {
 
       console.log('🚀 Creating customer with data:', customerData);
 
-      // Call API through CustomerService
-      const customerService = getCustomerService();
-      const response = await customerService.createCustomer(customerData);
+      // Call API through React Query hook
+      const response = await createCustomerMutation.mutateAsync(customerData);
 
-      if (response.success && response.data) {
-        console.log('✅ Customer created successfully:', response.data);
-        toast.success('Khách hàng đã được tạo thành công!');
-        
-        setSubmitSuccess(true);
-        
-        // Redirect sau 2 giây
-        setTimeout(() => {
-          navigate('/customers');
-        }, 2000);
-      } else {
-        throw new Error(response.message || 'Không thể tạo khách hàng');
-      }
+      console.log('✅ Customer created successfully:', response);
+      toast.success('Khách hàng đã được tạo thành công!');
+      
+      setSubmitSuccess(true);
+      
+      // Redirect sau 2 giây
+      setTimeout(() => {
+        navigate('/customers');
+      }, 2000);
       
     } catch (error) {
       console.error('❌ Error creating customer:', error);
@@ -344,10 +342,8 @@ export default function CreateCustomer() {
                       onChange={(e) => handleInputChange('type', e.target.value)}
                       className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${errors.type ? 'border-red-500' : ''}`}
                     >
-                      <option value="Công ty">Công ty</option>
-                      <option value="Cá nhân">Cá nhân</option>
-                      <option value="Cơ quan nhà nước">Cơ quan nhà nước</option>
-                      <option value="Tổ chức phi lợi nhuận">Tổ chức phi lợi nhuận</option>
+                      <option value="Công ty">Khách công ty</option>
+                      <option value="Cá nhân">Khách lẻ</option>
                     </select>
                     {errors.type && (
                       <p className="text-sm text-red-500">{errors.type}</p>

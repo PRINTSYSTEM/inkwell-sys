@@ -48,8 +48,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Design, DesignProgressImage, DesignComment } from '@/types';
 import MaterialSelector from '@/components/MaterialSelector';
 import { MaterialService } from '@/services/materialService';
-import { designService, users } from '@/lib/mockData';
-import { statusConfig, priorityConfig } from '@/lib/mockData';
+import { useDesign, useUpdateDesign, useDesigns } from '@/hooks/use-design';
+import { useMaterialTypes, useDesignTypes } from '@/hooks/use-material-type';
+import { users, statusConfig, priorityConfig } from '@/lib/mockData';
 import AutoDesignCode from '@/components/AutoDesignCode';
 
 export default function DesignDetailPage() {
@@ -57,8 +58,9 @@ export default function DesignDetailPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [design, setDesign] = useState<Design | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Use hooks for data fetching
+  const { data: design, isLoading: loading, error } = useDesign(Number(id));
+  const updateDesignMutation = useUpdateDesign();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -71,45 +73,41 @@ export default function DesignDetailPage() {
   const [editingMaterial, setEditingMaterial] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<string>('');
   const [materialName, setMaterialName] = useState<string>('');
+  const [designTypeName, setDesignTypeName] = useState<string>('');
 
+  // Initialize form data when design is loaded
   useEffect(() => {
-    const fetchDesign = async () => {
-      if (!id) {
-        navigate('/design/all');
-        return;
-      }
+    if (!id) {
+      navigate('/design/all');
+      return;
+    }
+    
+    if (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể tải thông tin thiết kế",
+        variant: "destructive",
+      });
+      navigate('/design/all');
+      return;
+    }
 
-      try {
-        setLoading(true);
-        const data = await designService.getById(id);
-        if (!data) {
-          throw new Error('Design not found');
-        }
-        setDesign(data);
-        // Initialize delivery date if exists
-        if (data.deliveryDate) {
-          setDeliveryDate(data.deliveryDate.split('T')[0]); // Extract date part only
-        }
-        // Initialize material if exists
-        if (data.material) {
-          setSelectedMaterial(data.material);
-          // Load material name
-          loadMaterialName(data.material);
-        }
-      } catch (error) {
-        toast({
-          title: "Lỗi",
-          description: "Không thể tải thông tin thiết kế",
-          variant: "destructive",
-        });
-        navigate('/design/all');
-      } finally {
-        setLoading(false);
+    if (design) {
+      // Initialize delivery date if exists
+      if (design.deliveryDate) {
+        setDeliveryDate(design.deliveryDate.split('T')[0]); // Extract date part only
       }
-    };
-
-    fetchDesign();
-  }, [id, navigate, toast]);
+      // Initialize material if exists
+      if (design.material) {
+        setSelectedMaterial(design.material);
+        loadMaterialName(design.material);
+      }
+      // Load design type name
+      if (design.designType) {
+        loadDesignTypeName(design.designType);
+      }
+    }
+  }, [id, design, error, navigate, toast]);
 
   const loadMaterialName = async (materialId: string) => {
     try {
@@ -126,6 +124,12 @@ export default function DesignDetailPage() {
       console.error('Error loading material name:', error);
       setMaterialName('Chưa rõ tên');
     }
+  };
+
+  const loadDesignTypeName = async (designTypeCode: string) => {
+    // TODO: Use useDesignTypes hook to get design type name
+    // For now, just set the code as fallback
+    setDesignTypeName(designTypeCode);
   };
 
   const getUserName = (userId: string) => {
@@ -148,7 +152,9 @@ export default function DesignDetailPage() {
     try {
       setUploadingImage(true);
       const imageUrl = URL.createObjectURL(pendingImageFile);
-      await designService.uploadProgressImage(design.id, {
+      // TODO: Implement uploadProgressImage in design API
+      console.log('TODO: Upload progress image', {
+        designId: design.id,
         imageUrl,
         description: imageDescription || `Hình tiến độ ${new Date().toLocaleString()}`,
         status: 'in_progress',
@@ -157,11 +163,11 @@ export default function DesignDetailPage() {
         isVisibleToCustomer: false,
       });
       
-      // Refresh design data
-      const updatedDesign = await designService.getById(design.id);
-      if (updatedDesign) {
-        setDesign(updatedDesign);
-      }
+      toast({
+        title: "Thông báo",
+        description: "Tính năng tải lên hình ảnh đang được phát triển",
+        variant: "default",
+      });
 
       toast({
         title: "Thành công",
@@ -246,10 +252,12 @@ export default function DesignDetailPage() {
     if (!design) return;
 
     try {
-      const updated = await designService.updateDesign(design.id, { 
-        deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : undefined 
+      await updateDesignMutation.mutateAsync({ 
+        id: design.id,
+        updates: {
+          deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : undefined 
+        }
       });
-      setDesign(updated);
       setEditingDeliveryDate(false);
 
       toast({
@@ -269,10 +277,12 @@ export default function DesignDetailPage() {
     if (!design) return;
 
     try {
-      const updated = await designService.updateDesign(design.id, { 
-        material: selectedMaterial || undefined 
+      await updateDesignMutation.mutateAsync({ 
+        id: design.id,
+        updates: {
+          material: selectedMaterial || undefined 
+        }
       });
-      setDesign(updated);
       setEditingMaterial(false);
       
       // Load material name for display
@@ -423,7 +433,7 @@ export default function DesignDetailPage() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Loại thiết kế</label>
-                  <Badge variant="outline" className="font-mono">{design.designType}</Badge>
+                  <Badge variant="outline">{designTypeName || design.designType}</Badge>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Độ ưu tiên</label>
