@@ -9,7 +9,7 @@ import { router } from "./routes";
 // Debug API configuration in development
 if (import.meta.env.DEV) {
   console.log('🔍 API Configuration Debug:');
-  console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
+  // console.log('VITE_API_BASE_URL:', process.env.VITE_API_BASE_URL);
   console.log('VITE_API_TIMEOUT:', import.meta.env.VITE_API_TIMEOUT);
   console.log('Environment:', import.meta.env.MODE);
 }

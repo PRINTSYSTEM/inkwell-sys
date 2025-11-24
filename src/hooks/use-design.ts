@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import type {
   Design,
   DesignListResponse,
@@ -7,20 +7,20 @@ import type {
   CreateDesignRequest,
   UpdateDesignRequest,
   CreateTimelineEntry,
-  TimelineEntry
-} from '@/Schema';
-import * as designApi from '@/apis/design.api';
+  TimelineEntry,
+} from "@/Schema";
+import * as designApi from "@/apis/design.api";
 
 // Query Keys
 export const designKeys = {
-  all: ['designs'] as const,
-  lists: () => [...designKeys.all, 'list'] as const,
+  all: ["designs"] as const,
+  lists: () => [...designKeys.all, "list"] as const,
   list: (params: DesignQueryParams) => [...designKeys.lists(), params] as const,
-  details: () => [...designKeys.all, 'detail'] as const,
+  details: () => [...designKeys.all, "detail"] as const,
   detail: (id: number) => [...designKeys.details(), id] as const,
-  my: () => [...designKeys.all, 'my'] as const,
+  my: () => [...designKeys.all, "my"] as const,
   myList: (params: DesignQueryParams) => [...designKeys.my(), params] as const,
-  timeline: (id: number) => [...designKeys.detail(id), 'timeline'] as const,
+  timeline: (id: number) => [...designKeys.detail(id), "timeline"] as const,
 } as const;
 
 // Hooks for Queries
@@ -32,7 +32,7 @@ export const useDesigns = (params?: DesignQueryParams) => {
   return useQuery({
     queryKey: designKeys.list(params || {}),
     queryFn: () => designApi.getDesigns(params),
-    staleTime: 5 * 60 * 1000 // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -43,7 +43,7 @@ export const useMyDesigns = (params?: DesignQueryParams) => {
   return useQuery({
     queryKey: designKeys.myList(params || {}),
     queryFn: () => designApi.getMyDesigns(params),
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -67,7 +67,7 @@ export const useDesignTimeline = (id: number, enabled: boolean = true) => {
     queryKey: designKeys.timeline(id),
     queryFn: () => designApi.getTimelineEntries(id),
     enabled: enabled && !!id,
-    staleTime: 2 * 60 * 1000 // 2 minutes (timeline updates frequently)
+    staleTime: 2 * 60 * 1000, // 2 minutes (timeline updates frequently)
   });
 };
 
@@ -86,7 +86,7 @@ export const useCreateDesign = () => {
       // Invalidate and refetch design lists
       queryClient.invalidateQueries({ queryKey: designKeys.lists() });
       queryClient.invalidateQueries({ queryKey: designKeys.my() });
-      
+
       toast({
         title: "Thành công",
         description: "Đã tạo design mới thành công",
@@ -95,7 +95,8 @@ export const useCreateDesign = () => {
     onError: (error) => {
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể tạo design",
+        description:
+          error instanceof Error ? error.message : "Không thể tạo design",
         variant: "destructive",
       });
     },
@@ -115,11 +116,11 @@ export const useUpdateDesign = () => {
     onSuccess: (updatedDesign, { id }) => {
       // Update the design in cache
       queryClient.setQueryData(designKeys.detail(id), updatedDesign);
-      
+
       // Invalidate lists to ensure they reflect changes
       queryClient.invalidateQueries({ queryKey: designKeys.lists() });
       queryClient.invalidateQueries({ queryKey: designKeys.my() });
-      
+
       toast({
         title: "Thành công",
         description: "Đã cập nhật design thành công",
@@ -128,7 +129,8 @@ export const useUpdateDesign = () => {
     onError: (error) => {
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể cập nhật design",
+        description:
+          error instanceof Error ? error.message : "Không thể cập nhật design",
         variant: "destructive",
       });
     },
@@ -147,11 +149,11 @@ export const useDeleteDesign = () => {
     onSuccess: (_, deletedId) => {
       // Remove from cache
       queryClient.removeQueries({ queryKey: designKeys.detail(deletedId) });
-      
+
       // Invalidate lists
       queryClient.invalidateQueries({ queryKey: designKeys.lists() });
       queryClient.invalidateQueries({ queryKey: designKeys.my() });
-      
+
       toast({
         title: "Thành công",
         description: "Đã xóa design thành công",
@@ -160,7 +162,8 @@ export const useDeleteDesign = () => {
     onError: (error) => {
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể xóa design",
+        description:
+          error instanceof Error ? error.message : "Không thể xóa design",
         variant: "destructive",
       });
     },
@@ -180,10 +183,10 @@ export const useAddTimelineEntry = () => {
     onSuccess: (_, { id }) => {
       // Invalidate timeline to refetch latest entries
       queryClient.invalidateQueries({ queryKey: designKeys.timeline(id) });
-      
+
       // Also invalidate design detail as it might include timeline
       queryClient.invalidateQueries({ queryKey: designKeys.detail(id) });
-      
+
       toast({
         title: "Thành công",
         description: "Đã thêm mục thời gian thành công",
@@ -192,7 +195,10 @@ export const useAddTimelineEntry = () => {
     onError: (error) => {
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể thêm mục thời gian",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Không thể thêm mục thời gian",
         variant: "destructive",
       });
     },
@@ -216,7 +222,8 @@ export const useGenerateExcel = () => {
     onError: (error) => {
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể tạo file Excel",
+        description:
+          error instanceof Error ? error.message : "Không thể tạo file Excel",
         variant: "destructive",
       });
     },
@@ -236,7 +243,7 @@ export const useUploadDesignFile = () => {
     onSuccess: (_, { id }) => {
       // Invalidate design detail to refetch with new file
       queryClient.invalidateQueries({ queryKey: designKeys.detail(id) });
-      
+
       toast({
         title: "Thành công",
         description: "Đã upload file design thành công",
@@ -245,7 +252,8 @@ export const useUploadDesignFile = () => {
     onError: (error) => {
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể upload file",
+        description:
+          error instanceof Error ? error.message : "Không thể upload file",
         variant: "destructive",
       });
     },

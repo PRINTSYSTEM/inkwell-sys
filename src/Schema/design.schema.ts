@@ -1,61 +1,63 @@
-import { z } from 'zod';
-import { StatusEnum } from './Common/enums';
-import { IdSchema, DateSchema } from './Common/base';
-import { DesignTypeEntitySchema } from './design-type.schema';
-import { MaterialTypeEntitySchema } from './material-type.schema';
-
-// User/Designer schema for nested objects
-export const DesignUserSchema = z.object({
-  id: IdSchema,
-  username: z.string(),
-  fullName: z.string(),
-  role: z.string(),
-  email: z.string().email(),
-  phone: z.string(),
-});
+import { z } from "zod";
+import { IdSchema, DateSchema } from "./Common/base";
+import { DesignTypeEntitySchema } from "./design-type.schema";
+import { MaterialTypeEntitySchema } from "./material-type.schema";
+import { UserSchema } from "./user.schema";
+import { TimelineEntrySchema } from "./timeline.schema";
 
 // Design Status enum specific to designs
 export const DesignStatusEnum = z.enum([
-  'pending',
-  'in_progress',
-  'review',
-  'approved',
-  'rejected',
-  'completed',
-  'cancelled',
-  'on_hold'
+  "received_info",
+  "designing",
+  "editing",
+  "waiting_for_customer_approval",
+  "confirmed_for_printing",
+  "pdf_exported",
 ]);
-
-// Timeline Entry schema
-export const TimelineEntrySchema = z.object({
-  id: IdSchema,
-  fileUrl: z.string().optional(),
-  description: z.string(),
-  createdAt: DateSchema,
-  createdBy: DesignUserSchema,
-});
 
 // Main Design Entity schema
 export const DesignEntitySchema = z.object({
   id: IdSchema,
   code: z.string(),
   orderId: IdSchema,
-  designStatus: z.string(), // Using string to match API response
+
+  // Nếu muốn strict hơn:
+  // designStatus: DesignStatusEnum,
+  designStatus: DesignStatusEnum,
+  statusType: z.string(),
+
   designerId: IdSchema,
-  designer: DesignUserSchema,
+  designer: UserSchema,
+
   designTypeId: IdSchema,
   designType: DesignTypeEntitySchema,
+
   materialTypeId: IdSchema,
   materialType: MaterialTypeEntitySchema,
-  quantity: z.number().int().min(1, 'Số lượng phải lớn hơn 0'),
+
+  quantity: z.number().int().min(1, "Số lượng phải lớn hơn 0"),
   dimensions: z.string(),
-  requirements: z.string(),
+
+  // Các field số có thể null → nullable + optional để tránh crash
+  width: z.number().nullable().optional(),
+  height: z.number().nullable().optional(),
+  areaCm2: z.number().nullable().optional(),
+  unitPrice: z.number().nullable().optional(),
+  totalPrice: z.number().nullable().optional(),
+
+  requirements: z.string().optional(),
   additionalNotes: z.string().optional(),
-  designFileUrl: z.string().optional(),
-  excelFileUrl: z.string().optional(),
-  notes: z.string().optional(),
+
+  // API đôi khi trả null → nullable + optional
+  designFileUrl: z.string().nullable().optional(),
+  excelFileUrl: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+
   createdAt: DateSchema,
   updatedAt: DateSchema,
+
+  // API có thể trả [] hoặc không có field → optional là ổn,
+  // nếu muốn luôn là [] thì dùng .default([])
   timelineEntries: z.array(TimelineEntrySchema).optional(),
 });
 
@@ -78,7 +80,7 @@ export const DesignQueryParamsSchema = z.object({
   status: z.string().optional(),
   search: z.string().optional(),
   sortBy: z.string().optional(),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
 // Create Design Request schema
@@ -87,9 +89,9 @@ export const CreateDesignRequestSchema = z.object({
   designTypeId: IdSchema,
   materialTypeId: IdSchema,
   designerId: IdSchema.optional(),
-  quantity: z.number().int().min(1, 'Số lượng phải lớn hơn 0'),
-  dimensions: z.string().min(1, 'Kích thước không được để trống'),
-  requirements: z.string().min(1, 'Yêu cầu thiết kế không được để trống'),
+  quantity: z.number().int().min(1, "Số lượng phải lớn hơn 0"),
+  dimensions: z.string().min(1, "Kích thước không được để trống"),
+  requirements: z.string().min(1, "Yêu cầu thiết kế không được để trống"),
   additionalNotes: z.string().optional(),
 });
 
@@ -106,27 +108,15 @@ export const UpdateDesignRequestSchema = z.object({
 
 // Timeline Entry Create schema
 export const CreateTimelineEntrySchema = z.object({
-  description: z.string().min(1, 'Mô tả không được để trống'),
+  description: z.string().min(1, "Mô tả không được để trống"),
   fileUrl: z.string().optional(),
 });
 
 // Inferred TypeScript types
 export type Design = z.infer<typeof DesignEntitySchema>;
-export type Designer = z.infer<typeof DesignUserSchema>;
-export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;
 export type DesignListResponse = z.infer<typeof DesignListResponseSchema>;
 export type DesignQueryParams = z.infer<typeof DesignQueryParamsSchema>;
 export type CreateDesignRequest = z.infer<typeof CreateDesignRequestSchema>;
 export type UpdateDesignRequest = z.infer<typeof UpdateDesignRequestSchema>;
 export type CreateTimelineEntry = z.infer<typeof CreateTimelineEntrySchema>;
 export type DesignStatus = z.infer<typeof DesignStatusEnum>;
-
-// Re-export related types for convenience
-export type { 
-  DesignType,
-  DesignTypeEntity 
-} from './design-type.schema';
-export type { 
-  MaterialType,
-  MaterialTypeEntity 
-} from './material-type.schema';

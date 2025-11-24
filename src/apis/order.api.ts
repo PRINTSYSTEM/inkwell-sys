@@ -1,175 +1,17 @@
-import { api } from '@/lib/http';
-import { API_SUFFIX } from './util.api';
-
-// Order API Types
-export interface CreateOrderRequest {
-  customerId: number;
-  assignedToUserId: number;
-  deliveryAddress: string;
-  totalAmount: number;
-  depositAmount: number;
-  deliveryDate: string;
-  note: string;
-  designRequests: {
-    designTypeId: number;
-    materialTypeId: number;
-    assignedDesignerId: number;
-    quantity: number;
-    dimensions: string;
-    requirements: string;
-    additionalNotes: string;
-  }[];
-}
-
-export interface UpdateOrderRequest {
-  id: number;
-  customerId?: number;
-  assignedToUserId?: number;
-  deliveryAddress?: string;
-  totalAmount?: number;
-  depositAmount?: number;
-  deliveryDate?: string;
-  note?: string;
-  status?: string;
-}
-
-export interface OrdersResponse {
-  items: Order[];
-  totalCount: number;
-  pageNumber: number;
-  pageSize: number;
-  totalPages: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
-}
-
-export interface Order {
-  id: number;
-  code: string;
-  customerId: number;
-  customer: {
-    id: number;
-    code: string;
-    name: string;
-    companyName: string;
-    debtStatus: string;
-    currentDebt: number;
-    maxDebt: number;
-  };
-  createdBy: number;
-  creator: {
-    id: number;
-    username: string;
-    fullName: string;
-    role: string;
-    email: string;
-    phone: string;
-  };
-  assignedTo: number;
-  assignedUser: {
-    id: number;
-    username: string;
-    fullName: string;
-    role: string;
-    email: string;
-    phone: string;
-  };
-  status: string;
-  deliveryAddress: string;
-  totalAmount: number;
-  depositAmount: number;
-  deliveryDate: string;
-  excelFileUrl: string;
-  note: string;
-  createdAt: string;
-  updatedAt: string;
-  designs: Design[];
-}
-
-export interface Design {
-  id: number;
-  code: string;
-  orderId: number;
-  designStatus: string;
-  designerId: number;
-  designer: {
-    id: number;
-    username: string;
-    fullName: string;
-    role: string;
-    email: string;
-    phone: string;
-  };
-  designTypeId: number;
-  designType: {
-    id: number;
-    code: string;
-    name: string;
-    displayOrder: number;
-    description: string;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-    createdBy: {
-      id: number;
-      username: string;
-      fullName: string;
-      role: string;
-      email: string;
-      phone: string;
-    };
-  };
-  materialTypeId: number;
-  materialType: {
-    id: number;
-    code: string;
-    name: string;
-    displayOrder: number;
-    description: string;
-    status: string;
-    createdAt: string;
-    updatedAt: string;
-    createdBy: {
-      id: number;
-      username: string;
-      fullName: string;
-      role: string;
-      email: string;
-      phone: string;
-    };
-  };
-  quantity: number;
-  dimensions: string;
-  requirements: string;
-  additionalNotes: string;
-  designFileUrl: string;
-  excelFileUrl: string;
-  notes: string;
-  createdAt: string;
-  updatedAt: string;
-  timelineEntries: {
-    id: number;
-    fileUrl: string;
-    description: string;
-    createdAt: string;
-    createdBy: {
-      id: number;
-      username: string;
-      fullName: string;
-      role: string;
-      email: string;
-      phone: string;
-    };
-  }[];
-}
+import { api } from "@/lib/http";
+import { API_SUFFIX } from "./util.api";
+import {
+  CreateOrderRequest,
+  Order,
+  OrderListResponse,
+  OrderQueryParams,
+  UpdateOrderRequest,
+} from "@/Schema";
 
 // Order API Functions
-export const getOrders = async (params?: {
-  pageNumber?: number;
-  pageSize?: number;
-  customerId?: number;
-  status?: string;
-}): Promise<OrdersResponse> => {
+export const getOrders = async (
+  params?: OrderQueryParams
+): Promise<OrderListResponse> => {
   return api.paginated<Order>(API_SUFFIX.ORDERS, params);
 };
 
@@ -181,9 +23,11 @@ export const createOrder = async (data: CreateOrderRequest): Promise<Order> => {
   return api.post<Order>(API_SUFFIX.ORDERS, data);
 };
 
-export const updateOrder = async (data: UpdateOrderRequest): Promise<Order> => {
-  const { id, ...updateData } = data;
-  return api.put<Order>(`${API_SUFFIX.ORDERS}/${id}`, updateData);
+export const updateOrder = async (
+  id: number,
+  data: UpdateOrderRequest
+): Promise<Order> => {
+  return api.put<Order>(`${API_SUFFIX.ORDERS}/${id}`, data);
 };
 
 export const deleteOrder = async (id: number): Promise<void> => {
@@ -211,9 +55,15 @@ export const exportOrders = async (params?: {
 };
 
 // Upload Excel File
-export const uploadOrderExcel = async (orderId: number, file: File): Promise<{ fileUrl: string }> => {
+export const uploadOrderExcel = async (
+  orderId: number,
+  file: File
+): Promise<{ fileUrl: string }> => {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append("file", file);
 
-  return api.upload<{ fileUrl: string }>(API_SUFFIX.ORDER_UPLOAD_EXCEL(orderId), formData);
+  return api.upload<{ fileUrl: string }>(
+    API_SUFFIX.ORDER_UPLOAD_EXCEL(orderId),
+    formData
+  );
 };

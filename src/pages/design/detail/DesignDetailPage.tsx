@@ -1,743 +1,361 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { 
-  Badge, 
-  Button, 
-  Separator,
-  Avatar,
-  AvatarFallback,
-  Input,
-  Textarea,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Label
-} from '@/components/ui/index';
-import { 
-  ArrowLeft,
-  Download,
-  Upload,
-  Eye,
-  Calendar,
-  User,
-  FileText,
-  Image as ImageIcon,
-  Camera,
-  Trash2,
-  Edit,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Plus,
-  Save
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { Design, DesignProgressImage, DesignComment } from '@/types';
-import MaterialSelector from '@/components/MaterialSelector';
-import { MaterialService } from '@/services/materialService';
-import { useDesign, useUpdateDesign, useDesigns } from '@/hooks/use-design';
-import { useMaterialTypes, useDesignTypes } from '@/hooks/use-material-type';
-import { users, statusConfig, priorityConfig } from '@/lib/mockData';
-import AutoDesignCode from '@/components/AutoDesignCode';
+import { useParams, useNavigate } from "react-router-dom"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
+import { ArrowLeft, User, Package, Ruler, FileText, Download, Calendar, DollarSign } from "lucide-react"
+import { useDesign } from "@/hooks"
 
 export default function DesignDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   
-  // Use hooks for data fetching
-  const { data: design, isLoading: loading, error } = useDesign(Number(id));
-  const updateDesignMutation = useUpdateDesign();
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [showImageDialog, setShowImageDialog] = useState(false);
-  const [imageDescription, setImageDescription] = useState('');
-  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
-  const [deliveryDate, setDeliveryDate] = useState('');
-  const [editingMaterial, setEditingMaterial] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState<string>('');
-  const [materialName, setMaterialName] = useState<string>('');
-  const [designTypeName, setDesignTypeName] = useState<string>('');
+  const { data: design, isLoading: loading } = useDesign(Number(id))
 
-  // Initialize form data when design is loaded
-  useEffect(() => {
-    if (!id) {
-      navigate('/design/all');
-      return;
+
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      received_info: { label: "Đã nhận thông tin", variant: "default" },
+      designing: { label: "Đang thiết kế", variant: "secondary" },
+      completed: { label: "Hoàn thành", variant: "outline" },
     }
-    
-    if (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải thông tin thiết kế",
-        variant: "destructive",
-      });
-      navigate('/design/all');
-      return;
-    }
-
-    if (design) {
-      // Initialize delivery date if exists
-      if (design.deliveryDate) {
-        setDeliveryDate(design.deliveryDate.split('T')[0]); // Extract date part only
-      }
-      // Initialize material if exists
-      if (design.material) {
-        setSelectedMaterial(design.material);
-        loadMaterialName(design.material);
-      }
-      // Load design type name
-      if (design.designType) {
-        loadDesignTypeName(design.designType);
-      }
-    }
-  }, [id, design, error, navigate, toast]);
-
-  const loadMaterialName = async (materialId: string) => {
-    try {
-      const response = await MaterialService.getMaterials({
-        page: 1,
-        pageSize: 1,
-        filters: { searchQuery: materialId }
-      });
-      const material = response.data.find(m => m.id === materialId);
-      if (material) {
-        setMaterialName(material.name);
-      }
-    } catch (error) {
-      console.error('Error loading material name:', error);
-      setMaterialName('Chưa rõ tên');
-    }
-  };
-
-  const loadDesignTypeName = async (designTypeCode: string) => {
-    // TODO: Use useDesignTypes hook to get design type name
-    // For now, just set the code as fallback
-    setDesignTypeName(designTypeCode);
-  };
-
-  const getUserName = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    return user?.fullName || 'Không xác định';
-  };
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setPendingImageFile(file);
-    setImageDescription('');
-    setShowImageDialog(true);
-  };
-
-  const confirmImageUpload = async () => {
-    if (!pendingImageFile || !design) return;
-
-    try {
-      setUploadingImage(true);
-      const imageUrl = URL.createObjectURL(pendingImageFile);
-      // TODO: Implement uploadProgressImage in design API
-      console.log('TODO: Upload progress image', {
-        designId: design.id,
-        imageUrl,
-        description: imageDescription || `Hình tiến độ ${new Date().toLocaleString()}`,
-        status: 'in_progress',
-        uploadedBy: 'current-user',
-        uploadedAt: new Date().toISOString(),
-        isVisibleToCustomer: false,
-      });
-      
-      toast({
-        title: "Thông báo",
-        description: "Tính năng tải lên hình ảnh đang được phát triển",
-        variant: "default",
-      });
-
-      toast({
-        title: "Thành công",
-        description: "Đã tải lên hình tiến độ",
-      });
-
-      setShowImageDialog(false);
-      setPendingImageFile(null);
-      setImageDescription('');
-    } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải lên hình",
-        variant: "destructive",
-      });
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const handleDesignFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !design) return;
-
-    try {
-      setUploadingFile(true);
-      const fileUrl = URL.createObjectURL(file);
-      
-      // Update design with new file
-      const updatedDesign = { 
-        ...design, 
-        designFile: {
-          url: fileUrl,
-          fileName: file.name,
-          uploadedAt: new Date().toISOString(),
-          uploadedBy: 'current-user'
-        }
-      };
-      
-      setDesign(updatedDesign);
-
-      toast({
-        title: "Thành công",
-        description: "Đã tải lên file bảng thiết kế",
-      });
-    } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải lên file",
-        variant: "destructive",
-      });
-    } finally {
-      setUploadingFile(false);
-    }
-  };
-
-  const handleStatusUpdate = async (newStatus: string) => {
-    if (!design) return;
-
-    try {
-      setUpdatingStatus(true);
-      // TODO: Call API to update status
-      const updatedDesign = { ...design, status: newStatus as Design['status'] };
-      setDesign(updatedDesign);
-
-      toast({
-        title: "Thành công",
-        description: "Đã cập nhật trạng thái thiết kế",
-      });
-    } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể cập nhật trạng thái",
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingStatus(false);
-    }
-  };
-
-  const handleDeliveryDateUpdate = async () => {
-    if (!design) return;
-
-    try {
-      await updateDesignMutation.mutateAsync({ 
-        id: design.id,
-        updates: {
-          deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : undefined 
-        }
-      });
-      setEditingDeliveryDate(false);
-
-      toast({
-        title: "Thành công",
-        description: "Đã cập nhật ngày gửi khách hàng",
-      });
-    } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể cập nhật ngày gửi khách hàng",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleMaterialUpdate = async () => {
-    if (!design) return;
-
-    try {
-      await updateDesignMutation.mutateAsync({ 
-        id: design.id,
-        updates: {
-          material: selectedMaterial || undefined 
-        }
-      });
-      setEditingMaterial(false);
-      
-      // Load material name for display
-      if (selectedMaterial) {
-        loadMaterialName(selectedMaterial);
-      } else {
-        setMaterialName('');
-      }
-
-      toast({
-        title: "Thành công",
-        description: "Đã cập nhật chất liệu",
-      });
-    } catch (error) {
-      toast({
-        title: "Lỗi",
-        description: "Không thể cập nhật chất liệu",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDownloadFile = () => {
-    if (design?.designFile) {
-      const link = document.createElement('a');
-      link.href = design.designFile.url;
-      link.download = design.designFile.fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('vi-VN');
-  };
+    const config = statusMap[status] || { label: status, variant: "default" }
+    return (
+      <Badge variant={config.variant} className="font-medium">
+        {config.label}
+      </Badge>
+    )
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Đang tải thông tin thiết kế...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Đang tải dữ liệu...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (!design) {
     return (
-      <div className="text-center py-8">
-        <p>Không tìm thấy thiết kế</p>
-        <Button onClick={() => navigate('/design/all')} className="mt-4">
-          Quay lại danh sách
-        </Button>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground">Không tìm thấy thiết kế</p>
+            <Button onClick={() => navigate("/designs")} className="mt-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Quay lại
+            </Button>
+          </CardContent>
+        </Card>
       </div>
-    );
+    )
   }
 
-  const status = statusConfig[design.status];
-  const priority = priorityConfig[design.priority];
-  const StatusIcon = status.icon;
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate('/design/all')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Quay lại
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">{design.designName}</h1>
-          <p className="text-sm text-muted-foreground font-mono">{design.designCode}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col items-end gap-2">
-            <Badge className={`${status.color} flex items-center gap-1`}>
-              <StatusIcon className="h-3 w-3" />
-              {status.label}
-            </Badge>
-            <Select value={design.status} onValueChange={handleStatusUpdate} disabled={updatingStatus}>
-              <SelectTrigger className="w-32 h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(statusConfig).map(([value, config]) => (
-                  <SelectItem key={value} value={value}>{config.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate("/designs")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-foreground">{design.code}</h1>
+            <p className="text-muted-foreground mt-1">
+              Đơn hàng #{design.orderId} • Thiết kế ID: {design.id}
+            </p>
           </div>
+          {getStatusBadge(design.designStatus)}
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Column - Main Info */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Auto-generated design code (copy / save) */}
-          <AutoDesignCode design={design} onSaved={(updated) => setDesign(updated)} />
+        <Tabs defaultValue="info" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="info">Thông tin chung</TabsTrigger>
+            <TabsTrigger value="specs">Thông số kỹ thuật</TabsTrigger>
+            <TabsTrigger value="pricing">Giá & Thanh toán</TabsTrigger>
+            <TabsTrigger value="files">Tệp đính kèm</TabsTrigger>
+          </TabsList>
 
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Thông tin cơ bản</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+          {/* General Info Tab */}
+          <TabsContent value="info" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Thông tin thiết kế viên
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm text-muted-foreground">Tên thiết kế</label>
-                  <p className="font-medium">{design.designName}</p>
+                  <p className="text-sm text-muted-foreground">Họ tên</p>
+                  <p className="font-medium">{design.designer.fullName}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-muted-foreground">Ngày gửi khách hàng</label>
-                  {editingDeliveryDate ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="date"
-                        value={deliveryDate}
-                        onChange={(e) => setDeliveryDate(e.target.value)}
-                        className="w-40"
-                      />
-                      <Button size="sm" onClick={handleDeliveryDateUpdate}>
-                        <Save className="h-3 w-3 mr-1" />
-                        Lưu
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingDeliveryDate(false)}>
-                        Hủy
-                      </Button>
+                  <p className="text-sm text-muted-foreground">Username</p>
+                  <p className="font-medium">{design.designer.username}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-medium">{design.designer.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Điện thoại</p>
+                  <p className="font-medium">{design.designer.phone}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Loại thiết kế & Chất liệu
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Loại thiết kế</h4>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tên loại</p>
+                      <p className="font-medium">{design.designType.name}</p>
                     </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <p>{design.deliveryDate ? new Date(design.deliveryDate).toLocaleDateString('vi-VN') : 'Chưa đặt'}</p>
-                      <Button size="sm" variant="outline" onClick={() => setEditingDeliveryDate(true)}>
-                        <Edit className="h-3 w-3 mr-1" />
-                        Sửa
-                      </Button>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Mã loại</p>
+                      <p className="font-medium">{design.designType.code}</p>
                     </div>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Khách hàng</label>
-                  <p className="font-medium">{design.customerName}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Số đơn hàng</label>
-                  <p className="font-mono">{design.orderNumber}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Loại thiết kế</label>
-                  <Badge variant="outline">{designTypeName || design.designType}</Badge>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Độ ưu tiên</label>
-                  <Badge className={priority.color}>{priority.label}</Badge>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Kích thước</label>
-                  <p className="font-mono">{design.dimensions}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Số lượng</label>
-                  <p>{design.quantity.toLocaleString()}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Chất liệu</label>
-                  {editingMaterial ? (
-                    <div className="flex items-center gap-2">
-                      <MaterialSelector 
-                        value={selectedMaterial} 
-                        onValueChange={setSelectedMaterial}
-                        placeholder="Chọn chất liệu"
-                        className="w-48"
-                        showStock={true}
-                      />
-                      <Button size="sm" onClick={handleMaterialUpdate}>
-                        <Save className="h-3 w-3 mr-1" />
-                        Lưu
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingMaterial(false)}>
-                        Hủy
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <p>{materialName || design.material || 'Chưa chọn'}</p>
-                      <Button size="sm" variant="outline" onClick={() => setEditingMaterial(true)}>
-                        <Edit className="h-3 w-3 mr-1" />
-                        Sửa
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Thiết kế viên</label>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {getUserName(design.assignedTo).charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{getUserName(design.assignedTo)}</span>
                   </div>
                 </div>
-                <div>
-                  <label className="text-sm text-muted-foreground">Hạn hoàn thành</label>
-                  <p className={design.dueDate && new Date(design.dueDate) < new Date() ? 'text-red-600' : ''}>
-                    {design.dueDate ? formatDateTime(design.dueDate) : 'Chưa đặt'}
-                  </p>
-                </div>
-              </div>
-              
-              {design.notes && (
-                <div>
-                  <label className="text-sm text-muted-foreground">Ghi chú</label>
-                  <p className="text-sm mt-1 p-3 bg-muted rounded-md">{design.notes}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Design Files */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
+                <Separator />
+
+                <div>
+                  <h4 className="font-semibold mb-3">Chất liệu</h4>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tên chất liệu</p>
+                      <p className="font-medium">{design.materialType.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Mã chất liệu</p>
+                      <p className="font-medium">{design.materialType.code}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Giá chất liệu</p>
+                      <p className="font-medium">{design.materialType.price.toLocaleString("vi-VN")} VNĐ</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Giá/cm²</p>
+                      <p className="font-medium">{design.materialType.pricePerCm2.toLocaleString("vi-VN")} VNĐ</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  File bảng thiết kế
-                </span>
+                  Yêu cầu & Ghi chú
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <input
-                    type="file"
-                    id="design-file-upload"
-                    accept=".ai,.psd,.pdf,.png,.jpg,.jpeg"
-                    onChange={handleDesignFileUpload}
-                    className="hidden"
-                    disabled={uploadingFile}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById('design-file-upload')?.click()}
-                    disabled={uploadingFile}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {uploadingFile ? 'Đang tải...' : 'Tải lên'}
-                  </Button>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Yêu cầu thiết kế</p>
+                  <p className="text-sm bg-muted p-4 rounded-lg">{design.requirements || "Không có yêu cầu"}</p>
                 </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {design.designFile ? (
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{design.designFile.fileName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Tải lên {formatDateTime(design.designFile.uploadedAt)} bởi {getUserName(design.designFile.uploadedBy)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={handleDownloadFile}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Tải xuống
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Chưa có file bảng thiết kế</p>
-                  <p className="text-sm">Tải lên file AI, PSD, PDF hoặc hình ảnh</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Progress Images */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5" />
-                  Hình tiến độ ({design.progressImages.length})
-                </span>
                 <div>
-                  <input
-                    type="file"
-                    id="progress-image-upload"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    disabled={uploadingImage}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById('progress-image-upload')?.click()}
-                    disabled={uploadingImage}
-                  >
-                    <Camera className="h-4 w-4 mr-2" />
-                    {uploadingImage ? 'Đang tải...' : 'Thêm hình'}
-                  </Button>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Ghi chú thêm</p>
+                  <p className="text-sm bg-muted p-4 rounded-lg">{design.additionalNotes || "Không có ghi chú"}</p>
                 </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {design.progressImages.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {design.progressImages
-                    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
-                    .map((image) => (
-                    <div key={image.id} className="space-y-2">
-                      <div 
-                        className="aspect-square bg-muted rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => setSelectedImage(image.imageUrl)}
-                      >
-                        <img 
-                          src={image.imageUrl} 
-                          alt={image.description}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="text-xs">
-                        <p className="font-medium truncate">{image.description}</p>
-                        <p className="text-muted-foreground">
-                          {formatDateTime(image.uploadedAt)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Camera className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Chưa có hình tiến độ</p>
-                  <p className="text-sm">Thêm hình để theo dõi tiến độ thiết kế</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column - Timeline */}
-        <div className="space-y-6">
-          {/* Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Timeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                {design.notes && (
                   <div>
-                    <p className="text-sm font-medium">Thiết kế được tạo</p>
-                    <p className="text-xs text-muted-foreground">{formatDateTime(design.createdAt)}</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Ghi chú nội bộ</p>
+                    <p className="text-sm bg-muted p-4 rounded-lg">{design.notes}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Specs Tab */}
+          <TabsContent value="specs" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Ruler className="h-5 w-5" />
+                  Thông số kỹ thuật
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Kích thước</p>
+                  <p className="text-2xl font-bold">{design.dimensions}</p>
+                </div>
+                {design.width && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Chiều rộng</p>
+                    <p className="text-2xl font-bold">{design.width} cm</p>
+                  </div>
+                )}
+                {design.height && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Chiều cao</p>
+                    <p className="text-2xl font-bold">{design.height} cm</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-muted-foreground">Số lượng</p>
+                  <p className="text-2xl font-bold">{design.quantity.toLocaleString()}</p>
+                </div>
+                {design.areaCm2 && (
+                  <div className="sm:col-span-2">
+                    <p className="text-sm text-muted-foreground">Diện tích</p>
+                    <p className="text-2xl font-bold">
+                      {design.areaCm2.toLocaleString("vi-VN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      cm²
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Pricing Tab */}
+          <TabsContent value="pricing" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Thông tin giá
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Đơn giá</p>
+                    <p className="text-2xl font-bold">
+                      {design.unitPrice ? `${design.unitPrice.toLocaleString("vi-VN")} VNĐ` : "Chưa có"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tổng giá</p>
+                    <p className="text-2xl font-bold">
+                      {design.totalPrice ? `${design.totalPrice.toLocaleString("vi-VN")} VNĐ` : "Chưa có"}
+                    </p>
                   </div>
                 </div>
-                
-                {design.progressImages.map((image, index) => (
-                  <div key={image.id} className="flex gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="text-sm font-medium">Cập nhật hình tiến độ</p>
-                      <p className="text-xs text-muted-foreground">{formatDateTime(image.uploadedAt)}</p>
-                      <p className="text-xs text-muted-foreground">{image.description}</p>
-                    </div>
-                  </div>
-                ))}
 
-                {design.designFile && (
-                  <div className="flex gap-3">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="text-sm font-medium">Tải lên file thiết kế</p>
-                      <p className="text-xs text-muted-foreground">{formatDateTime(design.designFile.uploadedAt)}</p>
-                      <p className="text-xs text-muted-foreground">{design.designFile.fileName}</p>
+                {design.totalPrice && design.unitPrice && (
+                  <div className="pt-4 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Giá mỗi đơn vị:</span>
+                      <span className="text-lg font-semibold">
+                        {(design.totalPrice / design.quantity).toLocaleString("vi-VN")} VNĐ
+                      </span>
                     </div>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Files Tab */}
+          <TabsContent value="files" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Download className="h-5 w-5" />
+                  Tệp đính kèm
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {design.designFileUrl ? (
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-8 w-8 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">File thiết kế</p>
+                        <p className="text-sm text-muted-foreground">{design.designFileUrl}</p>
+                      </div>
+                    </div>
+                    <Button asChild>
+                      <a href={design.designFileUrl} download>
+                        <Download className="h-4 w-4 mr-2" />
+                        Tải xuống
+                      </a>
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">Chưa có file thiết kế</p>
+                )}
+
+                {design.excelFileUrl && (
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-8 w-8 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">File Excel</p>
+                        <p className="text-sm text-muted-foreground">{design.excelFileUrl}</p>
+                      </div>
+                    </div>
+                    <Button asChild>
+                      <a href={design.excelFileUrl} download>
+                        <Download className="h-4 w-4 mr-2" />
+                        Tải xuống
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Thời gian
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Ngày tạo</p>
+                  <p className="font-medium">{new Date(design.createdAt).toLocaleString("vi-VN")}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Cập nhật lần cuối</p>
+                  <p className="font-medium">{new Date(design.updatedAt).toLocaleString("vi-VN")}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Action Buttons */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex gap-4">
+              <Button
+                variant="outline"
+                className="flex-1 bg-transparent"
+                onClick={() => navigate(`/orders/${design.orderId}`)}
+              >
+                Xem đơn hàng
+              </Button>
+              <Button className="flex-1">Chỉnh sửa thiết kế</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Image Upload Dialog */}
-      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Thêm hình tiến độ</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="image-description">Tên/Mô tả hình ảnh</Label>
-              <Input
-                id="image-description"
-                value={imageDescription}
-                onChange={(e) => setImageDescription(e.target.value)}
-                placeholder="VD: Bản phác thảo ban đầu, hoàn thiện 80%, sẵn sàng review..."
-                className="mt-1"
-              />
-            </div>
-            {pendingImageFile && (
-              <div className="text-sm text-muted-foreground">
-                File: {pendingImageFile.name}
-              </div>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setShowImageDialog(false);
-                  setPendingImageFile(null);
-                  setImageDescription('');
-                }}
-                disabled={uploadingImage}
-              >
-                Hủy
-              </Button>
-              <Button 
-                onClick={confirmImageUpload}
-                disabled={uploadingImage}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {uploadingImage ? 'Đang tải...' : 'Tải lên'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Image Preview Dialog */}
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Xem hình tiến độ</DialogTitle>
-          </DialogHeader>
-          {selectedImage && (
-            <div className="max-h-[80vh] overflow-auto">
-              <img 
-                src={selectedImage} 
-                alt="Progress" 
-                className="w-full h-auto"
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
-  );
+  )
 }

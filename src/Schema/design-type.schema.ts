@@ -1,37 +1,31 @@
-import { z } from 'zod';
-import { StatusEnum } from './Common/enums';
-import { IdSchema, DateSchema } from './Common/base';
+import { z } from "zod";
+import { StatusEnum } from "./Common/enums";
+import { IdSchema, DateSchema } from "./Common/base";
+import { UserSchema } from "./user.schema";
 
-// User schema for createdBy field
-export const DesignTypeUserSchema = z.object({
-  id: IdSchema,
-  username: z.string(),
-  fullName: z.string(),
-  role: z.string(),
-  email: z.string().email(),
-  phone: z.string(),
-});
-
-// Design Type Entity schema for API responses  
+// Design Type Entity schema for API responses
 export const DesignTypeEntitySchema = z.object({
   id: IdSchema,
-  code: z.string().min(1, 'Mã loại thiết kế không được để trống'),
-  name: z.string().min(1, 'Tên loại thiết kế không được để trống'),
-  displayOrder: z.number().int().min(0, 'Thứ tự hiển thị phải >= 0'),
+  code: z.string().min(1, "Mã loại thiết kế không được để trống"),
+  name: z.string().min(1, "Tên loại thiết kế không được để trống"),
+  displayOrder: z.number().int().min(0, "Thứ tự hiển thị phải >= 0"),
   description: z.string().optional(),
   status: StatusEnum,
   createdAt: DateSchema,
   updatedAt: DateSchema,
-  createdBy: DesignTypeUserSchema,
+  createdBy: UserSchema,
 });
-
 // Schema for creating new design type
 export const CreateDesignTypeSchema = z.object({
-  code: z.string().min(1, 'Mã loại thiết kế không được để trống')
-    .max(10, 'Mã loại thiết kế không được quá 10 ký tự'),
-  name: z.string().min(1, 'Tên loại thiết kế không được để trống')
-    .max(100, 'Tên loại thiết kế không được quá 100 ký tự'),
-  displayOrder: z.number().int().min(0, 'Thứ tự hiển thị phải >= 0'),
+  code: z
+    .string()
+    .min(1, "Mã loại thiết kế không được để trống")
+    .max(10, "Mã loại thiết kế không được quá 10 ký tự"),
+  name: z
+    .string()
+    .min(1, "Tên loại thiết kế không được để trống")
+    .max(100, "Tên loại thiết kế không được quá 100 ký tự"),
+  displayOrder: z.number().int().min(0, "Thứ tự hiển thị phải >= 0"),
   description: z.string().optional(),
   status: StatusEnum,
 });
@@ -64,4 +58,3 @@ export type CreateDesignTypeRequest = z.infer<typeof CreateDesignTypeSchema>;
 export type UpdateDesignTypeRequest = z.infer<typeof UpdateDesignTypeSchema>;
 export type DesignTypeListResponse = z.infer<typeof DesignTypeListSchema>;
 export type DesignTypeStats = z.infer<typeof DesignTypeStatsSchema>;
-export type DesignTypeUser = z.infer<typeof DesignTypeUserSchema>;

@@ -1,14 +1,5 @@
 import { z } from "zod";
-
-// User reference schema (for createdBy field)
-export const UserReferenceSchema = z.object({
-  id: z.number(),
-  username: z.string(),
-  fullName: z.string(),
-  role: z.string(),
-  email: z.string().email(),
-  phone: z.string(),
-});
+import { UserSchema } from "./user.schema";
 
 // Customer create/update request schema
 export const CustomerRequestSchema = z.object({
@@ -39,7 +30,7 @@ export const CustomerSchema = z.object({
   debtStatus: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  createdBy: UserReferenceSchema.optional(),
+  createdBy: UserSchema.optional(),
 });
 
 // Customer list item schema (matches API /customers response)
@@ -73,12 +64,14 @@ export const CustomerListResponseSchema = z.object({
 });
 
 // Customer search/filter parameters
-export const CustomerSearchParamsSchema = z.object({
-  pageNumber: z.number().min(1).optional().default(1),
-  pageSize: z.number().min(1).max(100).optional().default(10),
-  search: z.string().optional(),
-  debtStatus: z.string().optional(),
-}).partial();
+export const CustomerSearchParamsSchema = z
+  .object({
+    pageNumber: z.number().min(1).optional().default(1),
+    pageSize: z.number().min(1).max(100).optional().default(10),
+    search: z.string().optional(),
+    debtStatus: z.string().optional(),
+  })
+  .partial();
 
 // Types
 export type CustomerRequest = z.infer<typeof CustomerRequestSchema>;
@@ -86,22 +79,21 @@ export type Customer = z.infer<typeof CustomerSchema>;
 export type CustomerListItem = z.infer<typeof CustomerListItemSchema>;
 export type CustomerListResponse = z.infer<typeof CustomerListResponseSchema>;
 export type CustomerSearchParams = z.infer<typeof CustomerSearchParamsSchema>;
-export type UserReference = z.infer<typeof UserReferenceSchema>;
 
 // Customer type enum
 export enum CustomerType {
   INDIVIDUAL = "individual",
   COMPANY = "company",
   GOVERNMENT = "government",
-  NGO = "ngo"
+  NGO = "ngo",
 }
 
 // Debt status enum
 export enum DebtStatus {
   GOOD = "good",
-  WARNING = "warning", 
+  WARNING = "warning",
   BLOCKED = "blocked",
-  OVERDUE = "overdue"
+  OVERDUE = "overdue",
 }
 
 // Validation functions
@@ -113,16 +105,23 @@ export const validateCustomer = (data: unknown): Customer => {
   return CustomerSchema.parse(data);
 };
 
-export const validateCustomerListResponse = (data: unknown): CustomerListResponse => {
+export const validateCustomerListResponse = (
+  data: unknown
+): CustomerListResponse => {
   return CustomerListResponseSchema.parse(data);
 };
 
-export const validateCustomerSearchParams = (data: unknown): CustomerSearchParams => {
+export const validateCustomerSearchParams = (
+  data: unknown
+): CustomerSearchParams => {
   return CustomerSearchParamsSchema.parse(data);
 };
 
 // Helper functions for debt management
-export const calculateDebtRatio = (currentDebt: number, maxDebt: number): number => {
+export const calculateDebtRatio = (
+  currentDebt: number,
+  maxDebt: number
+): number => {
   if (maxDebt === 0) return 0;
   return (currentDebt / maxDebt) * 100;
 };
@@ -142,9 +141,14 @@ export const getDebtStatusColor = (debtStatus: string): string => {
 };
 
 export const isDebtStatusCritical = (debtStatus: string): boolean => {
-  return [DebtStatus.BLOCKED, DebtStatus.OVERDUE].includes(debtStatus.toLowerCase() as DebtStatus);
+  return [DebtStatus.BLOCKED, DebtStatus.OVERDUE].includes(
+    debtStatus.toLowerCase() as DebtStatus
+  );
 };
 
 export const canCreateOrderForCustomer = (customer: Customer): boolean => {
-  return !isDebtStatusCritical(customer.debtStatus) && customer.currentDebt <= customer.maxDebt;
+  return (
+    !isDebtStatusCritical(customer.debtStatus) &&
+    customer.currentDebt <= customer.maxDebt
+  );
 };
