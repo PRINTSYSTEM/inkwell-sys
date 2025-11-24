@@ -20,7 +20,7 @@ export default function Dashboard() {
 
   // Lấy danh sách đơn hàng thật
   const { data: ordersData, isLoading: loadingOrders } = useOrders({ pageSize: 100 });
-  const orders = ordersData?.items || [];
+  const orders = ordersData?.data || [];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {

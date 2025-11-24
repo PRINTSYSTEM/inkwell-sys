@@ -1,20 +1,20 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Form,
   FormControl,
@@ -22,27 +22,27 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { ArrowLeft, Save } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/form";
+import { ArrowLeft, Save } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // Design Types theo yêu cầu
 const designTypes = [
-  { code: 'T', name: 'Túi giấy (Paper Bag)' },
-  { code: 'C', name: 'Nhãn giấy (Paper Label)' },
-  { code: 'D', name: 'Decal' },
-  { code: 'H', name: 'Hộp giấy (Paper Box)' },
-  { code: 'R', name: 'Decal cuộn (Roll Decal)' },
+  { code: "T", name: "Túi giấy (Paper Bag)" },
+  { code: "C", name: "Nhãn giấy (Paper Label)" },
+  { code: "D", name: "Decal" },
+  { code: "H", name: "Hộp giấy (Paper Box)" },
+  { code: "R", name: "Decal cuộn (Roll Decal)" },
 ];
 
 const formSchema = z.object({
-  customerId: z.string().min(1, 'Vui lòng chọn khách hàng'),
-  designType: z.string().min(1, 'Vui lòng chọn loại thiết kế'),
-  designName: z.string().min(1, 'Vui lòng nhập tên thiết kế').max(200),
-  width: z.string().min(1, 'Vui lòng nhập chiều rộng'),
-  height: z.string().min(1, 'Vui lòng nhập chiều cao'),
+  customerId: z.string().min(1, "Vui lòng chọn khách hàng"),
+  designType: z.string().min(1, "Vui lòng chọn loại thiết kế"),
+  designName: z.string().min(1, "Vui lòng nhập tên thiết kế").max(200),
+  width: z.string().min(1, "Vui lòng nhập chiều rộng"),
+  height: z.string().min(1, "Vui lòng nhập chiều cao"),
   notes: z.string().optional(),
-  createdDate: z.string().min(1, 'Vui lòng chọn ngày tạo'),
+  createdDate: z.string().min(1, "Vui lòng chọn ngày tạo"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -50,28 +50,28 @@ type FormData = z.infer<typeof formSchema>;
 export default function CreateDesign() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [generatedCode, setGeneratedCode] = useState<string>('');
+  const [generatedCode, setGeneratedCode] = useState<string>("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      customerId: '',
-      designType: '',
-      designName: '',
-      width: '',
-      height: '',
-      notes: '',
-      createdDate: new Date().toISOString().split('T')[0],
+      customerId: "",
+      designType: "",
+      designName: "",
+      width: "",
+      height: "",
+      notes: "",
+      createdDate: new Date().toISOString().split("T")[0],
     },
   });
 
-  const selectedCustomerId = form.watch('customerId');
-  const selectedDesignType = form.watch('designType');
+  const selectedCustomerId = form.watch("customerId");
+  const selectedDesignType = form.watch("designType");
 
   // Auto-generate Design Code preview
   const generateDesignCode = (customerId: string, designType: string) => {
     if (!customerId || !designType) {
-      setGeneratedCode('');
+      setGeneratedCode("");
       return;
     }
 
@@ -79,7 +79,7 @@ export default function CreateDesign() {
     if (!customer) return;
 
     // Mock sequential number (trong thực tế sẽ query từ DB)
-    const sequentialNumber = '001';
+    const sequentialNumber = "001";
     const code = `${customer.code}-${designType}${sequentialNumber}`;
     setGeneratedCode(code);
   };
@@ -96,31 +96,33 @@ export default function CreateDesign() {
 
   const onSubmit = (data: FormData) => {
     toast({
-      title: 'Tạo thiết kế thành công',
+      title: "Tạo thiết kế thành công",
       description: `Mã thiết kế: ${generatedCode}`,
     });
 
     // Navigate back to design list
     setTimeout(() => {
-      navigate('/design');
+      navigate("/design");
     }, 1500);
   };
 
-  const selectedCustomer = mockCustomers.find((c) => c.id === selectedCustomerId);
+  const selectedCustomer = mockCustomers.find(
+    (c) => c.id === selectedCustomerId
+  );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/design')}
-        >
+        <Button variant="ghost" size="icon" onClick={() => navigate("/design")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Tạo thiết kế mới</h1>
-          <p className="text-muted-foreground mt-1">Nhập thông tin thiết kế cho khách hàng</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            Tạo thiết kế mới
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Nhập thông tin thiết kế cho khách hàng
+          </p>
         </div>
       </div>
 
@@ -153,7 +155,9 @@ export default function CreateDesign() {
                       <SelectContent>
                         {mockCustomers.map((customer) => (
                           <SelectItem key={customer.id} value={customer.id}>
-                            [{customer.code}] {customer.companyName || customer.representativeName}
+                            [{customer.code}]{" "}
+                            {customer.companyName ||
+                              customer.representativeName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -170,7 +174,9 @@ export default function CreateDesign() {
                     <strong>Mã KH:</strong> {selectedCustomer.code}
                   </p>
                   <p className="text-sm">
-                    <strong>Tên:</strong> {selectedCustomer.companyName || selectedCustomer.representativeName}
+                    <strong>Tên:</strong>{" "}
+                    {selectedCustomer.companyName ||
+                      selectedCustomer.representativeName}
                   </p>
                   <p className="text-sm">
                     <strong>SĐT:</strong> {selectedCustomer.phone}
@@ -213,8 +219,12 @@ export default function CreateDesign() {
               {/* Generated Design Code Preview */}
               {generatedCode && (
                 <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-                  <Label className="text-sm font-medium">Mã thiết kế (tự động)</Label>
-                  <p className="text-lg font-bold text-primary mt-1">{generatedCode}</p>
+                  <Label className="text-sm font-medium">
+                    Mã thiết kế (tự động)
+                  </Label>
+                  <p className="text-lg font-bold text-primary mt-1">
+                    {generatedCode}
+                  </p>
                 </div>
               )}
 
@@ -245,11 +255,7 @@ export default function CreateDesign() {
                     <FormItem>
                       <FormLabel>Chiều rộng (mm) *</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="VD: 60"
-                          {...field}
-                        />
+                        <Input type="number" placeholder="VD: 60" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -263,11 +269,7 @@ export default function CreateDesign() {
                     <FormItem>
                       <FormLabel>Chiều cao (mm) *</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="VD: 97"
-                          {...field}
-                        />
+                        <Input type="number" placeholder="VD: 97" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -316,7 +318,7 @@ export default function CreateDesign() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate('/design')}
+              onClick={() => navigate("/design")}
             >
               Hủy
             </Button>

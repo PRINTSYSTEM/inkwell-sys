@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { StatusEnum, PriorityEnum } from './Common/enums';
+import { StatusEnum } from './Common/enums';
 import { IdSchema, NameSchema, DescriptionSchema, DateSchema, DateRangeSchema } from './Common/base';
 
 // Report Type Enum

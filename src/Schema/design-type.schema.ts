@@ -11,6 +11,7 @@ export const DesignTypeEntitySchema = z.object({
   displayOrder: z.number().int().min(0, "Thứ tự hiển thị phải >= 0"),
   description: z.string().optional(),
   status: StatusEnum,
+  statusType:  z.string().optional(),
   createdAt: DateSchema,
   updatedAt: DateSchema,
   createdBy: UserSchema,

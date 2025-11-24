@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { StatusEnum, PriorityEnum } from './Common/enums';
 import { IdSchema, NameSchema, DescriptionSchema, EmailSchema, PhoneSchema, DateSchema, DateRangeSchema } from './Common/base';
 
 // Employee Status Enum
@@ -67,7 +66,6 @@ export const EmployeeAssignmentSchema = z.object({
   projectId: IdSchema.optional(),
   title: NameSchema,
   description: DescriptionSchema,
-  priority: PriorityEnum,
   status: z.enum(['pending', 'in_progress', 'completed', 'on_hold', 'cancelled']),
   startDate: DateSchema,
   dueDate: DateSchema,

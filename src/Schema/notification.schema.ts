@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { PriorityEnum } from './Common/enums';
 import { IdSchema, DateSchema } from './Common/base';
 
 // Notification Type Enum
@@ -45,7 +44,6 @@ export const NotificationTemplateSchema = z.object({
   body: z.string(),
   variables: z.array(z.string()).default([]),
   channels: z.array(NotificationChannelEnum).default(['in_app']),
-  priority: PriorityEnum.default('medium'),
   isActive: z.boolean().default(true),
   createdAt: DateSchema,
   updatedAt: DateSchema,
@@ -66,7 +64,6 @@ export const NotificationActionSchema = z.object({
 export const NotificationSchema = z.object({
   id: IdSchema,
   type: NotificationTypeEnum,
-  priority: PriorityEnum,
   
   // Content
   title: z.string(),
@@ -260,7 +257,6 @@ export const UpdateNotificationSchema = z.object({
 export const NotificationFilterSchema = z.object({
   search: z.string().optional(),
   type: NotificationTypeEnum.optional(),
-  priority: PriorityEnum.optional(),
   status: NotificationStatusEnum.optional(),
   isRead: z.boolean().optional(),
   recipientId: IdSchema.optional(),

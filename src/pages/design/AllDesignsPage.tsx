@@ -3,11 +3,31 @@ import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Search, Eye, Package, Ruler, User } from "lucide-react"
+import {
+  Search,
+  Eye,
+  Package,
+  Ruler,
+  User,
+} from "lucide-react"
 import { useDesigns, useFilters } from "@/hooks"
 import type { Design } from "@/Schema"
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table"
 
 type DesignWithSearch = Design & {
   designerFullName: string
@@ -43,7 +63,7 @@ export default function AllDesignsPage() {
       filterActions.applyFilters<DesignWithSearch>(designsWithSearch, {
         searchFields: ["code", "designerFullName"],
       }),
-    [designsWithSearch, filterActions, filterState], // nhớ thêm filterState để không bị stale
+    [designsWithSearch, filterActions, filterState],
   )
 
   // ====== mapping UI <-> filter state ======
@@ -109,7 +129,9 @@ export default function AllDesignsPage() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Danh sách thiết kế</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              Danh sách thiết kế
+            </h1>
             <p className="text-muted-foreground mt-1">
               Tổng số: {filteredDesigns.length} thiết kế
               {filterState.activeFiltersCount > 0 && (
@@ -168,82 +190,81 @@ export default function AllDesignsPage() {
           </CardContent>
         </Card>
 
-        {/* Designs Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredDesigns.map((design) => (
-            <Card
-              key={design.id}
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/design/detail/${design.id}`)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{design.code}</CardTitle>
-                    <p className="text-sm text-muted-foreground">Đơn hàng #{design.orderId}</p>
-                  </div>
-                  {getStatusBadge(design.designStatus)}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Thiết kế viên:</span>
-                  <span className="font-medium">{design.designer.fullName}</span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Loại:</span>
-                    <span className="font-medium">{design.designType.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Chất liệu:</span>
-                    <span className="font-medium">{design.materialType.name}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Ruler className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Kích thước:</span>
-                    <span className="font-medium">{design.dimensions}</span>
-                  </div>
-                  {design.width && design.height && (
-                    <div className="text-sm text-muted-foreground">
-                      {design.width} x {design.height} cm
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Số lượng:</span>
-                    <span className="font-medium">{design.quantity.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                {design.areaCm2 && (
-                  <div className="pt-2 border-t text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Diện tích:</span>
-                      <span className="font-medium">{design.areaCm2.toFixed(2)} cm²</span>
-                    </div>
-                  </div>
-                )}
-
-                <Button className="w-full bg-transparent" variant="outline">
-                  <Eye className="h-4 w-4 mr-2" />
-                  Xem chi tiết
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredDesigns.length === 0 && (
+        {/* Designs Table */}
+        {filteredDesigns.length > 0 ? (
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Đơn hàng</TableHead>
+                      <TableHead>Trạng thái</TableHead>
+                      <TableHead>Loại</TableHead>
+                      <TableHead>Chất liệu</TableHead>
+                      <TableHead>Kích thước</TableHead>
+                      <TableHead>Số lượng</TableHead>
+                      <TableHead className="text-right">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDesigns.map((design) => (
+                      <TableRow
+                        key={design.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() =>
+                          navigate(`/design/detail/${design.id}`)
+                        }
+                      >
+                        
+                        <TableCell>#{design.orderId}</TableCell>
+                        <TableCell>{getStatusBadge(design.designStatus)}</TableCell>
+                      
+                        <TableCell>{design.designType.name}</TableCell>
+                        <TableCell>{design.materialType.name}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Ruler className="h-4 w-4 text-muted-foreground" />
+                            <span>{design.dimensions}</span>
+                          </div>
+                          {design.width && design.height && (
+                            <div className="text-xs text-muted-foreground">
+                              {design.width} x {design.height} cm
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {design.quantity.toLocaleString()}
+                        </TableCell>
+                       
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-transparent"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/design/detail/${design.id}`)
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Xem
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
           <Card>
             <CardContent className="py-12 text-center">
               <Package className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
-              <p className="mt-4 text-muted-foreground">Không tìm thấy thiết kế nào</p>
+              <p className="mt-4 text-muted-foreground">
+                Không tìm thấy thiết kế nào
+              </p>
             </CardContent>
           </Card>
         )}

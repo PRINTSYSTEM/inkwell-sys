@@ -1,10 +1,25 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Plus, Search, Eye, Edit, Building2, ChevronLeft, ChevronRight, MoreHorizontal, Copy, Trash2, Mail, Download, DollarSign, TrendingUp } from 'lucide-react';
-import { toast } from 'sonner';
-import { useCustomers } from '@/hooks/use-customer';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Plus,
+  Search,
+  Eye,
+  Edit,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  Copy,
+  Trash2,
+  Mail,
+  Download,
+  DollarSign,
+  TrendingUp,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useCustomers } from "@/hooks/use-customer";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -12,55 +27,64 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Customer } from '@/apis/customer.api';
+} from "@/components/ui/dropdown-menu";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Customer } from "@/apis/customer.api";
 
 export default function Customers() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Use React Query hook for data fetching
-  const { 
-    data: customersResponse, 
-    isLoading: loading, 
-    error 
+  const {
+    data: customersResponse,
+    isLoading: loading,
+    error,
   } = useCustomers({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    search: debouncedSearch || ''
+    search: debouncedSearch || "",
   });
 
   const customers: Customer[] = customersResponse?.items || [];
   const totalCount = customersResponse?.totalCount || 0;
-  
+
   // Calculate stats from current data (could be enhanced with separate stats API)
   const stats = {
     total: totalCount,
-    totalDebt: customers.reduce((sum, customer) => sum + (customer.currentDebt || 0), 0),
-    averageDebt: customers.length > 0 
-      ? customers.reduce((sum, customer) => sum + (customer.currentDebt || 0), 0) / customers.length 
-      : 0
+    totalDebt: customers.reduce(
+      (sum, customer) => sum + (customer.currentDebt || 0),
+      0
+    ),
+    averageDebt:
+      customers.length > 0
+        ? customers.reduce(
+            (sum, customer) => sum + (customer.currentDebt || 0),
+            0
+          ) / customers.length
+        : 0,
   };
-  
+
   const navigate = useNavigate();
 
   // Add loading and error states
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Đang tải danh sách khách hàng...</div>
+        <div className="text-muted-foreground">
+          Đang tải danh sách khách hàng...
+        </div>
       </div>
     );
   }
@@ -91,7 +115,7 @@ export default function Customers() {
   };
 
   const handleCreateCustomer = () => {
-    navigate('/customers/create');
+    navigate("/customers/create");
   };
 
   const handleViewCustomer = (customerId: number) => {
@@ -104,7 +128,7 @@ export default function Customers() {
   };
 
   const handleDeleteCustomer = async (customerId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa khách hàng này?')) {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa khách hàng này?")) {
       return;
     }
 
@@ -128,13 +152,68 @@ export default function Customers() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Quản lý khách hàng</h1>
-          <p className="text-muted-foreground mt-1">Danh sách khách hàng và thông tin liên hệ</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            Quản lý khách hàng
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Danh sách khách hàng và thông tin liên hệ
+          </p>
         </div>
         <Button onClick={handleCreateCustomer} className="gap-2">
           <Plus className="h-4 w-4" />
           Thêm khách hàng
         </Button>
+      </div>
+      {/* Statistics */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Tổng khách hàng
+            </CardTitle>
+            <Building2 className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">
+              Tổng số khách hàng trong hệ thống
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Tổng công nợ
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-accent" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {stats.totalDebt.toLocaleString("vi-VN")} ₫
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tổng công nợ hiện tại
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Công nợ trung bình
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-success" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {Math.round(stats.averageDebt).toLocaleString("vi-VN")} ₫
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Trung bình mỗi khách hàng
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Search and Filter */}
@@ -143,7 +222,7 @@ export default function Customers() {
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
+              <Input
                 ref={searchInputRef}
                 placeholder="Tìm kiếm theo tên, mã KH, người đại diện, SĐT, mã số thuế..."
                 className="pl-10"
@@ -186,72 +265,100 @@ export default function Customers() {
                 ) : (
                   customers.map((customer) => {
                     // Tách tên viết tắt từ mã khách hàng (nếu có)
-                    const shortName = customer.code?.replace(/^\d{4}/, '') || '';
-                  
-                  return (
-                    <TableRow key={customer.id} className="hover:bg-muted/50 cursor-pointer">
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-primary" />
-                          <span className="font-mono">{customer.code}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <p className="font-medium">{customer.name}</p>
-                      </TableCell>
-                      <TableCell>
-                        {customer.companyName ? (
-                          <p className="font-medium">{customer.companyName}</p>
-                        ) : (
-                          <span className="text-muted-foreground text-sm italic">Cá nhân</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={
-                            customer.debtStatus === 'good' ? 'default' : 
-                            customer.debtStatus === 'warning' ? 'secondary' : 
-                            'destructive'
-                          }
-                          className="text-xs"
-                        >
-                          {customer.debtStatus === 'good' ? 'Tốt' : 
-                           customer.debtStatus === 'warning' ? 'Cảnh báo' : 
-                           'Bị chặn'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`font-medium ${(customer.currentDebt || 0) > (customer.maxDebt || 0) ? 'text-red-600' : 'text-green-600'}`}>
-                          {(customer.currentDebt || 0).toLocaleString('vi-VN')} ₫
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">{(customer.maxDebt || 0).toLocaleString('vi-VN')} ₫</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewCustomer(customer.id)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteCustomer(customer.id)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Xóa khách hàng
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
+                    const shortName =
+                      customer.code?.replace(/^\d{4}/, "") || "";
+
+                    return (
+                      <TableRow
+                        key={customer.id}
+                        className="hover:bg-muted/50 cursor-pointer"
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-primary" />
+                            <span className="font-mono">{customer.code}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="font-medium">{customer.name}</p>
+                        </TableCell>
+                        <TableCell>
+                          {customer.companyName ? (
+                            <p className="font-medium">
+                              {customer.companyName}
+                            </p>
+                          ) : (
+                            <span className="text-muted-foreground text-sm italic">
+                              Cá nhân
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              customer.debtStatus === "good"
+                                ? "default"
+                                : customer.debtStatus === "warning"
+                                ? "secondary"
+                                : "destructive"
+                            }
+                            className="text-xs"
+                          >
+                            {customer.debtStatus === "good"
+                              ? "Tốt"
+                              : customer.debtStatus === "warning"
+                              ? "Cảnh báo"
+                              : "Bị chặn"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`font-medium ${
+                              (customer.currentDebt || 0) >
+                              (customer.maxDebt || 0)
+                                ? "text-red-600"
+                                : "text-green-600"
+                            }`}
+                          >
+                            {(customer.currentDebt || 0).toLocaleString(
+                              "vi-VN"
+                            )}{" "}
+                            ₫
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium">
+                            {(customer.maxDebt || 0).toLocaleString("vi-VN")} ₫
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleViewCustomer(customer.id)}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Xem chi tiết
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleDeleteCustomer(customer.id)
+                                }
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Xóa khách hàng
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
                   })
                 )}
               </TableBody>
@@ -261,13 +368,15 @@ export default function Customers() {
             {totalCount > 0 && (
               <div className="flex items-center justify-between px-2 py-4">
                 <div className="text-sm text-muted-foreground">
-                  Hiển thị {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalCount)} trong tổng số {totalCount} khách hàng
+                  Hiển thị {(currentPage - 1) * itemsPerPage + 1}-
+                  {Math.min(currentPage * itemsPerPage, totalCount)} trong tổng
+                  số {totalCount} khách hàng
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -287,12 +396,16 @@ export default function Customers() {
                       }}
                       className="w-16 text-center text-sm"
                     />
-                    <span className="text-sm text-muted-foreground">/ {totalPages}</span>
+                    <span className="text-sm text-muted-foreground">
+                      / {totalPages}
+                    </span>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
                     disabled={currentPage === totalPages}
                   >
                     Sau
@@ -302,69 +415,19 @@ export default function Customers() {
               </div>
             )}
           </div>
-          
+
           {!loading && customers.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p className="text-sm">
-                {searchTerm ? 'Không tìm thấy khách hàng phù hợp' : 'Chưa có khách hàng nào'}
+                {searchTerm
+                  ? "Không tìm thấy khách hàng phù hợp"
+                  : "Chưa có khách hàng nào"}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Statistics */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Tổng khách hàng
-            </CardTitle>
-            <Building2 className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              Tổng số khách hàng trong hệ thống
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Tổng công nợ
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {stats.totalDebt.toLocaleString('vi-VN')} ₫
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Tổng công nợ hiện tại
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Công nợ trung bình
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {Math.round(stats.averageDebt).toLocaleString('vi-VN')} ₫
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Trung bình mỗi khách hàng
-            </p>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

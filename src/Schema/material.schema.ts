@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { StatusEnum, PriorityEnum } from './Common/enums';
+import { StatusEnum } from './Common/enums';
 import { IdSchema, DateSchema } from './Common/base';
 
 // Material Category Enum
