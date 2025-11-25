@@ -9,19 +9,6 @@ import {
   FileSchema,
 } from "./Common/base";
 
-// User Status Schema
-export interface UserStatusType {
-  id: number;
-  username: string;
-  fullName: string;
-  role: string;
-  email: string;
-  phone: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export const UserSchema = z.object({
   id: IdSchema,
   username: z.string().min(3).max(50),
@@ -32,6 +19,16 @@ export const UserSchema = z.object({
   isActive: z.boolean().default(true),
   createdAt: DateSchema,
   updatedAt: DateSchema,
+});
+
+export const UserListResponseSchema = z.object({
+  items: z.array(UserSchema),
+  totalCount: z.number().int(),
+  pageNumber: z.number().int(),
+  pageSize: z.number().int(),
+  totalPages: z.number().int(),
+  hasPreviousPage: z.boolean(),
+  hasNextPage: z.boolean(),
 });
 
 export const AuthTokenSchema = z.object({
@@ -111,7 +108,8 @@ export const LoginResponse = z.object({
 export type LoginRequestType = z.infer<typeof LoginRequest>;
 export type LoginResponseType = z.infer<typeof LoginResponse>;
 // Export types
-export type User = z.infer<typeof UserSchema>;
+export type UserType = z.infer<typeof UserSchema>;
+export type UserListResponse = z.infer<typeof UserListResponseSchema>;
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 export type AuthToken = z.infer<typeof AuthTokenSchema>;
 export type ChangePassword = z.infer<typeof ChangePasswordSchema>;

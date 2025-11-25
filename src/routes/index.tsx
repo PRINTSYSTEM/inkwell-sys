@@ -1,77 +1,133 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { AuthGuard } from '../guards/AuthGuard';
-import DashboardLayout from '../components/layout/DashboardLayout';
-import { lazy, Suspense } from 'react';
+import { createBrowserRouter, Navigate } from "react-router-dom";
+import { AuthGuard } from "../guards/AuthGuard";
+import DashboardLayout from "../components/layout/DashboardLayout";
+import { lazy, Suspense } from "react";
 
-const Login = lazy(() => import('@/pages/Login'));
-const Dashboard = lazy(() => import('@/pages/dashboard/DashboardPage'));
-const Production = lazy(() => import('@/pages/production/ProductionList.tsx'));
-const ProductionProgress = lazy(() => import('@/pages/production/ProductionProgress'));
-const ProductionMachines = lazy(() => import('@/pages/production/ProductionMachines.tsx'));
-const Design = lazy(() => import('@/pages/Design'));
-const CreateDesign = lazy(() => import('@/pages/design/CreateDesignPage'));
-const AllDesigns = lazy(() => import('@/pages/design/AllDesignsPage'));
-const DesignAssignments = lazy(() => import('@/pages/design/DesignAssignmentsPage'));
-const MyWork = lazy(() => import('@/pages/design/MyWorkPage'));
-const DesignManagerDashboard = lazy(() => import('@/pages/design/DesignManagerDashboard'));
-const DesignerDetailView = lazy(() => import('@/pages/design/DesignerDetailView'));
-const DesignTestPage = lazy(() => import('@/pages/design/TestPage'));
-const CustomerServiceTest = lazy(() => import('@/components/CustomerServiceTest'));
-const DesignDetail = lazy(() => import('@/pages/design/detail/DesignDetailPage'));
-const DesignCodeGenerator = lazy(() => import('@/pages/design/DesignCodeGenerator'));
-const Orders = lazy(() => import('@/pages/orders/OrderList.tsx'));
-const OrderDetail = lazy(() => import('@/pages/orders/OrderDetail.tsx'));
-const CreateOrder = lazy(() => import('@/pages/orders/OrderCreate.tsx'));
-const OrderTracking = lazy(() => import('@/pages/orders/OrderTracking.tsx'));
-const Accounting = lazy(() => import('@/pages/accounting/AccountingDashboard.tsx'));
-const DebtReport = lazy(() => import('@/pages/accounting/AccountingDebtReport.tsx'));
-const AccountingRevenue = lazy(() => import('@/pages/accounting/AccountingRevenue.tsx'));
-const AccountingExpenses = lazy(() => import('@/pages/accounting/AccountingExpenses.tsx'));
-const Attendance = lazy(() => import('@/pages/Attendance'));
-const AttendanceReports = lazy(() => import('@/pages/attendance/AttendanceReports.tsx'));
-const Customers = lazy(() => import('@/pages/customers/CustomerList.tsx'));
-const CustomerDetail = lazy(() => import('@/pages/customers/CustomerDetail.tsx'));
-const CreateCustomer = lazy(() => import('@/pages/customers/CustomerCreate.tsx'));
-const CustomerHistory = lazy(() => import('@/pages/customers/CustomerHistory.tsx'));
-const Inventory = lazy(() => import('@/pages/inventory/InventoryPage'));
-const InventoryDetail = lazy(() => import('@/pages/inventory/InventoryDetailPage.tsx'));
-const CreateMaterial = lazy(() => import('@/pages/inventory/CreateInventoryPage'));
-const ProductTemplates = lazy(() => import('@/pages/inventory/ProductTemplatesPage'));
-const Materials = lazy(() => import('@/pages/materials/MaterialList.tsx'));
-const MaterialTypes = lazy(() => import('@/pages/material-types/MaterialTypeList.tsx'));
-const MaterialTypeDetail = lazy(() => import('@/pages/material-types/MaterialTypeDetail.tsx'));
-const CreateMaterialType = lazy(() => import('@/pages/material-types/MaterialTypeCreate.tsx'));
-const DesignTypes = lazy(() => import('@/pages/design-types/DesignTypeList.tsx'));
-const DesignTypeDetail = lazy(() => import('@/pages/design-types/DesignTypeDetail.tsx'));
-const CreateDesignType = lazy(() => import('@/pages/design-types/DesignTypeCreate.tsx'));
-const PrepressCreatePrintOrder = lazy(() => import('@/pages/prepress/CreatePrintOrder'));
-const PrepressIndex = lazy(() => import('@/pages/prepress/PrepressList.tsx'));
-const PrepressCheck = lazy(() => import('@/pages/prepress/PrepressCheck.tsx'));
-const PrepressOutput = lazy(() => import('@/pages/prepress/PrepressOutput.tsx'));
-const Notifications = lazy(() => import('@/pages/Notifications'));
-const NotificationCenter = lazy(() => import('@/pages/notifications/NotificationCenter'));
-const Reports = lazy(() => import('@/pages/Reports'));
-const AdminRoutes = lazy(() => import('@/pages/admin/AdminDashboard.tsx'));
-const ManagerRoutes = lazy(() => import('@/pages/manager/ManagerDashboard.tsx'));
-const NotFound = lazy(() => import('@/pages/NotFound'));
+const Login = lazy(() => import("@/pages/Login"));
+const Dashboard = lazy(() => import("@/pages/dashboard/DashboardPage"));
+const Production = lazy(() => import("@/pages/production/ProductionList.tsx"));
+const ProductionProgress = lazy(
+  () => import("@/pages/production/ProductionProgress")
+);
+const ProductionMachines = lazy(
+  () => import("@/pages/production/ProductionMachines.tsx")
+);
+const Design = lazy(() => import("@/pages/Design"));
+// const CreateDesign = lazy(() => import("@/pages/design/CreateDesignPage"));
+const AllDesigns = lazy(() => import("@/pages/design/AllDesignsPage"));
+const DesignAssignments = lazy(
+  () => import("@/pages/design/DesignAssignmentsPage")
+);
+const MyWork = lazy(() => import("@/pages/design/MyWorkPage"));
+const Employees = lazy(() => import("@/pages/design/Designers"));
+
+const DesignTestPage = lazy(() => import("@/pages/design/TestPage"));
+const CustomerServiceTest = lazy(
+  () => import("@/components/CustomerServiceTest")
+);
+const DesignDetail = lazy(
+  () => import("@/pages/design/detail/DesignDetailPage")
+);
+// const DesignCodeGenerator = lazy(
+//   () => import("@/pages/design/DesignCodeGenerator")
+// );
+const Orders = lazy(() => import("@/pages/orders/OrderList.tsx"));
+const OrderDetail = lazy(() => import("@/pages/orders/OrderDetail.tsx"));
+const CreateOrder = lazy(() => import("@/pages/orders/OrderCreate.tsx"));
+const OrderTracking = lazy(() => import("@/pages/orders/OrderTracking.tsx"));
+const Accounting = lazy(
+  () => import("@/pages/accounting/AccountingDashboard.tsx")
+);
+const DebtReport = lazy(
+  () => import("@/pages/accounting/AccountingDebtReport.tsx")
+);
+const AccountingRevenue = lazy(
+  () => import("@/pages/accounting/AccountingRevenue.tsx")
+);
+const AccountingExpenses = lazy(
+  () => import("@/pages/accounting/AccountingExpenses.tsx")
+);
+const Attendance = lazy(() => import("@/pages/Attendance"));
+const AttendanceReports = lazy(
+  () => import("@/pages/attendance/AttendanceReports.tsx")
+);
+const Customers = lazy(() => import("@/pages/customers/CustomerList.tsx"));
+const CustomerDetail = lazy(
+  () => import("@/pages/customers/CustomerDetail.tsx")
+);
+const CreateCustomer = lazy(
+  () => import("@/pages/customers/CustomerCreate.tsx")
+);
+const CustomerHistory = lazy(
+  () => import("@/pages/customers/CustomerHistory.tsx")
+);
+const Inventory = lazy(() => import("@/pages/inventory/InventoryPage"));
+const InventoryDetail = lazy(
+  () => import("@/pages/inventory/InventoryDetailPage.tsx")
+);
+const CreateMaterial = lazy(
+  () => import("@/pages/inventory/CreateInventoryPage")
+);
+const ProductTemplates = lazy(
+  () => import("@/pages/inventory/ProductTemplatesPage")
+);
+const Materials = lazy(() => import("@/pages/materials/MaterialList.tsx"));
+const MaterialTypes = lazy(
+  () => import("@/pages/material-types/MaterialTypeList.tsx")
+);
+const MaterialTypeDetail = lazy(
+  () => import("@/pages/material-types/MaterialTypeDetail.tsx")
+);
+const CreateMaterialType = lazy(
+  () => import("@/pages/material-types/MaterialTypeCreate.tsx")
+);
+const DesignTypes = lazy(
+  () => import("@/pages/design-types/DesignTypeList.tsx")
+);
+const DesignTypeDetail = lazy(
+  () => import("@/pages/design-types/DesignTypeDetail.tsx")
+);
+const CreateDesignType = lazy(
+  () => import("@/pages/design-types/DesignTypeCreate.tsx")
+);
+const PrepressCreatePrintOrder = lazy(
+  () => import("@/pages/prepress/CreatePrintOrder")
+);
+const PrepressIndex = lazy(() => import("@/pages/prepress/PrepressList.tsx"));
+const PrepressCheck = lazy(() => import("@/pages/prepress/PrepressCheck.tsx"));
+const PrepressOutput = lazy(
+  () => import("@/pages/prepress/PrepressOutput.tsx")
+);
+const Notifications = lazy(() => import("@/pages/Notifications"));
+const NotificationCenter = lazy(
+  () => import("@/pages/notifications/NotificationCenter")
+);
+const Reports = lazy(() => import("@/pages/Reports"));
+const AdminRoutes = lazy(() => import("@/pages/admin/AdminDashboard.tsx"));
+const ManagerRoutes = lazy(
+  () => import("@/pages/manager/ManagerDashboard.tsx")
+);
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
 // Additional lazy imports for new pages
-const AdminPermissions = lazy(() => import('@/pages/admin/AdminPermissions.tsx'));
-const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings.tsx'));
-const Profile = lazy(() => import('@/pages/UserProfile'));
-const ManagerReports = lazy(() => import('@/pages/manager/ManagerReports.tsx'));
+const AdminPermissions = lazy(
+  () => import("@/pages/admin/AdminPermissions.tsx")
+);
+const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings.tsx"));
+const Profile = lazy(() => import("@/pages/UserProfile"));
+const ManagerReports = lazy(() => import("@/pages/manager/ManagerReports.tsx"));
 
 export const router = createBrowserRouter([
   {
-    path: '/login',
+    path: "/login",
     element: (
       <Suspense fallback={<div>Loading...</div>}>
         <Login />
       </Suspense>
-    )
+    ),
   },
   {
-    path: '/',
+    path: "/",
     element: (
       <AuthGuard>
         <DashboardLayout />
@@ -80,18 +136,18 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/dashboard" replace />
+        element: <Navigate to="/dashboard" replace />,
       },
       {
-        path: 'dashboard',
+        path: "dashboard",
         element: (
           <Suspense fallback={<div>Loading...</div>}>
             <Dashboard />
           </Suspense>
-        )
+        ),
       },
       {
-        path: 'production',
+        path: "production",
         children: [
           {
             index: true,
@@ -99,28 +155,28 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <Production />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'progress',
+            path: "progress",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <ProductionProgress />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'machines',
+            path: "machines",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <ProductionMachines />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'design',
+        path: "design",
         children: [
           {
             index: true,
@@ -128,92 +184,85 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <Design />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'all',
+            path: "all",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <AllDesigns />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'my-work',
+            path: "my-work",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <MyWork />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'detail/:id',
+            path: "detail/:id",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <DesignDetail />
               </Suspense>
-            )
+            ),
           },
+          // {
+          //   path: "create",
+          //   element: (
+          //     <Suspense fallback={<div>Loading...</div>}>
+          //       <CreateDesign />
+          //     </Suspense>
+          //   ),
+          // },
+          // {
+          //   path: "code-generator",
+          //   element: (
+          //     <Suspense fallback={<div>Loading...</div>}>
+          //       <DesignCodeGenerator />
+          //     </Suspense>
+          //   ),
+          // },
           {
-            path: 'create',
+            path: "management",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
-                <CreateDesign />
+                <Employees />
               </Suspense>
-            )
+            ),
           },
+
           {
-            path: 'code-generator',
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <DesignCodeGenerator />
-              </Suspense>
-            )
-          },
-          {
-            path: 'management',
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <DesignManagerDashboard />
-              </Suspense>
-            )
-          },
-          {
-            path: 'designers/:designerId',
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <DesignerDetailView />
-              </Suspense>
-            )
-          },
-          {
-            path: 'assignments',
+            path: "assignments",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <DesignAssignments />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'test',
+            path: "test",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <DesignTestPage />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'customer-service-test',
+            path: "customer-service-test",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CustomerServiceTest />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'orders',
+        path: "orders",
         children: [
           {
             index: true,
@@ -221,36 +270,36 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <Orders />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'create',
+            path: "create",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CreateOrder />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'tracking',
+            path: "tracking",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <OrderTracking />
               </Suspense>
-            )
+            ),
           },
           {
-            path: ':id',
+            path: ":id",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <OrderDetail />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'accounting',
+        path: "accounting",
         children: [
           {
             index: true,
@@ -258,36 +307,36 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <Accounting />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'debt-report',
+            path: "debt-report",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <DebtReport />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'revenue',
+            path: "revenue",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <AccountingRevenue />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'expenses',
+            path: "expenses",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <AccountingExpenses />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'attendance',
+        path: "attendance",
         children: [
           {
             index: true,
@@ -295,20 +344,20 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <Attendance />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'reports',
+            path: "reports",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <AttendanceReports />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'customers',
+        path: "customers",
         children: [
           {
             index: true,
@@ -316,36 +365,36 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <Customers />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'create',
+            path: "create",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CreateCustomer />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'history',
+            path: "history",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CustomerHistory />
               </Suspense>
-            )
+            ),
           },
           {
-            path: ':id',
+            path: ":id",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CustomerDetail />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'inventory',
+        path: "inventory",
         children: [
           {
             index: true,
@@ -353,33 +402,33 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <Inventory />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'create',
+            path: "create",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CreateMaterial />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'templates',
+            path: "templates",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <ProductTemplates />
               </Suspense>
-            )
+            ),
           },
           {
-            path: ':id',
+            path: ":id",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <InventoryDetail />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       // {
       //   path: 'material-types',
@@ -411,7 +460,7 @@ export const router = createBrowserRouter([
       //   ]
       // },
       {
-        path: 'materials',
+        path: "materials",
         children: [
           {
             index: true,
@@ -419,12 +468,12 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <Materials />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'material-types',
+        path: "material-types",
         children: [
           {
             index: true,
@@ -432,36 +481,36 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <MaterialTypes />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'create',
+            path: "create",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CreateMaterialType />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'edit/:id',
+            path: "edit/:id",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CreateMaterialType />
               </Suspense>
-            )
+            ),
           },
           {
-            path: ':id',
+            path: ":id",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <MaterialTypeDetail />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'design-types',
+        path: "design-types",
         children: [
           {
             index: true,
@@ -469,44 +518,44 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <DesignTypes />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'create',
+            path: "create",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CreateDesignType />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'edit/:id',
+            path: "edit/:id",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CreateDesignType />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'detail/:id',
+            path: "detail/:id",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <DesignTypeDetail />
               </Suspense>
-            )
+            ),
           },
           {
-            path: ':id',
+            path: ":id",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <DesignTypeDetail />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'prepress',
+        path: "prepress",
         children: [
           {
             index: true,
@@ -514,82 +563,82 @@ export const router = createBrowserRouter([
               <Suspense fallback={<div>Loading...</div>}>
                 <PrepressIndex />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'create-print-order',
+            path: "create-print-order",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <PrepressCreatePrintOrder />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'check',
+            path: "check",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <PrepressCheck />
               </Suspense>
-            )
+            ),
           },
           {
-            path: 'output',
+            path: "output",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <PrepressOutput />
               </Suspense>
-            )
-          }
-        ]
+            ),
+          },
+        ],
       },
       {
-        path: 'notifications',
+        path: "notifications",
         element: (
           <Suspense fallback={<div>Loading...</div>}>
             <NotificationCenter />
           </Suspense>
-        )
+        ),
       },
       {
-        path: 'profile',
+        path: "profile",
         element: (
           <Suspense fallback={<div>Loading...</div>}>
             <Profile />
           </Suspense>
-        )
+        ),
       },
       {
-        path: 'reports',
+        path: "reports",
         element: (
           <Suspense fallback={<div>Loading...</div>}>
             <Reports />
           </Suspense>
-        )
+        ),
       },
       {
-        path: 'admin/*',
+        path: "admin/*",
         element: (
           <Suspense fallback={<div>Loading...</div>}>
             <AdminRoutes />
           </Suspense>
-        )
+        ),
       },
       {
-        path: 'manager/*',
+        path: "manager/*",
         element: (
           <Suspense fallback={<div>Loading...</div>}>
             <ManagerRoutes />
           </Suspense>
-        )
-      }
-    ]
+        ),
+      },
+    ],
   },
   {
-    path: '*',
+    path: "*",
     element: (
       <Suspense fallback={<div>Loading...</div>}>
         <NotFound />
       </Suspense>
-    )
-  }
+    ),
+  },
 ]);

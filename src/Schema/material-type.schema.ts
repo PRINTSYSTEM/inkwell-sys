@@ -21,8 +21,16 @@ export const MaterialTypeEntitySchema = z.object({
 });
 
 // Schema for creating new material type
-export const CreateMaterialTypeSchema = z.object({});
-
+export const CreateMaterialTypeSchema = z.object({
+  code: z.string().min(1, "Mã loại vật liệu không được để trống"),
+  name: z.string().min(1, "Tên loại vật liệu không được để trống"),
+  displayOrder: z.number().int().min(0, "Thứ tự hiển thị phải >= 0").default(0),
+  description: z.string().optional(),
+  price: z.number().nonnegative("Giá phải >= 0"),
+  pricePerCm2: z.number().nonnegative("Đơn giá trên cm² phải >= 0"),
+  designTypeId: IdSchema,
+  status: StatusEnum, // hoặc .default(StatusEnum.Enum.ACTIVE) nếu bạn muốn default
+});
 // Schema for updating material type
 export const UpdateMaterialTypeSchema = CreateMaterialTypeSchema.partial();
 

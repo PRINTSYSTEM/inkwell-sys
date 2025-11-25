@@ -1,400 +1,421 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Activity, AlertTriangle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import type { Design, DesignQueryParams, UserType } from "@/Schema";
+import { FileText, Package } from "lucide-react";
+import { useEffect, useState, ChangeEvent } from "react";
+import { useEmployeeDesigns } from "@/hooks";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { useDebouncedCallback } from "use-debounce";
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from '@/hooks/use-toast';
-
-import { DesignerPerformance, DesignerWorkload, DesignAssignment } from '@/types/design-monitoring';
-import { Employee } from '@/types/employee';
-import { DesignAssignmentService } from '@/services/designAssignmentService';
-
-// Import micro-components
-import { 
-  DesignerInfo, 
-  PerformanceMetrics, 
-  QuickStats, 
-  DesignerActions, 
-  AssignmentHistory 
-} from '@/components/design';
-
-// Mock performance data
-const getMockDesignerPerformance = (designerId: string): DesignerPerformance => ({
-  designerId,
-  designer: {
-    id: designerId,
-    username: 'designer1',
-    fullName: 'Nguyễn Văn A',
-    email: 'designer1@company.com',
-    role: 'design',
-    department: 'dept-design',
-    departmentName: 'Design Department',
-    status: 'active',
-    avatar: '',
-    phone: '+84 123 456 789',
-    address: 'Hà Nội, Việt Nam',
-    hireDate: '2023-01-15',
-    currentWorkload: 85,
-    permissions: [],
-    createdBy: 'system',
-    updatedBy: 'system',
-    certifications: ['Adobe Certified Expert', 'Figma Professional'],
-    availability: 'available' as const,
-    metrics: {
-      totalDesigns: 24,
-      completedDesigns: 22,
-      inProgressDesigns: 2,
-      pendingDesigns: 0,
-      averageCompletionTime: 4.2,
-      completionRate: 92,
-      workloadScore: 85,
-      averageScore: 8.5,
-      qualityScore: 92,
-      lastActivityDate: new Date().toISOString(),
-      monthlyMetrics: []
-    },
-    skills: ['UI/UX Design', 'Graphic Design', 'Packaging Design'],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  periodStart: new Date('2024-10-01'),
-  periodEnd: new Date('2024-11-06'),
-  totalAssignments: 15,
-  completedAssignments: 12,
-  completionRate: 80,
-  averageCompletionTime: 4.2,
-  fastestCompletion: 2.1,
-  slowestCompletion: 8.5,
-  revisionRate: 1.3,
-  approvalRate: 85,
-  customerSatisfactionScore: 4.5,
-  peakWorkload: 5,
-  averageWorkload: 3.2,
-  workloadEfficiency: 88,
-  onTimeDeliveries: 10,
-  lateDeliveries: 2,
-  onTimeRate: 83,
-  skillAreas: [
-    { skillName: 'UI/UX Design', assignmentCount: 8, averageRating: 4.6 },
-    { skillName: 'Graphic Design', assignmentCount: 4, averageRating: 4.3 },
-    { skillName: 'Packaging Design', assignmentCount: 3, averageRating: 4.7 }
-  ],
-  recentAssignments: [],
-  performanceTrend: 'improving',
-  monthlyProgress: [
-    { month: '2024-08', completedCount: 5, averageTime: 5.2, onTimeRate: 75 },
-    { month: '2024-09', completedCount: 7, averageTime: 4.8, onTimeRate: 78 },
-    { month: '2024-10', completedCount: 8, averageTime: 4.2, onTimeRate: 83 }
-  ]
-});
-
-const DesignerDetailView: React.FC = () => {
-  const { designerId } = useParams<{ designerId: string }>();
-  const navigate = useNavigate();
-  
-  const [designer, setDesigner] = useState<Employee | null>(null);
-  const [workload, setWorkload] = useState<DesignerWorkload | null>(null);
-  const [performance, setPerformance] = useState<DesignerPerformance | null>(null);
-  const [assignments, setAssignments] = useState<DesignAssignment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
-
-  // Load designer data
-  const loadDesignerData = useCallback(async () => {
-    if (!designerId) return;
-    
-    try {
-      setLoading(true);
-      
-      // Load designer info (mock for now)
-      const mockDesigner: Employee = {
-        id: designerId,
-        username: 'designer1',
-        fullName: 'Nguyễn Văn A',
-        email: 'designer1@company.com',
-        role: 'design',
-        department: 'dept-design',
-        departmentName: 'Design Department',
-        status: 'active',
-        avatar: '',
-        phone: '+84 123 456 789',
-        address: 'Hà Nội, Việt Nam',
-        hireDate: '2023-01-15',
-        currentWorkload: 85,
-        permissions: [],
-        createdBy: 'system',
-        updatedBy: 'system',
-        certifications: ['Adobe Certified Expert', 'Figma Professional'],
-        availability: 'available' as const,
-        metrics: {
-          totalDesigns: 24,
-          completedDesigns: 22,
-          inProgressDesigns: 2,
-          pendingDesigns: 0,
-          averageCompletionTime: 4.2,
-          completionRate: 92,
-          workloadScore: 85,
-          averageScore: 8.5,
-          qualityScore: 92,
-          lastActivityDate: new Date().toISOString(),
-          monthlyMetrics: []
-        },
-        skills: ['UI/UX Design', 'Graphic Design', 'Packaging Design'],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      // Load workload data
-      const workloadData = await DesignAssignmentService.getDesignerWorkload(designerId);
-      const mockWorkload: DesignerWorkload = {
-        designerId,
-        designer: mockDesigner,
-        activeAssignments: workloadData.activeAssignments,
-        totalWorkload: workloadData.totalWorkload,
-        overdueAssignments: workloadData.overdueAssignments,
-        completedThisMonth: workloadData.completedThisMonth,
-        completedThisWeek: 2,
-        averageCompletionTime: workloadData.averageCompletionTime,
-        onTimeCompletionRate: 83,
-        assignmentsByStatus: {
-          pending: 1,
-          in_progress: 2,
-          review: 1,
-          revision: 0,
-          approved: 0
-        },
-        assignmentsByPriority: {
-          low: 1,
-          medium: 2,
-          high: 1,
-          urgent: 0
-        },
-        estimatedHoursRemaining: 32,
-        actualHoursThisWeek: 28,
-        isAvailable: workloadData.totalWorkload < 80,
-        availabilityStatus: workloadData.totalWorkload > 80 ? 'overloaded' : 'busy'
-      };
-
-      // Load assignments
-      const assignmentData = await DesignAssignmentService.getAssignmentsByDesigner(designerId);
-      
-      // Load performance data
-      const performanceData = getMockDesignerPerformance(designerId);
-      
-      setDesigner(mockDesigner);
-      setWorkload(mockWorkload);
-      setAssignments(assignmentData.data);
-      setPerformance(performanceData);
-      
-    } catch (error) {
-      console.error('Error loading designer data:', error);
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải thông tin designer",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [designerId]);
-
-  const handleRefresh = () => {
-    loadDesignerData();
-    toast({
-      title: "Thành công",
-      description: "Đã cập nhật dữ liệu mới nhất",
-    });
-  };
-
-  const getPerformanceColor = (value: number, threshold: { good: number; warning: number }) => {
-    if (value >= threshold.good) return 'text-green-600';
-    if (value >= threshold.warning) return 'text-orange-600';
-    return 'text-red-600';
-  };
-
-  useEffect(() => {
-    loadDesignerData();
-  }, [loadDesignerData]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <Activity className="h-8 w-8 animate-pulse mx-auto mb-2" />
-          <p>Đang tải thông tin designer...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!designer || !workload || !performance) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-red-500" />
-          <p>Không tìm thấy thông tin designer</p>
-          <Button onClick={() => navigate('/design/management')} className="mt-2">
-            Quay lại
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-
-
-  return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header Actions */}
-      <DesignerActions 
-        designerId={designerId!} 
-        onRefresh={handleRefresh} 
-      />
-
-      {/* Designer Info */}
-      <DesignerInfo designer={designer} workload={workload} />
-
-      {/* Quick Stats */}
-      <QuickStats workload={workload} performance={performance} />
-
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          <TabsTrigger value="performance">Hiệu suất</TabsTrigger>
-          <TabsTrigger value="skills">Kỹ năng</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <PerformanceMetrics workload={workload} performance={performance} />
-        </TabsContent>
-
-        {/* Assignments Tab */}
-        <TabsContent value="assignments">
-          <AssignmentHistory 
-            assignments={assignments}
-            onAssignmentClick={(assignment) => {
-              // Handle assignment click
-              console.log('Assignment clicked:', assignment);
-            }}
-          />
-        </TabsContent>
-
-        {/* Performance Tab */}
-        <TabsContent value="performance" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Thống kê chi tiết</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span>Tổng assignments:</span>
-                    <span className="font-medium">{performance.totalAssignments}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Đã hoàn thành:</span>
-                    <span className="font-medium">{performance.completedAssignments}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Thời gian hoàn thành nhanh nhất:</span>
-                    <span className="font-medium">{performance.fastestCompletion} ngày</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Thời gian hoàn thành chậm nhất:</span>
-                    <span className="font-medium">{performance.slowestCompletion} ngày</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Số lần revision trung bình:</span>
-                    <span className="font-medium">{performance.revisionRate}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Peak workload:</span>
-                    <span className="font-medium">{performance.peakWorkload} assignments</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Workload trung bình:</span>
-                    <span className="font-medium">{performance.averageWorkload} assignments</span>
-                  </div>
-                  {performance.customerSatisfactionScore && (
-                    <div className="flex justify-between">
-                      <span>Điểm hài lòng khách hàng:</span>
-                      <span className="font-medium">{performance.customerSatisfactionScore}/5</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Phân tích deadline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">{performance.onTimeDeliveries}</div>
-                    <div className="text-sm text-muted-foreground">Giao đúng hạn</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-red-600">{performance.lateDeliveries}</div>
-                    <div className="text-sm text-muted-foreground">Giao trễ hạn</div>
-                  </div>
-                  <div className="text-center pt-4 border-t">
-                    <div className={`text-2xl font-bold ${getPerformanceColor(performance.onTimeRate, { good: 80, warning: 60 })}`}>
-                      {performance.onTimeRate}%
-                    </div>
-                    <div className="text-sm text-muted-foreground">Tỷ lệ đúng hạn tổng</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Skills Tab */}
-        <TabsContent value="skills" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Chuyên môn theo lĩnh vực</CardTitle>
-              <CardDescription>
-                Phân tích hiệu suất theo từng lĩnh vực kỹ năng
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {performance.skillAreas.map((skill, index) => (
-                  <div key={index} className="p-4 border rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-medium">{skill.skillName}</h3>
-                      {skill.averageRating && (
-                        <Badge variant="outline">
-                          {skill.averageRating}/5 ⭐
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <span>Số assignments: {skill.assignmentCount}</span>
-                      <span>
-                        {((skill.assignmentCount / performance.totalAssignments) * 100).toFixed(1)}% 
-                        tổng workload
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+type DesignerDetailProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  selectedDesigner: UserType;
 };
 
-export default DesignerDetailView;
+const getStatusBadge = (status: string) => {
+  const statusMap: Record<string, { label: string; className: string }> = {
+    received_info: {
+      label: "Đã nhận thông tin",
+      className: "bg-blue-500 hover:bg-blue-600",
+    },
+    in_progress: {
+      label: "Đang thực hiện",
+      className: "bg-yellow-500 hover:bg-yellow-600",
+    },
+    review: {
+      label: "Đang xem xét",
+      className: "bg-purple-500 hover:bg-purple-600",
+    },
+    approved: {
+      label: "Đã duyệt",
+      className: "bg-green-500 hover:bg-green-600",
+    },
+    completed: {
+      label: "Hoàn thành",
+      className: "bg-emerald-500 hover:bg-emerald-600",
+    },
+  };
+  return statusMap[status] || { label: status, className: "bg-slate-500" };
+};
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+export default function DesignerDetail({
+  open,
+  onOpenChange,
+  selectedDesigner,
+}: DesignerDetailProps) {
+  // ====== PARAM STATE ======
+  const [params, setParams] = useState<DesignQueryParams>(() => ({
+    pageNumber: 1,
+    pageSize: 10,
+    designerId: Number(selectedDesigner.id),
+    search: "",
+    sortBy: "",
+    sortOrder: "desc",
+    status: "",
+  }));
+
+  const [searchInput, setSearchInput] = useState("");
+
+  const debounced = useDebouncedCallback((value: string) => {
+    setParams((prev) => ({
+      ...prev,
+      pageNumber: 1,
+      search: value,
+    }));
+  }, 1000);
+  // khi đổi designer hoặc mở dialog → reset lại params
+  useEffect(() => {
+    if (!selectedDesigner) return;
+    setParams((prev) => ({
+      ...prev,
+      pageNumber: 1,
+      designerId: Number(selectedDesigner.id),
+      // tuỳ bạn: nếu muốn reset luôn search/status, uncomment:
+      search: "",
+      status: "",
+    }));
+    setSearchInput("");
+  }, [selectedDesigner.id]);
+
+  // ====== CALL API ======
+  const { data, isLoading, isError } = useEmployeeDesigns(params);
+
+  // hỗ trợ cả 2 dạng: Array<Design> hoặc { items, totalPages, ... }
+  const designs: Design[] = Array.isArray(data)
+    ? data
+    : (data as any)?.items ?? [];
+
+  const totalPages: number =
+    !Array.isArray(data) && typeof (data as any)?.totalPages === "number"
+      ? (data as any).totalPages
+      : 1;
+
+  const currentPage = params.pageNumber;
+
+  // ====== UPDATE PARAM LOGIC ======
+
+  const handleStatusChange = (value: string) => {
+    setParams((prev) => ({
+      ...prev,
+      pageNumber: 1,
+      status: value === "all" ? "" : value,
+    }));
+  };
+
+  const handlePrevPage = () => {
+    setParams((prev) => ({
+      ...prev,
+      pageNumber: Math.max(1, prev.pageNumber - 1),
+    }));
+  };
+
+  const handleNextPage = () => {
+    setParams((prev) => ({
+      ...prev,
+      pageNumber: Math.min(totalPages, prev.pageNumber + 1),
+    }));
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold text-slate-900">
+            Danh sách thiết kế
+          </DialogTitle>
+          <DialogDescription>
+            {selectedDesigner && (
+              <div className="flex items-center gap-3 mt-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-pink-100 text-sm font-semibold text-purple-700">
+                  {selectedDesigner.username.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900">
+                    {selectedDesigner.fullName}
+                  </div>
+                  <div className="text-sm text-slate-500">
+                    @{selectedDesigner.username}
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* ====== FILTER BAR ====== */}
+        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {/* Search */}
+          <div className="w-full md:w-1/2">
+            <Input
+              placeholder="Tìm theo mã thiết kế, ghi chú..."
+              value={searchInput}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSearchInput(v); // update UI ngay
+                debounced(v); // update params sau 1s
+              }}
+            />
+          </div>
+
+          {/* Status filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">Trạng thái:</span>
+            <Select
+              value={params.status || "all"}
+              onValueChange={handleStatusChange}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Tất cả" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="received_info">Đã nhận thông tin</SelectItem>
+                <SelectItem value="in_progress">Đang thực hiện</SelectItem>
+                <SelectItem value="review">Đang xem xét</SelectItem>
+                <SelectItem value="approved">Đã duyệt</SelectItem>
+                <SelectItem value="completed">Hoàn thành</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* ====== CONTENT ====== */}
+        <div className="mt-6">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+              <p>Đang tải danh sách thiết kế...</p>
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-12 text-red-500">
+              <p>Không tải được danh sách thiết kế.</p>
+            </div>
+          ) : designs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+              <FileText className="mb-4 h-16 w-16 text-slate-300" />
+              <p className="text-lg font-medium">Chưa có thiết kế nào</p>
+              <p className="text-sm">
+                Nhân viên này chưa có công việc nào được giao
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4">
+                {designs.map((design) => {
+                  const statusBadge = getStatusBadge(design.designStatus);
+
+                  return (
+                    <Card
+                      key={design.id}
+                      className="group hover:shadow-lg hover:border-blue-300 transition-all duration-200 cursor-pointer"
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 space-y-4">
+                            {/* Header */}
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="flex items-center gap-3">
+                                  <h3 className="text-xl font-bold text-slate-900">
+                                    {design.code}
+                                  </h3>
+                                  <Badge className={statusBadge.className}>
+                                    {statusBadge.label}
+                                  </Badge>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                  Đơn hàng #{design.orderId}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Info Grid */}
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                              {/* Design Type */}
+                              <div className="flex items-center gap-3 rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
+                                  <FileText className="h-5 w-5 text-purple-600" />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-500">
+                                    Loại thiết kế
+                                  </p>
+                                  <p className="font-semibold text-slate-900">
+                                    {design.designType.name}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Material */}
+                              <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                                  <Package className="h-5 w-5 text-amber-600" />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-500">
+                                    Chất liệu
+                                  </p>
+                                  <p className="font-semibold text-slate-900">
+                                    {design.materialType.name}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Quantity */}
+                              <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                                  <Package className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-500">
+                                    Số lượng
+                                  </p>
+                                  <p className="font-semibold text-slate-900">
+                                    {design.quantity.toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Dimensions & Pricing */}
+                            <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+                              <div>
+                                <p className="text-xs font-medium text-slate-500">
+                                  Kích thước
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                  {design.dimensions}
+                                  {design.width && design.height && (
+                                    <span className="text-slate-500">
+                                      {" "}
+                                      ({design.width} × {design.height} cm)
+                                    </span>
+                                  )}
+                                </p>
+                                {design.areaCm2 && (
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    Diện tích: {design.areaCm2.toLocaleString()}{" "}
+                                    cm²
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-slate-500">
+                                  Giá
+                                </p>
+                                {design.unitPrice && design.totalPrice ? (
+                                  <div className="mt-1 space-y-1">
+                                    <p className="text-sm text-slate-700">
+                                      Đơn giá:{" "}
+                                      {design.unitPrice.toLocaleString()} ₫
+                                    </p>
+                                    <p className="text-lg font-bold text-green-600">
+                                      {design.totalPrice.toLocaleString()} ₫
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="mt-1 text-sm text-slate-500">
+                                    Chưa có
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Requirements */}
+                            {design.requirements && (
+                              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                <p className="text-xs font-medium text-blue-700">
+                                  Yêu cầu thiết kế
+                                </p>
+                                <p className="mt-1 text-sm text-slate-700">
+                                  {design.requirements}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Additional Notes */}
+                            {design.additionalNotes && (
+                              <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                                <p className="text-xs font-medium text-orange-700">
+                                  Ghi chú bổ sung
+                                </p>
+                                <p className="mt-1 text-sm text-slate-700">
+                                  {design.additionalNotes}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Timestamps */}
+                            <div className="flex gap-4 text-xs text-slate-500">
+                              <span>
+                                Tạo: {formatDate(design.createdAt as any)}
+                              </span>
+                              <span>
+                                Cập nhật: {formatDate(design.updatedAt as any)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* ====== PAGINATION ====== */}
+              <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+                <span>
+                  Trang {currentPage} / {totalPages}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage <= 1}
+                    onClick={handlePrevPage}
+                  >
+                    Trang trước
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage >= totalPages}
+                    onClick={handleNextPage}
+                  >
+                    Trang sau
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

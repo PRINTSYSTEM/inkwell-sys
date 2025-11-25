@@ -11,7 +11,7 @@ export const DesignTypeEntitySchema = z.object({
   displayOrder: z.number().int().min(0, "Thứ tự hiển thị phải >= 0"),
   description: z.string().optional(),
   status: StatusEnum,
-  statusType:  z.string().optional(),
+  statusType: z.string().optional(),
   createdAt: DateSchema,
   updatedAt: DateSchema,
   createdBy: UserSchema,
@@ -51,6 +51,9 @@ export const DesignTypeStatsSchema = z.object({
   active: z.number().int().min(0),
   inactive: z.number().int().min(0),
 });
+export const DesignTypeQueryParamsSchema = z.object({
+  status: z.string().optional(),
+});
 
 // Type exports
 export type DesignTypeEntity = z.infer<typeof DesignTypeEntitySchema>;
@@ -59,3 +62,4 @@ export type CreateDesignTypeRequest = z.infer<typeof CreateDesignTypeSchema>;
 export type UpdateDesignTypeRequest = z.infer<typeof UpdateDesignTypeSchema>;
 export type DesignTypeListResponse = z.infer<typeof DesignTypeListSchema>;
 export type DesignTypeStats = z.infer<typeof DesignTypeStatsSchema>;
+export type DesignTypeQueryParams = z.infer<typeof DesignTypeQueryParamsSchema>;

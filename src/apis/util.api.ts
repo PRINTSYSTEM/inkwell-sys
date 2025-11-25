@@ -45,4 +45,6 @@ export const API_SUFFIX = {
   DESIGN_TIMELINE: (id: number) => `/designs/${id}/timeline`,
   DESIGN_UPLOAD: (id: number) => `/designs/${id}/upload-design-file`,
   DESIGN_GENERATE_EXCEL: (id: number) => `/designs/${id}/generate-excel`,
+  DESIGN_EMPLOYEES: () => `/users?pageNumber=1&pageSize=10&role=design`,
+  DESIGN_EMPLOYEE_ID: (id: number) => `/designs/user/${id}`
 };

@@ -12,11 +12,14 @@ export interface BulkAddMaterialsRequest {
   }>;
 }
 
-export const bulkAddMaterials = async (data: BulkAddMaterialsRequest): Promise<void> => {
-  return api.post<void>('designs/materials/bulk', data);
+export const bulkAddMaterials = async (
+  data: BulkAddMaterialsRequest
+): Promise<void> => {
+  return api.post<void>("designs/materials/bulk", data);
 };
-import { api } from '@/lib/http';
-import { API_SUFFIX } from './util.api';
+import { api } from "@/lib/http";
+import { API_SUFFIX } from "./util.api";
+import { MaterialTypeEntity } from "@/Schema";
 
 // Material Type API Types
 export interface MaterialType {
@@ -90,24 +93,28 @@ export interface CreateDesignTypeRequest {
 
 // Material Type API Functions
 export const getMaterialTypes = async (params?: {
-  pageNumber?: number;
-  pageSize?: number;
-  designTypeId?: number;
   status?: string;
-}): Promise<MaterialTypesResponse> => {
-  return api.paginated<MaterialType>(API_SUFFIX.MATERIAL_TYPES, params);
+}): Promise<MaterialTypeEntity[]> => {
+  return api.get<MaterialTypeEntity[]>(API_SUFFIX.MATERIAL_TYPES, params);
 };
 
-export const getMaterialTypeById = async (id: number): Promise<MaterialType> => {
-  return api.get<MaterialType>(API_SUFFIX.MATERIAL_TYPE_BY_ID(id));
+export const getMaterialTypeById = async (
+  id: number
+): Promise<MaterialTypeEntity> => {
+  return api.get<MaterialTypeEntity>(API_SUFFIX.MATERIAL_TYPE_BY_ID(id));
 };
 
-export const createMaterialType = async (data: CreateMaterialTypeRequest): Promise<MaterialType> => {
-  return api.post<MaterialType>(API_SUFFIX.MATERIAL_TYPES, data);
+export const createMaterialType = async (
+  data: CreateMaterialTypeRequest
+): Promise<MaterialTypeEntity> => {
+  return api.post<MaterialTypeEntity>(API_SUFFIX.MATERIAL_TYPES, data);
 };
 
-export const updateMaterialType = async (id: number, data: Partial<CreateMaterialTypeRequest>): Promise<MaterialType> => {
-  return api.put<MaterialType>(API_SUFFIX.MATERIAL_TYPE_BY_ID(id), data);
+export const updateMaterialType = async (
+  id: number,
+  data: Partial<CreateMaterialTypeRequest>
+): Promise<MaterialTypeEntity> => {
+  return api.put<MaterialTypeEntity>(API_SUFFIX.MATERIAL_TYPE_BY_ID(id), data);
 };
 
 export const deleteMaterialType = async (id: number): Promise<void> => {
@@ -127,11 +134,16 @@ export const getDesignTypeById = async (id: number): Promise<DesignType> => {
   return api.get<DesignType>(API_SUFFIX.DESIGN_TYPE_BY_ID(id));
 };
 
-export const createDesignType = async (data: CreateDesignTypeRequest): Promise<DesignType> => {
+export const createDesignType = async (
+  data: CreateDesignTypeRequest
+): Promise<DesignType> => {
   return api.post<DesignType>(API_SUFFIX.DESIGN_TYPES, data);
 };
 
-export const updateDesignType = async (id: number, data: Partial<CreateDesignTypeRequest>): Promise<DesignType> => {
+export const updateDesignType = async (
+  id: number,
+  data: Partial<CreateDesignTypeRequest>
+): Promise<DesignType> => {
   return api.put<DesignType>(API_SUFFIX.DESIGN_TYPE_BY_ID(id), data);
 };
 

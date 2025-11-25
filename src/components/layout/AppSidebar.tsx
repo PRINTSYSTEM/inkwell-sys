@@ -1,6 +1,26 @@
-import { Users, FileText, Palette, Factory, Calculator, Clock, Bell, LayoutDashboard, Package, ChevronRight, Layers, Settings, Briefcase, Eye, BarChart3, Shield, UserPlus, FileBarChart } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
-import { useState } from 'react';
+import {
+  Users,
+  FileText,
+  Palette,
+  Factory,
+  Calculator,
+  Clock,
+  Bell,
+  LayoutDashboard,
+  Package,
+  ChevronRight,
+  Layers,
+  Settings,
+  Briefcase,
+  Eye,
+  BarChart3,
+  Shield,
+  UserPlus,
+  FileBarChart,
+  User,
+} from "lucide-react";
+import { NavLink } from "react-router-dom";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,301 +34,337 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarHeader,
-} from '@/components/ui/sidebar';
-import { useAuth } from '@/hooks/use-auth';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+} from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const navigationByRole = {
   admin: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { 
-      title: 'Phòng ban thiết kế',
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Phòng ban thiết kế",
       icon: Palette,
       submenu: [
-        { title: 'Thiết kế', url: '/design', icon: Palette },
-        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
-        { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
-      ]
+        { title: "Tất cả nhân viên", url: "/design/management", icon: User },
+        { title: "Tất cả thiết kế", url: "/design/all", icon: Eye },
+        { title: "Công việc của tôi", url: "/design/my-work", icon: Briefcase },
+      ],
     },
-    { 
-      title: 'Khách hàng & Đơn hàng',
+    {
+      title: "Khách hàng & Đơn hàng",
       icon: Users,
       submenu: [
-        { title: 'Khách hàng', url: '/customers', icon: Users },
-        { title: 'Đơn hàng', url: '/orders', icon: FileText },
-      ]
+        { title: "Khách hàng", url: "/customers", icon: Users },
+        { title: "Đơn hàng", url: "/orders", icon: FileText },
+      ],
     },
-    { 
-      title: 'Sản xuất',
+    {
+      title: "Sản xuất",
       icon: Factory,
       submenu: [
-        { title: 'Bình bài', url: '/prepress', icon: Layers },
-        { title: 'Sản xuất', url: '/production', icon: Factory },
-      ]
+        { title: "Bình bài", url: "/prepress", icon: Layers },
+        { title: "Sản xuất", url: "/production", icon: Factory },
+      ],
     },
-    { 
-      title: 'Kho vật tư',
+    {
+      title: "Kho vật tư",
       icon: Package,
       submenu: [
-        { title: 'Quản lý kho', url: '/inventory', icon: Package },
-        { title: 'Quản lý chất liệu', url: '/materials', icon: Package },
-      ]
+        { title: "Quản lý kho", url: "/inventory", icon: Package },
+        { title: "Quản lý chất liệu", url: "/materials", icon: Package },
+      ],
     },
-    { 
-      title: 'Quản lý hệ thống',
+    {
+      title: "Quản lý hệ thống",
       icon: Settings,
       submenu: [
-        { title: 'Quản lý người dùng', url: '/admin/users', icon: Users },
-        { title: 'Quản lý vai trò', url: '/admin/roles', icon: Shield },
-        { title: 'Phân tích phòng ban', url: '/admin/analytics', icon: BarChart3 },
-        { title: 'Loại chất liệu', url: '/material-types', icon: Layers },
-        { title: 'Loại thiết kế', url: '/design-types', icon: Settings },
-        { title: 'Tạo mã thiết kế', url: '/design/code-generator', icon: Settings },
-      ]
+        { title: "Quản lý người dùng", url: "/admin/users", icon: Users },
+        { title: "Quản lý vai trò", url: "/admin/roles", icon: Shield },
+        {
+          title: "Phân tích phòng ban",
+          url: "/admin/analytics",
+          icon: BarChart3,
+        },
+        { title: "Loại chất liệu", url: "/material-types", icon: Layers },
+        { title: "Loại thiết kế", url: "/design-types", icon: Settings },
+        {
+          title: "Tạo mã thiết kế",
+          url: "/design/code-generator",
+          icon: Settings,
+        },
+      ],
     },
-    { 
-      title: 'Hành chính',
+    {
+      title: "Hành chính",
       icon: Calculator,
       submenu: [
-        { title: 'Kế toán', url: '/accounting', icon: Calculator },
-        { title: 'Chấm công', url: '/attendance', icon: Clock },
-      ]
+        { title: "Kế toán", url: "/accounting", icon: Calculator },
+        { title: "Chấm công", url: "/attendance", icon: Clock },
+      ],
     },
-    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
+    { title: "Báo cáo", url: "/reports", icon: FileBarChart },
+    { title: "Thông báo", url: "/notifications", icon: Bell },
   ],
   shareholder: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { 
-      title: 'Phòng ban thiết kế',
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Phòng ban thiết kế",
       icon: Palette,
       submenu: [
-        { title: 'Thiết kế', url: '/design', icon: Palette },
-        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
-      ]
+        { title: "Thiết kế", url: "/design", icon: Palette },
+        { title: "Tất cả thiết kế", url: "/design/all", icon: Eye },
+      ],
     },
-    { 
-      title: 'Khách hàng & Đơn hàng',
+    {
+      title: "Khách hàng & Đơn hàng",
       icon: Users,
       submenu: [
-        { title: 'Khách hàng', url: '/customers', icon: Users },
-        { title: 'Đơn hàng', url: '/orders', icon: FileText },
-      ]
+        { title: "Khách hàng", url: "/customers", icon: Users },
+        { title: "Đơn hàng", url: "/orders", icon: FileText },
+      ],
     },
-    { 
-      title: 'Sản xuất',
+    {
+      title: "Sản xuất",
       icon: Factory,
       submenu: [
-        { title: 'Bình bài', url: '/prepress', icon: Layers },
-        { title: 'Sản xuất', url: '/production', icon: Factory },
-      ]
+        { title: "Bình bài", url: "/prepress", icon: Layers },
+        { title: "Sản xuất", url: "/production", icon: Factory },
+      ],
     },
-    { 
-      title: 'Kho vật tư',
+    {
+      title: "Kho vật tư",
       icon: Package,
       submenu: [
-        { title: 'Quản lý kho', url: '/inventory', icon: Package },
-        { title: 'Quản lý chất liệu', url: '/materials', icon: Package },
-      ]
+        { title: "Quản lý kho", url: "/inventory", icon: Package },
+        { title: "Quản lý chất liệu", url: "/materials", icon: Package },
+      ],
     },
-    { 
-      title: 'Quản lý hệ thống',
+    {
+      title: "Quản lý hệ thống",
       icon: Settings,
       submenu: [
-        { title: 'Loại chất liệu', url: '/material-types', icon: Layers },
-        { title: 'Loại thiết kế', url: '/design-types', icon: Settings },
-        { title: 'Tạo mã thiết kế', url: '/design/code-generator', icon: Settings },
-      ]
+        { title: "Loại chất liệu", url: "/material-types", icon: Layers },
+        { title: "Loại thiết kế", url: "/design-types", icon: Settings },
+        {
+          title: "Tạo mã thiết kế",
+          url: "/design/code-generator",
+          icon: Settings,
+        },
+      ],
     },
-    { 
-      title: 'Hành chính',
+    {
+      title: "Hành chính",
       icon: Calculator,
-      submenu: [
-        { title: 'Kế toán', url: '/accounting', icon: Calculator },
-      ]
+      submenu: [{ title: "Kế toán", url: "/accounting", icon: Calculator }],
     },
-    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
+    { title: "Báo cáo", url: "/reports", icon: FileBarChart },
+    { title: "Thông báo", url: "/notifications", icon: Bell },
   ],
   designer_manager: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { 
-      title: 'Quản lý thiết kế',
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Quản lý thiết kế",
       icon: Palette,
       submenu: [
-        { title: 'Dashboard quản lý', url: '/design/management', icon: BarChart3 },
-        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
-        { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
-      ]
+        {
+          title: "Dashboard quản lý",
+          url: "/design/management",
+          icon: BarChart3,
+        },
+        { title: "Tất cả thiết kế", url: "/design/all", icon: Eye },
+        { title: "Công việc của tôi", url: "/design/my-work", icon: Briefcase },
+      ],
     },
-    { 
-      title: 'Manager Dashboard',
+    {
+      title: "Manager Dashboard",
       icon: Users,
       submenu: [
-        { title: 'Tổng quan phòng ban', url: '/manager/dashboard', icon: LayoutDashboard },
-        { title: 'Theo dõi hiệu suất', url: '/manager/performance', icon: BarChart3 },
-        { title: 'Phân công công việc', url: '/manager/assignments', icon: UserPlus },
-      ]
+        {
+          title: "Tổng quan phòng ban",
+          url: "/manager/dashboard",
+          icon: LayoutDashboard,
+        },
+        {
+          title: "Theo dõi hiệu suất",
+          url: "/manager/performance",
+          icon: BarChart3,
+        },
+        {
+          title: "Phân công công việc",
+          url: "/manager/assignments",
+          icon: UserPlus,
+        },
+      ],
     },
-    { 
-      title: 'Khách hàng & Đơn hàng',
+    {
+      title: "Khách hàng & Đơn hàng",
       icon: Users,
       submenu: [
-        { title: 'Khách hàng', url: '/customers', icon: Users },
-        { title: 'Đơn hàng', url: '/orders', icon: FileText },
-      ]
+        { title: "Khách hàng", url: "/customers", icon: Users },
+        { title: "Đơn hàng", url: "/orders", icon: FileText },
+      ],
     },
-    { 
-      title: 'Kho vật tư',
+    {
+      title: "Kho vật tư",
       icon: Package,
       submenu: [
-        { title: 'Quản lý chất liệu', url: '/materials', icon: Package },
-      ]
+        { title: "Quản lý chất liệu", url: "/materials", icon: Package },
+      ],
     },
-    { 
-      title: 'Quản lý hệ thống',
+    {
+      title: "Quản lý hệ thống",
       icon: Settings,
       submenu: [
-        { title: 'Loại chất liệu', url: '/material-types', icon: Layers },
-        { title: 'Loại thiết kế', url: '/design-types', icon: Settings },
-        { title: 'Tạo mã thiết kế', url: '/design/code-generator', icon: Settings },
-      ]
+        { title: "Loại chất liệu", url: "/material-types", icon: Layers },
+        { title: "Loại thiết kế", url: "/design-types", icon: Settings },
+        {
+          title: "Tạo mã thiết kế",
+          url: "/design/code-generator",
+          icon: Settings,
+        },
+      ],
     },
-    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
+    { title: "Báo cáo", url: "/reports", icon: FileBarChart },
+    { title: "Thông báo", url: "/notifications", icon: Bell },
   ],
   production_manager: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { 
-      title: 'Manager Dashboard',
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Manager Dashboard",
       icon: Users,
       submenu: [
-        { title: 'Tổng quan phòng ban', url: '/manager/dashboard', icon: LayoutDashboard },
-        { title: 'Theo dõi hiệu suất', url: '/manager/performance', icon: BarChart3 },
-        { title: 'Phân công công việc', url: '/manager/assignments', icon: UserPlus },
-      ]
+        {
+          title: "Tổng quan phòng ban",
+          url: "/manager/dashboard",
+          icon: LayoutDashboard,
+        },
+        {
+          title: "Theo dõi hiệu suất",
+          url: "/manager/performance",
+          icon: BarChart3,
+        },
+        {
+          title: "Phân công công việc",
+          url: "/manager/assignments",
+          icon: UserPlus,
+        },
+      ],
     },
-    { 
-      title: 'Khách hàng & Đơn hàng',
+    {
+      title: "Khách hàng & Đơn hàng",
       icon: Users,
-      submenu: [
-        { title: 'Đơn hàng', url: '/orders', icon: FileText },
-      ]
+      submenu: [{ title: "Đơn hàng", url: "/orders", icon: FileText }],
     },
-    { 
-      title: 'Sản xuất',
+    {
+      title: "Sản xuất",
       icon: Factory,
-      submenu: [
-        { title: 'Sản xuất', url: '/production', icon: Factory },
-      ]
+      submenu: [{ title: "Sản xuất", url: "/production", icon: Factory }],
     },
-    { 
-      title: 'Kho vật tư',
+    {
+      title: "Kho vật tư",
       icon: Package,
       submenu: [
-        { title: 'Quản lý kho', url: '/inventory', icon: Package },
-        { title: 'Quản lý chất liệu', url: '/materials', icon: Package },
-      ]
+        { title: "Quản lý kho", url: "/inventory", icon: Package },
+        { title: "Quản lý chất liệu", url: "/materials", icon: Package },
+      ],
     },
-    { 
-      title: 'Quản lý hệ thống',
+    {
+      title: "Quản lý hệ thống",
       icon: Settings,
       submenu: [
-        { title: 'Loại chất liệu', url: '/material-types', icon: Layers },
-      ]
+        { title: "Loại chất liệu", url: "/material-types", icon: Layers },
+      ],
     },
-    { 
-      title: 'Hành chính',
+    {
+      title: "Hành chính",
       icon: Calculator,
-      submenu: [
-        { title: 'Chấm công', url: '/attendance', icon: Clock },
-      ]
+      submenu: [{ title: "Chấm công", url: "/attendance", icon: Clock }],
     },
-    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
+    { title: "Báo cáo", url: "/reports", icon: FileBarChart },
+    { title: "Thông báo", url: "/notifications", icon: Bell },
   ],
   designer: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { 
-      title: 'Phòng ban thiết kế',
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Phòng ban thiết kế",
       icon: Palette,
       submenu: [
-        { title: 'Thiết kế', url: '/design', icon: Palette },
-        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
-        { title: 'Công việc của tôi', url: '/design/my-work', icon: Briefcase },
-      ]
+        { title: "Thiết kế", url: "/design", icon: Palette },
+        { title: "Tất cả thiết kế", url: "/design/all", icon: Eye },
+        { title: "Công việc của tôi", url: "/design/my-work", icon: Briefcase },
+      ],
     },
-    { 
-      title: 'Khách hàng & Đơn hàng',
+    {
+      title: "Khách hàng & Đơn hàng",
       icon: Users,
-      submenu: [
-        { title: 'Đơn hàng', url: '/orders', icon: FileText },
-      ]
+      submenu: [{ title: "Đơn hàng", url: "/orders", icon: FileText }],
     },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
+    { title: "Thông báo", url: "/notifications", icon: Bell },
   ],
   accountant: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { 
-      title: 'Khách hàng & Đơn hàng',
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Khách hàng & Đơn hàng",
       icon: Users,
-      submenu: [
-        { title: 'Đơn hàng', url: '/orders', icon: FileText },
-      ]
+      submenu: [{ title: "Đơn hàng", url: "/orders", icon: FileText }],
     },
-    { 
-      title: 'Hành chính',
+    {
+      title: "Hành chính",
       icon: Calculator,
-      submenu: [
-        { title: 'Kế toán', url: '/accounting', icon: Calculator },
-      ]
+      submenu: [{ title: "Kế toán", url: "/accounting", icon: Calculator }],
     },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
+    { title: "Thông báo", url: "/notifications", icon: Bell },
   ],
   prepress: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { 
-      title: 'Phòng ban thiết kế',
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Phòng ban thiết kế",
       icon: Palette,
       submenu: [
-        { title: 'Thiết kế', url: '/design', icon: Palette },
-        { title: 'Tất cả thiết kế', url: '/design/all', icon: Eye },
-      ]
+        { title: "Thiết kế", url: "/design", icon: Palette },
+        { title: "Tất cả thiết kế", url: "/design/all", icon: Eye },
+      ],
     },
-    { 
-      title: 'Sản xuất',
+    {
+      title: "Sản xuất",
       icon: Factory,
       submenu: [
-        { title: 'Bình bài', url: '/prepress', icon: Layers },
-        { title: 'Tạo lệnh bình bài', url: '/prepress/create-print-order', icon: FileText },
-        { title: 'Sản xuất', url: '/production', icon: Factory },
-      ]
+        { title: "Bình bài", url: "/prepress", icon: Layers },
+        {
+          title: "Tạo lệnh bình bài",
+          url: "/prepress/create-print-order",
+          icon: FileText,
+        },
+        { title: "Sản xuất", url: "/production", icon: Factory },
+      ],
     },
-    { title: 'Báo cáo', url: '/reports', icon: FileBarChart },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
+    { title: "Báo cáo", url: "/reports", icon: FileBarChart },
+    { title: "Thông báo", url: "/notifications", icon: Bell },
   ],
   operator: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { 
-      title: 'Sản xuất',
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Sản xuất",
       icon: Factory,
-      submenu: [
-        { title: 'Sản xuất', url: '/production', icon: Factory },
-      ]
+      submenu: [{ title: "Sản xuất", url: "/production", icon: Factory }],
     },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
+    { title: "Thông báo", url: "/notifications", icon: Bell },
   ],
   customer_service: [
-    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { 
-      title: 'Khách hàng & Đơn hàng',
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Khách hàng & Đơn hàng",
       icon: Users,
       submenu: [
-        { title: 'Khách hàng', url: '/customers', icon: Users },
-        { title: 'Đơn hàng', url: '/orders', icon: FileText },
-      ]
+        { title: "Khách hàng", url: "/customers", icon: Users },
+        { title: "Đơn hàng", url: "/orders", icon: FileText },
+      ],
     },
-    { title: 'Thông báo', url: '/notifications', icon: Bell },
+    { title: "Thông báo", url: "/notifications", icon: Bell },
   ],
 };
 
@@ -316,20 +372,20 @@ export function AppSidebar() {
   const { user } = useAuth();
   // const permissions = {};
   const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
-  
+
   if (!user) return null;
-  
+
   // Filter menu items based on permissions
   const baseMenuItems = navigationByRole[user.role] || navigationByRole.admin;
-  const menuItems = baseMenuItems.filter(item => {
+  const menuItems = baseMenuItems.filter((item) => {
     // Show all items - backend handles authorization
     return true;
   });
 
   const toggleSubmenu = (title: string) => {
-    setOpenSubmenus(prev => 
-      prev.includes(title) 
-        ? prev.filter(item => item !== title)
+    setOpenSubmenus((prev) =>
+      prev.includes(title)
+        ? prev.filter((item) => item !== title)
         : [...prev, title]
     );
   };
@@ -342,21 +398,27 @@ export function AppSidebar() {
             PS
           </div>
           <div>
-            <h2 className="text-lg font-bold text-sidebar-foreground">PrintSys</h2>
-            <p className="text-xs text-sidebar-foreground/70">Hệ thống quản lý in ấn</p>
+            <h2 className="text-lg font-bold text-sidebar-foreground">
+              PrintSys
+            </h2>
+            <p className="text-xs text-sidebar-foreground/70">
+              Hệ thống quản lý in ấn
+            </p>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/70">Menu chính</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/70">
+            Menu chính
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   {item.submenu ? (
-                    <Collapsible 
+                    <Collapsible
                       open={openSubmenus.includes(item.title)}
                       onOpenChange={() => toggleSubmenu(item.title)}
                     >
@@ -366,10 +428,12 @@ export function AppSidebar() {
                             <item.icon className="h-4 w-4" />
                             <span>{item.title}</span>
                           </div>
-                          <ChevronRight 
+                          <ChevronRight
                             className={`h-4 w-4 transition-transform duration-200 ${
-                              openSubmenus.includes(item.title) ? 'rotate-90' : ''
-                            }`} 
+                              openSubmenus.includes(item.title)
+                                ? "rotate-90"
+                                : ""
+                            }`}
                           />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
@@ -382,8 +446,8 @@ export function AppSidebar() {
                                   to={subItem.url}
                                   className={({ isActive }) =>
                                     isActive
-                                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                                   }
                                 >
                                   <subItem.icon className="h-4 w-4" />
@@ -401,8 +465,8 @@ export function AppSidebar() {
                         to={item.url}
                         className={({ isActive }) =>
                           isActive
-                            ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                            : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                         }
                       >
                         <item.icon className="h-4 w-4" />

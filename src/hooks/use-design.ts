@@ -21,6 +21,7 @@ export const designKeys = {
   my: () => [...designKeys.all, "my"] as const,
   myList: (params: DesignQueryParams) => [...designKeys.my(), params] as const,
   timeline: (id: number) => [...designKeys.detail(id), "timeline"] as const,
+  employees: () => [...designKeys.all, "employees"] as const,
 } as const;
 
 // Hooks for Queries
@@ -257,5 +258,21 @@ export const useUploadDesignFile = () => {
         variant: "destructive",
       });
     },
+  });
+};
+
+export const useDesignEmployees = () => {
+  return useQuery({
+    queryKey: designKeys.employees(),
+    queryFn: () => designApi.getDesignEmployees(),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+export const useEmployeeDesigns = (params?: DesignQueryParams) => {
+  return useQuery({
+    queryKey: designKeys.list(params),
+    queryFn: () => designApi.getEmployeeDesigns(params),
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };
