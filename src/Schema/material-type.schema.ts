@@ -34,17 +34,6 @@ export const CreateMaterialTypeSchema = z.object({
 // Schema for updating material type
 export const UpdateMaterialTypeSchema = CreateMaterialTypeSchema.partial();
 
-// Schema for material type list response
-export const MaterialTypeListSchema = z.object({
-  data: z.array(MaterialTypeEntitySchema),
-  pagination: z.object({
-    page: z.number().int().min(1),
-    pageSize: z.number().int().min(1),
-    total: z.number().int().min(0),
-    totalPages: z.number().int().min(0),
-  }),
-});
-
 // Schema for material type statistics
 export const MaterialTypeStatsSchema = z.object({
   total: z.number().int().min(0),
@@ -61,5 +50,4 @@ export type CreateMaterialTypeRequest = z.infer<
 export type UpdateMaterialTypeRequest = z.infer<
   typeof UpdateMaterialTypeSchema
 >;
-export type MaterialTypeListResponse = z.infer<typeof MaterialTypeListSchema>;
 export type MaterialTypeStats = z.infer<typeof MaterialTypeStatsSchema>;

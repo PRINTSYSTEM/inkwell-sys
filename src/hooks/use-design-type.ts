@@ -24,7 +24,6 @@ export const useDesignTypes = (params?: DesignTypeQueryParams) => {
     staleTime: 5 * 60 * 1000,
   });
 };
-
 export const useCreateDesignType = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -33,21 +32,22 @@ export const useCreateDesignType = () => {
     mutationFn: (data: CreateDesignTypeRequest) =>
       designTypeApi.createDesignType(data),
     onSuccess: (newDesignType) => {
-      // cache chi tiết
+      // cache chi tiết (nếu anh có dùng detail)
       queryClient.setQueryData(
         designTypeKeys.detail(newDesignType.id),
         newDesignType
       );
 
-      // cập nhật tất cả list đang cache (nếu dùng dạng { items, totalCount })
+      // cập nhật tất cả list đang cache: DesignTypeEntity[]
       queryClient.setQueriesData(
         { queryKey: designTypeKeys.all },
         (oldData: DesignTypeEntity[] | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            items: [newDesignType, ...oldData],
-          };
+          if (!oldData) {
+            // chưa có cache list -> tạo mới array
+            return [newDesignType];
+          }
+          // trả về array mới, KHÔNG đổi shape
+          return [newDesignType, ...oldData];
         }
       );
 
@@ -78,26 +78,11 @@ export const useUpdateDesignType = () => {
       id: number;
       data: Partial<CreateDesignTypeRequest>;
     }) => designTypeApi.updateDesignType(id, data),
-    onSuccess: (updatedDesignType) => {
-      // cập nhật cache chi tiết
-      queryClient.setQueryData(
-        designTypeKeys.detail(updatedDesignType.id),
-        updatedDesignType
-      );
-
-      // cập nhật tất cả list
-      queryClient.setQueriesData(
-        { queryKey: designTypeKeys.all },
-        (oldData: DesignTypeEntity[] | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            items: oldData.map((item) =>
-              item.id === updatedDesignType.id ? updatedDesignType : item
-            ),
-          };
-        }
-      );
+    onSuccess: () => {
+      // chỉ cần refetch lại tất cả query liên quan tới design-types
+      queryClient.invalidateQueries({
+        queryKey: designTypeKeys.all,
+      });
 
       toast({
         title: "Thành công",
@@ -113,7 +98,6 @@ export const useUpdateDesignType = () => {
     },
   });
 };
-
 export const useDeleteDesignType = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -121,22 +105,27 @@ export const useDeleteDesignType = () => {
   return useMutation({
     mutationFn: (id: number) => designTypeApi.deleteDesignType(id),
     onSuccess: (_, deletedId) => {
-      // xoá cache chi tiết
+      // xoá cache chi tiết (nếu có dùng)
       queryClient.removeQueries({
         queryKey: designTypeKeys.detail(deletedId),
       });
 
-      // cập nhật tất cả list
-      queryClient.setQueriesData(
-        { queryKey: designTypeKeys.all },
-        (oldData: DesignTypeEntity[] | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            data: oldData.map((item) => (item.id !== deletedId ? item : null)),
-          };
-        }
-      );
+      // refetch lại tất cả list "design-types"
+      queryClient.invalidateQueries({
+        queryKey: designTypeKeys.all,
+      });
+
+      toast({
+        title: "Thành công",
+        description: "Đã xóa loại thiết kế thành công",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Không thể xóa loại thiết kế",
+        variant: "destructive",
+      });
     },
   });
 };

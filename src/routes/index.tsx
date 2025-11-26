@@ -72,9 +72,7 @@ const ProductTemplates = lazy(
   () => import("@/pages/inventory/ProductTemplatesPage")
 );
 const Materials = lazy(() => import("@/pages/materials/MaterialList.tsx"));
-const MaterialTypes = lazy(
-  () => import("@/pages/material-types/MaterialTypeList.tsx")
-);
+
 const MaterialTypeDetail = lazy(
   () => import("@/pages/material-types/MaterialTypeDetail.tsx")
 );
@@ -84,12 +82,7 @@ const CreateMaterialType = lazy(
 const DesignTypes = lazy(
   () => import("@/pages/design-types/DesignTypeList.tsx")
 );
-const DesignTypeDetail = lazy(
-  () => import("@/pages/design-types/DesignTypeDetail.tsx")
-);
-const CreateDesignType = lazy(
-  () => import("@/pages/design-types/DesignTypeCreate.tsx")
-);
+
 const PrepressCreatePrintOrder = lazy(
   () => import("@/pages/prepress/CreatePrintOrder")
 );
@@ -473,43 +466,6 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        path: "material-types",
-        children: [
-          {
-            index: true,
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <MaterialTypes />
-              </Suspense>
-            ),
-          },
-          {
-            path: "create",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <CreateMaterialType />
-              </Suspense>
-            ),
-          },
-          {
-            path: "edit/:id",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <CreateMaterialType />
-              </Suspense>
-            ),
-          },
-          {
-            path: ":id",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <MaterialTypeDetail />
-              </Suspense>
-            ),
-          },
-        ],
-      },
-      {
         path: "design-types",
         children: [
           {
@@ -517,38 +473,6 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <DesignTypes />
-              </Suspense>
-            ),
-          },
-          {
-            path: "create",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <CreateDesignType />
-              </Suspense>
-            ),
-          },
-          {
-            path: "edit/:id",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <CreateDesignType />
-              </Suspense>
-            ),
-          },
-          {
-            path: "detail/:id",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <DesignTypeDetail />
-              </Suspense>
-            ),
-          },
-          {
-            path: ":id",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <DesignTypeDetail />
               </Suspense>
             ),
           },

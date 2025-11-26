@@ -1,39 +1,54 @@
 import {
   bulkAddMaterials,
   BulkAddMaterialsRequest,
-} from "@/apis/material-type.api";
-// Bulk add materials hook
-
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "./use-toast";
-import {
   getMaterialTypes,
   getMaterialTypeById,
   createMaterialType,
   updateMaterialType,
   deleteMaterialType,
-  getDesignTypes,
-  getDesignTypeById,
-  createDesignType,
-  updateDesignType,
-  deleteDesignType,
-  type MaterialType,
-  type MaterialTypesResponse,
-  type CreateMaterialTypeRequest,
-  type DesignType,
-  type DesignTypesResponse,
-  type CreateDesignTypeRequest,
 } from "@/apis/material-type.api";
+
 import { api } from "@/lib/http";
 import { API_SUFFIX } from "@/apis/util.api";
-import { MaterialTypeEntity } from "@/Schema";
+import { CreateMaterialTypeRequest, MaterialTypeEntity } from "@/Schema";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "./use-toast";
+
+// ----------------- Query Keys -----------------
+const MATERIAL_TYPE_KEYS = {
+  all: ["material-types"] as const,
+  materialTypes: (params?: { status?: string }) =>
+    ["material-types", params ?? {}] as const,
+  materialType: (id: number) => ["material-type", id] as const,
+} as const;
+
+const DESIGN_TYPE_KEYS = {
+  designTypes: (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    status?: string;
+  }) => ["design-types", params],
+  designType: (id: number) => ["design-type", id],
+} as const;
+
+// ----------------- Bulk add -----------------
 export const useBulkAddMaterials = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
   return useMutation({
     mutationFn: (data: BulkAddMaterialsRequest) => bulkAddMaterials(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["materials-by-design-type"] });
+      // invalidate tất cả materials-by-design-type
+      queryClient.invalidateQueries({
+        queryKey: ["materials-by-design-type"],
+      });
+      // và list tổng nếu có
+      queryClient.invalidateQueries({
+        queryKey: MATERIAL_TYPE_KEYS.all,
+      });
+
       toast({
         title: "Thành công",
         description: "Đã thêm nhiều chất liệu thành công",
@@ -48,27 +63,8 @@ export const useBulkAddMaterials = () => {
     },
   });
 };
-// Query Keys
-const MATERIAL_TYPE_KEYS = {
-  materialTypes: (params?: {
-    pageNumber?: number;
-    pageSize?: number;
-    designTypeId?: number;
-    status?: string;
-  }) => ["material-types", params],
-  materialType: (id: number) => ["material-type", id],
-} as const;
 
-const DESIGN_TYPE_KEYS = {
-  designTypes: (params?: {
-    pageNumber?: number;
-    pageSize?: number;
-    status?: string;
-  }) => ["design-types", params],
-  designType: (id: number) => ["design-type", id],
-} as const;
-
-// Material Type Hooks
+// ----------------- Queries -----------------
 // Lấy danh sách chất liệu theo loại thiết kế
 export const useMaterialsByDesignType = (
   designTypeId?: number,
@@ -78,7 +74,7 @@ export const useMaterialsByDesignType = (
     queryKey: ["materials-by-design-type", designTypeId, status],
     queryFn: () => {
       if (!designTypeId) return [];
-      return api.get<MaterialType[]>(
+      return api.get<MaterialTypeEntity[]>(
         `${API_SUFFIX.MATERIAL_TYPES}/design-type/${designTypeId}`
       );
     },
@@ -87,12 +83,13 @@ export const useMaterialsByDesignType = (
     gcTime: 5 * 60 * 1000,
   });
 };
+
 export const useMaterialTypes = (params?: { status?: string }) => {
   return useQuery<MaterialTypeEntity[]>({
     queryKey: MATERIAL_TYPE_KEYS.materialTypes(params),
     queryFn: () => getMaterialTypes(params),
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 };
 
@@ -106,6 +103,7 @@ export const useMaterialType = (id: number, enabled = true) => {
   });
 };
 
+// ----------------- Mutations -----------------
 export const useCreateMaterialType = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -113,11 +111,21 @@ export const useCreateMaterialType = () => {
   return useMutation({
     mutationFn: (data: CreateMaterialTypeRequest) => createMaterialType(data),
     onSuccess: (newMaterialType) => {
-      queryClient.invalidateQueries({ queryKey: ["material-types"] });
+      // cache detail
       queryClient.setQueryData(
         MATERIAL_TYPE_KEYS.materialType(newMaterialType.id),
         newMaterialType
       );
+
+      // refetch tất cả list material-types
+      queryClient.invalidateQueries({
+        queryKey: MATERIAL_TYPE_KEYS.all,
+      });
+
+      // và theo design-type nếu cần
+      queryClient.invalidateQueries({
+        queryKey: ["materials-by-design-type"],
+      });
 
       toast({
         title: "Thành công",
@@ -147,23 +155,30 @@ export const useUpdateMaterialType = () => {
       data: Partial<CreateMaterialTypeRequest>;
     }) => updateMaterialType(id, data),
     onSuccess: (updatedMaterialType) => {
+      // cập nhật cache chi tiết
       queryClient.setQueryData(
         MATERIAL_TYPE_KEYS.materialType(updatedMaterialType.id),
         updatedMaterialType
       );
 
-      queryClient.setQueriesData(
-        { queryKey: ["material-types"] },
-        (oldData: MaterialTypesResponse | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            items: oldData.items.map((item) =>
-              item.id === updatedMaterialType.id ? updatedMaterialType : item
-            ),
-          };
-        }
-      );
+      // CÁCH 1 (đơn giản, ít bug): chỉ invalidate list
+      queryClient.invalidateQueries({
+        queryKey: MATERIAL_TYPE_KEYS.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["materials-by-design-type"],
+      });
+
+      // --- Nếu muốn tự update cache list, dùng đoạn này thay cho invalidate ---
+      // queryClient.setQueriesData(
+      //   { queryKey: MATERIAL_TYPE_KEYS.all },
+      //   (oldData: MaterialTypeEntity[] | undefined) => {
+      //     if (!oldData) return oldData;
+      //     return oldData.map((item) =>
+      //       item.id === updatedMaterialType.id ? updatedMaterialType : item
+      //     );
+      //   }
+      // );
 
       toast({
         title: "Thành công",
@@ -187,21 +202,27 @@ export const useDeleteMaterialType = () => {
   return useMutation({
     mutationFn: (id: number) => deleteMaterialType(id),
     onSuccess: (_, deletedId) => {
+      // xoá cache detail
       queryClient.removeQueries({
         queryKey: MATERIAL_TYPE_KEYS.materialType(deletedId),
       });
 
-      queryClient.setQueriesData(
-        { queryKey: ["material-types"] },
-        (oldData: MaterialTypesResponse | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            items: oldData.items.filter((item) => item.id !== deletedId),
-            totalCount: oldData.totalCount - 1,
-          };
-        }
-      );
+      // CÁCH 1: chỉ invalidate list
+      queryClient.invalidateQueries({
+        queryKey: MATERIAL_TYPE_KEYS.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["materials-by-design-type"],
+      });
+
+      // --- Nếu muốn tự update list cache, dùng đoạn này thay cho invalidate ---
+      // queryClient.setQueriesData(
+      //   { queryKey: MATERIAL_TYPE_KEYS.all },
+      //   (oldData: MaterialTypeEntity[] | undefined) => {
+      //     if (!oldData) return oldData;
+      //     return oldData.filter((item) => item.id !== deletedId);
+      //   }
+      // );
 
       toast({
         title: "Thành công",
@@ -215,15 +236,5 @@ export const useDeleteMaterialType = () => {
         variant: "destructive",
       });
     },
-  });
-};
-
-export const useDesignType = (id: number, enabled = true) => {
-  return useQuery({
-    queryKey: DESIGN_TYPE_KEYS.designType(id),
-    queryFn: () => getDesignTypeById(id),
-    enabled: enabled && !!id,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
   });
 };
