@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,23 +9,180 @@ import {
   ArrowLeft,
   Package,
   Ruler,
-  FileText,
   Download,
   DollarSign,
-  ImageIcon,
   Clock,
   User,
   Layers,
   Box,
+  FileImage,
+  Plus,
+  Eye,
+  Pencil,
+  Upload,
+  History,
 } from "lucide-react";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { useNavigate, useParams } from "react-router-dom";
-import { useDesign } from "@/hooks";
+import { DesignFileUploadDialog } from "@/components/design/design-file-upload";
+import { TimelineEntryDialog } from "@/components/design/timeline-entry-dialog";
+
+interface DesignType {
+  id: number;
+  code: string;
+  name: string;
+  displayOrder: number;
+  description: string;
+  status: string;
+  statusType: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: any;
+}
+
+interface MaterialType {
+  id: number;
+  code: string;
+  name: string;
+  displayOrder: number;
+  description: string;
+  price: number;
+  pricePerCm2: number;
+  designTypeId: number;
+  status: string;
+  statusType: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: any;
+}
+
+interface TimelineEntry {
+  id: number;
+  imageUrl: string;
+  description: string;
+  createdAt: string;
+  createdBy: any;
+}
+
+interface DesignFile {
+  fileUrl: string;
+  imageUrl: string;
+  uploadedAt: string;
+}
+
+interface Design {
+  id: number;
+  code: string;
+  orderId: number;
+  designStatus: string;
+  statusType: string;
+  designerId: number;
+  designer: any;
+  designTypeId: number;
+  designType: DesignType;
+  materialTypeId: number;
+  materialType: MaterialType;
+  quantity: number;
+  dimensions: string;
+  width: number;
+  height: number;
+  areaCm2: number;
+  unitPrice: number;
+  totalPrice: number;
+  requirements: string;
+  additionalNotes: string;
+  notes: string;
+  designFile: DesignFile | null;
+  timelineEntries: TimelineEntry[];
+}
+
+const MOCK_DESIGN = {
+  id: 1,
+  code: "TK-2024-001",
+  orderId: 12345,
+  designStatus: "designing",
+  statusType: "Đang thiết kế",
+  designer: {
+    id: 8,
+    username: "nguyenvana",
+    email: "nguyenvana@example.com",
+    fullName: "Nguyễn Văn A",
+    phone: "0912345678",
+  },
+  designType: {
+    id: 1,
+    code: "BANNER",
+    name: "Banner quảng cáo",
+    description: "Banner quảng cáo ngoài trời",
+    statusType: "Hoạt động",
+  },
+  materialType: {
+    id: 2,
+    code: "HIFLEX",
+    name: "Hiflex chất lượng cao",
+    price: 50000,
+    pricePerCm2: 5,
+  },
+  quantity: 10,
+  dimensions: "200x100",
+  width: 200,
+  height: 100,
+  areaCm2: 20000,
+  unitPrice: 100000,
+  totalPrice: 1000000,
+  requirements: "In màu đậm, chất lượng cao, chống nước",
+  additionalNotes: "Giao hàng trước 15/03/2024",
+  notes: "Khách hàng VIP, ưu tiên xử lý",
+  designFile: {
+    fileUrl: "https://example.com/banner-design.ai",
+    imageUrl: "/final-banner-design.jpg",
+    uploadedAt: "2024-03-12T14:00:00Z",
+  },
+  timelineEntries: [
+    {
+      id: 1,
+      imageUrl: "/design-mockup-banner.jpg",
+      description: "Bắt đầu thiết kế - Phác thảo layout cơ bản",
+      createdAt: "2024-03-10T08:00:00Z",
+      createdBy: {
+        fullName: "Nguyễn Văn A",
+        username: "nguyenvana",
+      },
+    },
+    {
+      id: 2,
+      imageUrl: "/banner-design-version-2.jpg",
+      description: "Chỉnh sửa màu sắc theo yêu cầu khách hàng",
+      createdAt: "2024-03-11T10:30:00Z",
+      createdBy: {
+        fullName: "Nguyễn Văn A",
+        username: "nguyenvana",
+      },
+    },
+    {
+      id: 3,
+      imageUrl: "/final-banner-design.jpg",
+      description: "Hoàn thành thiết kế - Đã kiểm tra và xuất file",
+      createdAt: "2024-03-12T14:00:00Z",
+      createdBy: {
+        fullName: "Nguyễn Văn A",
+        username: "nguyenvana",
+      },
+    },
+  ],
+};
 
 export default function DesignDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-
-  const { data: design, isLoading: loading } = useDesign(Number(id));
+  const params = useParams();
+  const router = useNavigate();
+  const [design, setDesign] = useState(MOCK_DESIGN);
+  const [loading] = useState(false);
+  const [viewingImage, setViewingImage] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [showTimelineDialog, setShowTimelineDialog] = useState(false);
 
   const getStatusBadge = (status: string, statusType: string) => {
     const statusMap: Record<
@@ -42,23 +201,49 @@ export default function DesignDetailPage() {
       variant: "default",
     };
     return (
-      <Badge variant={config.variant} className="font-medium px-3 py-1 text-sm">
+      <Badge variant={config.variant} className="text-xs px-2 py-0.5">
         {config.label}
       </Badge>
     );
   };
 
+  const handleDesignFileUpload = (file: File, image: File) => {
+    const fileUrl = URL.createObjectURL(file);
+    const imageUrl = URL.createObjectURL(image);
+
+    setDesign({
+      ...design,
+      designFile: {
+        fileUrl,
+        imageUrl,
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+  };
+
+  const handleTimelineAdd = (image: File, description: string) => {
+    const imageUrl = URL.createObjectURL(image);
+
+    const newEntry: TimelineEntry = {
+      id: Date.now(),
+      imageUrl,
+      description,
+      createdAt: new Date().toISOString(),
+      createdBy: design.designer,
+    };
+
+    setDesign({
+      ...design,
+      timelineEntries: [...design.timelineEntries, newEntry],
+    });
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background">
-        <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto" />
-            <Package className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-          </div>
-          <p className="text-lg font-medium text-muted-foreground">
-            Đang tải dữ liệu thiết kế...
-          </p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-3 border-primary/20 border-t-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Đang tải...</p>
         </div>
       </div>
     );
@@ -66,21 +251,19 @@ export default function DesignDetailPage() {
 
   if (!design) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-6">
-        <Card className="w-full max-w-md shadow-lg">
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
-              <Package className="h-8 w-8 text-destructive" />
-            </div>
+            <Package className="h-12 w-12 text-muted-foreground mx-auto" />
             <div>
-              <h3 className="text-xl font-semibold">Không tìm thấy thiết kế</h3>
-              <p className="text-sm text-muted-foreground mt-2">
-                Thiết kế bạn tìm kiếm không tồn tại hoặc đã bị xóa
+              <h3 className="text-lg font-semibold truncate">Không tìm thấy</h3>
+              <p className="text-sm text-muted-foreground">
+                Thiết kế không tồn tại
               </p>
             </div>
-            <Button onClick={() => navigate("design/all")} className="mt-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Quay lại danh sách
+            <Button onClick={() => router("/designs")} size="sm">
+              <ArrowLeft className="h-3 w-3 mr-1.5" />
+              Quay lại
             </Button>
           </CardContent>
         </Card>
@@ -89,236 +272,109 @@ export default function DesignDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/10 to-background">
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-background">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center gap-3">
             <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate("design/all")}
-              className="shrink-0"
+              variant="ghost"
+              size="sm"
+              onClick={() => router("/designs")}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">
-                  {design.code}
-                </h1>
-                {getStatusBadge(design.designStatus, design.statusType)}
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                <span className="inline-flex items-center gap-1.5">
-                  <Package className="h-3.5 w-3.5" />
-                  Đơn hàng #{design.orderId}
-                </span>
-                <span className="mx-2">•</span>
-                <span>Thiết kế ID: {design.id}</span>
-              </p>
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <h1 className="text-lg font-bold truncate">{design.code}</h1>
+              {getStatusBadge(design.designStatus, design.statusType)}
+              <span className="text-xs text-muted-foreground">
+                • ĐH #{design.orderId}
+              </span>
             </div>
+
+            <div>Mã thiết kế:</div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="lg:col-span-2 shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-primary">
-            <CardHeader className="bg-muted/30">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Package className="h-5 w-5 text-primary" />
-                </div>
+      <div className="max-w-7xl mx-auto p-4 space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Basic Info Card - Compact */}
+          <Card className="border-l-4 border-l-primary">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Package className="h-4 w-4" />
                 Thông tin cơ bản
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              <div className="bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20 p-5 rounded-lg border">
-                <h4 className="font-semibold mb-4 flex items-center gap-2 text-lg">
-                  <div className="p-1.5 bg-blue-500/10 rounded">
-                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  Thiết kế viên
-                </h4>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Họ tên
-                    </p>
-                    <p className="font-semibold text-foreground">
-                      {design.designer.fullName}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Username
-                    </p>
-                    <p className="font-medium text-foreground">
-                      {design.designer.username}
+            <CardContent className="space-y-3 text-sm">
+              {/* Designer - Inline */}
+              <div className="flex items-start gap-2 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded">
+                <User className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-blue-900 dark:text-blue-100">
+                    {design.designer.fullName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {design.designer.email} • {design.designer.phone}
+                  </p>
+                </div>
+              </div>
+
+              {/* Design Type & Material - Grid */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2 bg-purple-50/50 dark:bg-purple-950/20 rounded">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Layers className="h-3 w-3 text-purple-600" />
+                    <p className="text-xs font-medium text-purple-900 dark:text-purple-100">
+                      Loại TK
                     </p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Email
-                    </p>
-                    <p className="font-medium text-foreground truncate">
-                      {design.designer.email}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Điện thoại
-                    </p>
-                    <p className="font-medium text-foreground">
-                      {design.designer.phone}
+                  <p className="font-semibold text-xs">
+                    {design.designType.name}
+                  </p>
+                </div>
+                <div className="p-2 bg-amber-50/50 dark:bg-amber-950/20 rounded">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Box className="h-3 w-3 text-amber-600" />
+                    <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+                      Chất liệu
                     </p>
                   </div>
+                  <p className="font-semibold text-xs">
+                    {design.materialType.name}
+                  </p>
                 </div>
               </div>
 
               <Separator />
 
-              <div className="bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-950/20 p-5 rounded-lg border">
-                <h4 className="font-semibold mb-4 flex items-center gap-2 text-lg">
-                  <div className="p-1.5 bg-purple-500/10 rounded">
-                    <Layers className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  Loại thiết kế
-                </h4>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Tên loại
-                    </p>
-                    <p className="font-semibold text-foreground">
-                      {design.designType.name}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Mã loại
-                    </p>
-                    <p className="font-medium text-foreground">
-                      {design.designType.code}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Mô tả
-                    </p>
-                    <p className="font-medium text-foreground">
-                      {design.designType.description || "Không có"}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Trạng thái
-                    </p>
-                    <Badge variant="outline" className="w-fit">
-                      {design.designType.statusType}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-950/20 p-5 rounded-lg border">
-                <h4 className="font-semibold mb-4 flex items-center gap-2 text-lg">
-                  <div className="p-1.5 bg-amber-500/10 rounded">
-                    <Box className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  Chất liệu
-                </h4>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Tên chất liệu
-                    </p>
-                    <p className="font-semibold text-foreground">
-                      {design.materialType.name}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Mã chất liệu
-                    </p>
-                    <p className="font-medium text-foreground">
-                      {design.materialType.code}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Giá chất liệu
-                    </p>
-                    <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                      {design.materialType.price.toLocaleString("vi-VN")} VNĐ
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Giá/cm²
-                    </p>
-                    <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
-                      {design.materialType.pricePerCm2.toLocaleString("vi-VN")}{" "}
-                      VNĐ
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
+              {/* Specs - Compact Grid */}
               <div>
-                <h4 className="font-semibold mb-4 flex items-center gap-2 text-lg">
-                  <div className="p-1.5 bg-green-500/10 rounded">
-                    <Ruler className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  Thông số kỹ thuật
-                </h4>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  <div className="bg-gradient-to-br from-green-50 to-transparent dark:from-green-950/30 p-4 rounded-lg border text-center">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Ruler className="h-3.5 w-3.5 text-green-600" />
+                  <p className="text-xs font-semibold">Thông số</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-muted/50 p-2 rounded text-center">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">
                       Kích thước
                     </p>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {design.dimensions}
-                    </p>
+                    <p className="font-bold text-xs">{design.dimensions}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-green-50 to-transparent dark:from-green-950/30 p-4 rounded-lg border text-center">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                      Chiều rộng
-                    </p>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {design.width} <span className="text-sm">cm</span>
-                    </p>
-                  </div>
-                  <div className="bg-gradient-to-br from-green-50 to-transparent dark:from-green-950/30 p-4 rounded-lg border text-center">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                      Chiều cao
-                    </p>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {design.height} <span className="text-sm">cm</span>
-                    </p>
-                  </div>
-                  <div className="bg-gradient-to-br from-green-50 to-transparent dark:from-green-950/30 p-4 rounded-lg border text-center">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  <div className="bg-muted/50 p-2 rounded text-center">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">
                       Số lượng
                     </p>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    <p className="font-bold text-xs">
                       {design.quantity.toLocaleString()}
                     </p>
                   </div>
-                  <div className="bg-gradient-to-br from-green-50 to-transparent dark:from-green-950/30 p-4 rounded-lg border text-center">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  <div className="bg-muted/50 p-2 rounded text-center">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">
                       Diện tích
                     </p>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {design.areaCm2.toLocaleString("vi-VN", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}{" "}
-                      <span className="text-sm">cm²</span>
+                    <p className="font-bold text-xs">
+                      {(design.areaCm2 / 10000).toFixed(1)}m²
                     </p>
                   </div>
                 </div>
@@ -326,332 +382,288 @@ export default function DesignDetailPage() {
 
               <Separator />
 
+              {/* Pricing - Compact */}
               <div>
-                <h4 className="font-semibold mb-4 flex items-center gap-2 text-lg">
-                  <div className="p-1.5 bg-emerald-500/10 rounded">
-                    <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  Giá & Thanh toán
-                </h4>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="bg-gradient-to-br from-emerald-50 to-transparent dark:from-emerald-950/30 p-5 rounded-lg border">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                  <p className="text-xs font-semibold">Giá</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-2 rounded">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">
                       Đơn giá
                     </p>
-                    <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                      {design.unitPrice.toLocaleString("vi-VN")}{" "}
-                      <span className="text-base">VNĐ</span>
+                    <p className="font-bold text-sm text-emerald-600">
+                      {design.unitPrice.toLocaleString()}đ
                     </p>
                   </div>
-                  <div className="bg-gradient-to-br from-emerald-50 to-transparent dark:from-emerald-950/30 p-5 rounded-lg border">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                      Tổng giá
+                  <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-2 rounded">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">
+                      Tổng
                     </p>
-                    <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                      {design.totalPrice.toLocaleString("vi-VN")}{" "}
-                      <span className="text-base">VNĐ</span>
-                    </p>
-                  </div>
-                  <div className="bg-gradient-to-br from-emerald-50 to-transparent dark:from-emerald-950/30 p-5 rounded-lg border">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                      Giá mỗi đơn vị
-                    </p>
-                    <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                      {(design.totalPrice / design.quantity).toLocaleString(
-                        "vi-VN"
-                      )}{" "}
-                      <span className="text-base">VNĐ</span>
+                    <p className="font-bold text-sm text-emerald-600">
+                      {design.totalPrice.toLocaleString()}đ
                     </p>
                   </div>
                 </div>
               </div>
 
-              <Separator />
-
-              <div>
-                <h4 className="font-semibold mb-4 flex items-center gap-2 text-lg">
-                  <div className="p-1.5 bg-slate-500/10 rounded">
-                    <FileText className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              {/* Requirements - Compact */}
+              {(design.requirements || design.additionalNotes) && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    {design.requirements && (
+                      <div className="bg-muted/30 p-2 rounded">
+                        <p className="text-[10px] font-medium text-muted-foreground mb-1">
+                          YÊU CẦU
+                        </p>
+                        <p className="text-xs leading-relaxed">
+                          {design.requirements}
+                        </p>
+                      </div>
+                    )}
+                    {design.additionalNotes && (
+                      <div className="bg-muted/30 p-2 rounded">
+                        <p className="text-[10px] font-medium text-muted-foreground mb-1">
+                          GHI CHÚ
+                        </p>
+                        <p className="text-xs leading-relaxed">
+                          {design.additionalNotes}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  Yêu cầu & Ghi chú
-                </h4>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="bg-muted/50 p-5 rounded-lg border">
-                    <p className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                      <div className="h-1 w-1 rounded-full bg-primary" />
-                      Yêu cầu thiết kế
-                    </p>
-                    <p className="text-sm leading-relaxed">
-                      {design.requirements || "Không có yêu cầu"}
-                    </p>
-                  </div>
-                  <div className="bg-muted/50 p-5 rounded-lg border">
-                    <p className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                      <div className="h-1 w-1 rounded-full bg-primary" />
-                      Ghi chú thêm
-                    </p>
-                    <p className="text-sm leading-relaxed">
-                      {design.additionalNotes || "Không có ghi chú"}
-                    </p>
-                  </div>
-                  {design.notes && (
-                    <div className="sm:col-span-2 bg-muted/50 p-5 rounded-lg border">
-                      <p className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-                        <div className="h-1 w-1 rounded-full bg-primary" />
-                        Ghi chú nội bộ
-                      </p>
-                      <p className="text-sm leading-relaxed">{design.notes}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-blue-500">
-            <CardHeader className="bg-muted/30">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                File bảng thiết kế
-              </CardTitle>
+          <Card className="border-l-4 border-l-violet-500">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileImage className="h-5 w-5 text-violet-500" />
+                  File bảng thiết kế
+                </CardTitle>
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setShowFileUpload(true)}
+                >
+                  {design.designFile ? (
+                    <Pencil className="h-3.5 w-3.5" />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5" />
+                  )}
+                  {design.designFile ? "Thay đổi" : "Upload"}
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4 pt-6">
-              {design.designFileUrl ? (
-                <div className="group relative flex items-center justify-between p-5 border-2 rounded-xl hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                      <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-base">File thiết kế</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {design.designFileUrl.split("/").pop()}
-                      </p>
-                    </div>
-                  </div>
-                  <Button className="shrink-0" asChild>
-                    <a href={design.designFileUrl} download>
-                      <Download className="h-4 w-4 mr-2" />
-                      Tải xuống
-                    </a>
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-center py-12 border-2 border-dashed rounded-xl">
-                  <FileText className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                  <p className="text-muted-foreground font-medium">
+            <CardContent>
+              {!design.designFile ? (
+                <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                  <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-sm font-medium mb-1">
                     Chưa có file thiết kế
                   </p>
-                </div>
-              )}
-
-              {design.excelFileUrl && (
-                <div className="group relative flex items-center justify-between p-5 border-2 rounded-xl hover:border-green-500 hover:bg-green-50/50 dark:hover:bg-green-950/20 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                      <FileText className="h-8 w-8 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-base">File Excel</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {design.excelFileUrl.split("/").pop()}
-                      </p>
-                    </div>
-                  </div>
-                  <Button className="shrink-0" asChild>
-                    <a href={design.excelFileUrl} download>
-                      <Download className="h-4 w-4 mr-2" />
-                      Tải xuống
-                    </a>
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-purple-500">
-            <CardHeader className="bg-muted/30">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <div className="p-2 bg-purple-500/10 rounded-lg">
-                  <ImageIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                Ảnh chụp file bảng thiết kế
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {design.designFileUrl ? (
-                <div className="space-y-4">
-                  <div className="aspect-video bg-gradient-to-br from-muted/50 to-muted rounded-xl flex items-center justify-center overflow-hidden border-2 group hover:border-purple-500 transition-colors">
-                    <img
-                      src={design.designFileUrl || "/placeholder.svg"}
-                      alt="Preview thiết kế"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                        e.currentTarget.parentElement!.innerHTML =
-                          '<div class="flex flex-col items-center justify-center gap-3"><div class="p-4 bg-muted rounded-full"><svg class="h-12 w-12 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div><p class="text-sm font-medium text-muted-foreground">Không thể xem trước file</p></div>';
-                      }}
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="w-full h-11 bg-transparent"
-                    asChild
-                  >
-                    <a
-                      href={design.designFileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ImageIcon className="h-4 w-4 mr-2" />
-                      Xem ảnh đầy đủ
-                    </a>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Upload file .ai và hình ảnh chụp
+                  </p>
+                  <Button size="sm" onClick={() => setShowFileUpload(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-2" />
+                    Upload ngay
                   </Button>
                 </div>
               ) : (
-                <div className="aspect-video bg-gradient-to-br from-muted/50 to-muted rounded-xl flex flex-col items-center justify-center gap-3 border-2 border-dashed">
-                  <div className="p-4 bg-muted rounded-full">
-                    <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
+                <div className="space-y-4">
+                  {/* Image preview */}
+                  <div
+                    className="relative group cursor-pointer rounded-lg overflow-hidden border-2 hover:border-violet-500 transition-all"
+                    onClick={() =>
+                      setViewingImage({
+                        url: design.designFile.imageUrl,
+                        title: "File bảng thiết kế",
+                      })
+                    }
+                  >
+                    <img
+                      src={design.designFile.imageUrl || "/placeholder.svg"}
+                      alt="Design file preview"
+                      className="w-full h-64 object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Eye className="h-10 w-10 text-white" />
+                    </div>
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Chưa có ảnh thiết kế
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
-          <Card className="lg:col-span-2 shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-orange-500">
-            <CardHeader className="bg-muted/30">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <div className="p-2 bg-orange-500/10 rounded-lg">
-                  <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                </div>
-                Timeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-6">
-                {design.timelineEntries && design.timelineEntries.length > 0 ? (
-                  design.timelineEntries.map((entry, index) => (
-                    <div key={entry.id} className="flex gap-6 group">
-                      <div className="flex flex-col items-center">
-                        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 ring-4 ring-orange-500/20 group-hover:ring-orange-500/40 transition-all" />
-                        {index < design.timelineEntries.length - 1 && (
-                          <div className="w-0.5 h-full bg-gradient-to-b from-orange-500/30 to-transparent min-h-24" />
-                        )}
-                      </div>
-                      <div className="flex-1 pb-6">
-                        <div className="bg-gradient-to-br from-orange-50/50 to-transparent dark:from-orange-950/20 p-5 rounded-xl border group-hover:border-orange-500/50 transition-colors">
-                          <div className="flex items-start justify-between gap-4 mb-4">
-                            <div className="flex-1 space-y-2">
-                              <p className="font-semibold text-base text-foreground">
-                                {entry.description}
-                              </p>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <User className="h-3.5 w-3.5" />
-                                <span className="font-medium">
-                                  {entry.createdBy.fullName}
-                                </span>
-                                <span className="text-xs">•</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {entry.createdBy.role}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                <Clock className="h-3 w-3" />
-                                {new Date(entry.createdAt).toLocaleString(
-                                  "vi-VN"
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                          {entry.fileUrl && (
-                            <div className="mt-4 space-y-3">
-                              <div className="relative aspect-video bg-muted rounded-lg overflow-hidden border-2 group-hover:border-orange-500/50 transition-colors">
-                                <img
-                                  src={entry.fileUrl || "/placeholder.svg"}
-                                  alt={`Timeline ${entry.id}`}
-                                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                    e.currentTarget.parentElement!.innerHTML =
-                                      '<div class="flex flex-col items-center justify-center gap-2 h-full"><div class="p-3 bg-muted rounded-full"><svg class="h-8 w-8 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div><p class="text-xs text-muted-foreground">Không thể tải ảnh</p></div>';
-                                  }}
-                                />
-                              </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1 bg-transparent"
-                                  asChild
-                                >
-                                  <a
-                                    href={entry.fileUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
-                                    Xem ảnh đầy đủ
-                                  </a>
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1 bg-transparent"
-                                  asChild
-                                >
-                                  <a href={entry.fileUrl} download>
-                                    <Download className="h-3.5 w-3.5 mr-1.5" />
-                                    Tải xuống
-                                  </a>
-                                </Button>
-                              </div>
-                            </div>
-                          )}
+                  {/* File info & actions */}
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold mb-1">
+                          banner-design.ai
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            Upload:{" "}
+                            {new Date(
+                              design.designFile.uploadedAt
+                            ).toLocaleString("vi-VN")}
+                          </span>
                         </div>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 border-2 border-dashed rounded-xl">
-                    <Clock className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                    <p className="text-muted-foreground font-medium">
-                      Chưa có lịch sử thay đổi
-                    </p>
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 bg-transparent"
+                        asChild
+                      >
+                        <a href={design.designFile.fileUrl} download>
+                          <Download className="h-3.5 w-3.5 mr-2" />
+                          Tải file .ai
+                        </a>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowFileUpload(true)}
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-2" />
+                        Thay đổi
+                      </Button>
+                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Action buttons */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex gap-4 flex-wrap">
-              <Button variant="outline" onClick={() => navigate("design/all")}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Quay lại danh sách
-              </Button>
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <History className="h-5 w-5 text-purple-500" />
+                Timeline tiến trình ({design.timelineEntries.length})
+              </CardTitle>
               <Button
-                variant="outline"
-                onClick={() => navigate(`/orders/${design.orderId}`)}
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowTimelineDialog(true)}
               >
-                <Package className="h-4 w-4 mr-2" />
-                Xem đơn hàng
-              </Button>
-              <Button>
-                <FileText className="h-4 w-4 mr-2" />
-                Chỉnh sửa
+                <Plus className="h-3.5 w-3.5" />
+                Thêm timeline
               </Button>
             </div>
+          </CardHeader>
+          <CardContent>
+            {design.timelineEntries.length === 0 ? (
+              <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                <History className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-sm font-medium mb-1">Chưa có timeline nào</p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Thêm hình ảnh và mô tả công việc
+                </p>
+                <Button size="sm" onClick={() => setShowTimelineDialog(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-2" />
+                  Thêm ngay
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {design.timelineEntries.map((entry, index) => (
+                  <div
+                    key={entry.id}
+                    className="flex gap-4 p-4 rounded-lg border hover:border-purple-500 transition-all bg-muted/20"
+                  >
+                    {/* Timeline number badge */}
+                    <div className="shrink-0 w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold text-sm">
+                      {index + 1}
+                    </div>
+
+                    {/* Timeline Image */}
+                    <div
+                      className="shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() =>
+                        setViewingImage({
+                          url: entry.imageUrl,
+                          title: entry.description,
+                        })
+                      }
+                    >
+                      <img
+                        src={entry.imageUrl || "/placeholder.svg"}
+                        alt={entry.description}
+                        className="w-24 h-24 object-cover rounded-lg border-2 hover:border-purple-500"
+                      />
+                    </div>
+
+                    {/* Timeline Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm mb-2 leading-tight">
+                        {entry.description}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span>{entry.createdBy.fullName}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            {new Date(entry.createdAt).toLocaleString("vi-VN")}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs bg-transparent"
+                        asChild
+                      >
+                        <a href={entry.imageUrl} download>
+                          <Download className="h-3 w-3 mr-1.5" />
+                          Tải hình ảnh
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Image Viewer Dialog */}
+      {viewingImage && (
+        <ImageViewerDialog
+          open={!!viewingImage}
+          onOpenChange={(open) => !open && setViewingImage(null)}
+          imageUrl={viewingImage.url}
+          title={viewingImage.title}
+        />
+      )}
+
+      {/* File Upload Dialog */}
+      <DesignFileUploadDialog
+        open={showFileUpload}
+        onOpenChange={setShowFileUpload}
+        onUpload={handleDesignFileUpload}
+        mode={design.designFile ? "edit" : "create"}
+      />
+
+      {/* Timeline Entry Dialog */}
+      <TimelineEntryDialog
+        open={showTimelineDialog}
+        onOpenChange={setShowTimelineDialog}
+        onAdd={handleTimelineAdd}
+      />
     </div>
   );
 }

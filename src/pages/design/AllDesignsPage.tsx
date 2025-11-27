@@ -1,25 +1,19 @@
-import { useMemo } from "react"
-import { useNavigate } from "react-router-dom"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import {
-  Search,
-  Eye,
-  Package,
-  Ruler,
-  User,
-} from "lucide-react"
-import { useDesigns, useFilters } from "@/hooks"
-import type { Design } from "@/Schema"
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Search, Eye, Package, Ruler, User } from "lucide-react";
+import { useDesigns, useFilters } from "@/hooks";
+import type { Design } from "@/Schema";
 import {
   Table,
   TableHeader,
@@ -27,25 +21,25 @@ import {
   TableHead,
   TableBody,
   TableCell,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 
 type DesignWithSearch = Design & {
-  designerFullName: string
-}
+  designerFullName: string;
+};
 
 export default function AllDesignsPage() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   // gọi React Query lấy list
-  const { data, isLoading } = useDesigns()
-  const designs: Design[] = data?.items ?? [] // hoặc data?.data tùy API
+  const { data, isLoading } = useDesigns();
+  const designs: Design[] = data?.items ?? []; // hoặc data?.data tùy API
 
   // hook filter
   const [filterState, filterActions] = useFilters({
     initialFilters: {},
     initialSearch: "",
     persistKey: "designs-list",
-  })
+  });
 
   // map thêm field để search theo tên designer
   const designsWithSearch: DesignWithSearch[] = useMemo(
@@ -54,8 +48,8 @@ export default function AllDesignsPage() {
         ...d,
         designerFullName: d.designer.fullName,
       })),
-    [designs],
-  )
+    [designs]
+  );
 
   // áp dụng search + filters + sort
   const filteredDesigns = useMemo(
@@ -63,54 +57,59 @@ export default function AllDesignsPage() {
       filterActions.applyFilters<DesignWithSearch>(designsWithSearch, {
         searchFields: ["code", "designerFullName"],
       }),
-    [designsWithSearch, filterActions, filterState],
-  )
+    [designsWithSearch, filterActions, filterState]
+  );
 
   // ====== mapping UI <-> filter state ======
 
   const handleSearchChange = (value: string) => {
-    filterActions.setSearch(value)
-  }
+    filterActions.setSearch(value);
+  };
 
   const handleStatusChange = (value: string) => {
     if (value === "all") {
-      filterActions.removeFilter("designStatus")
+      filterActions.removeFilter("designStatus");
     } else {
-      filterActions.setFilter("designStatus", value, "eq")
+      filterActions.setFilter("designStatus", value, "eq");
     }
-  }
+  };
 
   const handleTypeChange = (value: string) => {
     if (value === "all") {
-      filterActions.removeFilter("designTypeId")
+      filterActions.removeFilter("designTypeId");
     } else {
-      filterActions.setFilter("designTypeId", Number(value), "eq")
+      filterActions.setFilter("designTypeId", Number(value), "eq");
     }
-  }
+  };
 
   // giá trị đang chọn cho Select (đọc từ filterState)
   const statusFilterValue =
-    (filterState.filters["designStatus"]?.value as string | undefined) ?? "all"
+    (filterState.filters["designStatus"]?.value as string | undefined) ?? "all";
 
   const typeFilterValue =
-    (filterState.filters["designTypeId"]?.value as number | undefined)?.toString() ?? "all"
+    (
+      filterState.filters["designTypeId"]?.value as number | undefined
+    )?.toString() ?? "all";
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<
       string,
-      { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+      {
+        label: string;
+        variant: "default" | "secondary" | "destructive" | "outline";
+      }
     > = {
       received_info: { label: "Đã nhận thông tin", variant: "default" },
       designing: { label: "Đang thiết kế", variant: "secondary" },
       completed: { label: "Hoàn thành", variant: "outline" },
-    }
-    const config = statusMap[status] || { label: status, variant: "default" }
+    };
+    const config = statusMap[status] || { label: status, variant: "default" };
     return (
       <Badge variant={config.variant} className="font-medium">
         {config.label}
       </Badge>
-    )
-  }
+    );
+  };
 
   if (isLoading) {
     return (
@@ -120,7 +119,7 @@ export default function AllDesignsPage() {
           <p className="mt-4 text-muted-foreground">Đang tải dữ liệu...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -157,13 +156,18 @@ export default function AllDesignsPage() {
               </div>
 
               {/* Status filter */}
-              <Select value={statusFilterValue} onValueChange={handleStatusChange}>
+              <Select
+                value={statusFilterValue}
+                onValueChange={handleStatusChange}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Lọc theo trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="received_info">Đã nhận thông tin</SelectItem>
+                  <SelectItem value="received_info">
+                    Đã nhận thông tin
+                  </SelectItem>
                   <SelectItem value="designing">Đang thiết kế</SelectItem>
                   <SelectItem value="completed">Hoàn thành</SelectItem>
                 </SelectContent>
@@ -176,14 +180,18 @@ export default function AllDesignsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả loại</SelectItem>
-                  {Array.from(new Set(designs.map((d) => d.designTypeId))).map((typeId) => {
-                    const type = designs.find((d) => d.designTypeId === typeId)?.designType
-                    return type ? (
-                      <SelectItem key={type.id} value={type.id.toString()}>
-                        {type.name}
-                      </SelectItem>
-                    ) : null
-                  })}
+                  {Array.from(new Set(designs.map((d) => d.designTypeId))).map(
+                    (typeId) => {
+                      const type = designs.find(
+                        (d) => d.designTypeId === typeId
+                      )?.designType;
+                      return type ? (
+                        <SelectItem key={type.id} value={type.id.toString()}>
+                          {type.name}
+                        </SelectItem>
+                      ) : null;
+                    }
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -212,14 +220,13 @@ export default function AllDesignsPage() {
                       <TableRow
                         key={design.id}
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() =>
-                          navigate(`/design/detail/${design.id}`)
-                        }
+                        onClick={() => navigate(`/design/detail/${design.id}`)}
                       >
-                        
                         <TableCell>#{design.orderId}</TableCell>
-                        <TableCell>{getStatusBadge(design.designStatus)}</TableCell>
-                      
+                        <TableCell>
+                          {getStatusBadge(design.designStatus)}
+                        </TableCell>
+
                         <TableCell>{design.designType.name}</TableCell>
                         <TableCell>{design.materialType.name}</TableCell>
                         <TableCell>
@@ -236,15 +243,15 @@ export default function AllDesignsPage() {
                         <TableCell>
                           {design.quantity.toLocaleString()}
                         </TableCell>
-                       
+
                         <TableCell className="text-right">
                           <Button
                             variant="outline"
                             size="sm"
                             className="bg-transparent"
                             onClick={(e) => {
-                              e.stopPropagation()
-                              navigate(`/design/detail/${design.id}`)
+                              e.stopPropagation();
+                              navigate(`/design/detail/${design.id}`);
                             }}
                           >
                             <Eye className="h-4 w-4 mr-2" />
@@ -270,5 +277,5 @@ export default function AllDesignsPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

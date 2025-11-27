@@ -1,259 +1,255 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "./use-toast";
-import {
-  getOrders,
-  getOrderById,
-  createOrder,
-  updateOrder,
-  deleteOrder,
-  getOrderStats,
-  exportOrders,
-  uploadOrderExcel,
-} from "@/apis/order.api";
-import type {
-  CreateOrderRequest,
-  Order,
-  UpdateOrderRequest,
-  OrderQueryParams,
-  OrderListResponse, // nếu bạn có type riêng thì import vào
-} from "@/Schema";
+// src/hooks/order-workflow.hook.ts
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import type { Order } from "@/Schema";
+import * as orderApi from "@/apis/order.api";
 
-/* ================== QUERY KEYS ================== */
+/**
+ * Các status chính bám đúng mindmap + JSON enum trước đó
+ */
+export type DesignStatus =
+  | "received_info" // Nhận thông tin
+  | "designing" // Đang thiết kế
+  | "editing" // Đang chỉnh sửa
+  | "waiting_for_customer_approval" // Chờ khách duyệt
+  | "confirmed_for_printing" // Đã chốt in
+  | "pdf_exported"; // Xuất file PDF
 
-export const orderKeys = {
+export type PaymentStatus =
+  | "not_paid" // Chưa thanh toán
+  | "deposited" // Đã nhận cọc
+  | "fully_paid"; // Đã thanh toán đủ
+
+export type OrderStatus =
+  | "pending" // Nhận thông tin
+  | "waiting_for_proofing" // Chờ bình bài
+  | "proofed" // Đã bình bài
+  | "waiting_for_production" // Chờ sản xuất
+  | "in_production" // Đang sản xuất
+  | "completed" // Hoàn thành
+  | "invoice_issued"; // Xuất hóa đơn
+
+export type CustomerType = "retail" | "company";
+
+type WorkflowPayload = {
+  designStatus?: DesignStatus;
+  paymentStatus?: PaymentStatus;
+  orderStatus?: OrderStatus;
+};
+
+/**
+ * Query keys cho Order (có thể sync với orderKeys hiện tại nếu bạn đã có)
+ */
+const orderWorkflowKeys = {
   all: ["orders"] as const,
-
-  // list với params (page, filter,...)
-  list: (params?: {
-    pageNumber?: number;
-    pageSize?: number;
-    customerId?: number;
-    status?: string;
-    search?: string;
-  }) => [...orderKeys.all, "list", params ?? {}] as const,
-
-  // detail
-  detail: (id: number) => [...orderKeys.all, "detail", id] as const,
-
-  // stats
-  stats: () => [...orderKeys.all, "stats"] as const,
+  lists: () => ["orders", "list"] as const,
+  detail: (id: number) => ["orders", "detail", id] as const,
 } as const;
 
-/* ================== QUERIES ================== */
-
-// useOrders Hook
-export const useOrders = (params?: {
-  pageNumber?: number;
-  pageSize?: number;
-  customerId?: number;
-  status?: string;
-  search?: string;
-}) => {
-  return useQuery({
-    queryKey: orderKeys.list(params),
-    queryFn: () => getOrders(params),
-    staleTime: 30 * 1000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes
-  });
+type WorkflowMutationVars = {
+  orderId: number;
+  payload: WorkflowPayload;
+  successMessage: string;
 };
 
-// useOrder Hook (single order)
-export const useOrder = (id: number, enabled = true) => {
-  return useQuery({
-    queryKey: orderKeys.detail(id),
-    queryFn: () => getOrderById(id),
-    enabled: enabled && !!id,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
-  });
-};
-
-// useOrderStats Hook
-export const useOrderStats = () => {
-  return useQuery({
-    queryKey: orderKeys.stats(),
-    queryFn: getOrderStats,
-    staleTime: 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000,
-  });
-};
-
-/* ================== MUTATIONS ================== */
-
-// useCreateOrder Mutation
-export const useCreateOrder = () => {
+/**
+ * Hook tổng: trả ra các action domain-level đúng flow mindmap
+ */
+export const useOrderWorkflow = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation<Order, Error, CreateOrderRequest>({
-    mutationFn: (data) => createOrder(data),
-
-    onSuccess: (newOrder) => {
-      // Invalidate list + stats
-      queryClient.invalidateQueries({ queryKey: orderKeys.all });
-      queryClient.invalidateQueries({ queryKey: orderKeys.stats() });
-
-      // Cache detail luôn
-      queryClient.setQueryData(orderKeys.detail(newOrder.id), newOrder);
+  const mutation = useMutation<Order, Error, WorkflowMutationVars>({
+    // Bạn implement hàm này trong order.api
+    mutationFn: ({ orderId, payload }) =>
+      orderApi.updateOrderWorkflow(orderId, payload),
+    onSuccess: (updatedOrder, { orderId, successMessage }) => {
+      // update cache detail
+      queryClient.setQueryData(orderWorkflowKeys.detail(orderId), updatedOrder);
+      // invalidate list
+      queryClient.invalidateQueries({ queryKey: orderWorkflowKeys.lists() });
 
       toast({
         title: "Thành công",
-        description: `Đã tạo đơn hàng ${newOrder.code} thành công`,
+        description: successMessage,
       });
     },
-
     onError: (error) => {
       toast({
         title: "Lỗi",
-        description: error.message || "Không thể tạo đơn hàng",
+        description: error.message || "Không thể cập nhật trạng thái đơn hàng",
         variant: "destructive",
       });
     },
   });
-};
 
-type UpdateOrderVariables = {
-  id: number;
-  data: UpdateOrderRequest;
-};
+  // =========== Các action theo từng bước trong mindmap ===========
 
-// useUpdateOrder Mutation
-export const useUpdateOrder = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  // 1. Thiết kế
 
-  return useMutation<Order, Error, UpdateOrderVariables>({
-    mutationFn: ({ id, data }) => updateOrder(id, data),
+  const moveToReceivedInfo = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        designStatus: "received_info",
+        orderStatus: "pending",
+      },
+      successMessage: "Đã chuyển thiết kế về trạng thái Nhận thông tin",
+    });
 
-    onSuccess: (updatedOrder, { id }) => {
-      // cập nhật cache chi tiết đơn hàng
-      queryClient.setQueryData(orderKeys.detail(id), updatedOrder);
+  const moveToDesigning = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        designStatus: "designing",
+      },
+      successMessage: "Đã chuyển sang trạng thái Đang thiết kế",
+    });
 
-      // invalidate list + stats để dữ liệu đồng bộ
-      queryClient.invalidateQueries({ queryKey: orderKeys.all });
-      queryClient.invalidateQueries({ queryKey: orderKeys.stats() });
+  const moveToEditing = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        designStatus: "editing",
+      },
+      successMessage: "Đã chuyển sang trạng thái Đang chỉnh sửa",
+    });
 
-      toast({
-        title: "Thành công",
-        description: `Đã cập nhật đơn hàng ${updatedOrder.code} thành công`,
-      });
-    },
+  const moveToWaitingForCustomerApproval = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        designStatus: "waiting_for_customer_approval",
+      },
+      successMessage: "Đã chuyển sang trạng thái Chờ khách duyệt",
+    });
 
-    onError: (error) => {
-      toast({
-        title: "Lỗi",
-        description: error.message || "Không thể cập nhật đơn hàng",
-        variant: "destructive",
-      });
-    },
-  });
-};
+  const moveToConfirmedForPrinting = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        designStatus: "confirmed_for_printing",
+        // kế toán bắt đầu thấy đơn: tuỳ bạn trigger ở FE hay BE
+      },
+      successMessage: "Đã chốt in thiết kế",
+    });
 
-// useDeleteOrder Mutation
-export const useDeleteOrder = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const moveToPdfExported = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        designStatus: "pdf_exported",
+      },
+      successMessage: "Đã xuất file PDF cho thiết kế",
+    });
 
-  return useMutation<void, Error, number>({
-    mutationFn: (id: number) => deleteOrder(id),
+  // 2. Thanh toán / cọc: dùng cho điều kiện khách lẻ
 
-    onSuccess: (_, deletedId) => {
-      // remove cache detail
-      queryClient.removeQueries({ queryKey: orderKeys.detail(deletedId) });
+  const markDeposited = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        paymentStatus: "deposited",
+      },
+      successMessage: "Đã ghi nhận khách hàng ĐÃ NHẬN CỌC",
+    });
 
-      // Update các cache list đang có
-      queryClient.setQueriesData(
-        { queryKey: orderKeys.all, type: "active" },
-        (oldData: OrderListResponse | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            items: oldData.data.filter((order) => order.id !== deletedId),
-            totalCount: oldData.totalCount - 1,
-          };
-        }
-      );
+  const markFullyPaid = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        paymentStatus: "fully_paid",
+      },
+      successMessage: "Đã ghi nhận khách hàng thanh toán ĐỦ",
+    });
 
-      // Invalidate stats
-      queryClient.invalidateQueries({ queryKey: orderKeys.stats() });
+  // 3. Bình bài: tuỳ loại khách (frontend có thể check customerType trước khi gọi)
 
-      toast({
-        title: "Thành công",
-        description: "Đã xóa đơn hàng thành công",
-      });
-    },
+  /**
+   * Chuyển sang "Chờ bình bài"
+   * - Khách lẻ: nên đảm bảo paymentStatus = deposited trước khi gọi
+   * - Khách công ty: chỉ cần đã chốt in
+   */
+  const moveToWaitingForProofing = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        orderStatus: "waiting_for_proofing",
+      },
+      successMessage: "Đã chuyển đơn sang trạng thái Chờ bình bài",
+    });
 
-    onError: (error) => {
-      toast({
-        title: "Lỗi",
-        description: error.message || "Không thể xóa đơn hàng",
-        variant: "destructive",
-      });
-    },
-  });
-};
+  const moveToProofed = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        orderStatus: "proofed",
+      },
+      successMessage: "Đã hoàn thành bình bài",
+    });
 
-// useExportOrders Mutation
-export const useExportOrders = () => {
-  const { toast } = useToast();
+  // 4. Sản xuất
 
-  return useMutation<
-    { fileUrl?: string },
-    Error,
-    | {
-        customerId?: number;
-        status?: string;
-        startDate?: string;
-        endDate?: string;
-      }
-    | undefined
-  >({
-    mutationFn: (params) => exportOrders(params),
+  const moveToWaitingForProduction = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        orderStatus: "waiting_for_production",
+      },
+      successMessage: "Đã chuyển sang Chờ sản xuất",
+    });
 
-    onSuccess: (data) => {
-      if (data.fileUrl) {
-        window.open(data.fileUrl, "_blank");
-      }
+  const moveToInProduction = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        orderStatus: "in_production",
+      },
+      successMessage: "Đã chuyển sang Đang sản xuất",
+    });
 
-      toast({
-        title: "Thành công",
-        description: "Đã xuất danh sách đơn hàng thành công",
-      });
-    },
+  const moveToCompleted = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        orderStatus: "completed",
+      },
+      successMessage: "Đã hoàn thành sản xuất đơn hàng",
+    });
 
-    onError: (error) => {
-      toast({
-        title: "Lỗi",
-        description: error.message || "Không thể xuất danh sách đơn hàng",
-        variant: "destructive",
-      });
-    },
-  });
-};
+  // 5. Xuất hóa đơn (kết thúc)
 
-// useUploadOrderExcel Mutation
-export const useUploadOrderExcel = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  const moveToInvoiceIssued = (orderId: number) =>
+    mutation.mutate({
+      orderId,
+      payload: {
+        orderStatus: "invoice_issued",
+      },
+      successMessage: "Đã xuất hóa đơn cho đơn hàng (bao gồm tất cả chi phí)",
+    });
 
-  return useMutation<unknown, Error, { orderId: number; file: File }>({
-    mutationFn: ({ orderId, file }) => uploadOrderExcel(orderId, file),
-
-    onSuccess: (_, { orderId }) => {
-      queryClient.invalidateQueries({ queryKey: orderKeys.detail(orderId) });
-
-      toast({
-        title: "Thành công",
-        description: "Đã tải lên file Excel thành công",
-      });
-    },
-
-    onError: (error) => {
-      toast({
-        title: "Lỗi",
-        description: error.message || "Không thể tải lên file Excel",
-        variant: "destructive",
-      });
-    },
-  });
+  // expose tất cả action + state của mutation
+  return {
+    // mutation state
+    ...mutation,
+    // design steps
+    moveToReceivedInfo,
+    moveToDesigning,
+    moveToEditing,
+    moveToWaitingForCustomerApproval,
+    moveToConfirmedForPrinting,
+    moveToPdfExported,
+    // payment
+    markDeposited,
+    markFullyPaid,
+    // proofing
+    moveToWaitingForProofing,
+    moveToProofed,
+    // production
+    moveToWaitingForProduction,
+    moveToInProduction,
+    moveToCompleted,
+    // invoice
+    moveToInvoiceIssued,
+  };
 };
