@@ -1,222 +1,247 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/http";
 import type {
-  Design,
-  DesignListResponse,
-  DesignQueryParams,
-  CreateDesignRequest,
-  UpdateDesignRequest,
-  CreateTimelineEntry,
-  TimelineEntry,
-} from "@/Schema";
-import * as designApi from "@/apis/design.api";
-import { API_SUFFIX } from "@/apis/util.api";
+  DesignResponse,
+  DesignResponsePagedResponse,
+  DesignListParams,
+  MyDesignListParams,
+  DesignTimelineEntryResponse,
+} from "@/Schema/design.schema";
 import { createCrudHooks } from "./use-base";
+import { API_SUFFIX } from "@/apis";
 
-// ================== Generic CRUD cho Design ==================
-
-const designCrud = createCrudHooks<
-  Design,
-  CreateDesignRequest,
-  UpdateDesignRequest,
+const {
+  api: designCrudApi,
+  keys: designKeys,
+  useList: useDesignListBase,
+  useDetail: useDesignDetailBase,
+  useUpdate: useUpdateDesignBase,
+} = createCrudHooks<
+  DesignResponse,
+  any, // không có POST /api/designs, nên không dùng create
+  any,
   number,
-  DesignQueryParams,
-  DesignListResponse
+  DesignListParams,
+  DesignResponsePagedResponse
 >({
   rootKey: "designs",
-  basePath: API_SUFFIX.DESIGNS, // ví dụ: "/designs"
+  basePath: "/api/designs",
+  getItems: (resp) => resp.items ?? [],
   messages: {
-    createSuccess: "Đã tạo design mới thành công",
-    updateSuccess: "Đã cập nhật design thành công",
-    deleteSuccess: "Đã xóa design thành công",
-    uploadSuccess: "Đã upload file thành công",
-    downloadSuccess: "Đã tải file thành công",
-    createError: "Không thể tạo design",
-    updateError: "Không thể cập nhật design",
-    deleteError: "Không thể xóa design",
-    uploadError: "Không thể upload file",
-    downloadError: "Không thể tải file",
+    updateSuccess: "Đã cập nhật thiết kế thành công",
   },
 });
 
-// ================== Query Keys (mở rộng từ generic) ==================
+// ===== Base list/detail/update =====
 
-export const designKeys = {
-  ...designCrud.keys, // all, list(params), detail(id)
+export const useDesigns = (params?: DesignListParams) =>
+  useDesignListBase(params ?? ({} as DesignListParams));
 
-  // Extra keys giống bản cũ
-  my: () => [...designCrud.keys.all, "my"] as const,
-  myList: (params: DesignQueryParams | {}) =>
-    [...designCrud.keys.all, "my", params] as const,
-  timeline: (id: number) =>
-    [...designCrud.keys.detail(id), "timeline"] as const,
-  employees: () => [...designCrud.keys.all, "employees"] as const,
-} as const;
+export const useDesign = (id: number | null, enabled = true) =>
+  useDesignDetailBase(id, enabled);
 
-// ================== Hooks dùng generic CRUD ==================
+export const useUpdateDesign = () => useUpdateDesignBase();
 
-/**
- * Lấy danh sách designs (có pagination / filter) – dùng generic useList
- */
-export const useDesigns = (params?: DesignQueryParams) => {
-  return designCrud.useList(params);
-};
+// ===== Extra endpoints từ swagger =====
 
-/**
- * Lấy chi tiết 1 design theo id – dùng generic useDetail
- */
-export const useDesign = (id: number, enabled: boolean = true) => {
-  return designCrud.useDetail(id, enabled);
-};
-
-/**
- * Tạo design – dùng generic useCreate
- */
-export const useCreateDesign = designCrud.useCreate;
-
-/**
- * Cập nhật design – dùng generic useUpdate
- * mutationFn({ id, data })
- */
-export const useUpdateDesign = designCrud.useUpdate;
-
-/**
- * Xoá design – dùng generic useDelete
- * mutationFn(id)
- */
-export const useDeleteDesign = designCrud.useDelete;
-
-// ================== Hooks custom thêm (không nằm trong CRUD chung) ==================
-
-/**
- * Lấy danh sách design "của tôi" (được assign cho user hiện tại)
- */
-export const useMyDesigns = (params?: DesignQueryParams) => {
+// GET /api/designs/my
+export const useMyDesigns = (params?: MyDesignListParams) => {
   return useQuery({
-    queryKey: designKeys.myList(params || {}),
-    queryFn: () => designApi.getMyDesigns(params),
+    queryKey: [designKeys.all[0], "my", params ?? {}],
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignResponsePagedResponse>(
+        API_SUFFIX.MY_DESIGNS,
+        { params }
+      );
+      return res.data;
+    },
     staleTime: 5 * 60 * 1000,
   });
 };
 
-/**
- * Lấy timeline của 1 design
- */
-export const useDesignTimeline = (id: number, enabled: boolean = true) => {
-  return useQuery<TimelineEntry[]>({
-    queryKey: designKeys.timeline(id),
-    queryFn: () => designApi.getTimelineEntries(id),
+// GET /api/designs/user/{userId}
+export const useDesignsByUser = (
+  userId: number | null,
+  params?: DesignListParams,
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: [designKeys.all[0], "user", userId, params ?? {}],
+    enabled: enabled && !!userId,
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignResponsePagedResponse>(
+        API_SUFFIX.DESIGN_BY_USER(userId),
+        { params }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+// GET /api/designs/{id}/timeline
+export const useDesignTimeline = (id: number | null, enabled = true) => {
+  return useQuery({
+    queryKey: [designKeys.detail(id as number), "timeline"],
     enabled: enabled && !!id,
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignTimelineEntryResponse[]>(
+        API_SUFFIX.DESIGN_TIMELINE(id)
+      );
+      return res.data;
+    },
     staleTime: 2 * 60 * 1000,
   });
 };
 
-/**
- * Thêm timeline entry cho 1 design
- */
-export const useAddTimelineEntry = () => {
+// POST /api/designs/{id}/timeline (multipart/form-data)
+export const useAddDesignTimelineEntry = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: ({ id, entry }: { id: number; entry: CreateTimelineEntry }) =>
-      designApi.addTimelineEntry(id, entry),
+    mutationFn: async ({
+      id,
+      file,
+      description,
+    }: {
+      id: number;
+      file: File;
+      description?: string;
+    }) => {
+      const formData = new FormData();
+      formData.append("File", file);
+      if (description) formData.append("Description", description);
+      const res = await apiRequest.post<DesignTimelineEntryResponse>(
+        API_SUFFIX.DESIGN_TIMELINE(id),
+        formData
+      );
+      return res.data;
+    },
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: designKeys.timeline(id) });
-      queryClient.invalidateQueries({ queryKey: designKeys.detail(id) });
-
+      queryClient.invalidateQueries({
+        queryKey: [designKeys.detail(id), "timeline"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(id),
+      });
       toast({
         title: "Thành công",
-        description: "Đã thêm mục thời gian thành công",
+        description: "Đã thêm file/timeline cho thiết kế",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Lỗi",
         description:
-          error instanceof Error
-            ? error.message
-            : "Không thể thêm mục thời gian",
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể thêm timeline",
         variant: "destructive",
       });
     },
   });
 };
 
-/**
- * Generate file Excel (export) – vẫn dùng designApi.generateDesignExcel
- * Nếu sau này endpoint dùng /download chung, có thể chuyển sang designCrud.useDownload
- */
-export const useGenerateExcel = () => {
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: designApi.generateDesignExcel,
-    onSuccess: () => {
-      toast({
-        title: "Thành công",
-        description: "Đã tạo file Excel thành công",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Lỗi",
-        description:
-          error instanceof Error ? error.message : "Không thể tạo file Excel",
-        variant: "destructive",
-      });
-    },
-  });
-};
-
-/**
- * Upload file design
- * (nếu endpoint phù hợp /designs/:id/upload thì có thể dùng luôn designCrud.useUpload)
- */
+// POST /api/designs/{id}/upload-design-file
 export const useUploadDesignFile = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: ({ id, file }: { id: number; file: File }) =>
-      designApi.uploadDesignFile(id, file),
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData();
+      formData.append("File", file);
+      const res = await apiRequest.post<string>(
+        API_SUFFIX.DESIGN_UPLOAD_FILE(id),
+        formData
+      );
+      return res.data;
+    },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: designKeys.detail(id) });
-
       toast({
         title: "Thành công",
-        description: "Đã upload file design thành công",
+        description: "Đã upload file thiết kế",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Lỗi",
         description:
-          error instanceof Error ? error.message : "Không thể upload file",
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể upload file thiết kế",
         variant: "destructive",
       });
     },
   });
 };
 
-/**
- * Danh sách nhân viên có liên quan tới design
- */
-export const useDesignEmployees = () => {
-  return useQuery({
-    queryKey: designKeys.employees(),
-    queryFn: () => designApi.getDesignEmployees(),
-    staleTime: 10 * 60 * 1000,
+// POST /api/designs/{id}/upload-design-image
+export const useUploadDesignImage = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData();
+      formData.append("File", file);
+      const res = await apiRequest.post<string>(
+        API_SUFFIX.DESIGN_UPLOAD_IMAGE(id),
+        formData
+      );
+      return res.data;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: designKeys.detail(id) });
+      toast({
+        title: "Thành công",
+        description: "Đã upload hình thiết kế",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể upload hình",
+        variant: "destructive",
+      });
+    },
   });
 };
 
-/**
- * Danh sách design theo nhân viên (employee designs)
- */
-export const useEmployeeDesigns = (params?: DesignQueryParams) => {
-  return useQuery({
-    queryKey: designCrud.keys.list(params || {}),
-    queryFn: () => designApi.getEmployeeDesigns(params),
-    staleTime: 10 * 60 * 1000,
+// POST /api/designs/{id}/generate-excel
+export const useGenerateDesignExcel = () => {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest.post<string>(
+        API_SUFFIX.DESIGN_GENERATE_EXCEL(id)
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Thành công",
+        description: "Đã tạo file Excel cho thiết kế",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Lỗi",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể tạo file Excel",
+        variant: "destructive",
+      });
+    },
   });
 };
+
+export { designCrudApi, designKeys };

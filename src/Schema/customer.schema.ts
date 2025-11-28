@@ -1,154 +1,94 @@
+// src/Schema/customer.schema.ts
 import { z } from "zod";
-import { UserSchema } from "./user.schema";
+import { UserInfoSchema } from "./auth.schema";
+import { PagedMetaSchema } from ".";
 
-// Customer create/update request schema
-export const CustomerRequestSchema = z.object({
-  name: z.string().min(1, "Customer name is required"),
-  companyName: z.string().min(1, "Company name is required"),
-  representativeName: z.string().min(1, "Representative name is required"),
-  phone: z.string().min(1, "Phone is required"),
-  taxCode: z.string().min(1, "Tax code is required"),
-  address: z.string().min(1, "Address is required"),
-  type: z.string().min(1, "Customer type is required"),
-  currentDebt: z.number().min(0, "Current debt cannot be negative"),
-  maxDebt: z.number().min(0, "Max debt cannot be negative"),
+/** CreateCustomerRequest */
+export const CreateCustomerRequestSchema = z.object({
+  name: z
+    .string({ required_error: "Tên khách hàng là bắt buộc" })
+    .max(255, { message: "Tên khách hàng tối đa 255 ký tự" }),
+  companyName: z.string().max(255).nullable().optional(),
+  representativeName: z.string().max(255).nullable().optional(),
+  phone: z
+    .string()
+    .max(20, { message: "Số điện thoại tối đa 20 ký tự" })
+    .nullable()
+    .optional(),
+  taxCode: z.string().max(50).nullable().optional(),
+  address: z.string().max(255).nullable().optional(),
+  type: z.string().max(50).nullable().optional(),
+  currentDebt: z
+    .number({ invalid_type_error: "Công nợ hiện tại phải là số" })
+    .min(0, { message: "Công nợ hiện tại không được âm" }),
+  maxDebt: z
+    .number({ invalid_type_error: "Công nợ tối đa phải là số" })
+    .min(0, { message: "Công nợ tối đa không được âm" }),
 });
+export type CreateCustomerRequest = z.infer<typeof CreateCustomerRequestSchema>;
 
-// Customer response schema (full details)
-export const CustomerSchema = z.object({
-  id: z.number(),
-  code: z.string(),
-  name: z.string(),
-  companyName: z.string(),
-  representativeName: z.string(),
-  phone: z.string(),
-  taxCode: z.string().optional(),
-  address: z.string(),
-  type: z.string(),
+/** UpdateCustomerRequest */
+export const UpdateCustomerRequestSchema = z.object({
+  name: z.string().max(255).nullable().optional(),
+  companyName: z.string().max(255).nullable().optional(),
+  representativeName: z.string().max(255).nullable().optional(),
+  phone: z.string().max(20).nullable().optional(),
+  taxCode: z.string().max(50).nullable().optional(),
+  address: z.string().max(255).nullable().optional(),
+  type: z.string().max(50).nullable().optional(),
+  currentDebt: z.number().min(0).nullable().optional(),
+  maxDebt: z.number().min(0).nullable().optional(),
+});
+export type UpdateCustomerRequest = z.infer<typeof UpdateCustomerRequestSchema>;
+
+/** CustomerResponse */
+export const CustomerResponseSchema = z.object({
+  id: z.number().int(),
+  code: z.string().nullable(),
+  name: z.string().nullable(),
+  companyName: z.string().nullable(),
+  representativeName: z.string().nullable(),
+  phone: z.string().nullable(),
+  taxCode: z.string().nullable(),
+  address: z.string().nullable(),
+  type: z.string().nullable(),
+  typeStatusType: z.string().nullable(),
   currentDebt: z.number(),
   maxDebt: z.number(),
-  debtStatus: z.string(),
+  debtStatus: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  createdBy: UserSchema.optional(),
+  createdBy: UserInfoSchema,
 });
+export type CustomerResponse = z.infer<typeof CustomerResponseSchema>;
 
-// Customer list item schema (matches API /customers response)
-export const CustomerListItemSchema = z.object({
-  id: z.number(),
-  code: z.string(),
-  name: z.string(),
-  companyName: z.string(),
-  debtStatus: z.string(),
+/** CustomerSummaryResponse */
+export const CustomerSummaryResponseSchema = z.object({
+  id: z.number().int(),
+  code: z.string().nullable(),
+  name: z.string().nullable(),
+  companyName: z.string().nullable(),
+  debtStatus: z.string().nullable(),
   currentDebt: z.number(),
   maxDebt: z.number(),
-  // Additional fields for UI compatibility (will be added by service layer)
-  representativeName: z.string().optional(),
-  phone: z.string().optional(),
-  taxCode: z.string().optional(),
-  address: z.string().optional(),
-  createdAt: z.string().optional(),
-  createdBy: z.string().optional(),
-  folder: z.string().optional(),
 });
+export type CustomerSummaryResponse = z.infer<
+  typeof CustomerSummaryResponseSchema
+>;
 
-// Paginated response schema
-export const CustomerListResponseSchema = z.object({
-  items: z.array(CustomerListItemSchema),
-  totalCount: z.number(),
-  pageNumber: z.number(),
-  pageSize: z.number(),
-  totalPages: z.number(),
-  hasPreviousPage: z.boolean(),
-  hasNextPage: z.boolean(),
+/** Customer list params */
+export const CustomerListParamsSchema = z.object({
+  pageNumber: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  search: z.string().optional(),
+  debtStatus: z.string().optional(),
 });
+export type CustomerListParams = z.infer<typeof CustomerListParamsSchema>;
 
-// Customer search/filter parameters
-export const CustomerSearchParamsSchema = z
-  .object({
-    pageNumber: z.number().min(1).optional().default(1),
-    pageSize: z.number().min(1).max(100).optional().default(10),
-    search: z.string().optional(),
-    debtStatus: z.string().optional(),
-  })
-  .partial();
-
-// Types
-export type CustomerRequest = z.infer<typeof CustomerRequestSchema>;
-export type Customer = z.infer<typeof CustomerSchema>;
-export type CustomerListItem = z.infer<typeof CustomerListItemSchema>;
-export type CustomerListResponse = z.infer<typeof CustomerListResponseSchema>;
-export type CustomerSearchParams = z.infer<typeof CustomerSearchParamsSchema>;
-
-// Customer type enum
-export enum CustomerType {
-  INDIVIDUAL = "individual",
-  COMPANY = "company",
-  GOVERNMENT = "government",
-  NGO = "ngo",
-}
-
-// Debt status enum
-export enum DebtStatus {
-  GOOD = "good",
-  WARNING = "warning",
-  BLOCKED = "blocked",
-  OVERDUE = "overdue",
-}
-
-// Validation functions
-export const validateCustomerRequest = (data: unknown): CustomerRequest => {
-  return CustomerRequestSchema.parse(data);
-};
-
-export const validateCustomer = (data: unknown): Customer => {
-  return CustomerSchema.parse(data);
-};
-
-export const validateCustomerListResponse = (
-  data: unknown
-): CustomerListResponse => {
-  return CustomerListResponseSchema.parse(data);
-};
-
-export const validateCustomerSearchParams = (
-  data: unknown
-): CustomerSearchParams => {
-  return CustomerSearchParamsSchema.parse(data);
-};
-
-// Helper functions for debt management
-export const calculateDebtRatio = (
-  currentDebt: number,
-  maxDebt: number
-): number => {
-  if (maxDebt === 0) return 0;
-  return (currentDebt / maxDebt) * 100;
-};
-
-export const getDebtStatusColor = (debtStatus: string): string => {
-  switch (debtStatus.toLowerCase()) {
-    case DebtStatus.GOOD:
-      return "green";
-    case DebtStatus.WARNING:
-      return "yellow";
-    case DebtStatus.BLOCKED:
-    case DebtStatus.OVERDUE:
-      return "red";
-    default:
-      return "gray";
-  }
-};
-
-export const isDebtStatusCritical = (debtStatus: string): boolean => {
-  return [DebtStatus.BLOCKED, DebtStatus.OVERDUE].includes(
-    debtStatus.toLowerCase() as DebtStatus
-  );
-};
-
-export const canCreateOrderForCustomer = (customer: Customer): boolean => {
-  return (
-    !isDebtStatusCritical(customer.debtStatus) &&
-    customer.currentDebt <= customer.maxDebt
-  );
-};
+/** CustomerSummaryResponsePagedResponse */
+export const CustomerSummaryResponsePagedSchema = PagedMetaSchema.extend({
+  items: z.array(CustomerSummaryResponseSchema).nullable(),
+});
+export type CustomerSummaryResponsePagedResponse = z.infer<
+  typeof CustomerSummaryResponsePagedSchema
+>;

@@ -19,18 +19,18 @@ import {
 import {
   CreateDesignTypeRequest,
   CreateMaterialTypeRequest,
-  DesignTypeEntity,
-  MaterialTypeEntity,
+  DesignTypeResponse,
+  MaterialTypeResponse,
 } from "@/Schema";
 import {
   useCreateDesignType,
   useDesignTypes,
-  useMaterialTypes,
   useUpdateDesignType,
   useDeleteDesignType,
   useCreateMaterialType,
   useDeleteMaterialType,
   useUpdateMaterialType,
+  useMaterialTypeList,
 } from "@/hooks";
 import {
   Button,
@@ -54,28 +54,28 @@ export default function DesignTypesPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: designTypesData, isLoading, isError } = useDesignTypes();
-  const { data: materialTypesData } = useMaterialTypes({});
+  const { data: materialTypesData } = useMaterialTypeList({});
 
   // Chuẩn hoá: luôn ra array, dù backend trả [] hay { items: [] }
-  const designTypes: DesignTypeEntity[] = Array.isArray(designTypesData)
+  const designTypes: DesignTypeResponse[] = Array.isArray(designTypesData)
     ? designTypesData
     : (designTypesData as any)?.items ?? [];
 
-  const materialTypesList: MaterialTypeEntity[] = Array.isArray(
+  const materialTypesList: MaterialTypeResponse[] = Array.isArray(
     materialTypesData
   )
     ? materialTypesData
     : (materialTypesData as any)?.items ?? [];
 
   const [selectedDesignType, setSelectedDesignType] =
-    useState<DesignTypeEntity | null>(null);
+    useState<DesignTypeResponse | null>(null);
 
   const [isDesignTypeDialogOpen, setIsDesignTypeDialogOpen] = useState(false);
   const [editingDesignType, setEditingDesignType] =
-    useState<DesignTypeEntity | null>(null);
+    useState<DesignTypeResponse | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [designTypeToDelete, setDesignTypeToDelete] =
-    useState<DesignTypeEntity | null>(null);
+    useState<DesignTypeResponse | null>(null);
 
   const { mutate: createDesignTypeMutation } = useCreateDesignType();
   const { mutate: updateDesignTypeMutation } = useUpdateDesignType();
@@ -109,7 +109,7 @@ export default function DesignTypesPage() {
     const { code, ...payload } = data;
 
     updateDesignTypeMutation(
-      { id: editingDesignType.id, data: payload },
+      { id: Number(editingDesignType.id), data: payload },
       {
         onSuccess: () => {
           setEditingDesignType(null);
@@ -123,7 +123,7 @@ export default function DesignTypesPage() {
   const handleDeleteDesignType = () => {
     if (!designTypeToDelete) return;
 
-    deleteDesignTypeMutation(designTypeToDelete.id, {
+    deleteDesignTypeMutation(Number(designTypeToDelete.id), {
       onSuccess: () => {
         setDesignTypeToDelete(null);
         setDeleteConfirmOpen(false);
@@ -138,9 +138,9 @@ export default function DesignTypesPage() {
     const payload: CreateMaterialTypeRequest = {
       ...material,
       designTypeId:
-        material.designTypeId ??
-        selectedDesignType?.id ??
-        material.designTypeId,
+        Number(material.designTypeId) ??
+        Number(selectedDesignType?.id) ??
+        Number(material.designTypeId),
     };
 
     if (!payload.designTypeId) {
@@ -165,7 +165,7 @@ export default function DesignTypesPage() {
 
   const handleEditMaterial = (
     id: number,
-    updates: Partial<MaterialTypeEntity>
+    updates: Partial<MaterialTypeResponse>
   ) => {
     // Chuyển về kiểu payload phù hợp với API (thường là Partial<CreateMaterialTypeRequest>)
     const {

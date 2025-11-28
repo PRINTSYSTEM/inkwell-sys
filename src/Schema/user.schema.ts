@@ -1,117 +1,120 @@
+// src/Schema/user.schema.ts
 import { z } from "zod";
-import { RoleEnum, StatusEnum } from "./Common/enums";
-import {
-  IdSchema,
-  NameSchema,
-  EmailSchema,
-  PhoneSchema,
-  DateSchema,
-  FileSchema,
-} from "./Common/base";
+import { PagedMetaSchema } from ".";
 
-export const UserSchema = z.object({
-  id: IdSchema,
-  username: z.string().min(3).max(50),
-  fullName: z.string().min(1).max(100),
-  role: RoleEnum,
-  email: EmailSchema,
-  phone: PhoneSchema,
-  isActive: z.boolean().default(true),
-  createdAt: DateSchema,
-  updatedAt: DateSchema,
-});
+/** Roles enum từ swagger pattern */
+export const UserRoleEnum = z.enum(
+  [
+    "admin",
+    "manager",
+    "design",
+    "production",
+    "accounting",
+    "warehouse",
+    "hr",
+    "cskh",
+  ],
+  {
+    invalid_type_error: "Vai trò không hợp lệ",
+    required_error: "Vai trò là bắt buộc",
+  }
+);
 
-export const UserListResponseSchema = z.object({
-  items: z.array(UserSchema),
-  totalCount: z.number().int(),
-  pageNumber: z.number().int(),
-  pageSize: z.number().int(),
-  totalPages: z.number().int(),
-  hasPreviousPage: z.boolean(),
-  hasNextPage: z.boolean(),
-});
-
-export const AuthTokenSchema = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
-  expiresIn: z.number(),
-  tokenType: z.literal("Bearer").default("Bearer"),
-});
-
-// User Profile Schema
-export const UserProfileSchema = z.object({
-  firstName: NameSchema,
-  lastName: NameSchema,
-  fullName: z.string().optional(),
-  avatar: FileSchema.optional(),
-  bio: z.string().max(500).optional(),
-  dateOfBirth: DateSchema.optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-  timezone: z.string().default("Asia/Ho_Chi_Minh"),
-  language: z.string().default("vi"),
-  phoneNumber: PhoneSchema,
-  emergencyContact: z
-    .object({
-      name: z.string(),
-      phone: PhoneSchema,
-      relationship: z.string(),
-    })
+/** CreateUserRequest */
+export const CreateUserRequestSchema = z.object({
+  username: z
+    .string({ required_error: "Tên đăng nhập là bắt buộc" })
+    .max(100, { message: "Tên đăng nhập tối đa 100 ký tự" }),
+  password: z
+    .string({ required_error: "Mật khẩu là bắt buộc" })
+    .min(6, { message: "Mật khẩu tối thiểu 6 ký tự" })
+    .max(100, { message: "Mật khẩu tối đa 100 ký tự" }),
+  fullName: z
+    .string({ required_error: "Họ tên là bắt buộc" })
+    .max(255, { message: "Họ tên tối đa 255 ký tự" }),
+  role: UserRoleEnum,
+  email: z
+    .string()
+    .email({ message: "Email không hợp lệ" })
+    .max(255, { message: "Email tối đa 255 ký tự" })
+    .nullable()
+    .optional(),
+  phone: z
+    .string()
+    .max(20, { message: "Số điện thoại tối đa 20 ký tự" })
+    .nullable()
     .optional(),
 });
+export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
-// Password related schemas
-export const ChangePasswordSchema = z
+/** UpdateUserRequest */
+export const UpdateUserRequestSchema = z.object({
+  fullName: z
+    .string()
+    .max(255, { message: "Họ tên tối đa 255 ký tự" })
+    .nullable()
+    .optional(),
+  role: UserRoleEnum.nullable().optional(),
+  email: z
+    .string()
+    .email({ message: "Email không hợp lệ" })
+    .max(255, { message: "Email tối đa 255 ký tự" })
+    .nullable()
+    .optional(),
+  phone: z
+    .string()
+    .max(20, { message: "Số điện thoại tối đa 20 ký tự" })
+    .nullable()
+    .optional(),
+  isActive: z.boolean().nullable().optional(),
+});
+export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;
+
+/** ChangePasswordRequest */
+export const ChangePasswordRequestSchema = z
   .object({
-    currentPassword: z.string(),
-    newPassword: z.string().min(6),
-    confirmPassword: z.string(),
+    currentPassword: z
+      .string({ required_error: "Mật khẩu hiện tại là bắt buộc" })
+      .min(1, { message: "Mật khẩu hiện tại không được để trống" }),
+    newPassword: z
+      .string({ required_error: "Mật khẩu mới là bắt buộc" })
+      .min(6, { message: "Mật khẩu mới tối thiểu 6 ký tự" })
+      .max(100, { message: "Mật khẩu mới tối đa 100 ký tự" }),
+    confirmPassword: z
+      .string({ required_error: "Xác nhận mật khẩu là bắt buộc" })
+      .min(1, { message: "Xác nhận mật khẩu không được để trống" }),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Mật khẩu xác nhận không khớp",
     path: ["confirmPassword"],
   });
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>;
 
-export const ResetPasswordSchema = z.object({
-  email: EmailSchema,
+/** UserResponse */
+export const UserResponseSchema = z.object({
+  id: z.number().int(),
+  username: z.string().nullable(),
+  fullName: z.string().nullable(),
+  role: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  isActive: z.boolean(),
+  createdAt: z.string(), // date-time
+  updatedAt: z.string(), // date-time
 });
+export type UserResponse = z.infer<typeof UserResponseSchema>;
 
-export const SetNewPasswordSchema = z
-  .object({
-    token: z.string(),
-    password: z.string().min(6),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
-export const LoginRequest = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+/** User list params */
+export const UserListParamsSchema = z.object({
+  pageNumber: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  role: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
+export type UserListParams = z.infer<typeof UserListParamsSchema>;
 
-export const LoginResponse = z.object({
-  accessToken: z.string(),
-  userInfo: z.object({
-    id: z.number(),
-    username: z.string(),
-    fullName: z.string(),
-    role: z.string(),
-    email: z.string(),
-    phone: z.string(),
-  }),
+/** UserResponsePagedResponse */
+export const UserResponsePagedSchema = PagedMetaSchema.extend({
+  items: z.array(UserResponseSchema).nullable(),
 });
-
-export type LoginRequestType = z.infer<typeof LoginRequest>;
-export type LoginResponseType = z.infer<typeof LoginResponse>;
-// Export types
-export type UserType = z.infer<typeof UserSchema>;
-export type UserListResponse = z.infer<typeof UserListResponseSchema>;
-export type UserProfile = z.infer<typeof UserProfileSchema>;
-export type AuthToken = z.infer<typeof AuthTokenSchema>;
-export type ChangePassword = z.infer<typeof ChangePasswordSchema>;
-export type ResetPassword = z.infer<typeof ResetPasswordSchema>;
-export type SetNewPassword = z.infer<typeof SetNewPasswordSchema>;
+export type UserResponsePagedResponse = z.infer<typeof UserResponsePagedSchema>;

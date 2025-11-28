@@ -1,65 +1,56 @@
+// src/Schema/design-type.schema.ts
 import { z } from "zod";
-import { StatusEnum } from "./Common/enums";
-import { IdSchema, DateSchema } from "./Common/base";
-import { UserSchema } from "./user.schema";
+import { UserInfoSchema } from "./auth.schema";
 
-// Design Type Entity schema for API responses
-export const DesignTypeEntitySchema = z.object({
-  id: IdSchema,
-  code: z.string().min(1, "Mã loại thiết kế không được để trống"),
-  name: z.string().min(1, "Tên loại thiết kế không được để trống"),
-  displayOrder: z.number().int().min(0, "Thứ tự hiển thị phải >= 0"),
-  description: z.string().optional(),
-  status: StatusEnum,
-  statusType: z.string().optional(),
-  createdAt: DateSchema,
-  updatedAt: DateSchema,
-  createdBy: UserSchema,
+export const CommonStatusEnum = z.enum(["active", "inactive"], {
+  invalid_type_error: "Trạng thái không hợp lệ",
 });
-// Schema for creating new design type
-export const CreateDesignTypeSchema = z.object({
+
+export const CreateDesignTypeRequestSchema = z.object({
   code: z
-    .string()
-    .min(1, "Mã loại thiết kế không được để trống")
-    .max(10, "Mã loại thiết kế không được quá 10 ký tự"),
+    .string({ required_error: "Mã loại thiết kế là bắt buộc" })
+    .max(20, { message: "Mã loại thiết kế tối đa 20 ký tự" }),
   name: z
-    .string()
-    .min(1, "Tên loại thiết kế không được để trống")
-    .max(100, "Tên loại thiết kế không được quá 100 ký tự"),
-  displayOrder: z.number().int().min(0, "Thứ tự hiển thị phải >= 0"),
-  description: z.string().optional(),
-  status: StatusEnum,
+    .string({ required_error: "Tên loại thiết kế là bắt buộc" })
+    .max(255, { message: "Tên loại thiết kế tối đa 255 ký tự" }),
+  displayOrder: z
+    .number()
+    .int()
+    .min(0, { message: "Thứ tự hiển thị không được âm" })
+    .optional(),
+  description: z.string().nullable().optional(),
+  status: CommonStatusEnum,
 });
+export type CreateDesignTypeRequest = z.infer<
+  typeof CreateDesignTypeRequestSchema
+>;
 
-// Schema for updating design type
-export const UpdateDesignTypeSchema = CreateDesignTypeSchema.partial();
-
-// Schema for design type list response
-export const DesignTypeListSchema = z.object({
-  data: z.array(DesignTypeEntitySchema),
-  pagination: z.object({
-    page: z.number().int().min(1),
-    pageSize: z.number().int().min(1),
-    total: z.number().int().min(0),
-    totalPages: z.number().int().min(0),
-  }),
+export const UpdateDesignTypeRequestSchema = z.object({
+  name: z.string().max(255).nullable().optional(),
+  displayOrder: z.number().int().min(0).nullable().optional(),
+  description: z.string().nullable().optional(),
+  status: CommonStatusEnum.nullable().optional(),
 });
+export type UpdateDesignTypeRequest = z.infer<
+  typeof UpdateDesignTypeRequestSchema
+>;
 
-// Schema for design type statistics
-export const DesignTypeStatsSchema = z.object({
-  total: z.number().int().min(0),
-  active: z.number().int().min(0),
-  inactive: z.number().int().min(0),
+export const DesignTypeResponseSchema = z.object({
+  id: z.number().int(),
+  code: z.string().nullable(),
+  name: z.string().nullable(),
+  displayOrder: z.number().int(),
+  description: z.string().nullable(),
+  status: z.string().nullable(),
+  statusType: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  createdBy: UserInfoSchema,
 });
-export const DesignTypeQueryParamsSchema = z.object({
+export type DesignTypeResponse = z.infer<typeof DesignTypeResponseSchema>;
+
+/** List params (GET /api/designs/types?status=...) */
+export const DesignTypeListParamsSchema = z.object({
   status: z.string().optional(),
 });
-
-// Type exports
-export type DesignTypeEntity = z.infer<typeof DesignTypeEntitySchema>;
-export type DesignType = DesignTypeEntity; // Alias for compatibility
-export type CreateDesignTypeRequest = z.infer<typeof CreateDesignTypeSchema>;
-export type UpdateDesignTypeRequest = z.infer<typeof UpdateDesignTypeSchema>;
-export type DesignTypeListResponse = z.infer<typeof DesignTypeListSchema>;
-export type DesignTypeStats = z.infer<typeof DesignTypeStatsSchema>;
-export type DesignTypeQueryParams = z.infer<typeof DesignTypeQueryParamsSchema>;
+export type DesignTypeListParams = z.infer<typeof DesignTypeListParamsSchema>;

@@ -15,6 +15,10 @@ export * from "./design-type.schema";
 export * from "./material-type.schema";
 export * from "./order.schema";
 export * from "./timeline.schema";
+export * from "./proofing-order.schema";
+export * from "./production.schema";
+export * from "./customer.schema";
+export * from "./invoice.schema";
 // Re-export zod for convenience
 import { z } from "zod";
 export { z };
@@ -91,3 +95,18 @@ export function createPartialSchema<T extends z.ZodRawShape>(
  * Type helper for extracting the TypeScript type from a Zod schema
  */
 export type InferSchema<T extends z.ZodType> = z.infer<T>;
+export const ErrorResponseSchema = z.object({
+  statusCode: z.number().int(),
+  error: z.string().nullable(),
+  timeStamp: z.string(), // date-time
+});
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
+export const PagedMetaSchema = z.object({
+  totalCount: z.number().int(),
+  pageNumber: z.number().int(),
+  pageSize: z.number().int(),
+  totalPages: z.number().int().optional(), // readOnly
+  hasPreviousPage: z.boolean().optional(),
+  hasNextPage: z.boolean().optional(),
+});
+export type PagedMeta = z.infer<typeof PagedMetaSchema>;

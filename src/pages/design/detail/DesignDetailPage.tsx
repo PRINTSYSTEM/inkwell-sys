@@ -291,7 +291,13 @@ export default function DesignDetailPage() {
               </span>
             </div>
 
-            <div>Mã thiết kế:</div>
+            <div>
+              Mã thiết kế:
+              <span className="font-medium">
+                {/* {design.} */}
+                {design.code}
+              </span>
+            </div>
           </div>
         </div>
       </div>

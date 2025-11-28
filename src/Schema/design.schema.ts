@@ -1,122 +1,106 @@
+// src/Schema/design.schema.ts
 import { z } from "zod";
-import { IdSchema, DateSchema } from "./Common/base";
-import { DesignTypeEntitySchema } from "./design-type.schema";
-import { MaterialTypeEntitySchema } from "./material-type.schema";
-import { UserSchema } from "./user.schema";
-import { TimelineEntrySchema } from "./timeline.schema";
+import { DesignTypeResponseSchema } from "./design-type.schema";
+import { MaterialTypeResponseSchema } from "./material-type.schema";
+import { UserInfoSchema } from "./auth.schema";
+import { PagedMetaSchema } from ".";
 
-// Design Status enum specific to designs
-export const DesignStatusEnum = z.enum([
-  "received_info",
-  "designing",
-  "editing",
-  "waiting_for_customer_approval",
-  "confirmed_for_printing",
-  "pdf_exported",
-]);
+/** CreateDesignRequest */
+export const CreateDesignRequestSchema = z.object({
+  designTypeId: z.number({ required_error: "Loại thiết kế là bắt buộc" }).int(),
+  materialTypeId: z
+    .number({ required_error: "Loại vật liệu là bắt buộc" })
+    .int(),
+  assignedDesignerId: z.number().int().nullable().optional(),
+  quantity: z
+    .number({ required_error: "Số lượng là bắt buộc" })
+    .int()
+    .min(1, { message: "Số lượng tối thiểu là 1" }),
+  dimensions: z.string().max(255).nullable().optional(),
+  width: z.number().min(0).nullable().optional(),
+  height: z.number().min(0).nullable().optional(),
+  requirements: z.string().nullable().optional(),
+  additionalNotes: z.string().nullable().optional(),
+});
+export type CreateDesignRequest = z.infer<typeof CreateDesignRequestSchema>;
 
-// Main Design Entity schema
-export const DesignEntitySchema = z.object({
-  id: IdSchema,
-  code: z.string(),
-  orderId: IdSchema,
-
-  // Nếu muốn strict hơn:
-  // designStatus: DesignStatusEnum,
-  designStatus: DesignStatusEnum,
-  statusType: z.string(),
-
-  designerId: IdSchema,
-  designer: UserSchema,
-
-  designTypeId: IdSchema,
-  designType: DesignTypeEntitySchema,
-
-  materialTypeId: IdSchema,
-  materialType: MaterialTypeEntitySchema,
-
-  quantity: z.number().int().min(1, "Số lượng phải lớn hơn 0"),
-  dimensions: z.string(),
-
-  // Các field số có thể null → nullable + optional để tránh crash
-  width: z.number().nullable().optional(),
-  height: z.number().nullable().optional(),
-  areaCm2: z.number().nullable().optional(),
-  unitPrice: z.number().nullable().optional(),
-  totalPrice: z.number().nullable().optional(),
-
-  requirements: z.string().optional(),
-  additionalNotes: z.string().optional(),
-
-  // API đôi khi trả null → nullable + optional
+/** UpdateDesignRequest */
+export const UpdateDesignRequestSchema = z.object({
+  assignedDesignerId: z.number().int().nullable().optional(),
+  designStatus: z.string().max(50).nullable().optional(),
   designFileUrl: z.string().nullable().optional(),
   excelFileUrl: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-
-  createdAt: DateSchema,
-  updatedAt: DateSchema,
-
-  // API có thể trả [] hoặc không có field → optional là ổn,
-  // nếu muốn luôn là [] thì dùng .default([])
-  timelineEntries: z.array(TimelineEntrySchema).optional(),
+  width: z.number().min(0).nullable().optional(),
+  height: z.number().min(0).nullable().optional(),
+  requirements: z.string().nullable().optional(),
+  additionalNotes: z.string().nullable().optional(),
 });
-
-// Design List Response schema (paginated)
-export const DesignListResponseSchema = z.object({
-  items: z.array(DesignEntitySchema),
-  totalCount: z.number().int(),
-  pageNumber: z.number().int(),
-  pageSize: z.number().int(),
-  totalPages: z.number().int(),
-  hasPreviousPage: z.boolean(),
-  hasNextPage: z.boolean(),
-});
-
-// Design Query Parameters
-export const DesignQueryParamsSchema = z.object({
-  pageNumber: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).max(100).default(10),
-  designerId: IdSchema.optional(),
-  status: z.string().optional(),
-  search: z.string().optional(),
-  sortBy: z.string().optional(),
-  sortOrder: z.enum(["asc", "desc"]).default("desc"),
-});
-
-// Create Design Request schema
-export const CreateDesignRequestSchema = z.object({
-  orderId: IdSchema,
-  designTypeId: IdSchema,
-  materialTypeId: IdSchema,
-  designerId: IdSchema.optional(),
-  quantity: z.number().int().min(1, "Số lượng phải lớn hơn 0"),
-  dimensions: z.string().min(1, "Kích thước không được để trống"),
-  requirements: z.string().min(1, "Yêu cầu thiết kế không được để trống"),
-  additionalNotes: z.string().optional(),
-});
-
-// Update Design Request schema
-export const UpdateDesignRequestSchema = z.object({
-  designStatus: DesignStatusEnum.optional(),
-  designerId: IdSchema.optional(),
-  quantity: z.number().int().min(1).optional(),
-  dimensions: z.string().optional(),
-  requirements: z.string().optional(),
-  additionalNotes: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-// Timeline Entry Create schema
-export const CreateTimelineEntrySchema = z.object({
-  description: z.string().min(1, "Mô tả không được để trống"),
-  fileUrl: z.string().optional(),
-});
-
-// Inferred TypeScript types
-export type Design = z.infer<typeof DesignEntitySchema>;
-export type DesignListResponse = z.infer<typeof DesignListResponseSchema>;
-export type DesignQueryParams = z.infer<typeof DesignQueryParamsSchema>;
-export type CreateDesignRequest = z.infer<typeof CreateDesignRequestSchema>;
 export type UpdateDesignRequest = z.infer<typeof UpdateDesignRequestSchema>;
-export type CreateTimelineEntry = z.infer<typeof CreateTimelineEntrySchema>;
-export type DesignStatus = z.infer<typeof DesignStatusEnum>;
+
+/** DesignTimelineEntryResponse */
+export const DesignTimelineEntryResponseSchema = z.object({
+  id: z.number().int(),
+  fileUrl: z.string().nullable(),
+  description: z.string().nullable(),
+  createdAt: z.string(),
+  createdBy: UserInfoSchema,
+});
+export type DesignTimelineEntryResponse = z.infer<
+  typeof DesignTimelineEntryResponseSchema
+>;
+
+/** DesignResponse (đúng như JSON ví dụ bạn gửi) */
+export const DesignResponseSchema = z.object({
+  id: z.number().int(),
+  code: z.string().nullable(),
+  orderId: z.number().int(),
+  designStatus: z.string().nullable(),
+  statusType: z.string().nullable(),
+  designerId: z.number().int(),
+  designer: UserInfoSchema,
+  designTypeId: z.number().int(),
+  designType: DesignTypeResponseSchema,
+  materialTypeId: z.number().int(),
+  materialType: MaterialTypeResponseSchema,
+  quantity: z.number().int(),
+  dimensions: z.string().nullable(),
+  width: z.number().nullable(),
+  height: z.number().nullable(),
+  areaCm2: z.number().nullable(),
+  unitPrice: z.number().nullable(),
+  totalPrice: z.number().nullable(),
+  requirements: z.string().nullable(),
+  additionalNotes: z.string().nullable(),
+  designFileUrl: z.string().nullable(),
+  excelFileUrl: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  timelineEntries: z.array(DesignTimelineEntryResponseSchema).nullable(),
+});
+export type DesignResponse = z.infer<typeof DesignResponseSchema>;
+
+/** Paged designs */
+export const DesignResponsePagedSchema = PagedMetaSchema.extend({
+  items: z.array(DesignResponseSchema).nullable(),
+});
+export type DesignResponsePagedResponse = z.infer<
+  typeof DesignResponsePagedSchema
+>;
+
+/** List params: /api/designs */
+export const DesignListParamsSchema = z.object({
+  pageNumber: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  designerId: z.number().int().optional(),
+  status: z.string().optional(),
+});
+export type DesignListParams = z.infer<typeof DesignListParamsSchema>;
+
+/** My designs params: /api/designs/my */
+export const MyDesignListParamsSchema = z.object({
+  pageNumber: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  status: z.string().optional(),
+});
+export type MyDesignListParams = z.infer<typeof MyDesignListParamsSchema>;

@@ -1,37 +1,49 @@
-import {
+// src/hooks/design-type.hooks.ts
+import type {
+  DesignTypeResponse, // = DesignTypeResponse
   CreateDesignTypeRequest,
-  DesignTypeEntity,
-  DesignTypeQueryParams,
   UpdateDesignTypeRequest,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
-import { API_SUFFIX } from "@/apis";
+
+// BE: GET /designs/types?status=...
+export type DesignTypeListParams = {
+  status?: string;
+};
+
+// BE: GET trả về DesignTypeResponse[]
+export type DesignTypeListResponse = DesignTypeResponse[];
+
 const designTypeCrud = createCrudHooks<
-  DesignTypeEntity,
+  DesignTypeResponse,
   CreateDesignTypeRequest,
   UpdateDesignTypeRequest,
   number,
-  DesignTypeQueryParams,
-  DesignTypeEntity[]
+  DesignTypeListParams,
+  DesignTypeListResponse
 >({
   rootKey: "design-types",
-  basePath: API_SUFFIX.DESIGN_TYPES,
+  basePath: "/designs/types", // baseURL = https://.../api
   messages: {
     createSuccess: "Đã tạo loại thiết kế thành công",
     updateSuccess: "Đã cập nhật loại thiết kế thành công",
-    deleteSuccess: "Đã xoá loại thiết kế thành công",
-    uploadSuccess: "Đã import loại thiết kế",
-    downloadSuccess: "Đã tải xuống template loại thiết kế",
+    deleteSuccess: "Đã xóa loại thiết kế thành công",
   },
 });
 
-// export ra cho page dùng
-export const designTypeKeys = designTypeCrud.keys;
+export const {
+  api: designTypeApi,
+  keys: designTypeKeys,
+  useList: useDesignTypeList,
+  useDetail: useDesignTypeDetail,
+  useCreate: useCreateDesignType,
+  useUpdate: useUpdateDesignType,
+  useDelete: useDeleteDesignType,
+  useUpload: useUploadDesignType,
+  useDownload: useDownloadDesignType,
+  getItemsFromResponse: getDesignTypeItems,
+} = designTypeCrud;
 
-export const useDesignTypes = designTypeCrud.useList;
-export const useDesignType = designTypeCrud.useDetail;
-export const useCreateDesignType = designTypeCrud.useCreate;
-export const useUpdateDesignType = designTypeCrud.useUpdate;
-export const useDeleteDesignType = designTypeCrud.useDelete;
-export const useUploadDesignTypes = designTypeCrud.useUpload;
-export const useDownloadDesignTypes = designTypeCrud.useDownload;
+// Alias thân thiện cho UI
+export const useDesignTypes = useDesignTypeList;
+export const useDesignType = useDesignTypeDetail;
