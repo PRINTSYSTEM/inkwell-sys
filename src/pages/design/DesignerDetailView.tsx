@@ -7,10 +7,8 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Design, DesignQueryParams, UserType } from "@/Schema";
 import { FileText, Package } from "lucide-react";
 import { useEffect, useState, ChangeEvent } from "react";
-import { useEmployeeDesigns } from "@/hooks";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -21,11 +19,14 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useDebouncedCallback } from "use-debounce";
+import { DesignListParams, DesignResponse, UserResponse } from "@/Schema";
+import { useDesignsByUser } from "@/hooks";
+import { useNavigate } from "react-router-dom";
 
 type DesignerDetailProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedDesigner: UserType;
+  selectedDesigner: UserResponse;
 };
 
 const getStatusBadge = (status: string) => {
@@ -70,45 +71,14 @@ export default function DesignerDetail({
   onOpenChange,
   selectedDesigner,
 }: DesignerDetailProps) {
-  // ====== PARAM STATE ======
-  const [params, setParams] = useState<DesignQueryParams>(() => ({
-    pageNumber: 1,
-    pageSize: 10,
-    designerId: Number(selectedDesigner.id),
-    search: "",
-    sortBy: "",
-    sortOrder: "desc",
-    status: "",
-  }));
-
-  const [searchInput, setSearchInput] = useState("");
-
-  const debounced = useDebouncedCallback((value: string) => {
-    setParams((prev) => ({
-      ...prev,
-      pageNumber: 1,
-      search: value,
-    }));
-  }, 1000);
-  // khi đổi designer hoặc mở dialog → reset lại params
-  useEffect(() => {
-    if (!selectedDesigner) return;
-    setParams((prev) => ({
-      ...prev,
-      pageNumber: 1,
-      designerId: Number(selectedDesigner.id),
-      // tuỳ bạn: nếu muốn reset luôn search/status, uncomment:
-      search: "",
-      status: "",
-    }));
-    setSearchInput("");
-  }, [selectedDesigner.id]);
-
+  const navigate = useNavigate();
   // ====== CALL API ======
-  const { data, isLoading, isError } = useEmployeeDesigns(params);
+  const { data, isLoading, isError } = useDesignsByUser(
+    Number(selectedDesigner?.id)
+  );
 
   // hỗ trợ cả 2 dạng: Array<Design> hoặc { items, totalPages, ... }
-  const designs: Design[] = Array.isArray(data)
+  const designs: DesignResponse[] = Array.isArray(data)
     ? data
     : (data as any)?.items ?? [];
 
@@ -117,30 +87,8 @@ export default function DesignerDetail({
       ? (data as any).totalPages
       : 1;
 
-  const currentPage = params.pageNumber;
-
-  // ====== UPDATE PARAM LOGIC ======
-
-  const handleStatusChange = (value: string) => {
-    setParams((prev) => ({
-      ...prev,
-      pageNumber: 1,
-      status: value === "all" ? "" : value,
-    }));
-  };
-
-  const handlePrevPage = () => {
-    setParams((prev) => ({
-      ...prev,
-      pageNumber: Math.max(1, prev.pageNumber - 1),
-    }));
-  };
-
-  const handleNextPage = () => {
-    setParams((prev) => ({
-      ...prev,
-      pageNumber: Math.min(totalPages, prev.pageNumber + 1),
-    }));
+  const handleViewDesign = (designId: number) => {
+    navigate(`/design/detail/${designId}`);
   };
 
   return (
@@ -168,43 +116,6 @@ export default function DesignerDetail({
             )}
           </DialogDescription>
         </DialogHeader>
-
-        {/* ====== FILTER BAR ====== */}
-        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          {/* Search */}
-          <div className="w-full md:w-1/2">
-            <Input
-              placeholder="Tìm theo mã thiết kế, ghi chú..."
-              value={searchInput}
-              onChange={(e) => {
-                const v = e.target.value;
-                setSearchInput(v); // update UI ngay
-                debounced(v); // update params sau 1s
-              }}
-            />
-          </div>
-
-          {/* Status filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-600">Trạng thái:</span>
-            <Select
-              value={params.status || "all"}
-              onValueChange={handleStatusChange}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Tất cả" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="received_info">Đã nhận thông tin</SelectItem>
-                <SelectItem value="in_progress">Đang thực hiện</SelectItem>
-                <SelectItem value="review">Đang xem xét</SelectItem>
-                <SelectItem value="approved">Đã duyệt</SelectItem>
-                <SelectItem value="completed">Hoàn thành</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
         {/* ====== CONTENT ====== */}
         <div className="mt-6">
@@ -253,6 +164,13 @@ export default function DesignerDetail({
                                   Đơn hàng #{design.orderId}
                                 </p>
                               </div>
+
+                              <Button
+                                className="text-sm font-medium cursor-pointer"
+                                onClick={() => handleViewDesign(design.id)}
+                              >
+                                View Detail
+                              </Button>
                             </div>
 
                             {/* Info Grid */}
@@ -386,31 +304,6 @@ export default function DesignerDetail({
                     </Card>
                   );
                 })}
-              </div>
-
-              {/* ====== PAGINATION ====== */}
-              <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
-                <span>
-                  Trang {currentPage} / {totalPages}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={currentPage <= 1}
-                    onClick={handlePrevPage}
-                  >
-                    Trang trước
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={currentPage >= totalPages}
-                    onClick={handleNextPage}
-                  >
-                    Trang sau
-                  </Button>
-                </div>
               </div>
             </>
           )}

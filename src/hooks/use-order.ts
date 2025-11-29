@@ -1,4 +1,3 @@
-import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
@@ -10,6 +9,7 @@ import type {
   UpdateOrderRequest,
 } from "@/Schema/order.schema";
 import { API_SUFFIX } from "@/apis";
+import { useAsyncCallback } from "@/hooks/use-async";
 
 const {
   api: orderCrudApi,
@@ -27,7 +27,7 @@ const {
   OrderResponsePagedResponse
 >({
   rootKey: "orders",
-  basePath: "/api/orders",
+  basePath: API_SUFFIX.ORDERS,
   getItems: (resp) => resp.items ?? [],
   messages: {
     createSuccess: "Đã tạo đơn hàng thành công",
@@ -44,32 +44,46 @@ export const useOrder = (id: number | null, enabled = true) =>
 export const useCreateOrder = () => useCreateOrderBase();
 export const useUpdateOrder = () => useUpdateOrderBase();
 
-// POST /api/orders/{id}/generate-excel
+// POST /orders/{id}/generate-excel
 export const useGenerateOrderExcel = () => {
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest.post<string>(API_SUFFIX.ORDER_EXCEL(id));
-      return res.data;
-    },
-    onSuccess: () => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    string,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.post<string>(API_SUFFIX.ORDER_EXCEL(id));
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
       toast({
         title: "Thành công",
         description: "Đã tạo file Excel cho đơn hàng",
       });
-    },
-    onError: (error: any) => {
+      return result;
+    } catch (err: any) {
       toast({
         title: "Lỗi",
         description:
-          error?.response?.data?.message ||
-          error?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
           "Không thể tạo file Excel",
         variant: "destructive",
       });
-    },
-  });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
 
 export { orderCrudApi, orderKeys };

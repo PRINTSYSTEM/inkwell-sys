@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
@@ -12,6 +12,7 @@ import type {
   CompleteProductionRequest,
 } from "@/Schema/production.schema";
 import { API_SUFFIX } from "@/apis";
+import { useAsyncCallback } from "@/hooks/use-async";
 
 const {
   api: productionCrudApi,
@@ -29,7 +30,7 @@ const {
   ProductionResponsePagedResponse
 >({
   rootKey: "productions",
-  basePath: "/api/productions",
+  basePath: API_SUFFIX.PRODUCTIONS,
   getItems: (resp) => resp.items ?? [],
   messages: {
     createSuccess: "Đã tạo lệnh sản xuất thành công",
@@ -46,7 +47,7 @@ export const useProduction = (id: number | null, enabled = true) =>
 export const useCreateProduction = () => useCreateProductionBase();
 export const useUpdateProduction = () => useUpdateProductionBase();
 
-// GET /api/productions/proofing-order/{proofingOrderId}
+// GET /productions/proofing-order/{proofingOrderId}
 export const useProductionsByProofingOrder = (
   proofingOrderId: number | null,
   enabled = true
@@ -56,93 +57,121 @@ export const useProductionsByProofingOrder = (
     enabled: enabled && !!proofingOrderId,
     queryFn: async () => {
       const res = await apiRequest.get<ProductionResponse[]>(
-        API_SUFFIX.PRODUCTIONS_BY_PROOFING_ORDER(proofingOrderId)
+        API_SUFFIX.PRODUCTIONS_BY_PROOFING_ORDER(proofingOrderId as number)
       );
       return res.data;
     },
   });
 };
 
-// POST /api/productions/{id}/start
+// POST /productions/{id}/start
 export const useStartProduction = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data?: StartProductionRequest;
-    }) => {
-      const res = await apiRequest.post<ProductionResponse>(
-        API_SUFFIX.PRODUCTION_START(id),
-        data ?? {}
-      );
-      return res.data;
-    },
-    onSuccess: (data) => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProductionResponse,
+    [{ id: number; data?: StartProductionRequest }]
+  >(async ({ id, data }) => {
+    const res = await apiRequest.post<ProductionResponse>(
+      API_SUFFIX.PRODUCTION_START(id),
+      data ?? {}
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: {
+    id: number;
+    data?: StartProductionRequest;
+  }) => {
+    try {
+      const result = await execute(payload);
+
       queryClient.invalidateQueries({
-        queryKey: productionKeys.detail(data.id),
+        queryKey: productionKeys.detail(result.id),
       });
+
       toast({
         title: "Thành công",
         description: "Đã bắt đầu sản xuất",
       });
-    },
-    onError: (error: any) => {
+
+      return result;
+    } catch (err: any) {
       toast({
         title: "Lỗi",
         description:
-          error?.response?.data?.message ||
-          error?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
           "Không thể bắt đầu sản xuất",
         variant: "destructive",
       });
-    },
-  });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
 
-// POST /api/productions/{id}/complete
+// POST /productions/{id}/complete
 export const useCompleteProduction = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data?: CompleteProductionRequest;
-    }) => {
-      const res = await apiRequest.post<ProductionResponse>(
-        API_SUFFIX.PRODUCTION_COMPLETE(id),
-        data ?? {}
-      );
-      return res.data;
-    },
-    onSuccess: (data) => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProductionResponse,
+    [{ id: number; data?: CompleteProductionRequest }]
+  >(async ({ id, data }) => {
+    const res = await apiRequest.post<ProductionResponse>(
+      API_SUFFIX.PRODUCTION_COMPLETE(id),
+      data ?? {}
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: {
+    id: number;
+    data?: CompleteProductionRequest;
+  }) => {
+    try {
+      const result = await execute(payload);
+
       queryClient.invalidateQueries({
-        queryKey: productionKeys.detail(data.id),
+        queryKey: productionKeys.detail(result.id),
       });
+
       toast({
         title: "Thành công",
         description: "Đã hoàn thành sản xuất",
       });
-    },
-    onError: (error: any) => {
+
+      return result;
+    } catch (err: any) {
       toast({
         title: "Lỗi",
         description:
-          error?.response?.data?.message ||
-          error?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
           "Không thể hoàn thành sản xuất",
         variant: "destructive",
       });
-    },
-  });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
 
 export { productionCrudApi, productionKeys };

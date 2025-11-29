@@ -1,15 +1,16 @@
 // src/hooks/invoice.hooks.ts
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
 import type { InvoiceResponse } from "@/Schema/invoice.schema";
 import { API_SUFFIX } from "@/apis";
+import { useAsyncCallback } from "@/hooks/use-async"; // <- hook async bạn đã có
 
 export const invoiceKeys = {
   byOrder: (orderId: number | null) => ["invoice", "order", orderId] as const,
 };
 
-// GET /api/invoices/order/{orderId}
+// GET /invoices/order/{orderId}
 export const useOrderInvoice = (
   orderId: number | null,
   enabled: boolean = true
@@ -19,7 +20,7 @@ export const useOrderInvoice = (
     enabled: enabled && !!orderId,
     queryFn: async () => {
       const res = await apiRequest.get<InvoiceResponse>(
-        API_SUFFIX.ORDER_INVOICE(orderId)
+        API_SUFFIX.ORDER_INVOICE(orderId as number)
       );
       return res.data; // string
     },
@@ -27,22 +28,27 @@ export const useOrderInvoice = (
   });
 };
 
-// POST /api/invoices/order/{orderId}
-// -> thường dùng khi bấm "Xuất hoá đơn"
+// POST /invoices/order/{orderId}
+// -> dùng khi bấm "Xuất hoá đơn"
 export const useGenerateOrderInvoice = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
-    // chỉ cần orderId, không có body
-    mutationFn: async (orderId: number) => {
-      const res = await apiRequest.post<InvoiceResponse>(
-        API_SUFFIX.ORDER_INVOICE(orderId)
-      );
-      return res.data; // string
-    },
-    onSuccess: (data, orderId) => {
-      // refresh lại GET /api/invoices/order/{orderId}
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    InvoiceResponse,
+    [number]
+  >(async (orderId: number) => {
+    const res = await apiRequest.post<InvoiceResponse>(
+      API_SUFFIX.ORDER_INVOICE(orderId)
+    );
+    return res.data; // string
+  });
+
+  const mutate = async (orderId: number) => {
+    try {
+      const result = await execute(orderId);
+
+      // refresh lại GET /invoices/order/{orderId}
       queryClient.invalidateQueries({
         queryKey: invoiceKeys.byOrder(orderId),
       });
@@ -52,21 +58,29 @@ export const useGenerateOrderInvoice = () => {
         description: "Đã tạo/cập nhật hoá đơn cho đơn hàng",
       });
 
-      // tuỳ cách BE trả:
-      // - nếu data là URL => có thể mở tab:
-      //   window.open(data, "_blank");
-      // - nếu data là mã/chuỗi => lưu vào UI/clipboard tuỳ ý
-    },
-    onError: (error: any) => {
+      // tuỳ BE trả gì:
+      // - nếu là URL: có thể window.open(result, "_blank")
+      // - nếu là mã hoá đơn: hiển thị trong UI
+      return result;
+    } catch (err: any) {
       const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Không thể tạo hoá đơn";
+        err?.response?.data?.message || err?.message || "Không thể tạo hoá đơn";
+
       toast({
         title: "Lỗi",
         description: message,
         variant: "destructive",
       });
-    },
-  });
+
+      throw err;
+    }
+  };
+
+  return {
+    data, // string | null (invoice result)
+    loading, // trạng thái đang gọi API
+    error, // message lỗi (string | null)
+    mutate, // (orderId: number) => Promise<string>
+    reset, // reset state về null
+  };
 };

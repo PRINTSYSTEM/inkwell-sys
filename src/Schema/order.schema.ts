@@ -1,9 +1,6 @@
 // src/Schema/order.schema.ts
 import { z } from "zod";
-import {
-  CustomerSummaryResponseSchema,
-  CustomerSummaryResponse,
-} from "./customer.schema";
+import { CustomerSummaryResponseSchema } from "./customer.schema";
 import {
   CreateDesignRequestSchema,
   DesignResponseSchema,

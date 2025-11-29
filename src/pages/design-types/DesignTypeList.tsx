@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Edit, Package, Plus, Search, Trash2 } from "lucide-react";
 
-import { DesignTypeFormDialog } from "@/pages/design-types/design-type-form-dialog";
-import { MaterialTypeDialog } from "@/pages/material-types/material-type-dialog";
+const DesignTypeFormDialogLazy = lazy(() =>
+  import("@/pages/design-types/design-type-form-dialog").then((m) => ({
+    default: m.DesignTypeFormDialog,
+  }))
+);
+const MaterialTypeDialogLazy = lazy(() =>
+  import("@/pages/material-types/material-type-dialog").then((m) => ({
+    default: m.MaterialTypeDialog,
+  }))
+);
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -443,17 +451,19 @@ export default function DesignTypesPage() {
         </CardContent>
       </Card>
 
-      <DesignTypeFormDialog
-        open={isDesignTypeDialogOpen}
-        onOpenChange={(open) => {
-          setIsDesignTypeDialogOpen(open);
-          if (!open) setEditingDesignType(null);
-        }}
-        designType={editingDesignType}
-        onSubmit={
-          editingDesignType ? handleUpdateDesignType : handleCreateDesignType
-        }
-      />
+      <Suspense fallback={<div>Đang tải...</div>}>
+        <DesignTypeFormDialogLazy
+          open={isDesignTypeDialogOpen}
+          onOpenChange={(open) => {
+            setIsDesignTypeDialogOpen(open);
+            if (!open) setEditingDesignType(null);
+          }}
+          designType={editingDesignType}
+          onSubmit={
+            editingDesignType ? handleUpdateDesignType : handleCreateDesignType
+          }
+        />
+      </Suspense>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
@@ -478,17 +488,19 @@ export default function DesignTypesPage() {
       </AlertDialog>
 
       {selectedDesignType && (
-        <MaterialTypeDialog
-          open={!!selectedDesignType}
-          onOpenChange={(open) => !open && setSelectedDesignType(null)}
-          designType={selectedDesignType}
-          materials={materialTypesList.filter(
-            (m) => m.designTypeId === selectedDesignType.id
-          )}
-          onCreateMaterial={handleCreateMaterial}
-          onEditMaterial={handleEditMaterial}
-          onDeleteMaterial={handleDeleteMaterial}
-        />
+        <Suspense fallback={<div>Đang tải...</div>}>
+          <MaterialTypeDialogLazy
+            open={!!selectedDesignType}
+            onOpenChange={(open) => !open && setSelectedDesignType(null)}
+            designType={selectedDesignType}
+            materials={materialTypesList.filter(
+              (m) => m.designTypeId === selectedDesignType.id
+            )}
+            onCreateMaterial={handleCreateMaterial}
+            onEditMaterial={handleEditMaterial}
+            onDeleteMaterial={handleDeleteMaterial}
+          />
+        </Suspense>
       )}
     </div>
   );

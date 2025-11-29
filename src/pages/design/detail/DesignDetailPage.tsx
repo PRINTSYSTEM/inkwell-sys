@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+
 import {
   ArrowLeft,
   Package,
@@ -22,161 +25,55 @@ import {
   Upload,
   History,
 } from "lucide-react";
+
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
-import { useNavigate, useParams } from "react-router-dom";
 import { DesignFileUploadDialog } from "@/components/design/design-file-upload";
 import { TimelineEntryDialog } from "@/components/design/timeline-entry-dialog";
 
-interface DesignType {
-  id: number;
-  code: string;
-  name: string;
-  displayOrder: number;
-  description: string;
-  status: string;
-  statusType: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: any;
-}
-
-interface MaterialType {
-  id: number;
-  code: string;
-  name: string;
-  displayOrder: number;
-  description: string;
-  price: number;
-  pricePerCm2: number;
-  designTypeId: number;
-  status: string;
-  statusType: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: any;
-}
-
-interface TimelineEntry {
-  id: number;
-  imageUrl: string;
-  description: string;
-  createdAt: string;
-  createdBy: any;
-}
-
-interface DesignFile {
-  fileUrl: string;
-  imageUrl: string;
-  uploadedAt: string;
-}
-
-interface Design {
-  id: number;
-  code: string;
-  orderId: number;
-  designStatus: string;
-  statusType: string;
-  designerId: number;
-  designer: any;
-  designTypeId: number;
-  designType: DesignType;
-  materialTypeId: number;
-  materialType: MaterialType;
-  quantity: number;
-  dimensions: string;
-  width: number;
-  height: number;
-  areaCm2: number;
-  unitPrice: number;
-  totalPrice: number;
-  requirements: string;
-  additionalNotes: string;
-  notes: string;
-  designFile: DesignFile | null;
-  timelineEntries: TimelineEntry[];
-}
-
-const MOCK_DESIGN = {
-  id: 1,
-  code: "TK-2024-001",
-  orderId: 12345,
-  designStatus: "designing",
-  statusType: "Đang thiết kế",
-  designer: {
-    id: 8,
-    username: "nguyenvana",
-    email: "nguyenvana@example.com",
-    fullName: "Nguyễn Văn A",
-    phone: "0912345678",
-  },
-  designType: {
-    id: 1,
-    code: "BANNER",
-    name: "Banner quảng cáo",
-    description: "Banner quảng cáo ngoài trời",
-    statusType: "Hoạt động",
-  },
-  materialType: {
-    id: 2,
-    code: "HIFLEX",
-    name: "Hiflex chất lượng cao",
-    price: 50000,
-    pricePerCm2: 5,
-  },
-  quantity: 10,
-  dimensions: "200x100",
-  width: 200,
-  height: 100,
-  areaCm2: 20000,
-  unitPrice: 100000,
-  totalPrice: 1000000,
-  requirements: "In màu đậm, chất lượng cao, chống nước",
-  additionalNotes: "Giao hàng trước 15/03/2024",
-  notes: "Khách hàng VIP, ưu tiên xử lý",
-  designFile: {
-    fileUrl: "https://example.com/banner-design.ai",
-    imageUrl: "/final-banner-design.jpg",
-    uploadedAt: "2024-03-12T14:00:00Z",
-  },
-  timelineEntries: [
-    {
-      id: 1,
-      imageUrl: "/design-mockup-banner.jpg",
-      description: "Bắt đầu thiết kế - Phác thảo layout cơ bản",
-      createdAt: "2024-03-10T08:00:00Z",
-      createdBy: {
-        fullName: "Nguyễn Văn A",
-        username: "nguyenvana",
-      },
-    },
-    {
-      id: 2,
-      imageUrl: "/banner-design-version-2.jpg",
-      description: "Chỉnh sửa màu sắc theo yêu cầu khách hàng",
-      createdAt: "2024-03-11T10:30:00Z",
-      createdBy: {
-        fullName: "Nguyễn Văn A",
-        username: "nguyenvana",
-      },
-    },
-    {
-      id: 3,
-      imageUrl: "/final-banner-design.jpg",
-      description: "Hoàn thành thiết kế - Đã kiểm tra và xuất file",
-      createdAt: "2024-03-12T14:00:00Z",
-      createdBy: {
-        fullName: "Nguyễn Văn A",
-        username: "nguyenvana",
-      },
-    },
-  ],
-};
+import {
+  useDesign,
+  useDesignTimeline,
+  useUploadDesignFile,
+  useUploadDesignImage,
+  useAddDesignTimelineEntry,
+} from "@/hooks";
+import type {
+  DesignResponse,
+  DesignTimelineEntryResponse,
+} from "@/Schema/design.schema";
 
 export default function DesignDetailPage() {
   const params = useParams();
   const router = useNavigate();
-  const [design, setDesign] = useState(MOCK_DESIGN);
-  const [loading] = useState(false);
+
+  const designId = Number(params.id);
+  const enabled = !Number.isNaN(designId);
+
+  // ==== DATA FROM API ====
+  const { data: design, isLoading: designLoading } = useDesign(
+    enabled ? designId : null,
+    enabled
+  );
+
+  const { data: timelineData, isLoading: timelineLoading } = useDesignTimeline(
+    enabled ? designId : null,
+    enabled
+  );
+
+  const timelineEntries: DesignTimelineEntryResponse[] =
+    timelineData ?? design?.timelineEntries ?? [];
+
+  // ==== MUTATIONS ====
+  const { mutate: uploadDesignFile, loading: uploadingDesignFile } =
+    useUploadDesignFile();
+
+  const { mutate: uploadDesignImage, loading: uploadingDesignImage } =
+    useUploadDesignImage();
+
+  const { mutate: addTimelineEntry, loading: addingTimeline } =
+    useAddDesignTimelineEntry();
+
+  // ==== LOCAL UI STATE ====
   const [viewingImage, setViewingImage] = useState<{
     url: string;
     title: string;
@@ -184,7 +81,13 @@ export default function DesignDetailPage() {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showTimelineDialog, setShowTimelineDialog] = useState(false);
 
-  const getStatusBadge = (status: string, statusType: string) => {
+  const loading = designLoading;
+
+  const getStatusBadge = (
+    status?: string | null,
+    statusType?: string | null
+  ) => {
+    const s = status || "";
     const statusMap: Record<
       string,
       {
@@ -192,14 +95,34 @@ export default function DesignDetailPage() {
         variant: "default" | "secondary" | "destructive" | "outline";
       }
     > = {
-      received_info: { label: "Đã nhận thông tin", variant: "default" },
+      pending: { label: "Nhận thông tin", variant: "default" },
       designing: { label: "Đang thiết kế", variant: "secondary" },
-      completed: { label: "Hoàn thành", variant: "outline" },
+      editing: { label: "Đang chỉnh sửa", variant: "secondary" },
+      waiting_for_customer_approval: {
+        label: "Chờ khách duyệt",
+        variant: "outline",
+      },
+      confirmed_for_printing: {
+        label: "Đã chốt in",
+        variant: "default",
+      },
+      pdf_exported: {
+        label: "Đã xuất PDF",
+        variant: "outline",
+      },
+      completed: {
+        label: "Hoàn thành",
+        variant: "outline",
+      },
     };
-    const config = statusMap[status] || {
-      label: statusType || status,
-      variant: "default",
-    };
+
+    const config =
+      statusMap[s] ||
+      ({
+        label: statusType || status || "Không rõ",
+        variant: "default",
+      } as const);
+
     return (
       <Badge variant={config.variant} className="text-xs px-2 py-0.5">
         {config.label}
@@ -207,36 +130,36 @@ export default function DesignDetailPage() {
     );
   };
 
-  const handleDesignFileUpload = (file: File, image: File) => {
-    const fileUrl = URL.createObjectURL(file);
-    const imageUrl = URL.createObjectURL(image);
+  // ==== HANDLERS (CALL API) ====
 
-    setDesign({
-      ...design,
-      designFile: {
-        fileUrl,
-        imageUrl,
-        uploadedAt: new Date().toISOString(),
-      },
-    });
+  // Upload file .ai + ảnh preview
+  const handleDesignFileUpload = async (file: File, image: File) => {
+    if (!enabled) return;
+    try {
+      await uploadDesignFile({ id: designId, file });
+      await uploadDesignImage({ id: designId, file: image });
+      setShowFileUpload(false);
+    } catch {
+      // toast đã được handle trong hook, ở đây không cần làm gì thêm
+    }
   };
 
-  const handleTimelineAdd = (image: File, description: string) => {
-    const imageUrl = URL.createObjectURL(image);
-
-    const newEntry: TimelineEntry = {
-      id: Date.now(),
-      imageUrl,
-      description,
-      createdAt: new Date().toISOString(),
-      createdBy: design.designer,
-    };
-
-    setDesign({
-      ...design,
-      timelineEntries: [...design.timelineEntries, newEntry],
-    });
+  // Thêm timeline entry
+  const handleTimelineAdd = async (image: File, description: string) => {
+    if (!enabled) return;
+    try {
+      await addTimelineEntry({
+        id: designId,
+        file: image,
+        description,
+      });
+      setShowTimelineDialog(false);
+    } catch {
+      // toast đã được handle trong hook
+    }
   };
+
+  // ==== RENDER ====
 
   if (loading) {
     return (
@@ -261,7 +184,7 @@ export default function DesignDetailPage() {
                 Thiết kế không tồn tại
               </p>
             </div>
-            <Button onClick={() => router("/designs")} size="sm">
+            <Button onClick={() => router("/design/all")} size="sm">
               <ArrowLeft className="h-3 w-3 mr-1.5" />
               Quay lại
             </Button>
@@ -271,40 +194,50 @@ export default function DesignDetailPage() {
     );
   }
 
+  // tiện alias cho code ngắn
+  const d: DesignResponse = design;
+  const latestTimelineImageUrl =
+    timelineEntries.length > 0
+      ? timelineEntries[timelineEntries.length - 1].fileUrl
+      : undefined;
+
   return (
     <div className="min-h-screen bg-background">
+      {/* HEADER STICKY */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router("/designs")}
+              onClick={() => router("/design/all")}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex-1 flex items-center gap-2 min-w-0">
-              <h1 className="text-lg font-bold truncate">{design.code}</h1>
-              {getStatusBadge(design.designStatus, design.statusType)}
+              <h1 className="text-lg font-bold truncate">
+                {d.code ?? `DES-${d.id}`}
+              </h1>
+              {getStatusBadge(d.designStatus, d.statusType)}
               <span className="text-xs text-muted-foreground">
-                • ĐH #{design.orderId}
+                • ĐH #{d.orderId}
               </span>
             </div>
 
-            <div>
-              Mã thiết kế:
-              <span className="font-medium">
-                {/* {design.} */}
-                {design.code}
+            <div className="text-xs sm:text-sm text-muted-foreground">
+              Mã thiết kế:{" "}
+              <span className="font-medium text-foreground">
+                {d.code ?? `DES-${d.id}`}
               </span>
             </div>
           </div>
         </div>
       </div>
 
+      {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto p-4 space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Basic Info Card - Compact */}
+          {/* ==== BASIC INFO CARD ==== */}
           <Card className="border-l-4 border-l-primary">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -313,20 +246,20 @@ export default function DesignDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              {/* Designer - Inline */}
+              {/* Designer */}
               <div className="flex items-start gap-2 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded">
                 <User className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-blue-900 dark:text-blue-100">
-                    {design.designer.fullName}
+                    {d.designer.fullName}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {design.designer.email} • {design.designer.phone}
+                  <p className="text-xs text-muted-foreground truncate">
+                    {d.designer.email} • {d.designer.phone}
                   </p>
                 </div>
               </div>
 
-              {/* Design Type & Material - Grid */}
+              {/* Design Type & Material */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-2 bg-purple-50/50 dark:bg-purple-950/20 rounded">
                   <div className="flex items-center gap-1.5 mb-1">
@@ -335,9 +268,7 @@ export default function DesignDetailPage() {
                       Loại TK
                     </p>
                   </div>
-                  <p className="font-semibold text-xs">
-                    {design.designType.name}
-                  </p>
+                  <p className="font-semibold text-xs">{d.designType.name}</p>
                 </div>
                 <div className="p-2 bg-amber-50/50 dark:bg-amber-950/20 rounded">
                   <div className="flex items-center gap-1.5 mb-1">
@@ -346,15 +277,13 @@ export default function DesignDetailPage() {
                       Chất liệu
                     </p>
                   </div>
-                  <p className="font-semibold text-xs">
-                    {design.materialType.name}
-                  </p>
+                  <p className="font-semibold text-xs">{d.materialType.name}</p>
                 </div>
               </div>
 
               <Separator />
 
-              {/* Specs - Compact Grid */}
+              {/* Specs */}
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
                   <Ruler className="h-3.5 w-3.5 text-green-600" />
@@ -365,14 +294,14 @@ export default function DesignDetailPage() {
                     <p className="text-[10px] text-muted-foreground mb-0.5">
                       Kích thước
                     </p>
-                    <p className="font-bold text-xs">{design.dimensions}</p>
+                    <p className="font-bold text-xs">{d.dimensions ?? "—"}</p>
                   </div>
                   <div className="bg-muted/50 p-2 rounded text-center">
                     <p className="text-[10px] text-muted-foreground mb-0.5">
                       Số lượng
                     </p>
                     <p className="font-bold text-xs">
-                      {design.quantity.toLocaleString()}
+                      {d.quantity.toLocaleString()}
                     </p>
                   </div>
                   <div className="bg-muted/50 p-2 rounded text-center">
@@ -380,7 +309,9 @@ export default function DesignDetailPage() {
                       Diện tích
                     </p>
                     <p className="font-bold text-xs">
-                      {(design.areaCm2 / 10000).toFixed(1)}m²
+                      {d.areaCm2 != null
+                        ? `${(d.areaCm2 / 10000).toFixed(1)}m²`
+                        : "—"}
                     </p>
                   </div>
                 </div>
@@ -388,7 +319,7 @@ export default function DesignDetailPage() {
 
               <Separator />
 
-              {/* Pricing - Compact */}
+              {/* Pricing */}
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
                   <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
@@ -400,7 +331,9 @@ export default function DesignDetailPage() {
                       Đơn giá
                     </p>
                     <p className="font-bold text-sm text-emerald-600">
-                      {design.unitPrice.toLocaleString()}đ
+                      {d.unitPrice != null
+                        ? `${d.unitPrice.toLocaleString()}đ`
+                        : "—"}
                     </p>
                   </div>
                   <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-2 rounded">
@@ -408,34 +341,36 @@ export default function DesignDetailPage() {
                       Tổng
                     </p>
                     <p className="font-bold text-sm text-emerald-600">
-                      {design.totalPrice.toLocaleString()}đ
+                      {d.totalPrice != null
+                        ? `${d.totalPrice.toLocaleString()}đ`
+                        : "—"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Requirements - Compact */}
-              {(design.requirements || design.additionalNotes) && (
+              {/* Requirements / Notes */}
+              {(d.requirements || d.additionalNotes) && (
                 <>
                   <Separator />
                   <div className="space-y-2">
-                    {design.requirements && (
+                    {d.requirements && (
                       <div className="bg-muted/30 p-2 rounded">
                         <p className="text-[10px] font-medium text-muted-foreground mb-1">
                           YÊU CẦU
                         </p>
                         <p className="text-xs leading-relaxed">
-                          {design.requirements}
+                          {d.requirements}
                         </p>
                       </div>
                     )}
-                    {design.additionalNotes && (
+                    {d.additionalNotes && (
                       <div className="bg-muted/30 p-2 rounded">
                         <p className="text-[10px] font-medium text-muted-foreground mb-1">
                           GHI CHÚ
                         </p>
                         <p className="text-xs leading-relaxed">
-                          {design.additionalNotes}
+                          {d.additionalNotes}
                         </p>
                       </div>
                     )}
@@ -445,6 +380,7 @@ export default function DesignDetailPage() {
             </CardContent>
           </Card>
 
+          {/* ==== DESIGN FILE CARD ==== */}
           <Card className="border-l-4 border-l-violet-500">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
@@ -455,19 +391,20 @@ export default function DesignDetailPage() {
                 <Button
                   size="sm"
                   className="gap-2"
+                  disabled={uploadingDesignFile || uploadingDesignImage}
                   onClick={() => setShowFileUpload(true)}
                 >
-                  {design.designFile ? (
+                  {d.designFileUrl ? (
                     <Pencil className="h-3.5 w-3.5" />
                   ) : (
                     <Plus className="h-3.5 w-3.5" />
                   )}
-                  {design.designFile ? "Thay đổi" : "Upload"}
+                  {d.designFileUrl ? "Thay đổi" : "Upload"}
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              {!design.designFile ? (
+              {!d.designFileUrl && !latestTimelineImageUrl ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                   <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-sm font-medium mb-1">
@@ -476,68 +413,79 @@ export default function DesignDetailPage() {
                   <p className="text-xs text-muted-foreground mb-4">
                     Upload file .ai và hình ảnh chụp
                   </p>
-                  <Button size="sm" onClick={() => setShowFileUpload(true)}>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowFileUpload(true)}
+                    disabled={uploadingDesignFile || uploadingDesignImage}
+                  >
                     <Plus className="h-3.5 w-3.5 mr-2" />
                     Upload ngay
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Image preview */}
+                  {/* Image preview: lấy từ timeline mới nhất hoặc placeholder */}
                   <div
                     className="relative group cursor-pointer rounded-lg overflow-hidden border-2 hover:border-violet-500 transition-all"
                     onClick={() =>
+                      latestTimelineImageUrl &&
                       setViewingImage({
-                        url: design.designFile.imageUrl,
+                        url: latestTimelineImageUrl,
                         title: "File bảng thiết kế",
                       })
                     }
                   >
                     <img
-                      src={design.designFile.imageUrl || "/placeholder.svg"}
+                      src={latestTimelineImageUrl || "/placeholder.svg"}
                       alt="Design file preview"
                       className="w-full h-64 object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Eye className="h-10 w-10 text-white" />
-                    </div>
+                    {latestTimelineImageUrl && (
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Eye className="h-10 w-10 text-white" />
+                      </div>
+                    )}
                   </div>
 
                   {/* File info & actions */}
                   <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold mb-1">
-                          banner-design.ai
+                        <p className="text-sm font-semibold mb-1 truncate">
+                          {d.designFileUrl?.split("/").pop() ??
+                            "file-thiet-ke.ai"}
                         </p>
+                        {/* Không có uploadedAt trong schema, nên chỉ hiển thị "đã upload" */}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          <span>
-                            Upload:{" "}
-                            {new Date(
-                              design.designFile.uploadedAt
-                            ).toLocaleString("vi-VN")}
-                          </span>
+                          <span>Đã upload file thiết kế</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 bg-transparent"
-                        asChild
-                      >
-                        <a href={design.designFile.fileUrl} download>
-                          <Download className="h-3.5 w-3.5 mr-2" />
-                          Tải file .ai
-                        </a>
-                      </Button>
+                      {d.designFileUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 bg-transparent"
+                          asChild
+                        >
+                          <a
+                            href={d.designFileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Download className="h-3.5 w-3.5 mr-2" />
+                            Tải file
+                          </a>
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => setShowFileUpload(true)}
+                        disabled={uploadingDesignFile || uploadingDesignImage}
                       >
                         <Pencil className="h-3.5 w-3.5 mr-2" />
                         Thay đổi
@@ -550,17 +498,19 @@ export default function DesignDetailPage() {
           </Card>
         </div>
 
+        {/* ==== TIMELINE ==== */}
         <Card className="border-l-4 border-l-purple-500">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 <History className="h-5 w-5 text-purple-500" />
-                Timeline tiến trình ({design.timelineEntries.length})
+                Timeline tiến trình ({timelineEntries.length})
               </CardTitle>
               <Button
                 size="sm"
                 className="gap-2"
                 onClick={() => setShowTimelineDialog(true)}
+                disabled={addingTimeline}
               >
                 <Plus className="h-3.5 w-3.5" />
                 Thêm timeline
@@ -568,51 +518,59 @@ export default function DesignDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {design.timelineEntries.length === 0 ? (
+            {timelineLoading ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                Đang tải timeline...
+              </div>
+            ) : timelineEntries.length === 0 ? (
               <div className="text-center py-12 border-2 border-dashed rounded-lg">
                 <History className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
                 <p className="text-sm font-medium mb-1">Chưa có timeline nào</p>
                 <p className="text-xs text-muted-foreground mb-4">
                   Thêm hình ảnh và mô tả công việc
                 </p>
-                <Button size="sm" onClick={() => setShowTimelineDialog(true)}>
+                <Button
+                  size="sm"
+                  onClick={() => setShowTimelineDialog(true)}
+                  disabled={addingTimeline}
+                >
                   <Plus className="h-3.5 w-3.5 mr-2" />
                   Thêm ngay
                 </Button>
               </div>
             ) : (
               <div className="space-y-4">
-                {design.timelineEntries.map((entry, index) => (
+                {timelineEntries.map((entry, index) => (
                   <div
                     key={entry.id}
                     className="flex gap-4 p-4 rounded-lg border hover:border-purple-500 transition-all bg-muted/20"
                   >
-                    {/* Timeline number badge */}
+                    {/* Number badge */}
                     <div className="shrink-0 w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center font-bold text-sm">
                       {index + 1}
                     </div>
 
-                    {/* Timeline Image */}
+                    {/* Image */}
                     <div
                       className="shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() =>
                         setViewingImage({
-                          url: entry.imageUrl,
-                          title: entry.description,
+                          url: entry.fileUrl,
+                          title: entry.description ?? "",
                         })
                       }
                     >
                       <img
-                        src={entry.imageUrl || "/placeholder.svg"}
-                        alt={entry.description}
+                        src={entry.fileUrl || "/placeholder.svg"}
+                        alt={entry.description ?? ""}
                         className="w-24 h-24 object-cover rounded-lg border-2 hover:border-purple-500"
                       />
                     </div>
 
-                    {/* Timeline Content */}
+                    {/* Content */}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm mb-2 leading-tight">
-                        {entry.description}
+                        {entry.description ?? "(Không có mô tả)"}
                       </p>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
@@ -632,7 +590,7 @@ export default function DesignDetailPage() {
                         className="h-7 text-xs bg-transparent"
                         asChild
                       >
-                        <a href={entry.imageUrl} download>
+                        <a href={entry.fileUrl} download>
                           <Download className="h-3 w-3 mr-1.5" />
                           Tải hình ảnh
                         </a>
@@ -661,7 +619,8 @@ export default function DesignDetailPage() {
         open={showFileUpload}
         onOpenChange={setShowFileUpload}
         onUpload={handleDesignFileUpload}
-        mode={design.designFile ? "edit" : "create"}
+        mode={d.designFileUrl ? "edit" : "create"}
+        // loading={uploadingDesignFile || uploadingDesignImage}
       />
 
       {/* Timeline Entry Dialog */}
@@ -669,6 +628,7 @@ export default function DesignDetailPage() {
         open={showTimelineDialog}
         onOpenChange={setShowTimelineDialog}
         onAdd={handleTimelineAdd}
+        // loading={addingTimeline}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,20 +13,28 @@ import { Plus, Package, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   CreateMaterialTypeRequest,
-  DesignTypeEntity,
-  MaterialTypeEntity,
+  DesignTypeResponse,
+  MaterialTypeResponse,
 } from "@/Schema";
 import { MaterialTypeList } from "./material-type-list";
-import { MaterialTypeFormDialog } from "./material-type-form-dialog";
-import { DeleteConfirmDialog } from "./delete-confirm-dialog";
+const MaterialTypeFormDialogLazy = lazy(() =>
+  import("./material-type-form-dialog").then((m) => ({
+    default: m.MaterialTypeFormDialog,
+  }))
+);
+const DeleteConfirmDialogLazy = lazy(() =>
+  import("./delete-confirm-dialog").then((m) => ({
+    default: m.DeleteConfirmDialog,
+  }))
+);
 
 interface MaterialTypeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  designType: DesignTypeEntity;
-  materials: MaterialTypeEntity[];
+  designType: DesignTypeResponse;
+  materials: MaterialTypeResponse[];
   onCreateMaterial: (material: CreateMaterialTypeRequest) => void;
-  onEditMaterial: (id: number, material: Partial<MaterialTypeEntity>) => void;
+  onEditMaterial: (id: number, material: Partial<MaterialTypeResponse>) => void;
   onDeleteMaterial: (id: number) => void;
 }
 
@@ -41,12 +49,12 @@ export function MaterialTypeDialog({
 }: MaterialTypeDialogProps) {
   const [showFormDialog, setShowFormDialog] = useState(false);
   const [editingMaterial, setEditingMaterial] =
-    useState<MaterialTypeEntity | null>(null);
+    useState<MaterialTypeResponse | null>(null);
   const [deletingMaterial, setDeletingMaterial] =
-    useState<MaterialTypeEntity | null>(null);
+    useState<MaterialTypeResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleEdit = (material: MaterialTypeEntity) => {
+  const handleEdit = (material: MaterialTypeResponse) => {
     setEditingMaterial(material);
     setShowFormDialog(true);
   };
@@ -166,21 +174,25 @@ export function MaterialTypeDialog({
         </DialogContent>
       </Dialog>
 
-      <MaterialTypeFormDialog
-        open={showFormDialog}
-        onOpenChange={handleFormClose}
-        designTypeId={designType.id}
-        editingMaterial={editingMaterial}
-        onSubmit={handleFormSubmit}
-      />
+      <Suspense fallback={<div>Đang tải...</div>}>
+        <MaterialTypeFormDialogLazy
+          open={showFormDialog}
+          onOpenChange={handleFormClose}
+          designTypeId={designType.id}
+          editingMaterial={editingMaterial}
+          onSubmit={handleFormSubmit}
+        />
+      </Suspense>
 
-      <DeleteConfirmDialog
-        open={!!deletingMaterial}
-        onOpenChange={(open) => !open && setDeletingMaterial(null)}
-        title="Xóa chất liệu"
-        description={`Bạn có chắc chắn muốn xóa chất liệu "${deletingMaterial?.name}"? Hành động này không thể hoàn tác.`}
-        onConfirm={handleDeleteConfirm}
-      />
+      <Suspense fallback={<div>Đang tải...</div>}>
+        <DeleteConfirmDialogLazy
+          open={!!deletingMaterial}
+          onOpenChange={(open) => !open && setDeletingMaterial(null)}
+          title="Xóa chất liệu"
+          description={`Bạn có chắc chắn muốn xóa chất liệu "${deletingMaterial?.name}"? Hành động này không thể hoàn tác.`}
+          onConfirm={handleDeleteConfirm}
+        />
+      </Suspense>
     </>
   );
 }

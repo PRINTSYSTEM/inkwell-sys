@@ -1,25 +1,41 @@
-export type UserRole = 'admin' | 'cskh' | 'design' | 'production_manager' | 'production' | 'accounting' | 'hr';
+export type UserRole =
+  | "admin"
+  | "cskh"
+  | "design"
+  | "production_manager"
+  | "production"
+  | "accounting"
+  | "hr";
 
 // Export employee types
-export * from './employee';
+export * from "./employee";
 
 // Export role types selectively
-export type { Role, RoleAssignment, RoleAnalytics, RoleConflict, RoleFormData } from './role';
+export type {
+  Role,
+  RoleAssignment,
+  RoleAnalytics,
+  RoleConflict,
+  RoleFormData,
+} from "./role";
 
 // Export design code types
-export * from './design-code';
+export * from "./design-code";
 
 // Export design monitoring types
-export * from './design-monitoring';
+export * from "./design-monitoring";
 
 // Export assignment types
-export * from './assignment';
+export * from "./assignment";
+
+// Export order types
+export * from "./orders";
 
 // Export department analytics types
-export type { 
-  DepartmentKPI, 
-  DepartmentMetrics, 
-  PerformanceTrend, 
+export type {
+  DepartmentKPI,
+  DepartmentMetrics,
+  PerformanceTrend,
   DepartmentComparison,
   ProjectStats,
   ResourceUtilization,
@@ -29,83 +45,144 @@ export type {
   AnalyticsInsight,
   AnalyticsFilter,
   AnalyticsReport,
-  ChartConfig
-} from './department-analytics';
+  ChartConfig,
+} from "./department-analytics";
 
 // Permission types
-export type Permission = 
-  | 'users.view' | 'users.create' | 'users.edit' | 'users.delete'
-  | 'materials.view' | 'materials.create' | 'materials.edit' | 'materials.delete'
-  | 'designs.view' | 'designs.create' | 'designs.edit' | 'designs.delete' | 'designs.assign'
-  | 'orders.view' | 'orders.create' | 'orders.edit' | 'orders.delete'
-  | 'customers.view' | 'customers.create' | 'customers.edit' | 'customers.delete'
-  | 'production.view' | 'production.create' | 'production.edit' | 'production.delete'
-  | 'accounting.view' | 'accounting.create' | 'accounting.edit' | 'accounting.delete'
-  | 'reports.view' | 'reports.export'
-  | 'settings.view' | 'settings.edit';
+export type Permission =
+  | "users.view"
+  | "users.create"
+  | "users.edit"
+  | "users.delete"
+  | "materials.view"
+  | "materials.create"
+  | "materials.edit"
+  | "materials.delete"
+  | "designs.view"
+  | "designs.create"
+  | "designs.edit"
+  | "designs.delete"
+  | "designs.assign"
+  | "orders.view"
+  | "orders.create"
+  | "orders.edit"
+  | "orders.delete"
+  | "customers.view"
+  | "customers.create"
+  | "customers.edit"
+  | "customers.delete"
+  | "production.view"
+  | "production.create"
+  | "production.edit"
+  | "production.delete"
+  | "accounting.view"
+  | "accounting.create"
+  | "accounting.edit"
+  | "accounting.delete"
+  | "reports.view"
+  | "reports.export"
+  | "settings.view"
+  | "settings.edit";
 
 // Role permissions mapping
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: [
-    'users.view', 'users.create', 'users.edit', 'users.delete',
-    'materials.view', 'materials.create', 'materials.edit', 'materials.delete',
-    'designs.view', 'designs.create', 'designs.edit', 'designs.delete', 'designs.assign',
-    'orders.view', 'orders.create', 'orders.edit', 'orders.delete',
-    'customers.view', 'customers.create', 'customers.edit', 'customers.delete',
-    'production.view', 'production.create', 'production.edit', 'production.delete',
-    'accounting.view', 'accounting.create', 'accounting.edit', 'accounting.delete',
-    'reports.view', 'reports.export',
-    'settings.view', 'settings.edit'
+    "users.view",
+    "users.create",
+    "users.edit",
+    "users.delete",
+    "materials.view",
+    "materials.create",
+    "materials.edit",
+    "materials.delete",
+    "designs.view",
+    "designs.create",
+    "designs.edit",
+    "designs.delete",
+    "designs.assign",
+    "orders.view",
+    "orders.create",
+    "orders.edit",
+    "orders.delete",
+    "customers.view",
+    "customers.create",
+    "customers.edit",
+    "customers.delete",
+    "production.view",
+    "production.create",
+    "production.edit",
+    "production.delete",
+    "accounting.view",
+    "accounting.create",
+    "accounting.edit",
+    "accounting.delete",
+    "reports.view",
+    "reports.export",
+    "settings.view",
+    "settings.edit",
   ],
   cskh: [
-    'customers.view', 'customers.create', 'customers.edit',
-    'orders.view', 'orders.create', 'orders.edit',
-    'designs.view',
-    'reports.view'
+    "customers.view",
+    "customers.create",
+    "customers.edit",
+    "orders.view",
+    "orders.create",
+    "orders.edit",
+    "designs.view",
+    "reports.view",
   ],
   design: [
-    'designs.view', 'designs.edit',
-    'materials.view',
-    'orders.view',
-    'customers.view'
+    "designs.view",
+    "designs.edit",
+    "materials.view",
+    "orders.view",
+    "customers.view",
   ],
   production_manager: [
-    'production.view', 'production.create', 'production.edit', 'production.delete',
-    'designs.view', 'designs.assign',
-    'materials.view',
-    'orders.view',
-    'users.view',
-    'reports.view'
+    "production.view",
+    "production.create",
+    "production.edit",
+    "production.delete",
+    "designs.view",
+    "designs.assign",
+    "materials.view",
+    "orders.view",
+    "users.view",
+    "reports.view",
   ],
   production: [
-    'production.view', 'production.edit',
-    'designs.view',
-    'materials.view',
-    'orders.view'
+    "production.view",
+    "production.edit",
+    "designs.view",
+    "materials.view",
+    "orders.view",
   ],
   accounting: [
-    'accounting.view', 'accounting.create', 'accounting.edit', 'accounting.delete',
-    'orders.view', 'orders.edit',
-    'customers.view', 'customers.edit',
-    'reports.view', 'reports.export'
+    "accounting.view",
+    "accounting.create",
+    "accounting.edit",
+    "accounting.delete",
+    "orders.view",
+    "orders.edit",
+    "customers.view",
+    "customers.edit",
+    "reports.view",
+    "reports.export",
   ],
-  hr: [
-    'users.view', 'users.create', 'users.edit',
-    'reports.view'
-  ]
+  hr: ["users.view", "users.create", "users.edit", "reports.view"],
 };
 
 // Design material types
 export const DESIGN_MATERIAL_TYPES = [
-  'Nhãn Metaline',
-  'Hộp Giấy Duplex',
-  'Hộp Carton Sóng E',
-  'Hộp Giấy Ivory',
-  'Decal Giấy',
-  'Decal Metaline'
+  "Nhãn Metaline",
+  "Hộp Giấy Duplex",
+  "Hộp Carton Sóng E",
+  "Hộp Giấy Ivory",
+  "Decal Giấy",
+  "Decal Metaline",
 ] as const;
 
-export type DesignMaterialType = typeof DESIGN_MATERIAL_TYPES[number];
+export type DesignMaterialType = (typeof DESIGN_MATERIAL_TYPES)[number];
 
 export interface User {
   id: string;
@@ -142,7 +219,7 @@ export interface User {
     workDays: string[];
   };
   permissions: Permission[];
-  status: 'active' | 'inactive' | 'suspended';
+  status: "active" | "inactive" | "suspended";
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;
@@ -162,7 +239,7 @@ export interface Customer {
   folder: string;
   maxDebt: number; // Công nợ tối đa cho phép (VNĐ)
   currentDebt: number; // Công nợ hiện tại (VNĐ)
-  debtStatus: 'good' | 'warning' | 'blocked'; // Trạng thái công nợ
+  debtStatus: "good" | "warning" | "blocked"; // Trạng thái công nợ
   createdAt: string;
   createdBy: string;
 }
@@ -171,7 +248,21 @@ export interface Customer {
 export interface OrderDesign {
   id: string;
   designCode?: string; // Mã thiết kế tự động sinh (VD: "0001VH-T-001-021124")
-  designType: 'T' | 'C' | 'D' | 'H' | 'R' | 'brochure' | 'business_card' | 'flyer' | 'poster' | 'banner' | 'sticker' | 'menu' | 'catalog' | 'other';
+  designType:
+    | "T"
+    | "C"
+    | "D"
+    | "H"
+    | "R"
+    | "brochure"
+    | "business_card"
+    | "flyer"
+    | "poster"
+    | "banner"
+    | "sticker"
+    | "menu"
+    | "catalog"
+    | "other";
   designName: string; // Tên thiết kế (VD: "Mẫu bìa túi phân bón kali")
   dimensions: string; // Kích thước (VD: "280x153mm")
   quantity: number; // Số lượng
@@ -191,10 +282,34 @@ export interface Order {
   designs?: OrderDesign[]; // Multi-design support
   // Legacy fields for backward compatibility
   description?: string;
-  designType?: 'T' | 'C' | 'D' | 'H' | 'R' | 'brochure' | 'business_card' | 'flyer' | 'poster' | 'banner' | 'sticker' | 'menu' | 'catalog' | 'other';
+  designType?:
+    | "T"
+    | "C"
+    | "D"
+    | "H"
+    | "R"
+    | "brochure"
+    | "business_card"
+    | "flyer"
+    | "poster"
+    | "banner"
+    | "sticker"
+    | "menu"
+    | "catalog"
+    | "other";
   quantity?: number;
-  status: 'new' | 'designing' | 'design_approved' | 'waiting_quote' | 'quoted' | 'deposited' | 'prepress_ready' | 'in_production' | 'completed' | 'cancelled';
-  designStatus?: 'pending' | 'in_progress' | 'waiting_approval' | 'approved';
+  status:
+    | "new"
+    | "designing"
+    | "design_approved"
+    | "waiting_quote"
+    | "quoted"
+    | "deposited"
+    | "prepress_ready"
+    | "in_production"
+    | "completed"
+    | "cancelled";
+  designStatus?: "pending" | "in_progress" | "waiting_approval" | "approved";
   totalAmount?: number;
   depositAmount?: number;
   depositPaid: boolean;
@@ -213,9 +328,9 @@ export interface PrepressOrder {
   paperType: string;
   printMachine: string;
   quantity: number;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  priority: "low" | "medium" | "high" | "urgent";
   notes?: string;
-  status: 'pending' | 'in_progress' | 'completed';
+  status: "pending" | "in_progress" | "completed";
   createdAt: string;
   createdBy: string;
   assignedTo?: string; // ID nhân viên sản xuất được giao
@@ -235,34 +350,41 @@ export interface Design {
   requirements: string;
   notes?: string;
   material?: string; // Chất liệu (nhãn metaline, hộp giấy Duplex, etc.)
-  
+
   // Assignment & Status
   assignedTo: string; // ID của designer được assign
   assignedBy: string; // ID của người assign
   assignedAt: string;
-  status: 'pending' | 'in_progress' | 'review' | 'revision' | 'approved' | 'delivered';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  
+  status:
+    | "pending"
+    | "in_progress"
+    | "review"
+    | "revision"
+    | "approved"
+    | "delivered";
+  priority: "low" | "medium" | "high" | "urgent";
+
   // Progress Tracking với hình ảnh
   progressImages: DesignProgressImage[];
-  
+
   // File management
   files: DesignFile[];
   finalFiles: DesignFile[]; // Files cuối cùng gửi khách
-  designFile?: { // File bảng thiết kế chính
+  designFile?: {
+    // File bảng thiết kế chính
     url: string;
     fileName: string;
     uploadedAt: string;
     uploadedBy: string;
   };
-  
+
   // Timeline
   createdAt: string;
   updatedAt: string;
   dueDate?: string;
   deliveryDate?: string; // Ngày gửi khách hàng
   completedAt?: string;
-  
+
   // Comments & Feedback
   comments: DesignComment[];
   revisionCount: number;
@@ -273,7 +395,7 @@ export interface DesignProgressImage {
   designId: string;
   imageUrl: string;
   description: string;
-  status: 'drafting' | 'in_progress' | 'review_ready' | 'final';
+  status: "drafting" | "in_progress" | "review_ready" | "final";
   uploadedBy: string;
   uploadedAt: string;
   isVisibleToCustomer: boolean; // Có hiển thị cho khách hàng không
@@ -285,7 +407,7 @@ export interface DesignComment {
   authorId: string;
   authorName: string;
   content: string;
-  type: 'internal' | 'customer_feedback' | 'revision_request';
+  type: "internal" | "customer_feedback" | "revision_request";
   createdAt: string;
   attachments?: string[];
 }
@@ -304,7 +426,7 @@ export interface Production {
   orderNumber: string;
   customerName: string;
   assignedTo?: string;
-  status: 'pending' | 'in_progress' | 'completed';
+  status: "pending" | "in_progress" | "completed";
   progress: number;
   notes?: string;
   issues?: ProductionIssue[];
@@ -326,8 +448,8 @@ export interface Payment {
   orderNumber: string;
   customerName: string;
   amount: number;
-  type: 'deposit' | 'final' | 'refund';
-  status: 'pending' | 'paid' | 'overdue';
+  type: "deposit" | "final" | "refund";
+  status: "pending" | "paid" | "overdue";
   paidAt?: string;
   notes?: string;
   createdAt: string;
@@ -340,7 +462,7 @@ export interface Attendance {
   date: string;
   checkIn?: string;
   checkOut?: string;
-  status: 'present' | 'late' | 'absent' | 'overtime';
+  status: "present" | "late" | "absent" | "overtime";
   workHours: number;
   overtimeHours: number;
   notes?: string;
@@ -348,17 +470,17 @@ export interface Attendance {
 
 export interface Notification {
   id: string;
-  type: 'warning' | 'info' | 'error' | 'success';
+  type: "warning" | "info" | "error" | "success";
   title: string;
   message: string;
   relatedId?: string;
-  relatedType?: 'order' | 'production' | 'payment';
+  relatedType?: "order" | "production" | "payment";
   read: boolean;
   createdAt: string;
 }
 
 // Inventory Management Types
-export type ProductCategory = 'bag' | 'decal' | 'box' | 'paper' | 'label';
+export type ProductCategory = "bag" | "decal" | "box" | "paper" | "label";
 
 export interface ProductCategoryInfo {
   id: ProductCategory;
@@ -367,57 +489,77 @@ export interface ProductCategoryInfo {
   defaultMaterials: string[]; // Danh sách mã nguyên liệu thường dùng
 }
 
-export type MaterialType = 'paper' | 'plastic' | 'ink' | 'glue' | 'coating' | 'foil' | 'ribbon' | 'hardware' | 'packaging';
+export type MaterialType =
+  | "paper"
+  | "plastic"
+  | "ink"
+  | "glue"
+  | "coating"
+  | "foil"
+  | "ribbon"
+  | "hardware"
+  | "packaging";
 
-export const MATERIAL_TYPE_CATEGORIES: Omit<MaterialTypeCategory, 'id' | 'createdAt' | 'updatedAt'>[] = [
+export const MATERIAL_TYPE_CATEGORIES: Omit<
+  MaterialTypeCategory,
+  "id" | "createdAt" | "updatedAt"
+>[] = [
   {
-    name: 'Giấy in ấn',
-    description: 'Các loại giấy sử dụng trong in ấn',
-    materialType: 'paper',
-    specifications: ['80gsm', '120gsm', '150gsm', '200gsm', '250gsm', '300gsm', '350gsm'],
-    units: ['tờ', 'kg', 'm2', 'cuộn'],
-    isActive: true
+    name: "Giấy in ấn",
+    description: "Các loại giấy sử dụng trong in ấn",
+    materialType: "paper",
+    specifications: [
+      "80gsm",
+      "120gsm",
+      "150gsm",
+      "200gsm",
+      "250gsm",
+      "300gsm",
+      "350gsm",
+    ],
+    units: ["tờ", "kg", "m2", "cuộn"],
+    isActive: true,
   },
   {
-    name: 'Nhựa và màng nhựa',
-    description: 'Các loại nhựa và màng nhựa',
-    materialType: 'plastic',
-    specifications: ['0.1mm', '0.2mm', '0.3mm', '0.5mm', 'PVC', 'PP', 'PE'],
-    units: ['m2', 'kg', 'cuộn', 'tờ'],
-    isActive: true
+    name: "Nhựa và màng nhựa",
+    description: "Các loại nhựa và màng nhựa",
+    materialType: "plastic",
+    specifications: ["0.1mm", "0.2mm", "0.3mm", "0.5mm", "PVC", "PP", "PE"],
+    units: ["m2", "kg", "cuộn", "tờ"],
+    isActive: true,
   },
   {
-    name: 'Mực in',
-    description: 'Mực in offset, digital và UV',
-    materialType: 'ink',
-    specifications: ['CMYK', 'Pantone', 'UV', 'Metallic'],
-    units: ['kg', 'lít', 'can'],
-    isActive: true
+    name: "Mực in",
+    description: "Mực in offset, digital và UV",
+    materialType: "ink",
+    specifications: ["CMYK", "Pantone", "UV", "Metallic"],
+    units: ["kg", "lít", "can"],
+    isActive: true,
   },
   {
-    name: 'Phủ bóng và coating',
-    description: 'Varnish, UV coating và các loại phủ bóng',
-    materialType: 'coating',
-    specifications: ['Gloss', 'Matt', 'Satin', 'UV'],
-    units: ['lít', 'kg'],
-    isActive: true
+    name: "Phủ bóng và coating",
+    description: "Varnish, UV coating và các loại phủ bóng",
+    materialType: "coating",
+    specifications: ["Gloss", "Matt", "Satin", "UV"],
+    units: ["lít", "kg"],
+    isActive: true,
   },
   {
-    name: 'Giấy bạc và foil',
-    description: 'Giấy bạc ép kim và các loại foil',
-    materialType: 'foil',
-    specifications: ['Gold', 'Silver', 'Hologram', 'Color'],
-    units: ['m2', 'cuộn'],
-    isActive: true
+    name: "Giấy bạc và foil",
+    description: "Giấy bạc ép kim và các loại foil",
+    materialType: "foil",
+    specifications: ["Gold", "Silver", "Hologram", "Color"],
+    units: ["m2", "cuộn"],
+    isActive: true,
   },
   {
-    name: 'Phụ kiện',
-    description: 'Dây, móc, khóa và các phụ kiện khác',
-    materialType: 'hardware',
-    specifications: ['Size S', 'Size M', 'Size L'],
-    units: ['cái', 'bộ', 'kg'],
-    isActive: true
-  }
+    name: "Phụ kiện",
+    description: "Dây, móc, khóa và các phụ kiện khác",
+    materialType: "hardware",
+    specifications: ["Size S", "Size M", "Size L"],
+    units: ["cái", "bộ", "kg"],
+    isActive: true,
+  },
 ];
 
 export interface Material {
@@ -443,7 +585,7 @@ export interface StockTransaction {
   materialId: string;
   materialCode: string;
   materialName: string;
-  type: 'import' | 'export' | 'adjust'; // Nhập, xuất, điều chỉnh
+  type: "import" | "export" | "adjust"; // Nhập, xuất, điều chỉnh
   quantity: number;
   unit: string;
   unitPrice?: number;
@@ -513,9 +655,24 @@ export interface DesignTypeCreateRequest {
   sortOrder?: number;
 }
 
-export interface DesignTypeUpdateRequest extends Partial<DesignTypeCreateRequest> {
+export interface DesignTypeUpdateRequest
+  extends Partial<DesignTypeCreateRequest> {
   id: string;
 }
 
 // Keep the old DesignType as union type for backward compatibility
-export type DesignType = 'T' | 'C' | 'D' | 'H' | 'R' | 'brochure' | 'business_card' | 'flyer' | 'poster' | 'banner' | 'sticker' | 'menu' | 'catalog' | 'other';
+export type DesignType =
+  | "T"
+  | "C"
+  | "D"
+  | "H"
+  | "R"
+  | "brochure"
+  | "business_card"
+  | "flyer"
+  | "poster"
+  | "banner"
+  | "sticker"
+  | "menu"
+  | "catalog"
+  | "other";

@@ -19,6 +19,8 @@ export * from "./proofing-order.schema";
 export * from "./production.schema";
 export * from "./customer.schema";
 export * from "./invoice.schema";
+export * from "./accounting.schema";
+
 // Re-export zod for convenience
 import { z } from "zod";
 export { z };

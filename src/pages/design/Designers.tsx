@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/pages/DesignersPage.tsx
+import { lazy, useState } from "react";
 import {
   Table,
   TableBody,
@@ -10,66 +11,156 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Mail, Phone, User, Eye } from "lucide-react";
+import {
+  Search,
+  Mail,
+  Phone,
+  User,
+  FileText,
+  Package,
+  Eye,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDesignEmployees } from "@/hooks";
-import { UserType } from "@/Schema";
-import DesignerDetail from "./DesignerDetailView";
-import { useDebounce } from "use-debounce";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DesignerFormDialog } from "@/components/design/designer-form-dialog";
+import { DeleteDesignerDialog } from "@/components/design/delete-designer-dialog";
+
+import type { UserResponse, DesignResponse } from "@/Schema";
+import { useDesignsByUser, useUsers } from "@/hooks";
+import DesignDetailPage from "./detail/DesignDetailPage";
+const DesignerDetail = lazy(() => import("./DesignerDetailView"));
+type Designer = UserResponse;
+type DesignerDesign = DesignResponse;
 
 export default function DesignersPage() {
-  const { data, isError, isLoading } = useDesignEmployees();
-
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery] = useDebounce(searchQuery, 300);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedDesigner, setSelectedDesigner] = useState<UserType | null>(
+  const [selectedDesigner, setSelectedDesigner] = useState<Designer | null>(
     null
   );
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const designers: UserType[] = data?.items ?? [];
-  const totalCount = data?.totalCount ?? 0;
+  // ====== Lấy danh sách designer (user.role = "design") ======
+  const { data, isLoading } = useUsers({
+    role: "design", // UserListParams.role là string
+  });
+
+  const designers: Designer[] = data?.items ?? [];
+  const totalCount = data?.totalCount ?? designers.length;
+  const pageNumber = data?.pageNumber ?? 1;
+  const totalPages = data?.totalPages ?? 1;
+
+  const normalizedSearch = searchQuery.toLowerCase().trim();
 
   const filteredDesigners = designers.filter((designer) => {
-    const q = debouncedQuery.toLowerCase();
+    const fullName = (designer.fullName ?? "").toLowerCase();
+    const username = (designer.username ?? "").toLowerCase();
+    const email = (designer.email ?? "").toLowerCase();
+
     return (
-      designer.fullName.toLowerCase().includes(q) ||
-      designer.username.toLowerCase().includes(q) ||
-      designer.email.toLowerCase().includes(q)
+      fullName.includes(normalizedSearch) ||
+      username.includes(normalizedSearch) ||
+      email.includes(normalizedSearch)
     );
   });
 
   const activeCount = designers.filter((d) => d.isActive).length;
   const inactiveCount = designers.filter((d) => !d.isActive).length;
 
-  const handleDesignerClick = (designer: UserType) => {
+  // ====== Lấy danh sách thiết kế của designer ======
+  const selectedDesignerId = selectedDesigner?.id ?? null;
+
+  const { data: designsData, isLoading: isDesignsLoading } =
+    useDesignsByUser(selectedDesignerId);
+
+  const designerDesigns: DesignerDesign[] = designsData?.items ?? [];
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleDateString("vi-VN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const handleDesignerClick = (designer: Designer) => {
     setSelectedDesigner(designer);
     setIsDialogOpen(true);
   };
 
-  // ===== Loading / Error screen toàn trang =====
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center text-slate-600">
-          <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          <p>Đang tải danh sách nhân viên thiết kế...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleAddDesigner = () => {
+    setSelectedDesigner(null);
+    setIsFormDialogOpen(true);
+  };
 
-  if (isError || !data) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center text-red-600">
-          <p>Không tải được danh sách nhân viên thiết kế.</p>
-        </div>
-      </div>
-    );
-  }
+  const handleEditDesigner = (designer: Designer) => {
+    setSelectedDesigner(designer);
+    setIsFormDialogOpen(true);
+  };
 
-  // ===== Main UI =====
+  const handleDeleteDesigner = (designer: Designer) => {
+    setSelectedDesigner(designer);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleFormSuccess = () => {
+    // Dialog con nên tự invalidate query useUsers, ở đây chỉ cần đóng
+    setIsFormDialogOpen(false);
+  };
+
+  const handleDeleteSuccess = () => {
+    setIsDeleteDialogOpen(false);
+  };
+
+  const getStatusBadge = (status: string | null | undefined) => {
+    const s = status || "";
+    const statusMap: Record<string, { label: string; className: string }> = {
+      pending: {
+        label: "Nhận thông tin",
+        className: "bg-blue-500 hover:bg-blue-600",
+      },
+      designing: {
+        label: "Đang thiết kế",
+        className: "bg-yellow-500 hover:bg-yellow-600",
+      },
+      editing: {
+        label: "Đang chỉnh sửa",
+        className: "bg-purple-500 hover:bg-purple-600",
+      },
+      waiting_for_customer_approval: {
+        label: "Chờ khách duyệt",
+        className: "bg-amber-500 hover:bg-amber-600",
+      },
+      confirmed_for_printing: {
+        label: "Đã chốt in",
+        className: "bg-green-500 hover:bg-green-600",
+      },
+      pdf_exported: {
+        label: "Đã xuất PDF",
+        className: "bg-emerald-500 hover:bg-emerald-600",
+      },
+    };
+
+    return (
+      statusMap[s] || {
+        label: s || "Không rõ",
+        className: "bg-slate-500",
+      }
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -83,7 +174,10 @@ export default function DesignersPage() {
               Quản lý danh sách nhân viên thiết kế và công việc của họ
             </p>
           </div>
-          <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+          <Button
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+            onClick={handleAddDesigner}
+          >
             <User className="mr-2 h-4 w-4" />
             Thêm nhân viên
           </Button>
@@ -147,7 +241,7 @@ export default function DesignersPage() {
           </Card>
         </div>
 
-        {/* Table + Search */}
+        {/* List */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-4">
@@ -183,7 +277,15 @@ export default function DesignersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredDesigners.length === 0 ? (
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-32 text-center">
+                        <div className="text-slate-500 text-sm">
+                          Đang tải danh sách nhân viên...
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredDesigners.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="h-32 text-center">
                         <div className="flex flex-col items-center justify-center text-slate-500">
@@ -201,14 +303,16 @@ export default function DesignersPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-pink-100 text-base font-semibold text-purple-700">
-                              {designer.username.charAt(0).toUpperCase()}
+                              {(designer.username ?? "?")
+                                .charAt(0)
+                                .toUpperCase()}
                             </div>
                             <div>
                               <div className="font-semibold text-slate-900">
-                                {designer.fullName}
+                                {designer.fullName ?? "(Chưa có tên)"}
                               </div>
                               <div className="text-sm text-slate-500">
-                                @{designer.username}
+                                @{designer.username ?? "unknown"}
                               </div>
                             </div>
                           </div>
@@ -217,11 +321,11 @@ export default function DesignersPage() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2 text-sm text-slate-600">
                               <Mail className="h-4 w-4" />
-                              {designer.email}
+                              {designer.email || "—"}
                             </div>
                             <div className="flex items-center gap-2 text-sm text-slate-600">
                               <Phone className="h-4 w-4" />
-                              {designer.phone}
+                              {designer.phone || "—"}
                             </div>
                           </div>
                         </TableCell>
@@ -249,15 +353,33 @@ export default function DesignersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDesignerClick(designer)}
-                            className="hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            Xem thiết kế
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDesignerClick(designer)}
+                              className="hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Xem thiết kế
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditDesigner(designer)}
+                              className="hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteDesigner(designer)}
+                              className="hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -271,20 +393,33 @@ export default function DesignersPage() {
                 Hiển thị {filteredDesigners.length} / {totalCount} nhân viên
               </span>
               <div className="text-xs text-slate-500">
-                Trang {data.pageNumber} / {data.totalPages}
+                Trang {pageNumber} / {totalPages}
               </div>
             </div>
           </CardContent>
-
-          {/* Dialog detail: chỉ render khi đã chọn designer */}
-          {selectedDesigner && (
-            <DesignerDetail
-              open={isDialogOpen}
-              onOpenChange={setIsDialogOpen}
-              selectedDesigner={selectedDesigner}
-            />
-          )}
         </Card>
+
+        {/* Form thêm/sửa designer */}
+        <DesignerFormDialog
+          open={isFormDialogOpen}
+          onOpenChange={setIsFormDialogOpen}
+          designer={selectedDesigner}
+          onSuccess={handleFormSuccess}
+        />
+
+        {/* Xoá designer */}
+        <DeleteDesignerDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          designer={selectedDesigner}
+          onSuccess={handleDeleteSuccess}
+        />
+
+        <DesignerDetail
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          selectedDesigner={selectedDesigner}
+        />
       </div>
     </div>
   );

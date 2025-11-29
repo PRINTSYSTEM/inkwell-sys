@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
@@ -12,6 +12,7 @@ import type {
 } from "@/Schema/proofing-order.schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
+import { useAsyncCallback } from "@/hooks/use-async";
 
 const {
   api: proofingCrudApi,
@@ -29,7 +30,7 @@ const {
   ProofingOrderResponsePagedResponse
 >({
   rootKey: "proofing-orders",
-  basePath: "/api/proofing-orders",
+  basePath: API_SUFFIX.PROOFING_ORDERS,
   getItems: (resp) => resp.items ?? [],
   messages: {
     createSuccess: "Đã tạo bình bài thành công",
@@ -46,38 +47,54 @@ export const useProofingOrder = (id: number | null, enabled = true) =>
 export const useCreateProofingOrder = () => useCreateProofingOrderBase();
 export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();
 
-// POST /api/proofing-orders/from-designs
+// POST /proofing-orders/from-designs
 export const useCreateProofingOrderFromDesigns = () => {
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async (data: CreateProofingOrderFromDesignsRequest) => {
-      const res = await apiRequest.post<ProofingOrderResponse>(
-        API_SUFFIX.PROOFING_FROM_DESIGNS,
-        data
-      );
-      return res.data;
-    },
-    onSuccess: () => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProofingOrderResponse,
+    [CreateProofingOrderFromDesignsRequest]
+  >(async (payload) => {
+    const res = await apiRequest.post<ProofingOrderResponse>(
+      API_SUFFIX.PROOFING_FROM_DESIGNS,
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: CreateProofingOrderFromDesignsRequest) => {
+    try {
+      const result = await execute(payload);
+
       toast({
         title: "Thành công",
         description: "Đã tạo bình bài từ danh sách thiết kế",
       });
-    },
-    onError: (error: any) => {
+
+      return result;
+    } catch (err: any) {
       toast({
         title: "Lỗi",
         description:
-          error?.response?.data?.message ||
-          error?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
           "Không thể tạo bình bài",
         variant: "destructive",
       });
-    },
-  });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
 
-// GET /api/proofing-orders/available-designs
+// GET /proofing-orders/available-designs
 export const useAvailableDesignsForProofing = (materialTypeId?: number) => {
   return useQuery({
     queryKey: [proofingKeys.all[0], "available-designs", materialTypeId],

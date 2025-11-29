@@ -1,469 +1,795 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Plus, Search, Eye, Calendar, Package, Filter, ChevronDown, Factory, ChevronLeft, ChevronRight, Edit, Copy, Trash2, Printer, Download, Layers } from 'lucide-react';
-import { useOrders } from '@/hooks/use-order';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/hooks/use-auth';
+  orderStatusLabels,
+  customerTypeLabels,
+  formatCurrency,
+  formatDate,
+} from "@/lib/status-utils";
+import { Plus, Search, Building2, User, Eye } from "lucide-react";
+// Mock data for the order management system
+import type {
+  CustomerResponse,
+  OrderResponse,
+  DesignResponse,
+  ProofingOrderResponse,
+  ProductionResponse,
+  UserResponse,
+  DesignTypeResponse,
+  MaterialTypeResponse,
+} from "@/Schema";
+import { Link } from "react-router-dom";
 
-const statusLabels = {
-  new: 'Mới',
-  designing: 'Đang thiết kế',
-  design_approved: 'Thiết kế đã duyệt',
-  waiting_quote: 'Chờ báo giá',
-  quoted: 'Đã báo giá',
-  deposited: 'Đã đặt cọc',
-  prepress_ready: 'Sẵn sàng bình bài',
-  in_production: 'Đang sản xuất',
-  completed: 'Hoàn thành',
-  cancelled: 'Đã hủy',
-};
+// Users
+export const mockUsers: UserResponse[] = [
+  {
+    id: 1,
+    username: "admin",
+    fullName: "Nguyễn Văn An",
+    role: "admin",
+    email: "admin@company.com",
+    phone: "0901234567",
+    isActive: true,
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: 2,
+    username: "designer1",
+    fullName: "Trần Thị Bình",
+    role: "design",
+    email: "designer@company.com",
+    phone: "0902345678",
+    isActive: true,
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: 3,
+    username: "production1",
+    fullName: "Lê Văn Công",
+    role: "production",
+    email: "production@company.com",
+    phone: "0903456789",
+    isActive: true,
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: 4,
+    username: "accounting1",
+    fullName: "Phạm Thị Dung",
+    role: "accounting",
+    email: "accounting@company.com",
+    phone: "0904567890",
+    isActive: true,
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+  },
+];
 
-const statusColors = {
-  new: 'bg-blue-100 text-blue-800 border-blue-200',
-  designing: 'bg-purple-100 text-purple-800 border-purple-200',
-  design_approved: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  waiting_quote: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  quoted: 'bg-orange-100 text-orange-800 border-orange-200',
-  deposited: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-  prepress_ready: 'bg-teal-100 text-teal-800 border-teal-200',
-  in_production: 'bg-green-100 text-green-800 border-green-200',
-  completed: 'bg-gray-100 text-gray-800 border-gray-200',
-  cancelled: 'bg-red-100 text-red-800 border-red-200',
-};
+// Design Types
+export const mockDesignTypes: DesignTypeResponse[] = [
+  {
+    id: 1,
+    code: "NAMECARD",
+    name: "Name Card",
+    displayOrder: 1,
+    description: "Thiết kế danh thiếp",
+    status: "active",
+    statusType: "active",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+  },
+  {
+    id: 2,
+    code: "BROCHURE",
+    name: "Brochure",
+    displayOrder: 2,
+    description: "Thiết kế brochure quảng cáo",
+    status: "active",
+    statusType: "active",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+  },
+  {
+    id: 3,
+    code: "POSTER",
+    name: "Poster",
+    displayOrder: 3,
+    description: "Thiết kế poster",
+    status: "active",
+    statusType: "active",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+  },
+];
 
-export default function Orders() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // 10 items per page
+// Material Types
+export const mockMaterialTypes: MaterialTypeResponse[] = [
+  {
+    id: 1,
+    code: "COUCHE250",
+    name: "Couche 250gsm",
+    displayOrder: 1,
+    description: "Giấy couche 250gsm",
+    price: 50000,
+    pricePerCm2: 5,
+    designTypeId: 1,
+    status: "active",
+    statusType: "active",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+  },
+  {
+    id: 2,
+    code: "COUCHE300",
+    name: "Couche 300gsm",
+    displayOrder: 2,
+    description: "Giấy couche 300gsm cao cấp",
+    price: 70000,
+    pricePerCm2: 7,
+    designTypeId: 1,
+    status: "active",
+    statusType: "active",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+  },
+  {
+    id: 3,
+    code: "ARTPAPER",
+    name: "Art Paper 150gsm",
+    displayOrder: 3,
+    description: "Giấy art paper cho brochure",
+    price: 120000,
+    pricePerCm2: 8,
+    designTypeId: 2,
+    status: "active",
+    statusType: "active",
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+  },
+];
 
-  // Use real API data
-  const { 
-    data: ordersResponse, 
-    isLoading, 
-    error 
-  } = useOrders({
-    page: currentPage,
-    pageSize: itemsPerPage,
-    search: searchTerm || undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined
+// Customers
+export const mockCustomers: CustomerResponse[] = [
+  {
+    id: 1,
+    code: "KH001",
+    name: "Nguyễn Thị Mai",
+    companyName: null,
+    representativeName: null,
+    phone: "0912345678",
+    taxCode: null,
+    address: "123 Đường ABC, Quận 1, TP.HCM",
+    type: "retail",
+    typeStatusType: "retail",
+    currentDebt: 0,
+    maxDebt: 10000000,
+    debtStatus: "normal",
+    createdAt: "2024-01-15T00:00:00Z",
+    updatedAt: "2024-01-15T00:00:00Z",
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+  },
+  {
+    id: 2,
+    code: "KH002",
+    name: "Công Ty TNHH ABC",
+    companyName: "Công Ty TNHH ABC",
+    representativeName: "Trần Văn B",
+    phone: "0923456789",
+    taxCode: "0123456789",
+    address: "456 Đường XYZ, Quận 3, TP.HCM",
+    type: "company",
+    typeStatusType: "company",
+    currentDebt: 5000000,
+    maxDebt: 50000000,
+    debtStatus: "normal",
+    createdAt: "2024-01-10T00:00:00Z",
+    updatedAt: "2024-01-10T00:00:00Z",
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+  },
+  {
+    id: 3,
+    code: "KH003",
+    name: "Lê Văn Dũng",
+    companyName: null,
+    representativeName: null,
+    phone: "0934567890",
+    taxCode: null,
+    address: "789 Đường DEF, Quận 7, TP.HCM",
+    type: "retail",
+    typeStatusType: "retail",
+    currentDebt: 2000000,
+    maxDebt: 10000000,
+    debtStatus: "normal",
+    createdAt: "2024-02-01T00:00:00Z",
+    updatedAt: "2024-02-01T00:00:00Z",
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+  },
+];
+
+// Designs
+export const mockDesigns: DesignResponse[] = [
+  {
+    id: 1,
+    code: "DES-001",
+    orderId: 1,
+    designStatus: "confirmed_for_printing",
+    statusType: "confirmed_for_printing",
+    designerId: 2,
+    designer: {
+      id: 2,
+      fullName: "Trần Thị Bình",
+      role: "design",
+    },
+    designTypeId: 1,
+    designType: mockDesignTypes[0],
+    materialTypeId: 1,
+    materialType: mockMaterialTypes[0],
+    quantity: 500,
+    dimensions: "9x5.5cm",
+    width: 9,
+    height: 5.5,
+    areaCm2: 49.5,
+    unitPrice: 5,
+    totalPrice: 247500,
+    requirements: "In 2 mặt, cán màng bóng",
+    additionalNotes: null,
+    designFileUrl: "/designs/namecard-001.pdf",
+    excelFileUrl: null,
+    notes: null,
+    createdAt: "2024-02-15T10:00:00Z",
+    updatedAt: "2024-02-20T14:30:00Z",
+    timelineEntries: [
+      {
+        id: 1,
+        fileUrl: "/designs/namecard-001-v1.png",
+        description: "Bản thiết kế đầu tiên",
+        createdAt: "2024-02-15T10:00:00Z",
+        createdBy: {
+          id: 2,
+          fullName: "Trần Thị Bình",
+          role: "design",
+        },
+      },
+      {
+        id: 2,
+        fileUrl: "/designs/namecard-001-v2.png",
+        description: "Chỉnh sửa theo yêu cầu khách hàng",
+        createdAt: "2024-02-18T15:00:00Z",
+        createdBy: {
+          id: 2,
+          fullName: "Trần Thị Bình",
+          role: "design",
+        },
+      },
+      {
+        id: 3,
+        fileUrl: "/designs/namecard-001-final.pdf",
+        description: "File in cuối cùng",
+        createdAt: "2024-02-20T14:30:00Z",
+        createdBy: {
+          id: 2,
+          fullName: "Trần Thị Bình",
+          role: "design",
+        },
+      },
+    ],
+  },
+  {
+    id: 2,
+    code: "DES-002",
+    orderId: 2,
+    designStatus: "designing",
+    statusType: "designing",
+    designerId: 2,
+    designer: {
+      id: 2,
+      fullName: "Trần Thị Bình",
+      role: "design",
+    },
+    designTypeId: 2,
+    designType: mockDesignTypes[1],
+    materialTypeId: 3,
+    materialType: mockMaterialTypes[2],
+    quantity: 1000,
+    dimensions: "A4",
+    width: 21,
+    height: 29.7,
+    areaCm2: 623.7,
+    unitPrice: 8,
+    totalPrice: 4989600,
+    requirements: "Brochure gấp 3, in màu 2 mặt",
+    additionalNotes: "Cần hoàn thành trước ngày 25/02",
+    designFileUrl: null,
+    excelFileUrl: null,
+    notes: null,
+    createdAt: "2024-02-18T09:00:00Z",
+    updatedAt: "2024-02-18T09:00:00Z",
+    timelineEntries: [],
+  },
+  {
+    id: 3,
+    code: "DES-003",
+    orderId: 1,
+    designStatus: "confirmed_for_printing",
+    statusType: "confirmed_for_printing",
+    designerId: 2,
+    designer: {
+      id: 2,
+      fullName: "Trần Thị Bình",
+      role: "design",
+    },
+    designTypeId: 1,
+    designType: mockDesignTypes[0],
+    materialTypeId: 2,
+    materialType: mockMaterialTypes[1],
+    quantity: 300,
+    dimensions: "9x5.5cm",
+    width: 9,
+    height: 5.5,
+    areaCm2: 49.5,
+    unitPrice: 7,
+    totalPrice: 346500,
+    requirements: "In 2 mặt, cán màng nhám",
+    additionalNotes: null,
+    designFileUrl: "/designs/namecard-003.pdf",
+    excelFileUrl: null,
+    notes: null,
+    createdAt: "2024-02-15T11:00:00Z",
+    updatedAt: "2024-02-20T16:00:00Z",
+    timelineEntries: [
+      {
+        id: 4,
+        fileUrl: "/designs/namecard-003-final.pdf",
+        description: "File in cuối cùng",
+        createdAt: "2024-02-20T16:00:00Z",
+        createdBy: {
+          id: 2,
+          fullName: "Trần Thị Bình",
+          role: "design",
+        },
+      },
+    ],
+  },
+];
+
+// Orders
+export const mockOrders: OrderResponse[] = [
+  {
+    id: 1,
+    code: "ORD-001",
+    customerId: 1,
+    customer: {
+      id: 1,
+      code: "KH001",
+      name: "Nguyễn Thị Mai",
+      companyName: null,
+      debtStatus: "normal",
+      currentDebt: 0,
+      maxDebt: 10000000,
+    },
+    createdBy: 1,
+    creator: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+    assignedTo: 2,
+    assignedUser: {
+      id: 2,
+      fullName: "Trần Thị Bình",
+      role: "design",
+    },
+    status: "proofed",
+    statusType: "proofed",
+    deliveryAddress: "123 Đường ABC, Quận 1, TP.HCM",
+    totalAmount: 594000,
+    depositAmount: 300000,
+    deliveryDate: "2024-02-28T00:00:00Z",
+    excelFileUrl: null,
+    note: "Khách lẻ - Đã nhận cọc",
+    createdAt: "2024-02-15T09:00:00Z",
+    updatedAt: "2024-02-21T10:00:00Z",
+    designs: [mockDesigns[0], mockDesigns[2]],
+  },
+  {
+    id: 2,
+    code: "ORD-002",
+    customerId: 2,
+    customer: {
+      id: 2,
+      code: "KH002",
+      name: "Công Ty TNHH ABC",
+      companyName: "Công Ty TNHH ABC",
+      debtStatus: "normal",
+      currentDebt: 5000000,
+      maxDebt: 50000000,
+    },
+    createdBy: 1,
+    creator: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+    assignedTo: 2,
+    assignedUser: {
+      id: 2,
+      fullName: "Trần Thị Bình",
+      role: "design",
+    },
+    status: "waiting_for_customer_approval",
+    statusType: "waiting_for_customer_approval",
+    deliveryAddress: "456 Đường XYZ, Quận 3, TP.HCM",
+    totalAmount: 4989600,
+    depositAmount: 0,
+    deliveryDate: "2024-03-05T00:00:00Z",
+    excelFileUrl: null,
+    note: "Khách công ty - Chưa cần cọc",
+    createdAt: "2024-02-18T09:00:00Z",
+    updatedAt: "2024-02-18T09:00:00Z",
+    designs: [mockDesigns[1]],
+  },
+  {
+    id: 3,
+    code: "ORD-003",
+    customerId: 3,
+    customer: {
+      id: 3,
+      code: "KH003",
+      name: "Lê Văn Dũng",
+      companyName: null,
+      debtStatus: "normal",
+      currentDebt: 2000000,
+      maxDebt: 10000000,
+    },
+    createdBy: 1,
+    creator: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+    assignedTo: null,
+    assignedUser: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+    status: "pending",
+    statusType: "pending",
+    deliveryAddress: "789 Đường DEF, Quận 7, TP.HCM",
+    totalAmount: 850000,
+    depositAmount: 0,
+    deliveryDate: "2024-03-10T00:00:00Z",
+    excelFileUrl: null,
+    note: "Chưa nhận cọc",
+    createdAt: "2024-02-20T14:00:00Z",
+    updatedAt: "2024-02-20T14:00:00Z",
+    designs: [],
+  },
+];
+
+// Proofing Orders
+export const mockProofingOrders: ProofingOrderResponse[] = [
+  {
+    id: 1,
+    code: "PROOF-001",
+    materialTypeId: 1,
+    materialType: mockMaterialTypes[0],
+    createdById: 1,
+    createdBy: {
+      id: 1,
+      fullName: "Nguyễn Văn An",
+      role: "admin",
+    },
+    totalQuantity: 800,
+    status: "completed",
+    statusType: "completed",
+    notes: "Bình bài cho đơn hàng ORD-001",
+    createdAt: "2024-02-21T10:00:00Z",
+    updatedAt: "2024-02-22T16:00:00Z",
+    proofingOrderDesigns: [
+      {
+        id: 1,
+        proofingOrderId: 1,
+        designId: 1,
+        design: mockDesigns[0],
+        quantity: 500,
+        createdAt: "2024-02-21T10:00:00Z",
+      },
+      {
+        id: 2,
+        proofingOrderId: 1,
+        designId: 3,
+        design: mockDesigns[2],
+        quantity: 300,
+        createdAt: "2024-02-21T10:00:00Z",
+      },
+    ],
+    productions: [],
+  },
+];
+
+// Productions
+export const mockProductions: ProductionResponse[] = [
+  {
+    id: 1,
+    proofingOrderId: 1,
+    productionLeadId: 3,
+    productionLead: {
+      id: 3,
+      fullName: "Lê Văn Công",
+      role: "production",
+    },
+    status: "waiting_for_production",
+    statusType: "waiting_for_production",
+    progressPercent: 0,
+    defectNotes: null,
+    wastage: 0,
+    startedAt: null,
+    completedAt: null,
+    createdAt: "2024-02-22T16:30:00Z",
+    updatedAt: "2024-02-22T16:30:00Z",
+  },
+];
+
+// Update proofing order with production
+mockProofingOrders[0].productions = [mockProductions[0]];
+
+export default function OrdersPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const filteredOrders = mockOrders.filter((order) => {
+    const matchesSearch =
+      order.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || order.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  const orders = ordersResponse?.items || [];
-  const priorityOrders = orders.filter(order => 
-    order.status === 'quoted' || 
-    order.status === 'design_approved' ||
-    (order.deliveryDate && new Date(order.deliveryDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))
-  );
-
-  // API handles filtering, so we use the returned data directly
-  const filteredOrders = orders;
-  // API handles pagination, so we use response data
-  const totalPages = ordersResponse ? Math.ceil(ordersResponse.total / itemsPerPage) : 0;
-  const paginatedOrders = filteredOrders;
-
-  // Reset to page 1 when filters change
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
-  };
-
-  const handleStatusChange = (value: string) => {
-    setStatusFilter(value);
-    setCurrentPage(1);
-  };
-
-  const handleCreateOrder = () => {
-    navigate('/orders/create');
-  };
-
-  const handleViewOrder = (orderId: string) => {
-    navigate(`/orders/${orderId}`);
-  };
-
-  const handleEditOrder = (orderId: string) => {
-    toast.success(`Đang chuyển đến chỉnh sửa đơn hàng ${orderId}`);
-    // navigate(`/orders/${orderId}/edit`); // Uncomment when edit page is created
-  };
-
-  const handleDuplicateOrder = (orderId: string) => {
-    toast.success(`Đang sao chép đơn hàng ${orderId}`);
-    // Logic to duplicate order
-  };
-
-  const handleDeleteOrder = (orderId: string) => {
-    toast.success(`Đã đánh dấu xóa đơn hàng ${orderId}`);
-    // Logic to delete order
-  };
-
-  const handlePrintOrder = (orderId: string) => {
-    toast.success(`Đang in đơn hàng ${orderId}`);
-    // Logic to print order
-  };
-
-  const handleExportOrder = (orderId: string) => {
-    toast.success(`Đang xuất PDF đơn hàng ${orderId}`);
-    // Logic to export order
-  };
-
-  const handleSendToPrepress = (orderId: string) => {
-    toast.success(`Đã gửi đơn hàng ${orderId} đến bình bài`);
-    // Logic: Chuyển status từ 'deposited' -> 'prepress_ready'
-    // navigate('/prepress/create-print-order'); // Có thể chuyển đến trang tạo lệnh bình bài
-  };
-
-  const formatCurrency = (amount: number | string | undefined) => {
-    if (amount === '***' || amount === undefined) {
-      return '***'; // Hiển thị ẩn cho những role không có quyền xem giá
-    }
-    if (typeof amount === 'string') {
-      return amount; // Return as-is if already formatted
-    }
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
-  };
-
-  const getStatusBadge = (status: keyof typeof statusLabels) => (
-    <Badge variant="outline" className={statusColors[status]}>
-      {statusLabels[status]}
-    </Badge>
-  );
-
-  // Calculate statistics from API data
-  const totalOrders = ordersResponse?.total || 0;
-  const newOrders = orders.filter(o => o.status === 'new').length;
-  const inProductionOrders = orders.filter(o => o.status === 'in_production').length;
-  const completedOrders = orders.filter(o => o.status === 'completed').length;
-  const totalRevenue = orders
-    .filter(o => o.totalAmount)
-    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Đang tải danh sách đơn hàng...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-destructive">Lỗi khi tải danh sách đơn hàng</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Quản lý đơn hàng</h1>
-          <p className="text-muted-foreground mt-1">Theo dõi và quản lý toàn bộ đơn hàng</p>
-        </div>
-        <Button onClick={handleCreateOrder} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Tạo đơn hàng
-        </Button>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng đơn hàng</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              +{newOrders} đơn mới
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-balance mb-2">
+              Quản lý đơn hàng
+            </h1>
+            <p className="text-muted-foreground">
+              Theo dõi và quản lý quy trình đơn hàng từ thiết kế đến sản xuất
             </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Đang sản xuất</CardTitle>
-            <Factory className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{inProductionOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round((inProductionOrders / totalOrders) * 100)}% tổng số
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hoàn thành</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completedOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round((completedOrders / totalOrders) * 100)}% tổng số
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng giá trị</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">
-              Giá trị tất cả đơn hàng
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Priority Orders Alert */}
-      {priorityOrders.length > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="text-orange-800 flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Đơn hàng cần chú ý ({priorityOrders.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {priorityOrders.slice(0, 3).map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">{order.orderNumber}</span>
-                    <span className="text-sm text-muted-foreground">{order.customerName}</span>
-                    {getStatusBadge(order.status)}
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleViewOrder(order.id)}
-                  >
-                    Xem
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Danh sách đơn hàng</CardTitle>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Tìm kiếm đơn hàng..." 
-                  className="pl-10 w-80"
-                  value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Lọc theo trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  {Object.entries(statusLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mã đơn</TableHead>
-                <TableHead>Khách hàng</TableHead>
-                <TableHead>Mô tả</TableHead>
-                <TableHead>Số lượng</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Giá trị</TableHead>
-                <TableHead>Ngày giao</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedOrders.map((order) => (
-                <TableRow key={order.id} className="hover:bg-muted/50">
-                  <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                  <TableCell>{order.customerName}</TableCell>
-                  <TableCell className="max-w-xs truncate" title={order.description}>
-                    {order.description}
-                  </TableCell>
-                  <TableCell>{order.quantity.toLocaleString()}</TableCell>
-                  <TableCell>{getStatusBadge(order.status)}</TableCell>
-                  <TableCell>
-                    {order.totalAmount ? formatCurrency(order.totalAmount) : '—'}
-                  </TableCell>
-                  <TableCell>
-                    {order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('vi-VN') : '—'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewOrder(order.id)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Xem chi tiết
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditOrder(order.id)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Chỉnh sửa
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicateOrder(order.id)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Sao chép đơn hàng
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handlePrintOrder(order.id)}>
-                          <Printer className="h-4 w-4 mr-2" />
-                          In đơn hàng
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExportOrder(order.id)}>
-                          <Download className="h-4 w-4 mr-2" />
-                          Xuất PDF
-                        </DropdownMenuItem>
-                        {/* Nút gửi đến bình bài cho đơn đã đặt cọc */}
-                        {order.status === 'deposited' && (
-                          <DropdownMenuItem onClick={() => handleSendToPrepress(order.id)}>
-                            <Layers className="h-4 w-4 mr-2" />
-                            Gửi đến bình bài
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => toast.info('Đang theo dõi tiến độ sản xuất...')}>
-                          <Package className="h-4 w-4 mr-2" />
-                          Theo dõi sản xuất
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info('Đang cập nhật tiến độ...')}>
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Cập nhật tiến độ
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDeleteOrder(order.id)}
-                          className="text-red-600 focus:text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Xóa đơn hàng
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <Link to="/orders/new">
+            <Button size="lg" className="gap-2">
+              <Plus className="w-5 h-5" />
+              Tạo đơn mới
+            </Button>
+          </Link>
+        </div>
 
-          {/* Pagination Controls */}
-          {filteredOrders.length > 0 && (
-            <div className="flex items-center justify-between px-2 py-4">
-              <div className="text-sm text-muted-foreground">
-                Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredOrders.length)} trong tổng số {filteredOrders.length} đơn hàng
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Trước
-                </Button>
-                <div className="flex items-center space-x-1">
-                  <Input
-                    type="number"
-                    min="1"
-                    max={totalPages}
-                    value={currentPage}
-                    onChange={(e) => {
-                      const page = parseInt(e.target.value);
-                      if (page >= 1 && page <= totalPages) {
-                        setCurrentPage(page);
-                      }
-                    }}
-                    className="w-16 text-center text-sm"
-                  />
-                  <span className="text-sm text-muted-foreground">/ {totalPages}</span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Sau
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+        {/* Filters */}
+        <div className="flex gap-4 mb-6">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Tìm kiếm theo mã đơn hoặc khách hàng..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Lọc theo trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              {Object.entries(orderStatusLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="border rounded-lg overflow-hidden bg-card">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr className="border-b">
+                  <th className="px-4 py-3 text-left text-sm font-semibold">
+                    Mã đơn
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">
+                    Khách hàng
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">
+                    Loại
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">
+                    Trạng thái
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">
+                    Thiết kế
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">
+                    Ngày giao
+                  </th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold">
+                    Tổng tiền
+                  </th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold">
+                    Còn lại
+                  </th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold">
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map((order) => {
+                  const customerType = order.customer.companyName
+                    ? "company"
+                    : "retail";
+                  const remaining = order.totalAmount - order.depositAmount;
+
+                  return (
+                    <tr
+                      key={order.id}
+                      className="border-b hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="px-4 py-4">
+                        <Link
+                          to={`/orders/${order.id}`}
+                          className="font-semibold text-primary hover:underline"
+                        >
+                          {order.code}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          {customerType === "company" ? (
+                            <Building2 className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <User className="w-4 h-4 text-muted-foreground" />
+                          )}
+                          <span className="font-medium">
+                            {order.customer.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <Badge variant="outline">
+                          {customerTypeLabels[customerType]}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-4">
+                        <StatusBadge
+                          status={order.status}
+                          label={orderStatusLabels[order.status || ""] || "N/A"}
+                        />
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <span className="font-medium">
+                          {order.designs?.length || 0}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-muted-foreground">
+                        {formatDate(order.deliveryDate)}
+                      </td>
+                      <td className="px-4 py-4 text-right font-semibold">
+                        {formatCurrency(order.totalAmount)}
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <span
+                          className={
+                            remaining > 0
+                              ? "text-orange-600 font-medium"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          {formatCurrency(remaining)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <Link to={`/orders/${order.id}`}>
+                          <Button variant="ghost" size="sm" className="gap-2">
+                            <Eye className="w-4 h-4" />
+                            Xem
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
           {filteredOrders.length === 0 && (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Không tìm thấy đơn hàng</h3>
-              <p className="text-muted-foreground mb-4">
-                {searchTerm || statusFilter !== 'all' 
-                  ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm'
-                  : 'Chưa có đơn hàng nào được tạo'
-                }
+            <div className="text-center py-12">
+              <p className="text-muted-foreground text-lg">
+                Không tìm thấy đơn hàng nào
               </p>
-              <Button onClick={handleCreateOrder}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tạo đơn hàng đầu tiên
-              </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Summary Stats */}
+        {filteredOrders.length > 0 && (
+          <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
+            <span>Hiển thị {filteredOrders.length} đơn hàng</span>
+            <span>
+              Tổng giá trị:{" "}
+              <span className="font-semibold text-foreground">
+                {formatCurrency(
+                  filteredOrders.reduce(
+                    (sum, order) => sum + order.totalAmount,
+                    0
+                  )
+                )}
+              </span>
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

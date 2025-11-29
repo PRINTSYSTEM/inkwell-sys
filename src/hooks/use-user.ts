@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
 import type {
@@ -11,6 +11,7 @@ import type {
 } from "@/Schema/user.schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
+import { useAsyncCallback } from "@/hooks/use-async";
 
 const rootKey = "users";
 
@@ -31,7 +32,7 @@ const {
   UserResponsePagedResponse
 >({
   rootKey,
-  basePath: "/api/users",
+  basePath: API_SUFFIX.USERS,
   getItems: (resp) => resp.items ?? [],
   messages: {
     createSuccess: "Đã tạo người dùng thành công",
@@ -54,49 +55,62 @@ export const useDeleteUser = () => useDeleteUserBase();
 
 // ====== Extra hooks theo swagger ======
 
-// GET /api/users/username/{username}
+// GET /users/username/{username}
 export const useUserByUsername = (username: string | null, enabled = true) => {
   return useQuery({
     queryKey: [rootKey, "by-username", username],
     enabled: enabled && !!username,
     queryFn: async () => {
       const res = await apiRequest.get<UserResponse>(
-        API_SUFFIX.USER_BY_USERNAME(username)
+        API_SUFFIX.USER_BY_USERNAME(username as string)
       );
       return res.data;
     },
   });
 };
 
-// POST /api/users/{id}/change-password
+// POST /users/{id}/change-password
 export const useChangeUserPassword = () => {
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: ChangePasswordRequest;
-    }) => {
-      await apiRequest.post(API_SUFFIX.USER_CHANGE_PASSWORD(id), data);
-    },
-    onSuccess: () => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    void,
+    [{ id: number; data: ChangePasswordRequest }]
+  >(async ({ id, data }) => {
+    await apiRequest.post(API_SUFFIX.USER_CHANGE_PASSWORD(id), data);
+  });
+
+  const mutate = async (payload: {
+    id: number;
+    data: ChangePasswordRequest;
+  }) => {
+    try {
+      await execute(payload);
+
       toast({
         title: "Thành công",
         description: "Đã đổi mật khẩu thành công",
       });
-    },
-    onError: (error: any) => {
+    } catch (err: any) {
       toast({
         title: "Lỗi",
         description:
-          error?.response?.data?.message ||
-          error?.message ||
+          err?.response?.data?.message ||
+          err?.message ||
           "Không thể đổi mật khẩu",
         variant: "destructive",
       });
-    },
-  });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
+
+export { userCrudApi, userKeys };
