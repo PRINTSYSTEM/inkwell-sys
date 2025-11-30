@@ -404,7 +404,7 @@ export default function DesignDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {!d.designFileUrl && !latestTimelineImageUrl ? (
+              {!d.designFileUrl ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                   <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-sm font-medium mb-1">
@@ -436,7 +436,7 @@ export default function DesignDetailPage() {
                     }
                   >
                     <img
-                      src={latestTimelineImageUrl || "/placeholder.svg"}
+                      src={latestTimelineImageUrl}
                       alt="Design file preview"
                       className="w-full h-64 object-cover"
                     />
@@ -452,8 +452,7 @@ export default function DesignDetailPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold mb-1 truncate">
-                          {d.designFileUrl?.split("/").pop() ??
-                            "file-thiet-ke.ai"}
+                          {d.designFileUrl?.split("/").pop()}
                         </p>
                         {/* Không có uploadedAt trong schema, nên chỉ hiển thị "đã upload" */}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">

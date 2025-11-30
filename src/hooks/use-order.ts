@@ -7,7 +7,7 @@ import type {
   OrderListParams,
   CreateOrderRequest,
   UpdateOrderRequest,
-} from "@/Schema/order.schema";
+} from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
 

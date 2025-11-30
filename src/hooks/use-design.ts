@@ -7,7 +7,7 @@ import type {
   DesignListParams,
   MyDesignListParams,
   DesignTimelineEntryResponse,
-} from "@/Schema/design.schema";
+} from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async"; // <== hook async bạn đã có

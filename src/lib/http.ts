@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
-import type { UserInfo } from "../Schema/auth.schema";
+import type { UserInfo } from "../Schema";
 
 const parseParams = (params: Record<string, unknown>) => {
   const keys = Object.keys(params);

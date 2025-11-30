@@ -1,102 +1,101 @@
-/**
- * @deprecated This file is deprecated. Use ModernAuthService instead.
- * This file is kept for backward compatibility during migration.
- */
+// src/services/AuthService.ts
+import { BaseService, ServiceError } from "./BaseService";
+import type { ApiResponse } from "./types";
+import {
+  LoginRequest,
+  LoginResponse,
+  UserInfo,
+  ChangePasswordRequest,
+  validateLoginResponse,
+} from "../Schema";
+import { AuthUtils } from "./AuthUtils";
 
-import type { LoginRequest, LoginResponse, UserInfo } from "../Schema/auth.schema";
-import { getAuthService } from "./index";
+export class AuthService extends BaseService {
+  constructor() {
+    // resourceName = 'auth', cache tắt cho auth
+    super("auth", undefined, { enabled: false });
+  }
 
-// Auth API service - Legacy wrapper for backward compatibility
-export class AuthAPI {
   /**
-   * @deprecated Use getAuthService().login() instead
-   * Login user
-   * @param credentials - Username and password
-   * @returns Promise with access token and user info
+   * Đăng nhập
+   * - Gọi /auth/login (theo swagger)
+   * - Validate bằng zod
+   * - Lưu token + user vào localStorage
+   * - Trả LoginResponse
    */
-  static async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const authService = getAuthService();
-    const response = await authService.login(credentials);
-    
-    if (response.success && response.data) {
-      return response.data;
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    const res: ApiResponse<LoginResponse> = await this.request<LoginResponse>(
+      {
+        method: "POST",
+        url: "/auth/login",
+        data: credentials,
+      },
+      { skipCache: true }
+    );
+
+    if (!res.success || !res.data) {
+      throw new ServiceError(res.message || "Login failed", {
+        code: "LOGIN_FAILED",
+        status: 401,
+      });
     }
-    
-    throw new Error(response.message || 'Login failed');
+
+    const loginData = validateLoginResponse(res.data);
+
+    if (!loginData.accessToken || !loginData.userInfo) {
+      throw new ServiceError("Invalid login response from server", {
+        code: "INVALID_LOGIN_RESPONSE",
+        status: 500,
+      });
+    }
+
+    AuthUtils.setAuthData(loginData.accessToken, loginData.userInfo);
+    return loginData;
   }
 
   /**
-   * @deprecated Use getAuthService().logout() instead
-   * Logout user
+   * Logout
+   * Swagger không định nghĩa /auth/logout, nên mặc định chỉ clear localStorage.
+   * Nếu sau này bạn có endpoint /auth/logout thì thêm call ở đây.
    */
-  static async logout(): Promise<void> {
-    const authService = getAuthService();
-    await authService.logout(true);
+  async logout(): Promise<void> {
+    // Nếu sau này có API:
+    // await this.request<void>({ method: 'POST', url: '/auth/logout' }, { skipCache: true });
+    AuthUtils.clearAuthData();
+  }
+
+  getCurrentUser(): UserInfo | null {
+    return AuthUtils.getUserInfo();
+  }
+
+  isAuthenticated(): boolean {
+    return AuthUtils.isAuthenticated();
+  }
+
+  getAccessToken(): string | null {
+    return AuthUtils.getAccessToken();
   }
 
   /**
-   * @deprecated Use getAuthService().getCurrentUser() instead
-   * Get current user info
-   * @returns Current user info from localStorage
+   * Đổi mật khẩu
+   * - /auth/change-password (swagger có)
    */
-  static getCurrentUser(): UserInfo | null {
-    const authService = getAuthService();
-    return authService.getCurrentUser();
-  }
+  async changePassword(payload: ChangePasswordRequest): Promise<void> {
+    const res: ApiResponse<void> = await this.request<void>(
+      {
+        method: "POST",
+        url: "/auth/change-password",
+        data: payload,
+      },
+      { skipCache: true }
+    );
 
-  /**
-   * @deprecated Use getAuthService().isAuthenticated() instead
-   * Check if user is authenticated
-   * @returns boolean indicating authentication status
-   */
-  static isAuthenticated(): boolean {
-    const authService = getAuthService();
-    return authService.isAuthenticated();
-  }
-
-  /**
-   * @deprecated Use getAuthService().getAccessToken() instead
-   * Get current access token
-   * @returns Access token or null
-   */
-  static getAccessToken(): string | null {
-    const authService = getAuthService();
-    return authService.getAccessToken();
-  }
-
-  /**
-   * @deprecated Use getAuthService().refreshToken() instead
-   * Refresh token
-   */
-  static async refreshToken(): Promise<LoginResponse | null> {
-    try {
-      const authService = getAuthService();
-      const response = await authService.refreshToken();
-      
-      if (response.success && response.data) {
-        return {
-          accessToken: response.data.accessToken,
-          userInfo: authService.getCurrentUser()!
-        };
-      }
-      
-      return null;
-    } catch (error) {
-      console.error("Refresh token failed:", error);
-      return null;
+    if (!res.success) {
+      throw new ServiceError(res.message || "Change password failed", {
+        code: "CHANGE_PASSWORD_FAILED",
+      });
     }
   }
 }
 
-// Export individual functions for easier usage
-export const authAPI = {
-  login: AuthAPI.login,
-  logout: AuthAPI.logout,
-  getCurrentUser: AuthAPI.getCurrentUser,
-  isAuthenticated: AuthAPI.isAuthenticated,
-  getAccessToken: AuthAPI.getAccessToken,
-  refreshToken: AuthAPI.refreshToken,
-};
-
-// Default export
-export default AuthAPI;
+export const authService = new AuthService();

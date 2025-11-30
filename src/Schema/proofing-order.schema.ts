@@ -1,100 +1,97 @@
 // src/Schema/proofing-order.schema.ts
 import { z } from "zod";
+import {
+  UserInfoSchema,
+  createPagedResponseSchema,
+  DateSchema,
+  IdSchema,
+} from "./common";
 import { MaterialTypeResponseSchema } from "./material-type.schema";
 import { DesignResponseSchema } from "./design.schema";
-import { ProductionResponseSchema } from "./production.schema"; // defined below
-import { UserInfoSchema } from "./auth.schema";
-import { PagedMetaSchema } from ".";
+import { ProductionResponseSchema } from "./production.schema";
 
-/** CreateProofingOrderRequest */
-export const CreateProofingOrderRequestSchema = z.object({
-  materialTypeId: z
-    .number({ required_error: "Loại vật liệu là bắt buộc" })
-    .int(),
-  designIds: z
-    .array(z.number().int())
-    .min(1, { message: "Cần chọn ít nhất 1 thiết kế" }),
-  notes: z.string().nullable().optional(),
-});
+// CreateProofingOrderRequest
+export const CreateProofingOrderRequestSchema = z
+  .object({
+    materialTypeId: IdSchema,
+    designIds: z.array(IdSchema),
+    notes: z.string().nullable().optional(),
+  })
+  .strict();
+
 export type CreateProofingOrderRequest = z.infer<
   typeof CreateProofingOrderRequestSchema
 >;
 
-/** CreateProofingOrderFromDesignsRequest */
-export const CreateProofingOrderFromDesignsRequestSchema = z.object({
-  designIds: z
-    .array(z.number().int())
-    .min(1, { message: "Cần chọn ít nhất 1 thiết kế" }),
-  notes: z.string().nullable().optional(),
-});
+// CreateProofingOrderFromDesignsRequest
+export const CreateProofingOrderFromDesignsRequestSchema = z
+  .object({
+    designIds: z.array(IdSchema),
+    notes: z.string().nullable().optional(),
+  })
+  .strict();
+
 export type CreateProofingOrderFromDesignsRequest = z.infer<
   typeof CreateProofingOrderFromDesignsRequestSchema
 >;
 
-/** UpdateProofingOrderRequest */
-export const UpdateProofingOrderRequestSchema = z.object({
-  status: z.string().max(50).nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
+// UpdateProofingOrderRequest
+export const UpdateProofingOrderRequestSchema = z
+  .object({
+    status: z.string().max(50).nullable().optional(),
+    notes: z.string().nullable().optional(),
+  })
+  .strict();
+
 export type UpdateProofingOrderRequest = z.infer<
   typeof UpdateProofingOrderRequestSchema
 >;
 
-/** ProofingOrderDesignResponse */
-export const ProofingOrderDesignResponseSchema = z.object({
-  id: z.number().int(),
-  proofingOrderId: z.number().int(),
-  designId: z.number().int(),
-  design: DesignResponseSchema,
-  quantity: z.number().int(),
-  createdAt: z.string(),
-});
+// ProofingOrderDesignResponse
+export const ProofingOrderDesignResponseSchema = z
+  .object({
+    id: IdSchema.optional(),
+    proofingOrderId: IdSchema.optional(),
+    designId: IdSchema.optional(),
+    design: DesignResponseSchema.optional(),
+    quantity: z.number().int().optional(),
+    createdAt: DateSchema.optional(),
+  })
+  .strict();
+
 export type ProofingOrderDesignResponse = z.infer<
   typeof ProofingOrderDesignResponseSchema
 >;
 
-/** ProofingOrderResponse */
-export const ProofingOrderResponseSchema = z.object({
-  id: z.number().int(),
-  code: z.string().nullable(),
-  materialTypeId: z.number().int(),
-  materialType: MaterialTypeResponseSchema,
-  createdById: z.number().int(),
-  createdBy: UserInfoSchema,
-  totalQuantity: z.number().int(),
-  status: z.string().nullable(),
-  statusType: z.string().nullable(),
-  notes: z.string().nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  proofingOrderDesigns: z.array(ProofingOrderDesignResponseSchema).nullable(),
-  productions: z.array(ProductionResponseSchema).nullable(),
-});
+// ProofingOrderResponse
+export const ProofingOrderResponseSchema = z
+  .object({
+    id: IdSchema.optional(),
+    code: z.string().nullable().optional(),
+    materialTypeId: IdSchema.optional(),
+    materialType: MaterialTypeResponseSchema.optional(),
+    createdById: IdSchema.optional(),
+    createdBy: UserInfoSchema.optional(),
+    totalQuantity: z.number().int().optional(),
+    status: z.string().nullable().optional(),
+    statusType: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    createdAt: DateSchema.optional(),
+    updatedAt: DateSchema.optional(),
+    proofingOrderDesigns: z
+      .array(ProofingOrderDesignResponseSchema)
+      .nullable()
+      .optional(),
+    productions: z.array(ProductionResponseSchema).nullable().optional(),
+  })
+  .strict();
+
 export type ProofingOrderResponse = z.infer<typeof ProofingOrderResponseSchema>;
 
-/** Paged proofing orders */
-export const ProofingOrderResponsePagedSchema = PagedMetaSchema.extend({
-  items: z.array(ProofingOrderResponseSchema).nullable(),
-});
+// ProofingOrderResponsePagedResponse
+export const ProofingOrderResponsePagedResponseSchema =
+  createPagedResponseSchema(ProofingOrderResponseSchema);
+
 export type ProofingOrderResponsePagedResponse = z.infer<
-  typeof ProofingOrderResponsePagedSchema
->;
-
-/** List params */
-export const ProofingOrderListParamsSchema = z.object({
-  pageNumber: z.number().int().optional(),
-  pageSize: z.number().int().optional(),
-  materialTypeId: z.number().int().optional(),
-  status: z.string().optional(),
-});
-export type ProofingOrderListParams = z.infer<
-  typeof ProofingOrderListParamsSchema
->;
-
-/** Available-designs params */
-export const AvailableDesignsForProofingParamsSchema = z.object({
-  materialTypeId: z.number().int().optional(),
-});
-export type AvailableDesignsForProofingParams = z.infer<
-  typeof AvailableDesignsForProofingParamsSchema
+  typeof ProofingOrderResponsePagedResponseSchema
 >;

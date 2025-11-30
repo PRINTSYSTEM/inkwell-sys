@@ -1,67 +1,107 @@
+// src/Schema/common.ts
 import { z } from "zod";
+import { DateSchema, IdSchema } from "./";
 
-// Role related enums
-export const RoleEnum = z.enum([
+// ===== Enum & common types từ Swagger =====
+
+export const UserRoleSchema = z.enum([
   "admin",
-  "shareholder",
-  "designer_manager",
-  "production_manager",
-  "designer",
-  "production_worker",
-  "prepress",
-  "operator",
-  "customer_service",
-  "accountant",
-  "hr",
-]);
-
-export const PermissionEnum = z.enum([
-  "create",
-  "read",
-  "update",
-  "delete",
-  "manage_all",
-  "view_all",
-  "export",
-  "import",
-  "approve",
-  "reject",
-]);
-
-export const ResourceEnum = z.enum([
-  "users",
-  "roles",
-  "departments",
-  "employees",
-  "assignments",
-  "reports",
-  "notifications",
-  "analytics",
-  "attendance",
-  "performance",
-  "designs",
-  "orders",
-  "customers",
-  "inventory",
-  "materials",
+  "manager",
+  "design",
+  "design_lead",
   "production",
+  "production_lead",
+  "accounting",
+  "accounting_lead",
+  "warehouse",
+  "warehouse_lead",
+  "hr",
+  "hr_lead",
+  "cskh",
+  "cskh_lead",
 ]);
 
-// Status enums
-export const StatusEnum = z.enum([
-  "active",
-  "inactive",
-  "pending",
-  "approved",
-  "rejected",
-  "draft",
-  "completed",
-  "cancelled",
-  "archived",
-]);
+export type UserRole = z.infer<typeof UserRoleSchema>;
 
-// Export types for use in other schemas
-export type RoleType = z.infer<typeof RoleEnum>;
-export type PermissionType = z.infer<typeof PermissionEnum>;
-export type ResourceType = z.infer<typeof ResourceEnum>;
-export type StatusType = z.infer<typeof StatusEnum>;
+// CommonStatus (từ constants Swagger: active/inactive)
+export const CommonStatusSchema = z.enum(["active", "inactive"]);
+export type CommonStatus = z.infer<typeof CommonStatusSchema>;
+
+// ===== Swagger: UserInfo =====
+
+export const UserInfoSchema = z
+  .object({
+    id: IdSchema, // integer int32
+    username: z.string().nullable().optional(),
+    fullName: z.string().nullable().optional(),
+    role: z.string().nullable().optional(),
+    email: z.string().nullable().optional(),
+    phone: z.string().nullable().optional(),
+  })
+  .strict();
+
+export type UserInfo = z.infer<typeof UserInfoSchema>;
+
+// ===== Swagger: ConstantGroup & ConstantsResponse =====
+
+export const ConstantGroupSchema = z
+  .object({
+    entityType: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    values: z.record(z.string()).nullable().optional(),
+  })
+  .strict();
+
+export type ConstantGroup = z.infer<typeof ConstantGroupSchema>;
+
+export const ConstantsResponseSchema = z
+  .object({
+    roles: ConstantGroupSchema.optional(),
+    orderStatuses: ConstantGroupSchema.optional(),
+    designStatuses: ConstantGroupSchema.optional(),
+    proofingOrderStatuses: ConstantGroupSchema.optional(),
+    productionStatuses: ConstantGroupSchema.optional(),
+    paymentStatuses: ConstantGroupSchema.optional(),
+    customerTypes: ConstantGroupSchema.optional(),
+    paymentMethods: ConstantGroupSchema.optional(),
+    commonStatuses: ConstantGroupSchema.optional(),
+  })
+  .strict();
+
+export type ConstantsResponse = z.infer<typeof ConstantsResponseSchema>;
+
+// ===== Helper: PagedResponse<T> (Swagger style) =====
+
+export const PagedResponseBaseSchema = z
+  .object({
+    totalCount: z.number().int(),
+    pageNumber: z.number().int(),
+    pageSize: z.number().int(),
+    totalPages: z.number().int().optional(),
+    hasPreviousPage: z.boolean().optional(),
+    hasNextPage: z.boolean().optional(),
+  })
+  .strict();
+
+export type PagedResponseBase = z.infer<typeof PagedResponseBaseSchema>;
+
+export const createPagedResponseSchema = <T extends z.ZodTypeAny>(
+  itemSchema: T
+) =>
+  PagedResponseBaseSchema.extend({
+    items: z.array(itemSchema).nullable().optional(),
+  });
+
+// ===== LƯU Ý về ErrorResponse =====
+// File base.schema.ts của bạn đã có ErrorResponseSchema cho API wrapper (success: false, error, ...).
+// Swagger lại có ErrorResponse kiểu khác (statusCode, error, timeStamp).
+// Nếu cần dùng ErrorResponse của Swagger, nên đặt tên khác, ví dụ:
+export const BackendErrorResponseSchema = z
+  .object({
+    statusCode: z.number().int(),
+    error: z.string().nullable().optional(),
+    timeStamp: DateSchema.optional(), // format date-time
+  })
+  .strict();
+
+export type BackendErrorResponse = z.infer<typeof BackendErrorResponseSchema>;

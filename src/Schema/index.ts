@@ -1,25 +1,22 @@
 // Common Schemas
-export * from "./Common/enums";
-export * from "./Common/base";
+export * from "./common/enums";
+export * from "./common/base";
 
 // Entity Schemas
 export * from "./user.schema";
-export * from "./role.schema";
 export * from "./employee.schema";
-export * from "./report.schema";
-export * from "./department.schema";
 export * from "./notification.schema";
 export * from "./design.schema";
-export * from "./material.schema";
 export * from "./design-type.schema";
 export * from "./material-type.schema";
 export * from "./order.schema";
-export * from "./timeline.schema";
 export * from "./proofing-order.schema";
 export * from "./production.schema";
 export * from "./customer.schema";
 export * from "./invoice.schema";
 export * from "./accounting.schema";
+export * from "./auth.schema";
+export * from "./params.schema";
 
 // Re-export zod for convenience
 import { z } from "zod";

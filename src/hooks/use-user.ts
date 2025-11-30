@@ -8,7 +8,7 @@ import type {
   CreateUserRequest,
   UpdateUserRequest,
   ChangePasswordRequest,
-} from "@/Schema/user.schema";
+} from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";

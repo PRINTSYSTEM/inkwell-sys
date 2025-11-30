@@ -10,7 +10,7 @@ import type {
   UpdateProductionRequest,
   StartProductionRequest,
   CompleteProductionRequest,
-} from "@/Schema/production.schema";
+} from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
 

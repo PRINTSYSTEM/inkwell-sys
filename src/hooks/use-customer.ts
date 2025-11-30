@@ -1,11 +1,11 @@
 import type {
   CustomerResponse,
   CustomerSummaryResponsePagedResponse,
-  CustomerListParams,
   CreateCustomerRequest,
   UpdateCustomerRequest,
 } from "@/Schema/customer.schema";
 import { createCrudHooks } from "./use-base";
+import { CustomerListParams } from "@/Schema";
 
 // Không có DELETE trong swagger → vẫn dùng createCrudHooks nhưng KHÔNG export useDelete.
 const {

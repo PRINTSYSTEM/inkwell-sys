@@ -9,7 +9,7 @@ import type {
   CreateProofingOrderRequest,
   CreateProofingOrderFromDesignsRequest,
   UpdateProofingOrderRequest,
-} from "@/Schema/proofing-order.schema";
+} from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";

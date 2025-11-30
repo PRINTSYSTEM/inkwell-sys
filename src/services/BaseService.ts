@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import {
   ApiResponse,
   ApiError,
@@ -6,11 +6,11 @@ import {
   CacheConfig,
   RequestConfig,
   ServiceMetrics,
-  QueryParams
-} from './types';
+  QueryParams,
+} from "./types";
 
 // Extend AxiosRequestConfig to include metadata
-declare module 'axios' {
+declare module "axios" {
   interface AxiosRequestConfig {
     metadata?: {
       startTime?: number;
@@ -20,7 +20,10 @@ declare module 'axios' {
 
 // Simple in-memory cache implementation
 class ServiceCache {
-  private cache = new Map<string, { data: unknown; timestamp: number; ttl: number }>();
+  private cache = new Map<
+    string,
+    { data: unknown; timestamp: number; ttl: number }
+  >();
   private maxSize: number;
 
   constructor(maxSize = 1000) {
@@ -49,7 +52,7 @@ class ServiceCache {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
-      ttl
+      ttl,
     });
   }
 
@@ -71,13 +74,13 @@ class ServiceCache {
       }
     }
 
-    keysToDelete.forEach(key => this.cache.delete(key));
+    keysToDelete.forEach((key) => this.cache.delete(key));
   }
 
   getStats() {
     return {
       size: this.cache.size,
-      maxSize: this.maxSize
+      maxSize: this.maxSize,
     };
   }
 }
@@ -91,7 +94,7 @@ export class ServiceError extends Error {
 
   constructor(message: string, options: Partial<ApiError> = {}) {
     super(message);
-    this.name = 'ServiceError';
+    this.name = "ServiceError";
     this.code = options.code;
     this.status = options.status;
     this.errors = options.errors;
@@ -110,7 +113,7 @@ export abstract class BaseService {
 
   constructor(
     resourceName: string,
-    baseURL: string = import.meta.env.VITE_API_BASE_URL || '/api',
+    baseURL: string = import.meta.env.VITE_API_BASE_URL || "/api",
     cacheConfig: CacheConfig = {}
   ) {
     this.resourceName = resourceName;
@@ -119,7 +122,7 @@ export abstract class BaseService {
       ttl: 5 * 60 * 1000, // 5 minutes
       maxSize: 1000,
       enabled: true,
-      ...cacheConfig
+      ...cacheConfig,
     };
 
     // Initialize cache
@@ -131,7 +134,7 @@ export abstract class BaseService {
       errorRate: 0,
       averageResponseTime: 0,
       cacheHitRate: 0,
-      lastReset: new Date()
+      lastReset: new Date(),
     };
 
     // Create axios instance
@@ -139,9 +142,9 @@ export abstract class BaseService {
       baseURL: this.baseURL,
       timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 30000,
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
     });
 
     // Setup interceptors
@@ -152,19 +155,19 @@ export abstract class BaseService {
     // Request interceptor
     this.client.interceptors.request.use(
       (config) => {
-        console.log('🔧 Request interceptor - config:', {
+        console.log("🔧 Request interceptor - config:", {
           method: config.method,
           url: config.url,
           baseURL: config.baseURL,
           headers: config.headers,
-          data: config.data
+          data: config.data,
         });
 
         // Add authentication token if available
         const token = this.getAuthToken();
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
-          console.log('🔑 Added auth token to request');
+          console.log("🔑 Added auth token to request");
         }
 
         // Add request timestamp for metrics
@@ -195,7 +198,7 @@ export abstract class BaseService {
   private getAuthToken(): string | null {
     // Get token from localStorage using AuthUtils key
     try {
-      return localStorage.getItem('accessToken'); // Match AuthUtils.TOKEN_KEY
+      return localStorage.getItem("accessToken"); // Match AuthUtils.TOKEN_KEY
     } catch {
       return null;
     }
@@ -205,12 +208,12 @@ export abstract class BaseService {
     const startTime = response.config.metadata?.startTime;
     if (startTime) {
       const responseTime = Date.now() - startTime;
-      
+
       // Update rolling average
       const currentCount = this.metrics.requestCount;
       const currentAverage = this.metrics.averageResponseTime;
-      
-      this.metrics.averageResponseTime = 
+
+      this.metrics.averageResponseTime =
         (currentAverage * currentCount + responseTime) / (currentCount + 1);
       this.metrics.requestCount++;
     }
@@ -224,12 +227,13 @@ export abstract class BaseService {
   private handleError(error: unknown): ServiceError {
     if (axios.isAxiosError(error)) {
       const response = error.response;
-      const message = response?.data?.message || error.message || 'An error occurred';
-      
+      const message =
+        response?.data?.message || error.message || "An error occurred";
+
       return new ServiceError(message, {
         code: response?.data?.code || error.code,
         status: response?.status,
-        errors: response?.data?.errors
+        errors: response?.data?.errors,
       });
     }
 
@@ -238,13 +242,13 @@ export abstract class BaseService {
     }
 
     return new ServiceError(
-      error instanceof Error ? error.message : 'Unknown error occurred'
+      error instanceof Error ? error.message : "Unknown error occurred"
     );
   }
 
   // Cache key generation
   protected getCacheKey(method: string, params?: unknown): string {
-    const paramStr = params ? JSON.stringify(params) : '';
+    const paramStr = params ? JSON.stringify(params) : "";
     return `${this.resourceName}:${method}:${paramStr}`;
   }
 
@@ -259,20 +263,22 @@ export abstract class BaseService {
       freshData = false,
       timeout,
       retries = 3,
-      retryDelay = 1000
+      retryDelay = 1000,
     } = options;
 
     // Generate cache key for GET requests
-    const cacheKey = config.method === 'get' ? 
-      this.getCacheKey(config.url || '', config.params) : null;
+    const cacheKey =
+      config.method === "get"
+        ? this.getCacheKey(config.url || "", config.params)
+        : null;
 
     // Try cache first for GET requests
     if (cacheKey && cache.enabled && !skipCache && !freshData) {
       const cached = this.cache.get<ApiResponse<T>>(cacheKey);
       if (cached) {
         // Update cache hit rate
-        this.metrics.cacheHitRate = 
-          (this.metrics.cacheHitRate * this.metrics.requestCount + 1) / 
+        this.metrics.cacheHitRate =
+          (this.metrics.cacheHitRate * this.metrics.requestCount + 1) /
           (this.metrics.requestCount + 1);
         return cached;
       }
@@ -282,29 +288,29 @@ export abstract class BaseService {
     const requestConfig: AxiosRequestConfig = {
       ...config,
       timeout: timeout || config.timeout,
-      signal: options.abortSignal
+      signal: options.abortSignal,
     };
 
     // Retry logic
     let lastError: ServiceError;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        console.log('🚀 Making API request:', requestConfig);
+        console.log("🚀 Making API request:", requestConfig);
         const response = await this.client.request(requestConfig);
-        
-        console.log('📡 API Response received:', {
+
+        console.log("📡 API Response received:", {
           status: response.status,
           headers: response.headers,
-          data: response.data
+          data: response.data,
         });
 
         // Normalize response to ApiResponse format
         const apiResponse: ApiResponse<T> = {
           success: response.status >= 200 && response.status < 300,
           data: response.data,
-          message: response.statusText || 'Success'
+          message: response.statusText || "Success",
         };
-        
+
         // Cache successful GET responses
         if (cacheKey && cache.enabled && apiResponse.success) {
           this.cache.set(cacheKey, apiResponse, cache.ttl || 300000);
@@ -312,15 +318,21 @@ export abstract class BaseService {
 
         return apiResponse;
       } catch (error) {
-        lastError = error instanceof ServiceError ? error : this.handleError(error);
-        
+        lastError =
+          error instanceof ServiceError ? error : this.handleError(error);
+
         // Don't retry for client errors (4xx) or on last attempt
-        if (attempt === retries || (lastError.status && lastError.status < 500)) {
+        if (
+          attempt === retries ||
+          (lastError.status && lastError.status < 500)
+        ) {
           throw lastError;
         }
 
         // Wait before retry with exponential backoff
-        await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt)));
+        await new Promise((resolve) =>
+          setTimeout(resolve, retryDelay * Math.pow(2, attempt))
+        );
       }
     }
 
@@ -328,71 +340,101 @@ export abstract class BaseService {
   }
 
   // Standard CRUD methods
-  protected async findMany<T>(params?: QueryParams, options?: ServiceOptions): Promise<ApiResponse<T[]>> {
-    return this.request<T[]>({
-      method: 'get',
-      url: `/${this.resourceName}`,
-      params
-    }, options);
+  protected async findMany<T>(
+    params?: QueryParams,
+    options?: ServiceOptions
+  ): Promise<ApiResponse<T[]>> {
+    return this.request<T[]>(
+      {
+        method: "get",
+        url: `/${this.resourceName}`,
+        params,
+      },
+      options
+    );
   }
 
-  protected async findById<T>(id: string | number, options?: ServiceOptions): Promise<ApiResponse<T>> {
-    return this.request<T>({
-      method: 'get',
-      url: `/${this.resourceName}/${id}`
-    }, options);
+  protected async findById<T>(
+    id: string | number,
+    options?: ServiceOptions
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(
+      {
+        method: "get",
+        url: `/${this.resourceName}/${id}`,
+      },
+      options
+    );
   }
 
-  protected async create<T>(data: unknown, options?: ServiceOptions): Promise<ApiResponse<T>> {
-    // Clear related cache entries
-    this.clearResourceCache();
-
-    return this.request<T>({
-      method: 'post',
-      url: `/${this.resourceName}`,
-      data
-    }, options);
-  }
-
-  protected async update<T>(
-    id: string | number, 
-    data: unknown, 
+  protected async create<T>(
+    data: unknown,
     options?: ServiceOptions
   ): Promise<ApiResponse<T>> {
     // Clear related cache entries
     this.clearResourceCache();
-    this.cache.delete(this.getCacheKey('findById', id));
 
-    return this.request<T>({
-      method: 'put',
-      url: `/${this.resourceName}/${id}`,
-      data
-    }, options);
+    return this.request<T>(
+      {
+        method: "post",
+        url: `/${this.resourceName}`,
+        data,
+      },
+      options
+    );
   }
 
-  protected async delete(id: string | number, options?: ServiceOptions): Promise<ApiResponse<void>> {
+  protected async update<T>(
+    id: string | number,
+    data: unknown,
+    options?: ServiceOptions
+  ): Promise<ApiResponse<T>> {
     // Clear related cache entries
     this.clearResourceCache();
-    this.cache.delete(this.getCacheKey('findById', id));
+    this.cache.delete(this.getCacheKey("findById", id));
 
-    return this.request<void>({
-      method: 'delete',
-      url: `/${this.resourceName}/${id}`
-    }, options);
+    return this.request<T>(
+      {
+        method: "put",
+        url: `/${this.resourceName}/${id}`,
+        data,
+      },
+      options
+    );
+  }
+
+  protected async delete(
+    id: string | number,
+    options?: ServiceOptions
+  ): Promise<ApiResponse<void>> {
+    // Clear related cache entries
+    this.clearResourceCache();
+    this.cache.delete(this.getCacheKey("findById", id));
+
+    return this.request<void>(
+      {
+        method: "delete",
+        url: `/${this.resourceName}/${id}`,
+      },
+      options
+    );
   }
 
   // Bulk operations
   protected async bulkCreate<T>(
-    items: unknown[], 
+    items: unknown[],
     options?: ServiceOptions
   ): Promise<ApiResponse<T[]>> {
     this.clearResourceCache();
 
-    return this.request<T[]>({
-      method: 'post',
-      url: `/${this.resourceName}/bulk`,
-      data: { items }
-    }, options);
+    return this.request<T[]>(
+      {
+        method: "post",
+        url: `/${this.resourceName}/bulk`,
+        data: { items },
+      },
+      options
+    );
   }
 
   protected async bulkUpdate<T>(
@@ -401,24 +443,30 @@ export abstract class BaseService {
   ): Promise<ApiResponse<T[]>> {
     this.clearResourceCache();
 
-    return this.request<T[]>({
-      method: 'put',
-      url: `/${this.resourceName}/bulk`,
-      data: { updates }
-    }, options);
+    return this.request<T[]>(
+      {
+        method: "put",
+        url: `/${this.resourceName}/bulk`,
+        data: { updates },
+      },
+      options
+    );
   }
 
   protected async bulkDelete(
-    ids: Array<string | number>, 
+    ids: Array<string | number>,
     options?: ServiceOptions
   ): Promise<ApiResponse<void>> {
     this.clearResourceCache();
 
-    return this.request<void>({
-      method: 'delete',
-      url: `/${this.resourceName}/bulk`,
-      data: { ids }
-    }, options);
+    return this.request<void>(
+      {
+        method: "delete",
+        url: `/${this.resourceName}/bulk`,
+        data: { ids },
+      },
+      options
+    );
   }
 
   // Cache management
@@ -447,7 +495,7 @@ export abstract class BaseService {
       errorRate: 0,
       averageResponseTime: 0,
       cacheHitRate: 0,
-      lastReset: new Date()
+      lastReset: new Date(),
     };
   }
 }
@@ -457,17 +505,17 @@ export const serviceUtils = {
   // Build query string from params
   buildQueryString: (params: Record<string, unknown>): string => {
     const searchParams = new URLSearchParams();
-    
+
     Object.entries(params).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
         if (Array.isArray(value)) {
-          value.forEach(v => searchParams.append(key, String(v)));
+          value.forEach((v) => searchParams.append(key, String(v)));
         } else {
           searchParams.append(key, String(value));
         }
       }
     });
-    
+
     return searchParams.toString();
   },
 
@@ -477,7 +525,7 @@ export const serviceUtils = {
     delay: number
   ): ((...args: T) => void) => {
     let timeoutId: NodeJS.Timeout;
-    
+
     return (...args: T) => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => func(...args), delay);
@@ -485,15 +533,21 @@ export const serviceUtils = {
   },
 
   // Validate required fields
-  validateRequired: (data: Record<string, unknown>, fields: string[]): string[] => {
+  validateRequired: (
+    data: Record<string, unknown>,
+    fields: string[]
+  ): string[] => {
     const errors: string[] = [];
-    
-    fields.forEach(field => {
-      if (!data[field] || (typeof data[field] === 'string' && !data[field].toString().trim())) {
+
+    fields.forEach((field) => {
+      if (
+        !data[field] ||
+        (typeof data[field] === "string" && !data[field].toString().trim())
+      ) {
         errors.push(`${field} is required`);
       }
     });
-    
+
     return errors;
   },
 
@@ -501,8 +555,8 @@ export const serviceUtils = {
   formatErrorMessage: (error: ServiceError): string => {
     if (error.errors) {
       const errorMessages = Object.values(error.errors).flat();
-      return errorMessages.join(', ');
+      return errorMessages.join(", ");
     }
     return error.message;
-  }
+  },
 };
