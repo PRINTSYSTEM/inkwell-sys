@@ -1,24 +1,25 @@
 // Common Schemas
-export * from './Common/enums';
-export * from './Common/base';
+export * from "./common/enums";
+export * from "./common/base";
 
 // Entity Schemas
-export * from './user.schema';
-export * from './role.schema';
-export * from './employee.schema';
-export * from './report.schema';
-export * from './department.schema';
-export * from './notification.schema';
-export * from './design-code.schema';
-export * from './design-assignment.schema';
-export * from './design-type.schema';
-export * from './design.schema';
-export * from './material.schema';
-export * from './material-type.schema';
-export * from './order.schema';
+export * from "./user.schema";
+export * from "./employee.schema";
+export * from "./notification.schema";
+export * from "./design.schema";
+export * from "./design-type.schema";
+export * from "./material-type.schema";
+export * from "./order.schema";
+export * from "./proofing-order.schema";
+export * from "./production.schema";
+export * from "./customer.schema";
+export * from "./invoice.schema";
+export * from "./accounting.schema";
+export * from "./auth.schema";
+export * from "./params.schema";
 
 // Re-export zod for convenience
-import { z } from 'zod';
+import { z } from "zod";
 export { z };
 
 // Schema validation utilities
@@ -62,17 +63,19 @@ export function safeParseSchema<T>(
  * @param error Zod validation error
  * @returns Formatted error object with field paths and messages
  */
-export function formatValidationErrors(error: z.ZodError): Record<string, string[]> {
+export function formatValidationErrors(
+  error: z.ZodError
+): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
-  
+
   error.errors.forEach((err) => {
-    const path = err.path.join('.');
+    const path = err.path.join(".");
     if (!errors[path]) {
       errors[path] = [];
     }
     errors[path].push(err.message);
   });
-  
+
   return errors;
 }
 
@@ -91,3 +94,18 @@ export function createPartialSchema<T extends z.ZodRawShape>(
  * Type helper for extracting the TypeScript type from a Zod schema
  */
 export type InferSchema<T extends z.ZodType> = z.infer<T>;
+export const ErrorResponseSchema = z.object({
+  statusCode: z.number().int(),
+  error: z.string().nullable(),
+  timeStamp: z.string(), // date-time
+});
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
+export const PagedMetaSchema = z.object({
+  totalCount: z.number().int(),
+  pageNumber: z.number().int(),
+  pageSize: z.number().int(),
+  totalPages: z.number().int().optional(), // readOnly
+  hasPreviousPage: z.boolean().optional(),
+  hasNextPage: z.boolean().optional(),
+});
+export type PagedMeta = z.infer<typeof PagedMetaSchema>;

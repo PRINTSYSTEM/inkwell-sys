@@ -1,69 +1,49 @@
+// src/Schema/auth.schema.ts
 import { z } from "zod";
+import { UserInfoSchema } from "./common";
 
-// Login Request Schema
+// ---------------------------
+// LoginRequest
+// ---------------------------
 export const LoginRequestSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
-// User Info Schema từ API response
-export const UserInfoSchema = z.object({
-  id: z.number(),
-  username: z.string(),
-  fullName: z.string(),
-  role: z.string(),
-  email: z.string(), // Accept any string for email (API may return invalid formats)
-  phone: z.string(), // Phone as string
-});
-
-// Login Response Schema
-export const LoginResponseSchema = z.object({
-  accessToken: z.string(),
-  userInfo: UserInfoSchema,
-});
-
-// Types
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
-export type UserInfo = z.infer<typeof UserInfoSchema>;
+
+// ---------------------------
+// LoginResponse (Swagger)
+// {
+//    accessToken: string | null,
+//    userInfo: UserInfo | null
+// }
+// ---------------------------
+export const LoginResponseSchema = z.object({
+  accessToken: z.string().nullable(),
+  userInfo: UserInfoSchema.nullable(),
+});
+
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 
-// Helper function to validate email format
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-// Helper function to get display email (show warning if invalid)
-export const getDisplayEmail = (email: string): string => {
-  return isValidEmail(email) ? email : `${email} ⚠️`;
-};
-
-// Auth State Schema
-export const AuthStateSchema = z.object({
-  user: UserInfoSchema.nullable(),
-  accessToken: z.string().nullable(),
-  isAuthenticated: z.boolean(),
-});
-
-export type AuthState = z.infer<typeof AuthStateSchema>;
-
-// Role enum for better type safety
-export enum UserRole {
-  ADMIN = "admin",
-  MANAGER = "manager",
-  EMPLOYEE = "employee",
-  DESIGNER = "designer",
+// ---------------------------
+// Validation helper
+// ---------------------------
+/**
+ * Validate raw unknown response to LoginResponse
+ * Throws ZodError if invalid
+ */
+export function validateLoginResponse(data: unknown): LoginResponse {
+  return LoginResponseSchema.parse(data);
 }
 
-// Helper functions for validation
-export const validateLoginRequest = (data: unknown): LoginRequest => {
-  return LoginRequestSchema.parse(data);
-};
+// ---------------------------
+// ChangePasswordRequest
+// ---------------------------
+export const ChangePasswordRequestSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(1),
+});
 
-export const validateLoginResponse = (data: unknown): LoginResponse => {
-  return LoginResponseSchema.parse(data);
-};
-
-export const validateUserInfo = (data: unknown): UserInfo => {
-  return UserInfoSchema.parse(data);
-};
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>;

@@ -1,583 +1,760 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Package, 
-  User, 
-  MapPin, 
-  DollarSign, 
-  FileText, 
-  Factory,
-  CheckCircle,
-  Clock,
-  AlertCircle,
+import { useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  User,
+  Building2,
+  MapPin,
+  Calendar,
+  FileText,
+  Package,
+  Briefcase,
+  Download,
+  Wallet,
+  Printer,
   Edit,
-  Trash2
-} from 'lucide-react';
-import { useOrder, useUpdateOrder } from '@/hooks/use-order';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import AutoDesignCode from '@/components/AutoDesignCode';
+  Receipt,
+  Play,
+  CheckCircle,
+  CreditCard,
+} from "lucide-react";
 
-const statusLabels = {
-  new: 'Mới',
-  designing: 'Đang thiết kế',
-  design_approved: 'Thiết kế đã duyệt',
-  waiting_quote: 'Chờ báo giá',
-  quoted: 'Đã báo giá',
-  deposited: 'Đã đặt cọc',
-  prepress_ready: 'Sẵn sàng bình bài',
-  in_production: 'Đang sản xuất',
-  completed: 'Hoàn thành',
-  cancelled: 'Đã hủy',
-  waiting_approval: 'Chờ duyệt',
-  waiting_deposit: 'Chờ đặt cọc',
-};
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/ui/status-badge";
 
-const statusColors = {
-  new: 'bg-blue-100 text-blue-800 border-blue-200',
-  designing: 'bg-purple-100 text-purple-800 border-purple-200',
-  design_approved: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  waiting_quote: 'bg-amber-100 text-amber-800 border-amber-200',
-  quoted: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  deposited: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  prepress_ready: 'bg-teal-100 text-teal-800 border-teal-200',
-  in_production: 'bg-green-100 text-green-800 border-green-200',
-  completed: 'bg-gray-100 text-gray-800 border-gray-200',
-  cancelled: 'bg-red-100 text-red-800 border-red-200',
-  waiting_approval: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  waiting_deposit: 'bg-orange-100 text-orange-800 border-orange-200',
-};
+import { OrderFlowDiagram } from "@/components/orders/order-flow-diagram";
+import { DepositDialog } from "@/components/orders/deposit-dialog";
+import { CreateProofingDialog } from "@/components/orders/create-proofing-dialog";
+import { ProductionDialog } from "@/components/orders/production-dialog";
+import { InvoiceDialog } from "@/components/orders/invoice-dialog";
+import { EditOrderSheet } from "@/components/orders/edit-order-sheet";
+import { StatusUpdateDialog } from "@/components/orders/status-update-dialog";
+import { PrintOrderDialog } from "@/components/orders/print-order-dialog";
 
-const workflowSteps = [
-  { key: 'new', label: 'Tạo đơn', icon: FileText },
-  { key: 'designing', label: 'Thiết kế', icon: Edit },
-  { key: 'design_approved', label: 'Duyệt thiết kế', icon: CheckCircle },
-  { key: 'waiting_quote', label: 'Chờ báo giá', icon: Clock },
-  { key: 'quoted', label: 'Đã báo giá', icon: DollarSign },
-  { key: 'deposited', label: 'Đã đặt cọc', icon: DollarSign },
-  { key: 'prepress_ready', label: 'Bình bài', icon: Edit },
-  { key: 'in_production', label: 'Sản xuất', icon: Factory },
-  { key: 'completed', label: 'Hoàn thành', icon: Package },
-];
+import {
+  orderStatusLabels,
+  designStatusLabels,
+  customerTypeLabels,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+} from "@/lib/status-utils";
 
-export default function OrderDetail() {
+import type {
+  OrderListParams,
+  ProofingOrderListParams,
+  ProductionResponse,
+} from "@/Schema";
+import { useOrder, useProofingOrders } from "@/hooks";
+
+export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const orderId = Number.parseInt(id || "0", 10);
 
-  // Helper functions to extract information from description
-  const extractDimensions = (description: string): string => {
-    const patterns = [
-      /(\d+x\d+x\d+\s*mm)/i,
-      /(\d+\s*x\s*\d+\s*x\s*\d+\s*mm)/i,
-      /(\d+\s*x\s*\d+\s*mm)/i,
-      /kích thước[:\s]*([^,\n]+)/i,
-      /KT[:\s]*([^,\n]+)/i
-    ];
-    
-    for (const pattern of patterns) {
-      const match = description.match(pattern);
-      if (match) return match[1].trim();
-    }
-    return '';
-  };
+  // Dialog states
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [proofingDialogOpen, setProofingDialogOpen] = useState(false);
+  const [productionDialogOpen, setProductionDialogOpen] = useState(false);
+  const [productionType, setProductionType] = useState<"start" | "complete">(
+    "start"
+  );
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
 
-  const extractVolume = (description: string): string => {
-    const patterns = [
-      /(\d+\s*ml)/i,
-      /(\d+\s*lít)/i,
-      /(\d+\s*l)/i,
-      /dung tích[:\s]*([^,\n]+)/i
-    ];
-    
-    for (const pattern of patterns) {
-      const match = description.match(pattern);
-      if (match) return match[1].trim();
-    }
-    return '';
-  };
+  // ===== FETCH ORDER =====
+  const {
+    data: order,
+    isLoading: orderLoading,
+    isError: orderError,
+  } = useOrder(orderId || null, !!orderId);
 
-  const extractWeight = (description: string): string => {
-    const patterns = [
-      /(\d+\s*kg)/i,
-      /(\d+\s*g)/i,
-      /trọng lượng[:\s]*([^,\n]+)/i
-    ];
-    
-    for (const pattern of patterns) {
-      const match = description.match(pattern);
-      if (match) return match[1].trim();
-    }
-    return '';
-  };
+  // ===== FETCH PROOFING ORDERS LIÊN QUAN =====
+  const proofingParams: ProofingOrderListParams | undefined = useMemo(() => {
+    if (!order) return undefined;
+    // tuỳ swagger, giả sử có thể filter theo orderId
+    return {
+      pageNumber: 1,
+      pageSize: 50,
+      orderId: order.id,
+    } as ProofingOrderListParams;
+  }, [order]);
 
-  // Use real API to fetch order data
-  const { data: order, isLoading, error } = useOrder(Number(id));
-  
-  // TODO: Add hooks for design, production, and payments when available
-  const design = null; // mockDesigns.find(d => d.orderId === id);
-  const production = null; // mockProductions.find(p => p.orderId === id);
-  const payments: never[] = []; // No payments data yet
+  const { data: proofingPage } = useProofingOrders(proofingParams);
+  const relatedProofing = proofingPage?.items ?? [];
 
-  if (isLoading) {
+  // Productions lấy từ field productions trong ProofingOrderResponse
+  const relatedProductions: ProductionResponse[] = useMemo(() => {
+    if (!relatedProofing?.length) return [];
+    return relatedProofing.flatMap((po) => po.productions ?? []);
+  }, [relatedProofing]);
+
+  // ===== LOADING / ERROR =====
+  if (orderLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Đang tải thông tin đơn hàng...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Đang tải đơn hàng...</p>
       </div>
     );
   }
 
-  if (error || !order) {
+  if (orderError || !order) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Không tìm thấy đơn hàng</h3>
-          <Button onClick={() => navigate('/orders')}>Quay lại danh sách</Button>
+          <h1 className="text-2xl font-bold mb-2">Không tìm thấy đơn hàng</h1>
+          <Link to="/orders">
+            <Button>Quay lại danh sách</Button>
+          </Link>
         </div>
       </div>
     );
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
-  };
+  // ===== DERIVED STATE TỪ ORDER + PROOFING + PRODUCTION =====
+  const customerType = order.customer?.companyName ? "company" : "retail";
+  const hasDeposit = (order.depositAmount || 0) > 0;
 
-  const getStatusBadge = (status: keyof typeof statusLabels) => (
-    <Badge variant="outline" className={statusColors[status]}>
-      {statusLabels[status]}
-    </Badge>
+  const hasConfirmedDesign = (order.designs ?? []).some((d) =>
+    ["confirmed_for_printing", "pdf_exported"].includes(d.designStatus || "")
   );
 
-  const getCurrentStepIndex = () => {
-    return workflowSteps.findIndex(step => step.key === order.status);
-  };
+  const hasCompletedProofing = relatedProofing.some(
+    (po) => po.status === "completed"
+  );
 
-  const currentStepIndex = getCurrentStepIndex();
+  const productionToStart = relatedProductions.find((p) =>
+    ["waiting_for_production", "pending"].includes(p.status || "")
+  );
+  const productionInProgress = relatedProductions.find(
+    (p) => p.status === "in_production"
+  );
+  const hasProductionInProgress = !!productionInProgress;
+  const hasProductionCompleted = relatedProductions.some(
+    (p) => p.status === "completed"
+  );
+
+  const remainingAmount = (order.totalAmount || 0) - (order.depositAmount || 0);
+
+  // material options cho bình bài – lấy từ các thiết kế của đơn
+  const materialOptions =
+    order?.designs?.reduce<
+      NonNullable<(typeof order.designs)[number]["materialType"]>[]
+    >((acc, d) => {
+      if (d.materialType && !acc.some((m) => m.id === d.materialType!.id)) {
+        acc.push(d.materialType);
+      }
+      return acc;
+    }, []) ?? [];
+
+  // ===== RULE FLOW =====
+  const canTakeDeposit =
+    customerType === "retail" &&
+    !hasDeposit &&
+    hasConfirmedDesign &&
+    order.status === "pending";
+
+  const canCreateProofing =
+    hasConfirmedDesign &&
+    (customerType === "company" || hasDeposit) &&
+    ["pending", "waiting_for_proofing"].includes(order.status || "") &&
+    relatedProofing.length === 0;
+
+  const canStartProduction = !!productionToStart && hasCompletedProofing;
+
+  const canCompleteProduction = !!productionInProgress;
+
+  const canIssueInvoice =
+    order.status === "completed" &&
+    hasProductionCompleted &&
+    (customerType === "company" || remainingAmount <= 0);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate('/orders')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Quay lại
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Đơn hàng {order.orderNumber}</h1>
-            <p className="text-muted-foreground mt-1">{order.customerName}</p>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Header */}
+        <div className="mb-6">
+          <Link to="/orders">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 mb-4 -ml-2 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Quay lại
+            </Button>
+          </Link>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl font-bold">{order.code}</h1>
+                <StatusBadge
+                  status={order.status}
+                  label={orderStatusLabels[order.status || ""] || "N/A"}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Tạo ngày {formatDateTime(order.createdAt)} •{" "}
+                {order.creator?.fullName}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setPrintDialogOpen(true)}
+              >
+                <Printer className="w-4 h-4" />
+                In đơn
+              </Button>
+              <Button size="sm" onClick={() => setStatusDialogOpen(true)}>
+                Cập nhật trạng thái
+              </Button>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {getStatusBadge(order.status)}
-          <Button variant="outline" size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Chỉnh sửa
-          </Button>
+
+        {/* Flow Diagram */}
+        <div className="mb-6">
+          <OrderFlowDiagram
+            currentStatus={order.status}
+            customerType={customerType}
+            hasDeposit={hasDeposit}
+          />
         </div>
-      </div>
 
-      {/* Workflow Progress */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Tiến độ đơn hàng
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between mb-4">
-            {workflowSteps.map((step, index) => {
-              const StepIcon = step.icon;
-              const isCompleted = index < currentStepIndex;
-              const isCurrent = index === currentStepIndex;
-              
-              return (
-                <div key={step.key} className="flex flex-col items-center flex-1">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                    isCompleted 
-                      ? 'bg-green-100 border-green-500 text-green-700'
-                      : isCurrent
-                      ? 'bg-blue-100 border-blue-500 text-blue-700'
-                      : 'bg-gray-100 border-gray-300 text-gray-500'
-                  }`}>
-                    <StepIcon className="h-5 w-5" />
-                  </div>
-                  <span className={`text-xs mt-2 text-center ${
-                    isCurrent ? 'font-medium text-blue-700' : 'text-muted-foreground'
-                  }`}>
-                    {step.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-          <Progress value={(currentStepIndex / (workflowSteps.length - 1)) * 100} className="h-2" />
-        </CardContent>
-      </Card>
-
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="design">Thiết kế</TabsTrigger>
-          <TabsTrigger value="production">Sản xuất</TabsTrigger>
-          <TabsTrigger value="payment">Thanh toán</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Order Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Thông tin đơn hàng
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-muted-foreground">Mã đơn hàng</label>
-                  <p className="font-medium">{order.orderNumber}</p>
-                </div>
-                <Separator />
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-muted-foreground">Mô tả sản phẩm</label>
-                  <p>{order.description}</p>
-                </div>
-                <Separator />
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-muted-foreground">Số lượng</label>
-                  <p className="font-medium">{order.quantity.toLocaleString()} sản phẩm</p>
-                </div>
-                <Separator />
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-muted-foreground">Ngày tạo</label>
-                  <p>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</p>
-                </div>
-                <Separator />
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-muted-foreground">Người tạo</label>
-                  <p>{order.createdBy}</p>
-                </div>
-              </CardContent>
-            </Card>
-
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
             {/* Customer Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
+            <Card className="shadow-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  {customerType === "company" ? (
+                    <Building2 className="w-4 h-4 text-primary" />
+                  ) : (
+                    <User className="w-4 h-4 text-primary" />
+                  )}
                   Thông tin khách hàng
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-muted-foreground">Tên khách hàng</label>
-                  <p className="font-medium">{order.customerName}</p>
-                </div>
-                <Separator />
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    <MapPin className="h-4 w-4 inline mr-1" />
-                    Địa chỉ giao hàng
-                  </label>
-                  <p>{order.deliveryAddress}</p>
-                </div>
-                <Separator />
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    <Calendar className="h-4 w-4 inline mr-1" />
-                    Ngày giao hàng
-                  </label>
-                  <p className="font-medium">
-                    {order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('vi-VN') : 'Chưa xác định'}
-                  </p>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <InfoItem label="Mã KH" value={order.customer?.code || ""} />
+                  <InfoItem label="Tên" value={order.customer?.name || ""} />
+                  {order.customer?.companyName && (
+                    <InfoItem
+                      label="Công ty"
+                      value={order.customer.companyName}
+                      className="col-span-2"
+                    />
+                  )}
+                  <div className="col-span-2 md:col-span-1">
+                    <span className="text-xs text-muted-foreground block mb-1">
+                      Loại KH
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {customerTypeLabels[customerType]}
+                    </Badge>
+                  </div>
+                  {order.deliveryAddress && (
+                    <div className="col-span-2 md:col-span-3">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                        <MapPin className="w-3 h-3" /> Địa chỉ giao hàng
+                      </span>
+                      <span className="text-sm font-medium">
+                        {order.deliveryAddress}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Financial Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Thông tin tài chính
+            {/* Designs */}
+            <Card className="shadow-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="w-4 h-4 text-primary" />
+                  Thiết kế
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {order.designs?.length || 0}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {order.designs && order.designs.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[700px] text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/30">
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Mã
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Loại / Chất liệu
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Trạng thái
+                          </th>
+                          <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                            SL
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Designer
+                          </th>
+                          <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                            Giá
+                          </th>
+                          <th className="px-4 py-3 text-center font-medium text-muted-foreground w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {order.designs.map((design) => (
+                          <tr
+                            key={design.id}
+                            className="hover:bg-muted/20 transition-colors"
+                          >
+                            <td className="px-4 py-3 font-medium">
+                              {design.code}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-xs text-muted-foreground">
+                                {design.designType?.name}
+                              </div>
+                              <div className="font-medium">
+                                {design.materialType?.name}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusBadge
+                                status={design.designStatus}
+                                label={
+                                  designStatusLabels[
+                                    design.designStatus || ""
+                                  ] || "N/A"
+                                }
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-center font-medium">
+                              {design.quantity}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {design.designer?.fullName}
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold">
+                              {formatCurrency(design.totalPrice || 0)}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {design.designFileUrl && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    Chưa có thiết kế nào
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Proofing Orders */}
+            {relatedProofing.length > 0 && (
+              <Card className="shadow-card">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Package className="w-4 h-4 text-primary" />
+                    Bình bài
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/30">
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Mã
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Chất liệu
+                          </th>
+                          <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                            Số lượng
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Trạng thái
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {relatedProofing.map((proof) => (
+                          <tr
+                            key={proof.id}
+                            className="hover:bg-muted/20 transition-colors"
+                          >
+                            <td className="px-4 py-3 font-medium">
+                              {proof.code}
+                            </td>
+                            <td className="px-4 py-3">
+                              {proof.materialType?.name}
+                            </td>
+                            <td className="px-4 py-3 text-center font-medium">
+                              {proof.totalQuantity}
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusBadge
+                                status={proof.status}
+                                label={
+                                  orderStatusLabels[proof.status || ""] || "N/A"
+                                }
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Productions */}
+            {relatedProductions.length > 0 && (
+              <Card className="shadow-card">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Briefcase className="w-4 h-4 text-primary" />
+                    Sản xuất
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/30">
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Mã
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Phụ trách
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Tiến độ
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Trạng thái
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                            Thời gian
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {relatedProductions.map((prod) => (
+                          <tr
+                            key={prod.id}
+                            className="hover:bg-muted/20 transition-colors"
+                          >
+                            <td className="px-4 py-3 font-medium">
+                              SP-{prod.id}
+                            </td>
+                            <td className="px-4 py-3">
+                              {prod.productionLead?.fullName}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-muted rounded-full h-2 w-24 overflow-hidden">
+                                  <div
+                                    className="bg-primary h-2 rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${prod.progressPercent}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-xs font-medium w-10">
+                                  {prod.progressPercent}%
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusBadge
+                                status={prod.status}
+                                label={
+                                  orderStatusLabels[prod.status || ""] || "N/A"
+                                }
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground text-xs">
+                              {prod.completedAt
+                                ? formatDate(prod.completedAt)
+                                : prod.startedAt
+                                ? formatDate(prod.startedAt)
+                                : "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Summary */}
+            <Card className="shadow-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Wallet className="w-4 h-4 text-primary" />
+                  Tổng quan
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-muted-foreground">Tổng giá trị</label>
-                  <p className="text-2xl font-bold text-green-600">
-                    {order.totalAmount ? formatCurrency(order.totalAmount) : 'Chưa báo giá'}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Tổng tiền
+                    </span>
+                    <span className="text-lg font-bold">
+                      {formatCurrency(order.totalAmount || 0)}
+                    </span>
+                  </div>
+                  {hasDeposit && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Đã cọc
+                      </span>
+                      <span className="font-medium text-success">
+                        {formatCurrency(order.depositAmount || 0)}
+                      </span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Còn lại
+                    </span>
+                    <span className="font-semibold text-warning">
+                      {formatCurrency(remainingAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Ngày giao:</span>
+                  <span className="font-medium">
+                    {order.deliveryDate ? formatDate(order.deliveryDate) : "-"}
+                  </span>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    Người phụ trách
+                  </p>
+                  <p className="text-sm font-medium">
+                    {order.assignedUser?.fullName || "—"}
                   </p>
                 </div>
-                {order.depositAmount && (
+
+                {order.note && (
                   <>
                     <Separator />
-                    <div className="grid gap-2">
-                      <label className="text-sm font-medium text-muted-foreground">Tiền đặt cọc</label>
-                      <p className="font-medium">{formatCurrency(order.depositAmount)}</p>
-                    </div>
-                    <div className="grid gap-2">
-                      <label className="text-sm font-medium text-muted-foreground">Trạng thái đặt cọc</label>
-                      <Badge variant={order.depositPaid ? "default" : "destructive"}>
-                        {order.depositPaid ? "Đã thanh toán" : "Chưa thanh toán"}
-                      </Badge>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Ghi chú</p>
+                      <p className="text-sm bg-muted/50 p-2 rounded-md">
+                        {order.note}
+                      </p>
                     </div>
                   </>
                 )}
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Thao tác nhanh</CardTitle>
+            {/* Actions */}
+            <Card className="shadow-card border-primary/20">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base">Hành động</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full justify-start" variant="outline">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Chỉnh sửa đơn hàng
+                {canTakeDeposit && (
+                  <Button
+                    className="w-full gap-2"
+                    size="sm"
+                    onClick={() => setDepositDialogOpen(true)}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Nhận cọc
+                  </Button>
+                )}
+
+                {canCreateProofing && (
+                  <Button
+                    className="w-full gap-2"
+                    size="sm"
+                    onClick={() => setProofingDialogOpen(true)}
+                  >
+                    <Package className="w-4 h-4" />
+                    Tạo bình bài
+                  </Button>
+                )}
+
+                {canStartProduction && productionToStart && (
+                  <Button
+                    className="w-full gap-2"
+                    size="sm"
+                    onClick={() => {
+                      setProductionType("start");
+                      setProductionDialogOpen(true);
+                    }}
+                  >
+                    <Play className="w-4 h-4" />
+                    Bắt đầu sản xuất
+                  </Button>
+                )}
+
+                {canCompleteProduction && productionInProgress && (
+                  <Button
+                    className="w-full gap-2"
+                    size="sm"
+                    onClick={() => {
+                      setProductionType("complete");
+                      setProductionDialogOpen(true);
+                    }}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Hoàn thành sản xuất
+                  </Button>
+                )}
+
+                {canIssueInvoice && (
+                  <Button
+                    className="w-full gap-2"
+                    size="sm"
+                    onClick={() => setInvoiceDialogOpen(true)}
+                  >
+                    <Receipt className="w-4 h-4" />
+                    Xuất hoá đơn
+                  </Button>
+                )}
+
+                <Separator className="my-3" />
+
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  size="sm"
+                  onClick={() => setEditSheetOpen(true)}
+                >
+                  <Edit className="w-4 h-4" />
+                  Chỉnh sửa
                 </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Xem thiết kế
-                </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <Factory className="h-4 w-4 mr-2" />
-                  Theo dõi sản xuất
-                </Button>
-                <Button className="w-full justify-start" variant="outline">
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  Quản lý thanh toán
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  size="sm"
+                  onClick={() => setPrintDialogOpen(true)}
+                >
+                  <Printer className="w-4 h-4" />
+                  In đơn hàng
                 </Button>
               </CardContent>
             </Card>
-
-            {/* Auto Design Code Generator */}
-            <AutoDesignCode 
-              design={{
-                id: order.id,
-                designCode: '',
-                orderId: order.id,
-                orderNumber: order.orderNumber,
-                customerId: order.customerId || '',
-                customerName: order.customerName,
-                designType: order.designType || 'H',
-                designName: order.description || '',
-                dimensions: extractDimensions(order.description || ''),
-                quantity: order.quantity || 0,
-                requirements: order.description || '',
-                notes: order.notes || '',
-                assignedTo: '',
-                assignedBy: '',
-                assignedAt: new Date().toISOString(),
-                status: 'pending' as const,
-                priority: 'medium' as const,
-                progressImages: [],
-                files: [],
-                finalFiles: [],
-                createdAt: order.createdAt,
-                updatedAt: order.createdAt,
-                dueDate: order.deliveryDate,
-                deliveryDate: order.deliveryDate,
-                comments: [],
-                revisionCount: 0,
-              }}
-              onSaved={(updated) => {
-                // Handle saving if needed
-                console.log('Design code saved:', updated.designCode);
-              }}
-            />
           </div>
-        </TabsContent>
+        </div>
+      </div>
 
-        {/* Design Tab */}
-        <TabsContent value="design" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Thiết kế sản phẩm</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {design ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium">Trạng thái thiết kế</h3>
-                      <Badge variant="outline" className="mt-1">
-                        {design.status === 'approved' ? 'Đã duyệt' : 
-                         design.status === 'in_progress' ? 'Đang thực hiện' :
-                         design.status === 'review' ? 'Chờ duyệt' : 
-                         design.status === 'revision' ? 'Yêu cầu sửa' :
-                         design.status === 'delivered' ? 'Đã giao' : 'Chờ bắt đầu'}
-                      </Badge>
-                    </div>
-                    <Button size="sm">
-                      Xem thiết kế
-                    </Button>
-                  </div>
-                  
-                  {design.files.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2">File thiết kế</h4>
-                      <div className="space-y-2">
-                        {design.files.map((file) => (
-                          <div key={file.id} className="flex items-center justify-between p-2 border rounded">
-                            <div>
-                              <p className="font-medium">{file.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Tải lên: {new Date(file.uploadedAt).toLocaleDateString('vi-VN')} bởi {file.uploadedBy}
-                              </p>
-                            </div>
-                            <Button size="sm" variant="outline">Tải về</Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {design.notes && (
-                    <div>
-                      <h4 className="font-medium mb-2">Ghi chú</h4>
-                      <p className="text-sm text-muted-foreground p-3 bg-muted rounded">{design.notes}</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Chưa có thiết kế</h3>
-                  <p className="text-muted-foreground mb-4">Đơn hàng này chưa bắt đầu quá trình thiết kế</p>
-                  <Button>Bắt đầu thiết kế</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+      {/* Dialogs – version có hooks bên trong như bạn thiết kế */}
+      <DepositDialog
+        open={depositDialogOpen}
+        onOpenChange={setDepositDialogOpen}
+        orderId={order.id}
+        totalAmount={order.totalAmount || 0}
+        currentDeposit={order.depositAmount || 0}
+      />
 
-        {/* Production Tab */}
-        <TabsContent value="production" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Thông tin sản xuất</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {production ? (
-                <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <h4 className="font-medium mb-2">Trạng thái</h4>
-                      <Badge variant="outline">
-                        {production.status === 'in_progress' ? 'Đang sản xuất' :
-                         production.status === 'completed' ? 'Hoàn thành' : 'Chờ bắt đầu'}
-                      </Badge>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-2">Người phụ trách</h4>
-                      <p>{production.assignedTo || 'Chưa phân công'}</p>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium mb-2">Tiến độ sản xuất</h4>
-                    <Progress value={production.progress} className="h-3 mb-2" />
-                    <p className="text-sm text-muted-foreground">{production.progress}% hoàn thành</p>
-                  </div>
-                  
-                  {production.startedAt && (
-                    <div>
-                      <h4 className="font-medium mb-2">Ngày bắt đầu</h4>
-                      <p>{new Date(production.startedAt).toLocaleDateString('vi-VN')}</p>
-                    </div>
-                  )}
-                  
-                  {production.notes && (
-                    <div>
-                      <h4 className="font-medium mb-2">Ghi chú sản xuất</h4>
-                      <p className="text-sm text-muted-foreground p-3 bg-muted rounded">{production.notes}</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Factory className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Chưa bắt đầu sản xuất</h3>
-                  <p className="text-muted-foreground mb-4">Đơn hàng này chưa chuyển sang giai đoạn sản xuất</p>
-                  <Button>Bắt đầu sản xuất</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+      <CreateProofingDialog
+        open={proofingDialogOpen}
+        onOpenChange={setProofingDialogOpen}
+        orderId={order.id}
+        designs={order.designs || []}
+        materialOptions={materialOptions}
+      />
 
-        {/* Payment Tab */}
-        <TabsContent value="payment" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Lịch sử thanh toán</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {payments.length > 0 ? (
-                <div className="space-y-4">
-                  {payments.map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between p-4 border rounded">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-medium">
-                            {payment.type === 'deposit' ? 'Tiền đặt cọc' : 
-                             payment.type === 'final' ? 'Thanh toán cuối' : 'Hoàn tiền'}
-                          </h4>
-                          <Badge variant={payment.status === 'paid' ? 'default' : 'destructive'}>
-                            {payment.status === 'paid' ? 'Đã thanh toán' : 
-                             payment.status === 'pending' ? 'Chờ thanh toán' : 'Quá hạn'}
-                          </Badge>
-                        </div>
-                        <p className="text-2xl font-bold text-green-600">{formatCurrency(payment.amount)}</p>
-                        {payment.paidAt && (
-                          <p className="text-sm text-muted-foreground">
-                            Thanh toán: {new Date(payment.paidAt).toLocaleDateString('vi-VN')}
-                          </p>
-                        )}
-                        {payment.notes && (
-                          <p className="text-sm text-muted-foreground mt-1">{payment.notes}</p>
-                        )}
-                      </div>
-                      {payment.status === 'pending' && (
-                        <Button size="sm">Xác nhận thanh toán</Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Chưa có giao dịch</h3>
-                  <p className="text-muted-foreground mb-4">Chưa có giao dịch thanh toán nào cho đơn hàng này</p>
-                  <Button>Tạo phiếu thu</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <ProductionDialog
+        open={productionDialogOpen}
+        onOpenChange={setProductionDialogOpen}
+        productionId={
+          productionType === "start"
+            ? productionToStart?.id ?? 0
+            : productionInProgress?.id ?? 0
+        }
+        mode={productionType}
+      />
+
+      <InvoiceDialog
+        open={invoiceDialogOpen}
+        onOpenChange={setInvoiceDialogOpen}
+        orderId={order.id}
+      />
+
+      <EditOrderSheet
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
+        order={order}
+      />
+
+      <StatusUpdateDialog
+        open={statusDialogOpen}
+        onOpenChange={setStatusDialogOpen}
+        orderId={order.id}
+        currentStatus={(order.status || "pending") as any}
+      />
+
+      <PrintOrderDialog
+        open={printDialogOpen}
+        onOpenChange={setPrintDialogOpen}
+        orderId={order.id}
+      />
+    </div>
+  );
+}
+
+function InfoItem({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <span className="text-xs text-muted-foreground block mb-1">{label}</span>
+      <span className="text-sm font-medium">{value}</span>
     </div>
   );
 }

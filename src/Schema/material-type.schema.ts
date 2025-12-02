@@ -1,67 +1,88 @@
-import { z } from 'zod';
-import { StatusEnum } from './Common/enums';
-import { IdSchema, DateSchema } from './Common/base';
+// src/Schema/material-type.schema.ts
+import { z } from "zod";
+import {
+  UserInfoSchema,
+  CommonStatusSchema,
+  DateSchema,
+  IdSchema,
+  NameSchema,
+} from "./common";
 
-// User schema for createdBy field
-export const MaterialTypeUserSchema = z.object({
-  id: IdSchema,
-  username: z.string(),
-  fullName: z.string(),
-  role: z.string(),
-  email: z.string().email(),
-  phone: z.string(),
-});
+// CreateMaterialTypeRequest
+export const CreateMaterialTypeRequestSchema = z
+  .object({
+    code: z.string().max(20),
+    name: NameSchema,
+    displayOrder: z.number().int().min(0),
+    description: z.string().nullable().optional(),
+    pricePerCm2: z.number().min(0),
+    designTypeId: IdSchema.nullable().optional(),
+    status: CommonStatusSchema,
+  })
+  .strict();
 
-// Material Type Entity schema for API responses  
-export const MaterialTypeEntitySchema = z.object({
-  id: IdSchema,
-  code: z.string().min(1, 'Mã loại vật liệu không được để trống'),
-  name: z.string().min(1, 'Tên loại vật liệu không được để trống'),
-  displayOrder: z.number().int().min(0, 'Thứ tự hiển thị phải >= 0'),
-  description: z.string().optional(),
-  status: StatusEnum,
-  createdAt: DateSchema,
-  updatedAt: DateSchema,
-  createdBy: MaterialTypeUserSchema,
-});
+export type CreateMaterialTypeRequest = z.infer<
+  typeof CreateMaterialTypeRequestSchema
+>;
 
-// Schema for creating new material type
-export const CreateMaterialTypeSchema = z.object({
-  code: z.string().min(1, 'Mã loại vật liệu không được để trống')
-    .max(10, 'Mã loại vật liệu không được quá 10 ký tự'),
-  name: z.string().min(1, 'Tên loại vật liệu không được để trống')
-    .max(100, 'Tên loại vật liệu không được quá 100 ký tự'),
-  displayOrder: z.number().int().min(0, 'Thứ tự hiển thị phải >= 0'),
-  description: z.string().optional(),
-  status: StatusEnum,
-});
+// MaterialTypeItem (dùng cho bulk create)
+export const MaterialTypeItemSchema = z
+  .object({
+    code: z.string().max(20),
+    name: NameSchema,
+    displayOrder: z.number().int().min(0),
+    description: z.string().nullable().optional(),
+    pricePerCm2: z.number().min(0),
+    status: CommonStatusSchema,
+  })
+  .strict();
 
-// Schema for updating material type
-export const UpdateMaterialTypeSchema = CreateMaterialTypeSchema.partial();
+export type MaterialTypeItem = z.infer<typeof MaterialTypeItemSchema>;
 
-// Schema for material type list response
-export const MaterialTypeListSchema = z.object({
-  data: z.array(MaterialTypeEntitySchema),
-  pagination: z.object({
-    page: z.number().int().min(1),
-    pageSize: z.number().int().min(1),
-    total: z.number().int().min(0),
-    totalPages: z.number().int().min(0),
-  }),
-});
+// BulkCreateMaterialTypeRequest
+export const BulkCreateMaterialTypeRequestSchema = z
+  .object({
+    designTypeId: IdSchema,
+    materials: z.array(MaterialTypeItemSchema).min(1),
+  })
+  .strict();
 
-// Schema for material type statistics
-export const MaterialTypeStatsSchema = z.object({
-  total: z.number().int().min(0),
-  active: z.number().int().min(0),
-  inactive: z.number().int().min(0),
-});
+export type BulkCreateMaterialTypeRequest = z.infer<
+  typeof BulkCreateMaterialTypeRequestSchema
+>;
 
-// Type exports
-export type MaterialTypeEntity = z.infer<typeof MaterialTypeEntitySchema>;
-export type MaterialType = MaterialTypeEntity; // Alias for compatibility
-export type CreateMaterialTypeRequest = z.infer<typeof CreateMaterialTypeSchema>;
-export type UpdateMaterialTypeRequest = z.infer<typeof UpdateMaterialTypeSchema>;
-export type MaterialTypeListResponse = z.infer<typeof MaterialTypeListSchema>;
-export type MaterialTypeStats = z.infer<typeof MaterialTypeStatsSchema>;
-export type MaterialTypeUser = z.infer<typeof MaterialTypeUserSchema>;
+// UpdateMaterialTypeRequest
+export const UpdateMaterialTypeRequestSchema = z
+  .object({
+    name: NameSchema.nullable().optional(),
+    displayOrder: z.number().int().min(0).nullable().optional(),
+    description: z.string().nullable().optional(),
+    pricePerCm2: z.number().min(0).nullable().optional(),
+    designTypeId: IdSchema.nullable().optional(),
+    status: CommonStatusSchema.nullable().optional(),
+  })
+  .strict();
+
+export type UpdateMaterialTypeRequest = z.infer<
+  typeof UpdateMaterialTypeRequestSchema
+>;
+
+// MaterialTypeResponse
+export const MaterialTypeResponseSchema = z
+  .object({
+    id: IdSchema.optional(),
+    code: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
+    displayOrder: z.number().int().optional(),
+    description: z.string().nullable().optional(),
+    pricePerCm2: z.number(),
+    designTypeId: IdSchema.nullable().optional(),
+    status: z.string().nullable().optional(),
+    statusType: z.string().nullable().optional(),
+    createdAt: DateSchema.optional(),
+    updatedAt: DateSchema.optional(),
+    createdBy: UserInfoSchema.optional(),
+  })
+  .strict();
+
+export type MaterialTypeResponse = z.infer<typeof MaterialTypeResponseSchema>;

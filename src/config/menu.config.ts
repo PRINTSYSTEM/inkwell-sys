@@ -1,0 +1,315 @@
+// src/config/menuConfig.ts
+import type { LucideIcon } from "lucide-react";
+import {
+  Users,
+  FileText,
+  Palette,
+  Factory,
+  Calculator,
+  Clock,
+  Bell,
+  LayoutDashboard,
+  Package,
+  Layers,
+  Settings,
+  Briefcase,
+  Eye,
+  BarChart3,
+  Shield,
+  UserPlus,
+  FileBarChart,
+  User,
+} from "lucide-react";
+import type { UserRole } from "@/Schema";
+import { ROLE, ROUTE_PATHS } from "@/constants";
+
+type RoleList = "all" | UserRole[];
+
+export interface MenuItemBase {
+  id: string;
+  title: string;
+  icon: LucideIcon;
+  allowedRoles: RoleList;
+}
+
+export interface MenuItemLeaf extends MenuItemBase {
+  path: string;
+  children?: undefined;
+}
+
+export interface MenuItemGroup extends MenuItemBase {
+  path?: undefined;
+  children: MenuItemLeaf[];
+}
+
+export type MenuItem = MenuItemLeaf | MenuItemGroup;
+
+// Helper cho allowedRoles = "ai cũng thấy"
+const ALL: RoleList = "all";
+
+export const MENU_ITEMS: MenuItem[] = [
+  // ==== Dashboard ====
+  {
+    id: "dashboard",
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    path: ROUTE_PATHS.DASHBOARD,
+    allowedRoles: ALL,
+  },
+
+  // ==== Phòng ban thiết kế ====
+  {
+    id: "design-dept",
+    title: "Phòng ban thiết kế",
+    icon: Palette,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN, ROLE.DESIGN_LEAD],
+    children: [
+      {
+        id: "design-staff",
+        title: "Tất cả nhân viên",
+        icon: User,
+        path: ROUTE_PATHS.DESIGN.MANAGEMENT,
+        allowedRoles: [ROLE.ADMIN, ROLE.DESIGN_LEAD, ROLE.MANAGER],
+      },
+      {
+        id: "design-all",
+        title: "Tất cả thiết kế",
+        icon: Eye,
+        path: ROUTE_PATHS.DESIGN.ALL,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD],
+      },
+      {
+        id: "design-my-work",
+        title: "Công việc của tôi",
+        icon: Briefcase,
+        path: ROUTE_PATHS.DESIGN.MY_WORK,
+        allowedRoles: [ROLE.DESIGN, ROLE.DESIGN_LEAD],
+      },
+    ],
+  },
+
+  // ==== Khách hàng & Đơn hàng ====
+  {
+    id: "customer-orders",
+    title: "Khách hàng & Đơn hàng",
+    icon: Users,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.CSKH,
+      ROLE.CSKH_LEAD,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
+      ROLE.DESIGN,
+      ROLE.DESIGN_LEAD,
+      ROLE.PRODUCTION,
+      ROLE.PRODUCTION_LEAD,
+    ],
+    children: [
+      {
+        id: "customers",
+        title: "Khách hàng",
+        icon: Users,
+        path: ROUTE_PATHS.CUSTOMERS.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.CSKH, ROLE.CSKH_LEAD],
+      },
+      {
+        id: "orders",
+        title: "Đơn hàng",
+        icon: FileText,
+        path: ROUTE_PATHS.ORDERS.ROOT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.CSKH,
+          ROLE.CSKH_LEAD,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.PRODUCTION,
+          ROLE.PRODUCTION_LEAD,
+          ROLE.DESIGN,
+          ROLE.DESIGN_LEAD,
+        ],
+      },
+    ],
+  },
+
+  // ==== Sản xuất ====
+  {
+    id: "production",
+    title: "Sản xuất",
+    icon: Factory,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.PRODUCTION,
+      ROLE.PRODUCTION_LEAD,
+      ROLE.DESIGN_LEAD,
+    ],
+    children: [
+      {
+        id: "proofing",
+        title: "Bình bài",
+        icon: Layers,
+        path: ROUTE_PATHS.PROOFING.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION_LEAD],
+      },
+      {
+        id: "production-main",
+        title: "Sản xuất",
+        icon: Factory,
+        path: ROUTE_PATHS.PRODUCTION.ROOT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION,
+          ROLE.PRODUCTION_LEAD,
+        ],
+      },
+    ],
+  },
+
+  // ==== Kho vật tư ====
+  {
+    id: "inventory",
+    title: "Kho vật tư",
+    icon: Package,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.WAREHOUSE,
+      ROLE.WAREHOUSE_LEAD,
+      ROLE.PRODUCTION_LEAD,
+    ],
+    children: [
+      {
+        id: "inventory-main",
+        title: "Quản lý kho",
+        icon: Package,
+        path: ROUTE_PATHS.INVENTORY.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.WAREHOUSE, ROLE.WAREHOUSE_LEAD],
+      },
+      {
+        id: "materials",
+        title: "Quản lý chất liệu",
+        icon: Package,
+        path: ROUTE_PATHS.MATERIALS.ROOT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.WAREHOUSE,
+          ROLE.WAREHOUSE_LEAD,
+          ROLE.PRODUCTION_LEAD,
+          ROLE.DESIGN_LEAD,
+        ],
+      },
+    ],
+  },
+
+  // ==== Quản lý hệ thống ====
+  {
+    id: "system",
+    title: "Quản lý hệ thống",
+    icon: Settings,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+    children: [
+      {
+        id: "admin-users",
+        title: "Quản lý người dùng",
+        icon: Users,
+        path: ROUTE_PATHS.ADMIN.USERS,
+        allowedRoles: [ROLE.ADMIN],
+      },
+      {
+        id: "admin-roles",
+        title: "Quản lý vai trò",
+        icon: Shield,
+        path: ROUTE_PATHS.ADMIN.ROLES,
+        allowedRoles: [ROLE.ADMIN],
+      },
+      {
+        id: "admin-analytics",
+        title: "Phân tích phòng ban",
+        icon: BarChart3,
+        path: ROUTE_PATHS.ADMIN.ANALYTICS,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
+      {
+        id: "material-types",
+        title: "Loại chất liệu",
+        icon: Layers,
+        path: ROUTE_PATHS.MATERIAL_TYPES.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
+      {
+        id: "design-types",
+        title: "Loại thiết kế",
+        icon: Settings,
+        path: ROUTE_PATHS.DESIGN_TYPES.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
+    ],
+  },
+
+  // ==== Hành chính ====
+  {
+    id: "hr",
+    title: "Hành chính",
+    icon: Calculator,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
+      ROLE.HR,
+      ROLE.HR_LEAD,
+    ],
+    children: [
+      {
+        id: "accounting",
+        title: "Kế toán",
+        icon: Calculator,
+        path: ROUTE_PATHS.ACCOUNTING.ROOT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
+        id: "attendance",
+        title: "Chấm công",
+        icon: Clock,
+        path: ROUTE_PATHS.ATTENDANCE.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.HR, ROLE.HR_LEAD],
+      },
+    ],
+  },
+
+  // ==== Báo cáo ====
+  {
+    id: "reports",
+    title: "Báo cáo",
+    icon: FileBarChart,
+    path: ROUTE_PATHS.REPORTS,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.ACCOUNTING_LEAD,
+      ROLE.WAREHOUSE_LEAD,
+      ROLE.HR_LEAD,
+      ROLE.CSKH_LEAD,
+      ROLE.PRODUCTION_LEAD,
+      ROLE.DESIGN_LEAD,
+    ],
+  },
+
+  // ==== Thông báo ====
+  {
+    id: "notifications",
+    title: "Thông báo",
+    icon: Bell,
+    path: ROUTE_PATHS.NOTIFICATIONS,
+    allowedRoles: ALL,
+  },
+];

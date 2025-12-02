@@ -1,6 +1,6 @@
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth';
-import { Suspense } from 'react';
+import { Navigate, useLocation } from "react-router-dom";
+import { Suspense } from "react";
+import { useAuth } from "@/hooks";
 
 interface AuthGuardProps {
   children: React.ReactNode;

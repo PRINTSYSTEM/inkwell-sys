@@ -1,31 +1,35 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { DollarSign, Users, Package, Activity } from 'lucide-react';
-import { payments } from '@/lib/mockData';
-import { useOrders } from '@/hooks/use-order';
-import { useCustomers } from '@/hooks/use-customer';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { DollarSign, Users, Package, Activity } from "lucide-react";
+import { payments } from "@/lib/mockData";
+import { useOrders } from "@/hooks/use-order";
+import { useCustomers } from "@/hooks/use-customer";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks";
 
 export default function Dashboard() {
-    // Lấy danh sách khách hàng thật
-    const { data: customersData, isLoading: loadingCustomers } = useCustomers({ pageSize: 100 });
-    const customers = customersData?.items || [];
+  // Lấy danh sách khách hàng thật
+  const { data: customersData, isLoading: loadingCustomers } = useCustomers({
+    pageSize: 100,
+  });
+  const customers = customersData?.items || [];
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const totalRevenue = payments
-    .filter(p => p.status === 'paid')
+    .filter((p) => p.status === "paid")
     .reduce((sum, p) => sum + p.amount, 0);
 
   // Lấy danh sách đơn hàng thật
-  const { data: ordersData, isLoading: loadingOrders } = useOrders({ pageSize: 100 });
+  const { data: ordersData, isLoading: loadingOrders } = useOrders({
+    pageSize: 100,
+  });
   const orders = ordersData?.items || [];
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
     }).format(amount);
   };
 
@@ -40,12 +44,18 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng doanh thu</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Tổng doanh thu
+            </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">Từ các đơn hàng đã thanh toán</p>
+            <div className="text-2xl font-bold">
+              {formatCurrency(totalRevenue)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Từ các đơn hàng đã thanh toán
+            </p>
           </CardContent>
         </Card>
 
@@ -56,7 +66,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loadingOrders ? '...' : orders.length}
+              {loadingOrders ? "..." : orders.length}
             </div>
             <p className="text-xs text-muted-foreground">Tổng số đơn hàng</p>
           </CardContent>
@@ -69,9 +79,11 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {loadingCustomers ? '...' : customers.length}
+              {loadingCustomers ? "..." : customers.length}
             </div>
-            <p className="text-xs text-muted-foreground">Khách hàng đang hoạt động</p>
+            <p className="text-xs text-muted-foreground">
+              Khách hàng đang hoạt động
+            </p>
           </CardContent>
         </Card>
 
@@ -94,13 +106,24 @@ export default function Dashboard() {
             <CardTitle>Hành động nhanh</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button onClick={() => navigate('/orders/create')} className="w-full justify-start">
+            <Button
+              onClick={() => navigate("/orders/create")}
+              className="w-full justify-start"
+            >
               Tạo đơn hàng mới
             </Button>
-            <Button onClick={() => navigate('/customers/create')} variant="outline" className="w-full justify-start">
+            <Button
+              onClick={() => navigate("/customers/create")}
+              variant="outline"
+              className="w-full justify-start"
+            >
               Thêm khách hàng
             </Button>
-            <Button onClick={() => navigate('/designs')} variant="outline" className="w-full justify-start">
+            <Button
+              onClick={() => navigate("/designs")}
+              variant="outline"
+              className="w-full justify-start"
+            >
               Xem thiết kế
             </Button>
           </CardContent>

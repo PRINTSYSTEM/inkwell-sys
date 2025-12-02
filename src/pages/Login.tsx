@@ -1,45 +1,54 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { useAuth } from '@/contexts/auth';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks";
 
 export default function Login() {
   const navigate = useNavigate();
   const { login, isLoading, user } = useAuth();
   const [credentials, setCredentials] = useState({
-    username: '',
-    password: '',
+    username: "",
+    password: "",
   });
 
   const handleInputChange = (field: string, value: string) => {
-    setCredentials(prev => ({
+    setCredentials((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
-  const handleLogin = async (loginCredentials: { username: string; password: string }) => {
+  const handleLogin = async (loginCredentials: {
+    username: string;
+    password: string;
+  }) => {
     if (!loginCredentials.username || !loginCredentials.password) {
-      toast.error('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
+      toast.error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu");
       return;
     }
 
     try {
-      const success = await login(loginCredentials.username, loginCredentials.password);
-      
+      const success = await login(loginCredentials);
+
       if (success) {
         toast.success(`Đăng nhập thành công!`);
-        navigate('/dashboard');
+        navigate("/dashboard");
       } else {
-        toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
+        toast.error("Tên đăng nhập hoặc mật khẩu không đúng");
       }
     } catch (error: unknown) {
-      console.error('Login error:', error);
-      toast.error('Có lỗi xảy ra khi đăng nhập');
+      console.error("Login error:", error);
+      toast.error("Có lỗi xảy ra khi đăng nhập");
     }
   };
 
@@ -75,7 +84,7 @@ export default function Login() {
                 type="text"
                 placeholder="admin"
                 value={credentials.username}
-                onChange={(e) => handleInputChange('username', e.target.value)}
+                onChange={(e) => handleInputChange("username", e.target.value)}
                 disabled={isLoading}
               />
             </div>
@@ -86,15 +95,15 @@ export default function Login() {
                 type="password"
                 placeholder="••••••••"
                 value={credentials.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
+                onChange={(e) => handleInputChange("password", e.target.value)}
                 disabled={isLoading}
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
           </form>
-          
+
           <div className="mt-4 text-center text-sm text-muted-foreground">
             Vui lòng đăng nhập bằng tài khoản được cung cấp bởi quản trị viên
           </div>

@@ -29,7 +29,7 @@ export interface PaginationParams {
 
 export interface SortingParams {
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface FilterParams {
@@ -37,7 +37,10 @@ export interface FilterParams {
   filters?: Record<string, unknown>;
 }
 
-export interface QueryParams extends PaginationParams, SortingParams, FilterParams {
+export interface QueryParams
+  extends PaginationParams,
+    SortingParams,
+    FilterParams {
   include?: string[];
   fields?: string[];
 }
@@ -67,12 +70,12 @@ export interface ServiceOptions extends RequestConfig {
 
 // CRUD operation types
 export interface CreateOptions<T> extends ServiceOptions {
-  data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>;
+  data: Omit<T, "id" | "createdAt" | "updatedAt">;
 }
 
 export interface UpdateOptions<T> extends ServiceOptions {
   id: string | number;
-  data: Partial<Omit<T, 'id' | 'createdAt' | 'updatedAt'>>;
+  data: Partial<Omit<T, "id" | "createdAt" | "updatedAt">>;
 }
 
 export interface DeleteOptions extends ServiceOptions {
@@ -101,7 +104,7 @@ export type ValidationSchema<T> = {
 
 // Audit and logging types
 export interface AuditLog {
-  action: 'create' | 'update' | 'delete' | 'read';
+  action: "create" | "update" | "delete" | "read";
   resource: string;
   resourceId?: string | number;
   userId?: string;
@@ -114,7 +117,7 @@ export interface AuditLog {
 export interface WebhookEvent<T = unknown> {
   type: string;
   resource: string;
-  action: 'created' | 'updated' | 'deleted';
+  action: "created" | "updated" | "deleted";
   data: T;
   timestamp: Date;
   version: string;
@@ -122,7 +125,7 @@ export interface WebhookEvent<T = unknown> {
 
 // Bulk operations
 export interface BulkCreateOptions<T> extends ServiceOptions {
-  data: Array<Omit<T, 'id' | 'createdAt' | 'updatedAt'>>;
+  data: Array<Omit<T, "id" | "createdAt" | "updatedAt">>;
   batchSize?: number;
 }
 
@@ -138,7 +141,7 @@ export interface BulkDeleteOptions extends ServiceOptions {
 
 // Export operations
 export interface ExportOptions extends ServiceOptions {
-  format: 'json' | 'csv' | 'xlsx' | 'pdf';
+  format: "json" | "csv" | "xlsx" | "pdf";
   filters?: Record<string, unknown>;
   fields?: string[];
   filename?: string;
@@ -147,7 +150,7 @@ export interface ExportOptions extends ServiceOptions {
 // Import operations
 export interface ImportOptions extends ServiceOptions {
   file: File | Buffer;
-  format: 'json' | 'csv' | 'xlsx';
+  format: "json" | "csv" | "xlsx";
   mapping?: Record<string, string>;
   validateOnly?: boolean;
   upsert?: boolean;
@@ -171,14 +174,17 @@ export interface Subscription {
 
 // Health check and metrics
 export interface HealthStatus {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   version: string;
   timestamp: Date;
-  services: Record<string, {
-    status: 'up' | 'down' | 'degraded';
-    responseTime?: number;
-    lastCheck?: Date;
-  }>;
+  services: Record<
+    string,
+    {
+      status: "up" | "down" | "degraded";
+      responseTime?: number;
+      lastCheck?: Date;
+    }
+  >;
 }
 
 export interface ServiceMetrics {

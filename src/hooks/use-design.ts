@@ -1,253 +1,326 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/http";
 import type {
-  Design,
-  DesignListResponse,
-  DesignQueryParams,
-  CreateDesignRequest,
-  UpdateDesignRequest,
-  CreateTimelineEntry,
-  TimelineEntry
-} from '@/Schema';
-import * as designApi from '@/apis/design.api';
+  DesignResponse,
+  DesignResponsePagedResponse,
+  DesignListParams,
+  MyDesignListParams,
+  DesignTimelineEntryResponse,
+} from "@/Schema";
+import { createCrudHooks } from "./use-base";
+import { API_SUFFIX } from "@/apis";
+import { useAsyncCallback } from "@/hooks/use-async"; // <== hook async bạn đã có
 
-// Query Keys
-export const designKeys = {
-  all: ['designs'] as const,
-  lists: () => [...designKeys.all, 'list'] as const,
-  list: (params: DesignQueryParams) => [...designKeys.lists(), params] as const,
-  details: () => [...designKeys.all, 'detail'] as const,
-  detail: (id: number) => [...designKeys.details(), id] as const,
-  my: () => [...designKeys.all, 'my'] as const,
-  myList: (params: DesignQueryParams) => [...designKeys.my(), params] as const,
-  timeline: (id: number) => [...designKeys.detail(id), 'timeline'] as const,
-} as const;
+// ================== CRUD BASE (createCrudHooks) ==================
 
-// Hooks for Queries
+const {
+  api: designCrudApi,
+  keys: designKeys,
+  useList: useDesignListBase,
+  useDetail: useDesignDetailBase,
+  useUpdate: useUpdateDesignBase,
+} = createCrudHooks<
+  DesignResponse,
+  any, // không có POST /designs, nên không dùng create
+  any,
+  number,
+  DesignListParams,
+  DesignResponsePagedResponse
+>({
+  rootKey: "designs",
+  basePath: API_SUFFIX.DESIGNS, // dùng suffix thay vì hardcode "/api/designs"
+  getItems: (resp) => resp.items ?? [],
+  messages: {
+    updateSuccess: "Đã cập nhật thiết kế thành công",
+  },
+});
 
-/**
- * Hook to get all designs with pagination and filters
- */
-export const useDesigns = (params?: DesignQueryParams) => {
+// ===== Base list/detail/update =====
+
+export const useDesigns = (params?: DesignListParams) =>
+  useDesignListBase(params ?? ({} as DesignListParams));
+
+export const useDesign = (id: number | null, enabled = true) =>
+  useDesignDetailBase(id, enabled);
+
+export const useUpdateDesign = () => useUpdateDesignBase();
+
+// ================== EXTRA QUERIES ==================
+
+// GET /api/designs/my
+export const useMyDesigns = (params?: MyDesignListParams) => {
   return useQuery({
-    queryKey: designKeys.list(params || {}),
-    queryFn: () => designApi.getDesigns(params),
-    staleTime: 5 * 60 * 1000 // 5 minutes
-  });
-};
-
-/**
- * Hook to get my designs (assigned to current user)
- */
-export const useMyDesigns = (params?: DesignQueryParams) => {
-  return useQuery({
-    queryKey: designKeys.myList(params || {}),
-    queryFn: () => designApi.getMyDesigns(params),
-    staleTime: 5 * 60 * 1000
-  });
-};
-
-/**
- * Hook to get design by ID
- */
-export const useDesign = (id: number, enabled: boolean = true) => {
-  return useQuery({
-    queryKey: designKeys.detail(id),
-    queryFn: () => designApi.getDesignById(id),
-    enabled: enabled && !!id,
+    queryKey: [designKeys.all[0], "my", params ?? {}],
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignResponsePagedResponse>(
+        API_SUFFIX.MY_DESIGNS,
+        { params }
+      );
+      return res.data;
+    },
     staleTime: 5 * 60 * 1000,
   });
 };
 
-/**
- * Hook to get design timeline
- */
-export const useDesignTimeline = (id: number, enabled: boolean = true) => {
+// GET /api/designs/user/{userId}
+export const useDesignsByUser = (
+  userId: number | null,
+  params?: {
+    status?: string;
+  },
+  enabled = true
+) => {
   return useQuery({
-    queryKey: designKeys.timeline(id),
-    queryFn: () => designApi.getTimelineEntries(id),
+    queryKey: [designKeys.all[0], "user", userId, params ?? {}],
+    enabled: enabled && !!userId,
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignResponsePagedResponse>(
+        API_SUFFIX.DESIGN_BY_USER(userId as number),
+        { params }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+// GET /api/designs/{id}/timeline
+export const useDesignTimeline = (id: number | null, enabled = true) => {
+  return useQuery({
+    queryKey: [designKeys.detail(id as number), "timeline"],
     enabled: enabled && !!id,
-    staleTime: 2 * 60 * 1000 // 2 minutes (timeline updates frequently)
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignTimelineEntryResponse[]>(
+        API_SUFFIX.DESIGN_TIMELINE(id as number)
+      );
+      return res.data;
+    },
+    staleTime: 2 * 60 * 1000,
   });
 };
 
-// Hooks for Mutations
+// ================== ACTIONS / MUTATIONS (dùng useAsyncCallback) ==================
 
-/**
- * Hook to create new design
- */
-export const useCreateDesign = () => {
+// POST /api/designs/{id}/timeline (multipart/form-data)
+export const useAddDesignTimelineEntry = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: designApi.createDesign,
-    onSuccess: (newDesign) => {
-      // Invalidate and refetch design lists
-      queryClient.invalidateQueries({ queryKey: designKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: designKeys.my() });
-      
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    DesignTimelineEntryResponse,
+    [{ id: number; file: File; description?: string }]
+  >(async ({ id, file, description }) => {
+    const formData = new FormData();
+    formData.append("File", file);
+    if (description) formData.append("Description", description);
+
+    const res = await apiRequest.post<DesignTimelineEntryResponse>(
+      API_SUFFIX.DESIGN_TIMELINE(id),
+      formData
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: {
+    id: number;
+    file: File;
+    description?: string;
+  }) => {
+    try {
+      const result = await execute(payload);
+
+      // invalidates timeline + detail
+      queryClient.invalidateQueries({
+        queryKey: [designKeys.detail(payload.id), "timeline"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(payload.id),
+      });
+
       toast({
         title: "Thành công",
-        description: "Đã tạo design mới thành công",
+        description: "Đã thêm file/timeline cho thiết kế",
       });
-    },
-    onError: (error) => {
+
+      return result;
+    } catch (err: any) {
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể tạo design",
+        description:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Không thể thêm timeline",
         variant: "destructive",
       });
-    },
-  });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
 
-/**
- * Hook to update design
- */
-export const useUpdateDesign = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateDesignRequest }) =>
-      designApi.updateDesign(id, data),
-    onSuccess: (updatedDesign, { id }) => {
-      // Update the design in cache
-      queryClient.setQueryData(designKeys.detail(id), updatedDesign);
-      
-      // Invalidate lists to ensure they reflect changes
-      queryClient.invalidateQueries({ queryKey: designKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: designKeys.my() });
-      
-      toast({
-        title: "Thành công",
-        description: "Đã cập nhật design thành công",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể cập nhật design",
-        variant: "destructive",
-      });
-    },
-  });
-};
-
-/**
- * Hook to delete design
- */
-export const useDeleteDesign = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: designApi.deleteDesign,
-    onSuccess: (_, deletedId) => {
-      // Remove from cache
-      queryClient.removeQueries({ queryKey: designKeys.detail(deletedId) });
-      
-      // Invalidate lists
-      queryClient.invalidateQueries({ queryKey: designKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: designKeys.my() });
-      
-      toast({
-        title: "Thành công",
-        description: "Đã xóa design thành công",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể xóa design",
-        variant: "destructive",
-      });
-    },
-  });
-};
-
-/**
- * Hook to add timeline entry
- */
-export const useAddTimelineEntry = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: ({ id, entry }: { id: number; entry: CreateTimelineEntry }) =>
-      designApi.addTimelineEntry(id, entry),
-    onSuccess: (_, { id }) => {
-      // Invalidate timeline to refetch latest entries
-      queryClient.invalidateQueries({ queryKey: designKeys.timeline(id) });
-      
-      // Also invalidate design detail as it might include timeline
-      queryClient.invalidateQueries({ queryKey: designKeys.detail(id) });
-      
-      toast({
-        title: "Thành công",
-        description: "Đã thêm mục thời gian thành công",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể thêm mục thời gian",
-        variant: "destructive",
-      });
-    },
-  });
-};
-
-/**
- * Hook to generate Excel file
- */
-export const useGenerateExcel = () => {
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: designApi.generateDesignExcel,
-    onSuccess: (_, designId) => {
-      toast({
-        title: "Thành công",
-        description: "Đã tạo file Excel thành công",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể tạo file Excel",
-        variant: "destructive",
-      });
-    },
-  });
-};
-
-/**
- * Hook to upload design file
- */
+// POST /api/designs/{id}/upload-design-file
 export const useUploadDesignFile = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: ({ id, file }: { id: number; file: File }) =>
-      designApi.uploadDesignFile(id, file),
-    onSuccess: (_, { id }) => {
-      // Invalidate design detail to refetch with new file
-      queryClient.invalidateQueries({ queryKey: designKeys.detail(id) });
-      
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    string,
+    [{ id: number; file: File }]
+  >(async ({ id, file }) => {
+    const formData = new FormData();
+    formData.append("File", file);
+
+    const res = await apiRequest.post<string>(
+      API_SUFFIX.DESIGN_UPLOAD_FILE(id),
+      formData
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: { id: number; file: File }) => {
+    try {
+      const result = await execute(payload);
+
+      // refresh detail
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(payload.id),
+      });
+
       toast({
         title: "Thành công",
-        description: "Đã upload file design thành công",
+        description: "Đã upload file thiết kế",
       });
-    },
-    onError: (error) => {
+
+      return result;
+    } catch (err: any) {
       toast({
         title: "Lỗi",
-        description: error instanceof Error ? error.message : "Không thể upload file",
+        description:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Không thể upload file thiết kế",
         variant: "destructive",
       });
-    },
-  });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
+
+// POST /api/designs/{id}/upload-design-image
+export const useUploadDesignImage = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    string,
+    [{ id: number; file: File }]
+  >(async ({ id, file }) => {
+    const formData = new FormData();
+    formData.append("File", file);
+
+    const res = await apiRequest.post<string>(
+      API_SUFFIX.DESIGN_UPLOAD_IMAGE(id),
+      formData
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: { id: number; file: File }) => {
+    try {
+      const result = await execute(payload);
+
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(payload.id),
+      });
+
+      toast({
+        title: "Thành công",
+        description: "Đã upload hình thiết kế",
+      });
+
+      return result;
+    } catch (err: any) {
+      toast({
+        title: "Lỗi",
+        description:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Không thể upload hình",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+// POST /api/designs/{id}/generate-excel
+export const useGenerateDesignExcel = () => {
+  const { toast } = useToast();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    string,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.post<string>(
+      API_SUFFIX.DESIGN_GENERATE_EXCEL(id)
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+
+      toast({
+        title: "Thành công",
+        description: "Đã tạo file Excel cho thiết kế",
+      });
+
+      return result;
+    } catch (err: any) {
+      toast({
+        title: "Lỗi",
+        description:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Không thể tạo file Excel",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+export { designCrudApi, designKeys };
