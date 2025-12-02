@@ -1,0 +1,16 @@
+export const ROLE = {
+  ADMIN: "admin",
+  MANAGER: "manager",
+  DESIGN: "design",
+  DESIGN_LEAD: "design_lead",
+  PRODUCTION: "production",
+  PRODUCTION_LEAD: "production_lead",
+  ACCOUNTING: "accounting",
+  ACCOUNTING_LEAD: "accounting_lead",
+  WAREHOUSE: "warehouse",
+  WAREHOUSE_LEAD: "warehouse_lead",
+  HR: "hr",
+  HR_LEAD: "hr_lead",
+  CSKH: "cskh",
+  CSKH_LEAD: "cskh_lead",
+} as const;

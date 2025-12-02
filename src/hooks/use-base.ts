@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { crudApi } from "@/lib/http";
 import { createCrudKeys } from "@/lib/crud-key";
+import { ServiceError, serviceUtils } from "@/services/BaseService";
 
 type MessagesConfig = {
   createSuccess?: string;
@@ -17,6 +18,21 @@ type MessagesConfig = {
   downloadError?: string;
 };
 
+type CrudHooksConfig<
+  TEntity,
+  TCreate,
+  TUpdate,
+  TId,
+  TListParams,
+  TListResponse
+> = {
+  rootKey: string;
+  basePath: string;
+  getItems?: (resp: TListResponse) => TEntity[];
+  getId?: (entity: TEntity) => TId;
+  messages?: MessagesConfig;
+};
+
 export function createCrudHooks<
   TEntity,
   TCreate,
@@ -24,17 +40,17 @@ export function createCrudHooks<
   TId = number,
   TListParams = any,
   TListResponse = TEntity[]
->(config: {
-  rootKey: string; // ví dụ: "design-types"
-  basePath: string; // ví dụ: "/designs/types"
-  /**
-   * Nếu list API trả không phải TEntity[] mà là { items, totalCount } thì
-   * dùng getItems để extract array khi cần.
-   */
-  getItems?: (resp: TListResponse) => TEntity[];
-  messages?: MessagesConfig;
-}) {
-  const { rootKey, basePath, getItems, messages } = config;
+>(
+  config: CrudHooksConfig<
+    TEntity,
+    TCreate,
+    TUpdate,
+    TId,
+    TListParams,
+    TListResponse
+  >
+) {
+  const { rootKey, basePath, getItems, getId, messages } = config;
 
   const api = crudApi<
     TEntity,
@@ -47,6 +63,22 @@ export function createCrudHooks<
 
   const keys = createCrudKeys<TListParams, TId>(rootKey);
 
+  const resolveId = (entity: TEntity): TId | undefined => {
+    if (getId) return getId(entity);
+    const anyEntity = entity as any;
+    return anyEntity?.id as TId | undefined;
+  };
+
+  const getErrorMessage = (error: unknown, fallback?: string) => {
+    if (error instanceof ServiceError) {
+      return serviceUtils.formatErrorMessage(error);
+    }
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return fallback ?? "Đã xảy ra lỗi không xác định";
+  };
+
   // ===== LIST =====
   const useList = (params?: TListParams) => {
     return useQuery<TListResponse>({
@@ -54,6 +86,18 @@ export function createCrudHooks<
       queryFn: () => api.list(params),
       staleTime: 5 * 60 * 1000,
     });
+  };
+
+  // Optional: trả luôn TEntity[]
+  const useListItems = (params?: TListParams) => {
+    const query = useList(params);
+    const items: TEntity[] =
+      query.data != null
+        ? getItems
+          ? getItems(query.data)
+          : (query.data as unknown as TEntity[]) ?? []
+        : [];
+    return { ...query, items };
   };
 
   // ===== DETAIL =====
@@ -70,11 +114,12 @@ export function createCrudHooks<
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    return useMutation({
+    return useMutation<TEntity, ServiceError | Error, TCreate>({
       mutationFn: (data: TCreate) => api.create(data),
-      onSuccess: (created: any) => {
-        if ((created as any)?.id !== undefined) {
-          queryClient.setQueryData(keys.detail((created as any).id), created);
+      onSuccess: (created) => {
+        const id = resolveId(created);
+        if (id !== undefined) {
+          queryClient.setQueryData(keys.detail(id), created);
         }
 
         queryClient.invalidateQueries({ queryKey: keys.all });
@@ -84,11 +129,12 @@ export function createCrudHooks<
           description: messages?.createSuccess ?? "Đã tạo mới thành công",
         });
       },
-      onError: (error: Error) => {
+      onError: (error) => {
         toast({
           title: "Lỗi",
           description:
-            error.message || messages?.createError || "Không thể tạo mới",
+            getErrorMessage(error, messages?.createError) ||
+            "Không thể tạo mới",
           variant: "destructive",
         });
       },
@@ -100,12 +146,16 @@ export function createCrudHooks<
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    return useMutation({
-      mutationFn: ({ id, data }: { id: TId; data: TUpdate }) =>
-        api.update(id, data),
-      onSuccess: (updated: any) => {
-        if ((updated as any)?.id !== undefined) {
-          queryClient.setQueryData(keys.detail((updated as any).id), updated);
+    return useMutation<
+      TEntity,
+      ServiceError | Error,
+      { id: TId; data: TUpdate }
+    >({
+      mutationFn: ({ id, data }) => api.update(id, data),
+      onSuccess: (updated) => {
+        const id = resolveId(updated);
+        if (id !== undefined) {
+          queryClient.setQueryData(keys.detail(id), updated);
         }
 
         queryClient.invalidateQueries({ queryKey: keys.all });
@@ -115,11 +165,12 @@ export function createCrudHooks<
           description: messages?.updateSuccess ?? "Đã cập nhật thành công",
         });
       },
-      onError: (error: Error) => {
+      onError: (error) => {
         toast({
           title: "Lỗi",
           description:
-            error.message || messages?.updateError || "Không thể cập nhật",
+            getErrorMessage(error, messages?.updateError) ||
+            "Không thể cập nhật",
           variant: "destructive",
         });
       },
@@ -131,7 +182,7 @@ export function createCrudHooks<
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    return useMutation({
+    return useMutation<void, ServiceError | Error, TId>({
       mutationFn: (id: TId) => api.delete(id),
       onSuccess: (_, deletedId) => {
         queryClient.removeQueries({
@@ -145,30 +196,28 @@ export function createCrudHooks<
           description: messages?.deleteSuccess ?? "Đã xoá thành công",
         });
       },
-      onError: (error: Error) => {
+      onError: (error) => {
         toast({
           title: "Lỗi",
           description:
-            error.message || messages?.deleteError || "Không thể xoá",
+            getErrorMessage(error, messages?.deleteError) || "Không thể xoá",
           variant: "destructive",
         });
       },
     });
   };
 
-  // ===== UPLOAD (import, upload file...) =====
+  // ===== UPLOAD =====
   const useUpload = () => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    return useMutation({
-      mutationFn: ({
-        formData,
-        subPath,
-      }: {
-        formData: FormData;
-        subPath?: string;
-      }) => api.upload(formData, subPath),
+    return useMutation<
+      unknown,
+      ServiceError | Error,
+      { formData: FormData; subPath?: string }
+    >({
+      mutationFn: ({ formData, subPath }) => api.upload(formData, subPath),
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: keys.all });
 
@@ -177,40 +226,40 @@ export function createCrudHooks<
           description: messages?.uploadSuccess ?? "Đã tải lên thành công",
         });
       },
-      onError: (error: Error) => {
+      onError: (error) => {
         toast({
           title: "Lỗi",
           description:
-            error.message || messages?.uploadError || "Không thể tải lên",
+            getErrorMessage(error, messages?.uploadError) ||
+            "Không thể tải lên",
           variant: "destructive",
         });
       },
     });
   };
 
-  // ===== DOWNLOAD (export file...) =====
+  // ===== DOWNLOAD =====
   const useDownload = () => {
     const { toast } = useToast();
 
-    return useMutation({
-      mutationFn: ({
-        subPath,
-        filename,
-      }: {
-        subPath?: string;
-        filename?: string;
-      }) => api.download(subPath, filename),
+    return useMutation<
+      void,
+      ServiceError | Error,
+      { subPath?: string; filename?: string }
+    >({
+      mutationFn: ({ subPath, filename }) => api.download(subPath, filename),
       onSuccess: () => {
         toast({
           title: "Thành công",
           description: messages?.downloadSuccess ?? "Đã tải xuống thành công",
         });
       },
-      onError: (error: Error) => {
+      onError: (error) => {
         toast({
           title: "Lỗi",
           description:
-            error.message || messages?.downloadError || "Không thể tải xuống",
+            getErrorMessage(error, messages?.downloadError) ||
+            "Không thể tải xuống",
           variant: "destructive",
         });
       },
@@ -221,16 +270,15 @@ export function createCrudHooks<
     api,
     keys,
     useList,
+    useListItems,
     useDetail,
     useCreate,
     useUpdate,
     useDelete,
     useUpload,
     useDownload,
-    // optional helper: lấy items từ list response nếu cần
     getItemsFromResponse: (resp: TListResponse): TEntity[] => {
       if (getItems) return getItems(resp);
-      // mặc định: resp là array
       return (resp as unknown as TEntity[]) ?? [];
     },
   };

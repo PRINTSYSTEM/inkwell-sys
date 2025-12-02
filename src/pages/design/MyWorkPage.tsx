@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useMyDesigns } from "@/hooks";
-import { Design } from "@/Schema";
+import { DesignResponse } from "@/Schema";
 
 export default function MyWorkPage() {
   const navigate = useNavigate();
@@ -105,14 +105,14 @@ export default function MyWorkPage() {
   };
 
   const groupDesignsByStatus = () => {
-    const grouped: { [key: string]: Design[] } = {};
+    const grouped: { [key: string]: DesignResponse[] } = {};
     Object.keys(statusConfig).forEach((status) => {
       grouped[status] = designs.filter((d) => d.designStatus === status);
     });
     return grouped;
   };
 
-  const DesignCard = ({ design }: { design: Design }) => {
+  const DesignCard = ({ design }: { design: DesignResponse }) => {
     const status =
       statusConfig[design.designStatus as keyof typeof statusConfig] ||
       statusConfig.received_info;
@@ -121,7 +121,7 @@ export default function MyWorkPage() {
     return (
       <Card
         className="group cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-300 border-2 hover:border-primary/50"
-        onClick={() => navigate(`/designs/${design.id}`)}
+        onClick={() => navigate(`/design/detail/${design.id}`)}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
@@ -340,7 +340,7 @@ export default function MyWorkPage() {
                   <div
                     key={design.id}
                     className="flex items-center justify-between p-4 rounded-lg bg-white border-2 hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => navigate(`/designs/${design.id}`)}
+                    onClick={() => navigate(`/design/detail/${design.id}`)}
                   >
                     <div className="flex-1 space-y-1">
                       <p className="text-sm font-bold text-foreground">

@@ -1,83 +1,53 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  ArrowLeft, 
-  Edit, 
-  Save, 
-  X, 
-  Building2, 
-  Phone, 
-  MapPin, 
-  FileText, 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  ArrowLeft,
+  Edit,
+  Save,
+  X,
+  Building2,
+  Phone,
+  MapPin,
+  FileText,
   Calendar,
   User,
   Package,
-  TrendingUp
-} from 'lucide-react';
-import { useCustomer, useUpdateCustomer } from '@/hooks/use-customer';
-import { Badge } from '@/components/ui/badge';
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Customer } from '@/apis/customer.api';
-import { CustomerRequestSchema } from '@/Schema/customer.schema';
-import { toast } from 'sonner';
-import { ZodError } from 'zod';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  TrendingUp,
+} from "lucide-react";
+import { useCustomer, useUpdateCustomer } from "@/hooks";
+import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import { ZodError } from "zod";
+
+import { CustomerResponse, UpdateCustomerRequestSchema } from "@/Schema";
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [editForm, setEditForm] = useState<Customer | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<unknown[]>([]);
+  const [customer, setCustomer] = useState<CustomerResponse | null>(null);
+  const [editForm, setEditForm] = useState<CustomerResponse | null>(null);
 
-  // Load customer data from API
+  const { data, isLoading, error } = useCustomer(parseInt(id));
+  const { mutateAsync: updateCustomer, isPending } = useUpdateCustomer();
+
   useEffect(() => {
-    const loadCustomer = async () => {
-      if (!id) return;
-
-      try {
-        setLoading(true);
-        const customerId = parseInt(id);
-        
-        if (isNaN(customerId)) {
-          toast.error('ID khách hàng không hợp lệ');
-          navigate('/customers');
-          return;
-        }
-
-        const response = await import('@/apis/customer.api').then(m => m.getCustomerById(customerId));
-        
-        if (response.success && response.data) {
-          setCustomer(response.data);
-          setEditForm(response.data);
-        } else {
-          toast.error('Không tìm thấy khách hàng');
-          navigate('/customers');
-        }
-      } catch (error) {
-        console.error('Error loading customer:', error);
-        toast.error('Lỗi khi tải thông tin khách hàng');
-        navigate('/customers');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCustomer();
-  }, [id, navigate]);
+    if (isLoading) return;
+    if (error) {
+      toast.error("Lỗi khi tải thông tin khách hàng");
+      navigate("/customers");
+      return;
+    }
+    if (data) {
+      setCustomer(data);
+      setEditForm(data);
+    }
+  }, [isLoading, error, data, navigate]);
 
   // TODO: Load customer orders from OrderService when available
   // const customerOrders = mockOrders.filter(order => order.customerId === id);
@@ -105,51 +75,58 @@ export default function CustomerDetail() {
         address: editForm.address,
         type: editForm.type,
         currentDebt: editForm.currentDebt,
-        maxDebt: editForm.maxDebt
+        maxDebt: editForm.maxDebt,
       };
 
       // Validate data using Zod schema
-      CustomerRequestSchema.parse(updateData);
+      UpdateCustomerRequestSchema.parse(updateData);
 
-      const response = await import('@/apis/customer.api').then(m => m.updateCustomer(editForm.id, updateData));
-      
-      if (response.success && response.data) {
-        setCustomer(response.data);
-        setEditForm(response.data);
-        setIsEditing(false);
-        toast.success('Cập nhật khách hàng thành công');
-      } else {
-        toast.error('Không thể cập nhật khách hàng');
-      }
+      // Use updateCustomer hook
+      await updateCustomer({
+        id: editForm.id,
+        data: updateData,
+      });
+
+      setIsEditing(false);
+      setCustomer(editForm);
     } catch (error) {
-      console.error('Error updating customer:', error);
-      
+      console.error("Error updating customer:", error);
+
       if (error instanceof ZodError) {
         // Handle validation errors
-        const validationErrors = error.errors.map(err => err.message).join(', ');
+        const validationErrors = error.errors
+          .map((err) => err.message)
+          .join(", ");
         toast.error(`Dữ liệu không hợp lệ: ${validationErrors}`);
       } else if (error instanceof Error) {
         toast.error(`Lỗi khi cập nhật khách hàng: ${error.message}`);
       } else {
-        toast.error('Lỗi không xác định khi cập nhật khách hàng');
+        toast.error("Lỗi không xác định khi cập nhật khách hàng");
       }
     }
   };
 
-  const handleInputChange = (field: keyof Customer, value: string | number) => {
+  const handleInputChange = (
+    field: keyof CustomerResponse,
+    value: string | number
+  ) => {
     if (editForm) {
       setEditForm({
         ...editForm,
-        [field]: value
+        [field]: value,
       });
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate('/customers')} className="gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/customers")}
+            className="gap-2"
+          >
             <ArrowLeft className="h-4 w-4" />
             Quay lại
           </Button>
@@ -170,7 +147,11 @@ export default function CustomerDetail() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate('/customers')} className="gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/customers")}
+            className="gap-2"
+          >
             <ArrowLeft className="h-4 w-4" />
             Quay lại
           </Button>
@@ -185,23 +166,23 @@ export default function CustomerDetail() {
   }
 
   const statusLabels = {
-    new: 'Mới',
-    designing: 'Đang thiết kế',
-    waiting_approval: 'Chờ duyệt',
-    waiting_deposit: 'Chờ cọc',
-    in_production: 'Đang sản xuất',
-    completed: 'Hoàn thành',
-    cancelled: 'Đã hủy',
+    new: "Mới",
+    designing: "Đang thiết kế",
+    waiting_approval: "Chờ duyệt",
+    waiting_deposit: "Chờ cọc",
+    in_production: "Đang sản xuất",
+    completed: "Hoàn thành",
+    cancelled: "Đã hủy",
   };
 
   const statusColors = {
-    new: 'bg-blue-100 text-blue-800',
-    designing: 'bg-purple-100 text-purple-800',
-    waiting_approval: 'bg-yellow-100 text-yellow-800',
-    waiting_deposit: 'bg-orange-100 text-orange-800',
-    in_production: 'bg-green-100 text-green-800',
-    completed: 'bg-gray-100 text-gray-800',
-    cancelled: 'bg-red-100 text-red-800',
+    new: "bg-blue-100 text-blue-800",
+    designing: "bg-purple-100 text-purple-800",
+    waiting_approval: "bg-yellow-100 text-yellow-800",
+    waiting_deposit: "bg-orange-100 text-orange-800",
+    in_production: "bg-green-100 text-green-800",
+    completed: "bg-gray-100 text-gray-800",
+    cancelled: "bg-red-100 text-red-800",
   };
 
   return (
@@ -209,19 +190,31 @@ export default function CustomerDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate('/customers')} className="gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/customers")}
+            className="gap-2"
+          >
             <ArrowLeft className="h-4 w-4" />
             Quay lại
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Chi tiết khách hàng</h1>
-            <p className="text-muted-foreground mt-1">Thông tin và lịch sử đơn hàng</p>
+            <h1 className="text-3xl font-bold text-foreground">
+              Chi tiết khách hàng
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Thông tin và lịch sử đơn hàng
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
           {isEditing ? (
             <>
-              <Button variant="outline" onClick={handleCancel} className="gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                className="gap-2"
+              >
                 <X className="h-4 w-4" />
                 Hủy
               </Button>
@@ -255,11 +248,13 @@ export default function CustomerDetail() {
                   <Label htmlFor="code">Mã khách hàng</Label>
                   <Input
                     id="code"
-                    value={editForm?.code || ''}
+                    value={editForm?.code || ""}
                     disabled={true}
                     className="font-mono bg-muted"
                   />
-                  <p className="text-xs text-muted-foreground">Mã không thể thay đổi</p>
+                  <p className="text-xs text-muted-foreground">
+                    Mã không thể thay đổi
+                  </p>
                 </div>
               </div>
 
@@ -267,8 +262,10 @@ export default function CustomerDetail() {
                 <Label htmlFor="representativeName">Tên người đại diện</Label>
                 <Input
                   id="representativeName"
-                  value={editForm?.representativeName || ''}
-                  onChange={(e) => handleInputChange('representativeName', e.target.value)}
+                  value={editForm?.representativeName || ""}
+                  onChange={(e) =>
+                    handleInputChange("representativeName", e.target.value)
+                  }
                   disabled={!isEditing}
                 />
               </div>
@@ -277,8 +274,10 @@ export default function CustomerDetail() {
                 <Label htmlFor="companyName">Tên công ty</Label>
                 <Input
                   id="companyName"
-                  value={editForm?.companyName || ''}
-                  onChange={(e) => handleInputChange('companyName', e.target.value)}
+                  value={editForm?.companyName || ""}
+                  onChange={(e) =>
+                    handleInputChange("companyName", e.target.value)
+                  }
                   disabled={!isEditing}
                   placeholder="Không bắt buộc"
                 />
@@ -288,8 +287,8 @@ export default function CustomerDetail() {
                 <Label htmlFor="name">Tên khách hàng</Label>
                 <Input
                   id="name"
-                  value={editForm?.name || ''}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  value={editForm?.name || ""}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
                   disabled={!isEditing}
                 />
               </div>
@@ -299,8 +298,10 @@ export default function CustomerDetail() {
                   <Label htmlFor="taxCode">Mã số thuế</Label>
                   <Input
                     id="taxCode"
-                    value={editForm?.taxCode || ''}
-                    onChange={(e) => handleInputChange('taxCode', e.target.value)}
+                    value={editForm?.taxCode || ""}
+                    onChange={(e) =>
+                      handleInputChange("taxCode", e.target.value)
+                    }
                     disabled={!isEditing}
                     placeholder="Không bắt buộc"
                   />
@@ -309,8 +310,8 @@ export default function CustomerDetail() {
                   <Label htmlFor="phone">Số điện thoại</Label>
                   <Input
                     id="phone"
-                    value={editForm?.phone || ''}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    value={editForm?.phone || ""}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
                     disabled={!isEditing}
                   />
                 </div>
@@ -320,8 +321,8 @@ export default function CustomerDetail() {
                 <Label htmlFor="type">Loại khách hàng</Label>
                 <Input
                   id="type"
-                  value={editForm?.type || ''}
-                  onChange={(e) => handleInputChange('type', e.target.value)}
+                  value={editForm?.type || ""}
+                  onChange={(e) => handleInputChange("type", e.target.value)}
                   disabled={!isEditing}
                   placeholder="good, warning, blocked"
                 />
@@ -331,8 +332,8 @@ export default function CustomerDetail() {
                 <Label htmlFor="address">Địa chỉ</Label>
                 <Textarea
                   id="address"
-                  value={editForm?.address || ''}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  value={editForm?.address || ""}
+                  onChange={(e) => handleInputChange("address", e.target.value)}
                   disabled={!isEditing}
                   rows={3}
                 />
@@ -343,14 +344,16 @@ export default function CustomerDetail() {
                   <Label>Ngày tạo</Label>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    {new Date(customer.createdAt).toLocaleDateString('vi-VN')}
+                    {new Date(customer.createdAt).toLocaleDateString("vi-VN")}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Người tạo</Label>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <User className="h-4 w-4" />
-                    {customer.createdBy?.fullName || customer.createdBy?.username || 'N/A'}
+                    {customer.createdBy?.fullName ||
+                      customer.createdBy?.username ||
+                      "N/A"}
                   </div>
                 </div>
               </div>
@@ -369,13 +372,15 @@ export default function CustomerDetail() {
               <div className="text-center py-8 text-muted-foreground">
                 <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>Chưa có đơn hàng nào</p>
-                <p className="text-sm">Sẽ hiển thị khi OrderService được triển khai</p>
+                <p className="text-sm">
+                  Sẽ hiển thị khi OrderService được triển khai
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-              {/* TODO: Implement orders section when OrderService is available
+        {/* TODO: Implement orders section when OrderService is available
               {orders.length > 0 ? (
                 <div className="rounded-md border">
                   <Table>
@@ -428,7 +433,9 @@ export default function CustomerDetail() {
               <div className="text-center py-8 text-muted-foreground">
                 <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>Thống kê đơn hàng</p>
-                <p className="text-sm">Sẽ hiển thị khi OrderService được triển khai</p>
+                <p className="text-sm">
+                  Sẽ hiển thị khi OrderService được triển khai
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -445,7 +452,7 @@ export default function CustomerDetail() {
                   <p className="text-xs text-muted-foreground">Số điện thoại</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start gap-3">
                 <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
                 <div>
@@ -453,7 +460,7 @@ export default function CustomerDetail() {
                   <p className="text-xs text-muted-foreground">Địa chỉ</p>
                 </div>
               </div>
-              
+
               {customer.taxCode && (
                 <div className="flex items-start gap-3">
                   <FileText className="h-4 w-4 text-muted-foreground mt-1" />

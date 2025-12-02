@@ -4,7 +4,6 @@ export * from "./use-auth";
 export * from "./use-toast";
 
 // Export new utility hooks
-export * from "./use-async-data";
 export * from "./use-filters";
 export * from "./use-design";
 

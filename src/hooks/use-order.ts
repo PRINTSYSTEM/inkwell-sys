@@ -48,22 +48,40 @@ export const useUpdateOrder = () => useUpdateOrderBase();
 export const useGenerateOrderExcel = () => {
   const { toast } = useToast();
 
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    string,
-    [number]
-  >(async (id: number) => {
-    const res = await apiRequest.post<string>(API_SUFFIX.ORDER_EXCEL(id));
-    return res.data;
-  });
+  // Không cần trả data ra ngoài, chỉ cần download file
+  const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
+    async (id: number) => {
+      const res = await apiRequest.post<ArrayBuffer>(
+        API_SUFFIX.ORDER_EXCEL(id),
+        null,
+        {
+          responseType: "arraybuffer",
+        }
+      );
+
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `order-${id}.xlsx`; // có thể đổi tên tuỳ ý
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    }
+  );
 
   const mutate = async (id: number) => {
     try {
-      const result = await execute(id);
+      await execute(id);
+
       toast({
         title: "Thành công",
-        description: "Đã tạo file Excel cho đơn hàng",
+        description: "Đã tạo và tải file Excel cho đơn hàng",
       });
-      return result;
     } catch (err: any) {
       toast({
         title: "Lỗi",
@@ -78,7 +96,6 @@ export const useGenerateOrderExcel = () => {
   };
 
   return {
-    data,
     loading,
     error,
     mutate,

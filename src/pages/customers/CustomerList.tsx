@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Customer } from "@/apis/customer.api";
+import { CustomerResponse } from "@/Schema";
 
 export default function Customers() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -57,7 +57,7 @@ export default function Customers() {
     search: debouncedSearch || "",
   });
 
-  const customers: Customer[] = customersResponse?.items || [];
+  const customers: CustomerResponse[] = customersResponse?.items || [];
   const totalCount = customersResponse?.totalCount || 0;
 
   // Calculate stats from current data (could be enhanced with separate stats API)

@@ -5,6 +5,7 @@ import type {
   UpdateDesignTypeRequest,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
+import { API_SUFFIX } from "@/apis";
 
 // BE: GET /designs/types?status=...
 export type DesignTypeListParams = {
@@ -23,7 +24,7 @@ const designTypeCrud = createCrudHooks<
   DesignTypeListResponse
 >({
   rootKey: "design-types",
-  basePath: "/designs/types", // baseURL = https://.../api
+  basePath: API_SUFFIX.DESIGN_TYPES,
   messages: {
     createSuccess: "Đã tạo loại thiết kế thành công",
     updateSuccess: "Đã cập nhật loại thiết kế thành công",

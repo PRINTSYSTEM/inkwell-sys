@@ -41,6 +41,7 @@ import type {
   DesignResponse,
   DesignTimelineEntryResponse,
 } from "@/Schema/design.schema";
+import DesignCode from "@/components/design/design-code";
 
 export default function DesignDetailPage() {
   const params = useParams();
@@ -136,7 +137,7 @@ export default function DesignDetailPage() {
   const handleDesignFileUpload = async (file: File, image: File) => {
     if (!enabled) return;
     try {
-      await uploadDesignFile({ id: designId, file });
+      // await uploadDesignFile({ id: designId, file });
       await uploadDesignImage({ id: designId, file: image });
       setShowFileUpload(false);
     } catch {
@@ -224,12 +225,13 @@ export default function DesignDetailPage() {
               </span>
             </div>
 
-            <div className="text-xs sm:text-sm text-muted-foreground">
-              Mã thiết kế:{" "}
-              <span className="font-medium text-foreground">
-                {d.code ?? `DES-${d.id}`}
-              </span>
-            </div>
+            <DesignCode
+              code={d.code}
+              designName={d.designName}
+              quantity={d.quantity}
+              dimensions={d.dimensions}
+              createdAt={d.createdAt.toString()}
+            />
           </div>
         </div>
       </div>
@@ -428,19 +430,19 @@ export default function DesignDetailPage() {
                   <div
                     className="relative group cursor-pointer rounded-lg overflow-hidden border-2 hover:border-violet-500 transition-all"
                     onClick={() =>
-                      latestTimelineImageUrl &&
+                      design?.designImageUrl &&
                       setViewingImage({
-                        url: latestTimelineImageUrl,
+                        url: design?.designImageUrl,
                         title: "File bảng thiết kế",
                       })
                     }
                   >
                     <img
-                      src={latestTimelineImageUrl}
+                      src={design?.designImageUrl}
                       alt="Design file preview"
                       className="w-full h-64 object-cover"
                     />
-                    {latestTimelineImageUrl && (
+                    {design?.designImageUrl && (
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Eye className="h-10 w-10 text-white" />
                       </div>

@@ -26,7 +26,7 @@ const materialTypeCrud = createCrudHooks<
   MaterialTypeListResponse
 >({
   rootKey: "material-types",
-  basePath: "/designs/materials",
+  basePath: API_SUFFIX.MATERIAL_TYPES,
   messages: {
     createSuccess: "Đã tạo chất liệu thành công",
     updateSuccess: "Đã cập nhật chất liệu thành công",
@@ -55,16 +55,18 @@ export const useMaterialsByDesignType = (
 ) => {
   return useQuery<MaterialTypeResponse[]>({
     queryKey: ["materials-by-design-type", designTypeId, status],
+
+    enabled: !!designTypeId,
+
     queryFn: async () => {
-      if (!designTypeId) return [];
       const res = await apiRequest.get<MaterialTypeResponse[]>(
-        API_SUFFIX.MATERIAL_TYPES_BY_DESIGN_TYPE(designTypeId),
-        { params: { status } }
+        API_SUFFIX.MATERIAL_TYPES_BY_DESIGN_TYPE(designTypeId!),
+        { params: { status: status || "" } }
       );
       return res.data;
     },
-    enabled: !!designTypeId,
-    staleTime: 30_000,
+
+    placeholderData: [],
   });
 };
 

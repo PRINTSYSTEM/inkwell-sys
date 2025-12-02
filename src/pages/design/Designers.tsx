@@ -11,32 +11,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Search,
-  Mail,
-  Phone,
-  User,
-  FileText,
-  Package,
-  Eye,
-  Edit,
-  Trash2,
-} from "lucide-react";
+import { Search, Mail, Phone, User, Eye, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { DesignerFormDialog } from "@/components/design/designer-form-dialog";
 import { DeleteDesignerDialog } from "@/components/design/delete-designer-dialog";
 
 import type { UserResponse, DesignResponse } from "@/Schema";
 import { useDesignsByUser, useUsers } from "@/hooks";
-import DesignDetailPage from "./detail/DesignDetailPage";
-const DesignerDetail = lazy(() => import("./DesignerDetailView"));
+import DesignerDetail from "./DesignerDetailView";
+
 type Designer = UserResponse;
 type DesignerDesign = DesignResponse;
 

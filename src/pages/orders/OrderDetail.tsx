@@ -1,30 +1,5 @@
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { OrderFlowDiagram } from "@/components/orders/order-flow-diagram";
-import { DepositDialog } from "@/components/orders/deposit-dialog";
-import { CreateProofingDialog } from "@/components/orders/create-proofing-dialog";
-import { ProductionDialog } from "@/components/orders/production-dialog";
-import { InvoiceDialog } from "@/components/orders/invoice-dialog";
-import { EditOrderSheet } from "@/components/orders/edit-order-sheet";
-import { StatusUpdateDialog } from "@/components/orders/status-update-dialog";
-import { PrintOrderDialog } from "@/components/orders/print-order-dialog";
-import {
-  mockOrders,
-  mockProofingOrders,
-  mockProductions,
-} from "@/lib/mockData";
-import {
-  orderStatusLabels,
-  designStatusLabels,
-  customerTypeLabels,
-  formatCurrency,
-  formatDate,
-  formatDateTime,
-} from "@/lib/status-utils";
+import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   User,
@@ -43,11 +18,41 @@ import {
   CheckCircle,
   CreditCard,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { StatusBadge } from "@/components/ui/status-badge";
+
+import { OrderFlowDiagram } from "@/components/orders/order-flow-diagram";
+import { DepositDialog } from "@/components/orders/deposit-dialog";
+import { CreateProofingDialog } from "@/components/orders/create-proofing-dialog";
+import { ProductionDialog } from "@/components/orders/production-dialog";
+import { InvoiceDialog } from "@/components/orders/invoice-dialog";
+import { EditOrderSheet } from "@/components/orders/edit-order-sheet";
+import { StatusUpdateDialog } from "@/components/orders/status-update-dialog";
+import { PrintOrderDialog } from "@/components/orders/print-order-dialog";
+
+import {
+  orderStatusLabels,
+  designStatusLabels,
+  customerTypeLabels,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+} from "@/lib/status-utils";
+
+import type {
+  OrderListParams,
+  ProofingOrderListParams,
+  ProductionResponse,
+} from "@/Schema";
+import { useOrder, useProofingOrders } from "@/hooks";
 
 export default function OrderDetailPage() {
-  const { id } = useParams();
-  const order = mockOrders.find((o) => o.id === Number.parseInt(id || "1"));
+  const { id } = useParams<{ id: string }>();
+  const orderId = Number.parseInt(id || "0", 10);
 
   // Dialog states
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
@@ -61,12 +66,48 @@ export default function OrderDetailPage() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
 
-  if (!order) {
+  // ===== FETCH ORDER =====
+  const {
+    data: order,
+    isLoading: orderLoading,
+    isError: orderError,
+  } = useOrder(orderId || null, !!orderId);
+
+  // ===== FETCH PROOFING ORDERS LIÊN QUAN =====
+  const proofingParams: ProofingOrderListParams | undefined = useMemo(() => {
+    if (!order) return undefined;
+    // tuỳ swagger, giả sử có thể filter theo orderId
+    return {
+      pageNumber: 1,
+      pageSize: 50,
+      orderId: order.id,
+    } as ProofingOrderListParams;
+  }, [order]);
+
+  const { data: proofingPage } = useProofingOrders(proofingParams);
+  const relatedProofing = proofingPage?.items ?? [];
+
+  // Productions lấy từ field productions trong ProofingOrderResponse
+  const relatedProductions: ProductionResponse[] = useMemo(() => {
+    if (!relatedProofing?.length) return [];
+    return relatedProofing.flatMap((po) => po.productions ?? []);
+  }, [relatedProofing]);
+
+  // ===== LOADING / ERROR =====
+  if (orderLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Đang tải đơn hàng...</p>
+      </div>
+    );
+  }
+
+  if (orderError || !order) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Không tìm thấy đơn hàng</h1>
-          <Link to="/">
+          <Link to="/orders">
             <Button>Quay lại danh sách</Button>
           </Link>
         </div>
@@ -74,28 +115,18 @@ export default function OrderDetailPage() {
     );
   }
 
-  const customerType = order.customer.companyName ? "company" : "retail";
-  const hasDeposit = order.depositAmount > 0;
+  // ===== DERIVED STATE TỪ ORDER + PROOFING + PRODUCTION =====
+  const customerType = order.customer?.companyName ? "company" : "retail";
+  const hasDeposit = (order.depositAmount || 0) > 0;
 
-  const hasConfirmedDesign = order.designs?.some((d) =>
+  const hasConfirmedDesign = (order.designs ?? []).some((d) =>
     ["confirmed_for_printing", "pdf_exported"].includes(d.designStatus || "")
-  );
-
-  const relatedProofing = mockProofingOrders.filter((po) =>
-    po.proofingOrderDesigns?.some((pod) =>
-      order.designs?.some((d) => d.id === pod.designId)
-    )
-  );
-
-  const relatedProductions = mockProductions.filter((p) =>
-    relatedProofing.some((po) => po.id === p.proofingOrderId)
   );
 
   const hasCompletedProofing = relatedProofing.some(
     (po) => po.status === "completed"
   );
 
-  // production đang chờ start / đang chạy
   const productionToStart = relatedProductions.find((p) =>
     ["waiting_for_production", "pending"].includes(p.status || "")
   );
@@ -107,24 +138,20 @@ export default function OrderDetailPage() {
     (p) => p.status === "completed"
   );
 
-  const remainingAmount = order.totalAmount - order.depositAmount;
+  const remainingAmount = (order.totalAmount || 0) - (order.depositAmount || 0);
 
   // material options cho bình bài – lấy từ các thiết kế của đơn
-  const materialOptions = useMemo(() => {
-    if (!order.designs || order.designs.length === 0) return [];
-    const map = new Map<
-      number,
-      (typeof order.designs)[number]["materialType"]
-    >();
-    order.designs.forEach((d) => {
-      if (d.materialType) {
-        map.set(d.materialType.id, d.materialType);
+  const materialOptions =
+    order?.designs?.reduce<
+      NonNullable<(typeof order.designs)[number]["materialType"]>[]
+    >((acc, d) => {
+      if (d.materialType && !acc.some((m) => m.id === d.materialType!.id)) {
+        acc.push(d.materialType);
       }
-    });
-    return Array.from(map.values());
-  }, [order.designs]);
+      return acc;
+    }, []) ?? [];
 
-  // điều kiện flow
+  // ===== RULE FLOW =====
   const canTakeDeposit =
     customerType === "retail" &&
     !hasDeposit &&
@@ -151,7 +178,7 @@ export default function OrderDetailPage() {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header */}
         <div className="mb-6">
-          <Link to="/">
+          <Link to="/orders">
             <Button
               variant="ghost"
               size="sm"
@@ -172,7 +199,7 @@ export default function OrderDetailPage() {
               </div>
               <p className="text-sm text-muted-foreground">
                 Tạo ngày {formatDateTime(order.createdAt)} •{" "}
-                {order.creator.fullName}
+                {order.creator?.fullName}
               </p>
             </div>
             <div className="flex gap-2">
@@ -186,7 +213,7 @@ export default function OrderDetailPage() {
                 In đơn
               </Button>
               <Button size="sm" onClick={() => setStatusDialogOpen(true)}>
-                Cập nhật
+                Cập nhật trạng thái
               </Button>
             </div>
           </div>
@@ -218,9 +245,9 @@ export default function OrderDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <InfoItem label="Mã KH" value={order.customer.code} />
-                  <InfoItem label="Tên" value={order.customer.name} />
-                  {order.customer.companyName && (
+                  <InfoItem label="Mã KH" value={order.customer?.code || ""} />
+                  <InfoItem label="Tên" value={order.customer?.name || ""} />
+                  {order.customer?.companyName && (
                     <InfoItem
                       label="Công ty"
                       value={order.customer.companyName}
@@ -298,10 +325,10 @@ export default function OrderDetailPage() {
                             </td>
                             <td className="px-4 py-3">
                               <div className="text-xs text-muted-foreground">
-                                {design.designType.name}
+                                {design.designType?.name}
                               </div>
                               <div className="font-medium">
-                                {design.materialType.name}
+                                {design.materialType?.name}
                               </div>
                             </td>
                             <td className="px-4 py-3">
@@ -318,7 +345,7 @@ export default function OrderDetailPage() {
                               {design.quantity}
                             </td>
                             <td className="px-4 py-3 text-muted-foreground">
-                              {design.designer.fullName}
+                              {design.designer?.fullName}
                             </td>
                             <td className="px-4 py-3 text-right font-semibold">
                               {formatCurrency(design.totalPrice || 0)}
@@ -385,7 +412,7 @@ export default function OrderDetailPage() {
                               {proof.code}
                             </td>
                             <td className="px-4 py-3">
-                              {proof.materialType.name}
+                              {proof.materialType?.name}
                             </td>
                             <td className="px-4 py-3 text-center font-medium">
                               {proof.totalQuantity}
@@ -407,7 +434,7 @@ export default function OrderDetailPage() {
               </Card>
             )}
 
-            {/* Production */}
+            {/* Productions */}
             {relatedProductions.length > 0 && (
               <Card className="shadow-card">
                 <CardHeader className="pb-4">
@@ -448,7 +475,7 @@ export default function OrderDetailPage() {
                               SP-{prod.id}
                             </td>
                             <td className="px-4 py-3">
-                              {prod.productionLead.fullName}
+                              {prod.productionLead?.fullName}
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
@@ -507,7 +534,7 @@ export default function OrderDetailPage() {
                       Tổng tiền
                     </span>
                     <span className="text-lg font-bold">
-                      {formatCurrency(order.totalAmount)}
+                      {formatCurrency(order.totalAmount || 0)}
                     </span>
                   </div>
                   {hasDeposit && (
@@ -516,7 +543,7 @@ export default function OrderDetailPage() {
                         Đã cọc
                       </span>
                       <span className="font-medium text-success">
-                        {formatCurrency(order.depositAmount)}
+                        {formatCurrency(order.depositAmount || 0)}
                       </span>
                     </div>
                   )}
@@ -537,7 +564,7 @@ export default function OrderDetailPage() {
                   <Calendar className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Ngày giao:</span>
                   <span className="font-medium">
-                    {formatDate(order.deliveryDate)}
+                    {order.deliveryDate ? formatDate(order.deliveryDate) : "-"}
                   </span>
                 </div>
 
@@ -548,7 +575,7 @@ export default function OrderDetailPage() {
                     Người phụ trách
                   </p>
                   <p className="text-sm font-medium">
-                    {order.assignedUser.fullName}
+                    {order.assignedUser?.fullName || "—"}
                   </p>
                 </div>
 
@@ -659,13 +686,13 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Dialogs – dùng version có hooks bên trong */}
+      {/* Dialogs – version có hooks bên trong như bạn thiết kế */}
       <DepositDialog
         open={depositDialogOpen}
         onOpenChange={setDepositDialogOpen}
         orderId={order.id}
-        totalAmount={order.totalAmount}
-        currentDeposit={order.depositAmount}
+        totalAmount={order.totalAmount || 0}
+        currentDeposit={order.depositAmount || 0}
       />
 
       <CreateProofingDialog

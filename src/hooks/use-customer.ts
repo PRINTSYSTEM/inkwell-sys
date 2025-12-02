@@ -6,6 +6,7 @@ import type {
 } from "@/Schema/customer.schema";
 import { createCrudHooks } from "./use-base";
 import { CustomerListParams } from "@/Schema";
+import { API_SUFFIX } from "@/apis";
 
 // Không có DELETE trong swagger → vẫn dùng createCrudHooks nhưng KHÔNG export useDelete.
 const {
@@ -24,7 +25,7 @@ const {
   CustomerSummaryResponsePagedResponse
 >({
   rootKey: "customers",
-  basePath: "/api/customers",
+  basePath: API_SUFFIX.CUSTOMERS,
   getItems: (resp) => resp.items ?? [],
   messages: {
     createSuccess: "Đã tạo khách hàng thành công",
