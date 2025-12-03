@@ -3,17 +3,11 @@ import type {
   DesignTypeResponse, // = DesignTypeResponse
   CreateDesignTypeRequest,
   UpdateDesignTypeRequest,
+  DesignTypeListParams,
+  DesignTypeListResponse,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
-
-// BE: GET /designs/types?status=...
-export type DesignTypeListParams = {
-  status?: string;
-};
-
-// BE: GET trả về DesignTypeResponse[]
-export type DesignTypeListResponse = DesignTypeResponse[];
 
 const designTypeCrud = createCrudHooks<
   DesignTypeResponse,

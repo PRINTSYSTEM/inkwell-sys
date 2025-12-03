@@ -11,6 +11,7 @@ const MaterialTypeDialogLazy = lazy(() =>
     default: m.MaterialTypeDialog,
   }))
 );
+
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -57,24 +58,73 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+// Kiểu generic cho response phân trang từ backend
+type PagedResponse<T> = {
+  items: T[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
 export default function DesignTypesPage() {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: designTypesData, isLoading, isError } = useDesignTypes();
+  // ====== Search & Pagination state ======
+  const [searchTerm, setSearchTerm] = useState("");
+  const [pageNumber, setPageNumber] = useState(1);
+  const pageSize = 10; // có thể cho user đổi về sau
+
+  // ====== Queries ======
+  // Giữ nguyên hook, chỉ truyền thêm params phân trang
+  const {
+    data: designTypesData,
+    isLoading,
+    isError,
+  } = useDesignTypes({
+    pageNumber,
+    pageSize,
+  });
+
   const { data: materialTypesData } = useMaterialTypeList({});
 
-  // Chuẩn hoá: luôn ra array, dù backend trả [] hay { items: [] }
-  const designTypes: DesignTypeResponse[] = Array.isArray(designTypesData)
-    ? designTypesData
-    : (designTypesData as any)?.items ?? [];
+  // Chuẩn hoá dữ liệu phân trang của designTypes
+  const designTypesPaged: PagedResponse<DesignTypeResponse> =
+    designTypesData && !Array.isArray(designTypesData)
+      ? (designTypesData as PagedResponse<DesignTypeResponse>)
+      : {
+          items: (designTypesData as DesignTypeResponse[]) ?? [],
+          totalCount: (designTypesData as DesignTypeResponse[])?.length ?? 0,
+          pageNumber: 1,
+          pageSize: (designTypesData as DesignTypeResponse[])?.length ?? 10,
+          totalPages: 1,
+          hasPreviousPage: false,
+          hasNextPage: false,
+        };
 
-  const materialTypesList: MaterialTypeResponse[] = Array.isArray(
-    materialTypesData
-  )
-    ? materialTypesData
-    : (materialTypesData as any)?.items ?? [];
+  const designTypes: DesignTypeResponse[] = designTypesPaged.items ?? [];
 
+  // Chuẩn hoá material types (cũng đọc từ response phân trang nếu có)
+  const materialTypesPaged: PagedResponse<MaterialTypeResponse> =
+    materialTypesData && !Array.isArray(materialTypesData)
+      ? (materialTypesData as PagedResponse<MaterialTypeResponse>)
+      : {
+          items: (materialTypesData as MaterialTypeResponse[]) ?? [],
+          totalCount:
+            (materialTypesData as MaterialTypeResponse[])?.length ?? 0,
+          pageNumber: 1,
+          pageSize: (materialTypesData as MaterialTypeResponse[])?.length ?? 10,
+          totalPages: 1,
+          hasPreviousPage: false,
+          hasNextPage: false,
+        };
+
+  const materialTypesList: MaterialTypeResponse[] =
+    materialTypesPaged.items ?? [];
+
+  // ====== Local UI state ======
   const [selectedDesignType, setSelectedDesignType] =
     useState<DesignTypeResponse | null>(null);
 
@@ -85,6 +135,7 @@ export default function DesignTypesPage() {
   const [designTypeToDelete, setDesignTypeToDelete] =
     useState<DesignTypeResponse | null>(null);
 
+  // ====== Mutations ======
   const { mutate: createDesignTypeMutation } = useCreateDesignType();
   const { mutate: updateDesignTypeMutation } = useUpdateDesignType();
   const { mutate: deleteDesignTypeMutation } = useDeleteDesignType();
@@ -93,23 +144,25 @@ export default function DesignTypesPage() {
   const { mutate: updateMaterialTypeMutation } = useUpdateMaterialType();
   const { mutate: deleteMaterialTypeMutation } = useDeleteMaterialType();
 
+  // ====== Search (filter client-side trên page hiện tại) ======
   const filteredDesignTypes = designTypes.filter(
     (dt) =>
       dt.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       dt.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // CREATE DESIGN TYPE
+  // ====== DESIGN TYPE HANDLERS ======
+
   const handleCreateDesignType = (data: CreateDesignTypeRequest) => {
     createDesignTypeMutation(data, {
       onSuccess: () => {
         setIsDesignTypeDialogOpen(false);
         setEditingDesignType(null);
+        // Có thể setPageNumber(1) nếu muốn luôn quay về trang đầu
       },
     });
   };
 
-  // UPDATE DESIGN TYPE
   const handleUpdateDesignType = (data: CreateDesignTypeRequest) => {
     if (!editingDesignType) return;
 
@@ -127,7 +180,6 @@ export default function DesignTypesPage() {
     );
   };
 
-  // DELETE DESIGN TYPE
   const handleDeleteDesignType = () => {
     if (!designTypeToDelete) return;
 
@@ -139,10 +191,9 @@ export default function DesignTypesPage() {
     });
   };
 
-  // ========== MATERIAL HANDLERS (DÙNG API THẬT) ==========
+  // ====== MATERIAL HANDLERS (GIỮ API CŨ) ======
 
   const handleCreateMaterial = (material: CreateMaterialTypeRequest) => {
-    // đảm bảo có designTypeId (nếu form không gán sẵn)
     const payload: CreateMaterialTypeRequest = {
       ...material,
       designTypeId:
@@ -166,7 +217,6 @@ export default function DesignTypesPage() {
           title: "Thành công",
           description: "Đã thêm chất liệu mới",
         });
-        // MaterialTypeDialog vẫn mở, user có thể tạo tiếp
       },
     });
   };
@@ -175,7 +225,6 @@ export default function DesignTypesPage() {
     id: number,
     updates: Partial<MaterialTypeResponse>
   ) => {
-    // Chuyển về kiểu payload phù hợp với API (thường là Partial<CreateMaterialTypeRequest>)
     const {
       id: _ignoreId,
       createdAt,
@@ -211,12 +260,33 @@ export default function DesignTypesPage() {
     });
   };
 
+  // ====== Stats (dùng totalCount từ backend nếu có) ======
   const stats = {
-    total: designTypes.length,
-    active: designTypes.filter((dt) => dt.status === "active").length,
-    totalMaterials: materialTypesList.length,
+    total: designTypesPaged.totalCount ?? designTypes.length,
+    active: designTypes.filter((dt) => dt.status === "active").length, // trong trang hiện tại
+    totalMaterials: materialTypesPaged.totalCount ?? materialTypesList.length,
   };
 
+  // ====== Pagination logic ======
+  const handlePageChange = (nextPage: number) => {
+    if (
+      nextPage < 1 ||
+      nextPage > (designTypesPaged.totalPages || 1) ||
+      nextPage === pageNumber
+    ) {
+      return;
+    }
+    setPageNumber(nextPage);
+  };
+
+  const startIndex =
+    designTypes.length > 0
+      ? (designTypesPaged.pageNumber - 1) * designTypesPaged.pageSize + 1
+      : 0;
+  const endIndex =
+    designTypes.length > 0 ? startIndex + designTypes.length - 1 : 0;
+
+  // ====== Loading / Error ======
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
@@ -233,6 +303,7 @@ export default function DesignTypesPage() {
     );
   }
 
+  // ====== UI ======
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
@@ -266,7 +337,7 @@ export default function DesignTypesPage() {
               {stats.total}
             </div>
             <p className="text-xs text-blue-600 mt-1">
-              {stats.active} đang hoạt động
+              {stats.active} đang hoạt động (trong trang hiện tại)
             </p>
           </CardContent>
         </Card>
@@ -282,7 +353,7 @@ export default function DesignTypesPage() {
               {stats.totalMaterials}
             </div>
             <p className="text-xs text-purple-600 mt-1">
-              Trên tất cả loại thiết kế
+              Trên tất cả loại thiết kế (theo backend)
             </p>
           </CardContent>
         </Card>
@@ -306,6 +377,7 @@ export default function DesignTypesPage() {
         </Card>
       </div>
 
+      {/* Main table + pagination */}
       <Card>
         <CardHeader>
           <div className="relative">
@@ -313,7 +385,10 @@ export default function DesignTypesPage() {
             <Input
               placeholder="Tìm kiếm theo tên hoặc mã loại thiết kế..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                // có thể setPageNumber(1) nếu muốn reset về trang đầu khi search
+              }}
               className="pl-10"
             />
           </div>
@@ -448,9 +523,56 @@ export default function DesignTypesPage() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination UI */}
+          <div className="flex items-center justify-between mt-4 text-sm text-slate-600">
+            <div>
+              {stats.total > 0 ? (
+                <span>
+                  Hiển thị{" "}
+                  <span className="font-semibold">
+                    {startIndex}-{endIndex}
+                  </span>{" "}
+                  trên{" "}
+                  <span className="font-semibold">
+                    {designTypesPaged.totalCount}
+                  </span>{" "}
+                  loại thiết kế
+                </span>
+              ) : (
+                <span>Không có dữ liệu.</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!designTypesPaged.hasPreviousPage}
+                onClick={() => handlePageChange(pageNumber - 1)}
+              >
+                Trước
+              </Button>
+              <span>
+                Trang{" "}
+                <span className="font-semibold">
+                  {designTypesPaged.pageNumber}
+                </span>{" "}
+                / {designTypesPaged.totalPages || 1}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!designTypesPaged.hasNextPage}
+                onClick={() => handlePageChange(pageNumber + 1)}
+              >
+                Sau
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
+      {/* Dialog Loại thiết kế */}
       <Suspense fallback={<div>Đang tải...</div>}>
         <DesignTypeFormDialogLazy
           open={isDesignTypeDialogOpen}
@@ -465,6 +587,7 @@ export default function DesignTypesPage() {
         />
       </Suspense>
 
+      {/* Confirm xóa loại thiết kế */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -487,6 +610,7 @@ export default function DesignTypesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Dialog chất liệu */}
       {selectedDesignType && (
         <Suspense fallback={<div>Đang tải...</div>}>
           <MaterialTypeDialogLazy

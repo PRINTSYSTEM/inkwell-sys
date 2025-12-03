@@ -75,14 +75,14 @@ export type DesignUserQueryParams = z.infer<typeof DesignUserQueryParamsSchema>;
  * =======================================================*/
 
 // /api/designs/types (GET)
-export const DesignTypeListParamsSchema = z.object({
+export const DesignTypeListParamsSchema = PageParamsSchema.extend({
   status: z.string().optional(),
 });
 
 export type DesignTypeListParams = z.infer<typeof DesignTypeListParamsSchema>;
 
 // /api/designs/materials (GET)
-export const MaterialTypeListParamsSchema = z.object({
+export const MaterialTypeListParamsSchema = PageParamsSchema.extend({
   status: z.string().optional(),
 });
 

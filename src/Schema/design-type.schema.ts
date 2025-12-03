@@ -6,6 +6,7 @@ import {
   DateSchema,
   IdSchema,
   NameSchema,
+  createPagedResponseSchema,
 } from "./common";
 
 // CreateDesignTypeRequest
@@ -54,3 +55,11 @@ export const DesignTypeResponseSchema = z
   .strict();
 
 export type DesignTypeResponse = z.infer<typeof DesignTypeResponseSchema>;
+
+export const DesignTypeListResponseSchema = createPagedResponseSchema(
+  DesignTypeResponseSchema
+);
+
+export type DesignTypeListResponse = z.infer<
+  typeof DesignTypeListResponseSchema
+>;

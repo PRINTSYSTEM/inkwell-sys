@@ -10,13 +10,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MaterialTypeEntity } from "@/Schema";
+import { MaterialTypeResponse } from "@/Schema";
 import { Edit, Trash2, DollarSign } from "lucide-react";
 
 interface MaterialTypeListProps {
-  materials: MaterialTypeEntity[];
-  onEdit: (material: MaterialTypeEntity) => void;
-  onDelete: (material: MaterialTypeEntity) => void;
+  materials: MaterialTypeResponse[];
+  onEdit: (material: MaterialTypeResponse) => void;
+  onDelete: (material: MaterialTypeResponse) => void;
 }
 
 export function MaterialTypeList({
@@ -46,7 +46,6 @@ export function MaterialTypeList({
             <TableHead className="w-[100px]">Thứ tự</TableHead>
             <TableHead className="w-[120px]">Mã</TableHead>
             <TableHead>Tên chất liệu</TableHead>
-            <TableHead className="text-right w-[140px]">Giá cố định</TableHead>
             <TableHead className="text-right w-[140px]">Giá/cm²</TableHead>
             <TableHead className="w-[120px]">Trạng thái</TableHead>
             <TableHead className="text-right w-[120px]">Thao tác</TableHead>
@@ -76,9 +75,6 @@ export function MaterialTypeList({
                 </div>
               </TableCell>
               <TableCell className="text-right">
-                <span className="font-semibold">
-                  {material.price.toLocaleString("vi-VN")}
-                </span>
                 <span className="text-xs text-muted-foreground ml-1">đ</span>
               </TableCell>
               <TableCell className="text-right">

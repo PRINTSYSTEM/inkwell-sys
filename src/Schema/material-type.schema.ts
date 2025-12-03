@@ -6,6 +6,7 @@ import {
   DateSchema,
   IdSchema,
   NameSchema,
+  createPagedResponseSchema,
 } from "./common";
 
 // CreateMaterialTypeRequest
@@ -86,3 +87,11 @@ export const MaterialTypeResponseSchema = z
   .strict();
 
 export type MaterialTypeResponse = z.infer<typeof MaterialTypeResponseSchema>;
+
+export const MaterialTypeListResponseSchema = createPagedResponseSchema(
+  MaterialTypeResponseSchema
+);
+
+export type MaterialTypeListResponse = z.infer<
+  typeof MaterialTypeListResponseSchema
+>;

@@ -17,7 +17,12 @@ import { DesignerFormDialog } from "@/components/design/designer-form-dialog";
 import { DeleteDesignerDialog } from "@/components/design/delete-designer-dialog";
 
 import type { UserResponse, DesignResponse } from "@/Schema";
-import { useDesignsByUser, useUsers } from "@/hooks";
+import {
+  useCreateUser,
+  useDesignsByUser,
+  useUpdateUser,
+  useUsers,
+} from "@/hooks";
 import DesignerDetail from "./DesignerDetailView";
 
 type Designer = UserResponse;
@@ -64,6 +69,9 @@ export default function DesignersPage() {
 
   const { data: designsData, isLoading: isDesignsLoading } =
     useDesignsByUser(selectedDesignerId);
+
+  const { mutateAsync: createUser } = useCreateUser();
+  const { mutateAsync: updateUser } = useUpdateUser();
 
   const designerDesigns: DesignerDesign[] = designsData?.items ?? [];
 
@@ -388,6 +396,7 @@ export default function DesignersPage() {
           onOpenChange={setIsFormDialogOpen}
           designer={selectedDesigner}
           onSuccess={handleFormSuccess}
+          onSubmit={selectedDesigner ? updateUser : createUser}
         />
 
         {/* Xoá designer */}
