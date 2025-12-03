@@ -66,14 +66,33 @@ function renderGroup(
   );
   if (visibleChildren.length === 0) return null;
 
+  // 🔹 TRƯỜNG HỢP CHỈ CÓ 1 CHILD => HIỆN THẲNG ITEM, KHÔNG CẦN SUBMENU
+  if (visibleChildren.length === 1) {
+    const child = visibleChildren[0];
+    const Icon = child.icon || item.icon; // ưu tiên icon của child
+
+    return (
+      <SidebarMenuButton asChild>
+        <NavLink
+          to={child.path}
+          className={({ isActive }) =>
+            isActive
+              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+          }
+        >
+          <Icon className="h-4 w-4" />
+          <span>{child.title}</span>
+        </NavLink>
+      </SidebarMenuButton>
+    );
+  }
+
+  // 🔹 TRƯỜNG HỢP CÓ ≥ 2 CHILD => DÙNG COLLAPSIBLE NHƯ CŨ
   const isOpen = openSubmenus.includes(item.id);
 
   return (
-    <Collapsible
-      key={item.id}
-      open={isOpen}
-      onOpenChange={() => toggleSubmenu(item.id)}
-    >
+    <Collapsible open={isOpen} onOpenChange={() => toggleSubmenu(item.id)}>
       <CollapsibleTrigger asChild>
         <SidebarMenuButton className="w-full justify-between">
           <div className="flex items-center gap-2">

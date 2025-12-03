@@ -7,15 +7,11 @@ import type {
   CreateMaterialTypeRequest,
   UpdateMaterialTypeRequest,
   BulkCreateMaterialTypeRequest,
+  MaterialTypeListParams,
+  MaterialTypeListResponse,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
-
-export type MaterialTypeListParams = {
-  status?: string;
-};
-
-export type MaterialTypeListResponse = MaterialTypeResponse[];
 
 const materialTypeCrud = createCrudHooks<
   MaterialTypeResponse,

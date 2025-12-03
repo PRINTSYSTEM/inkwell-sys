@@ -22,13 +22,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { UserResponse } from "@/Schema";
+import { UserResponse, CreateUserRequest, UpdateUserRequest } from "@/Schema";
 
 interface DesignerFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   designer?: UserResponse | null;
   onSuccess: () => void;
+  onSubmit: (
+    data: CreateUserRequest | { id: number; data: UpdateUserRequest }
+  ) => Promise<UserResponse>;
 }
 
 export function DesignerFormDialog({
@@ -36,6 +39,7 @@ export function DesignerFormDialog({
   onOpenChange,
   designer,
   onSuccess,
+  onSubmit,
 }: DesignerFormDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,31 +82,25 @@ export function DesignerFormDialog({
     setIsSubmitting(true);
 
     try {
-      const endpoint = designer ? `/api/users/${designer.id}` : "/api/users";
-      const method = designer ? "PUT" : "POST";
-
-      // For update, we don't send username and password
-      const body = designer
-        ? {
-            fullName: formData.fullName,
-            role: formData.role,
-            email: formData.email,
-            phone: formData.phone,
-            isActive: formData.isActive,
-          }
-        : formData;
-
-      const response = await fetch(endpoint, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save designer");
+      if (designer) {
+        const updateData: UpdateUserRequest = {
+          fullName: formData.fullName,
+          role: formData.role as UpdateUserRequest["role"],
+          email: formData.email,
+          phone: formData.phone,
+          isActive: formData.isActive,
+        };
+        await onSubmit({ id: designer.id as number, data: updateData });
+      } else {
+        const createData: CreateUserRequest = {
+          username: formData.username,
+          password: formData.password,
+          fullName: formData.fullName,
+          role: formData.role as CreateUserRequest["role"],
+          email: formData.email,
+          phone: formData.phone,
+        };
+        await onSubmit(createData);
       }
 
       toast({
@@ -224,24 +222,26 @@ export function DesignerFormDialog({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">Vai trò</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, role: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="design">Nhân viên thiết kế</SelectItem>
-                  <SelectItem value="manager">Quản lý</SelectItem>
-                  <SelectItem value="admin">Quản trị viên</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {designer && (
+              <div className="space-y-2">
+                <Label htmlFor="role">Vai trò</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, role: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="design">Nhân viên thiết kế</SelectItem>
+                    <SelectItem value="manager">Quản lý</SelectItem>
+                    <SelectItem value="admin">Quản trị viên</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {designer && (
               <div className="space-y-2">
