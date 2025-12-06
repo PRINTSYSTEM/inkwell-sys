@@ -2,7 +2,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
-import type { InvoiceResponse } from "@/Schema/invoice.schema";
+import type { InvoiceFileResponse } from "@/Schema/invoice.schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async"; // <- hook async bạn đã có
 
@@ -19,7 +19,7 @@ export const useOrderInvoice = (
     queryKey: invoiceKeys.byOrder(orderId),
     enabled: enabled && !!orderId,
     queryFn: async () => {
-      const res = await apiRequest.get<InvoiceResponse>(
+      const res = await apiRequest.get<InvoiceFileResponse>(
         API_SUFFIX.ORDER_INVOICE(orderId as number)
       );
       return res.data; // string
@@ -35,10 +35,10 @@ export const useGenerateOrderInvoice = () => {
   const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
-    InvoiceResponse,
+    InvoiceFileResponse,
     [number]
   >(async (orderId: number) => {
-    const res = await apiRequest.post<InvoiceResponse>(
+    const res = await apiRequest.post<InvoiceFileResponse>(
       API_SUFFIX.ORDER_INVOICE(orderId)
     );
     return res.data; // string

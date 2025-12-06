@@ -1,5 +1,5 @@
 // src/pages/DesignersPage.tsx
-import { lazy, useState } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -16,17 +16,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DesignerFormDialog } from "@/components/design/designer-form-dialog";
 import { DeleteDesignerDialog } from "@/components/design/delete-designer-dialog";
 
-import type { UserResponse, DesignResponse } from "@/Schema";
-import {
-  useCreateUser,
-  useDesignsByUser,
-  useUpdateUser,
-  useUsers,
-} from "@/hooks";
+import type { UserResponse } from "@/Schema";
+import { useCreateUser, useUpdateUser, useUsers } from "@/hooks";
 import DesignerDetail from "./DesignerDetailView";
 
 type Designer = UserResponse;
-type DesignerDesign = DesignResponse;
 
 export default function DesignersPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,24 +61,8 @@ export default function DesignersPage() {
   // ====== Lấy danh sách thiết kế của designer ======
   const selectedDesignerId = selectedDesigner?.id ?? null;
 
-  const { data: designsData, isLoading: isDesignsLoading } =
-    useDesignsByUser(selectedDesignerId);
-
   const { mutateAsync: createUser } = useCreateUser();
   const { mutateAsync: updateUser } = useUpdateUser();
-
-  const designerDesigns: DesignerDesign[] = designsData?.items ?? [];
-
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString("vi-VN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   const handleDesignerClick = (designer: Designer) => {
     setSelectedDesigner(designer);
@@ -113,43 +91,6 @@ export default function DesignersPage() {
 
   const handleDeleteSuccess = () => {
     setIsDeleteDialogOpen(false);
-  };
-
-  const getStatusBadge = (status: string | null | undefined) => {
-    const s = status || "";
-    const statusMap: Record<string, { label: string; className: string }> = {
-      pending: {
-        label: "Nhận thông tin",
-        className: "bg-blue-500 hover:bg-blue-600",
-      },
-      designing: {
-        label: "Đang thiết kế",
-        className: "bg-yellow-500 hover:bg-yellow-600",
-      },
-      editing: {
-        label: "Đang chỉnh sửa",
-        className: "bg-purple-500 hover:bg-purple-600",
-      },
-      waiting_for_customer_approval: {
-        label: "Chờ khách duyệt",
-        className: "bg-amber-500 hover:bg-amber-600",
-      },
-      confirmed_for_printing: {
-        label: "Đã chốt in",
-        className: "bg-green-500 hover:bg-green-600",
-      },
-      pdf_exported: {
-        label: "Đã xuất PDF",
-        className: "bg-emerald-500 hover:bg-emerald-600",
-      },
-    };
-
-    return (
-      statusMap[s] || {
-        label: s || "Không rõ",
-        className: "bg-slate-500",
-      }
-    );
   };
 
   return (

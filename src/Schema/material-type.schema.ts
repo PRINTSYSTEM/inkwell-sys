@@ -1,83 +1,23 @@
 // src/Schema/material-type.schema.ts
 import { z } from "zod";
 import {
-  UserInfoSchema,
-  CommonStatusSchema,
-  DateSchema,
   IdSchema,
+  DateSchema,
   NameSchema,
   createPagedResponseSchema,
 } from "./common";
+import { UserInfoSchema } from "./common";
 
-// CreateMaterialTypeRequest
-export const CreateMaterialTypeRequestSchema = z
-  .object({
-    code: z.string().max(20),
-    name: NameSchema,
-    displayOrder: z.number().int().min(0),
-    description: z.string().nullable().optional(),
-    pricePerCm2: z.number().min(0),
-    designTypeId: IdSchema.nullable().optional(),
-    status: CommonStatusSchema,
-  })
-  .strict();
+// ===== MaterialTypeResponse =====
 
-export type CreateMaterialTypeRequest = z.infer<
-  typeof CreateMaterialTypeRequestSchema
->;
-
-// MaterialTypeItem (dùng cho bulk create)
-export const MaterialTypeItemSchema = z
-  .object({
-    code: z.string().max(20),
-    name: NameSchema,
-    displayOrder: z.number().int().min(0),
-    description: z.string().nullable().optional(),
-    pricePerCm2: z.number().min(0),
-    status: CommonStatusSchema,
-  })
-  .strict();
-
-export type MaterialTypeItem = z.infer<typeof MaterialTypeItemSchema>;
-
-// BulkCreateMaterialTypeRequest
-export const BulkCreateMaterialTypeRequestSchema = z
-  .object({
-    designTypeId: IdSchema,
-    materials: z.array(MaterialTypeItemSchema).min(1),
-  })
-  .strict();
-
-export type BulkCreateMaterialTypeRequest = z.infer<
-  typeof BulkCreateMaterialTypeRequestSchema
->;
-
-// UpdateMaterialTypeRequest
-export const UpdateMaterialTypeRequestSchema = z
-  .object({
-    name: NameSchema.nullable().optional(),
-    displayOrder: z.number().int().min(0).nullable().optional(),
-    description: z.string().nullable().optional(),
-    pricePerCm2: z.number().min(0).nullable().optional(),
-    designTypeId: IdSchema.nullable().optional(),
-    status: CommonStatusSchema.nullable().optional(),
-  })
-  .strict();
-
-export type UpdateMaterialTypeRequest = z.infer<
-  typeof UpdateMaterialTypeRequestSchema
->;
-
-// MaterialTypeResponse
 export const MaterialTypeResponseSchema = z
   .object({
     id: IdSchema.optional(),
+    designTypeId: IdSchema.optional(),
+    designTypeName: z.string().nullable().optional(),
     code: z.string().nullable().optional(),
-    name: z.string().nullable().optional(),
-    displayOrder: z.number().int().optional(),
+    name: NameSchema.nullable().optional(),
     description: z.string().nullable().optional(),
-    pricePerCm2: z.number(),
-    designTypeId: IdSchema.nullable().optional(),
     status: z.string().nullable().optional(),
     statusType: z.string().nullable().optional(),
     createdAt: DateSchema.optional(),
@@ -88,10 +28,63 @@ export const MaterialTypeResponseSchema = z
 
 export type MaterialTypeResponse = z.infer<typeof MaterialTypeResponseSchema>;
 
-export const MaterialTypeListResponseSchema = createPagedResponseSchema(
-  MaterialTypeResponseSchema
-);
+// ===== PagedResponse =====
 
-export type MaterialTypeListResponse = z.infer<
-  typeof MaterialTypeListResponseSchema
+export const MaterialTypeResponsePagedResponseSchema =
+  createPagedResponseSchema(MaterialTypeResponseSchema);
+
+export type MaterialTypeResponsePagedResponse = z.infer<
+  typeof MaterialTypeResponsePagedResponseSchema
+>;
+
+// ===== CreateMaterialTypeRequest =====
+
+export const CreateMaterialTypeRequestSchema = z
+  .object({
+    designTypeId: IdSchema,
+    code: z.string().max(50),
+    name: NameSchema,
+    description: z.string().nullable().optional(),
+  })
+  .strict();
+
+export type CreateMaterialTypeRequest = z.infer<
+  typeof CreateMaterialTypeRequestSchema
+>;
+
+// ===== BulkCreateMaterialTypeRequest =====
+
+export const BulkCreateMaterialTypeRequestSchema = z
+  .object({
+    designTypeId: IdSchema,
+    materials: z
+      .array(
+        z.object({
+          code: z.string().max(50),
+          name: NameSchema,
+          description: z.string().nullable().optional(),
+        })
+      )
+      .min(1),
+  })
+  .strict();
+
+export type BulkCreateMaterialTypeRequest = z.infer<
+  typeof BulkCreateMaterialTypeRequestSchema
+>;
+
+// ===== UpdateMaterialTypeRequest =====
+
+export const UpdateMaterialTypeRequestSchema = z
+  .object({
+    designTypeId: IdSchema.nullable().optional(),
+    code: z.string().max(50).nullable().optional(),
+    name: NameSchema.nullable().optional(),
+    description: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+  })
+  .strict();
+
+export type UpdateMaterialTypeRequest = z.infer<
+  typeof UpdateMaterialTypeRequestSchema
 >;

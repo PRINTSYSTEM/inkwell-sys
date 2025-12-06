@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   ArrowLeft,
@@ -36,12 +43,35 @@ import {
   useUploadDesignFile,
   useUploadDesignImage,
   useAddDesignTimelineEntry,
+  useUpdateDesign,
 } from "@/hooks";
 import type {
   DesignResponse,
   DesignTimelineEntryResponse,
 } from "@/Schema/design.schema";
 import DesignCode from "@/components/design/design-code";
+
+const DESIGN_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "pending", label: "Nhận thông tin" },
+  { value: "designing", label: "Đang thiết kế" },
+  { value: "editing", label: "Đang chỉnh sửa" },
+  {
+    value: "waiting_for_customer_approval",
+    label: "Chờ khách duyệt",
+  },
+  {
+    value: "confirmed_for_printing",
+    label: "Đã chốt in",
+  },
+  {
+    value: "pdf_exported",
+    label: "Đã xuất PDF",
+  },
+  {
+    value: "completed",
+    label: "Hoàn thành",
+  },
+];
 
 export default function DesignDetailPage() {
   const params = useParams();
@@ -74,6 +104,8 @@ export default function DesignDetailPage() {
   const { mutate: addTimelineEntry, loading: addingTimeline } =
     useAddDesignTimelineEntry();
 
+  const { mutate: updateDesignStatus } = useUpdateDesign();
+
   // ==== LOCAL UI STATE ====
   const [viewingImage, setViewingImage] = useState<{
     url: string;
@@ -82,7 +114,19 @@ export default function DesignDetailPage() {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showTimelineDialog, setShowTimelineDialog] = useState(false);
 
+  // draft status để chọn trên UI
+  const [statusDraft, setStatusDraft] = useState<string>("");
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
   const loading = designLoading;
+
+  useEffect(() => {
+    if (design?.designStatus) {
+      setStatusDraft(design.designStatus);
+    } else {
+      setStatusDraft("");
+    }
+  }, [design?.designStatus]);
 
   const getStatusBadge = (
     status?: string | null,
@@ -137,11 +181,12 @@ export default function DesignDetailPage() {
   const handleDesignFileUpload = async (file: File, image: File) => {
     if (!enabled) return;
     try {
-      // await uploadDesignFile({ id: designId, file });
+      // nếu muốn upload cả file .ai:
+      await uploadDesignFile({ id: designId, file });
       await uploadDesignImage({ id: designId, file: image });
       setShowFileUpload(false);
     } catch {
-      // toast đã được handle trong hook, ở đây không cần làm gì thêm
+      // toast đã được handle trong hook
     }
   };
 
@@ -158,6 +203,28 @@ export default function DesignDetailPage() {
     } catch {
       // toast đã được handle trong hook
     }
+  };
+
+  // Cập nhật trạng thái thiết kế
+  const handleSaveStatus = () => {
+    if (!enabled || !statusDraft || statusDraft === design?.designStatus) {
+      return;
+    }
+
+    setUpdatingStatus(true);
+    updateDesignStatus(
+      {
+        id: designId,
+        data: {
+          designStatus: statusDraft,
+        },
+      },
+      {
+        onSettled: () => {
+          setUpdatingStatus(false);
+        },
+      }
+    );
   };
 
   // ==== RENDER ====
@@ -258,6 +325,43 @@ export default function DesignDetailPage() {
                   <p className="text-xs text-muted-foreground truncate">
                     {d.designer.email} • {d.designer.phone}
                   </p>
+                </div>
+              </div>
+
+              {/* Status select + update */}
+              <div className="space-y-1">
+                <p className="text-[10px] font-medium text-muted-foreground">
+                  TRẠNG THÁI THIẾT KẾ
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select
+                    value={statusDraft || ""}
+                    onValueChange={(v) => setStatusDraft(v)}
+                  >
+                    <SelectTrigger className="h-8 w-fit min-w-[180px]">
+                      <SelectValue placeholder="Chọn trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DESIGN_STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={
+                      updatingStatus ||
+                      !statusDraft ||
+                      statusDraft === d.designStatus
+                    }
+                    onClick={handleSaveStatus}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                    Cập nhật
+                  </Button>
                 </div>
               </div>
 
@@ -426,7 +530,7 @@ export default function DesignDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Image preview: lấy từ timeline mới nhất hoặc placeholder */}
+                  {/* Image preview */}
                   <div
                     className="relative group cursor-pointer rounded-lg overflow-hidden border-2 hover:border-violet-500 transition-all"
                     onClick={() =>
@@ -456,7 +560,6 @@ export default function DesignDetailPage() {
                         <p className="text-sm font-semibold mb-1 truncate">
                           {d.designFileUrl?.split("/").pop()}
                         </p>
-                        {/* Không có uploadedAt trong schema, nên chỉ hiển thị "đã upload" */}
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Clock className="h-3 w-3" />
                           <span>Đã upload file thiết kế</span>
@@ -621,7 +724,6 @@ export default function DesignDetailPage() {
         onOpenChange={setShowFileUpload}
         onUpload={handleDesignFileUpload}
         mode={d.designFileUrl ? "edit" : "create"}
-        // loading={uploadingDesignFile || uploadingDesignImage}
       />
 
       {/* Timeline Entry Dialog */}
@@ -629,7 +731,6 @@ export default function DesignDetailPage() {
         open={showTimelineDialog}
         onOpenChange={setShowTimelineDialog}
         onAdd={handleTimelineAdd}
-        // loading={addingTimeline}
       />
     </div>
   );

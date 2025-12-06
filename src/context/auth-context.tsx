@@ -13,7 +13,7 @@ import type {
   UserInfo,
   LoginResponse,
 } from "../Schema";
-import { authService } from "../services/AuthService";
+import { authService } from "../services/authService";
 import { AuthUtils } from "../services/AuthUtils";
 
 type AuthUser = UserInfo | null;

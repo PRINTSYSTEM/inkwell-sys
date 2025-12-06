@@ -47,13 +47,17 @@ import type {
   OrderListParams,
   ProofingOrderListParams,
   ProductionResponse,
+  UserRole,
 } from "@/Schema";
-import { useOrder, useProofingOrders } from "@/hooks";
+import { useAuth, useOrder, useProofingOrders } from "@/hooks";
+import { ROLE } from "@/constants";
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const orderId = Number.parseInt(id || "0", 10);
+  const { user } = useAuth();
 
+  const role = user?.role as UserRole;
   // Dialog states
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [proofingDialogOpen, setProofingDialogOpen] = useState(false);
@@ -73,6 +77,9 @@ export default function OrderDetailPage() {
     isError: orderError,
   } = useOrder(orderId || null, !!orderId);
 
+  const canViewPrice = role !== ROLE.DESIGN && role !== ROLE.DESIGN_LEAD;
+  const canViewDesigner =
+    role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD || role === ROLE.ADMIN;
   // ===== FETCH PROOFING ORDERS LIÊN QUAN =====
   const proofingParams: ProofingOrderListParams | undefined = useMemo(() => {
     if (!order) return undefined;
@@ -119,23 +126,11 @@ export default function OrderDetailPage() {
   const customerType = order.customer?.companyName ? "company" : "retail";
   const hasDeposit = (order.depositAmount || 0) > 0;
 
-  const hasConfirmedDesign = (order.designs ?? []).some((d) =>
-    ["confirmed_for_printing", "pdf_exported"].includes(d.designStatus || "")
-  );
-
-  const hasCompletedProofing = relatedProofing.some(
-    (po) => po.status === "completed"
-  );
-
   const productionToStart = relatedProductions.find((p) =>
     ["waiting_for_production", "pending"].includes(p.status || "")
   );
   const productionInProgress = relatedProductions.find(
     (p) => p.status === "in_production"
-  );
-  const hasProductionInProgress = !!productionInProgress;
-  const hasProductionCompleted = relatedProductions.some(
-    (p) => p.status === "completed"
   );
 
   const remainingAmount = (order.totalAmount || 0) - (order.depositAmount || 0);
@@ -150,28 +145,6 @@ export default function OrderDetailPage() {
       }
       return acc;
     }, []) ?? [];
-
-  // ===== RULE FLOW =====
-  const canTakeDeposit =
-    customerType === "retail" &&
-    !hasDeposit &&
-    hasConfirmedDesign &&
-    order.status === "pending";
-
-  const canCreateProofing =
-    hasConfirmedDesign &&
-    (customerType === "company" || hasDeposit) &&
-    ["pending", "waiting_for_proofing"].includes(order.status || "") &&
-    relatedProofing.length === 0;
-
-  const canStartProduction = !!productionToStart && hasCompletedProofing;
-
-  const canCompleteProduction = !!productionInProgress;
-
-  const canIssueInvoice =
-    order.status === "completed" &&
-    hasProductionCompleted &&
-    (customerType === "company" || remainingAmount <= 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -215,6 +188,8 @@ export default function OrderDetailPage() {
               <Button size="sm" onClick={() => setStatusDialogOpen(true)}>
                 Cập nhật trạng thái
               </Button>
+
+              <Button onClick={() => setEditSheetOpen(true)}>Chỉnh sửa</Button>
             </div>
           </div>
         </div>
@@ -305,12 +280,16 @@ export default function OrderDetailPage() {
                           <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                             SL
                           </th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                            Designer
-                          </th>
-                          <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                            Giá
-                          </th>
+                          {canViewDesigner && (
+                            <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                              Designer
+                            </th>
+                          )}
+                          {canViewPrice && (
+                            <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                              Giá
+                            </th>
+                          )}
                           <th className="px-4 py-3 text-center font-medium text-muted-foreground w-12"></th>
                         </tr>
                       </thead>
@@ -344,12 +323,16 @@ export default function OrderDetailPage() {
                             <td className="px-4 py-3 text-center font-medium">
                               {design.quantity}
                             </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {design.designer?.fullName}
-                            </td>
-                            <td className="px-4 py-3 text-right font-semibold">
-                              {formatCurrency(design.totalPrice || 0)}
-                            </td>
+                            {canViewDesigner && (
+                              <td className="px-4 py-3 text-left font-medium text-muted-foreground">
+                                {design.designer?.fullName}
+                              </td>
+                            )}
+                            {canViewPrice && (
+                              <td className="px-4 py-3 text-right font-semibold">
+                                {formatCurrency(design.totalPrice || 0)}
+                              </td>
+                            )}
                             <td className="px-4 py-3 text-center">
                               {design.designFileUrl && (
                                 <Button
@@ -528,35 +511,37 @@ export default function OrderDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Tổng tiền
-                    </span>
-                    <span className="text-lg font-bold">
-                      {formatCurrency(order.totalAmount || 0)}
-                    </span>
-                  </div>
-                  {hasDeposit && (
+                {canViewPrice && (
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">
-                        Đã cọc
+                        Tổng tiền
                       </span>
-                      <span className="font-medium text-success">
-                        {formatCurrency(order.depositAmount || 0)}
+                      <span className="text-lg font-bold">
+                        {formatCurrency(order.totalAmount || 0)}
                       </span>
                     </div>
-                  )}
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Còn lại
-                    </span>
-                    <span className="font-semibold text-warning">
-                      {formatCurrency(remainingAmount)}
-                    </span>
+                    {hasDeposit && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          Đã cọc
+                        </span>
+                        <span className="font-medium text-success">
+                          {formatCurrency(order.depositAmount || 0)}
+                        </span>
+                      </div>
+                    )}
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Còn lại
+                      </span>
+                      <span className="font-semibold text-warning">
+                        {formatCurrency(remainingAmount)}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <Separator />
 
@@ -590,96 +575,6 @@ export default function OrderDetailPage() {
                     </div>
                   </>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Actions */}
-            <Card className="shadow-card border-primary/20">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-base">Hành động</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {canTakeDeposit && (
-                  <Button
-                    className="w-full gap-2"
-                    size="sm"
-                    onClick={() => setDepositDialogOpen(true)}
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    Nhận cọc
-                  </Button>
-                )}
-
-                {canCreateProofing && (
-                  <Button
-                    className="w-full gap-2"
-                    size="sm"
-                    onClick={() => setProofingDialogOpen(true)}
-                  >
-                    <Package className="w-4 h-4" />
-                    Tạo bình bài
-                  </Button>
-                )}
-
-                {canStartProduction && productionToStart && (
-                  <Button
-                    className="w-full gap-2"
-                    size="sm"
-                    onClick={() => {
-                      setProductionType("start");
-                      setProductionDialogOpen(true);
-                    }}
-                  >
-                    <Play className="w-4 h-4" />
-                    Bắt đầu sản xuất
-                  </Button>
-                )}
-
-                {canCompleteProduction && productionInProgress && (
-                  <Button
-                    className="w-full gap-2"
-                    size="sm"
-                    onClick={() => {
-                      setProductionType("complete");
-                      setProductionDialogOpen(true);
-                    }}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Hoàn thành sản xuất
-                  </Button>
-                )}
-
-                {canIssueInvoice && (
-                  <Button
-                    className="w-full gap-2"
-                    size="sm"
-                    onClick={() => setInvoiceDialogOpen(true)}
-                  >
-                    <Receipt className="w-4 h-4" />
-                    Xuất hoá đơn
-                  </Button>
-                )}
-
-                <Separator className="my-3" />
-
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  size="sm"
-                  onClick={() => setEditSheetOpen(true)}
-                >
-                  <Edit className="w-4 h-4" />
-                  Chỉnh sửa
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  size="sm"
-                  onClick={() => setPrintDialogOpen(true)}
-                >
-                  <Printer className="w-4 h-4" />
-                  In đơn hàng
-                </Button>
               </CardContent>
             </Card>
           </div>

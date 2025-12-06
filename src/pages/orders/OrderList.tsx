@@ -21,29 +21,43 @@ import {
   formatDate,
 } from "@/lib/status-utils";
 
-import type { OrderListParams } from "@/Schema";
-import { useOrders } from "@/hooks";
+import type { OrderListParams, UserRole } from "@/Schema";
+import { useAuth } from "@/hooks";
+import { useOrdersByRole } from "@/hooks/use-order";
+import { ROLE } from "@/constants";
+
 export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { user } = useAuth();
+
+  const role = user?.role as UserRole;
 
   // build params cho API
   const listParams: OrderListParams = useMemo(
     () => ({
-      // tuỳ swagger của bạn, có thể thêm pageNumber/pageSize
       pageNumber: 1,
       pageSize: 50,
       status: statusFilter === "all" ? "" : statusFilter,
-      // nếu swagger có field search:
       search: searchTerm.trim() || "",
     }),
     [searchTerm, statusFilter]
   );
 
-  const { data, isLoading, isError, error } = useOrders(listParams);
+  // chỉ 1 hook duy nhất, bên trong tự chọn endpoint theo role
+  const { data, isLoading, isError, error } = useOrdersByRole(role, listParams);
+  console.log(data);
 
   const orders = data?.items ?? [];
+
   const totalOrders = data?.totalCount ?? orders.length;
+
+  // quyền tạo đơn:
+  // - accounting: KHÔNG được tạo
+  // - còn lại (admin, design, ...) được tạo
+  const isAccounting = role === ROLE.ACCOUNTING;
+  const canCreateOrder = !isAccounting;
+  const canViewPrice = role !== ROLE.DESIGN && role !== ROLE.DESIGN_LEAD;
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,12 +72,15 @@ export default function OrdersPage() {
               Theo dõi và quản lý quy trình đơn hàng từ thiết kế đến sản xuất
             </p>
           </div>
-          <Link to="/orders/new">
-            <Button size="lg" className="gap-2">
-              <Plus className="w-5 h-5" />
-              Tạo đơn mới
-            </Button>
-          </Link>
+
+          {canCreateOrder && (
+            <Link to="/orders/new">
+              <Button size="lg" className="gap-2">
+                <Plus className="w-5 h-5" />
+                Tạo đơn mới
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Filters */}
@@ -116,12 +133,17 @@ export default function OrdersPage() {
                   <th className="px-4 py-3 text-left text-sm font-semibold">
                     Ngày giao
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold">
-                    Tổng tiền
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold">
-                    Còn lại
-                  </th>
+                  {canViewPrice && (
+                    <>
+                      {" "}
+                      <th className="px-4 py-3 text-right text-sm font-semibold">
+                        Tổng tiền
+                      </th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold">
+                        Còn lại
+                      </th>
+                    </>
+                  )}
                   <th className="px-4 py-3 text-center text-sm font-semibold">
                     Thao tác
                   </th>
@@ -219,21 +241,25 @@ export default function OrdersPage() {
                             : "-"}
                         </td>
 
-                        <td className="px-4 py-4 text-right font-semibold">
-                          {formatCurrency(order.totalAmount || 0)}
-                        </td>
+                        {canViewPrice && (
+                          <>
+                            <td className="px-4 py-4 text-right font-semibold">
+                              {formatCurrency(order.totalAmount || 0)}
+                            </td>
 
-                        <td className="px-4 py-4 text-right">
-                          <span
-                            className={
-                              remaining > 0
-                                ? "text-orange-600 font-medium"
-                                : "text-muted-foreground"
-                            }
-                          >
-                            {formatCurrency(remaining)}
-                          </span>
-                        </td>
+                            <td className="px-4 py-4 text-right">
+                              <span
+                                className={
+                                  remaining > 0
+                                    ? "text-orange-600 font-medium"
+                                    : "text-muted-foreground"
+                                }
+                              >
+                                {formatCurrency(remaining)}
+                              </span>
+                            </td>
+                          </>
+                        )}
 
                         <td className="px-4 py-4 text-center">
                           <Link to={`/orders/${order.id}`}>
@@ -268,17 +294,6 @@ export default function OrdersPage() {
           <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
             <span>
               Hiển thị {orders.length} / {totalOrders} đơn hàng
-            </span>
-            <span>
-              Tổng giá trị:{" "}
-              <span className="font-semibold text-foreground">
-                {formatCurrency(
-                  orders.reduce(
-                    (sum, order) => sum + (order.totalAmount || 0),
-                    0
-                  )
-                )}
-              </span>
             </span>
           </div>
         )}
