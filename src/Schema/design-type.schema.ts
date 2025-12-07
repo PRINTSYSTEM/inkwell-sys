@@ -12,10 +12,14 @@ import {
 // CreateDesignTypeRequest
 export const CreateDesignTypeRequestSchema = z
   .object({
-    code: z.string().max(20),
+    code: z
+      .string()
+      .min(2, "Mã loại thiết kế quá ngắn")
+      .max(20, "Mã loại thiết kế quá dài")
+      .regex(/^[A-Z0-9-]+$/, "Mã chỉ gồm A-Z, số và dấu gạch ngang"),
     name: NameSchema,
-    displayOrder: z.number().int().min(0),
-    description: z.string().nullable().optional(),
+    displayOrder: z.number().int().min(0).default(0),
+    description: z.string().max(500).nullable().optional(),
     status: CommonStatusSchema,
   })
   .strict();

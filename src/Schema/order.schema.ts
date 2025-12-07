@@ -70,9 +70,9 @@ export type OrderResponsePagedResponse = z.infer<
 export const CreateOrderRequestSchema = z
   .object({
     customerId: IdSchema,
-    deliveryAddress: z.string().nullable().optional(),
-    totalAmount: z.number(),
-    depositAmount: z.number(),
+    deliveryAddress: z.string().max(500).nullable().optional(),
+    totalAmount: z.number().min(0, "Tổng tiền không thể âm"),
+    depositAmount: z.number().min(0, "Tiền đặt cọc không thể âm"),
     deliveryDate: DateSchema.nullable().optional(),
     note: z.string().nullable().optional(),
 
@@ -93,7 +93,19 @@ export const CreateOrderRequestSchema = z
       .nullable()
       .optional(),
   })
-  .strict();
+  .refine((data) => data.depositAmount <= data.totalAmount, {
+    message: "Tiền đặt cọc không được lớn hơn tổng tiền",
+  })
+  .refine(
+    (data) => {
+      if (data.deliveryDate) {
+        const today = new Date();
+        return new Date(data.deliveryDate) >= today;
+      }
+      return true;
+    },
+    { message: "Ngày giao hàng phải từ hôm nay trở đi" }
+  );
 
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
 
@@ -129,15 +141,17 @@ export type ExistingDesignRequest = z.infer<typeof ExistingDesignRequestSchema>;
 export const CreateOrderWithExistingDesignsRequestSchema = z
   .object({
     customerId: IdSchema,
-    deliveryAddress: z.string().nullable().optional(),
-    totalAmount: z.number(),
-    depositAmount: z.number(),
+    deliveryAddress: z.string().max(500).nullable().optional(),
+    totalAmount: z.number().min(0, "Tổng tiền không thể âm"),
+    depositAmount: z.number().min(0, "Tiền đặt cọc không thể âm"),
     deliveryDate: DateSchema.nullable().optional(),
     note: z.string().nullable().optional(),
 
     designs: z.array(ExistingDesignRequestSchema).min(1),
   })
-  .strict();
+  .refine((data) => data.depositAmount <= data.totalAmount, {
+    message: "Tiền đặt cọc không được lớn hơn tổng tiền",
+  });
 
 export type CreateOrderWithExistingDesignsRequest = z.infer<
   typeof CreateOrderWithExistingDesignsRequestSchema

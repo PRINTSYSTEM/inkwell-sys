@@ -82,14 +82,22 @@ export const CreateDesignRequestSchema = z
     designTypeId: IdSchema,
     materialTypeId: IdSchema,
     assignedDesignerId: IdSchema.nullable().optional(),
-    quantity: z.number().int().min(1),
+    quantity: z.number().int().min(1, "Số lượng tối thiểu là 1"),
     designName: NameSchema.nullable().optional(),
-    width: z.number().min(0).nullable().optional(),
-    height: z.number().min(0).nullable().optional(),
-    requirements: z.string().nullable().optional(),
-    additionalNotes: z.string().nullable().optional(),
+    width: z.number().min(0, "Chiều rộng không thể âm").nullable().optional(),
+    height: z.number().min(0, "Chiều cao không thể âm").nullable().optional(),
+    requirements: z.string().max(2000).nullable().optional(),
+    additionalNotes: z.string().max(1000).nullable().optional(),
   })
-  .strict();
+  .refine(
+    (data) => {
+      if (data.width != null && data.height != null) {
+        return data.width >= 0 && data.height >= 0;
+      }
+      return true;
+    },
+    { message: "Kích thước không hợp lệ" }
+  );
 
 export type CreateDesignRequest = z.infer<typeof CreateDesignRequestSchema>;
 

@@ -5,6 +5,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AuthGuard } from "@/guards/AuthGuard";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { ROUTE_PATHS } from "@/constants";
+import CreateCustomer from "@/pages/customers/CreateCustomer";
 
 // ================== Lazy imports ==================
 const Login = lazy(() => import("@/pages/Login"));
@@ -213,6 +214,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <Customers />
+              </Suspense>
+            ),
+          },
+          {
+            path: lastSegment(ROUTE_PATHS.CUSTOMERS.NEW), // "new"
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CreateCustomer />
               </Suspense>
             ),
           },

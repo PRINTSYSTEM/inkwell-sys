@@ -40,10 +40,21 @@ export function validateLoginResponse(data: unknown): LoginResponse {
 // ---------------------------
 // ChangePasswordRequest
 // ---------------------------
-export const ChangePasswordRequestSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(1),
-});
+export const ChangePasswordRequestSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+        "Password must include uppercase, lowercase and number"
+      ),
+    confirmPassword: z.string().min(1),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "Confirm password must match new password",
+    path: ["confirmPassword"],
+  });
 
 export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequestSchema>;

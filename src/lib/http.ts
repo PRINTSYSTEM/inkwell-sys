@@ -157,6 +157,12 @@ export const apiRequest = createApiInstance();
 
 export const http = {
   get: async <T>(url: string, params?: any): Promise<T> => {
+    console.group("🔥 http.get CALLED FROM");
+    console.log("URL:", url);
+    console.log("Params:", params);
+    console.log("📌 Call stack:", new Error().stack);
+    console.groupEnd();
+
     const response = await apiRequest.get<T>(url, { params });
     return response.data;
   },

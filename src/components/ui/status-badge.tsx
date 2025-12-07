@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { getStatusVariant } from "@/lib/status-utils";
+import { getStatusColorClass } from "@/lib/status-utils";
 
 interface StatusBadgeProps {
   status: string | null;
@@ -7,19 +7,10 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
-  const variant = getStatusVariant(status);
+  const colorClass = getStatusColorClass(status);
 
   return (
-    <Badge
-      variant={
-        variant === "warning"
-          ? "default"
-          : variant === "success"
-          ? "default"
-          : variant
-      }
-      className="font-medium"
-    >
+    <Badge variant="outline" className={`font-medium border ${colorClass}`}>
       {label}
     </Badge>
   );

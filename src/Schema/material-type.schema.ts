@@ -42,9 +42,13 @@ export type MaterialTypeResponsePagedResponse = z.infer<
 export const CreateMaterialTypeRequestSchema = z
   .object({
     designTypeId: IdSchema,
-    code: z.string().max(50),
+    code: z
+      .string()
+      .min(2, "Mã chất liệu quá ngắn")
+      .max(20, "Mã chất liệu quá dài")
+      .regex(/^[A-Z0-9-]+$/, "Mã chỉ gồm A-Z, số và dấu gạch ngang"),
     name: NameSchema,
-    description: z.string().nullable().optional(),
+    description: z.string().max(500).nullable().optional(),
   })
   .strict();
 
@@ -60,9 +64,13 @@ export const BulkCreateMaterialTypeRequestSchema = z
     materials: z
       .array(
         z.object({
-          code: z.string().max(50),
+          code: z
+            .string()
+            .min(2, "Mã chất liệu quá ngắn")
+            .max(20, "Mã chất liệu quá dài")
+            .regex(/^[A-Z0-9-]+$/, "Mã chỉ gồm A-Z, số và dấu gạch ngang"),
           name: NameSchema,
-          description: z.string().nullable().optional(),
+          description: z.string().max(500).nullable().optional(),
         })
       )
       .min(1),

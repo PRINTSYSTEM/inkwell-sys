@@ -75,8 +75,8 @@ export type ProofingOrderResponsePagedResponse = z.infer<
 export const CreateProofingOrderRequestSchema = z
   .object({
     materialTypeId: IdSchema,
-    designIds: z.array(IdSchema).min(1),
-    notes: z.string().nullable().optional(),
+    designIds: z.array(IdSchema).min(1, "Cần ít nhất 1 thiết kế"),
+    notes: z.string().max(1000).nullable().optional(),
   })
   .strict();
 
@@ -88,8 +88,8 @@ export type CreateProofingOrderRequest = z.infer<
 
 export const CreateProofingOrderFromDesignsRequestSchema = z
   .object({
-    designIds: z.array(IdSchema).min(1),
-    notes: z.string().nullable().optional(),
+    designIds: z.array(IdSchema).min(1, "Cần ít nhất 1 thiết kế"),
+    notes: z.string().max(1000).nullable().optional(),
   })
   .strict();
 

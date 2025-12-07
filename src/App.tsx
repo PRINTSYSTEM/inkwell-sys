@@ -12,6 +12,7 @@ if (import.meta.env.DEV) {
   // console.log('VITE_API_BASE_URL:', process.env.VITE_API_BASE_URL);
   console.log("VITE_API_TIMEOUT:", import.meta.env.VITE_API_TIMEOUT);
   console.log("Environment:", import.meta.env.MODE);
+  import("./tests/validation.spec").catch(() => {});
 }
 
 const queryClient = new QueryClient();

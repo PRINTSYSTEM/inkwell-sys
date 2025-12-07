@@ -39,12 +39,24 @@ export type UserResponsePagedResponse = z.infer<
 
 export const CreateUserRequestSchema = z
   .object({
-    username: z.string().max(100),
-    password: z.string().min(6).max(100),
+    username: z
+      .string()
+      .min(3, "Username phải có ít nhất 3 ký tự")
+      .max(30, "Username tối đa 30 ký tự")
+      .regex(/^[a-zA-Z0-9_]+$/, "Username chỉ chứa chữ, số và _"),
+    password: z
+      .string()
+      .min(8, "Mật khẩu tối thiểu 8 ký tự")
+      .max(100, "Mật khẩu quá dài")
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Mật khẩu phải có chữ hoa, chữ thường và số"),
     fullName: NameSchema,
     role: UserRoleSchema,
-    email: z.string().email().nullable().optional(),
-    phone: z.string().max(20).nullable().optional(),
+    email: z.string().email("Email không hợp lệ").nullable().optional(),
+    phone: z
+      .string()
+      .regex(/^[0-9+\-\s()]{8,20}$/, "Số điện thoại không hợp lệ")
+      .nullable()
+      .optional(),
   })
   .strict();
 

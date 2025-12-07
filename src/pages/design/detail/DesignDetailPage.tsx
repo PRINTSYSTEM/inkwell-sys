@@ -50,28 +50,8 @@ import type {
   DesignTimelineEntryResponse,
 } from "@/Schema/design.schema";
 import DesignCode from "@/components/design/design-code";
-
-const DESIGN_STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "pending", label: "Nhận thông tin" },
-  { value: "designing", label: "Đang thiết kế" },
-  { value: "editing", label: "Đang chỉnh sửa" },
-  {
-    value: "waiting_for_customer_approval",
-    label: "Chờ khách duyệt",
-  },
-  {
-    value: "confirmed_for_printing",
-    label: "Đã chốt in",
-  },
-  {
-    value: "pdf_exported",
-    label: "Đã xuất PDF",
-  },
-  {
-    value: "completed",
-    label: "Hoàn thành",
-  },
-];
+import { StatusBadge } from "@/components/ui/status-badge";
+import { designStatusLabels } from "@/lib/status-utils";
 
 export default function DesignDetailPage() {
   const params = useParams();
@@ -127,53 +107,6 @@ export default function DesignDetailPage() {
       setStatusDraft("");
     }
   }, [design?.designStatus]);
-
-  const getStatusBadge = (
-    status?: string | null,
-    statusType?: string | null
-  ) => {
-    const s = status || "";
-    const statusMap: Record<
-      string,
-      {
-        label: string;
-        variant: "default" | "secondary" | "destructive" | "outline";
-      }
-    > = {
-      pending: { label: "Nhận thông tin", variant: "default" },
-      designing: { label: "Đang thiết kế", variant: "secondary" },
-      editing: { label: "Đang chỉnh sửa", variant: "secondary" },
-      waiting_for_customer_approval: {
-        label: "Chờ khách duyệt",
-        variant: "outline",
-      },
-      confirmed_for_printing: {
-        label: "Đã chốt in",
-        variant: "default",
-      },
-      pdf_exported: {
-        label: "Đã xuất PDF",
-        variant: "outline",
-      },
-      completed: {
-        label: "Hoàn thành",
-        variant: "outline",
-      },
-    };
-
-    const config =
-      statusMap[s] ||
-      ({
-        label: statusType || status || "Không rõ",
-        variant: "default",
-      } as const);
-
-    return (
-      <Badge variant={config.variant} className="text-xs px-2 py-0.5">
-        {config.label}
-      </Badge>
-    );
-  };
 
   // ==== HANDLERS (CALL API) ====
 
@@ -286,7 +219,10 @@ export default function DesignDetailPage() {
               <h1 className="text-lg font-bold truncate">
                 {d.code ?? `DES-${d.id}`}
               </h1>
-              {getStatusBadge(d.designStatus, d.statusType)}
+              <StatusBadge
+                status={d.designStatus}
+                label={designStatusLabels[d.designStatus]}
+              />
               <span className="text-xs text-muted-foreground">
                 • ĐH #{d.orderId}
               </span>
@@ -342,11 +278,13 @@ export default function DesignDetailPage() {
                       <SelectValue placeholder="Chọn trạng thái" />
                     </SelectTrigger>
                     <SelectContent>
-                      {DESIGN_STATUS_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
+                      {Object.entries(designStatusLabels).map(
+                        ([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        )
+                      )}
                     </SelectContent>
                   </Select>
                   <Button

@@ -26,6 +26,7 @@ export const ROUTE_PATHS = {
   CUSTOMERS: {
     ROOT: "/customers" as const,
     DETAIL_BASE: "/customers" as const, // prefix cho /customers/:id
+    NEW: "/customers/create" as const,
   },
 
   DESIGN_TYPES: {
