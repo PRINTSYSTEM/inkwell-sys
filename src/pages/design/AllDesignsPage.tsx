@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Search, Eye, Package, Ruler, User } from "lucide-react";
 import { useDesigns, useFilters } from "@/hooks";
-import type { Design } from "@/Schema";
+import type { DesignResponse } from "@/Schema";
 import {
   Table,
   TableHeader,
@@ -23,7 +23,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-type DesignWithSearch = Design & {
+type DesignWithSearch = DesignResponse & {
   designerFullName: string;
 };
 
@@ -32,7 +32,7 @@ export default function AllDesignsPage() {
 
   // gọi React Query lấy list
   const { data, isLoading } = useDesigns();
-  const designs: Design[] = data?.items ?? []; // hoặc data?.data tùy API
+  const designs: DesignResponse[] = data?.items ?? []; // hoặc data?.data tùy API
 
   // hook filter
   const [filterState, filterActions] = useFilters({

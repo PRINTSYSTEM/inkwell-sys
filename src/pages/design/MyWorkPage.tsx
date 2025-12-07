@@ -178,12 +178,6 @@ export default function MyWorkPage() {
                 {design.quantity.toLocaleString()}
               </p>
             </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Tổng giá</p>
-              <p className="text-lg font-bold text-emerald-600">
-                {design.totalPrice?.toLocaleString() || 0}₫
-              </p>
-            </div>
           </div>
 
           {design.timelineEntries && design.timelineEntries.length > 0 && (

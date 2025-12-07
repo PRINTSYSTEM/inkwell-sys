@@ -1,10 +1,8 @@
 // Common Schemas
-export * from "./common/enums";
-export * from "./common/base";
 
+export * from "./common";
 // Entity Schemas
 export * from "./user.schema";
-export * from "./employee.schema";
 export * from "./notification.schema";
 export * from "./design.schema";
 export * from "./design-type.schema";

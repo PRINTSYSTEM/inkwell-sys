@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   Save,
@@ -8,7 +8,6 @@ import {
   Check,
   ChevronsUpDown,
   Calendar,
-  DollarSign,
   FileText,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -56,11 +55,13 @@ import {
   useCustomers,
   useDesignTypes,
   useMaterialsByDesignType,
+  useOrders,
   useToast,
 } from "@/hooks";
 import {
   CreateDesignRequest,
   CustomerResponse,
+  DesignResponse,
   DesignTypeResponse,
   MaterialTypeResponse,
 } from "@/Schema";
@@ -69,7 +70,6 @@ import {
 type CreateDesignRequestUI = CreateDesignRequest & {
   id: string; // id cho UI
   designCode?: string; // nếu sau này muốn show code
-  dimensions: string; // text mô tả (không gửi lên BE)
 };
 
 // Chuẩn hóa mọi kiểu response (items, data, array) về mảng
@@ -92,7 +92,7 @@ const generateDesignCodePreview = (
   return dt ? `${dt.code}xxx` : "";
 };
 
-// ===== Component con: một yêu cầu thiết kế =====
+// ===== Component con: một yêu cầu thiết kế mới =====
 type DesignRequestItemProps = {
   design: CreateDesignRequestUI;
   index: number;
@@ -130,7 +130,7 @@ const DesignRequestItem: React.FC<DesignRequestItemProps> = ({
           </div>
           <div>
             <p className="text-sm font-medium">
-              {design.designName || `Thiết kế #${index + 1}`}
+              {design.designName || `Thiết kế mới #${index + 1}`}
             </p>
             {design.designTypeId > 0 && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -275,21 +275,6 @@ const DesignRequestItem: React.FC<DesignRequestItemProps> = ({
           />
         </div>
 
-        {/* Kích thước (text mô tả) */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">
-            Kích thước <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            placeholder="VD: 280x153mm"
-            value={design.dimensions}
-            onChange={(e) =>
-              onChange(design.id, { dimensions: e.target.value })
-            }
-            className="bg-background h-10 text-sm"
-          />
-        </div>
-
         {/* Rộng */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">
@@ -327,7 +312,7 @@ const DesignRequestItem: React.FC<DesignRequestItemProps> = ({
         </div>
 
         {/* Số lượng */}
-        <div className="space-y-2 md:col-span-2">
+        <div className="space-y-2 ">
           <Label className="text-sm font-medium">
             Số lượng <span className="text-destructive">*</span>
           </Label>
@@ -397,6 +382,9 @@ export default function CreateOrderPage() {
     isError: designTypesError,
   } = useDesignTypes({ status: "active" });
 
+  // lấy toàn bộ order (sau đó filter theo customer ở FE)
+  const { data: ordersData } = useOrders({ pageSize: 200 });
+
   const createOrderMutation = useCreateOrder();
   const createCustomerMutation = useCreateCustomer();
 
@@ -411,20 +399,17 @@ export default function CreateOrderPage() {
   const [formData, setFormData] = useState({
     customerId: "",
     notes: "",
-    deliveryAddress: "",
     deliveryDate: "",
-    totalAmount: "",
-    depositAmount: "",
   });
 
   const [selectedCustomer, setSelectedCustomer] =
     useState<CustomerResponse | null>(null);
 
+  // danh sách thiết kế mới
   const [designs, setDesigns] = useState<CreateDesignRequestUI[]>([
     {
       id: "1",
       designCode: "",
-      dimensions: "",
       designTypeId: 0,
       materialTypeId: 0,
       assignedDesignerId: 0,
@@ -437,6 +422,11 @@ export default function CreateOrderPage() {
     },
   ]);
 
+  // thiết kế cũ của khách được chọn
+  const [selectedExistingDesignIds, setSelectedExistingDesignIds] = useState<
+    number[]
+  >([]);
+
   const [newCustomerData, setNewCustomerData] = useState({
     companyName: "",
     representativeName: "",
@@ -446,12 +436,28 @@ export default function CreateOrderPage() {
     maxDebt: "10000000",
   });
 
+  // ===== Lấy danh sách design cũ của khách (từ orders) =====
+  const existingDesignsForCustomer: DesignResponse[] = useMemo(() => {
+    if (!selectedCustomer) return [];
+    const allOrders = ordersData?.items ?? [];
+    const relatedOrders = allOrders.filter(
+      (o: any) => o.customerId === selectedCustomer.id
+    );
+    const allDesigns = relatedOrders.flatMap(
+      (o: any) => (o.designs as DesignResponse[]) ?? []
+    );
+    // Có thể filter thêm theo status nếu muốn
+    return allDesigns;
+  }, [selectedCustomer, ordersData]);
+
   // ===== Handlers =====
   const handleCustomerSelect = (customerId: string) => {
     const customer = customers.find((c) => c.id.toString() === customerId);
     if (customer) {
       setSelectedCustomer(customer);
       setFormData((prev) => ({ ...prev, customerId }));
+      // reset lựa chọn thiết kế cũ khi đổi khách
+      setSelectedExistingDesignIds([]);
     }
   };
 
@@ -462,7 +468,6 @@ export default function CreateOrderPage() {
       {
         id: newId,
         designCode: "",
-        dimensions: "",
         designTypeId: 0,
         materialTypeId: 0,
         assignedDesignerId: 0,
@@ -500,14 +505,11 @@ export default function CreateOrderPage() {
     );
   };
 
-  // tiền
-  const totalAmountNum = formData.totalAmount
-    ? Number(formData.totalAmount)
-    : 0;
-  const depositAmountNum = formData.depositAmount
-    ? Number(formData.depositAmount)
-    : 0;
-  const remaining = totalAmountNum - depositAmountNum;
+  const toggleExistingDesign = (id: number) => {
+    setSelectedExistingDesignIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
 
   // validate designs (UI)
   const validateDesigns = () =>
@@ -516,7 +518,6 @@ export default function CreateOrderPage() {
         d.designTypeId > 0 &&
         d.materialTypeId > 0 &&
         d.designName.trim() &&
-        d.dimensions.trim() &&
         d.quantity > 0 &&
         d.requirements.trim() &&
         d.width > 0 &&
@@ -596,23 +597,48 @@ export default function CreateOrderPage() {
     }
 
     const validDesigns = validateDesigns();
-    if (validDesigns.length === 0) {
+    const selectedExisting = existingDesignsForCustomer.filter((d) =>
+      selectedExistingDesignIds.includes(d.id)
+    );
+
+    if (validDesigns.length === 0 && selectedExisting.length === 0) {
       toast({
         title: "Lỗi",
-        description: "Vui lòng thêm ít nhất một yêu cầu thiết kế hợp lệ",
+        description:
+          "Vui lòng chọn thiết kế có sẵn hoặc thêm ít nhất một yêu cầu thiết kế mới hợp lệ",
         variant: "destructive",
       });
       return;
     }
 
+    // map thiết kế cũ -> CreateDesignRequest
+    const reusedDesignRequests: CreateDesignRequest[] = selectedExisting.map(
+      (d) => ({
+        designTypeId: d.designTypeId,
+        materialTypeId: d.materialTypeId,
+        assignedDesignerId: user?.id || d.designer?.id || 0,
+        quantity: d.quantity,
+        designName: d.designName,
+        width: d.width,
+        height: d.height,
+        requirements: d.requirements ?? "",
+        additionalNotes: d.additionalNotes ?? "",
+      })
+    );
+
     // map UI model -> CreateDesignRequest gửi BE
-    const designRequests: CreateDesignRequest[] = validDesigns.map((d) => {
-      const { id, designCode, dimensions, ...rest } = d;
+    const newDesignRequests: CreateDesignRequest[] = validDesigns.map((d) => {
+      const { id, designCode, ...rest } = d;
       return {
         ...rest,
         assignedDesignerId: user?.id || rest.assignedDesignerId || 0,
       };
     });
+
+    const designRequests: CreateDesignRequest[] = [
+      ...reusedDesignRequests,
+      ...newDesignRequests,
+    ];
 
     const deliveryDateIso = formData.deliveryDate
       ? new Date(formData.deliveryDate).toISOString()
@@ -621,24 +647,56 @@ export default function CreateOrderPage() {
     const payload = {
       customerId: selectedCustomer.id,
       assignedToUserId: user?.id || 0,
-      deliveryAddress: formData.deliveryAddress || "",
-      totalAmount: totalAmountNum,
-      depositAmount: depositAmountNum,
+      // dùng địa chỉ của khách
+      deliveryAddress: selectedCustomer.address || "",
+      // bỏ nhập tiền, để 0 (hoặc để BE tính)
+      totalAmount: 0,
+      depositAmount: 0,
       deliveryDate: deliveryDateIso,
       note: formData.notes || "",
       designRequests,
     };
 
-    createOrderMutation.mutate({
-      ...payload,
-      deliveryDate: new Date(payload.deliveryDate),
-    });
+    createOrderMutation.mutate(
+      {
+        ...payload,
+        deliveryDate: payload.deliveryDate,
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Thành công",
+            description: "Đã tạo đơn hàng mới",
+          });
+          navigate("/orders");
+        },
+        onError: (err: any) => {
+          toast({
+            title: "Lỗi",
+            description:
+              err?.response?.data?.message ||
+              "Không thể tạo đơn hàng, vui lòng thử lại",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   const handleFormSubmit: React.FormEventHandler = (e) => {
     e.preventDefault();
     submitOrder();
   };
+
+  // ================= SUMMARY DATA =================
+  const totalNewQuantity = designs.reduce(
+    (sum, d) => sum + (d.quantity || 0),
+    0
+  );
+  const totalExistingQuantity = existingDesignsForCustomer
+    .filter((d) => selectedExistingDesignIds.includes(d.id))
+    .reduce((sum, d) => sum + (d.quantity || 0), 0);
+  const totalQuantity = totalNewQuantity + totalExistingQuantity;
 
   // ===== UI =====
   return (
@@ -658,7 +716,7 @@ export default function CreateOrderPage() {
                 Tạo đơn hàng mới
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Đi từng bước: chọn khách, nhập giao hàng, thêm yêu cầu thiết kế
+                Chọn khách hàng, ngày giao và thiết kế (mới hoặc dùng lại)
               </p>
             </div>
           </div>
@@ -712,9 +770,11 @@ export default function CreateOrderPage() {
                           >
                             {selectedCustomer
                               ? `${
-                                  selectedCustomer.companyName ||
+                                  selectedCustomer.name ||
                                   selectedCustomer.representativeName
-                                } - ${selectedCustomer.code}`
+                                } - ${selectedCustomer.code} - ${
+                                  selectedCustomer.companyName
+                                }`
                               : loadingCustomers
                               ? "Đang tải khách hàng..."
                               : "Tìm và chọn khách hàng..."}
@@ -755,11 +815,22 @@ export default function CreateOrderPage() {
                                     />
                                     <div className="flex flex-col gap-0.5">
                                       <span className="font-medium">
-                                        {customer.companyName ||
-                                          customer.representativeName}
+                                        {customer.name ||
+                                          customer.representativeName}{" "}
+                                        - {customer.code} -
+                                        {customer.companyName}
                                       </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {customer.code} • {customer.phone}
+
+                                      {customer.companyName &&
+                                        customer.representativeName && (
+                                          <span className="text-[11px] text-muted-foreground">
+                                            Người đại diện:{" "}
+                                            {customer.representativeName}
+                                          </span>
+                                        )}
+
+                                      <span className="text-[11px] text-muted-foreground">
+                                        Mã: {customer.code} • {customer.phone}
                                       </span>
                                     </div>
                                   </CommandItem>
@@ -776,14 +847,14 @@ export default function CreateOrderPage() {
                         <Label className="text-sm font-medium">
                           Thông tin nhanh
                         </Label>
-                        <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+                        <div className="flex items-start gap-2 rounded-md border bg-muted/40 px-3 py-2">
                           <Badge
                             variant="outline"
-                            className="font-mono text-xs"
+                            className="font-mono text-xs mt-0.5"
                           >
                             {selectedCustomer.code}
                           </Badge>
-                          <div className="flex flex-col">
+                          <div className="flex flex-col gap-0.5">
                             <span className="text-sm font-medium">
                               {selectedCustomer.companyName ||
                                 selectedCustomer.representativeName}
@@ -791,6 +862,11 @@ export default function CreateOrderPage() {
                             {selectedCustomer.phone && (
                               <span className="text-xs text-muted-foreground">
                                 {selectedCustomer.phone}
+                              </span>
+                            )}
+                            {selectedCustomer.address && (
+                              <span className="text-xs text-muted-foreground">
+                                {selectedCustomer.address}
                               </span>
                             )}
                           </div>
@@ -824,30 +900,12 @@ export default function CreateOrderPage() {
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs text-primary">
                       2
                     </span>
-                    Giao hàng & thanh toán
+                    Thông tin giao hàng
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0 pb-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Địa chỉ giao hàng
-                    </Label>
-                    <Textarea
-                      placeholder="Nhập địa chỉ giao hàng..."
-                      value={formData.deliveryAddress}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          deliveryAddress: e.target.value,
-                        }))
-                      }
-                      rows={3}
-                      className="resize-none bg-background text-sm"
-                    />
-                  </div>
-
                   <div className="grid gap-4 md:grid-cols-3">
-                    <div className="space-y-2">
+                    <div className="space-y-2 md:col-span-1">
                       <Label className="text-sm font-medium flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         Ngày giao dự kiến
@@ -864,43 +922,6 @@ export default function CreateOrderPage() {
                         className="bg-background h-10 text-sm"
                       />
                     </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Tổng tiền (VNĐ)
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={formData.totalAmount}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            totalAmount: e.target.value,
-                          }))
-                        }
-                        className="bg-background h-10 text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        Tiền cọc (VNĐ)
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={formData.depositAmount}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            depositAmount: e.target.value,
-                          }))
-                        }
-                        className="bg-background h-10 text-sm"
-                      />
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -912,23 +933,143 @@ export default function CreateOrderPage() {
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs text-primary">
                       3
                     </span>
-                    Yêu cầu thiết kế
-                    <span className="text-sm font-normal text-muted-foreground">
-                      ({designs.length})
-                    </span>
+                    Thiết kế
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-0 pb-4">
+                  {/* Thiết kế có sẵn */}
+                  {/* Thiết kế có sẵn */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Thiết kế có sẵn của khách (tuỳ chọn)
+                    </Label>
+
+                    {!selectedCustomer ? (
+                      <p className="text-sm text-muted-foreground italic">
+                        Chọn khách hàng để xem các thiết kế cũ.
+                      </p>
+                    ) : existingDesignsForCustomer.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic">
+                        Khách hàng này chưa có thiết kế nào trước đó.
+                      </p>
+                    ) : (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {existingDesignsForCustomer.map((d) => {
+                          const selected = selectedExistingDesignIds.includes(
+                            d.id
+                          );
+                          const sizeLabel =
+                            d.width && d.height
+                              ? `${d.width} x ${d.height} mm`
+                              : "—";
+
+                          return (
+                            <button
+                              key={d.id}
+                              type="button"
+                              onClick={() => toggleExistingDesign(d.id)}
+                              className={[
+                                "w-full text-left rounded-md border p-3 flex flex-col gap-1.5 transition-all",
+                                "hover:shadow-sm hover:-translate-y-[1px]",
+                                selected
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border bg-background",
+                              ].join(" ")}
+                            >
+                              {/* Row 1: Code + tên + trạng thái */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex flex-col gap-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <Badge
+                                      variant={selected ? "default" : "outline"}
+                                      className="font-mono text-[11px]"
+                                    >
+                                      {d.code || `DES-${d.id}`}
+                                    </Badge>
+                                    {d.designStatus && (
+                                      <span className="text-[11px] rounded-full px-2 py-0.5 bg-muted text-muted-foreground">
+                                        {d.designStatus}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-sm font-medium line-clamp-2">
+                                    {d.designName || "Không tên"}
+                                  </span>
+                                </div>
+
+                                {/* Check icon */}
+                                <div
+                                  className={[
+                                    "h-5 w-5 rounded-full border flex items-center justify-center",
+                                    selected
+                                      ? "border-primary bg-primary text-primary-foreground"
+                                      : "border-muted-foreground/30 text-muted-foreground/50",
+                                  ].join(" ")}
+                                >
+                                  {selected && <Check className="h-3 w-3" />}
+                                </div>
+                              </div>
+
+                              {/* Row 2: Loại & chất liệu */}
+                              <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                                {d.designType?.name && (
+                                  <span className="px-2 py-0.5 rounded-full bg-muted/80">
+                                    Loại: {d.designType.name}
+                                  </span>
+                                )}
+                                {d.materialType?.name && (
+                                  <span className="px-2 py-0.5 rounded-full bg-muted/80">
+                                    Chất liệu: {d.materialType.name}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Row 3: Số lượng + kích thước + ngày */}
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground mt-1">
+                                <span>
+                                  SL:{" "}
+                                  <span className="font-medium">
+                                    {d.quantity?.toLocaleString("vi-VN") ?? 0}
+                                  </span>
+                                </span>
+                                <span>Kích thước: {sizeLabel}</span>
+                                {d.updatedAt && (
+                                  <span>
+                                    Cập nhật:{" "}
+                                    {new Date(d.updatedAt).toLocaleDateString(
+                                      "vi-VN"
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator className="my-2" />
+
+                  {/* Thiết kế mới */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">
+                        Thiết kế mới ({designs.length})
+                      </p>
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="ml-auto h-8 px-3 text-sm"
+                      className="h-8 px-3 text-sm"
                       onClick={addDesign}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Thêm yêu cầu
                     </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-0 pb-4">
+                  </div>
+
                   {designTypesError && (
                     <p className="text-sm text-red-500">
                       Lỗi tải danh sách loại thiết kế
@@ -968,14 +1109,31 @@ export default function CreateOrderPage() {
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Khách hàng</p>
                     {selectedCustomer ? (
-                      <div className="rounded-md border bg-muted/30 px-3 py-2 flex items-center gap-2">
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {selectedCustomer.code}
-                        </Badge>
-                        <span className="text-sm">
-                          {selectedCustomer.companyName ||
-                            selectedCustomer.representativeName}
-                        </span>
+                      <div className="rounded-md border bg-muted/30 px-3 py-2 flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className="font-mono text-xs"
+                          >
+                            {selectedCustomer.code}
+                          </Badge>
+                          <span className="text-sm">
+                            {selectedCustomer.companyName ||
+                              selectedCustomer.representativeName}
+                          </span>
+                        </div>
+
+                        {selectedCustomer.address && (
+                          <span className="text-xs text-muted-foreground">
+                            Địa chỉ: {selectedCustomer.address}
+                          </span>
+                        )}
+
+                        {selectedCustomer.phone && (
+                          <span className="text-xs text-muted-foreground">
+                            SĐT: {selectedCustomer.phone}
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">
@@ -998,33 +1156,30 @@ export default function CreateOrderPage() {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tổng tiền</span>
+                      <span className="text-muted-foreground">
+                        Thiết kế có sẵn
+                      </span>
                       <span className="font-medium">
-                        {totalAmountNum.toLocaleString("vi-VN")} đ
+                        {selectedExistingDesignIds.length}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Đã cọc</span>
-                      <span className="font-medium">
-                        {depositAmountNum.toLocaleString("vi-VN")} đ
+                      <span className="text-muted-foreground">
+                        Thiết kế mới
                       </span>
+                      <span className="font-medium">{designs.length}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t mt-1">
-                      <span className="text-muted-foreground">Còn lại</span>
+                      <span className="text-muted-foreground">
+                        Tổng số lượng
+                      </span>
                       <span className="font-semibold">
-                        {remaining.toLocaleString("vi-VN")} đ
+                        {totalQuantity.toLocaleString("vi-VN")}
                       </span>
                     </div>
                   </div>
 
                   <Separator />
-
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Số yêu cầu thiết kế
-                    </span>
-                    <Badge variant="secondary">{designs.length}</Badge>
-                  </div>
 
                   <Button
                     type="submit"

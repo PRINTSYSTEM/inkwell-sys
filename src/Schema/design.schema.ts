@@ -1,16 +1,17 @@
 // src/Schema/design.schema.ts
 import { z } from "zod";
 import {
-  UserInfoSchema,
-  createPagedResponseSchema,
-  DateSchema,
   IdSchema,
+  DateSchema,
   NameSchema,
+  createPagedResponseSchema,
 } from "./common";
+import { UserInfoSchema } from "./common";
 import { DesignTypeResponseSchema } from "./design-type.schema";
 import { MaterialTypeResponseSchema } from "./material-type.schema";
 
-// DesignTimelineEntryResponse
+// ===== DesignTimelineEntryResponse =====
+
 export const DesignTimelineEntryResponseSchema = z
   .object({
     id: IdSchema.optional(),
@@ -25,7 +26,8 @@ export type DesignTimelineEntryResponse = z.infer<
   typeof DesignTimelineEntryResponseSchema
 >;
 
-// DesignResponse
+// ===== DesignResponse =====
+
 export const DesignResponseSchema = z
   .object({
     id: IdSchema.optional(),
@@ -64,7 +66,8 @@ export const DesignResponseSchema = z
 
 export type DesignResponse = z.infer<typeof DesignResponseSchema>;
 
-// DesignResponsePagedResponse
+// ===== PagedResponse =====
+
 export const DesignResponsePagedResponseSchema =
   createPagedResponseSchema(DesignResponseSchema);
 
@@ -72,7 +75,8 @@ export type DesignResponsePagedResponse = z.infer<
   typeof DesignResponsePagedResponseSchema
 >;
 
-// CreateDesignRequest
+// ===== CreateDesignRequest =====
+
 export const CreateDesignRequestSchema = z
   .object({
     designTypeId: IdSchema,
@@ -89,7 +93,8 @@ export const CreateDesignRequestSchema = z
 
 export type CreateDesignRequest = z.infer<typeof CreateDesignRequestSchema>;
 
-// UpdateDesignRequest
+// ===== UpdateDesignRequest =====
+
 export const UpdateDesignRequestSchema = z
   .object({
     assignedDesignerId: IdSchema.nullable().optional(),
@@ -104,3 +109,47 @@ export const UpdateDesignRequestSchema = z
   .strict();
 
 export type UpdateDesignRequest = z.infer<typeof UpdateDesignRequestSchema>;
+
+export const DesignResponseForDesignerSchema = z
+  .object({
+    id: IdSchema.optional(),
+    code: z.string().nullable().optional(),
+    orderId: IdSchema.optional(),
+
+    designStatus: z.string().nullable().optional(),
+    statusType: z.string().nullable().optional(),
+
+    designerId: IdSchema.optional(),
+    designer: UserInfoSchema.optional(),
+
+    designTypeId: IdSchema.optional(),
+    designType: DesignTypeResponseSchema.optional(),
+
+    materialTypeId: IdSchema.optional(),
+    materialType: MaterialTypeResponseSchema.optional(),
+
+    quantity: z.number().int().optional(),
+    designName: z.string().nullable().optional(),
+    dimensions: z.string().nullable().optional(),
+    width: z.number().nullable().optional(),
+    height: z.number().nullable().optional(),
+
+    requirements: z.string().nullable().optional(),
+    additionalNotes: z.string().nullable().optional(),
+
+    designFileUrl: z.string().nullable().optional(),
+    designImageUrl: z.string().nullable().optional(),
+
+    createdAt: DateSchema.optional(),
+    updatedAt: DateSchema.optional(),
+
+    timelineEntries: z
+      .array(DesignTimelineEntryResponseSchema)
+      .nullable()
+      .optional(),
+  })
+  .strict();
+
+export type DesignResponseForDesigner = z.infer<
+  typeof DesignResponseForDesignerSchema
+>;

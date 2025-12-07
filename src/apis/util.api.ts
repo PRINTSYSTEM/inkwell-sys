@@ -19,6 +19,7 @@ export const normalizeParams = (filters: Record<string, unknown>) => {
 export const API_SUFFIX = {
   // ========== AUTH ==========
   AUTH_LOGIN: "/auth/login",
+  AUTH_ROLES: "/auth/roles",
 
   // ========== CONSTANTS ==========
   CONSTANTS: "/constants",
@@ -28,30 +29,36 @@ export const API_SUFFIX = {
   USER_BY_ID: (id: number) => `/users/${id}`,
   USER_BY_USERNAME: (username: string) => `/users/username/${username}`,
   USER_CHANGE_PASSWORD: (id: number) => `/users/${id}/change-password`,
+  USERS_DESIGNERS: "/users/designers",
 
   // ========== ORDERS ==========
   ORDERS: "/orders",
   ORDER_BY_ID: (id: number) => `/orders/${id}`,
-  ORDERS_STATS: "/orders/stats",
-  ORDERS_EXPORT: "/orders/export",
-  ORDER_UPLOAD_EXCEL: (orderId: number) => `/orders/${orderId}/upload-excel`,
-  ORDER_EXCEL: (orderId: number) => `/orders/${orderId}/generate-excel`,
+
+  ORDERS_FOR_DESIGNER: "/orders/for-designer",
+  ORDERS_FOR_ACCOUNTING: "/orders/for-accounting",
+  ORDERS_WITH_EXISTING_DESIGNS: "/orders/with-existing-designs",
+
+  ORDER_ADD_DESIGN: (id: number) => `/orders/${id}/add-design`,
+  ORDER_EXPORT_INVOICE: (id: number) => `/orders/${id}/export-invoice`,
+  ORDER_EXPORT_DELIVERY_NOTE: (id: number) =>
+    `/orders/${id}/export-delivery-note`,
+  ORDER_EXCEL: (id: number) => `/orders/${id}/generate-excel`,
 
   // ========== INVOICE / ACCOUNTING ==========
-  // /invoices/order/{orderId}
   ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`,
+  CUSTOMER_EXPORT_DEBT_COMPARISON: (id: number) =>
+    `/customers/${id}/export-debt-comparison`,
 
   // ========== CUSTOMERS ==========
   CUSTOMERS: "/customers",
   CUSTOMER_BY_ID: (id: number) => `/customers/${id}`,
 
   // ========== DESIGN TYPES ==========
-  // matching backend /api/designs/types
   DESIGN_TYPES: "/designs/types",
   DESIGN_TYPE_BY_ID: (id: number) => `/designs/types/${id}`,
 
   // ========== MATERIAL TYPES ==========
-  // matching backend /api/designs/materials
   MATERIAL_TYPES: "/designs/materials",
   MATERIAL_TYPE_BY_ID: (id: number) => `/designs/materials/${id}`,
   MATERIAL_TYPES_BY_DESIGN_TYPE: (designTypeId: number) =>
@@ -63,23 +70,33 @@ export const API_SUFFIX = {
   DESIGN_BY_ID: (id: number) => `/designs/${id}`,
   MY_DESIGNS: "/designs/my",
   DESIGN_BY_USER: (userId: number) => `/designs/user/${userId}`,
+  DESIGN_BY_CUSTOMER: (customerId: number) =>
+    `/designs/by-customer/${customerId}`,
+
   DESIGN_TIMELINE: (id: number) => `/designs/${id}/timeline`,
   DESIGN_UPLOAD_FILE: (id: number) => `/designs/${id}/upload-design-file`,
   DESIGN_UPLOAD_IMAGE: (id: number) => `/designs/${id}/upload-design-image`,
   DESIGN_GENERATE_EXCEL: (id: number) => `/designs/${id}/generate-excel`,
 
-  // Lấy danh sách employee role=design
-  // (nếu muốn linh hoạt hơn thì có thể chỉ dùng USERS + params, nhưng giữ cái này cho tiện)
   DESIGN_EMPLOYEES_FIXED_QUERY: () =>
     `/users?pageNumber=1&pageSize=10&role=design`,
 
-  // ========== PROOFING ORDERS (BÌNH BÀI) ==========
+  // ========== PROOFING ORDERS ==========
   PROOFING_ORDERS: "/proofing-orders",
   PROOFING_ORDER_BY_ID: (id: number) => `/proofing-orders/${id}`,
   PROOFING_FROM_DESIGNS: "/proofing-orders/from-designs",
-  PROOFING_AVAILABLE_DESIGNS: "/proofing-orders/available-designs`",
+  PROOFING_AVAILABLE_DESIGNS: "/proofing-orders/available-designs",
+  PROOFING_FOR_PRODUCTION: "/proofing-orders/for-production",
+  PROOFING_UPLOAD_FILE: (id: number) => `/proofing-orders/${id}/upload-file`,
+  PROOFING_DOWNLOAD_FILE: (id: number) =>
+    `/proofing-orders/${id}/download-file`,
+  PROOFING_COMPLETE: (id: number) => `/proofing-orders/${id}/complete`,
+  PROOFING_START_PRODUCTION: (id: number) =>
+    `/proofing-orders/${id}/start-production`,
+  PROOFING_COMPLETE_PRODUCTION: (id: number) =>
+    `/proofing-orders/${id}/complete-production`,
 
-  // ========== PRODUCTIONS (SẢN XUẤT) ==========
+  // ========== PRODUCTIONS ==========
   PRODUCTIONS: "/productions",
   PRODUCTION_BY_ID: (id: number) => `/productions/${id}`,
   PRODUCTIONS_BY_PROOFING_ORDER: (proofingOrderId: number) =>

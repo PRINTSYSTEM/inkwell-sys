@@ -7,9 +7,17 @@ import type {
   OrderListParams,
   CreateOrderRequest,
   UpdateOrderRequest,
+  CreateOrderWithExistingDesignsRequest,
+  AddDesignToOrderRequest,
+  OrderResponseForDesignerPagedResponse,
+  UserRole,
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "./use-auth";
+import { normalizeParams } from "@/apis/util.api";
+import { ROLE } from "@/constants";
 
 const {
   api: orderCrudApi,
@@ -104,3 +112,253 @@ export const useGenerateOrderExcel = () => {
 };
 
 export { orderCrudApi, orderKeys };
+// ================== ORDER: TẠO TỪ EXISTING DESIGNS ==================
+// POST /orders/with-existing-designs
+
+export const useCreateOrderWithExistingDesigns = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderResponse,
+    [CreateOrderWithExistingDesignsRequest]
+  >(async (payload) => {
+    const res = await apiRequest.post<OrderResponse>(
+      API_SUFFIX.ORDERS_WITH_EXISTING_DESIGNS,
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: CreateOrderWithExistingDesignsRequest) => {
+    try {
+      const result = await execute(payload);
+
+      // Cập nhật cache
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: orderKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+
+      toast({
+        title: "Thành công",
+        description: "Đã tạo đơn hàng từ thiết kế có sẵn",
+      });
+
+      return result;
+    } catch (err: any) {
+      toast({
+        title: "Lỗi",
+        description:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Không thể tạo đơn hàng từ thiết kế có sẵn",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+// ================== ORDER: THÊM THIẾT KẾ VÀO ĐƠN ==================
+// PUT /orders/{id}/add-design
+
+export const useAddDesignToOrder = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderResponse,
+    [{ id: number; payload: AddDesignToOrderRequest }]
+  >(async ({ id, payload }) => {
+    const res = await apiRequest.put<OrderResponse>(
+      API_SUFFIX.ORDER_ADD_DESIGN(id),
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (args: {
+    id: number;
+    payload: AddDesignToOrderRequest;
+  }) => {
+    try {
+      const result = await execute(args);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: orderKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+
+      toast({
+        title: "Thành công",
+        description: "Đã thêm thiết kế vào đơn hàng",
+      });
+
+      return result;
+    } catch (err: any) {
+      toast({
+        title: "Lỗi",
+        description:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Không thể thêm thiết kế vào đơn",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+// ================== ORDER: LIST FOR DESIGNER ==================
+// GET /orders/for-designer
+
+const useOrdersForDesigner = (params?: OrderListParams) => {
+  return useQuery<OrderResponseForDesignerPagedResponse>({
+    queryKey: [orderKeys.all[0], "for-designer", params],
+    queryFn: async () => {
+      const res = await apiRequest.get<OrderResponseForDesignerPagedResponse>(
+        API_SUFFIX.ORDERS_FOR_DESIGNER,
+        { params }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ================== ORDER: LIST FOR ACCOUNTING ==================
+// GET /orders/for-accounting
+
+const useOrdersForAccounting = (params?: OrderListParams) => {
+  return useQuery<OrderResponsePagedResponse>({
+    queryKey: [orderKeys.all[0], "for-accounting", params],
+    queryFn: async () => {
+      const res = await apiRequest.get<OrderResponsePagedResponse>(
+        API_SUFFIX.ORDERS_FOR_ACCOUNTING,
+        { params }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ================== ORDER: EXPORT INVOICE / DELIVERY NOTE ==================
+// POST /orders/{id}/export-invoice
+// POST /orders/{id}/export-delivery-note
+
+export const useExportOrderInvoice = () => {
+  const { toast } = useToast();
+
+  const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
+    async (id: number) => {
+      const res = await apiRequest.post<ArrayBuffer>(
+        API_SUFFIX.ORDER_EXPORT_INVOICE(id),
+        null,
+        { responseType: "arraybuffer" }
+      );
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `order-${id}-invoice.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    }
+  );
+
+  const mutate = async (id: number) => {
+    try {
+      await execute(id);
+      toast({
+        title: "Thành công",
+        description: "Đã xuất hoá đơn đơn hàng",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Lỗi",
+        description:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Không thể xuất hoá đơn",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  return { loading, error, mutate, reset };
+};
+
+export const useExportOrderDeliveryNote = () => {
+  const { toast } = useToast();
+
+  const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
+    async (id: number) => {
+      const res = await apiRequest.post<ArrayBuffer>(
+        API_SUFFIX.ORDER_EXPORT_DELIVERY_NOTE(id),
+        null,
+        { responseType: "arraybuffer" }
+      );
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `order-${id}-delivery-note.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    }
+  );
+
+  const mutate = async (id: number) => {
+    try {
+      await execute(id);
+    } catch (err: any) {
+      toast({
+        title: "Lỗi",
+        description:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Không thể xuất phiếu giao hàng",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  return { loading, error, mutate, reset };
+};
+
+export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
+  const finalParams = normalizeParams(params ?? ({} as OrderListParams));
+
+  if (role == ROLE.ADMIN) return useOrderListBase(finalParams);
+
+  return role == ROLE.DESIGN
+    ? useOrdersForDesigner(finalParams)
+    : useOrdersForAccounting(finalParams);
+};

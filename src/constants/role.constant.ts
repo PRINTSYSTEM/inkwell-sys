@@ -7,10 +7,5 @@ export const ROLE = {
   PRODUCTION_LEAD: "production_lead",
   ACCOUNTING: "accounting",
   ACCOUNTING_LEAD: "accounting_lead",
-  WAREHOUSE: "warehouse",
-  WAREHOUSE_LEAD: "warehouse_lead",
-  HR: "hr",
-  HR_LEAD: "hr_lead",
-  CSKH: "cskh",
-  CSKH_LEAD: "cskh_lead",
+  PROOFER: "proofer",
 } as const;

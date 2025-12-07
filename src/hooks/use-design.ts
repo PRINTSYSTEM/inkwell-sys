@@ -7,6 +7,7 @@ import type {
   DesignListParams,
   MyDesignListParams,
   DesignTimelineEntryResponse,
+  UpdateDesignRequest,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -23,13 +24,13 @@ const {
 } = createCrudHooks<
   DesignResponse,
   any, // không có POST /designs, nên không dùng create
-  any,
+  UpdateDesignRequest,
   number,
   DesignListParams,
   DesignResponsePagedResponse
 >({
   rootKey: "designs",
-  basePath: API_SUFFIX.DESIGNS, // dùng suffix thay vì hardcode "/api/designs"
+  basePath: API_SUFFIX.DESIGNS,
   getItems: (resp) => resp.items ?? [],
   messages: {
     updateSuccess: "Đã cập nhật thiết kế thành công",

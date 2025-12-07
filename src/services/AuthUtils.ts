@@ -81,8 +81,6 @@ export class AuthUtils {
     "/projects",
   ] as const;
 
-  private static readonly GUEST_ROUTES = ["/home", "/about"] as const;
-
   /** Map tất cả UserRole → list routes được phép */
   private static readonly ROLE_ROUTES: Record<UserRole, readonly string[]> = {
     // ===== Admin & manager =====
