@@ -9,6 +9,11 @@ export const orderStatusLabels: Record<string, string> = {
   waiting_for_customer_approval: "Chờ khách duyệt",
   editing: "Đang chỉnh sửa",
   confirmed_for_printing: "Đã chốt in",
+
+  waiting_for_deposit: "Chờ đặt cọc",
+  deposit_received: "Đã nhận cọc",
+  debt_approved: "Đã duyệt công nợ",
+
   waiting_for_proofing: "Chờ bình bài",
   waiting_for_production: "Chờ sản xuất",
   in_production: "Đang sản xuất",
@@ -20,23 +25,22 @@ export const orderStatusLabels: Record<string, string> = {
 // Mô tả chi tiết cho từng trạng thái đơn hàng
 export const orderStatusDescription: Record<string, string> = {
   pending: "Đơn hàng vừa được tạo, mới nhận thông tin từ khách.",
-  designing:
-    "Đơn hàng đang trong giai đoạn thiết kế, chưa gửi khách duyệt hoặc chốt in.",
-  waiting_for_customer_approval:
-    "Đã có file thiết kế, đang chờ khách hàng xem và duyệt.",
-  editing:
-    "Khách yêu cầu chỉnh sửa, thiết kế đang được cập nhật theo feedback.",
+  designing: "Đơn hàng đang được thiết kế.",
+  waiting_for_customer_approval: "Đang chờ khách xem và duyệt thiết kế.",
+  editing: "Đang chỉnh sửa theo yêu cầu khách.",
   confirmed_for_printing:
-    "Khách đã chốt file in, có thể tiến hành bình bài / lên lệnh sản xuất.",
-  waiting_for_proofing:
-    "Tất cả thiết kế trong đơn đã chốt in, chờ tạo và xử lý lệnh bình bài.",
-  waiting_for_production:
-    "Đã có thông tin bình bài, chờ tạo / xử lý lệnh sản xuất.",
-  in_production: "Đơn hàng đang được in / gia công tại xưởng.",
-  production_completed:
-    "Đã hoàn thành toàn bộ công đoạn sản xuất, chờ giao hàng / tất toán.",
-  completed: "Đơn hàng đã hoàn thành toàn bộ quy trình.",
-  cancelled: "Đơn hàng đã bị hủy, không tiếp tục xử lý.",
+    "Khách đã chốt file in, có thể tạo bình bài / sản xuất.",
+
+  waiting_for_deposit: "Khách cần đặt cọc trước khi tiếp tục xử lý đơn.",
+  deposit_received: "Đã nhận tiền cọc từ khách.",
+  debt_approved: "Khách công ty đã được duyệt công nợ.",
+
+  waiting_for_proofing: "Chờ tạo lệnh bình bài.",
+  waiting_for_production: "Chờ tạo lệnh sản xuất.",
+  in_production: "Đơn đang được xử lý tại xưởng.",
+  production_completed: "Sản xuất xong, chờ giao hàng / tất toán.",
+  completed: "Đơn hàng đã hoàn tất.",
+  cancelled: "Đơn hàng bị hủy.",
 };
 
 // Trạng thái thiết kế (Design)
@@ -97,30 +101,29 @@ export function getStatusVariant(
 ): "default" | "secondary" | "success" | "warning" | "destructive" | "outline" {
   if (!status) return "default";
 
-  // Nhóm trạng thái cảnh báo / chờ
   const warningStatuses = [
     "pending",
     "waiting_for_customer_approval",
     "waiting_for_proofing",
     "waiting_for_production",
     "waiting_for_file",
+    "waiting_for_deposit",
     "not_paid",
   ];
 
-  // Nhóm trạng thái đã ok / thành công
   const successStatuses = [
     "confirmed_for_printing",
+    "debt_approved",
     "production_completed",
     "completed",
     "fully_paid",
   ];
 
-  // Nhóm trạng thái đang xử lý
   const inProgressStatuses = [
     "designing",
     "editing",
     "in_production",
-    "deposited",
+    "deposit_received",
   ];
 
   if (successStatuses.includes(status)) return "success";
@@ -142,27 +145,33 @@ export function getStatusVariant(
 export const statusColorMap: Record<string, string> = {
   // ===== ORDER =====
   pending: "bg-slate-100 text-slate-800 border-slate-200",
+
   designing: "bg-blue-50 text-blue-700 border-blue-200",
-  waiting_for_customer_approval: "bg-amber-50 text-amber-700 border-amber-200",
   editing: "bg-sky-50 text-sky-700 border-sky-200",
+
+  waiting_for_customer_approval: "bg-amber-50 text-amber-700 border-amber-200",
+
   confirmed_for_printing: "bg-emerald-50 text-emerald-700 border-emerald-200",
+
+  waiting_for_deposit: "bg-amber-100 text-amber-800 border-amber-300",
+  deposit_received: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  debt_approved: "bg-green-50 text-green-700 border-green-200",
+
   waiting_for_proofing: "bg-violet-50 text-violet-700 border-violet-200",
   waiting_for_production: "bg-indigo-50 text-indigo-700 border-indigo-200",
+
   in_production: "bg-cyan-50 text-cyan-700 border-cyan-200",
+
   production_completed: "bg-green-50 text-green-700 border-green-200",
   completed: "bg-green-100 text-green-800 border-green-200",
+
   cancelled: "bg-red-50 text-red-700 border-red-200",
 
   // ===== DESIGN =====
   received_info: "bg-slate-100 text-slate-800 border-slate-200",
-  // designing, editing, waiting_for_customer_approval, confirmed_for_printing dùng lại như Order
 
-  // ===== PROOFING ORDER =====
+  // ===== PROOFING =====
   waiting_for_file: "bg-slate-100 text-slate-800 border-slate-200",
-  // waiting_for_production, in_production, completed trùng key dùng lại ở trên
-
-  // ===== PRODUCTION =====
-  // waiting_for_production, in_production, completed: reuse
 
   // ===== PAYMENT =====
   not_paid: "bg-rose-50 text-rose-700 border-rose-200",

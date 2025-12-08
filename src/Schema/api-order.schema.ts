@@ -1,3 +1,4 @@
+// DEPRECATED: Không sử dụng. Vui lòng dùng các schema trong `src/Schema/order.schema.ts`
 import { z } from 'zod';
 
 // Base schemas
