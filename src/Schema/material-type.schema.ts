@@ -1,5 +1,7 @@
 // src/Schema/material-type.schema.ts
-import { z } from "zod";
+// Schema cho quản lý "Chất liệu thiết kế" (Material Type)
+// Bao gồm các dạng response, request tạo/cập nhật, và response phân trang
+import { number, z } from "zod";
 import {
   IdSchema,
   DateSchema,
@@ -9,26 +11,30 @@ import {
 import { UserInfoSchema } from "./common";
 
 // ===== MaterialTypeResponse =====
+// Dữ liệu trả về từ API cho một chất liệu thiết kế
 
 export const MaterialTypeResponseSchema = z
   .object({
     id: IdSchema.optional(),
     designTypeId: IdSchema.optional(),
+    displayOrder: IdSchema.optional(),
     designTypeName: z.string().nullable().optional(),
     code: z.string().nullable().optional(),
     name: NameSchema.nullable().optional(),
     description: z.string().nullable().optional(),
+    pricePerCm2: z.number().optional(),
     status: z.string().nullable().optional(),
     statusType: z.string().nullable().optional(),
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
-    createdBy: UserInfoSchema.optional(),
+    createdBy: UserInfoSchema.nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type MaterialTypeResponse = z.infer<typeof MaterialTypeResponseSchema>;
 
 // ===== PagedResponse =====
+// Dữ liệu trả về khi lấy danh sách chất liệu với phân trang
 
 export const MaterialTypeResponsePagedResponseSchema =
   createPagedResponseSchema(MaterialTypeResponseSchema);
@@ -38,6 +44,7 @@ export type MaterialTypeResponsePagedResponse = z.infer<
 >;
 
 // ===== CreateMaterialTypeRequest =====
+// Payload tạo mới chất liệu thiết kế
 
 export const CreateMaterialTypeRequestSchema = z
   .object({
@@ -50,13 +57,14 @@ export const CreateMaterialTypeRequestSchema = z
     name: NameSchema,
     description: z.string().max(500).nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type CreateMaterialTypeRequest = z.infer<
   typeof CreateMaterialTypeRequestSchema
 >;
 
 // ===== BulkCreateMaterialTypeRequest =====
+// Payload tạo hàng loạt chất liệu theo một loại thiết kế
 
 export const BulkCreateMaterialTypeRequestSchema = z
   .object({
@@ -75,13 +83,14 @@ export const BulkCreateMaterialTypeRequestSchema = z
       )
       .min(1),
   })
-  .strict();
+  .passthrough();
 
 export type BulkCreateMaterialTypeRequest = z.infer<
   typeof BulkCreateMaterialTypeRequestSchema
 >;
 
 // ===== UpdateMaterialTypeRequest =====
+// Payload cập nhật chất liệu thiết kế
 
 export const UpdateMaterialTypeRequestSchema = z
   .object({
@@ -91,7 +100,7 @@ export const UpdateMaterialTypeRequestSchema = z
     description: z.string().nullable().optional(),
     status: z.string().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UpdateMaterialTypeRequest = z.infer<
   typeof UpdateMaterialTypeRequestSchema

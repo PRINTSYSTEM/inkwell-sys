@@ -18,7 +18,7 @@ export const UserInfoSchema = z
     email: z.string().nullable().optional(),
     phone: z.string().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UserInfo = z.infer<typeof UserInfoSchema>;
 
@@ -30,7 +30,7 @@ export const ConstantGroupSchema = z
     description: z.string().nullable().optional(),
     values: z.record(z.string()).nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type ConstantGroup = z.infer<typeof ConstantGroupSchema>;
 
@@ -46,7 +46,7 @@ export const ConstantsResponseSchema = z
     paymentMethods: ConstantGroupSchema.optional(),
     commonStatuses: ConstantGroupSchema.optional(),
   })
-  .strict();
+  .passthrough();
 
 export type ConstantsResponse = z.infer<typeof ConstantsResponseSchema>;
 

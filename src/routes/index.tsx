@@ -6,6 +6,7 @@ import { AuthGuard } from "@/guards/AuthGuard";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { ROUTE_PATHS } from "@/constants";
 import CreateCustomer from "@/pages/customers/CreateCustomer";
+import ProductionDetailPage from "@/pages/production/ProductionDetail";
 
 // ================== Lazy imports ==================
 const Login = lazy(() => import("@/pages/Login"));
@@ -308,6 +309,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <Production />
+              </Suspense>
+            ),
+          },
+          {
+            path: lastSegment(ROUTE_PATHS.PRODUCTION.DETAIL), // "detail"
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <ProductionDetailPage />
               </Suspense>
             ),
           },

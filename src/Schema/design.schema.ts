@@ -20,7 +20,7 @@ export const DesignTimelineEntryResponseSchema = z
     createdAt: DateSchema.optional(),
     createdBy: UserInfoSchema.optional(),
   })
-  .strict();
+  .passthrough();
 
 export type DesignTimelineEntryResponse = z.infer<
   typeof DesignTimelineEntryResponseSchema
@@ -36,11 +36,11 @@ export const DesignResponseSchema = z
     designStatus: z.string().nullable().optional(),
     statusType: z.string().nullable().optional(),
     designerId: IdSchema.optional(),
-    designer: UserInfoSchema.optional(),
+    designer: UserInfoSchema.nullable().optional(),
     designTypeId: IdSchema.optional(),
-    designType: DesignTypeResponseSchema.optional(),
+    designType: DesignTypeResponseSchema.nullable().optional(),
     materialTypeId: IdSchema.optional(),
-    materialType: MaterialTypeResponseSchema.optional(),
+    materialType: MaterialTypeResponseSchema.nullable().optional(),
     quantity: z.number().int().optional(),
     designName: z.string().nullable().optional(),
     dimensions: z.string().nullable().optional(),
@@ -62,7 +62,7 @@ export const DesignResponseSchema = z
       .nullable()
       .optional(),
   })
-  .strict();
+  .passthrough();
 
 export type DesignResponse = z.infer<typeof DesignResponseSchema>;
 
@@ -114,7 +114,7 @@ export const UpdateDesignRequestSchema = z
     requirements: z.string().nullable().optional(),
     additionalNotes: z.string().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UpdateDesignRequest = z.infer<typeof UpdateDesignRequestSchema>;
 
@@ -156,7 +156,7 @@ export const DesignResponseForDesignerSchema = z
       .nullable()
       .optional(),
   })
-  .strict();
+  .passthrough();
 
 export type DesignResponseForDesigner = z.infer<
   typeof DesignResponseForDesignerSchema

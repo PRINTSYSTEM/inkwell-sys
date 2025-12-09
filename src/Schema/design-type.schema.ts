@@ -22,7 +22,7 @@ export const CreateDesignTypeRequestSchema = z
     description: z.string().max(500).nullable().optional(),
     status: CommonStatusSchema,
   })
-  .strict();
+  .passthrough();
 
 export type CreateDesignTypeRequest = z.infer<
   typeof CreateDesignTypeRequestSchema
@@ -36,7 +36,7 @@ export const UpdateDesignTypeRequestSchema = z
     description: z.string().nullable().optional(),
     status: CommonStatusSchema.nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UpdateDesignTypeRequest = z.infer<
   typeof UpdateDesignTypeRequestSchema
@@ -54,9 +54,9 @@ export const DesignTypeResponseSchema = z
     statusType: z.string().nullable().optional(),
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
-    createdBy: UserInfoSchema.optional(),
+    createdBy: UserInfoSchema.nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type DesignTypeResponse = z.infer<typeof DesignTypeResponseSchema>;
 

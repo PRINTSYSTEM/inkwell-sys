@@ -112,7 +112,7 @@ export const useStartProduction = () => {
 
   return {
     data,
-    loading,
+    isPending: loading,
     error,
     mutate,
     reset,
@@ -167,7 +167,7 @@ export const useCompleteProduction = () => {
 
   return {
     data,
-    loading,
+    isPending: loading,
     error,
     mutate,
     reset,

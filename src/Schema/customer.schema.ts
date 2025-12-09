@@ -29,7 +29,7 @@ export const CustomerResponseSchema = z
     updatedAt: DateSchema.optional(),
     createdBy: UserInfoSchema.optional(),
   })
-  .strict();
+  .passthrough();
 
 export type CustomerResponse = z.infer<typeof CustomerResponseSchema>;
 
@@ -45,7 +45,7 @@ export const CustomerSummaryResponseSchema = z
     maxDebt: z.number().optional(),
     debtStatus: z.string().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type CustomerSummaryResponse = z.infer<
   typeof CustomerSummaryResponseSchema
@@ -96,7 +96,7 @@ export const CreateCustomerRequestSchema = z
     type: z.enum(["company", "retail"]),
     maxDebt: z.number().min(0, "Số dư tối đa không thể âm").default(0),
   })
-  .strict();
+  .passthrough();
 
 export type CreateCustomerRequest = z.infer<typeof CreateCustomerRequestSchema>;
 
@@ -113,6 +113,6 @@ export const UpdateCustomerRequestSchema = z
     type: z.string().nullable().optional(),
     maxDebt: z.number().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UpdateCustomerRequest = z.infer<typeof UpdateCustomerRequestSchema>;

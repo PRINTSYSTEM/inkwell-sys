@@ -13,11 +13,11 @@ export const ProofingOrderDesignResponseSchema = z
     id: IdSchema.optional(),
     proofingOrderId: IdSchema.optional(),
     designId: IdSchema.optional(),
-    design: DesignResponseSchema.optional(),
+    design: DesignResponseSchema.nullable().optional(),
     quantity: z.number().int().optional(),
     createdAt: DateSchema.optional(),
   })
-  .strict();
+  .passthrough();
 
 export type ProofingOrderDesignResponse = z.infer<
   typeof ProofingOrderDesignResponseSchema
@@ -31,13 +31,13 @@ export const ProofingOrderResponseSchema = z
     code: z.string().nullable().optional(),
 
     materialTypeId: IdSchema.optional(),
-    materialType: MaterialTypeResponseSchema.optional(),
+    materialType: MaterialTypeResponseSchema.nullable().optional(),
 
     createdById: IdSchema.optional(),
-    createdBy: UserInfoSchema.optional(),
+    createdBy: UserInfoSchema.nullable().optional(),
 
     assignedToId: IdSchema.nullable().optional(),
-    assignedTo: UserInfoSchema.optional(),
+    assignedTo: UserInfoSchema.nullable().optional(),
 
     totalQuantity: z.number().int().optional(),
 
@@ -57,7 +57,7 @@ export const ProofingOrderResponseSchema = z
 
     productions: z.array(ProductionResponseSchema).nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type ProofingOrderResponse = z.infer<typeof ProofingOrderResponseSchema>;
 
@@ -78,7 +78,7 @@ export const CreateProofingOrderRequestSchema = z
     designIds: z.array(IdSchema).min(1, "Cần ít nhất 1 thiết kế"),
     notes: z.string().max(1000).nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type CreateProofingOrderRequest = z.infer<
   typeof CreateProofingOrderRequestSchema
@@ -91,7 +91,7 @@ export const CreateProofingOrderFromDesignsRequestSchema = z
     designIds: z.array(IdSchema).min(1, "Cần ít nhất 1 thiết kế"),
     notes: z.string().max(1000).nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type CreateProofingOrderFromDesignsRequest = z.infer<
   typeof CreateProofingOrderFromDesignsRequestSchema
@@ -106,7 +106,7 @@ export const UpdateProofingOrderRequestSchema = z
     proofingFileUrl: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UpdateProofingOrderRequest = z.infer<
   typeof UpdateProofingOrderRequestSchema

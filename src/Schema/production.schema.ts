@@ -10,7 +10,7 @@ export const ProductionResponseSchema = z
     id: IdSchema.optional(),
     proofingOrderId: IdSchema.optional(),
     productionLeadId: IdSchema.optional(),
-    productionLead: UserInfoSchema.optional(),
+    productionLead: UserInfoSchema.nullable().optional(),
 
     status: z.string().nullable().optional(),
     statusType: z.string().nullable().optional(),
@@ -25,7 +25,7 @@ export const ProductionResponseSchema = z
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
   })
-  .strict();
+  .passthrough();
 
 export type ProductionResponse = z.infer<typeof ProductionResponseSchema>;
 
@@ -47,7 +47,7 @@ export const CreateProductionRequestSchema = z
     productionLeadId: IdSchema,
     notes: z.string().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type CreateProductionRequest = z.infer<
   typeof CreateProductionRequestSchema
@@ -62,7 +62,7 @@ export const UpdateProductionRequestSchema = z
     defectNotes: z.string().nullable().optional(),
     wastage: z.number().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UpdateProductionRequest = z.infer<
   typeof UpdateProductionRequestSchema
@@ -74,7 +74,7 @@ export const StartProductionRequestSchema = z
   .object({
     notes: z.string().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type StartProductionRequest = z.infer<
   typeof StartProductionRequestSchema
@@ -88,7 +88,7 @@ export const CompleteProductionRequestSchema = z
     defectNotes: z.string().nullable().optional(),
     wastage: z.number().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type CompleteProductionRequest = z.infer<
   typeof CompleteProductionRequestSchema

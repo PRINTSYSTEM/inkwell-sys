@@ -140,7 +140,7 @@ export abstract class BaseService {
     // Create axios instance
     this.client = axios.create({
       baseURL: this.baseURL,
-      timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 30000,
+      timeout: Number(import.meta.env.VITE_API_TIMEOUT),
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -313,7 +313,7 @@ export abstract class BaseService {
 
         // Cache successful GET responses
         if (cacheKey && cache.enabled && apiResponse.success) {
-          this.cache.set(cacheKey, apiResponse, cache.ttl || 300000);
+          this.cache.set(cacheKey, apiResponse, cache.ttl);
         }
 
         return apiResponse;

@@ -22,7 +22,7 @@ export const UserResponseSchema = z
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 
@@ -48,7 +48,10 @@ export const CreateUserRequestSchema = z
       .string()
       .min(8, "Mật khẩu tối thiểu 8 ký tự")
       .max(100, "Mật khẩu quá dài")
-      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, "Mật khẩu phải có chữ hoa, chữ thường và số"),
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+        "Mật khẩu phải có chữ hoa, chữ thường và số"
+      ),
     fullName: NameSchema,
     role: UserRoleSchema,
     email: z.string().email("Email không hợp lệ").nullable().optional(),
@@ -58,7 +61,7 @@ export const CreateUserRequestSchema = z
       .nullable()
       .optional(),
   })
-  .strict();
+  .passthrough();
 
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
@@ -72,6 +75,6 @@ export const UpdateUserRequestSchema = z
     phone: z.string().max(20).nullable().optional(),
     isActive: z.boolean().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;

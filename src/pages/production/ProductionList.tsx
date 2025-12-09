@@ -1,486 +1,203 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Clock,
-  Play,
-  CheckCircle,
-  User,
-  Calendar,
-  AlertTriangle,
-  Calculator,
-  Package,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Search,
   Plus,
+  Factory,
+  CheckCircle,
+  Clock,
   Eye,
-  Edit,
-  FileText
-} from 'lucide-react';
-import { productions, mockUsers, mockMaterials, mockPrepressOrders } from '@/lib/mockData';
+  Package,
+} from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { useDebounce } from "use-debounce";
+import { useProductions, useCreateProduction } from "@/hooks/use-production";
+import {
+  ProductionResponse,
+  ProductionResponsePagedResponseSchema,
+  safeParseSchema,
+  type ProductionListParams,
+} from "@/Schema";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { productionStatusLabels } from "@/lib/status-utils";
 
-// TODO: Replace with Zod schema types when Production schema is available
-interface Production {
-  id: string;
-  orderId: string;
-  orderNumber: string;
-  customerName: string;
-  productType: string;
-  quantity: number;
-  assignedTo?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'paused';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  startDate?: string;
-  endDate?: string;
-  estimatedDuration: number;
-  progress: number;
-  notes?: string;
-  materialRequirements?: MaterialRequirement[];
-}
+export default function ProductionListPage() {
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [proofingOrderId, setProofingOrderId] = useState("");
+  const [productionLeadId, setProductionLeadId] = useState("");
+  const [notes, setNotes] = useState("");
+  const [debouncedSearch] = useDebounce(searchTerm, 300);
 
-// TODO: Replace with Zod schema types when MaterialRequirement schema is available
-interface MaterialRequirement {
-  materialId: string;
-  materialName: string;
-  requiredQuantity: number;
-  unit: string;
-  availableStock: number;
-  shortage: number;
-  stockStatus: 'sufficient' | 'low' | 'insufficient';
-}
-
-export default function ProductionManagement() {
-  const [productionList, setProductionList] = useState<Production[]>([]);
-  const [selectedProduction, setSelectedProduction] = useState<Production | null>(null);
-  const [showMaterialCalculator, setShowMaterialCalculator] = useState(false);
-  const [materialCalculations, setMaterialCalculations] = useState<MaterialRequirement[]>([]);
-
-  useEffect(() => {
-    // Tạo production data từ orders
-    const productionData: Production[] = orders.map(order => {
-      const customer = customers.find(c => c.id === order.customerId);
-      const existingProduction = productions.find(p => p.orderId === order.id);
-      
-      return {
-        id: existingProduction?.id || `prod-${order.id}`,
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerName: customer?.representativeName || 'Unknown Customer',
-        productType: order.description || 'General Print',
-        quantity: order.quantity || 100,
-        assignedTo: existingProduction?.assignedTo,
-        status: existingProduction?.status || 'pending',
-        priority: 'medium' as Production['priority'],
-        startDate: existingProduction?.startedAt,
-        endDate: undefined,
-        estimatedDuration: 3,
-        progress: existingProduction?.progress || 0,
-        notes: existingProduction?.notes
-      };
-    });
-
-    setProductionList(productionData);
-  }, []);
-
-  const calculateMaterialRequirements = (production: Production) => {
-    // Mock material calculation logic
-    const baseMaterials: MaterialRequirement[] = [
-      {
-        materialId: 'paper-a4',
-        materialName: 'Giấy A4 80gsm',
-        requiredQuantity: production.quantity * 1.1, // 10% waste factor
-        unit: 'tờ',
-        availableStock: 5000,
-        shortage: 0,
-        stockStatus: 'sufficient'
-      },
-      {
-        materialId: 'ink-black',
-        materialName: 'Mực đen CMYK',
-        requiredQuantity: Math.ceil(production.quantity / 100) * 2, // 2ml per 100 sheets
-        unit: 'ml',
-        availableStock: 500,
-        shortage: 0,
-        stockStatus: 'sufficient'
-      }
-    ];
-
-    // Calculate shortages and stock status
-    const calculations = baseMaterials.map(material => {
-      const shortage = Math.max(0, material.requiredQuantity - material.availableStock);
-      let stockStatus: 'sufficient' | 'low' | 'insufficient' = 'sufficient';
-      
-      if (shortage > 0) {
-        stockStatus = 'insufficient';
-      } else if (material.availableStock < material.requiredQuantity * 1.2) {
-        stockStatus = 'low';
-      }
-
-      return {
-        ...material,
-        shortage,
-        stockStatus
-      };
-    });
-
-    setMaterialCalculations(calculations);
-    return calculations;
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'in_progress':
-        return <Play className="h-4 w-4 text-blue-600" />;
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'paused':
-        return <AlertTriangle className="h-4 w-4 text-orange-600" />;
-      default:
-        return <Clock className="h-4 w-4" />;
+  const queryParams = useMemo<ProductionListParams>(() => {
+    const params: ProductionListParams = {
+      pageNumber: 1,
+      pageSize: 100,
+    };
+    if (selectedStatus !== "all") {
+      params.status = selectedStatus;
     }
-  };
+    return params;
+  }, [selectedStatus]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 border-yellow-200';
-      case 'in_progress':
-        return 'bg-blue-100 border-blue-200';
-      case 'completed':
-        return 'bg-green-100 border-green-200';
-      case 'paused':
-        return 'bg-orange-100 border-orange-200';
-      default:
-        return 'bg-gray-100 border-gray-200';
-    }
-  };
+  const {
+    data: productionsResp,
+    isLoading,
+    error,
+  } = useProductions(queryParams);
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'destructive';
-      case 'high':
-        return 'secondary';
-      case 'medium':
-        return 'outline';
-      case 'low':
-        return 'default';
-      default:
-        return 'outline';
-    }
-  };
-
-  const updateProductionStatus = (productionId: string, newStatus: string) => {
-    setProductionList(prev => 
-      prev.map(prod => 
-        prod.id === productionId 
-          ? { 
-              ...prod, 
-              status: newStatus as Production['status'],
-              startDate: newStatus === 'in_progress' && !prod.startDate ? new Date().toISOString() : prod.startDate,
-              endDate: newStatus === 'completed' ? new Date().toISOString() : prod.endDate,
-              progress: newStatus === 'completed' ? 100 : prod.progress
-            }
-          : prod
-      )
-    );
-  };
-
-  const groupedProductions = {
-    pending: productionList.filter(p => p.status === 'pending'),
-    in_progress: productionList.filter(p => p.status === 'in_progress'),
-    completed: productionList.filter(p => p.status === 'completed'),
-    paused: productionList.filter(p => p.status === 'paused')
-  };
-
-  const ProductionCard = ({ production }: { production: Production }) => (
-    <Card className={`mb-4 ${getStatusColor(production.status)}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            {getStatusIcon(production.status)}
-            <CardTitle className="text-lg">#{production.orderNumber}</CardTitle>
-            <Badge variant={getPriorityColor(production.priority)}>
-              {production.priority === 'urgent' ? 'Khẩn cấp' :
-               production.priority === 'high' ? 'Cao' :
-               production.priority === 'medium' ? 'Trung bình' : 'Thấp'}
-            </Badge>
-          </div>
-          <div className="flex space-x-2">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline" onClick={() => setSelectedProduction(production)}>
-                  <Eye className="h-4 w-4 mr-1" />
-                  Chi tiết
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Chi tiết sản xuất #{production.orderNumber}</DialogTitle>
-                </DialogHeader>
-                <ProductionDetails production={production} />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <div>
-            <p className="font-medium">{production.customerName}</p>
-            <p className="text-sm text-muted-foreground">{production.productType}</p>
-          </div>
-          
-          <div className="flex items-center justify-between text-sm">
-            <span>Số lượng: <strong>{production.quantity.toLocaleString()}</strong></span>
-            {production.assignedTo && (
-              <span className="flex items-center">
-                <User className="h-3 w-3 mr-1" />
-                {mockUsers.find(u => u.id === production.assignedTo)?.name}
-              </span>
-            )}
-          </div>
-
-          {production.status === 'in_progress' && (
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span>Tiến độ</span>
-                <span>{production.progress}%</span>
-              </div>
-              <Progress value={production.progress} />
-            </div>
-          )}
-
-          <div className="flex justify-between">
-            <Select
-              value={production.status}
-              onValueChange={(value) => updateProductionStatus(production.id, value)}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Chờ sản xuất</SelectItem>
-                <SelectItem value="in_progress">Đang sản xuất</SelectItem>
-                <SelectItem value="paused">Tạm dừng</SelectItem>
-                <SelectItem value="completed">Hoàn thành</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setSelectedProduction(production);
-                calculateMaterialRequirements(production);
-                setShowMaterialCalculator(true);
-              }}
-            >
-              <Calculator className="h-4 w-4 mr-1" />
-              Tính nguyên liệu
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+  const parseProdResp = safeParseSchema(
+    ProductionResponsePagedResponseSchema,
+    productionsResp
   );
 
-  const ProductionDetails = ({ production }: { production: Production }) => (
-    <Tabs defaultValue="overview" className="mt-4">
-      <TabsList>
-        <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-        <TabsTrigger value="materials">Nguyên liệu</TabsTrigger>
-        <TabsTrigger value="timeline">Tiến độ</TabsTrigger>
-      </TabsList>
-      
-      <TabsContent value="overview" className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Thông tin cơ bản</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Khách hàng:</span>
-                <span className="text-sm font-medium">{production.customerName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Sản phẩm:</span>
-                <span className="text-sm font-medium">{production.productType}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Số lượng:</span>
-                <span className="text-sm font-medium">{production.quantity.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Ưu tiên:</span>
-                <Badge variant={getPriorityColor(production.priority)}>
-                  {production.priority === 'urgent' ? 'Khẩn cấp' :
-                   production.priority === 'high' ? 'Cao' :
-                   production.priority === 'medium' ? 'Trung bình' : 'Thấp'}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
+  const productions: ProductionResponse[] = parseProdResp?.items || [];
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Tiến độ</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Trạng thái:</span>
-                <Badge variant={production.status === 'completed' ? 'default' : 'secondary'}>
-                  {production.status === 'pending' ? 'Chờ sản xuất' :
-                   production.status === 'in_progress' ? 'Đang sản xuất' :
-                   production.status === 'completed' ? 'Hoàn thành' : 'Tạm dừng'}
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Tiến độ:</span>
-                <span className="text-sm font-medium">{production.progress}%</span>
-              </div>
-              {production.startDate && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Bắt đầu:</span>
-                  <span className="text-sm font-medium">
-                    {new Date(production.startDate).toLocaleDateString('vi-VN')}
-                  </span>
-                </div>
-              )}
-              {production.endDate && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Hoàn thành:</span>
-                  <span className="text-sm font-medium">
-                    {new Date(production.endDate).toLocaleDateString('vi-VN')}
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
+  const { mutate: createProduction, isPending: creating } =
+    useCreateProduction();
 
-      <TabsContent value="materials" className="space-y-4">
-        <Button
-          onClick={() => {
-            calculateMaterialRequirements(production);
-            setShowMaterialCalculator(true);
-          }}
-          className="mb-4"
-        >
-          <Calculator className="h-4 w-4 mr-2" />
-          Tính toán nguyên liệu
-        </Button>
-        
-        {materialCalculations.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Yêu cầu nguyên liệu</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {materialCalculations.map((material, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded">
-                    <div>
-                      <p className="font-medium">{material.materialName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Cần: {material.requiredQuantity} {material.unit} | 
-                        Có: {material.availableStock} {material.unit}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {material.shortage > 0 && (
-                        <span className="text-sm text-red-600 font-medium">
-                          Thiếu: {material.shortage} {material.unit}
-                        </span>
-                      )}
-                      <Badge 
-                        variant={
-                          material.stockStatus === 'sufficient' ? 'default' :
-                          material.stockStatus === 'low' ? 'secondary' : 'destructive'
-                        }
-                      >
-                        {material.stockStatus === 'sufficient' ? 'Đủ' :
-                         material.stockStatus === 'low' ? 'Ít' : 'Thiếu'}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </TabsContent>
+  const filteredProductions = useMemo(
+    () =>
+      productions?.filter((prod: ProductionResponse) => {
+        const search = debouncedSearch.toLowerCase().trim();
 
-      <TabsContent value="timeline" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Thời gian ước tính</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Thời gian dự kiến:</span>
-                <span className="text-sm font-medium">{production.estimatedDuration} ngày</span>
-              </div>
-              {production.notes && (
-                <div>
-                  <span className="text-sm text-muted-foreground">Ghi chú:</span>
-                  <p className="text-sm mt-1">{production.notes}</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+        const matchSearch =
+          search.length === 0 ||
+          String(prod.id ?? "")
+            .toLowerCase()
+            .includes(search) ||
+          (prod.productionLead?.fullName ?? "").toLowerCase().includes(search);
+
+        const matchStatus =
+          selectedStatus === "all" || prod.status === selectedStatus;
+
+        return matchSearch && matchStatus;
+      }),
+    [productions, debouncedSearch, selectedStatus]
   );
+
+  const handleCreateProduction = async () => {
+    if (!proofingOrderId || !productionLeadId) {
+      toast({
+        variant: "destructive",
+        title: "Thiếu thông tin",
+        description: "Vui lòng điền đầy đủ thông tin",
+      });
+      return;
+    }
+
+    try {
+      await createProduction({
+        proofingOrderId: Number(proofingOrderId),
+        productionLeadId: Number(productionLeadId),
+        notes: notes || undefined,
+      });
+      setIsCreateDialogOpen(false);
+      setProofingOrderId("");
+      setProductionLeadId("");
+      setNotes("");
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
+
+  const stats = useMemo(
+    () => ({
+      total: productions?.length || 0,
+      pending: productions?.filter((p) => p.status === "pending").length || 0,
+      inProgress:
+        productions?.filter((p) => p.status === "in_progress").length || 0,
+      completed:
+        productions?.filter((p) => p.status === "completed").length || 0,
+    }),
+    [productions]
+  );
+
+  const formatDate = (dateStr?: string | null) =>
+    dateStr
+      ? new Date(dateStr).toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+      : "N/A";
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Quản lý sản xuất</h1>
-          <p className="text-muted-foreground">
-            Theo dõi và quản lý tiến độ sản xuất các đơn hàng
+          <h1 className="text-3xl font-bold text-balance">Quản lý Sản xuất</h1>
+          <p className="text-muted-foreground text-pretty">
+            Theo dõi và quản lý tiến độ sản xuất
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Thêm công việc
+        <Button className="gap-2" onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Tạo đơn sản xuất
         </Button>
       </div>
 
-      {/* Statistics */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tổng đơn</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.total}</div>
+            <p className="text-xs text-muted-foreground">Tất cả đơn sản xuất</p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Chờ sản xuất</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{groupedProductions.pending.length}</div>
+            <div className="text-2xl font-bold">{stats?.pending || 0}</div>
+            <p className="text-xs text-muted-foreground">Chưa bắt đầu</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Đang sản xuất</CardTitle>
-            <Play className="h-4 w-4 text-muted-foreground" />
+            <Factory className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{groupedProductions.in_progress.length}</div>
+            <div className="text-2xl font-bold">{stats.inProgress}</div>
+            <p className="text-xs text-muted-foreground">Đang thực hiện</p>
           </CardContent>
         </Card>
 
@@ -490,335 +207,185 @@ export default function ProductionManagement() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{groupedProductions.completed.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tạm dừng</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{groupedProductions.paused.length}</div>
+            <div className="text-2xl font-bold">{stats.completed}</div>
+            <p className="text-xs text-muted-foreground">Đã hoàn thành</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Prepress Orders Section */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Lệnh bình bài sẵn sàng sản xuất
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Các lệnh bình bài đã được chuẩn bị, mỗi lệnh chứa nhiều thiết kế được tối ưu để in chung
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {mockPrepressOrders.map(prepressOrder => {
-              // Lấy thông tin các đơn hàng trong lệnh bình bài
-              const orderDetails = prepressOrder.orderIds.map(orderId => 
-                orders.find(order => order.id === orderId)
-              ).filter(Boolean);
-
-              return (
-                <Card key={prepressOrder.id} className="border-l-4 border-l-blue-500">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
-                            {prepressOrder.prepressOrderNumber}
-                          </Badge>
-                          <Badge variant={prepressOrder.status === 'completed' ? 'default' : 'secondary'}>
-                            {prepressOrder.status === 'completed' ? 'Hoàn thành' : 
-                             prepressOrder.status === 'in_progress' ? 'Đang xử lý' : 'Chờ xử lý'}
-                          </Badge>
-                          <Badge variant={prepressOrder.priority === 'high' ? 'destructive' : 'outline'}>
-                            {prepressOrder.priority === 'high' ? 'Ưu tiên cao' : 
-                             prepressOrder.priority === 'medium' ? 'Ưu tiên vừa' : 'Ưu tiên thấp'}
-                          </Badge>
-                        </div>
-
-                        {/* Thông tin in chung */}
-                        <div className="grid grid-cols-3 gap-4 text-sm bg-gray-50 p-3 rounded">
-                          <div>
-                            <span className="text-muted-foreground">📄 Loại giấy:</span>
-                            <div className="font-medium">{prepressOrder.paperType}</div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">🖨️ Máy in:</span>
-                            <div className="font-medium">{prepressOrder.printMachine}</div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">📊 Tổng số lượng:</span>
-                            <div className="font-medium">{prepressOrder.quantity?.toLocaleString()}</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          Chi tiết
-                        </Button>
-                        {prepressOrder.status !== 'completed' && (
-                          <Button size="sm">
-                            <Play className="h-4 w-4 mr-1" />
-                            Bắt đầu in
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Danh sách thiết kế trong lệnh bình bài */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Thiết kế cần in ({orderDetails.length} thiết kế):
-                      </h4>
-                      <div className="grid gap-2">
-                        {orderDetails.map((order, index) => (
-                          <div key={order?.id} className="flex items-center justify-between p-3 bg-white border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium">
-                                {index + 1}
-                              </div>
-                              <div>
-                                <div className="font-medium">{order?.orderNumber}</div>
-                                <div className="text-sm text-muted-foreground">{order?.description}</div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-medium">{order?.quantity?.toLocaleString()}</div>
-                              <div className="text-sm text-muted-foreground">
-                                Khách: {customers.find(c => c.id === order?.customerId)?.representativeName}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Ghi chú */}
-                    {prepressOrder.notes && (
-                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <div className="text-sm">
-                          <span className="font-medium text-yellow-800">💡 Ghi chú bình bài:</span>
-                          <div className="mt-1 text-yellow-700">{prepressOrder.notes}</div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Thông tin người tạo */}
-                    <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground border-t pt-3">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Tạo: {prepressOrder.createdAt}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        Bởi: {prepressOrder.createdBy}
-                      </div>
-                      {prepressOrder.assignedTo && (
-                        <div className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          Phân công: {prepressOrder.assignedTo}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-
-            {mockPrepressOrders.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Chưa có lệnh bình bài nào sẵn sàng</p>
-                <p className="text-sm">Các lệnh bình bài sẽ hiển thị ở đây sau khi được tạo từ phòng prepress</p>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Tìm theo ID hoặc người phụ trách..."
+                  className="pl-10 w-72"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
-            )}
+
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="pending">Chờ sản xuất</SelectItem>
+                  <SelectItem value="in_progress">Đang sản xuất</SelectItem>
+                  <SelectItem value="completed">Hoàn thành</SelectItem>
+                  <SelectItem value="on_hold">Tạm dừng</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {isLoading ? (
+            <div className="text-center py-12">
+              <Factory className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">
+                Đang tải đơn sản xuất...
+              </p>
+            </div>
+          ) : filteredProductions.length === 0 ? (
+            <div className="text-center py-12">
+              <Factory className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">
+                Không tìm thấy đơn sản xuất nào
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Người phụ trách</TableHead>
+                    <TableHead>Tiến độ</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Bắt đầu</TableHead>
+                    <TableHead>Hoàn thành</TableHead>
+                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead className="text-right">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProductions.map((prod: ProductionResponse) => (
+                    <TableRow key={prod.id}>
+                      <TableCell className="font-medium">
+                        {prod.id ?? "N/A"}
+                      </TableCell>
+
+                      <TableCell>
+                        {prod.productionLead?.fullName || "Chưa phân công"}
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary transition-all"
+                              style={{
+                                width: `${prod.progressPercent || 0}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium">
+                            {prod.progressPercent || 0}%
+                          </span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <StatusBadge
+                          status={prod.status || "pending"}
+                          label={
+                            productionStatusLabels[prod.status || "pending"] ||
+                            prod.status ||
+                            "N/A"
+                          }
+                        />
+                      </TableCell>
+
+                      <TableCell>{formatDate(prod.startedAt)}</TableCell>
+                      <TableCell>{formatDate(prod.completedAt)}</TableCell>
+                      <TableCell>{formatDate(prod.createdAt)}</TableCell>
+
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => navigate(`/productions/${prod.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Xem
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Production Kanban Board */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Pending */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Clock className="mr-2 h-5 w-5 text-yellow-600" />
-              Chờ sản xuất ({groupedProductions.pending.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {groupedProductions.pending.map(production => (
-                <ProductionCard key={production.id} production={production} />
-              ))}
-              {groupedProductions.pending.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  Không có công việc chờ sản xuất
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* In Progress */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Play className="mr-2 h-5 w-5 text-blue-600" />
-              Đang sản xuất ({groupedProductions.in_progress.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {groupedProductions.in_progress.map(production => (
-                <ProductionCard key={production.id} production={production} />
-              ))}
-              {groupedProductions.in_progress.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  Không có công việc đang sản xuất
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Completed & Paused */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <CheckCircle className="mr-2 h-5 w-5 text-green-600" />
-              Hoàn thành ({groupedProductions.completed.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {groupedProductions.completed.map(production => (
-                <ProductionCard key={production.id} production={production} />
-              ))}
-              {groupedProductions.paused.length > 0 && (
-                <div className="pt-4 border-t">
-                  <h4 className="font-medium text-orange-600 mb-2 flex items-center">
-                    <AlertTriangle className="mr-1 h-4 w-4" />
-                    Tạm dừng ({groupedProductions.paused.length})
-                  </h4>
-                  {groupedProductions.paused.map(production => (
-                    <ProductionCard key={production.id} production={production} />
-                  ))}
-                </div>
-              )}
-              {groupedProductions.completed.length === 0 && groupedProductions.paused.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  Chưa có công việc hoàn thành
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Material Calculator Modal */}
-      <Dialog open={showMaterialCalculator} onOpenChange={setShowMaterialCalculator}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Calculator className="mr-2 h-5 w-5" />
-              Tính toán nguyên liệu
-            </DialogTitle>
+            <DialogTitle>Tạo đơn sản xuất mới</DialogTitle>
+            <DialogDescription>
+              Nhập thông tin để tạo đơn sản xuất từ lệnh bình bài
+            </DialogDescription>
           </DialogHeader>
-          
-          {selectedProduction && (
-            <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    Đơn hàng #{selectedProduction.orderNumber}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Khách hàng:</span>
-                      <p className="font-medium">{selectedProduction.customerName}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Sản phẩm:</span>
-                      <p className="font-medium">{selectedProduction.productType}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Số lượng:</span>
-                      <p className="font-medium">{selectedProduction.quantity.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {materialCalculations.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Yêu cầu nguyên liệu</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {materialCalculations.map((material, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded">
-                          <div className="flex items-center space-x-3">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">{material.materialName}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Yêu cầu: <strong>{material.requiredQuantity} {material.unit}</strong> | 
-                                Tồn kho: {material.availableStock} {material.unit}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {material.shortage > 0 && (
-                              <Alert className="p-2 border-red-200">
-                                <AlertDescription className="text-sm text-red-600">
-                                  Thiếu: {material.shortage} {material.unit}
-                                </AlertDescription>
-                              </Alert>
-                            )}
-                            <Badge 
-                              variant={
-                                material.stockStatus === 'sufficient' ? 'default' :
-                                material.stockStatus === 'low' ? 'secondary' : 'destructive'
-                              }
-                            >
-                              {material.stockStatus === 'sufficient' ? 'Đủ nguyên liệu' :
-                               material.stockStatus === 'low' ? 'Sắp hết' : 'Không đủ'}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowMaterialCalculator(false)}>
-                  Đóng
-                </Button>
-                <Button onClick={() => {
-                  // TODO: Save material calculations
-                  setShowMaterialCalculator(false);
-                }}>
-                  Lưu tính toán
-                </Button>
-              </div>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>ID Lệnh bình bài</Label>
+              <Input
+                type="number"
+                placeholder="Nhập ID lệnh bình bài"
+                value={proofingOrderId}
+                onChange={(e) => setProofingOrderId(e.target.value)}
+              />
             </div>
-          )}
+
+            <div className="space-y-2">
+              <Label>ID Người phụ trách sản xuất</Label>
+              <Input
+                type="number"
+                placeholder="Nhập ID người phụ trách"
+                value={productionLeadId}
+                onChange={(e) => setProductionLeadId(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ghi chú (tùy chọn)</Label>
+              <Textarea
+                placeholder="Nhập ghi chú cho đơn sản xuất..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateDialogOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button onClick={handleCreateProduction} disabled={creating}>
+              <Plus className="h-4 w-4 mr-2" />
+              {creating ? "Đang tạo..." : "Tạo đơn"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

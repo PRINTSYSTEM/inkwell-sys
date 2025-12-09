@@ -9,7 +9,7 @@ export const PagedParamsSchema = z
     pageNumber: z.number().int().min(1).optional(),
     pageSize: z.number().int().min(1).optional(),
   })
-  .strict();
+  .passthrough();
 
 export type PagedParams = z.infer<typeof PagedParamsSchema>;
 
@@ -84,7 +84,7 @@ export const ProofingOrderAvailableDesignsParamsSchema = z
   .object({
     materialTypeId: IdSchema.optional(),
   })
-  .strict();
+  .passthrough();
 
 export type ProofingOrderAvailableDesignsParams = z.infer<
   typeof ProofingOrderAvailableDesignsParamsSchema

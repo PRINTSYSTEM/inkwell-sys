@@ -60,7 +60,7 @@ export const authUtils = {
 const createApiInstance = (): AxiosInstance => {
   const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
-    timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 30000,
+    timeout: Number(import.meta.env.VITE_API_TIMEOUT),
     paramsSerializer: parseParams,
     withCredentials: false,
     headers: {
@@ -157,12 +157,6 @@ export const apiRequest = createApiInstance();
 
 export const http = {
   get: async <T>(url: string, params?: any): Promise<T> => {
-    console.group("🔥 http.get CALLED FROM");
-    console.log("URL:", url);
-    console.log("Params:", params);
-    console.log("📌 Call stack:", new Error().stack);
-    console.groupEnd();
-
     const response = await apiRequest.get<T>(url, { params });
     return response.data;
   },

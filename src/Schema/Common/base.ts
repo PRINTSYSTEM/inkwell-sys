@@ -23,7 +23,7 @@ export const PagedResponseBaseSchema = z
     hasPreviousPage: z.boolean().optional(),
     hasNextPage: z.boolean().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type PagedResponseBase = z.infer<typeof PagedResponseBaseSchema>;
 
@@ -42,6 +42,6 @@ export const BackendErrorResponseSchema = z
     error: z.string().nullable().optional(),
     timeStamp: DateSchema.optional(),
   })
-  .strict();
+  .passthrough();
 
 export type BackendErrorResponse = z.infer<typeof BackendErrorResponseSchema>;

@@ -1,4 +1,6 @@
 // src/Schema/order.schema.ts
+// Schema cho "Đơn hàng" (Order)
+// Bao gồm: response chi tiết đơn, payload tạo/cập nhật, và các biến thể phục vụ designer
 import { z } from "zod";
 import { IdSchema, DateSchema, createPagedResponseSchema } from "./common";
 import { UserInfoSchema } from "./common";
@@ -7,6 +9,8 @@ import {
   DesignResponseForDesignerSchema,
 } from "./design.schema";
 
+// ===== CustomerOrderResponse =====
+// Thông tin tóm tắt khách hàng gắn với đơn hàng
 export const CustomerOrderResponseSchema = z.object({
   id: IdSchema.optional(),
   code: z.string().nullable().optional(),
@@ -20,6 +24,7 @@ export const CustomerOrderResponseSchema = z.object({
 });
 
 // ===== OrderResponse =====
+// Dữ liệu đơn hàng chi tiết
 
 export const OrderResponseSchema = z
   .object({
@@ -52,11 +57,12 @@ export const OrderResponseSchema = z
 
     designs: z.array(DesignResponseSchema).nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type OrderResponse = z.infer<typeof OrderResponseSchema>;
 
 // ===== PagedResponse =====
+// Dữ liệu danh sách đơn hàng có phân trang
 
 export const OrderResponsePagedResponseSchema =
   createPagedResponseSchema(OrderResponseSchema);
@@ -66,6 +72,7 @@ export type OrderResponsePagedResponse = z.infer<
 >;
 
 // ===== CreateOrderRequest =====
+// Payload tạo đơn hàng (bao gồm danh sách thiết kế mới)
 
 export const CreateOrderRequestSchema = z
   .object({
@@ -110,6 +117,7 @@ export const CreateOrderRequestSchema = z
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
 
 // ===== UpdateOrderRequest =====
+// Payload cập nhật đơn hàng
 
 export const UpdateOrderRequestSchema = z
   .object({
@@ -121,22 +129,24 @@ export const UpdateOrderRequestSchema = z
     note: z.string().nullable().optional(),
     status: z.string().nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type UpdateOrderRequest = z.infer<typeof UpdateOrderRequestSchema>;
 
-// ===== ExistingDesignRequest (dùng cho order existing designs) =====
+// ===== ExistingDesignRequest =====
+// Dùng khi tạo đơn hàng từ danh sách thiết kế có sẵn
 
 export const ExistingDesignRequestSchema = z
   .object({
     designId: IdSchema,
     quantity: z.number().int().min(1),
   })
-  .strict();
+  .passthrough();
 
 export type ExistingDesignRequest = z.infer<typeof ExistingDesignRequestSchema>;
 
 // ===== CreateOrderWithExistingDesignsRequest =====
+// Payload tạo đơn hàng từ các thiết kế có sẵn
 
 export const CreateOrderWithExistingDesignsRequestSchema = z
   .object({
@@ -158,13 +168,14 @@ export type CreateOrderWithExistingDesignsRequest = z.infer<
 >;
 
 // ===== AddDesignToOrderRequest =====
+// Thêm một thiết kế vào đơn hàng hiện có
 
 export const AddDesignToOrderRequestSchema = z
   .object({
     designId: IdSchema,
     quantity: z.number().int().min(1),
   })
-  .strict();
+  .passthrough();
 
 export type AddDesignToOrderRequest = z.infer<
   typeof AddDesignToOrderRequestSchema
@@ -190,13 +201,14 @@ export const OrderResponseForDesignerSchema = z
 
     designs: z.array(DesignResponseForDesignerSchema).nullable().optional(),
   })
-  .strict();
+  .passthrough();
 
 export type OrderResponseForDesigner = z.infer<
   typeof OrderResponseForDesignerSchema
 >;
 
-// OrderResponseForDesignerPagedResponse
+// ===== OrderResponseForDesignerPagedResponse =====
+// Dữ liệu danh sách đơn hàng dành cho designer (phân trang)
 export const OrderResponseForDesignerPagedResponseSchema =
   createPagedResponseSchema(OrderResponseForDesignerSchema);
 

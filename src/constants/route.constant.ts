@@ -39,7 +39,8 @@ export const ROUTE_PATHS = {
   },
 
   PRODUCTION: {
-    ROOT: "/production" as const,
+    ROOT: "/productions" as const,
+    DETAIL: "/productions/:id" as const,
   },
 
   INVENTORY: {
