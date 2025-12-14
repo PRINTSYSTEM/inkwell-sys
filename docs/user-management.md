@@ -1,7 +1,7 @@
 # Tính năng Quản lý Tài khoản Nhân sự (User Management)
 
 ## Mô tả
-Tính năng này cho phép Admin quản lý tài khoản của tất cả nhân viên trong hệ thống, bao gồm tạo, xem, chỉnh sửa và xóa tài khoản.
+Tính năng này cho phép Admin quản lý tài khoản của tất cả nhân viên trong hệ thống, bao gồm tạo, xem, chỉnh sửa và xóa tài khoản .
 
 ## Đường dẫn truy cập
 - URL: `/admin/users`
