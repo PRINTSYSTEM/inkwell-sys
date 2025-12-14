@@ -104,12 +104,12 @@ export default function ProductionDetailPage() {
   }, [production?.status]);
 
   const showUpdateButton = useMemo(() => {
-    return production?.status === "in_progress";
+    return production?.status === "in_production";
   }, [production?.status]);
 
   const showCompleteButton = useMemo(() => {
     return (
-      production?.status === "in_progress" &&
+      production?.status === "in_production" &&
       (production?.progressPercent || 0) >= 100
     );
   }, [production?.status, production?.progressPercent]);
