@@ -81,22 +81,6 @@ export default function OrderDetailPage() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
 
-  // Excel download
-  const [downloadingDesignId, setDownloadingDesignId] = useState<number | null>(
-    null
-  );
-  const { mutate: generateExcel } = useGenerateDesignExcel();
-
-  const handleDownloadExcel = async (designId: number) => {
-    if (!designId) return;
-    setDownloadingDesignId(designId);
-    try {
-      await generateExcel(designId);
-    } finally {
-      setDownloadingDesignId(null);
-    }
-  };
-
   // ===== FETCH ORDER =====
   const {
     data: order,
@@ -404,41 +388,6 @@ export default function OrderDetailPage() {
                                   {design?.designType?.name} •{" "}
                                   {design?.materialType?.name}
                                 </p>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                {design?.id && (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          disabled={
-                                            downloadingDesignId === design.id
-                                          }
-                                          onClick={() =>
-                                            handleDownloadExcel(design.id)
-                                          }
-                                        >
-                                          {downloadingDesignId === design.id ? (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                          ) : (
-                                            <Download className="w-4 h-4" />
-                                          )}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        Tải file Excel
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                )}
-                                <Link to={`/design/detail/${design?.id}`}>
-                                  <Button variant="ghost" size="icon">
-                                    <ExternalLink className="w-4 h-4" />
-                                  </Button>
-                                </Link>
                               </div>
                             </div>
 
