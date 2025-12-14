@@ -391,19 +391,13 @@ export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
   const finalParams = normalizeParams(params ?? ({} as OrderListParams));
 
   // Call all hooks unconditionally to satisfy Rules of Hooks
-  const adminResult = useOrderListBase(finalParams);
-  const designerResult = useOrdersForDesigner(finalParams);
-  const accountingResult = useOrdersForAccounting(finalParams);
 
   // Return the appropriate result based on role
   if (role === ROLE.ADMIN || role === ROLE.MANAGER) {
-    return adminResult;
+    return useOrderListBase(finalParams);
+  } else if (role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD) {
+    return useOrdersForDesigner(finalParams);
+  } else {
+    return useOrdersForAccounting(finalParams);
   }
-
-  if (role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD) {
-    return designerResult;
-  }
-
-  // Default to accounting for accounting roles and others
-  return accountingResult;
 };
