@@ -53,7 +53,7 @@ import {
 } from "@/hooks/use-proofing-order";
 import { safeParseSchema } from "@/Schema";
 import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
-import { IdSchema } from "@/Schema/common";
+import { IdSchema } from "@/Schema";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { designStatusLabels, proofingStatusLabels } from "@/lib/status-utils";
 

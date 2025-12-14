@@ -5,8 +5,8 @@ import {
   DateSchema,
   NameSchema,
   createPagedResponseSchema,
-} from "./common";
-import { UserInfoSchema } from "./common";
+} from "./Common";
+import { UserInfoSchema } from "./Common";
 import { DesignTypeResponseSchema } from "./design-type.schema";
 import { MaterialTypeResponseSchema } from "./material-type.schema";
 

@@ -7,7 +7,7 @@ import {
   IdSchema,
   NameSchema,
   createPagedResponseSchema,
-} from "./common";
+} from "./Common";
 
 // CreateDesignTypeRequest
 export const CreateDesignTypeRequestSchema = z

@@ -45,7 +45,7 @@ import {
   useCompleteProduction,
 } from "@/hooks/use-production";
 import { useProofingOrder } from "@/hooks/use-proofing-order";
-import { IdSchema } from "@/Schema/common";
+import { IdSchema } from "@/Schema";
 
 export default function ProductionDetailPage() {
   const params = useParams();

@@ -1,7 +1,7 @@
 // src/Schema/production.schema.ts
 import { z } from "zod";
-import { IdSchema, DateSchema, createPagedResponseSchema } from "./common";
-import { UserInfoSchema } from "./common";
+import { IdSchema, DateSchema, createPagedResponseSchema } from "./Common";
+import { UserInfoSchema } from "./Common";
 
 // ===== ProductionResponse =====
 

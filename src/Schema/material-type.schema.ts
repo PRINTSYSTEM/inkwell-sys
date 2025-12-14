@@ -7,8 +7,8 @@ import {
   DateSchema,
   NameSchema,
   createPagedResponseSchema,
-} from "./common";
-import { UserInfoSchema } from "./common";
+} from "./Common";
+import { UserInfoSchema } from "./Common";
 
 // ===== MaterialTypeResponse =====
 // Dữ liệu trả về từ API cho một chất liệu thiết kế

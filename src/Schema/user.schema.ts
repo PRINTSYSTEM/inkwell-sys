@@ -5,7 +5,7 @@ import {
   DateSchema,
   NameSchema,
   createPagedResponseSchema,
-} from "./common";
+} from "./Common";
 import { UserRoleSchema } from "./common/enums";
 
 // ===== UserResponse =====
