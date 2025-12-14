@@ -51,6 +51,7 @@ import {
   orderStatusLabels,
   designStatusLabels,
   orderDetailItemStatusLabels,
+  orderDetailDerivedStatusLabels,
   customerTypeLabels,
   proofingStatusLabels,
   productionStatusLabels,
@@ -345,6 +346,22 @@ export default function OrderDetailPage() {
                 <div className="space-y-3">
                   {order.orderDetails.map((orderDetail, index) => {
                     const design = orderDetail.design;
+
+                    // Xác định status và label dựa trên isCutOver
+                    const isCutOver = orderDetail.isCutOver ?? false;
+                    const statusValue = isCutOver
+                      ? orderDetail.status
+                      : orderDetail.derivedStatus;
+                    const statusLabel = isCutOver
+                      ? orderDetailItemStatusLabels[orderDetail.status || ""] ||
+                        orderDetail.status ||
+                        "N/A"
+                      : orderDetailDerivedStatusLabels[
+                          orderDetail.derivedStatus || ""
+                        ] ||
+                        orderDetail.derivedStatus ||
+                        "N/A";
+
                     return (
                       <div
                         key={orderDetail.id}
@@ -378,14 +395,8 @@ export default function OrderDetailPage() {
                                     {design?.code || "—"}
                                   </p>
                                   <StatusBadge
-                                    status={orderDetail.status}
-                                    label={
-                                      orderDetailItemStatusLabels[
-                                        orderDetail.status || ""
-                                      ] ||
-                                      orderDetail.status ||
-                                      "N/A"
-                                    }
+                                    status={statusValue || ""}
+                                    label={statusLabel}
                                   />
                                 </div>
                                 <h4 className="font-medium">
