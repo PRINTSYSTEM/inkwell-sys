@@ -1,8 +1,8 @@
-import { DesignItem } from '@/types/proofing';
-import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { DesignItem } from "@/types/proofing";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface DesignCardProps {
   design: DesignItem;
@@ -26,9 +26,9 @@ export function DesignCard({
   return (
     <Card
       className={cn(
-        'relative cursor-pointer transition-all duration-200 hover:shadow-md',
-        isSelected && 'ring-2 ring-primary shadow-md',
-        !canSelect && !isSelected && 'opacity-50 cursor-not-allowed'
+        "relative cursor-pointer transition-all duration-200 hover:shadow-md",
+        isSelected && "ring-2 ring-primary shadow-md",
+        !canSelect && !isSelected && "opacity-50 cursor-not-allowed"
       )}
       onClick={handleClick}
     >
@@ -77,14 +77,14 @@ export function DesignCard({
 
         {/* Quantity & Price */}
         <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">SL: {design.quantity.toLocaleString()}</span>
-          <span className="font-medium">{design.unitPrice.toLocaleString()}đ</span>
+          <span className="text-muted-foreground">
+            SL: {design.quantity.toLocaleString()}
+          </span>
+          {/* <span className="font-medium">{design.unitPrice.toLocaleString()}đ</span> */}
         </div>
 
         {/* Order ID */}
-        <p className="text-xs text-muted-foreground">
-          Order: {design.orderId}
-        </p>
+        <p className="text-xs text-muted-foreground">Order: {design.orderId}</p>
       </CardContent>
     </Card>
   );
