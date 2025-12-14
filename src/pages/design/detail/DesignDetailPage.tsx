@@ -78,6 +78,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
 import type { OrderDetailResponse } from "@/Schema";
+import DesignCodeGeneratorComponent from "@/components/DesignCodeGenerator";
+import DesignCode from "@/components/design/design-code";
 
 export default function DesignDetailPage() {
   const params = useParams();
@@ -469,6 +471,16 @@ export default function DesignDetailPage() {
               )}
             </div>
           </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto p-6">
+          <DesignCode
+            code={d.code}
+            designName={d.designName}
+            dimensions={d.dimensions}
+            extraNote={d.extraNote as string}
+            createdAt={d.createdAt}
+          />
         </div>
 
         {/* MAIN CONTENT */}

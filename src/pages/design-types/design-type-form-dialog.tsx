@@ -18,12 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CreateDesignTypeRequest, DesignTypeEntity } from "@/Schema";
+import type { CreateDesignTypeRequest, DesignTypeResponse } from "@/Schema";
 
 interface DesignTypeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  designType?: DesignTypeEntity | null;
+  designType?: DesignTypeResponse | null;
   onSubmit: (data: CreateDesignTypeRequest) => void;
 }
 

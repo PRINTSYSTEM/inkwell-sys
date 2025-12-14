@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from "react";
 import { Edit, Package, Plus, Search, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const DesignTypeFormDialogLazy = lazy(() =>
   import("@/pages/design-types/design-type-form-dialog").then((m) => ({
@@ -39,7 +40,6 @@ import {
   useCreateMaterialType,
   useDeleteMaterialType,
   useUpdateMaterialType,
-  useMaterialTypeList,
 } from "@/hooks";
 import {
   Button,
@@ -71,6 +71,7 @@ type PagedResponse<T> = {
 
 export default function DesignTypesPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // ====== Search & Pagination state ======
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,41 +89,35 @@ export default function DesignTypesPage() {
     pageSize,
   });
 
-  const { data: materialTypesData } = useMaterialTypeList({});
-
   // Chuẩn hoá dữ liệu phân trang của designTypes
-  const designTypesPaged: PagedResponse<DesignTypeResponse> =
-    designTypesData && !Array.isArray(designTypesData)
-      ? (designTypesData as PagedResponse<DesignTypeResponse>)
-      : {
-          items: (designTypesData as DesignTypeResponse[]) ?? [],
-          totalCount: (designTypesData as DesignTypeResponse[])?.length ?? 0,
-          pageNumber: 1,
-          pageSize: (designTypesData as DesignTypeResponse[])?.length ?? 10,
-          totalPages: 1,
-          hasPreviousPage: false,
-          hasNextPage: false,
-        };
+  const designTypesPaged: PagedResponse<DesignTypeResponse> = (() => {
+    if (!designTypesData) {
+      return {
+        items: [],
+        totalCount: 0,
+        pageNumber: 1,
+        pageSize: 10,
+        totalPages: 1,
+        hasPreviousPage: false,
+        hasNextPage: false,
+      };
+    }
+    if (Array.isArray(designTypesData)) {
+      return {
+        items: designTypesData,
+        totalCount: designTypesData.length,
+        pageNumber: 1,
+        pageSize: designTypesData.length || 10,
+        totalPages: 1,
+        hasPreviousPage: false,
+        hasNextPage: false,
+      };
+    }
+    // It's a paged response - use unknown first to satisfy TypeScript
+    return designTypesData as unknown as PagedResponse<DesignTypeResponse>;
+  })();
 
   const designTypes: DesignTypeResponse[] = designTypesPaged.items ?? [];
-
-  // Chuẩn hoá material types (cũng đọc từ response phân trang nếu có)
-  const materialTypesPaged: PagedResponse<MaterialTypeResponse> =
-    materialTypesData && !Array.isArray(materialTypesData)
-      ? (materialTypesData as PagedResponse<MaterialTypeResponse>)
-      : {
-          items: (materialTypesData as MaterialTypeResponse[]) ?? [],
-          totalCount:
-            (materialTypesData as MaterialTypeResponse[])?.length ?? 0,
-          pageNumber: 1,
-          pageSize: (materialTypesData as MaterialTypeResponse[])?.length ?? 10,
-          totalPages: 1,
-          hasPreviousPage: false,
-          hasNextPage: false,
-        };
-
-  const materialTypesList: MaterialTypeResponse[] =
-    materialTypesPaged.items ?? [];
 
   // ====== Local UI state ======
   const [selectedDesignType, setSelectedDesignType] =
@@ -213,6 +208,10 @@ export default function DesignTypesPage() {
 
     createMaterialTypeMutation(payload, {
       onSuccess: () => {
+        // Invalidate materials-by-design-type query to refresh the list
+        queryClient.invalidateQueries({
+          queryKey: ["materials-by-design-type", designTypeId],
+        });
         toast({
           title: "Thành công",
           description: "Đã thêm chất liệu mới",
@@ -240,6 +239,10 @@ export default function DesignTypesPage() {
       },
       {
         onSuccess: () => {
+          // Invalidate materials-by-design-type query to refresh the list
+          queryClient.invalidateQueries({
+            queryKey: ["materials-by-design-type"],
+          });
           toast({
             title: "Thành công",
             description: "Đã cập nhật chất liệu",
@@ -252,6 +255,10 @@ export default function DesignTypesPage() {
   const handleDeleteMaterial = (id: number) => {
     deleteMaterialTypeMutation(id, {
       onSuccess: () => {
+        // Invalidate materials-by-design-type query to refresh the list
+        queryClient.invalidateQueries({
+          queryKey: ["materials-by-design-type"],
+        });
         toast({
           title: "Thành công",
           description: "Đã xóa chất liệu",
@@ -264,7 +271,7 @@ export default function DesignTypesPage() {
   const stats = {
     total: designTypesPaged.totalCount ?? designTypes.length,
     active: designTypes.filter((dt) => dt.status === "active").length, // trong trang hiện tại
-    totalMaterials: materialTypesPaged.totalCount ?? materialTypesList.length,
+    totalMaterials: 0, // Material types sẽ được fetch trong dialog khi cần
   };
 
   // ====== Pagination logic ======
@@ -617,9 +624,6 @@ export default function DesignTypesPage() {
             open={!!selectedDesignType}
             onOpenChange={(open) => !open && setSelectedDesignType(null)}
             designType={selectedDesignType}
-            materials={materialTypesList.filter(
-              (m) => m.designTypeId === selectedDesignType.id
-            )}
             onCreateMaterial={handleCreateMaterial}
             onEditMaterial={handleEditMaterial}
             onDeleteMaterial={handleDeleteMaterial}

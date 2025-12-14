@@ -46,6 +46,22 @@ const {
 export const useOrders = (params?: OrderListParams) =>
   useOrderListBase(params ?? ({} as OrderListParams));
 
+// Wrapper for admin/base list with enabled parameter
+const useOrderListBaseWithEnabled = (
+  params?: OrderListParams,
+  enabled = true
+) => {
+  return useQuery<OrderResponsePagedResponse>({
+    queryKey: orderKeys.list(params ?? ({} as OrderListParams)),
+    enabled,
+    queryFn: async () => {
+      const res = await orderCrudApi.list(params ?? ({} as OrderListParams));
+      return res;
+    },
+    staleTime: 5 * 60 * 1000, // 5 phút
+  });
+};
+
 export const useOrder = (id: number | null, enabled = true) =>
   useOrderDetailBase(id, enabled);
 
@@ -244,9 +260,10 @@ export const useAddDesignToOrder = () => {
 // ================== ORDER: LIST FOR DESIGNER ==================
 // GET /orders/for-designer
 
-const useOrdersForDesigner = (params?: OrderListParams) => {
+const useOrdersForDesigner = (params?: OrderListParams, enabled = true) => {
   return useQuery<OrderResponseForDesignerPagedResponse>({
     queryKey: [orderKeys.all[0], "for-designer", params],
+    enabled,
     queryFn: async () => {
       const res = await apiRequest.get<OrderResponseForDesignerPagedResponse>(
         API_SUFFIX.ORDERS_FOR_DESIGNER,
@@ -260,9 +277,10 @@ const useOrdersForDesigner = (params?: OrderListParams) => {
 // ================== ORDER: LIST FOR ACCOUNTING ==================
 // GET /orders/for-accounting
 
-const useOrdersForAccounting = (params?: OrderListParams) => {
+const useOrdersForAccounting = (params?: OrderListParams, enabled = true) => {
   return useQuery<OrderResponsePagedResponse>({
     queryKey: [orderKeys.all[0], "for-accounting", params],
+    enabled,
     queryFn: async () => {
       const res = await apiRequest.get<OrderResponsePagedResponse>(
         API_SUFFIX.ORDERS_FOR_ACCOUNTING,
@@ -390,14 +408,35 @@ export const useExportOrderDeliveryNote = () => {
 export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
   const finalParams = normalizeParams(params ?? ({} as OrderListParams));
 
+  // Determine which hook should be enabled based on role
+  const isAdminRole =
+    role === ROLE.ADMIN ||
+    role === ROLE.MANAGER ||
+    role === ROLE.PROOFER ||
+    role === ROLE.PRODUCTION ||
+    role === ROLE.PRODUCTION_LEAD ||
+    role === ROLE.ACCOUNTING_LEAD;
+  const isDesignerRole = role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD;
+  const isAccountingRole = role === ROLE.ACCOUNTING;
+
   // Call all hooks unconditionally to satisfy Rules of Hooks
+  // But only enable the query for the current role to optimize performance
+  const adminResult = useOrderListBaseWithEnabled(finalParams, isAdminRole);
+  const designerResult = useOrdersForDesigner(finalParams, isDesignerRole);
+  const accountingResult = useOrdersForAccounting(
+    finalParams,
+    isAccountingRole
+  );
 
   // Return the appropriate result based on role
-  if (role === ROLE.ADMIN || role === ROLE.MANAGER) {
-    return useOrderListBase(finalParams);
-  } else if (role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD) {
-    return useOrdersForDesigner(finalParams);
-  } else {
-    return useOrdersForAccounting(finalParams);
+  if (isDesignerRole) {
+    return designerResult;
   }
+
+  if (isAccountingRole) {
+    return accountingResult;
+  }
+
+  // Default to admin/base for admin roles and others
+  return adminResult;
 };

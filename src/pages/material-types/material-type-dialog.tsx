@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Search } from "lucide-react";
+import { Plus, Package, Search, Loader2 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -17,6 +17,7 @@ import {
   MaterialTypeResponse,
 } from "@/Schema";
 import { MaterialTypeList } from "./material-type-list";
+import { useMaterialsByDesignType } from "@/hooks";
 const MaterialTypeFormDialogLazy = lazy(() =>
   import("./material-type-form-dialog").then((m) => ({
     default: m.MaterialTypeFormDialog,
@@ -32,7 +33,6 @@ interface MaterialTypeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   designType: DesignTypeResponse;
-  materials: MaterialTypeResponse[];
   onCreateMaterial: (material: CreateMaterialTypeRequest) => void;
   onEditMaterial: (id: number, material: Partial<MaterialTypeResponse>) => void;
   onDeleteMaterial: (id: number) => void;
@@ -42,7 +42,6 @@ export function MaterialTypeDialog({
   open,
   onOpenChange,
   designType,
-  materials,
   onCreateMaterial,
   onEditMaterial,
   onDeleteMaterial,
@@ -53,6 +52,19 @@ export function MaterialTypeDialog({
   const [deletingMaterial, setDeletingMaterial] =
     useState<MaterialTypeResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Fetch material types when dialog is open
+  const {
+    data: materialsData,
+    isLoading: isLoadingMaterials,
+    isError: isErrorMaterials,
+  } = useMaterialsByDesignType(open ? designType?.id : undefined, undefined);
+
+  // Normalize materials data (always array from API)
+  const materials: MaterialTypeResponse[] = useMemo(() => {
+    if (!materialsData) return [];
+    return Array.isArray(materialsData) ? materialsData : [];
+  }, [materialsData]);
 
   const handleEdit = (material: MaterialTypeResponse) => {
     setEditingMaterial(material);
@@ -80,6 +92,14 @@ export function MaterialTypeDialog({
     }
   };
 
+  // Reset search when dialog closes
+  const handleDialogOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setSearchQuery("");
+    }
+    onOpenChange(isOpen);
+  };
+
   const filteredMaterials = materials.filter(
     (material) =>
       material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -88,7 +108,7 @@ export function MaterialTypeDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-6xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <div className="flex items-center justify-between">
@@ -165,11 +185,37 @@ export function MaterialTypeDialog({
           </div>
 
           <div className="flex-1 overflow-y-auto -mx-6 px-6">
-            <MaterialTypeList
-              materials={filteredMaterials}
-              onEdit={handleEdit}
-              onDelete={setDeletingMaterial}
-            />
+            {isLoadingMaterials ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Đang tải danh sách chất liệu...
+                </p>
+              </div>
+            ) : isErrorMaterials ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-red-500 mb-2">
+                  Không thể tải danh sách chất liệu
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Retry by closing and reopening
+                    handleDialogOpenChange(false);
+                    setTimeout(() => handleDialogOpenChange(true), 100);
+                  }}
+                >
+                  Thử lại
+                </Button>
+              </div>
+            ) : (
+              <MaterialTypeList
+                materials={filteredMaterials}
+                onEdit={handleEdit}
+                onDelete={setDeletingMaterial}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>

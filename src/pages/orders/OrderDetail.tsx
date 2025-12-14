@@ -92,6 +92,11 @@ export default function OrderDetailPage() {
   const canViewDesigner =
     role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD || role === ROLE.ADMIN;
 
+  const canExportExcel =
+    role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.ADMIN ||
+    role === ROLE.ACCOUNTING;
+
   // ===== PROOFING & PRODUCTION =====
   // Note: ProofingOrderListParams không có orderId để filter
   // Các proofing orders liên quan sẽ cần được fetch từ API riêng hoặc
@@ -178,15 +183,17 @@ export default function OrderDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => setPrintDialogOpen(true)}
-            >
-              <Printer className="w-4 h-4" />
-              In đơn
-            </Button>
+            {canExportExcel && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setPrintDialogOpen(true)}
+              >
+                <Printer className="w-4 h-4" />
+                In đơn
+              </Button>
+            )}
 
             <Button
               variant="outline"
