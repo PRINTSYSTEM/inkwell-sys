@@ -16,13 +16,29 @@ import {
   User,
   Package,
   TrendingUp,
+  Eye,
+  Loader2,
 } from "lucide-react";
-import { useCustomer, useUpdateCustomer } from "@/hooks";
+import { useCustomer, useUpdateCustomer, useOrders } from "@/hooks";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { ZodError } from "zod";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  orderStatusLabels,
+  formatCurrency,
+  formatDate,
+} from "@/lib/status-utils";
 
 import { CustomerResponse, UpdateCustomerRequestSchema } from "@/Schema";
 
@@ -33,8 +49,50 @@ export default function CustomerDetail() {
   const [customer, setCustomer] = useState<CustomerResponse | null>(null);
   const [editForm, setEditForm] = useState<CustomerResponse | null>(null);
 
-  const { data, isLoading, error } = useCustomer(parseInt(id));
+  const customerId = parseInt(id || "0");
+  const { data, isLoading, error } = useCustomer(customerId, !!id);
   const { mutateAsync: updateCustomer, isPending } = useUpdateCustomer();
+
+  // Fetch orders for this customer
+  const { data: ordersData, isLoading: isLoadingOrders } = useOrders({
+    customerId: customerId || undefined,
+    pageNumber: 1,
+    pageSize: 100, // Get all orders for this customer
+  });
+
+  const orders = ordersData?.items ?? [];
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const totalOrders = orders.length;
+    const totalAmount = orders.reduce(
+      (sum, order) => sum + (order.totalAmount || 0),
+      0
+    );
+    const totalDeposit = orders.reduce(
+      (sum, order) => sum + (order.depositAmount || 0),
+      0
+    );
+    const remainingDebt = totalAmount - totalDeposit;
+    const completedOrders = orders.filter(
+      (order) => order.status === "completed"
+    ).length;
+    const inProgressOrders = orders.filter(
+      (order) =>
+        order.status !== "completed" &&
+        order.status !== "cancelled" &&
+        order.status !== "invoice_issued"
+    ).length;
+
+    return {
+      totalOrders,
+      totalAmount,
+      totalDeposit,
+      remainingDebt,
+      completedOrders,
+      inProgressOrders,
+    };
+  }, [orders]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -48,9 +106,6 @@ export default function CustomerDetail() {
       setEditForm(data);
     }
   }, [isLoading, error, data, navigate]);
-
-  // TODO: Load customer orders from OrderService when available
-  // const customerOrders = mockOrders.filter(order => order.customerId === id);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -164,26 +219,6 @@ export default function CustomerDetail() {
       </div>
     );
   }
-
-  const statusLabels = {
-    new: "Mới",
-    designing: "Đang thiết kế",
-    waiting_approval: "Chờ duyệt",
-    waiting_deposit: "Chờ cọc",
-    in_production: "Đang sản xuất",
-    completed: "Hoàn thành",
-    cancelled: "Đã hủy",
-  };
-
-  const statusColors = {
-    new: "bg-blue-100 text-blue-800",
-    designing: "bg-purple-100 text-purple-800",
-    waiting_approval: "bg-yellow-100 text-yellow-800",
-    waiting_deposit: "bg-orange-100 text-orange-800",
-    in_production: "bg-green-100 text-green-800",
-    completed: "bg-gray-100 text-gray-800",
-    cancelled: "bg-red-100 text-red-800",
-  };
 
   return (
     <div className="space-y-6">
@@ -360,22 +395,76 @@ export default function CustomerDetail() {
             </CardContent>
           </Card>
 
-          {/* Order History - TODO: Implement when OrderService is available */}
+          {/* Order History */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Lịch sử đơn hàng (0)
+                Lịch sử đơn hàng ({stats.totalOrders})
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>Chưa có đơn hàng nào</p>
-                <p className="text-sm">
-                  Sẽ hiển thị khi OrderService được triển khai
-                </p>
-              </div>
+              {isLoadingOrders ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : orders.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Mã đơn</TableHead>
+                        <TableHead>Trạng thái</TableHead>
+                        <TableHead>Giá trị</TableHead>
+                        <TableHead>Đã cọc</TableHead>
+                        <TableHead>Ngày tạo</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">
+                            <Link
+                              to={`/orders/${order.id}`}
+                              className="text-primary hover:underline"
+                            >
+                              {order.code}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={order.status || ""}
+                              label={
+                                orderStatusLabels[order.status || ""] || "N/A"
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(order.totalAmount)}
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(order.depositAmount)}
+                          </TableCell>
+                          <TableCell>{formatDate(order.createdAt)}</TableCell>
+                          <TableCell>
+                            <Link to={`/orders/${order.id}`}>
+                              <Button variant="ghost" size="icon">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Chưa có đơn hàng nào</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -420,7 +509,7 @@ export default function CustomerDetail() {
           </Card>
         </div>
 
-        {/* Statistics - Placeholder until OrderService is implemented */}
+        {/* Statistics */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -429,13 +518,64 @@ export default function CustomerDetail() {
                 Thống kê
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>Thống kê đơn hàng</p>
-                <p className="text-sm">
-                  Sẽ hiển thị khi OrderService được triển khai
-                </p>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Tổng đơn hàng
+                    </p>
+                    <p className="text-2xl font-bold">{stats.totalOrders}</p>
+                  </div>
+                  <Package className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Tổng giá trị
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(stats.totalAmount)}
+                    </p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-400" />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Đã cọc</p>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(stats.totalDeposit)}
+                    </p>
+                  </div>
+                  <FileText className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Công nợ</p>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(stats.remainingDebt)}
+                    </p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/20">
+                    <p className="text-xs text-muted-foreground">Hoàn thành</p>
+                    <p className="text-lg font-semibold">
+                      {stats.completedOrders}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/20">
+                    <p className="text-xs text-muted-foreground">Đang xử lý</p>
+                    <p className="text-lg font-semibold">
+                      {stats.inProgressOrders}
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
