@@ -258,7 +258,7 @@ export function useAsyncData<T>(
 
     return () => {
       if (abortControllerRef.current instanceof AbortController) {
-        // @ts-ignore
+        // @ts-expect-error - abort may not exist on some implementations
         abortControllerRef.current.abort?.();
       }
       if (retryTimeoutRef.current) {

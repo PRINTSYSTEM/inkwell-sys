@@ -6,6 +6,12 @@ import type { InvoiceFileResponse } from "@/Schema/invoice.schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async"; // <- hook async bạn đã có
 
+// Error type for API responses
+type ApiError = {
+  response?: { data?: { message?: string } };
+  message?: string;
+};
+
 export const invoiceKeys = {
   byOrder: (orderId: number | null) => ["invoice", "order", orderId] as const,
 };
@@ -62,9 +68,12 @@ export const useGenerateOrderInvoice = () => {
       // - nếu là URL: có thể window.open(result, "_blank")
       // - nếu là mã hoá đơn: hiển thị trong UI
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       const message =
-        err?.response?.data?.message || err?.message || "Không thể tạo hoá đơn";
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể tạo hoá đơn";
 
       toast({
         title: "Lỗi",

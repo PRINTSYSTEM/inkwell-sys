@@ -53,32 +53,34 @@ import {
   useCreateCustomer,
   useCreateOrder,
   useCustomers,
+  useDesigns,
+  useDesignsByCustomer,
   useDesignTypes,
   useMaterialsByDesignType,
-  useOrders,
   useToast,
 } from "@/hooks";
-import {
-  CreateDesignRequest,
+import type {
+  CreateDesignRequestEmbedded,
   CustomerResponse,
   DesignResponse,
   DesignTypeResponse,
   MaterialTypeResponse,
 } from "@/Schema";
 
-// ===== UI model: CreateDesignRequest + field phục vụ UI =====
-type CreateDesignRequestUI = CreateDesignRequest & {
-  id: string; // id cho UI
-  designCode?: string; // nếu sau này muốn show code
+// ===== UI model: CreateDesignRequestEmbedded + field phục vụ UI =====
+type CreateDesignRequestUI = CreateDesignRequestEmbedded & {
+  id: string; // id cho UI (unique key cho React)
+  designCode?: string; // code của design gốc (nếu từ existing)
+  isFromExisting?: boolean; // đánh dấu là từ thiết kế có sẵn (existing)
 };
 
 // Chuẩn hóa mọi kiểu response (items, data, array) về mảng
 const normalizeArray = <T,>(raw: unknown): T[] => {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw as T[];
-  const anyRaw = raw as any;
-  if (Array.isArray(anyRaw.items)) return anyRaw.items as T[];
-  if (Array.isArray(anyRaw.data)) return anyRaw.data as T[];
+  const objRaw = raw as { items?: unknown[]; data?: unknown[] };
+  if (Array.isArray(objRaw.items)) return objRaw.items as T[];
+  if (Array.isArray(objRaw.data)) return objRaw.data as T[];
   return [];
 };
 
@@ -90,6 +92,91 @@ const generateDesignCodePreview = (
   if (!designTypeId) return "";
   const dt = designTypes.find((x) => x.id === designTypeId);
   return dt ? `${dt.code}xxx` : "";
+};
+
+// ===== Component con: Design có sẵn (chỉ hiển thị thông tin + nhập số lượng) =====
+type ExistingDesignItemProps = {
+  design: CreateDesignRequestUI;
+  index: number;
+  onChange: (id: string, patch: Partial<CreateDesignRequestUI>) => void;
+  onRemove: (id: string) => void;
+  canRemove: boolean;
+};
+
+const ExistingDesignItem: React.FC<ExistingDesignItemProps> = ({
+  design,
+  index,
+  onChange,
+  onRemove,
+  canRemove,
+}) => {
+  return (
+    <div className="border rounded-lg p-4 bg-blue-50/50 dark:bg-blue-950/20 border-l-4 border-l-blue-500">
+      <div className="flex items-start justify-between gap-4">
+        {/* Left: Design Info */}
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 text-sm font-bold shrink-0">
+            {index + 1}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-sm truncate">
+                {design.designCode || `Design #${design.designId}`}
+              </p>
+              <Badge
+                variant="secondary"
+                className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 shrink-0"
+              >
+                Có sẵn
+              </Badge>
+            </div>
+            {design.designName && (
+              <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                {design.designName}
+              </p>
+            )}
+            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+              {design.width && design.height && (
+                <span>
+                  Kích thước: {design.width} x {design.height} cm
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Quantity Input + Remove */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Số lượng *</Label>
+            <Input
+              type="number"
+              placeholder="VD: 1000"
+              value={design.quantity || ""}
+              onChange={(e) =>
+                onChange(design.id, {
+                  quantity: e.target.value === "" ? 0 : Number(e.target.value),
+                })
+              }
+              className="w-28 h-9 text-sm bg-background"
+              min={1}
+            />
+          </div>
+          {canRemove && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => onRemove(design.id)}
+              className="h-8 w-8 text-destructive hover:bg-destructive/10 mt-5"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // ===== Component con: một yêu cầu thiết kế mới =====
@@ -122,16 +209,18 @@ const DesignRequestItem: React.FC<DesignRequestItemProps> = ({
   } = useMaterialsByDesignType(designTypeNumericId);
 
   return (
-    <div className="border rounded-md p-4 bg-muted/20 relative border-l-4 border-l-primary/60">
+    <div className="border rounded-md p-4 relative border-l-4 bg-muted/20 border-l-primary/60">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-xs text-primary font-semibold">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md text-xs font-semibold bg-primary/10 text-primary">
             {index + 1}
           </div>
           <div>
-            <p className="text-sm font-medium">
-              {design.designName || `Thiết kế mới #${index + 1}`}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium">
+                {design.designName || `Thiết kế mới #${index + 1}`}
+              </p>
+            </div>
             {design.designTypeId > 0 && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <FileText className="h-3.5 w-3.5" />
@@ -382,9 +471,6 @@ export default function CreateOrderPage() {
     isError: designTypesError,
   } = useDesignTypes({ status: "active" });
 
-  // lấy toàn bộ order (sau đó filter theo customer ở FE)
-  const { data: ordersData } = useOrders({ pageSize: 200 });
-
   const createOrderMutation = useCreateOrder();
   const createCustomerMutation = useCreateCustomer();
 
@@ -422,12 +508,10 @@ export default function CreateOrderPage() {
     },
   ]);
 
-  // thiết kế cũ của khách được chọn
-  const [selectedExistingDesignIds, setSelectedExistingDesignIds] = useState<
-    number[]
-  >([]);
+  // const [selectedExistingDesignIds, setSelectedExistingDesignIds] = useState<number[]>([]);
 
   const [newCustomerData, setNewCustomerData] = useState({
+    name: "",
     companyName: "",
     representativeName: "",
     phone: "",
@@ -436,19 +520,14 @@ export default function CreateOrderPage() {
     maxDebt: "10000000",
   });
 
-  // ===== Lấy danh sách design cũ của khách (từ orders) =====
+  // ===== Lấy danh sách design có sẵn của khách =====
+  const { data: existingDesignsData, isLoading: loadingExistingDesigns } =
+    useDesignsByCustomer(Number(selectedCustomer?.id ?? 0));
+
   const existingDesignsForCustomer: DesignResponse[] = useMemo(() => {
-    if (!selectedCustomer) return [];
-    const allOrders = ordersData?.items ?? [];
-    const relatedOrders = allOrders.filter(
-      (o: any) => o.customerId === selectedCustomer.id
-    );
-    const allDesigns = relatedOrders.flatMap(
-      (o: any) => (o.designs as DesignResponse[]) ?? []
-    );
-    // Có thể filter thêm theo status nếu muốn
-    return allDesigns;
-  }, [selectedCustomer, ordersData]);
+    if (!existingDesignsData) return [];
+    return existingDesignsData || [];
+  }, [existingDesignsData]);
 
   // ===== Handlers =====
   const handleCustomerSelect = (customerId: string) => {
@@ -456,8 +535,21 @@ export default function CreateOrderPage() {
     if (customer) {
       setSelectedCustomer(customer);
       setFormData((prev) => ({ ...prev, customerId }));
-      // reset lựa chọn thiết kế cũ khi đổi khách
-      setSelectedExistingDesignIds([]);
+      setDesigns([
+        {
+          id: "1",
+          designCode: "",
+          designTypeId: 0,
+          materialTypeId: 0,
+          assignedDesignerId: 0,
+          quantity: 0,
+          designName: "",
+          width: 0,
+          height: 0,
+          requirements: "",
+          additionalNotes: "",
+        },
+      ]);
     }
   };
 
@@ -505,28 +597,99 @@ export default function CreateOrderPage() {
     );
   };
 
-  const toggleExistingDesign = (id: number) => {
-    setSelectedExistingDesignIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  const handleSelectExistingDesign = (design: DesignResponse) => {
+    // Check if this design is already in the list by designId (for existing designs)
+    const existingIndex = designs.findIndex(
+      (d) => d.isFromExisting && d.designId === design.id
     );
+
+    if (existingIndex >= 0) {
+      // Remove it if already selected
+      if (designs.length > 1) {
+        setDesigns((prev) => prev.filter((_, i) => i !== existingIndex));
+      } else {
+        // If it's the only one, reset to empty new design
+        setDesigns([
+          {
+            id: "1",
+            designCode: "",
+            designTypeId: 0,
+            materialTypeId: 0,
+            assignedDesignerId: 0,
+            quantity: 0,
+            designName: "",
+            width: 0,
+            height: 0,
+            requirements: "",
+            additionalNotes: "",
+          },
+        ]);
+      }
+    } else {
+      // Generate unique id for new item
+      const newId = `existing-${design.id}-${Date.now()}`;
+
+      // Check if current first design is empty (default state)
+      const firstDesignEmpty =
+        designs.length === 1 &&
+        !designs[0].designName &&
+        !designs[0].designTypeId &&
+        !designs[0].quantity;
+
+      const newDesignItem: CreateDesignRequestUI = {
+        id: newId,
+        designCode: design.code || undefined,
+        designId: design.id, // ID của design có sẵn
+        isFromExisting: true,
+        // Các field dưới đây dùng để hiển thị UI, không gửi lên API
+        designTypeId: design.designTypeId || 0,
+        materialTypeId: design.materialTypeId || 0,
+        assignedDesignerId: user?.id || design.designerId || 0,
+        quantity: 0, // User needs to specify quantity
+        designName: design.designName || "",
+        width: design.width || 0,
+        height: design.height || 0,
+        requirements: "",
+        additionalNotes: "",
+      };
+
+      if (firstDesignEmpty) {
+        // Replace empty first design
+        setDesigns([newDesignItem]);
+      } else {
+        // Add to list
+        setDesigns((prev) => [...prev, newDesignItem]);
+      }
+    }
+  };
+
+  const isDesignSelected = (design: DesignResponse) => {
+    return designs.some((d) => d.isFromExisting && d.designId === design.id);
   };
 
   // validate designs (UI)
   const validateDesigns = () =>
-    designs.filter(
-      (d) =>
-        d.designTypeId > 0 &&
-        d.materialTypeId > 0 &&
-        d.designName.trim() &&
-        d.quantity > 0 &&
-        d.requirements.trim() &&
-        d.width > 0 &&
-        d.height > 0
-    );
+    designs.filter((d) => {
+      if (d.isFromExisting && d.designId) {
+        // Existing design: chỉ cần designId và quantity
+        return d.designId > 0 && d.quantity > 0;
+      } else {
+        // New design: cần đầy đủ thông tin
+        return (
+          d.designTypeId > 0 &&
+          d.materialTypeId > 0 &&
+          d.designName?.trim() &&
+          d.quantity > 0 &&
+          d.width > 0 &&
+          d.height > 0
+        );
+      }
+    });
 
   // tạo khách hàng mới
   const handleCreateCustomer = () => {
     if (
+      !newCustomerData.name ||
       !newCustomerData.companyName ||
       !newCustomerData.representativeName ||
       !newCustomerData.phone
@@ -541,6 +704,7 @@ export default function CreateOrderPage() {
 
     createCustomerMutation.mutate(
       {
+        name: newCustomerData.name,
         companyName: newCustomerData.companyName,
         representativeName: newCustomerData.representativeName,
         phone: newCustomerData.phone,
@@ -549,13 +713,14 @@ export default function CreateOrderPage() {
         maxDebt: Number(newCustomerData.maxDebt) || 0,
       },
       {
-        onSuccess: (created: any) => {
+        onSuccess: (created: CustomerResponse) => {
           toast({
             title: "Thành công",
             description: "Đã tạo khách hàng mới",
           });
           setShowCreateCustomerDialog(false);
           setNewCustomerData({
+            name: "",
             companyName: "",
             representativeName: "",
             phone: "",
@@ -572,11 +737,12 @@ export default function CreateOrderPage() {
             }));
           }
         },
-        onError: (err: any) => {
+        onError: (err: unknown) => {
+          const error = err as { response?: { data?: { message?: string } } };
           toast({
             title: "Lỗi",
             description:
-              err?.response?.data?.message ||
+              error?.response?.data?.message ||
               "Không thể tạo khách hàng, vui lòng thử lại",
             variant: "destructive",
           });
@@ -597,48 +763,43 @@ export default function CreateOrderPage() {
     }
 
     const validDesigns = validateDesigns();
-    const selectedExisting = existingDesignsForCustomer.filter((d) =>
-      selectedExistingDesignIds.includes(d.id)
-    );
 
-    if (validDesigns.length === 0 && selectedExisting.length === 0) {
+    if (validDesigns.length === 0) {
       toast({
         title: "Lỗi",
-        description:
-          "Vui lòng chọn thiết kế có sẵn hoặc thêm ít nhất một yêu cầu thiết kế mới hợp lệ",
+        description: "Vui lòng thêm ít nhất một thiết kế hợp lệ",
         variant: "destructive",
       });
       return;
     }
 
-    // map thiết kế cũ -> CreateDesignRequest
-    const reusedDesignRequests: CreateDesignRequest[] = selectedExisting.map(
-      (d) => ({
-        designTypeId: d.designTypeId,
-        materialTypeId: d.materialTypeId,
-        assignedDesignerId: user?.id || d.designer?.id || 0,
-        quantity: d.quantity,
-        designName: d.designName,
-        width: d.width,
-        height: d.height,
-        requirements: d.requirements ?? "",
-        additionalNotes: d.additionalNotes ?? "",
-      })
+    const designRequests: CreateDesignRequestEmbedded[] = validDesigns.map(
+      (d) => {
+        // Loại bỏ các field UI-only
+        const { id, designCode, isFromExisting, ...rest } = d;
+
+        if (isFromExisting && d.designId) {
+          // Design CŨ: chỉ cần designId và quantity
+          return {
+            designId: d.designId,
+            quantity: d.quantity,
+          };
+        } else {
+          // Design MỚI: cần designTypeId, materialTypeId, quantity, width, height, etc.
+          return {
+            designTypeId: rest.designTypeId,
+            materialTypeId: rest.materialTypeId,
+            assignedDesignerId: user?.id || rest.assignedDesignerId || null,
+            quantity: rest.quantity,
+            designName: rest.designName || null,
+            width: rest.width || null,
+            height: rest.height || null,
+            requirements: rest.requirements || null,
+            additionalNotes: rest.additionalNotes || null,
+          };
+        }
+      }
     );
-
-    // map UI model -> CreateDesignRequest gửi BE
-    const newDesignRequests: CreateDesignRequest[] = validDesigns.map((d) => {
-      const { id, designCode, ...rest } = d;
-      return {
-        ...rest,
-        assignedDesignerId: user?.id || rest.assignedDesignerId || 0,
-      };
-    });
-
-    const designRequests: CreateDesignRequest[] = [
-      ...reusedDesignRequests,
-      ...newDesignRequests,
-    ];
 
     const deliveryDateIso = formData.deliveryDate
       ? new Date(formData.deliveryDate).toISOString()
@@ -670,11 +831,12 @@ export default function CreateOrderPage() {
           });
           navigate("/orders");
         },
-        onError: (err: any) => {
+        onError: (err: unknown) => {
+          const error = err as { response?: { data?: { message?: string } } };
           toast({
             title: "Lỗi",
             description:
-              err?.response?.data?.message ||
+              error?.response?.data?.message ||
               "Không thể tạo đơn hàng, vui lòng thử lại",
             variant: "destructive",
           });
@@ -689,14 +851,35 @@ export default function CreateOrderPage() {
   };
 
   // ================= SUMMARY DATA =================
-  const totalNewQuantity = designs.reduce(
-    (sum, d) => sum + (d.quantity || 0),
-    0
-  );
-  const totalExistingQuantity = existingDesignsForCustomer
-    .filter((d) => selectedExistingDesignIds.includes(d.id))
-    .reduce((sum, d) => sum + (d.quantity || 0), 0);
-  const totalQuantity = totalNewQuantity + totalExistingQuantity;
+  const totalQuantity = designs.reduce((sum, d) => sum + (d.quantity || 0), 0);
+
+  // Số thiết kế hợp lệ (đã điền đủ thông tin)
+  const validDesignCount = designs.filter((d) => {
+    if (d.isFromExisting && d.designId) {
+      return d.designId > 0 && d.quantity > 0;
+    } else {
+      return (
+        d.designTypeId > 0 &&
+        d.materialTypeId > 0 &&
+        d.designName?.trim() &&
+        d.quantity > 0
+      );
+    }
+  }).length;
+
+  // Số thiết kế từ template vs mới
+  const fromExistingCount = designs.filter((d) => d.isFromExisting).length;
+  const newDesignCount = designs.length - fromExistingCount;
+
+  // Danh sách loại thiết kế được sử dụng
+  const usedDesignTypes = useMemo(() => {
+    const typeIds = [
+      ...new Set(designs.map((d) => d.designTypeId).filter(Boolean)),
+    ];
+    return typeIds
+      .map((id) => designTypes.find((dt) => dt.id === id)?.name)
+      .filter(Boolean);
+  }, [designs, designTypes]);
 
   // ===== UI =====
   return (
@@ -856,7 +1039,8 @@ export default function CreateOrderPage() {
                           </Badge>
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm font-medium">
-                              {selectedCustomer.companyName ||
+                              {selectedCustomer.name ||
+                                selectedCustomer.companyName ||
                                 selectedCustomer.representativeName}
                             </span>
                             {selectedCustomer.phone && (
@@ -937,27 +1121,31 @@ export default function CreateOrderPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0 pb-4">
-                  {/* Thiết kế có sẵn */}
-                  {/* Thiết kế có sẵn */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
-                      Thiết kế có sẵn của khách (tuỳ chọn)
+                      Chọn thiết kế có sẵn của khách (tuỳ chọn)
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Thiết kế được chọn sẽ thêm vào danh sách bên dưới và có
+                      thể chỉnh sửa số lượng, kích thước
+                    </p>
 
                     {!selectedCustomer ? (
                       <p className="text-sm text-muted-foreground italic">
-                        Chọn khách hàng để xem các thiết kế cũ.
+                        Chọn khách hàng để xem các thiết kế có sẵn.
+                      </p>
+                    ) : loadingExistingDesigns ? (
+                      <p className="text-sm text-muted-foreground italic">
+                        Đang tải thiết kế có sẵn...
                       </p>
                     ) : existingDesignsForCustomer.length === 0 ? (
                       <p className="text-sm text-muted-foreground italic">
-                        Khách hàng này chưa có thiết kế nào trước đó.
+                        Khách hàng này chưa có thiết kế nào.
                       </p>
                     ) : (
                       <div className="grid gap-3 md:grid-cols-2">
                         {existingDesignsForCustomer.map((d) => {
-                          const selected = selectedExistingDesignIds.includes(
-                            d.id
-                          );
+                          const selected = isDesignSelected(d);
                           const sizeLabel =
                             d.width && d.height
                               ? `${d.width} x ${d.height} mm`
@@ -967,7 +1155,7 @@ export default function CreateOrderPage() {
                             <button
                               key={d.id}
                               type="button"
-                              onClick={() => toggleExistingDesign(d.id)}
+                              onClick={() => handleSelectExistingDesign(d)}
                               className={[
                                 "w-full text-left rounded-md border p-3 flex flex-col gap-1.5 transition-all",
                                 "hover:shadow-sm hover:-translate-y-[1px]",
@@ -976,7 +1164,7 @@ export default function CreateOrderPage() {
                                   : "border-border bg-background",
                               ].join(" ")}
                             >
-                              {/* Row 1: Code + tên + trạng thái */}
+                              {/* Row 1: Code + tên */}
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex flex-col gap-0.5">
                                   <div className="flex items-center gap-2">
@@ -986,11 +1174,6 @@ export default function CreateOrderPage() {
                                     >
                                       {d.code || `DES-${d.id}`}
                                     </Badge>
-                                    {d.designStatus && (
-                                      <span className="text-[11px] rounded-full px-2 py-0.5 bg-muted text-muted-foreground">
-                                        {d.designStatus}
-                                      </span>
-                                    )}
                                   </div>
                                   <span className="text-sm font-medium line-clamp-2">
                                     {d.designName || "Không tên"}
@@ -1014,24 +1197,18 @@ export default function CreateOrderPage() {
                               <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                                 {d.designType?.name && (
                                   <span className="px-2 py-0.5 rounded-full bg-muted/80">
-                                    Loại: {d.designType.name}
+                                    {d.designType.name}
                                   </span>
                                 )}
                                 {d.materialType?.name && (
                                   <span className="px-2 py-0.5 rounded-full bg-muted/80">
-                                    Chất liệu: {d.materialType.name}
+                                    {d.materialType.name}
                                   </span>
                                 )}
                               </div>
 
-                              {/* Row 3: Số lượng + kích thước + ngày */}
+                              {/* Row 3: Kích thước + ngày */}
                               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground mt-1">
-                                <span>
-                                  SL:{" "}
-                                  <span className="font-medium">
-                                    {d.quantity?.toLocaleString("vi-VN") ?? 0}
-                                  </span>
-                                </span>
                                 <span>Kích thước: {sizeLabel}</span>
                                 {d.updatedAt && (
                                   <span>
@@ -1055,18 +1232,21 @@ export default function CreateOrderPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">
-                        Thiết kế mới ({designs.length})
+                        Danh sách thiết kế ({designs.length})
                       </p>
+                      <span className="text-xs text-muted-foreground">
+                        Có thể chỉnh sửa số lượng và kích thước
+                      </span>
                     </div>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 px-3 text-sm"
+                      className="h-8 px-3 text-sm bg-transparent"
                       onClick={addDesign}
                     >
                       <Plus className="h-4 w-4 mr-1" />
-                      Thêm yêu cầu
+                      Thêm mới
                     </Button>
                   </div>
 
@@ -1081,17 +1261,28 @@ export default function CreateOrderPage() {
                     </p>
                   )}
 
-                  {designs.map((design, index) => (
-                    <DesignRequestItem
-                      key={design.id}
-                      design={design}
-                      index={index}
-                      designTypes={designTypes}
-                      onChange={updateDesign}
-                      onRemove={removeDesign}
-                      canRemove={designs.length > 1}
-                    />
-                  ))}
+                  {designs.map((design, index) =>
+                    design.isFromExisting ? (
+                      <ExistingDesignItem
+                        key={design.id}
+                        design={design}
+                        index={index}
+                        onChange={updateDesign}
+                        onRemove={removeDesign}
+                        canRemove={designs.length > 1}
+                      />
+                    ) : (
+                      <DesignRequestItem
+                        key={design.id}
+                        design={design}
+                        index={index}
+                        designTypes={designTypes}
+                        onChange={updateDesign}
+                        onRemove={removeDesign}
+                        canRemove={designs.length > 1}
+                      />
+                    )
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1118,7 +1309,8 @@ export default function CreateOrderPage() {
                             {selectedCustomer.code}
                           </Badge>
                           <span className="text-sm">
-                            {selectedCustomer.companyName ||
+                            {selectedCustomer.name ||
+                              selectedCustomer.companyName ||
                               selectedCustomer.representativeName}
                           </span>
                         </div>
@@ -1144,7 +1336,8 @@ export default function CreateOrderPage() {
 
                   <Separator />
 
-                  <div className="space-y-1.5 text-sm">
+                  <div className="space-y-2 text-sm">
+                    {/* Ngày giao */}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Ngày giao</span>
                       <span>
@@ -1155,28 +1348,101 @@ export default function CreateOrderPage() {
                           : "Chưa đặt"}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Thiết kế có sẵn
-                      </span>
-                      <span className="font-medium">
-                        {selectedExistingDesignIds.length}
-                      </span>
+
+                    {/* Ghi chú */}
+                    {formData.notes && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Ghi chú</span>
+                        <span className="text-right max-w-[150px] truncate">
+                          {formData.notes}
+                        </span>
+                      </div>
+                    )}
+
+                    <Separator className="my-1" />
+
+                    {/* Chi tiết thiết kế */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Thiết kế
+                      </p>
+
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Tổng số</span>
+                        <span className="font-medium">{designs.length}</span>
+                      </div>
+
+                      {fromExistingCount > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-blue-600">• Từ mẫu có sẵn</span>
+                          <span className="text-blue-600">
+                            {fromExistingCount}
+                          </span>
+                        </div>
+                      )}
+
+                      {newDesignCount > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            • Thiết kế mới
+                          </span>
+                          <span>{newDesignCount}</span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Hợp lệ</span>
+                        <span
+                          className={
+                            validDesignCount === designs.length
+                              ? "text-green-600 font-medium"
+                              : "text-amber-600"
+                          }
+                        >
+                          {validDesignCount}/{designs.length}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Thiết kế mới
-                      </span>
-                      <span className="font-medium">{designs.length}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t mt-1">
-                      <span className="text-muted-foreground">
+
+                    {/* Loại thiết kế sử dụng */}
+                    {usedDesignTypes.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          Loại thiết kế:
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {usedDesignTypes.map((name, i) => (
+                            <Badge
+                              key={i}
+                              variant="secondary"
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <Separator className="my-1" />
+
+                    {/* Tổng số lượng */}
+                    <div className="flex justify-between pt-1">
+                      <span className="text-muted-foreground font-medium">
                         Tổng số lượng
                       </span>
-                      <span className="font-semibold">
+                      <span className="font-bold text-lg text-primary">
                         {totalQuantity.toLocaleString("vi-VN")}
                       </span>
                     </div>
+
+                    {/* Cảnh báo nếu chưa đủ thông tin */}
+                    {validDesignCount < designs.length && (
+                      <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2 text-xs text-amber-700 dark:text-amber-400">
+                        ⚠️ Còn {designs.length - validDesignCount} thiết kế chưa
+                        điền đủ thông tin
+                      </div>
+                    )}
                   </div>
 
                   <Separator />
@@ -1223,6 +1489,24 @@ export default function CreateOrderPage() {
           </DialogHeader>
 
           <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm">
+                Tên khách hàng <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="name"
+                placeholder="VD: Nguyễn Văn A"
+                value={newCustomerData.name}
+                onChange={(e) =>
+                  setNewCustomerData((prev) => ({
+                    ...prev,
+                    name: e.target.value,
+                  }))
+                }
+                className="h-10 text-sm"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="companyName" className="text-sm">
                 Tên công ty <span className="text-destructive">*</span>

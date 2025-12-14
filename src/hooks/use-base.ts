@@ -1,9 +1,21 @@
-// src/lib/crud-hooks.ts
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+// src/hooks/use-base.ts
+// Generic CRUD hooks factory với TanStack Query
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  QueryClient,
+} from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { crudApi } from "@/lib/http";
-import { createCrudKeys } from "@/lib/crud-key";
+import {
+  createCrudKeys,
+  invalidateRelatedQueries,
+  RELATED_QUERIES,
+} from "@/lib/crud-key";
 import { ServiceError, serviceUtils } from "@/services/BaseService";
+
+// ===== TYPES =====
 
 type MessagesConfig = {
   createSuccess?: string;
@@ -26,19 +38,52 @@ type CrudHooksConfig<
   TListParams,
   TListResponse
 > = {
+  /** Root key cho query cache (vd: "orders", "designs") */
   rootKey: string;
+  /** Base API path (vd: "/api/orders") */
   basePath: string;
+  /** Hàm extract items từ response (cho paged response) */
   getItems?: (resp: TListResponse) => TEntity[];
+  /** Hàm lấy ID từ entity */
   getId?: (entity: TEntity) => TId;
+  /** Custom messages cho toast */
   messages?: MessagesConfig;
 };
+
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Lấy error message từ error object
+ */
+const getErrorMessage = (error: unknown, fallback?: string): string => {
+  if (error instanceof ServiceError) {
+    return serviceUtils.formatErrorMessage(error);
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return fallback ?? "Đã xảy ra lỗi không xác định";
+};
+
+/**
+ * Invalidate cache cho entity và các entity liên quan
+ */
+const invalidateEntityQueries = (
+  queryClient: QueryClient,
+  rootKey: string
+): void => {
+  const relatedKeys = RELATED_QUERIES[rootKey] ?? [rootKey];
+  invalidateRelatedQueries(queryClient, relatedKeys);
+};
+
+// ===== MAIN FACTORY =====
 
 export function createCrudHooks<
   TEntity,
   TCreate,
   TUpdate = Partial<TCreate>,
   TId = number,
-  TListParams = any,
+  TListParams = Record<string, unknown>,
   TListResponse = TEntity[]
 >(
   config: CrudHooksConfig<
@@ -52,6 +97,7 @@ export function createCrudHooks<
 ) {
   const { rootKey, basePath, getItems, getId, messages } = config;
 
+  // API instance
   const api = crudApi<
     TEntity,
     TCreate,
@@ -61,22 +107,20 @@ export function createCrudHooks<
     TListResponse
   >(basePath);
 
+  // Query keys
   const keys = createCrudKeys<TListParams, TId>(rootKey);
 
+  // Helper: resolve entity ID
   const resolveId = (entity: TEntity): TId | undefined => {
     if (getId) return getId(entity);
-    const anyEntity = entity as any;
-    return anyEntity?.id as TId | undefined;
+    return (entity as Record<string, unknown>)?.id as TId | undefined;
   };
 
-  const getErrorMessage = (error: unknown, fallback?: string) => {
-    if (error instanceof ServiceError) {
-      return serviceUtils.formatErrorMessage(error);
-    }
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return fallback ?? "Đã xảy ra lỗi không xác định";
+  // Helper: extract items từ response
+  const extractItems = (data: TListResponse | undefined): TEntity[] => {
+    if (!data) return [];
+    if (getItems) return getItems(data);
+    return Array.isArray(data) ? data : [];
   };
 
   // ===== LIST =====
@@ -84,24 +128,21 @@ export function createCrudHooks<
     return useQuery<TListResponse>({
       queryKey: keys.list(params ?? ({} as TListParams)),
       queryFn: () => api.list(params),
-      staleTime: 5 * 60 * 1000,
+      staleTime: 5 * 60 * 1000, // 5 phút
     });
   };
 
-  // Optional: trả luôn TEntity[]
+  // List với items đã extract
   const useListItems = (params?: TListParams) => {
     const query = useList(params);
-    const items: TEntity[] =
-      query.data != null
-        ? getItems
-          ? getItems(query.data)
-          : (query.data as unknown as TEntity[]) ?? []
-        : [];
-    return { ...query, items };
+    return {
+      ...query,
+      items: extractItems(query.data),
+    };
   };
 
   // ===== DETAIL =====
-  const useDetail = (id: TId | null, enabled: boolean = true) => {
+  const useDetail = (id: TId | null, enabled = true) => {
     return useQuery<TEntity>({
       queryKey: keys.detail(id as TId),
       queryFn: () => api.get(id as TId),
@@ -115,14 +156,16 @@ export function createCrudHooks<
     const { toast } = useToast();
 
     return useMutation<TEntity, ServiceError | Error, TCreate>({
-      mutationFn: (data: TCreate) => api.create(data),
+      mutationFn: (data) => api.create(data),
       onSuccess: (created) => {
-        const id = resolveId(created);
-        if (id !== undefined) {
-          queryClient.setQueryData(keys.detail(id), created);
+        // Cache detail ngay lập tức
+        const entityId = resolveId(created);
+        if (entityId !== undefined) {
+          queryClient.setQueryData(keys.detail(entityId), created);
         }
 
-        queryClient.invalidateQueries({ queryKey: keys.all });
+        // Invalidate related queries
+        invalidateEntityQueries(queryClient, rootKey);
 
         toast({
           title: "Thành công",
@@ -153,12 +196,14 @@ export function createCrudHooks<
     >({
       mutationFn: ({ id, data }) => api.update(id, data),
       onSuccess: (updated) => {
-        const id = resolveId(updated);
-        if (id !== undefined) {
-          queryClient.setQueryData(keys.detail(id), updated);
+        // Cache detail ngay lập tức
+        const entityId = resolveId(updated);
+        if (entityId !== undefined) {
+          queryClient.setQueryData(keys.detail(entityId), updated);
         }
 
-        queryClient.invalidateQueries({ queryKey: keys.all });
+        // Invalidate related queries
+        invalidateEntityQueries(queryClient, rootKey);
 
         toast({
           title: "Thành công",
@@ -183,13 +228,15 @@ export function createCrudHooks<
     const { toast } = useToast();
 
     return useMutation<void, ServiceError | Error, TId>({
-      mutationFn: (id: TId) => api.delete(id),
+      mutationFn: (id) => api.delete(id),
       onSuccess: (_, deletedId) => {
+        // Xóa cache detail
         queryClient.removeQueries({
-          queryKey: keys.detail(deletedId as any),
+          queryKey: keys.detail(deletedId),
         });
 
-        queryClient.invalidateQueries({ queryKey: keys.all });
+        // Invalidate related queries
+        invalidateEntityQueries(queryClient, rootKey);
 
         toast({
           title: "Thành công",
@@ -219,7 +266,8 @@ export function createCrudHooks<
     >({
       mutationFn: ({ formData, subPath }) => api.upload(formData, subPath),
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: keys.all });
+        // Invalidate related queries
+        invalidateEntityQueries(queryClient, rootKey);
 
         toast({
           title: "Thành công",
@@ -266,20 +314,26 @@ export function createCrudHooks<
     });
   };
 
+  // ===== RETURN =====
   return {
+    // API & Keys (để sử dụng ngoài hooks nếu cần)
     api,
     keys,
+
+    // Query hooks
     useList,
     useListItems,
     useDetail,
+
+    // Mutation hooks
     useCreate,
     useUpdate,
     useDelete,
     useUpload,
     useDownload,
-    getItemsFromResponse: (resp: TListResponse): TEntity[] => {
-      if (getItems) return getItems(resp);
-      return (resp as unknown as TEntity[]) ?? [];
-    },
+
+    // Utility
+    extractItems,
+    resolveId,
   };
 }

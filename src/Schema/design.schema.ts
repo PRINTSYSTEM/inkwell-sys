@@ -32,29 +32,24 @@ export const DesignResponseSchema = z
   .object({
     id: IdSchema.optional(),
     code: z.string().nullable().optional(),
-    orderId: IdSchema.optional(),
-    designStatus: z.string().nullable().optional(),
-    statusType: z.string().nullable().optional(),
+    customerId: IdSchema.optional(),
     designerId: IdSchema.optional(),
     designer: UserInfoSchema.nullable().optional(),
     designTypeId: IdSchema.optional(),
     designType: DesignTypeResponseSchema.nullable().optional(),
     materialTypeId: IdSchema.optional(),
     materialType: MaterialTypeResponseSchema.nullable().optional(),
-    quantity: z.number().int().optional(),
     designName: z.string().nullable().optional(),
     dimensions: z.string().nullable().optional(),
     width: z.number().nullable().optional(),
     height: z.number().nullable().optional(),
     areaCm2: z.number().nullable().optional(),
-    unitPrice: z.number().nullable().optional(),
-    totalPrice: z.number().nullable().optional(),
-    requirements: z.string().nullable().optional(),
-    additionalNotes: z.string().nullable().optional(),
     designFileUrl: z.string().nullable().optional(),
     designImageUrl: z.string().nullable().optional(),
     excelFileUrl: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    statusType: z.string().nullable().optional(),
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
     timelineEntries: z
@@ -106,6 +101,7 @@ export type CreateDesignRequest = z.infer<typeof CreateDesignRequestSchema>;
 export const UpdateDesignRequestSchema = z
   .object({
     assignedDesignerId: IdSchema.nullable().optional(),
+    designName: z.string().max(255).nullable().optional(),
     designStatus: z.string().max(50).nullable().optional(),
     designFileUrl: z.string().nullable().optional(),
     excelFileUrl: z.string().nullable().optional(),
@@ -122,10 +118,7 @@ export const DesignResponseForDesignerSchema = z
   .object({
     id: IdSchema.optional(),
     code: z.string().nullable().optional(),
-    orderId: IdSchema.optional(),
-
-    designStatus: z.string().nullable().optional(),
-    statusType: z.string().nullable().optional(),
+    customerId: IdSchema.optional(),
 
     designerId: IdSchema.optional(),
     designer: UserInfoSchema.optional(),
@@ -136,17 +129,18 @@ export const DesignResponseForDesignerSchema = z
     materialTypeId: IdSchema.optional(),
     materialType: MaterialTypeResponseSchema.optional(),
 
-    quantity: z.number().int().optional(),
     designName: z.string().nullable().optional(),
     dimensions: z.string().nullable().optional(),
     width: z.number().nullable().optional(),
     height: z.number().nullable().optional(),
-
-    requirements: z.string().nullable().optional(),
-    additionalNotes: z.string().nullable().optional(),
+    areaCm2: z.number().nullable().optional(),
 
     designFileUrl: z.string().nullable().optional(),
     designImageUrl: z.string().nullable().optional(),
+    excelFileUrl: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    statusType: z.string().nullable().optional(),
 
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
@@ -160,4 +154,17 @@ export const DesignResponseForDesignerSchema = z
 
 export type DesignResponseForDesigner = z.infer<
   typeof DesignResponseForDesignerSchema
+>;
+
+// ===== CreateDesignTimelineEntryRequest =====
+
+export const CreateDesignTimelineEntryRequestSchema = z
+  .object({
+    File: z.string(), // binary file - handled as FormData
+    Description: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export type CreateDesignTimelineEntryRequest = z.infer<
+  typeof CreateDesignTimelineEntryRequestSchema
 >;

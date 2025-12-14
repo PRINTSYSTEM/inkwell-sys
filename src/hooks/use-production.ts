@@ -2,6 +2,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
+
+// Error type for API responses
+type ApiError = {
+  response?: { data?: { message?: string } };
+  message?: string;
+};
+
 import type {
   ProductionResponse,
   ProductionResponsePagedResponse,
@@ -97,12 +104,13 @@ export const useStartProduction = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể bắt đầu sản xuất",
         variant: "destructive",
       });
@@ -152,12 +160,13 @@ export const useCompleteProduction = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể hoàn thành sản xuất",
         variant: "destructive",
       });

@@ -8,20 +8,62 @@ import {
   DesignResponseSchema,
   DesignResponseForDesignerSchema,
 } from "./design.schema";
+import { CustomerSummaryResponseSchema } from "./customer.schema";
 
-// ===== CustomerOrderResponse =====
-// Thông tin tóm tắt khách hàng gắn với đơn hàng
-export const CustomerOrderResponseSchema = z.object({
-  id: IdSchema.optional(),
-  code: z.string().nullable().optional(),
-  name: z.string().nullable().optional(),
-  phone: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
-  debtStatus: z.string().nullable().optional(),
-  companyName: z.string().nullable().optional(),
-  currentDebt: z.number().optional(),
-  maxDebt: z.number().optional(),
-});
+// ===== OrderDetailResponse =====
+// Chi tiết từng thiết kế trong đơn hàng
+
+export const OrderDetailResponseSchema = z
+  .object({
+    id: IdSchema.optional(),
+    orderId: IdSchema.optional(),
+    designId: IdSchema.optional(),
+    design: DesignResponseSchema.nullable().optional(),
+    quantity: z.number().int().optional(),
+    unitPrice: z.number().nullable().optional(),
+    totalPrice: z.number().nullable().optional(),
+    requirements: z.string().nullable().optional(),
+    additionalNotes: z.string().nullable().optional(),
+    derivedStatus: z.string().nullable().optional(),
+    cutOverAt: DateSchema.nullable().optional(),
+    itemStatus: z.string().nullable().optional(),
+    isCutOver: z.boolean().optional(),
+    status: z.string().nullable().optional(),
+    statusType: z.string().nullable().optional(),
+    createdAt: DateSchema.optional(),
+    updatedAt: DateSchema.optional(),
+  })
+  .passthrough();
+
+export type OrderDetailResponse = z.infer<typeof OrderDetailResponseSchema>;
+
+// ===== OrderDetailResponseForDesigner =====
+
+export const OrderDetailResponseForDesignerSchema = z
+  .object({
+    id: IdSchema.optional(),
+    orderId: IdSchema.optional(),
+    designId: IdSchema.optional(),
+    derivedStatus: z.string().nullable().optional(),
+    cutOverAt: DateSchema.nullable().optional(),
+    itemStatus: z.string().nullable().optional(),
+    isCutOver: z.boolean().optional(),
+    status: z.string().nullable().optional(),
+    statusType: z.string().nullable().optional(),
+    quantity: z.number().int().optional(),
+    unitPrice: z.number().nullable().optional(),
+    totalPrice: z.number().nullable().optional(),
+    requirements: z.string().nullable().optional(),
+    additionalNotes: z.string().nullable().optional(),
+    createdAt: DateSchema.optional(),
+    updatedAt: DateSchema.optional(),
+    design: DesignResponseSchema.nullable().optional(),
+  })
+  .passthrough();
+
+export type OrderDetailResponseForDesigner = z.infer<
+  typeof OrderDetailResponseForDesignerSchema
+>;
 
 // ===== OrderResponse =====
 // Dữ liệu đơn hàng chi tiết
@@ -32,7 +74,7 @@ export const OrderResponseSchema = z
     code: z.string().nullable().optional(),
 
     customerId: IdSchema.optional(),
-    customer: CustomerOrderResponseSchema.optional(),
+    customer: CustomerSummaryResponseSchema.optional(),
 
     createdBy: IdSchema.optional(),
     creator: UserInfoSchema.optional(),
@@ -55,7 +97,7 @@ export const OrderResponseSchema = z
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
 
-    designs: z.array(DesignResponseSchema).nullable().optional(),
+    orderDetails: z.array(OrderDetailResponseSchema).nullable().optional(),
   })
   .passthrough();
 
@@ -71,48 +113,52 @@ export type OrderResponsePagedResponse = z.infer<
   typeof OrderResponsePagedResponseSchema
 >;
 
+// ===== CreateDesignRequest (embedded in CreateOrderRequest) =====
+// Có thể là design MỚI hoặc design CŨ (existing)
+// - Design MỚI: designTypeId, materialTypeId, quantity, width, height (KHÔNG có designId)
+// - Design CŨ: designId, quantity (KHÔNG cần designTypeId, materialTypeId)
+
+export const CreateDesignRequestEmbeddedSchema = z.object({
+  // For existing design
+  designId: IdSchema.nullable().optional(),
+
+  // For new design
+  designTypeId: IdSchema.nullable().optional(),
+  materialTypeId: IdSchema.nullable().optional(),
+  assignedDesignerId: IdSchema.nullable().optional(),
+  designName: z.string().max(255).nullable().optional(),
+  width: z.number().min(0).nullable().optional(),
+  height: z.number().min(0).nullable().optional(),
+  requirements: z.string().nullable().optional(),
+  additionalNotes: z.string().nullable().optional(),
+
+  // Required for both
+  quantity: z.number().int().min(1),
+});
+
+export type CreateDesignRequestEmbedded = z.infer<
+  typeof CreateDesignRequestEmbeddedSchema
+>;
+
 // ===== CreateOrderRequest =====
 // Payload tạo đơn hàng (bao gồm danh sách thiết kế mới)
 
 export const CreateOrderRequestSchema = z
   .object({
     customerId: IdSchema,
+    assignedToUserId: IdSchema.nullable().optional(),
     deliveryAddress: z.string().max(500).nullable().optional(),
-    totalAmount: z.number().min(0, "Tổng tiền không thể âm"),
-    depositAmount: z.number().min(0, "Tiền đặt cọc không thể âm"),
+    totalAmount: z.number().min(0).optional(),
+    depositAmount: z.number().min(0).optional(),
     deliveryDate: DateSchema.nullable().optional(),
     note: z.string().nullable().optional(),
 
-    designs: z
-      .array(
-        z.object({
-          designTypeId: IdSchema,
-          materialTypeId: IdSchema,
-          assignedDesignerId: IdSchema.nullable().optional(),
-          quantity: z.number().int().min(1),
-          designName: z.string().nullable().optional(),
-          width: z.number().nullable().optional(),
-          height: z.number().nullable().optional(),
-          requirements: z.string().nullable().optional(),
-          additionalNotes: z.string().nullable().optional(),
-        })
-      )
+    designRequests: z
+      .array(CreateDesignRequestEmbeddedSchema)
       .nullable()
       .optional(),
   })
-  .refine((data) => data.depositAmount <= data.totalAmount, {
-    message: "Tiền đặt cọc không được lớn hơn tổng tiền",
-  })
-  .refine(
-    (data) => {
-      if (data.deliveryDate) {
-        const today = new Date();
-        return new Date(data.deliveryDate) >= today;
-      }
-      return true;
-    },
-    { message: "Ngày giao hàng phải từ hôm nay trở đi" }
-  );
+  .passthrough();
 
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
 
@@ -121,13 +167,13 @@ export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
 
 export const UpdateOrderRequestSchema = z
   .object({
-    customerId: IdSchema.nullable().optional(),
-    deliveryAddress: z.string().nullable().optional(),
-    totalAmount: z.number().nullable().optional(),
-    depositAmount: z.number().nullable().optional(),
+    status: z.string().max(50).nullable().optional(),
+    deliveryAddress: z.string().max(500).nullable().optional(),
+    totalAmount: z.number().min(0).nullable().optional(),
+    depositAmount: z.number().min(0).nullable().optional(),
     deliveryDate: DateSchema.nullable().optional(),
     note: z.string().nullable().optional(),
-    status: z.string().nullable().optional(),
+    assignedToUserId: IdSchema.nullable().optional(),
   })
   .passthrough();
 
@@ -151,17 +197,20 @@ export type ExistingDesignRequest = z.infer<typeof ExistingDesignRequestSchema>;
 export const CreateOrderWithExistingDesignsRequestSchema = z
   .object({
     customerId: IdSchema,
+    assignedToUserId: IdSchema.nullable().optional(),
     deliveryAddress: z.string().max(500).nullable().optional(),
-    totalAmount: z.number().min(0, "Tổng tiền không thể âm"),
-    depositAmount: z.number().min(0, "Tiền đặt cọc không thể âm"),
+    totalAmount: z.number().min(0).optional(),
+    depositAmount: z.number().min(0).optional(),
     deliveryDate: DateSchema.nullable().optional(),
     note: z.string().nullable().optional(),
 
-    designs: z.array(ExistingDesignRequestSchema).min(1),
+    newDesigns: z
+      .array(CreateDesignRequestEmbeddedSchema)
+      .nullable()
+      .optional(),
+    existingDesigns: z.array(ExistingDesignRequestSchema).nullable().optional(),
   })
-  .refine((data) => data.depositAmount <= data.totalAmount, {
-    message: "Tiền đặt cọc không được lớn hơn tổng tiền",
-  });
+  .passthrough();
 
 export type CreateOrderWithExistingDesignsRequest = z.infer<
   typeof CreateOrderWithExistingDesignsRequestSchema
@@ -199,7 +248,10 @@ export const OrderResponseForDesignerSchema = z
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
 
-    designs: z.array(DesignResponseForDesignerSchema).nullable().optional(),
+    orderDetails: z
+      .array(OrderDetailResponseForDesignerSchema)
+      .nullable()
+      .optional(),
   })
   .passthrough();
 

@@ -1,7 +1,7 @@
 // src/Schema/material-type.schema.ts
 // Schema cho quản lý "Chất liệu thiết kế" (Material Type)
 // Bao gồm các dạng response, request tạo/cập nhật, và response phân trang
-import { number, z } from "zod";
+import { z } from "zod";
 import {
   IdSchema,
   DateSchema,
@@ -16,13 +16,12 @@ import { UserInfoSchema } from "./common";
 export const MaterialTypeResponseSchema = z
   .object({
     id: IdSchema.optional(),
-    designTypeId: IdSchema.optional(),
-    displayOrder: IdSchema.optional(),
-    designTypeName: z.string().nullable().optional(),
     code: z.string().nullable().optional(),
     name: NameSchema.nullable().optional(),
+    displayOrder: z.number().int().optional(),
     description: z.string().nullable().optional(),
     pricePerCm2: z.number().optional(),
+    designTypeId: IdSchema.nullable().optional(),
     status: z.string().nullable().optional(),
     statusType: z.string().nullable().optional(),
     createdAt: DateSchema.optional(),
@@ -48,14 +47,13 @@ export type MaterialTypeResponsePagedResponse = z.infer<
 
 export const CreateMaterialTypeRequestSchema = z
   .object({
-    designTypeId: IdSchema,
-    code: z
-      .string()
-      .min(2, "Mã chất liệu quá ngắn")
-      .max(20, "Mã chất liệu quá dài")
-      .regex(/^[A-Z0-9-]+$/, "Mã chỉ gồm A-Z, số và dấu gạch ngang"),
-    name: NameSchema,
-    description: z.string().max(500).nullable().optional(),
+    code: z.string().max(20),
+    name: z.string().max(255),
+    displayOrder: z.number().int().min(0).optional(),
+    description: z.string().nullable().optional(),
+    pricePerCm2: z.number().min(0),
+    designTypeId: IdSchema.nullable().optional(),
+    status: z.string().regex(/^(active|inactive)$/),
   })
   .passthrough();
 
@@ -63,25 +61,24 @@ export type CreateMaterialTypeRequest = z.infer<
   typeof CreateMaterialTypeRequestSchema
 >;
 
+// ===== MaterialTypeItem (for bulk create) =====
+
+export const MaterialTypeItemSchema = z.object({
+  code: z.string().max(20),
+  name: z.string().max(255),
+  displayOrder: z.number().int().min(0).optional(),
+  description: z.string().nullable().optional(),
+  pricePerCm2: z.number().min(0),
+  status: z.string().regex(/^(active|inactive)$/),
+});
+
 // ===== BulkCreateMaterialTypeRequest =====
 // Payload tạo hàng loạt chất liệu theo một loại thiết kế
 
 export const BulkCreateMaterialTypeRequestSchema = z
   .object({
     designTypeId: IdSchema,
-    materials: z
-      .array(
-        z.object({
-          code: z
-            .string()
-            .min(2, "Mã chất liệu quá ngắn")
-            .max(20, "Mã chất liệu quá dài")
-            .regex(/^[A-Z0-9-]+$/, "Mã chỉ gồm A-Z, số và dấu gạch ngang"),
-          name: NameSchema,
-          description: z.string().max(500).nullable().optional(),
-        })
-      )
-      .min(1),
+    materials: z.array(MaterialTypeItemSchema).min(1),
   })
   .passthrough();
 
@@ -94,11 +91,16 @@ export type BulkCreateMaterialTypeRequest = z.infer<
 
 export const UpdateMaterialTypeRequestSchema = z
   .object({
-    designTypeId: IdSchema.nullable().optional(),
-    code: z.string().max(50).nullable().optional(),
-    name: NameSchema.nullable().optional(),
+    name: z.string().max(255).nullable().optional(),
+    displayOrder: z.number().int().min(0).nullable().optional(),
     description: z.string().nullable().optional(),
-    status: z.string().nullable().optional(),
+    pricePerCm2: z.number().min(0).nullable().optional(),
+    designTypeId: IdSchema.nullable().optional(),
+    status: z
+      .string()
+      .regex(/^(active|inactive)$/)
+      .nullable()
+      .optional(),
   })
   .passthrough();
 

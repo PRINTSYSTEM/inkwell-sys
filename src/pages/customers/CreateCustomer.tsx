@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,11 +52,14 @@ export default function CreateCustomer() {
   const generatePreviewCode = (name: string) =>
     name.trim() ? `XXXX${generateShortName(name)}` : "";
 
-  const handleInput = (field: keyof CreateCustomerRequest, value: any) => {
+  const handleInput = (
+    field: keyof CreateCustomerRequest,
+    value: string | number | null
+  ) => {
     setForm((p) => ({ ...p, [field]: value }));
     setErrors((e) => ({ ...e, [field]: "" }));
     if (field === "representativeName")
-      setGeneratedCode(generatePreviewCode(value));
+      setGeneratedCode(generatePreviewCode(String(value ?? "")));
   };
 
   const validateForm = () => {
@@ -63,12 +67,12 @@ export default function CreateCustomer() {
       CreateCustomerRequestSchema.parse(form);
       setErrors({});
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       const validationErrors: Record<string, string> = {};
-      if (error.errors) {
-        error.errors.forEach((err: any) => {
+      if (error instanceof z.ZodError) {
+        error.errors.forEach((err) => {
           const field = err.path[0];
-          if (field) {
+          if (field && typeof field === "string") {
             validationErrors[field] = err.message;
           }
         });
@@ -78,7 +82,7 @@ export default function CreateCustomer() {
     }
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validateForm()) {
       toast.error("Vui lòng kiểm tra lại thông tin");
@@ -92,7 +96,7 @@ export default function CreateCustomer() {
       });
       await createCustomer(payload);
       setTimeout(() => navigate("/customers"), 2000);
-    } catch (error: any) {
+    } catch {
       toast.error("Dữ liệu không hợp lệ");
     }
   };

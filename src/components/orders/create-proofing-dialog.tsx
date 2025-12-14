@@ -85,13 +85,11 @@ export function CreateProofingDialog({
   const handleSubmit = async () => {
     if (!materialTypeId || selectedDesignIds.length === 0) return;
 
+    // Schema expects orderDetailIds instead of designIds
     const payload: CreateProofingOrderFromDesignsRequest = {
-      materialTypeId,
-      // tuỳ swagger: ở đây giả sử BE lấy quantity từ thiết kế
-      designIds: selectedDesignIds,
+      orderDetailIds: selectedDesignIds,
       notes: notes || undefined,
-      orderId, // nếu swagger có, nếu không thì bỏ
-    } as any;
+    };
 
     await createFromDesigns(payload);
     // TODO: có thể refetch orders/proofings ở parent bằng invalidateQueries

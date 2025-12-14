@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
+
+// Error type for API responses
+type ApiError = {
+  response?: { data?: { message?: string } };
+  message?: string;
+};
+
 import type {
   UserResponse,
   UserResponsePagedResponse,
@@ -91,12 +98,13 @@ export const useChangeUserPassword = () => {
         title: "Thành công",
         description: "Đã đổi mật khẩu thành công",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể đổi mật khẩu",
         variant: "destructive",
       });

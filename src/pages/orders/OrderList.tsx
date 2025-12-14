@@ -171,7 +171,9 @@ export default function OrdersPage() {
                       className="px-4 py-8 text-center text-red-600"
                     >
                       Lỗi khi tải đơn hàng:{" "}
-                      {(error as any)?.message || "Vui lòng thử lại sau."}
+                      {error instanceof Error
+                        ? error.message
+                        : "Vui lòng thử lại sau."}
                     </td>
                   </tr>
                 )}
@@ -180,7 +182,7 @@ export default function OrdersPage() {
                 {!isLoading &&
                   !isError &&
                   orders.map((order) => {
-                    const customerType = order.customer?.companyName
+                    const customerType = order.customerCompanyName
                       ? "company"
                       : "retail";
 
@@ -231,7 +233,7 @@ export default function OrdersPage() {
 
                         <td className="px-4 py-4 text-center">
                           <span className="font-medium">
-                            {order.designs?.length || 0}
+                            {order.orderDetails?.length || 0}
                           </span>
                         </td>
 

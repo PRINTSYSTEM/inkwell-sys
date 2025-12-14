@@ -54,7 +54,7 @@ export function ProductionDialog({
       const payload: CompleteProductionRequest = {
         wastage: wastage || 0,
         defectNotes: defectNotes || undefined,
-      } as any;
+      };
       await completeProduction({ id: productionId, data: payload });
     }
 

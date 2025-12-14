@@ -2,6 +2,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
+
+// Error type for API responses
+type ApiError = {
+  response?: { data?: { message?: string } };
+  message?: string;
+};
+
 import type {
   ProofingOrderResponse,
   ProofingOrderResponsePagedResponse,
@@ -9,10 +16,12 @@ import type {
   CreateProofingOrderRequest,
   CreateProofingOrderFromDesignsRequest,
   UpdateProofingOrderRequest,
+  OrderDetailResponse,
 } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
+import { normalizeParams } from "@/apis/util.api";
 
 const {
   api: proofingCrudApi,
@@ -49,6 +58,7 @@ export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();
 
 // POST /proofing-orders/from-designs
 export const useCreateProofingOrderFromDesigns = () => {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
@@ -66,18 +76,25 @@ export const useCreateProofingOrderFromDesigns = () => {
     try {
       const result = await execute(payload);
 
+      // Invalidate queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: [proofingKeys.all[0], "available-order-details"],
+      });
+
       toast({
         title: "Thành công",
         description: "Đã tạo bình bài từ danh sách thiết kế",
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể tạo bình bài",
         variant: "destructive",
       });
@@ -94,18 +111,92 @@ export const useCreateProofingOrderFromDesigns = () => {
   };
 };
 
-// GET /proofing-orders/available-designs
-export const useAvailableDesignsForProofing = (materialTypeId?: number) => {
+// GET /proofing-orders/available-order-details
+export const useAvailableOrderDetailsForProofing = (params?: {
+  materialTypeId?: number | null;
+}) => {
   return useQuery({
-    queryKey: [proofingKeys.all[0], "available-designs", materialTypeId],
+    // Use specific value in queryKey instead of object to ensure proper refetch
+    queryKey: [
+      proofingKeys.all[0],
+      "available-order-details",
+      params?.materialTypeId ?? null,
+    ],
     queryFn: async () => {
-      const res = await apiRequest.get<DesignResponse[]>(
-        API_SUFFIX.PROOFING_AVAILABLE_DESIGNS,
-        {
-          params: materialTypeId ? { materialTypeId } : undefined,
-        }
+      const normalizedParams = normalizeParams(params ?? {});
+
+      const res = await apiRequest.get<OrderDetailResponse[]>(
+        API_SUFFIX.PROOFING_AVAILABLE_ORDER_DETAILS,
+        { params: normalizedParams }
       );
-      return res.data;
+      const orderDetails = res.data;
+
+      // Transform OrderDetailResponse[] to expected structure
+      const designs = orderDetails
+        .filter((od) => od.design != null)
+        .map((od) => {
+          const design = od.design!;
+          return {
+            id: od.id!,
+            code: design.code || "",
+            name: design.designName || "",
+            designTypeId: design.designTypeId || 0,
+            designTypeName: design.designType?.name || "",
+            materialTypeId: design.materialTypeId || 0,
+            materialTypeName: design.materialType?.name || "",
+            width: design.width || 0,
+            height: design.height || 0,
+            unit: "cm",
+            quantity: od.quantity || 0,
+            unitPrice: od.unitPrice || 0,
+            orderId: od.orderId?.toString() || "",
+            thumbnailUrl: design.designImageUrl || "",
+            createdAt: design.createdAt || "",
+          };
+        });
+
+      // Extract unique design types with counts
+      const designTypeMap = new Map<
+        number,
+        { id: number; name: string; count: number }
+      >();
+      designs.forEach((d) => {
+        const existing = designTypeMap.get(d.designTypeId);
+        if (existing) {
+          existing.count++;
+        } else {
+          designTypeMap.set(d.designTypeId, {
+            id: d.designTypeId,
+            name: d.designTypeName,
+            count: 1,
+          });
+        }
+      });
+
+      // Extract unique material types with counts
+      const materialTypeMap = new Map<
+        number,
+        { id: number; name: string; count: number }
+      >();
+      designs.forEach((d) => {
+        const existing = materialTypeMap.get(d.materialTypeId);
+        if (existing) {
+          existing.count++;
+        } else {
+          materialTypeMap.set(d.materialTypeId, {
+            id: d.materialTypeId,
+            name: d.materialTypeName,
+            count: 1,
+          });
+        }
+      });
+
+      return {
+        designs,
+        designTypeOptions: Array.from(designTypeMap.values()),
+        materialTypeOptions: Array.from(materialTypeMap.values()),
+        totalCount: designs.length,
+      };
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -175,13 +266,72 @@ export const useUploadProofingFile = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể upload file bình bài",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
+// PUT /proofing-orders/{id}/update-file
+export const useUpdateProofingFile = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProofingOrderResponse,
+    [{ proofingOrderId: number; file: File }]
+  >(async ({ proofingOrderId, file }) => {
+    const form = new FormData();
+    form.append("proofingFile", file);
+
+    const res = await apiRequest.put<ProofingOrderResponse>(
+      API_SUFFIX.PROOFING_UPDATE_FILE(proofingOrderId),
+      form,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return res.data;
+  });
+
+  const mutate = async (args: { proofingOrderId: number; file: File }) => {
+    try {
+      const result = await execute(args);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: proofingKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật file bình bài",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast({
+        title: "Lỗi",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật file bình bài",
         variant: "destructive",
       });
       throw err;
@@ -220,12 +370,13 @@ export const useDownloadProofingFile = () => {
   }) => {
     try {
       await execute(args);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể tải file bình bài",
         variant: "destructive",
       });
@@ -271,12 +422,13 @@ export const useCompleteProofingOrder = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể hoàn tất bình bài",
         variant: "destructive",
       });
@@ -318,12 +470,13 @@ export const useStartProductionFromProofing = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể bắt đầu sản xuất",
         variant: "destructive",
       });
@@ -365,12 +518,13 @@ export const useCompleteProductionFromProofing = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as ApiError;
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể hoàn tất sản xuất",
         variant: "destructive",
       });

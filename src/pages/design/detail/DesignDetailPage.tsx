@@ -1,16 +1,21 @@
-import { useEffect, useState } from "react";
+"use client";
+
+import { useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { toast, useToast } from "@/hooks/use-toast";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 import {
   useDesign,
   useDesignTimeline,
@@ -26,7 +31,6 @@ import {
   Package,
   Ruler,
   Download,
-  DollarSign,
   Clock,
   User,
   Layers,
@@ -39,6 +43,8 @@ import {
   History,
   AlertCircle,
   CheckCircle2,
+  ArrowRight,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import {
@@ -55,10 +61,14 @@ import { DesignFileUploadDialog } from "@/components/design/design-file-upload";
 import { TimelineEntryDialog } from "@/components/design/timeline-entry-dialog";
 
 import type { DesignResponse, DesignTimelineEntryResponse } from "@/Schema";
+import { ROLE } from "@/constants";
+import { useAuth } from "@/hooks";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default function DesignDetailPage() {
   const params = useParams();
   const router = useNavigate();
+  const { user } = useAuth();
 
   const designId = Number(params.id);
   const enabled = !Number.isNaN(designId);
@@ -89,7 +99,8 @@ export default function DesignDetailPage() {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showTimelineDialog, setShowTimelineDialog] = useState(false);
 
-  const [statusDraft, setStatusDraft] = useState<DesignStatus | "">("");
+  const [pendingStatus, setPendingStatus] = useState<DesignStatus | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const updateDesign = useUpdateDesign();
@@ -97,35 +108,60 @@ export default function DesignDetailPage() {
   const { mutate: uploadImage } = useUploadDesignImage();
   const { mutate: addTimeline } = useAddDesignTimelineEntry();
 
-  useEffect(() => {
-    if (design?.designStatus) {
-      setStatusDraft(design.designStatus as DesignStatus);
+  // Use 'status' field from DesignResponse
+  const currentStatus = (design?.status ?? "received_info") as DesignStatus;
+
+  const validNextStatuses = getValidNextStatuses(currentStatus);
+
+  // Only DESIGN, DESIGN_LEAD, ADMIN can update status
+  const canUpdateStatus =
+    user?.role === ROLE.DESIGN ||
+    user?.role === ROLE.DESIGN_LEAD ||
+    user?.role === ROLE.ADMIN;
+
+  const canChangeStatus =
+    canUpdateStatus &&
+    !isFinalStatus(currentStatus) &&
+    validNextStatuses.length > 0;
+
+  // For single next status, we use the first one
+  // For multiple, we show all options
+  const hasMultipleOptions = validNextStatuses.length > 1;
+
+  // Check if can transition to a specific status
+  const canTransitionTo = (targetStatus: DesignStatus): boolean => {
+    // Từ "designing" sang "waiting_for_customer_approval" phải có file
+    if (
+      currentStatus === "designing" &&
+      targetStatus === "waiting_for_customer_approval"
+    ) {
+      return !!design?.designFileUrl;
     }
-  }, [design?.designStatus]);
+    return true;
+  };
 
-  const validNextStatuses = design?.designStatus
-    ? getValidNextStatuses(design.designStatus as DesignStatus)
-    : [];
+  // Check if missing design file when in designing status
+  const needsDesignFile =
+    currentStatus === "designing" &&
+    validNextStatuses.includes("waiting_for_customer_approval") &&
+    !design?.designFileUrl;
 
-  const canChangeStatus = design?.designStatus
-    ? !isFinalStatus(design.designStatus as DesignStatus)
-    : false;
+  const handleStatusTransition = (targetStatus: DesignStatus) => {
+    if (!targetStatus) return;
+    setPendingStatus(targetStatus);
+    setShowConfirmDialog(true);
+  };
 
-  const handleSaveStatus = async () => {
-    if (!design || !statusDraft || statusDraft === design.designStatus) {
+  const handleConfirmStatus = async () => {
+    if (!design || !pendingStatus) {
       return;
     }
 
     // Validate transition
-    if (
-      !isValidStatusTransition(
-        design.designStatus as DesignStatus,
-        statusDraft as DesignStatus
-      )
-    ) {
+    if (!isValidStatusTransition(currentStatus, pendingStatus)) {
       const errorMessage = getTransitionErrorMessage(
-        design.designStatus as DesignStatus,
-        statusDraft as DesignStatus
+        currentStatus,
+        pendingStatus
       );
 
       toast({
@@ -134,27 +170,52 @@ export default function DesignDetailPage() {
         variant: "destructive",
       });
 
-      // Reset to current status
-      setStatusDraft(design.designStatus as DesignStatus);
+      setShowConfirmDialog(false);
+      setPendingStatus(null);
       return;
+    }
+
+    // Validate: Từ "designing" sang "waiting_for_customer_approval" phải có file thiết kế
+    if (
+      currentStatus === "designing" &&
+      pendingStatus === "waiting_for_customer_approval"
+    ) {
+      if (!design.designFileUrl) {
+        toast({
+          title: "Không thể chuyển trạng thái",
+          description:
+            "Vui lòng upload file thiết kế trước khi chuyển sang trạng thái 'Chờ khách duyệt'",
+          variant: "destructive",
+        });
+
+        setShowConfirmDialog(false);
+        setPendingStatus(null);
+        return;
+      }
     }
 
     setUpdatingStatus(true);
 
     try {
+      // API uses 'designStatus' field for updating
       await updateDesign.mutateAsync({
         id: designId,
-        data: { designStatus: statusDraft as string },
+        data: { designStatus: pendingStatus },
       });
+
+      toast({
+        title: "Thành công",
+        description: `Trạng thái đã được cập nhật thành ${designStatusLabels[pendingStatus]}`,
+      });
+
+      setShowConfirmDialog(false);
+      setPendingStatus(null);
     } catch (error) {
       toast({
         title: "Lỗi",
         description: "Không thể cập nhật trạng thái. Vui lòng thử lại.",
         variant: "destructive",
       });
-
-      // Reset to current status
-      setStatusDraft(design.designStatus as DesignStatus);
     } finally {
       setUpdatingStatus(false);
     }
@@ -256,23 +317,22 @@ export default function DesignDetailPage() {
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
           <div className="max-w-7xl mx-auto px-4 py-3">
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router("/design/all")}
-              >
+              <Button variant="ghost" size="sm" onClick={() => router(-1)}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div className="flex-1 flex items-center gap-2 min-w-0">
                 <h1 className="text-lg font-bold truncate">
                   {d.code ?? `DES-${d.id}`}
                 </h1>
-                <span className="px-2 py-1 text-xs font-medium rounded bg-secondary text-secondary-foreground">
-                  {designStatusLabels[d.designStatus]}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  • ĐH #{d.orderId}
-                </span>
+                <StatusBadge
+                  status={currentStatus}
+                  label={designStatusLabels[currentStatus]}
+                />
+                {d.designName && (
+                  <span className="text-xs text-muted-foreground truncate">
+                    • {d.designName}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -303,77 +363,124 @@ export default function DesignDetailPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-[10px] font-medium text-muted-foreground">
-                    TRẠNG THÁI THIẾT KẾ
+                <div className="space-y-3">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Trạng thái thiết kế
                   </p>
 
-                  {isFinalStatus(d.designStatus as DesignStatus) && (
-                    <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded text-xs">
-                      <AlertCircle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
-                      <p className="text-amber-900 dark:text-amber-100">
-                        Đây là trạng thái cuối cùng, không thể thay đổi.
-                      </p>
+                  {/* Current status display */}
+                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg">
+                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    <span className="font-semibold text-sm">
+                      {designStatusLabels[currentStatus]}
+                    </span>
+                  </div>
+
+                  {/* Final status message */}
+                  {isFinalStatus(currentStatus) && (
+                    <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-green-900 dark:text-green-100">
+                          Hoàn thành
+                        </p>
+                        <p className="text-green-700 dark:text-green-300 mt-0.5">
+                          Đây là trạng thái cuối cùng, không thể thay đổi.
+                        </p>
+                      </div>
                     </div>
                   )}
 
-                  {!isFinalStatus(d.designStatus as DesignStatus) &&
-                    validNextStatuses.length > 0 && (
-                      <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded text-xs">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
-                        <p className="text-blue-900 dark:text-blue-100">
-                          Có thể chuyển sang:{" "}
-                          <span className="font-semibold">
-                            {validNextStatuses
-                              .map((s) => designStatusLabels[s])
-                              .join(", ")}
-                          </span>
+                  {/* Warning: Need design file */}
+                  {needsDesignFile && (
+                    <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs">
+                      <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-amber-900 dark:text-amber-100">
+                          Cần upload file thiết kế
+                        </p>
+                        <p className="text-amber-700 dark:text-amber-300 mt-0.5">
+                          Vui lòng upload file thiết kế trước khi chuyển sang
+                          trạng thái "Chờ khách duyệt"
                         </p>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Select
-                      value={statusDraft || ""}
-                      onValueChange={(v) => setStatusDraft(v as DesignStatus)}
-                      disabled={!canChangeStatus}
-                    >
-                      <SelectTrigger className="h-8 w-fit min-w-[180px]">
-                        <SelectValue placeholder="Chọn trạng thái" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={d.designStatus as string}>
-                          {designStatusLabels[d.designStatus as DesignStatus]}{" "}
-                          (Hiện tại)
-                        </SelectItem>
+                  {/* Status transition options */}
+                  {canChangeStatus && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        {hasMultipleOptions
+                          ? "Chọn trạng thái tiếp theo:"
+                          : "Trạng thái tiếp theo:"}
+                      </p>
 
-                        {validNextStatuses.length > 0 && (
-                          <>
-                            <Separator className="my-1" />
-                            {validNextStatuses.map((status) => (
-                              <SelectItem key={status} value={status}>
-                                {designStatusLabels[status]}
-                              </SelectItem>
-                            ))}
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={
-                        updatingStatus ||
-                        !statusDraft ||
-                        statusDraft === (d.designStatus as DesignStatus) ||
-                        !canChangeStatus
-                      }
-                      onClick={handleSaveStatus}
-                    >
-                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                      Cập nhật
-                    </Button>
-                  </div>
+                      {hasMultipleOptions ? (
+                        // Multiple options - show as button group
+                        <div className="grid gap-2">
+                          {validNextStatuses.map((nextStatus) => {
+                            const canTransition = canTransitionTo(nextStatus);
+                            return (
+                              <Button
+                                key={nextStatus}
+                                size="sm"
+                                variant={
+                                  nextStatus === "confirmed_for_printing"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                onClick={() =>
+                                  handleStatusTransition(nextStatus)
+                                }
+                                disabled={updatingStatus || !canTransition}
+                                className={`w-full justify-start gap-2 ${
+                                  nextStatus === "confirmed_for_printing"
+                                    ? "bg-green-600 hover:bg-green-700"
+                                    : ""
+                                }`}
+                              >
+                                <ArrowRight className="h-3.5 w-3.5" />
+                                {designStatusLabels[nextStatus]}
+                                {nextStatus === "confirmed_for_printing" && (
+                                  <span className="ml-auto text-[10px] opacity-75">
+                                    (Hoàn thành)
+                                  </span>
+                                )}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        // Single option - show info and button
+                        <>
+                          <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded text-xs">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 mt-0.5 shrink-0" />
+                            <p className="text-blue-900 dark:text-blue-100">
+                              <span className="font-semibold">
+                                {designStatusLabels[validNextStatuses[0]]}
+                              </span>
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              handleStatusTransition(validNextStatuses[0])
+                            }
+                            disabled={
+                              updatingStatus ||
+                              !canTransitionTo(validNextStatuses[0])
+                            }
+                            className="w-full gap-2"
+                          >
+                            <ArrowRight className="h-3.5 w-3.5" />
+                            Chuyển sang:{" "}
+                            {designStatusLabels[validNextStatuses[0]]}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Design Type & Material */}
@@ -404,100 +511,92 @@ export default function DesignDetailPage() {
 
                 <Separator />
 
-                {/* Specs */}
+                {/* Specs - Based on DesignResponse schema */}
                 <div>
                   <div className="flex items-center gap-1.5 mb-2">
                     <Ruler className="h-3.5 w-3.5 text-green-600" />
-                    <p className="text-xs font-semibold">Thông số</p>
+                    <p className="text-xs font-semibold">Thông số kích thước</p>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
+                    {/* Chiều rộng */}
                     <div className="bg-muted/50 p-2 rounded text-center">
                       <p className="text-[10px] text-muted-foreground mb-0.5">
-                        Kích thước
-                      </p>
-                      <p className="font-bold text-xs">{d.dimensions ?? "—"}</p>
-                    </div>
-                    <div className="bg-muted/50 p-2 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground mb-0.5">
-                        Số lượng
+                        Chiều rộng
                       </p>
                       <p className="font-bold text-xs">
-                        {d.quantity.toLocaleString()}
+                        {d.width != null ? `${d.width} mm` : "—"}
                       </p>
                     </div>
+
+                    {/* Chiều cao */}
+                    <div className="bg-muted/50 p-2 rounded text-center">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">
+                        Chiều cao
+                      </p>
+                      <p className="font-bold text-xs">
+                        {d.height != null ? `${d.height} mm` : "—"}
+                      </p>
+                    </div>
+
+                    {/* Diện tích */}
                     <div className="bg-muted/50 p-2 rounded text-center">
                       <p className="text-[10px] text-muted-foreground mb-0.5">
                         Diện tích
                       </p>
                       <p className="font-bold text-xs">
                         {d.areaCm2 != null
-                          ? `${(d.areaCm2 / 10000).toFixed(1)}m²`
+                          ? `${(d.areaCm2 / 100).toFixed(2)} cm²`
                           : "—"}
                       </p>
                     </div>
                   </div>
+
+                  {/* Dimensions string if available */}
+                  {d.dimensions && (
+                    <div className="mt-2 p-2 bg-muted/30 rounded text-center">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">
+                        Kích thước (text)
+                      </p>
+                      <p className="font-semibold text-xs">{d.dimensions}</p>
+                    </div>
+                  )}
                 </div>
 
-                <Separator />
-
-                {/* Pricing */}
-                <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
-                    <p className="text-xs font-semibold">Giá</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-2 rounded">
-                      <p className="text-[10px] text-muted-foreground mb-0.5">
-                        Đơn giá
-                      </p>
-                      <p className="font-bold text-sm text-emerald-600">
-                        {d.unitPrice != null
-                          ? `${d.unitPrice.toLocaleString()}đ`
-                          : "—"}
-                      </p>
-                    </div>
-                    <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-2 rounded">
-                      <p className="text-[10px] text-muted-foreground mb-0.5">
-                        Tổng
-                      </p>
-                      <p className="font-bold text-sm text-emerald-600">
-                        {d.totalPrice != null
-                          ? `${d.totalPrice.toLocaleString()}đ`
-                          : "—"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Requirements / Notes */}
-                {(d.requirements || d.additionalNotes) && (
+                {/* Notes - From schema */}
+                {d.notes && (
                   <>
                     <Separator />
-                    <div className="space-y-2">
-                      {d.requirements && (
-                        <div className="bg-muted/30 p-2 rounded">
-                          <p className="text-[10px] font-medium text-muted-foreground mb-1">
-                            YÊU CẦU
-                          </p>
-                          <p className="text-xs leading-relaxed">
-                            {d.requirements}
-                          </p>
-                        </div>
-                      )}
-                      {d.additionalNotes && (
-                        <div className="bg-muted/30 p-2 rounded">
-                          <p className="text-[10px] font-medium text-muted-foreground mb-1">
-                            GHI CHÚ
-                          </p>
-                          <p className="text-xs leading-relaxed">
-                            {d.additionalNotes}
-                          </p>
-                        </div>
-                      )}
+                    <div className="bg-muted/30 p-2 rounded">
+                      <p className="text-[10px] font-medium text-muted-foreground mb-1">
+                        GHI CHÚ
+                      </p>
+                      <p className="text-xs leading-relaxed">{d.notes}</p>
                     </div>
                   </>
                 )}
+
+                {/* Timestamps - From schema */}
+                <Separator />
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    <span>
+                      Tạo:{" "}
+                      {d.createdAt
+                        ? new Date(d.createdAt).toLocaleDateString("vi-VN")
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    <span>
+                      Cập nhật:{" "}
+                      {d.updatedAt
+                        ? new Date(d.updatedAt).toLocaleDateString("vi-VN")
+                        : "—"}
+                    </span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -577,7 +676,7 @@ export default function DesignDetailPage() {
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {d.designFileUrl && (
                           <Button
                             size="sm"
@@ -591,7 +690,24 @@ export default function DesignDetailPage() {
                               rel="noreferrer"
                             >
                               <Download className="h-3.5 w-3.5 mr-2" />
-                              Tải file
+                              Tải file AI
+                            </a>
+                          </Button>
+                        )}
+                        {d.excelFileUrl && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 bg-transparent"
+                            asChild
+                          >
+                            <a
+                              href={d.excelFileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />
+                              Tải Excel
                             </a>
                           </Button>
                         )}
@@ -661,21 +777,23 @@ export default function DesignDetailPage() {
                       </div>
 
                       {/* Image */}
-                      <div
-                        className="shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() =>
-                          setViewingImage({
-                            url: entry.fileUrl,
-                            title: entry.description ?? "",
-                          })
-                        }
-                      >
-                        <img
-                          src={entry.fileUrl || "/placeholder.svg"}
-                          alt={entry.description ?? ""}
-                          className="w-24 h-24 object-cover rounded-lg border-2 hover:border-purple-500"
-                        />
-                      </div>
+                      {entry.fileUrl && (
+                        <div
+                          className="shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() =>
+                            setViewingImage({
+                              url: entry.fileUrl!,
+                              title: entry.description ?? "",
+                            })
+                          }
+                        >
+                          <img
+                            src={entry.fileUrl}
+                            alt={entry.description ?? ""}
+                            className="w-24 h-24 object-cover rounded-lg border-2 hover:border-purple-500"
+                          />
+                        </div>
+                      )}
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
@@ -683,30 +801,36 @@ export default function DesignDetailPage() {
                           {entry.description ?? "(Không có mô tả)"}
                         </p>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                          <div className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            <span>{entry.createdBy.fullName}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              {new Date(entry.createdAt).toLocaleString(
-                                "vi-VN"
-                              )}
-                            </span>
-                          </div>
+                          {entry.createdBy?.fullName && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              <span>{entry.createdBy.fullName}</span>
+                            </div>
+                          )}
+                          {entry.createdAt && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                {new Date(entry.createdAt).toLocaleString(
+                                  "vi-VN"
+                                )}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs bg-transparent"
-                          asChild
-                        >
-                          <a href={entry.fileUrl} download>
-                            <Download className="h-3 w-3 mr-1.5" />
-                            Tải hình ảnh
-                          </a>
-                        </Button>
+                        {entry.fileUrl && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs bg-transparent"
+                            asChild
+                          >
+                            <a href={entry.fileUrl} download>
+                              <Download className="h-3 w-3 mr-1.5" />
+                              Tải hình ảnh
+                            </a>
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -740,6 +864,72 @@ export default function DesignDetailPage() {
           onOpenChange={setShowTimelineDialog}
           onAdd={handleTimelineAdd}
         />
+
+        <AlertDialog
+          open={showConfirmDialog}
+          onOpenChange={setShowConfirmDialog}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <ArrowRight className="h-5 w-5 text-primary" />
+                Xác nhận thay đổi trạng thái
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>Bạn có chắc chắn muốn thay đổi trạng thái thiết kế?</p>
+
+                  <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                    <div className="text-center flex-1">
+                      <p className="text-[10px] text-muted-foreground mb-1">
+                        HIỆN TẠI
+                      </p>
+                      <p className="font-semibold text-sm text-foreground">
+                        {designStatusLabels[currentStatus]}
+                      </p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="text-center flex-1">
+                      <p className="text-[10px] text-muted-foreground mb-1">
+                        SAU KHI ĐỔI
+                      </p>
+                      <p className="font-semibold text-sm text-primary">
+                        {pendingStatus ? designStatusLabels[pendingStatus] : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  {pendingStatus === "confirmed_for_printing" && (
+                    <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded text-xs">
+                      <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                      <p className="text-amber-800 dark:text-amber-200">
+                        <strong>Lưu ý:</strong> Đây là trạng thái cuối cùng. Sau
+                        khi chuyển sang trạng thái này, bạn sẽ không thể thay
+                        đổi nữa.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={updatingStatus}>
+                Hủy
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmStatus}
+                disabled={updatingStatus}
+                className={
+                  pendingStatus === "confirmed_for_printing"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : ""
+                }
+              >
+                {updatingStatus ? "Đang cập nhật..." : "Xác nhận thay đổi"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </ErrorBoundary>
   );

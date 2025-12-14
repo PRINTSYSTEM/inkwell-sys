@@ -45,10 +45,15 @@ export const API_SUFFIX = {
     `/orders/${id}/export-delivery-note`,
   ORDER_EXCEL: (id: number) => `/orders/${id}/generate-excel`,
 
-  // ========== INVOICE / ACCOUNTING ==========
+  // ========== INVOICE ==========
   ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`,
   CUSTOMER_EXPORT_DEBT_COMPARISON: (id: number) =>
     `/customers/${id}/export-debt-comparison`,
+
+  // ========== ACCOUNTING ==========
+  ACCOUNTING_BY_ORDER: (orderId: number) => `/accountings/order/${orderId}`,
+  ACCOUNTING_CONFIRM_PAYMENT: (accountingId: number) =>
+    `/accountings/${accountingId}/confirm-payment`,
 
   // ========== CUSTOMERS ==========
   CUSTOMERS: "/customers",
@@ -85,9 +90,10 @@ export const API_SUFFIX = {
   PROOFING_ORDERS: "/proofing-orders",
   PROOFING_ORDER_BY_ID: (id: number) => `/proofing-orders/${id}`,
   PROOFING_FROM_DESIGNS: "/proofing-orders/from-designs",
-  PROOFING_AVAILABLE_DESIGNS: "/proofing-orders/available-designs",
+  PROOFING_AVAILABLE_ORDER_DETAILS: "/proofing-orders/available-order-details",
   PROOFING_FOR_PRODUCTION: "/proofing-orders/for-production",
   PROOFING_UPLOAD_FILE: (id: number) => `/proofing-orders/${id}/upload-file`,
+  PROOFING_UPDATE_FILE: (id: number) => `/proofing-orders/${id}/update-file`,
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
   PROOFING_COMPLETE: (id: number) => `/proofing-orders/${id}/complete`,

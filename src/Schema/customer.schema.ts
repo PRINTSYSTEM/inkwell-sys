@@ -40,10 +40,12 @@ export const CustomerSummaryResponseSchema = z
     id: IdSchema.optional(),
     code: z.string().nullable().optional(),
     name: NameSchema.nullable().optional(),
+    companyName: z.string().nullable().optional(),
     phone: z.string().nullable().optional(),
+    address: z.string().nullable().optional(),
+    debtStatus: z.string().nullable().optional(),
     currentDebt: z.number().optional(),
     maxDebt: z.number().optional(),
-    debtStatus: z.string().nullable().optional(),
   })
   .passthrough();
 
@@ -72,29 +74,15 @@ export type CustomerSummaryResponsePagedResponse = z.infer<
 
 export const CreateCustomerRequestSchema = z
   .object({
-    name: NameSchema,
-    companyName: z
-      .string()
-      .min(1, "Tên công ty không được để trống")
-      .max(255, "Tên công ty quá dài"),
-    representativeName: z
-      .string()
-      .min(1, "Tên đại diện không được để trống")
-      .max(255, "Tên đại diện quá dài"),
-    phone: z
-      .string()
-      .min(1, "Số điện thoại không được để trống")
-      .regex(/^[0-9+\-\s()]{8,20}$/, "Số điện thoại không hợp lệ"),
-    taxCode: z
-      .string()
-      .min(1, "Mã số thuế không được để trống")
-      .regex(/^\d{10,13}$/, "Mã số thuế phải gồm 10-13 chữ số"),
-    address: z
-      .string()
-      .min(1, "Địa chỉ không được để trống")
-      .max(500, "Địa chỉ quá dài"),
-    type: z.enum(["company", "retail"]),
-    maxDebt: z.number().min(0, "Số dư tối đa không thể âm").default(0),
+    name: z.string().max(255),
+    companyName: z.string().max(255).nullable().optional(),
+    representativeName: z.string().max(255).nullable().optional(),
+    phone: z.string().max(20).nullable().optional(),
+    taxCode: z.string().max(50).nullable().optional(),
+    address: z.string().max(255).nullable().optional(),
+    type: z.string().max(50).nullable().optional(),
+    currentDebt: z.number().min(0).optional(),
+    maxDebt: z.number().min(0).optional(),
   })
   .passthrough();
 

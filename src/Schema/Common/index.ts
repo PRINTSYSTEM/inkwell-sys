@@ -40,6 +40,7 @@ export const ConstantsResponseSchema = z
     orderStatuses: ConstantGroupSchema.optional(),
     designStatuses: ConstantGroupSchema.optional(),
     proofingOrderStatuses: ConstantGroupSchema.optional(),
+    orderDetailItemStatuses: ConstantGroupSchema.optional(),
     productionStatuses: ConstantGroupSchema.optional(),
     paymentStatuses: ConstantGroupSchema.optional(),
     customerTypes: ConstantGroupSchema.optional(),

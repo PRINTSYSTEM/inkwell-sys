@@ -29,30 +29,35 @@ type DesignerDetailProps = {
   selectedDesigner: UserResponse;
 };
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string | null | undefined) => {
   const statusMap: Record<string, { label: string; className: string }> = {
     received_info: {
-      label: "Đã nhận thông tin",
+      label: "Nhận thông tin",
       className: "bg-blue-500 hover:bg-blue-600",
     },
-    in_progress: {
-      label: "Đang thực hiện",
+    designing: {
+      label: "Đang thiết kế",
       className: "bg-yellow-500 hover:bg-yellow-600",
     },
-    review: {
-      label: "Đang xem xét",
+    editing: {
+      label: "Đang chỉnh sửa",
+      className: "bg-orange-500 hover:bg-orange-600",
+    },
+    waiting_for_customer_approval: {
+      label: "Chờ khách duyệt",
       className: "bg-purple-500 hover:bg-purple-600",
     },
-    approved: {
-      label: "Đã duyệt",
+    confirmed_for_printing: {
+      label: "Đã chốt in",
       className: "bg-green-500 hover:bg-green-600",
     },
-    completed: {
-      label: "Hoàn thành",
-      className: "bg-emerald-500 hover:bg-emerald-600",
-    },
   };
-  return statusMap[status] || { label: status, className: "bg-slate-500" };
+  return (
+    statusMap[status || ""] || {
+      label: status || "N/A",
+      className: "bg-slate-500",
+    }
+  );
 };
 
 const formatDate = (dateString: string) => {
@@ -78,13 +83,16 @@ export default function DesignerDetail({
   );
 
   // hỗ trợ cả 2 dạng: Array<Design> hoặc { items, totalPages, ... }
+  type PagedData = { items?: DesignResponse[]; totalPages?: number };
+  const pagedData = data as PagedData | undefined;
+
   const designs: DesignResponse[] = Array.isArray(data)
     ? data
-    : (data as any)?.items ?? [];
+    : pagedData?.items ?? [];
 
   const totalPages: number =
-    !Array.isArray(data) && typeof (data as any)?.totalPages === "number"
-      ? (data as any).totalPages
+    !Array.isArray(data) && typeof pagedData?.totalPages === "number"
+      ? pagedData.totalPages
       : 1;
 
   const handleViewDesign = (designId: number) => {
@@ -139,7 +147,7 @@ export default function DesignerDetail({
             <>
               <div className="grid gap-4">
                 {designs.map((design) => {
-                  const statusBadge = getStatusBadge(design.designStatus);
+                  const statusBadge = getStatusBadge(design.status);
 
                   return (
                     <Card
@@ -154,27 +162,29 @@ export default function DesignerDetail({
                               <div>
                                 <div className="flex items-center gap-3">
                                   <h3 className="text-xl font-bold text-slate-900">
-                                    {design.code}
+                                    {design.code || `DES-${design.id}`}
                                   </h3>
                                   <Badge className={statusBadge.className}>
                                     {statusBadge.label}
                                   </Badge>
                                 </div>
-                                <p className="mt-1 text-sm text-slate-500">
-                                  Đơn hàng #{design.orderId}
-                                </p>
+                                {design.designName && (
+                                  <p className="mt-1 text-sm text-slate-700 font-medium">
+                                    {design.designName}
+                                  </p>
+                                )}
                               </div>
 
                               <Button
                                 className="text-sm font-medium cursor-pointer"
-                                onClick={() => handleViewDesign(design.id)}
+                                onClick={() => handleViewDesign(design.id!)}
                               >
-                                View Detail
+                                Xem chi tiết
                               </Button>
                             </div>
 
                             {/* Info Grid */}
-                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-4 md:grid-cols-2">
                               {/* Design Type */}
                               <div className="flex items-center gap-3 rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-3">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100">
@@ -185,7 +195,7 @@ export default function DesignerDetail({
                                     Loại thiết kế
                                   </p>
                                   <p className="font-semibold text-slate-900">
-                                    {design.designType.name}
+                                    {design.designType?.name || "—"}
                                   </p>
                                 </div>
                               </div>
@@ -200,91 +210,60 @@ export default function DesignerDetail({
                                     Chất liệu
                                   </p>
                                   <p className="font-semibold text-slate-900">
-                                    {design.materialType.name}
+                                    {design.materialType?.name || "—"}
                                   </p>
                                 </div>
                               </div>
+                            </div>
 
-                              {/* Quantity */}
-                              <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                                  <Package className="h-5 w-5 text-blue-600" />
+                            {/* Dimensions */}
+                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                              <p className="text-xs font-medium text-slate-500 mb-2">
+                                Kích thước
+                              </p>
+                              <div className="grid grid-cols-3 gap-4 text-sm">
+                                <div>
+                                  <p className="text-slate-500">Chiều rộng</p>
+                                  <p className="font-semibold">
+                                    {design.width != null
+                                      ? `${design.width} cm`
+                                      : "—"}
+                                  </p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-slate-500">
-                                    Số lượng
+                                  <p className="text-slate-500">Chiều cao</p>
+                                  <p className="font-semibold">
+                                    {design.height != null
+                                      ? `${design.height} cm`
+                                      : "—"}
                                   </p>
-                                  <p className="font-semibold text-slate-900">
-                                    {design.quantity.toLocaleString()}
+                                </div>
+                                <div>
+                                  <p className="text-slate-500">Diện tích</p>
+                                  <p className="font-semibold">
+                                    {design.areaCm2 != null
+                                      ? `${(design.areaCm2 / 10000).toFixed(
+                                          2
+                                        )} m²`
+                                      : "—"}
                                   </p>
                                 </div>
                               </div>
+                              {design.dimensions && (
+                                <p className="mt-2 text-sm text-slate-600">
+                                  Kích thước: {design.dimensions}
+                                </p>
+                              )}
                             </div>
 
-                            {/* Dimensions & Pricing */}
-                            <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
-                              <div>
-                                <p className="text-xs font-medium text-slate-500">
-                                  Kích thước
-                                </p>
-                                <p className="mt-1 text-sm font-semibold text-slate-900">
-                                  {design.dimensions}
-                                  {design.width && design.height && (
-                                    <span className="text-slate-500">
-                                      {" "}
-                                      ({design.width} × {design.height} cm)
-                                    </span>
-                                  )}
-                                </p>
-                                {design.areaCm2 && (
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    Diện tích: {design.areaCm2.toLocaleString()}{" "}
-                                    cm²
-                                  </p>
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-xs font-medium text-slate-500">
-                                  Giá
-                                </p>
-                                {design.unitPrice && design.totalPrice ? (
-                                  <div className="mt-1 space-y-1">
-                                    <p className="text-sm text-slate-700">
-                                      Đơn giá:{" "}
-                                      {design.unitPrice.toLocaleString()} ₫
-                                    </p>
-                                    <p className="text-lg font-bold text-green-600">
-                                      {design.totalPrice.toLocaleString()} ₫
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <p className="mt-1 text-sm text-slate-500">
-                                    Chưa có
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Requirements */}
-                            {design.requirements && (
+                            {/* Notes */}
+                            {design.notes && (
                               <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                                 <p className="text-xs font-medium text-blue-700">
-                                  Yêu cầu thiết kế
+                                  Ghi chú
                                 </p>
                                 <p className="mt-1 text-sm text-slate-700">
-                                  {design.requirements}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Additional Notes */}
-                            {design.additionalNotes && (
-                              <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
-                                <p className="text-xs font-medium text-orange-700">
-                                  Ghi chú bổ sung
-                                </p>
-                                <p className="mt-1 text-sm text-slate-700">
-                                  {design.additionalNotes}
+                                  {design.notes}
                                 </p>
                               </div>
                             )}
@@ -292,10 +271,11 @@ export default function DesignerDetail({
                             {/* Timestamps */}
                             <div className="flex gap-4 text-xs text-slate-500">
                               <span>
-                                Tạo: {formatDate(design.createdAt as any)}
+                                Tạo: {formatDate(design.createdAt as string)}
                               </span>
                               <span>
-                                Cập nhật: {formatDate(design.updatedAt as any)}
+                                Cập nhật:{" "}
+                                {formatDate(design.updatedAt as string)}
                               </span>
                             </div>
                           </div>

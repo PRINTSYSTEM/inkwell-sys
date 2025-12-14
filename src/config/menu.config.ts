@@ -132,6 +132,28 @@ export const MENU_ITEMS: MenuItem[] = [
 
   // ==== Sản xuất ====
   {
+    id: "proofing",
+    title: "Bình bài",
+    icon: Factory,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+    children: [
+      {
+        id: "proofing",
+        title: "Danh sách bình bài",
+        icon: Layers,
+        path: ROUTE_PATHS.PROOFING.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
+      {
+        id: "proofing-create-print-order",
+        title: "Tạo lệnh bình bài",
+        icon: Layers,
+        path: ROUTE_PATHS.PROOFING.CREATE,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
+    ],
+  },
+  {
     id: "production",
     title: "Sản xuất",
     icon: Factory,
@@ -140,21 +162,13 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.MANAGER,
       ROLE.PRODUCTION,
       ROLE.PRODUCTION_LEAD,
-      ROLE.DESIGN_LEAD,
     ],
     children: [
       {
-        id: "proofing",
-        title: "Bình bài",
+        id: "production",
+        title: "Danh sách sản xuất",
         icon: Layers,
         path: ROUTE_PATHS.PROOFING.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION_LEAD],
-      },
-      {
-        id: "production-main",
-        title: "Sản xuất",
-        icon: Factory,
-        path: ROUTE_PATHS.PRODUCTION.ROOT,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,
@@ -234,10 +248,10 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
-  // ==== Hành chính ====
+  // ==== Kế toán ====
   {
-    id: "hr",
-    title: "Hành chính",
+    id: "accounting-dept",
+    title: "Kế toán",
     icon: Calculator,
     allowedRoles: [
       ROLE.ADMIN,
@@ -247,8 +261,8 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     children: [
       {
-        id: "accounting",
-        title: "Kế toán",
+        id: "accounting-dashboard",
+        title: "Quản lý thanh toán",
         icon: Calculator,
         path: ROUTE_PATHS.ACCOUNTING.ROOT,
         allowedRoles: [
@@ -258,6 +272,42 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
+      {
+        id: "accounting-debt-report",
+        title: "Báo cáo công nợ",
+        icon: FileBarChart,
+        path: ROUTE_PATHS.ACCOUNTING.DEBT_REPORT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      // {
+      //   id: "accounting-revenue",
+      //   title: "Doanh thu",
+      //   icon: BarChart3,
+      //   path: ROUTE_PATHS.ACCOUNTING.REVENUE,
+      //   allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD],
+      // },
+      // {
+      //   id: "accounting-expenses",
+      //   title: "Chi phí",
+      //   icon: FileText,
+      //   path: ROUTE_PATHS.ACCOUNTING.EXPENSES,
+      //   allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD],
+      // },
+    ],
+  },
+
+  // ==== Hành chính ====
+  {
+    id: "hr",
+    title: "Hành chính",
+    icon: Clock,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+    children: [
       {
         id: "attendance",
         title: "Chấm công",

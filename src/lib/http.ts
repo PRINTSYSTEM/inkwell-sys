@@ -156,17 +156,17 @@ export const apiRequest = createApiInstance();
 // ===================== HTTP WRAPPER (get/post/put/delete/upload/download) =====================
 
 export const http = {
-  get: async <T>(url: string, params?: any): Promise<T> => {
+  get: async <T>(url: string, params?: Record<string, unknown>): Promise<T> => {
     const response = await apiRequest.get<T>(url, { params });
     return response.data;
   },
 
-  post: async <T>(url: string, data?: any): Promise<T> => {
+  post: async <T>(url: string, data?: unknown): Promise<T> => {
     const response = await apiRequest.post<T>(url, data);
     return response.data;
   },
 
-  put: async <T>(url: string, data?: any): Promise<T> => {
+  put: async <T>(url: string, data?: unknown): Promise<T> => {
     const response = await apiRequest.put<T>(url, data);
     return response.data;
   },
@@ -219,12 +219,13 @@ export function crudApi<
   TCreate,
   TUpdate = Partial<TCreate>,
   TId = number,
-  TListParams = any,
+  TListParams = Record<string, unknown>,
   TListResponse = TEntity[]
 >(basePath: string) {
   return {
     // GET /resource
-    list: (params?: TListParams) => http.get<TListResponse>(basePath, params),
+    list: (params?: TListParams) =>
+      http.get<TListResponse>(basePath, params as Record<string, unknown>),
 
     // GET /resource/:id
     get: (id: TId) => http.get<TEntity>(`${basePath}/${id}`),
@@ -240,7 +241,7 @@ export function crudApi<
     delete: (id: TId) => http.delete<void>(`${basePath}/${id}`),
 
     // UPLOAD file cho resource (mặc định /resource/upload)
-    upload: <TResponse = any>(
+    upload: <TResponse = unknown>(
       formData: FormData,
       subPath: string = "/upload"
     ) => http.upload<TResponse>(`${basePath}${subPath}`, formData),

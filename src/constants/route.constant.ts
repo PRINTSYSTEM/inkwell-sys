@@ -36,6 +36,7 @@ export const ROUTE_PATHS = {
   PROOFING: {
     ROOT: "/proofing" as const,
     CREATE_PRINT_ORDER: "/proofing/create-print-order" as const,
+    CREATE: "/proofing/create" as const,
   },
 
   PRODUCTION: {
@@ -57,6 +58,9 @@ export const ROUTE_PATHS = {
 
   ACCOUNTING: {
     ROOT: "/accounting" as const,
+    DEBT_REPORT: "/accounting/debt-report" as const,
+    REVENUE: "/accounting/revenue" as const,
+    EXPENSES: "/accounting/expenses" as const,
   },
 
   ATTENDANCE: {

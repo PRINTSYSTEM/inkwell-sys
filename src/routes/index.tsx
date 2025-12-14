@@ -34,6 +34,7 @@ const DesignTypes = lazy(() => import("@/pages/design-types/DesignTypeList"));
 
 // Proofing (prepress)
 const ProofingList = lazy(() => import("@/pages/prepress/PrepressList"));
+const ProofingCreate = lazy(() => import("@/pages/prepress/ProofingCreate"));
 const ProofingCreatePrintOrder = lazy(
   () => import("@/pages/prepress/CreatePrintOrder")
 );
@@ -262,6 +263,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <ProofingList />
+              </Suspense>
+            ),
+          },
+          {
+            path: lastSegment(ROUTE_PATHS.PROOFING.CREATE),
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <ProofingCreate />
               </Suspense>
             ),
           },

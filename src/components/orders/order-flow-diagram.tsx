@@ -1,15 +1,24 @@
 import { Card } from "@/components/ui/card";
-import { Check, Circle } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Order statuses from backend
 type OrderStatus =
   | "pending"
+  | "designing"
+  | "waiting_for_customer_approval"
+  | "editing"
+  | "confirmed_for_printing"
+  | "waiting_for_deposit"
+  | "deposit_received"
+  | "debt_approved"
   | "waiting_for_proofing"
-  | "proofed"
   | "waiting_for_production"
   | "in_production"
-  | "completed"
+  | "production_completed"
   | "invoice_issued"
+  | "delivering"
+  | "completed"
   | "cancelled"
   | (string & {});
 
@@ -26,85 +35,135 @@ interface OrderFlowDiagramProps {
   hasDeposit: boolean;
 }
 
+// Define status order for comparison
+const STATUS_ORDER: OrderStatus[] = [
+  "pending",
+  "designing",
+  "waiting_for_customer_approval",
+  "editing",
+  "confirmed_for_printing",
+  "waiting_for_deposit",
+  "deposit_received",
+  "debt_approved",
+  "waiting_for_proofing",
+  "waiting_for_production",
+  "in_production",
+  "production_completed",
+  "invoice_issued",
+  "delivering",
+  "completed",
+];
+
 export function OrderFlowDiagram({
   currentStatus,
   customerType,
   hasDeposit,
 }: OrderFlowDiagramProps) {
-  const status = (currentStatus || "") as OrderStatus;
-  const is = (list: OrderStatus[]) => list.includes(status);
+  const status = (currentStatus || "pending") as OrderStatus;
+
+  // Helper to check if current status is at or past a certain point
+  const isAtOrPast = (targetStatuses: OrderStatus[]): boolean => {
+    const currentIndex = STATUS_ORDER.indexOf(status);
+    return targetStatuses.some((s) => {
+      const targetIndex = STATUS_ORDER.indexOf(s);
+      return currentIndex >= targetIndex;
+    });
+  };
+
+  // Helper to check if status is exactly one of the given statuses
+  const isExactly = (list: OrderStatus[]): boolean => list.includes(status);
 
   const getFlowSteps = (): FlowStep[] => {
     const steps: FlowStep[] = [];
 
+    // 1. Nhận đơn (pending)
     steps.push({
       id: "pending",
       label: "Nhận đơn",
-      completed: is([
-        "waiting_for_proofing",
-        "proofed",
-        "waiting_for_production",
-        "in_production",
-        "completed",
-        "invoice_issued",
-      ]),
-      active: status === "pending",
+      completed: isAtOrPast(["designing"]),
+      active: isExactly(["pending"]),
     });
 
+    // 2. Thiết kế (designing, waiting_for_customer_approval, editing)
     steps.push({
       id: "design",
       label: "Thiết kế",
-      completed: is([
-        "waiting_for_proofing",
-        "proofed",
-        "waiting_for_production",
-        "in_production",
-        "completed",
-        "invoice_issued",
+      completed: isAtOrPast(["confirmed_for_printing"]),
+      active: isExactly([
+        "designing",
+        "waiting_for_customer_approval",
+        "editing",
       ]),
-      active: is(["pending"]),
     });
 
+    // 3. Chốt in (confirmed_for_printing)
+    steps.push({
+      id: "confirmed",
+      label: "Chốt in",
+      completed: isAtOrPast([
+        "waiting_for_deposit",
+        "deposit_received",
+        "debt_approved",
+        "waiting_for_proofing",
+      ]),
+      active: isExactly(["confirmed_for_printing"]),
+    });
+
+    // 4. Thanh toán - different for retail vs company
     if (customerType === "retail") {
       steps.push({
-        id: "deposited",
-        label: "Nhận cọc",
-        completed: hasDeposit,
-        active: !hasDeposit && is(["pending", "waiting_for_proofing"]),
+        id: "payment",
+        label: "Đặt cọc",
+        completed: hasDeposit || isAtOrPast(["deposit_received"]),
+        active: isExactly(["waiting_for_deposit"]),
+      });
+    } else {
+      steps.push({
+        id: "payment",
+        label: "Duyệt nợ",
+        completed: isAtOrPast(["debt_approved", "waiting_for_proofing"]),
+        active: isExactly(["waiting_for_deposit", "deposit_received"]),
       });
     }
 
+    // 5. Bình bài (waiting_for_proofing)
     steps.push({
       id: "proofing",
       label: "Bình bài",
-      completed: is([
-        "waiting_for_production",
-        "in_production",
-        "completed",
-        "invoice_issued",
-      ]),
-      active: is(["waiting_for_proofing", "proofed"]),
+      completed: isAtOrPast(["waiting_for_production"]),
+      active: isExactly(["waiting_for_proofing"]),
     });
 
+    // 6. Sản xuất (waiting_for_production, in_production, production_completed)
     steps.push({
       id: "production",
       label: "Sản xuất",
-      completed: is(["completed", "invoice_issued"]),
-      active: is(["waiting_for_production", "in_production"]),
+      completed: isAtOrPast(["production_completed"]),
+      active: isExactly(["waiting_for_production", "in_production"]),
     });
 
-    steps.push({
-      id: "completed",
-      label: "Hoàn thành",
-      completed: is(["invoice_issued"]),
-      active: status === "completed",
-    });
-
+    // 7. Xuất HĐ (invoice_issued)
     steps.push({
       id: "invoice",
       label: "Xuất HĐ",
-      completed: status === "invoice_issued",
-      active: status === "invoice_issued",
+      completed: isAtOrPast(["delivering"]),
+      active: isExactly(["production_completed", "invoice_issued"]),
+    });
+
+    // 8. Giao hàng (delivering)
+    steps.push({
+      id: "delivering",
+      label: "Giao hàng",
+      completed: isAtOrPast(["completed"]),
+      active: isExactly(["delivering"]),
+    });
+
+    // 9. Hoàn thành (completed)
+    steps.push({
+      id: "completed",
+      label: "Hoàn thành",
+      completed: isExactly(["completed"]),
+      active: isExactly(["completed"]),
     });
 
     return steps;
@@ -112,13 +171,32 @@ export function OrderFlowDiagram({
 
   const steps = getFlowSteps();
 
+  // Handle cancelled status
+  if (status === "cancelled") {
+    return (
+      <Card className="p-5 shadow-card bg-card">
+        <h3 className="text-sm font-semibold mb-5 text-muted-foreground uppercase tracking-wide">
+          Quy trình đơn hàng
+        </h3>
+        <div className="flex items-center justify-center py-4">
+          <div className="flex items-center gap-3 text-destructive">
+            <div className="w-10 h-10 rounded-full bg-destructive/10 border-2 border-destructive flex items-center justify-center">
+              <span className="text-lg font-bold">✕</span>
+            </div>
+            <span className="font-semibold">Đơn hàng đã bị hủy</span>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className="p-5 shadow-card bg-card">
       <h3 className="text-sm font-semibold mb-5 text-muted-foreground uppercase tracking-wide">
         Quy trình đơn hàng
       </h3>
       <div className="relative">
-        {/* Progress line */}
+        {/* Progress line - desktop */}
         <div className="hidden lg:block absolute top-5 left-0 right-0 h-0.5 bg-border" />
         <div
           className="hidden lg:block absolute top-5 left-0 h-0.5 bg-success transition-all duration-500"

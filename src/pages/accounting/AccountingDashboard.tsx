@@ -1,192 +1,176 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  AlertCircle, 
-  Search, 
-  Plus,
-  FileText,
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  DollarSign,
+  TrendingUp,
+  AlertCircle,
+  Search,
   Clock,
   CheckCircle,
   Eye,
-  Download
-} from 'lucide-react';
-import { mockPayments } from '@/lib/mockData';
-import { 
+  CreditCard,
+  FileText,
+  Loader2,
+} from "lucide-react";
+import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useOrdersByRole } from "@/hooks/use-order";
+import {
+  useAccountingByOrder,
+  useCreateAccountingForOrder,
+  useConfirmPayment,
+} from "@/hooks/use-accounting";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  formatCurrency,
+  formatDate,
+  paymentStatusLabels,
+  getStatusColorClass,
+  orderStatusLabels,
+  paymentMethodLabels,
+} from "@/lib/status-utils";
+import type { OrderResponse } from "@/Schema";
+import type { ConfirmPaymentRequest } from "@/Schema/accounting.schema";
+import { ROLE } from "@/constants";
 
-export default function Accounting() {
+export default function AccountingDashboard() {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [pageNumber, setPageNumber] = useState(1);
+  const pageSize = 10;
 
-  // Calculate revenue statistics
-  const totalRevenue = mockOrders
-    .filter(o => o.totalAmount && o.status === 'completed')
-    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  // Payment dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(
+    null
+  );
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("bank_transfer");
+  const [paymentNotes, setPaymentNotes] = useState<string>("");
 
-  const pendingRevenue = mockOrders
-    .filter(o => o.totalAmount && o.status !== 'completed' && o.status !== 'cancelled')
-    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
-  const paidAmount = mockPayments
-    .filter(p => p.status === 'paid')
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const pendingAmount = mockPayments
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const overduePayments = mockPayments.filter(payment => {
-    if (payment.status !== 'pending') return false;
-    const createdDate = new Date(payment.createdAt);
-    const today = new Date();
-    const daysPending = Math.ceil((today.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-    return daysPending > 7; // Consider overdue after 7 days
+  // Fetch orders for accounting
+  const {
+    data: ordersData,
+    isLoading: ordersLoading,
+    refetch: refetchOrders,
+  } = useOrdersByRole(user?.role ?? ROLE.ACCOUNTING, {
+    pageNumber,
+    pageSize,
+    search: searchTerm || undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
   });
 
-  // Filter payments
-  const filteredPayments = mockPayments.filter(payment => {
-    const matchesSearch = payment.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.customerName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
-    const matchesType = typeFilter === 'all' || payment.type === typeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // Accounting hooks
+  const { mutate: createAccounting, loading: creatingAccounting } =
+    useCreateAccountingForOrder();
+  const { mutate: confirmPayment, loading: confirmingPayment } =
+    useConfirmPayment();
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      minimumFractionDigits: 0,
-    }).format(amount);
+  // Get accounting data for selected order
+  const { data: accountingData, isLoading: accountingLoading } =
+    useAccountingByOrder(selectedOrder?.id ?? null, !!selectedOrder);
+
+  const orders = ordersData?.items ?? [];
+  const totalCount = ordersData?.totalCount ?? 0;
+
+  // Calculate stats from orders
+  const stats = {
+    totalOrders: totalCount,
+    pendingPayment: orders.filter(
+      (o) =>
+        o.status === "waiting_for_deposit" || o.status === "deposit_received"
+    ).length,
+    completed: orders.filter((o) => o.status === "completed").length,
+    totalAmount: orders.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0),
   };
 
-  const getStatusBadge = (status: string) => {
-    const colors = {
-      paid: 'bg-green-100 text-green-800 border-green-200',
-      pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      overdue: 'bg-red-100 text-red-800 border-red-200',
+  const handleOpenPaymentDialog = async (order: OrderResponse) => {
+    setSelectedOrder(order);
+    setPaymentAmount("");
+    setPaymentMethod("bank_transfer");
+    setPaymentNotes("");
+    setPaymentDialogOpen(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!accountingData?.id || !paymentAmount) return;
+
+    const payload: ConfirmPaymentRequest = {
+      amount: parseFloat(paymentAmount),
+      paymentMethod: paymentMethod,
+      notes: paymentNotes || undefined,
     };
 
-    const labels = {
-      paid: 'Đã thanh toán',
-      pending: 'Chờ thanh toán',
-      overdue: 'Quá hạn',
-    };
+    try {
+      await confirmPayment(accountingData.id, payload);
+      setPaymentDialogOpen(false);
+      refetchOrders();
+    } catch {
+      // Error handled in hook
+    }
+  };
+
+  const handleCreateAccounting = async (orderId: number) => {
+    try {
+      await createAccounting(orderId);
+      refetchOrders();
+    } catch {
+      // Error handled in hook
+    }
+  };
+
+  const getPaymentStatusBadge = (status: string | null | undefined) => {
+    if (!status) return null;
+    const label = paymentStatusLabels[status] ?? status;
+    const colorClass = getStatusColorClass(status);
 
     return (
-      <Badge variant="outline" className={colors[status as keyof typeof colors]}>
-        {labels[status as keyof typeof labels]}
+      <Badge variant="outline" className={colorClass}>
+        {label}
       </Badge>
     );
   };
 
-  const getTypeBadge = (type: string) => {
-    const colors = {
-      deposit: 'bg-blue-100 text-blue-800 border-blue-200',
-      final: 'bg-purple-100 text-purple-800 border-purple-200',
-      refund: 'bg-orange-100 text-orange-800 border-orange-200',
-    };
-
-    const labels = {
-      deposit: 'Đặt cọc',
-      final: 'Thanh toán cuối',
-      refund: 'Hoàn tiền',
-    };
+  const getOrderStatusBadge = (status: string | null | undefined) => {
+    if (!status) return null;
+    const label = orderStatusLabels[status] ?? status;
+    const colorClass = getStatusColorClass(status);
 
     return (
-      <Badge variant="outline" className={colors[type as keyof typeof colors]}>
-        {labels[type as keyof typeof labels]}
+      <Badge variant="outline" className={colorClass}>
+        {label}
       </Badge>
     );
   };
-
-  // Customer debt analysis
-  const customerDebts = mockCustomers.map(customer => {
-    const customerOrders = mockOrders.filter(o => o.customerId === customer.id);
-    const customerPayments = mockPayments.filter(p => 
-      customerOrders.some(o => o.orderNumber === p.orderNumber)
-    );
-    
-    const totalOwed = customerOrders
-      .filter(o => o.totalAmount)
-      .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-    
-    const totalPaid = customerPayments
-      .filter(p => p.status === 'paid')
-      .reduce((sum, p) => sum + p.amount, 0);
-    
-    const debt = totalOwed - totalPaid;
-    
-    return {
-      customer,
-      totalOwed,
-      totalPaid,
-      debt,
-      orderCount: customerOrders.length,
-    };
-  }).filter(item => item.debt > 0)
-    .sort((a, b) => b.debt - a.debt)
-    .slice(0, 5);
-
-  const stats = [
-    {
-      title: 'Tổng doanh thu',
-      value: totalRevenue,
-      icon: TrendingUp,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-      description: 'Đã thanh toán',
-    },
-    {
-      title: 'Chờ thu',
-      value: pendingAmount,
-      icon: Clock,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
-      description: `${mockPayments.filter(p => p.status === 'pending').length} giao dịch`,
-    },
-    {
-      title: 'Quá hạn',
-      value: overduePayments.reduce((sum, p) => sum + p.amount, 0),
-      icon: AlertCircle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
-      description: `${overduePayments.length} giao dịch`,
-    },
-    {
-      title: 'Đã thu tháng này',
-      value: paidAmount,
-      icon: CheckCircle,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-      description: 'Thành công',
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -194,229 +178,363 @@ export default function Accounting() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Kế toán</h1>
-          <p className="text-muted-foreground mt-1">Quản lý thanh toán và doanh thu</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Download className="h-4 w-4" />
-            Xuất báo cáo
-          </Button>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Tạo phiếu thu
-          </Button>
+          <p className="text-muted-foreground mt-1">
+            Quản lý thanh toán và theo dõi công nợ
+          </p>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-1">
-                {formatCurrency(stat.value)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stat.description}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Tổng đơn hàng
+            </CardTitle>
+            <div className="p-2 rounded-lg bg-blue-100">
+              <FileText className="h-4 w-4 text-blue-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold mb-1">{stats.totalOrders}</div>
+            <p className="text-xs text-muted-foreground">đơn hàng</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Chờ thanh toán
+            </CardTitle>
+            <div className="p-2 rounded-lg bg-yellow-100">
+              <Clock className="h-4 w-4 text-yellow-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold mb-1">
+              {stats.pendingPayment}
+            </div>
+            <p className="text-xs text-muted-foreground">đơn cần xử lý</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Hoàn thành
+            </CardTitle>
+            <div className="p-2 rounded-lg bg-green-100">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold mb-1">{stats.completed}</div>
+            <p className="text-xs text-muted-foreground">đơn đã thanh toán</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Tổng giá trị
+            </CardTitle>
+            <div className="p-2 rounded-lg bg-purple-100">
+              <TrendingUp className="h-4 w-4 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold mb-1">
+              {formatCurrency(stats.totalAmount)}
+            </div>
+            <p className="text-xs text-muted-foreground">trang hiện tại</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Overdue Alert */}
-      {overduePayments.length > 0 && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertDescription>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-red-800">
-                  {overduePayments.length} khoản thanh toán quá hạn
-                </p>
-                <p className="text-sm text-red-700">
-                  Tổng giá trị: {formatCurrency(overduePayments.reduce((sum, p) => sum + p.amount, 0))}
-                </p>
-              </div>
-              <Button size="sm" variant="outline">
-                Xem chi tiết
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Revenue Progress */}
+      {/* Order Management Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Tiến độ doanh thu tháng 10/2024
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Quản lý thanh toán đơn hàng
+            </CardTitle>
+          </div>
+          <div className="flex items-center gap-4 mt-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm kiếm đơn hàng..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                <SelectItem value="waiting_for_deposit">Chờ đặt cọc</SelectItem>
+                <SelectItem value="deposit_received">Đã nhận cọc</SelectItem>
+                <SelectItem value="debt_approved">Đã duyệt công nợ</SelectItem>
+                <SelectItem value="completed">Hoàn thành</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span>Mục tiêu: {formatCurrency(100000000)}</span>
-              <span className="font-medium">{Math.round((totalRevenue / 100000000) * 100)}%</span>
+          {ordersLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-            <Progress value={(totalRevenue / 100000000) * 100} className="h-3" />
-            <div className="grid gap-4 md:grid-cols-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">Đã thu</p>
-                <p className="font-medium text-green-600">{formatCurrency(totalRevenue)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Chờ thu</p>
-                <p className="font-medium text-yellow-600">{formatCurrency(pendingAmount)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Còn lại</p>
-                <p className="font-medium">{formatCurrency(100000000 - totalRevenue)}</p>
-              </div>
+          ) : orders.length === 0 ? (
+            <div className="text-center py-8">
+              <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">Không có đơn hàng nào</p>
             </div>
-          </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mã đơn</TableHead>
+                    <TableHead>Khách hàng</TableHead>
+                    <TableHead>Tổng tiền</TableHead>
+                    <TableHead>Đã cọc</TableHead>
+                    <TableHead>Còn lại</TableHead>
+                    <TableHead>Trạng thái đơn</TableHead>
+                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead className="text-right">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => {
+                    const remaining =
+                      (order.totalAmount ?? 0) - (order.depositAmount ?? 0);
+
+                    return (
+                      <TableRow key={order.id} className="hover:bg-muted/50">
+                        <TableCell className="font-medium">
+                          {order.code ?? `#${order.id}`}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">
+                              {order.customer?.name ?? "—"}
+                            </p>
+                            {order.customer?.companyName && (
+                              <p className="text-xs text-muted-foreground">
+                                {order.customer.companyName}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatCurrency(order.totalAmount)}
+                        </TableCell>
+                        <TableCell className="text-green-600">
+                          {formatCurrency(order.depositAmount)}
+                        </TableCell>
+                        <TableCell
+                          className={
+                            remaining > 0 ? "text-red-600" : "text-green-600"
+                          }
+                        >
+                          {formatCurrency(remaining)}
+                        </TableCell>
+                        <TableCell>
+                          {getOrderStatusBadge(order.status)}
+                        </TableCell>
+                        <TableCell>{formatDate(order.createdAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/orders/${order.id}`)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {remaining > 0 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenPaymentDialog(order)}
+                                disabled={creatingAccounting}
+                              >
+                                <CreditCard className="h-4 w-4 mr-1" />
+                                Thanh toán
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Hiển thị {orders.length} / {totalCount} đơn hàng
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+                    disabled={pageNumber === 1}
+                  >
+                    Trước
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageNumber((p) => p + 1)}
+                    disabled={orders.length < pageSize}
+                  >
+                    Sau
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Payment Management */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Quản lý thanh toán
-              </CardTitle>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Tìm kiếm giao dịch..." 
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="paid">Đã thanh toán</SelectItem>
-                  <SelectItem value="pending">Chờ thanh toán</SelectItem>
-                  <SelectItem value="overdue">Quá hạn</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Loại" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả loại</SelectItem>
-                  <SelectItem value="deposit">Đặt cọc</SelectItem>
-                  <SelectItem value="final">Thanh toán cuối</SelectItem>
-                  <SelectItem value="refund">Hoàn tiền</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Đơn hàng</TableHead>
-                  <TableHead>Khách hàng</TableHead>
-                  <TableHead>Loại</TableHead>
-                  <TableHead>Số tiền</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPayments.slice(0, 10).map((payment) => (
-                  <TableRow key={payment.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">{payment.orderNumber}</TableCell>
-                    <TableCell>{payment.customerName}</TableCell>
-                    <TableCell>{getTypeBadge(payment.type)}</TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(payment.amount)}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                    <TableCell>
-                      {new Date(payment.createdAt).toLocaleDateString('vi-VN')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xác nhận thanh toán</DialogTitle>
+            <DialogDescription>
+              Đơn hàng: {selectedOrder?.code ?? `#${selectedOrder?.id}`}
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* Customer Debt Analysis */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Công nợ khách hàng
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {customerDebts.map((item) => (
-                <div key={item.customer.id} className="p-3 rounded-lg border border-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-sm">
-                      {item.customer.companyName || item.customer.representativeName}
-                    </span>
-                    <Badge variant="outline" className="text-xs">
-                      {item.orderCount} đơn
-                    </Badge>
-                  </div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tổng:</span>
-                      <span>{formatCurrency(item.totalOwed)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Đã trả:</span>
-                      <span className="text-green-600">{formatCurrency(item.totalPaid)}</span>
-                    </div>
-                    <div className="flex justify-between border-t pt-1">
-                      <span className="font-medium">Còn nợ:</span>
-                      <span className="font-medium text-red-600">{formatCurrency(item.debt)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {customerDebts.length === 0 && (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Không có công nợ</p>
-                </div>
-              )}
+          {accountingLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Order Info */}
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Khách hàng:</span>
+                  <span className="font-medium">
+                    {accountingData?.customerName ??
+                      selectedOrder?.customer?.name ??
+                      "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tổng tiền:</span>
+                  <span className="font-medium">
+                    {formatCurrency(
+                      accountingData?.totalAmount ?? selectedOrder?.totalAmount
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Đã cọc:</span>
+                  <span className="font-medium text-green-600">
+                    {formatCurrency(
+                      accountingData?.deposit ?? selectedOrder?.depositAmount
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm border-t pt-2">
+                  <span className="text-muted-foreground">Còn lại:</span>
+                  <span className="font-medium text-red-600">
+                    {formatCurrency(
+                      accountingData?.remainingAmount ??
+                        (selectedOrder?.totalAmount ?? 0) -
+                          (selectedOrder?.depositAmount ?? 0)
+                    )}
+                  </span>
+                </div>
+                {accountingData?.paymentStatus && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Trạng thái TT:
+                    </span>
+                    {getPaymentStatusBadge(accountingData.paymentStatus)}
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Form */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Số tiền thanh toán</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="Nhập số tiền..."
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="method">Phương thức thanh toán</Label>
+                  <Select
+                    value={paymentMethod}
+                    onValueChange={setPaymentMethod}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(paymentMethodLabels).map(
+                        ([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Ghi chú</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Ghi chú thanh toán..."
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPaymentDialogOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleConfirmPayment}
+              disabled={
+                confirmingPayment || !paymentAmount || !accountingData?.id
+              }
+            >
+              {confirmingPayment && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Xác nhận thanh toán
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

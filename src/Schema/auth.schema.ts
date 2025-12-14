@@ -27,6 +27,30 @@ export const LoginResponseSchema = z.object({
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 
 // ---------------------------
+// RoleDefinition (Swagger)
+// ---------------------------
+export const RoleDefinitionSchema = z
+  .object({
+    code: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export type RoleDefinition = z.infer<typeof RoleDefinitionSchema>;
+
+// ---------------------------
+// RolesResponse (Swagger)
+// ---------------------------
+export const RolesResponseSchema = z
+  .object({
+    roles: z.array(RoleDefinitionSchema).nullable().optional(),
+  })
+  .passthrough();
+
+export type RolesResponse = z.infer<typeof RolesResponseSchema>;
+
+// ---------------------------
 // Validation helper
 // ---------------------------
 /**

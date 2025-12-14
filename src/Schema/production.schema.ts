@@ -58,9 +58,11 @@ export type CreateProductionRequest = z.infer<
 export const UpdateProductionRequestSchema = z
   .object({
     status: z.string().max(50).nullable().optional(),
-    progressPercent: z.number().int().nullable().optional(),
+    progressPercent: z.number().int().min(0).max(100).nullable().optional(),
     defectNotes: z.string().nullable().optional(),
-    wastage: z.number().nullable().optional(),
+    wastage: z.number().min(0).nullable().optional(),
+    startedAt: DateSchema.nullable().optional(),
+    completedAt: DateSchema.nullable().optional(),
   })
   .passthrough();
 
@@ -84,9 +86,9 @@ export type StartProductionRequest = z.infer<
 
 export const CompleteProductionRequestSchema = z
   .object({
-    notes: z.string().nullable().optional(),
+    progressPercent: z.number().int().min(0).max(100).optional(),
     defectNotes: z.string().nullable().optional(),
-    wastage: z.number().nullable().optional(),
+    wastage: z.number().min(0).optional(),
   })
   .passthrough();
 

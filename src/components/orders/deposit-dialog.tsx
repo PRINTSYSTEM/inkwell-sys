@@ -71,9 +71,9 @@ export function DepositDialog({
       id: orderId,
       data: {
         depositAmount: amount,
-        paymentMethod: method,
-        depositNote: note || undefined,
-      } as any, // nếu UpdateOrderRequest chưa có field này thì chỉnh lại schema
+        // Include payment method and note in the note field
+        note: note ? `[${method}] ${note}` : `[${method}] Đã nhận cọc`,
+      },
     });
 
     handleClose();

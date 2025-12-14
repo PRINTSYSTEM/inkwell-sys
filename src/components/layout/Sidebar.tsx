@@ -1,6 +1,6 @@
-import { Link, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth';
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -18,15 +18,15 @@ import {
   Building2,
   Scissors,
   ChevronDown,
-  ChevronRight
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  ChevronRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useState } from 'react';
+import { useState } from "react";
 
 interface SidebarSubItem {
   title: string;
@@ -41,120 +41,130 @@ interface SidebarDepartment {
 
 const departments: SidebarDepartment[] = [
   {
-    title: 'Quản lý',
+    title: "Quản lý",
     icon: Building2,
     items: [
-      { title: 'Dashboard', href: '/dashboard' },
-      { title: 'Quản lý nhân viên', href: '/manager/employees' },
-      { title: 'Phân công công việc', href: '/manager/assignments' },
-      { title: 'Báo cáo tổng quan', href: '/manager/reports' }
-    ]
+      { title: "Dashboard", href: "/dashboard" },
+      { title: "Quản lý nhân viên", href: "/manager/employees" },
+      { title: "Phân công công việc", href: "/manager/assignments" },
+      { title: "Báo cáo tổng quan", href: "/manager/reports" },
+    ],
   },
   {
-    title: 'Thiết kế',
+    title: "Thiết kế",
     icon: Palette,
     items: [
-      { title: 'Danh sách thiết kế', href: '/design' },
-      { title: 'Tạo thiết kế mới', href: '/design/create' },
-      { title: 'Phân công thiết kế', href: '/design/assignments' },
-      { title: 'Loại thiết kế', href: '/design-types' }
-    ]
+      { title: "Danh sách thiết kế", href: "/design" },
+      { title: "Tạo thiết kế mới", href: "/design/create" },
+      { title: "Phân công thiết kế", href: "/design/assignments" },
+      { title: "Loại thiết kế", href: "/design-types" },
+    ],
   },
   {
-    title: 'Đơn hàng',
+    title: "Đơn hàng",
     icon: ShoppingCart,
     items: [
-      { title: 'Danh sách đơn hàng', href: '/orders' },
-      { title: 'Tạo đơn hàng', href: '/orders/create' },
-      { title: 'Theo dõi đơn hàng', href: '/orders/tracking' }
-    ]
+      { title: "Danh sách đơn hàng", href: "/orders" },
+      { title: "Tạo đơn hàng", href: "/orders/create" },
+      { title: "Theo dõi đơn hàng", href: "/orders/tracking" },
+    ],
   },
   {
-    title: 'Sản xuất',
+    title: "Sản xuất",
     icon: Factory,
     items: [
-      { title: 'Kế hoạch sản xuất', href: '/production' },
-      { title: 'Tiến độ sản xuất', href: '/production/progress' },
-      { title: 'Quản lý máy móc', href: '/production/machines' }
-    ]
+      { title: "Kế hoạch sản xuất", href: "/production" },
+      { title: "Tiến độ sản xuất", href: "/production/progress" },
+      { title: "Quản lý máy móc", href: "/production/machines" },
+    ],
   },
   {
-    title: 'Prepress',
+    title: "Prepress",
     icon: Scissors,
     items: [
-      { title: 'Chuẩn bị in', href: '/prepress' },
-      { title: 'Kiểm tra file', href: '/prepress/check' },
-      { title: 'Xuất bản in', href: '/prepress/output' }
-    ]
+      { title: "Chuẩn bị in", href: "/prepress" },
+      { title: "Kiểm tra file", href: "/prepress/check" },
+      { title: "Xuất bản in", href: "/prepress/output" },
+    ],
   },
   {
-    title: 'Vật liệu',
+    title: "Vật liệu",
     icon: Package,
     items: [
-      { title: 'Kho vật liệu', href: '/materials' },
-      { title: 'Nhập xuất kho', href: '/inventory' },
-      { title: 'Loại vật liệu', href: '/material-types' }
-    ]
+      { title: "Kho vật liệu", href: "/materials" },
+      { title: "Nhập xuất kho", href: "/inventory" },
+      { title: "Loại vật liệu", href: "/material-types" },
+    ],
   },
   {
-    title: 'Khách hàng',
+    title: "Khách hàng",
     icon: Users,
     items: [
-      { title: 'Danh sách khách hàng', href: '/customers' },
-      { title: 'Thêm khách hàng', href: '/customers/create' },
-      { title: 'Lịch sử giao dịch', href: '/customers/history' }
-    ]
+      { title: "Danh sách khách hàng", href: "/customers" },
+      { title: "Thêm khách hàng", href: "/customers/create" },
+      { title: "Lịch sử giao dịch", href: "/customers/history" },
+    ],
   },
   {
-    title: 'Kế toán',
+    title: "Kế toán",
     icon: Calculator,
     items: [
-      { title: 'Báo cáo tài chính', href: '/accounting' },
-      { title: 'Doanh thu', href: '/accounting/revenue' },
-      { title: 'Chi phí', href: '/accounting/expenses' }
-    ]
+      { title: "Quản lý thanh toán", href: "/accounting" },
+      { title: "Báo cáo công nợ", href: "/accounting/debt-report" },
+      { title: "Doanh thu", href: "/accounting/revenue" },
+      { title: "Chi phí", href: "/accounting/expenses" },
+    ],
   },
   {
-    title: 'Chấm công',
+    title: "Chấm công",
     icon: UserCheck,
     items: [
-      { title: 'Chấm công nhân viên', href: '/attendance' },
-      { title: 'Báo cáo chấm công', href: '/attendance/reports' }
-    ]
+      { title: "Chấm công nhân viên", href: "/attendance" },
+      { title: "Báo cáo chấm công", href: "/attendance/reports" },
+    ],
   },
   {
-    title: 'Quản trị',
+    title: "Quản trị",
     icon: Settings,
     items: [
-      { title: 'Quản lý người dùng', href: '/admin/users' },
-      { title: 'Phân quyền', href: '/admin/permissions' },
-      { title: 'Cài đặt hệ thống', href: '/admin/settings' }
-    ]
-  }
+      { title: "Quản lý người dùng", href: "/admin/users" },
+      { title: "Phân quyền", href: "/admin/permissions" },
+      { title: "Cài đặt hệ thống", href: "/admin/settings" },
+    ],
+  },
 ];
 
 export function Sidebar({ className }: { className?: string }) {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [openDepartments, setOpenDepartments] = useState<Record<string, boolean>>({});
+  const [openDepartments, setOpenDepartments] = useState<
+    Record<string, boolean>
+  >({});
 
   const handleLogout = async () => {
     await logout();
   };
 
   const toggleDepartment = (departmentTitle: string) => {
-    setOpenDepartments(prev => ({
+    setOpenDepartments((prev) => ({
       ...prev,
-      [departmentTitle]: !prev[departmentTitle]
+      [departmentTitle]: !prev[departmentTitle],
     }));
   };
 
   const isItemActive = (href: string) => {
-    return location.pathname === href || location.pathname.startsWith(href + '/');
+    return (
+      location.pathname === href || location.pathname.startsWith(href + "/")
+    );
   };
 
   return (
-    <div className={cn("flex h-full w-64 flex-col bg-background border-r", className)}>
+    <div
+      className={cn(
+        "flex h-full w-64 flex-col bg-background border-r",
+        className
+      )}
+    >
       {/* Header */}
       <div className="flex h-14 items-center border-b px-4">
         <div className="flex items-center gap-2 font-semibold">
@@ -164,16 +174,18 @@ export function Sidebar({ className }: { className?: string }) {
           InkWell System
         </div>
       </div>
-      
+
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-2">
         {departments.map((department) => {
           const Icon = department.icon;
           const isOpen = openDepartments[department.title];
-          const hasActiveItem = department.items.some(item => isItemActive(item.href));
-          
+          const hasActiveItem = department.items.some((item) =>
+            isItemActive(item.href)
+          );
+
           return (
-            <Collapsible 
+            <Collapsible
               key={department.title}
               open={isOpen}
               onOpenChange={() => toggleDepartment(department.title)}
@@ -183,7 +195,9 @@ export function Sidebar({ className }: { className?: string }) {
                   variant="ghost"
                   className={cn(
                     "w-full justify-between text-sm font-medium mb-1",
-                    hasActiveItem ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    hasActiveItem
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -197,18 +211,20 @@ export function Sidebar({ className }: { className?: string }) {
                   )}
                 </Button>
               </CollapsibleTrigger>
-              
+
               <CollapsibleContent className="space-y-1">
                 {department.items.map((item) => {
                   const isActive = isItemActive(item.href);
-                  
+
                   return (
                     <Link
                       key={item.href}
                       to={item.href}
                       className={cn(
-                        'block rounded-lg px-8 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground',
-                        isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground'
+                        "block rounded-lg px-8 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+                        isActive
+                          ? "bg-accent text-accent-foreground font-medium"
+                          : "text-muted-foreground"
                       )}
                     >
                       {item.title}
@@ -219,32 +235,36 @@ export function Sidebar({ className }: { className?: string }) {
             </Collapsible>
           );
         })}
-        
+
         {/* Reports - Standalone */}
         <Link
           to="/reports"
           className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground mt-2',
-            isItemActive('/reports') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground mt-2",
+            isItemActive("/reports")
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground"
           )}
         >
           <BarChart3 className="h-4 w-4" />
           Báo cáo
         </Link>
-        
+
         {/* Notifications - Standalone */}
         <Link
           to="/notifications"
           className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground',
-            isItemActive('/notifications') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+            isItemActive("/notifications")
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground"
           )}
         >
           <FileText className="h-4 w-4" />
           Thông báo
         </Link>
       </nav>
-      
+
       {/* User info and logout */}
       <div className="border-t p-4 space-y-2">
         <div className="flex items-center gap-3 px-2">
@@ -253,13 +273,15 @@ export function Sidebar({ className }: { className?: string }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{user?.fullName}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.role}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {user?.role}
+            </p>
           </div>
         </div>
-        
-        <Button 
-          variant="ghost" 
-          size="sm" 
+
+        <Button
+          variant="ghost"
+          size="sm"
           className="w-full justify-start text-muted-foreground hover:text-destructive"
           onClick={handleLogout}
         >

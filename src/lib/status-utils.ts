@@ -1,26 +1,11 @@
 // src/lib/status-utils.ts
+import { ENTITY_CONFIG } from "@/config/entities.config";
 
-// ===== LABEL MAPPING CHO CÁC STATUS =====
+// ===== LABEL MAPPING CHO CÁC STATUS (từ ENTITY_CONFIG) =====
 
-// Trạng thái đơn hàng (theo enum mới)
-export const orderStatusLabels: Record<string, string> = {
-  pending: "Nhận thông tin",
-  designing: "Đang thiết kế",
-  waiting_for_customer_approval: "Chờ khách duyệt",
-  editing: "Đang chỉnh sửa",
-  confirmed_for_printing: "Đã chốt in",
-
-  waiting_for_deposit: "Chờ đặt cọc",
-  deposit_received: "Đã nhận cọc",
-  debt_approved: "Đã duyệt công nợ",
-
-  waiting_for_proofing: "Chờ bình bài",
-  waiting_for_production: "Chờ sản xuất",
-  in_production: "Đang sản xuất",
-  production_completed: "Hoàn thành sản xuất",
-  completed: "Hoàn thành",
-  cancelled: "Hủy",
-};
+// Trạng thái đơn hàng
+export const orderStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.orderStatuses.values;
 
 // Mô tả chi tiết cho từng trạng thái đơn hàng
 export const orderStatusDescription: Record<string, string> = {
@@ -30,68 +15,87 @@ export const orderStatusDescription: Record<string, string> = {
   editing: "Đang chỉnh sửa theo yêu cầu khách.",
   confirmed_for_printing:
     "Khách đã chốt file in, có thể tạo bình bài / sản xuất.",
-
   waiting_for_deposit: "Khách cần đặt cọc trước khi tiếp tục xử lý đơn.",
   deposit_received: "Đã nhận tiền cọc từ khách.",
   debt_approved: "Khách công ty đã được duyệt công nợ.",
-
   waiting_for_proofing: "Chờ tạo lệnh bình bài.",
   waiting_for_production: "Chờ tạo lệnh sản xuất.",
   in_production: "Đơn đang được xử lý tại xưởng.",
   production_completed: "Sản xuất xong, chờ giao hàng / tất toán.",
+  invoice_issued: "Đã xuất hóa đơn cho đơn hàng.",
+  delivering: "Đang giao hàng cho khách.",
   completed: "Đơn hàng đã hoàn tất.",
   cancelled: "Đơn hàng bị hủy.",
 };
 
 // Trạng thái thiết kế (Design)
-export const designStatusLabels: Record<string, string> = {
-  received_info: "Nhận thông tin",
-  designing: "Đang thiết kế",
-  editing: "Đang chỉnh sửa",
-  waiting_for_customer_approval: "Chờ khách duyệt",
-  confirmed_for_printing: "Đã chốt in",
-};
+export const designStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.designStatuses.values;
 
 // Trạng thái bình bài (ProofingOrder)
-export const proofingStatusLabels: Record<string, string> = {
-  waiting_for_file: "Chờ file in",
-  waiting_for_production: "Chờ sản xuất",
-  in_production: "Đang sản xuất",
-  completed: "Hoàn thành",
-};
+export const proofingStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.proofingOrderStatuses.values;
 
 // Trạng thái sản xuất (Production)
-export const productionStatusLabels: Record<string, string> = {
-  waiting_for_production: "Chờ sản xuất",
-  in_production: "Đang sản xuất",
-  completed: "Hoàn thành",
-};
+export const productionStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.productionStatuses.values;
+
+// Trạng thái mục chi tiết đơn hàng (OrderDetail)
+export const orderDetailItemStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.orderDetailItemStatuses.values;
 
 // Trạng thái thanh toán (Accounting)
-export const paymentStatusLabels: Record<string, string> = {
-  not_paid: "Chưa thanh toán",
-  deposited: "Đã nhận cọc",
-  fully_paid: "Đã thanh toán đủ",
-};
+export const paymentStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.paymentStatuses.values;
 
 // Loại khách hàng
-export const customerTypeLabels: Record<string, string> = {
-  retail: "Khách lẻ",
-  company: "Khách công ty",
-};
+export const customerTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.customerTypes.values;
 
 // Trạng thái chung (MaterialType, DesignType, ...)
-export const commonStatusLabels: Record<string, string> = {
-  active: "Hoạt động",
-  inactive: "Không hoạt động",
-};
+export const commonStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.commonStatuses.values;
 
 // Phương thức thanh toán
-export const paymentMethodLabels: Record<string, string> = {
-  cash: "Tiền mặt",
-  bank_transfer: "Chuyển khoản",
-  card: "Thẻ",
-  e_wallet: "Ví điện tử",
+export const paymentMethodLabels: Record<string, string> =
+  ENTITY_CONFIG.paymentMethods.values;
+
+// ===== DESIGN STATUS CONFIG (cho UI) =====
+export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
+
+export const designStatusConfig: Record<
+  DesignStatusKey,
+  {
+    label: string;
+    color: string;
+    bgColor: string;
+  }
+> = {
+  received_info: {
+    label: ENTITY_CONFIG.designStatuses.values.received_info,
+    color: "bg-slate-100 text-slate-700 border-slate-300",
+    bgColor: "bg-slate-50",
+  },
+  designing: {
+    label: ENTITY_CONFIG.designStatuses.values.designing,
+    color: "bg-blue-100 text-blue-700 border-blue-300",
+    bgColor: "bg-blue-50",
+  },
+  editing: {
+    label: ENTITY_CONFIG.designStatuses.values.editing,
+    color: "bg-amber-100 text-amber-700 border-amber-300",
+    bgColor: "bg-amber-50",
+  },
+  waiting_for_customer_approval: {
+    label: ENTITY_CONFIG.designStatuses.values.waiting_for_customer_approval,
+    color: "bg-orange-100 text-orange-700 border-orange-300",
+    bgColor: "bg-orange-50",
+  },
+  confirmed_for_printing: {
+    label: ENTITY_CONFIG.designStatuses.values.confirmed_for_printing,
+    color: "bg-green-100 text-green-700 border-green-300",
+    bgColor: "bg-green-50",
+  },
 };
 
 // ===== VARIANT CŨ (CHO CÁC CHỖ ĐÃ DÙNG) =====

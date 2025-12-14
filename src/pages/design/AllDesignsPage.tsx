@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Search, Eye, Package, Ruler, User } from "lucide-react";
+import { Search, Eye, Package, Ruler } from "lucide-react";
 import { useDesigns, useFilters } from "@/hooks";
 import type { DesignResponse } from "@/Schema";
 import {
@@ -32,7 +32,6 @@ export default function AllDesignsPage() {
 
   // gọi React Query lấy list
   const { data, isLoading } = useDesigns();
-  const designs: DesignResponse[] = data?.items ?? []; // hoặc data?.data tùy API
 
   // hook filter
   const [filterState, filterActions] = useFilters({
@@ -41,12 +40,18 @@ export default function AllDesignsPage() {
     persistKey: "designs-list",
   });
 
+  // Memoize designs to prevent dependency warnings
+  const designs = useMemo<DesignResponse[]>(
+    () => data?.items ?? [],
+    [data?.items]
+  );
+
   // map thêm field để search theo tên designer
   const designsWithSearch: DesignWithSearch[] = useMemo(
     () =>
       designs.map((d) => ({
         ...d,
-        designerFullName: d.designer.fullName,
+        designerFullName: d.designer?.fullName ?? "",
       })),
     [designs]
   );
@@ -57,7 +62,7 @@ export default function AllDesignsPage() {
       filterActions.applyFilters<DesignWithSearch>(designsWithSearch, {
         searchFields: ["code", "designerFullName"],
       }),
-    [designsWithSearch, filterActions, filterState]
+    [designsWithSearch, filterActions]
   );
 
   // ====== mapping UI <-> filter state ======
@@ -68,9 +73,9 @@ export default function AllDesignsPage() {
 
   const handleStatusChange = (value: string) => {
     if (value === "all") {
-      filterActions.removeFilter("designStatus");
+      filterActions.removeFilter("status");
     } else {
-      filterActions.setFilter("designStatus", value, "eq");
+      filterActions.setFilter("status", value, "eq");
     }
   };
 
@@ -84,14 +89,14 @@ export default function AllDesignsPage() {
 
   // giá trị đang chọn cho Select (đọc từ filterState)
   const statusFilterValue =
-    (filterState.filters["designStatus"]?.value as string | undefined) ?? "all";
+    (filterState.filters["status"]?.value as string | undefined) ?? "all";
 
   const typeFilterValue =
     (
       filterState.filters["designTypeId"]?.value as number | undefined
     )?.toString() ?? "all";
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null | undefined) => {
     const statusMap: Record<
       string,
       {
@@ -99,11 +104,19 @@ export default function AllDesignsPage() {
         variant: "default" | "secondary" | "destructive" | "outline";
       }
     > = {
-      received_info: { label: "Đã nhận thông tin", variant: "default" },
+      received_info: { label: "Nhận thông tin", variant: "default" },
       designing: { label: "Đang thiết kế", variant: "secondary" },
-      completed: { label: "Hoàn thành", variant: "outline" },
+      editing: { label: "Đang chỉnh sửa", variant: "secondary" },
+      waiting_for_customer_approval: {
+        label: "Chờ khách duyệt",
+        variant: "outline",
+      },
+      confirmed_for_printing: { label: "Đã chốt in", variant: "default" },
     };
-    const config = statusMap[status] || { label: status, variant: "default" };
+    const config = statusMap[status || ""] || {
+      label: status || "N/A",
+      variant: "default",
+    };
     return (
       <Badge variant={config.variant} className="font-medium">
         {config.label}
@@ -165,11 +178,15 @@ export default function AllDesignsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="received_info">
-                    Đã nhận thông tin
-                  </SelectItem>
+                  <SelectItem value="received_info">Nhận thông tin</SelectItem>
                   <SelectItem value="designing">Đang thiết kế</SelectItem>
-                  <SelectItem value="completed">Hoàn thành</SelectItem>
+                  <SelectItem value="editing">Đang chỉnh sửa</SelectItem>
+                  <SelectItem value="waiting_for_customer_approval">
+                    Chờ khách duyệt
+                  </SelectItem>
+                  <SelectItem value="confirmed_for_printing">
+                    Đã chốt in
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
@@ -206,12 +223,12 @@ export default function AllDesignsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Đơn hàng</TableHead>
+                      <TableHead>Mã thiết kế</TableHead>
+                      <TableHead>Tên</TableHead>
                       <TableHead>Trạng thái</TableHead>
                       <TableHead>Loại</TableHead>
                       <TableHead>Chất liệu</TableHead>
                       <TableHead>Kích thước</TableHead>
-                      <TableHead>Số lượng</TableHead>
                       <TableHead className="text-right">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -222,17 +239,19 @@ export default function AllDesignsPage() {
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => navigate(`/design/detail/${design.id}`)}
                       >
-                        <TableCell>#{design.orderId}</TableCell>
-                        <TableCell>
-                          {getStatusBadge(design.designStatus)}
+                        <TableCell className="font-medium">
+                          {design.code || `DES-${design.id}`}
                         </TableCell>
-
-                        <TableCell>{design.designType.name}</TableCell>
-                        <TableCell>{design.materialType.name}</TableCell>
+                        <TableCell>{design.designName || "—"}</TableCell>
+                        <TableCell>{getStatusBadge(design.status)}</TableCell>
+                        <TableCell>{design.designType?.name || "—"}</TableCell>
+                        <TableCell>
+                          {design.materialType?.name || "—"}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Ruler className="h-4 w-4 text-muted-foreground" />
-                            <span>{design.dimensions}</span>
+                            <span>{design.dimensions || "—"}</span>
                           </div>
                           {design.width && design.height && (
                             <div className="text-xs text-muted-foreground">
@@ -240,10 +259,6 @@ export default function AllDesignsPage() {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell>
-                          {design.quantity.toLocaleString()}
-                        </TableCell>
-
                         <TableCell className="text-right">
                           <Button
                             variant="outline"

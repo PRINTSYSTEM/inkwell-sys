@@ -36,7 +36,7 @@ export const {
   useDelete: useDeleteDesignType,
   useUpload: useUploadDesignType,
   useDownload: useDownloadDesignType,
-  getItemsFromResponse: getDesignTypeItems,
+  extractItems: getDesignTypeItems,
 } = designTypeCrud;
 
 // Alias thân thiện cho UI

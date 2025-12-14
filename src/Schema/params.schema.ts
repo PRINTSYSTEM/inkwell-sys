@@ -113,6 +113,7 @@ export type ProductionListParams = z.infer<typeof ProductionListParamsSchema>;
 export const UserListParamsSchema = PagedParamsSchema.extend({
   search: z.string().nullable().optional(),
   role: z.string().nullable().optional(),
+  isActive: z.boolean().nullable().optional(),
 });
 
 export type UserListParams = z.infer<typeof UserListParamsSchema>;

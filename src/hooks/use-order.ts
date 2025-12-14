@@ -90,12 +90,16 @@ export const useGenerateOrderExcel = () => {
         title: "Thành công",
         description: "Đã tạo và tải file Excel cho đơn hàng",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể tạo file Excel",
         variant: "destructive",
       });
@@ -148,12 +152,16 @@ export const useCreateOrderWithExistingDesigns = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể tạo đơn hàng từ thiết kế có sẵn",
         variant: "destructive",
       });
@@ -208,12 +216,16 @@ export const useAddDesignToOrder = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể thêm thiết kế vào đơn",
         variant: "destructive",
       });
@@ -295,12 +307,16 @@ export const useExportOrderInvoice = () => {
         title: "Thành công",
         description: "Đã xuất hoá đơn đơn hàng",
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể xuất hoá đơn",
         variant: "destructive",
       });
@@ -337,12 +353,16 @@ export const useExportOrderDeliveryNote = () => {
   const mutate = async (id: number) => {
     try {
       await execute(id);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể xuất phiếu giao hàng",
         variant: "destructive",
       });
@@ -356,9 +376,20 @@ export const useExportOrderDeliveryNote = () => {
 export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
   const finalParams = normalizeParams(params ?? ({} as OrderListParams));
 
-  if (role == ROLE.ADMIN) return useOrderListBase(finalParams);
+  // Call all hooks unconditionally to satisfy Rules of Hooks
+  const adminResult = useOrderListBase(finalParams);
+  const designerResult = useOrdersForDesigner(finalParams);
+  const accountingResult = useOrdersForAccounting(finalParams);
 
-  return role == ROLE.DESIGN
-    ? useOrdersForDesigner(finalParams)
-    : useOrdersForAccounting(finalParams);
+  // Return the appropriate result based on role
+  if (role === ROLE.ADMIN || role === ROLE.MANAGER) {
+    return adminResult;
+  }
+
+  if (role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD) {
+    return designerResult;
+  }
+
+  // Default to accounting for accounting roles and others
+  return accountingResult;
 };

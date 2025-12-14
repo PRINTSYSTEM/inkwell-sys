@@ -40,7 +40,7 @@ export const {
   useDelete: useDeleteMaterialType,
   useUpload: useUploadMaterialType,
   useDownload: useDownloadMaterialType,
-  getItemsFromResponse: getMaterialTypeItems,
+  extractItems: getMaterialTypeItems,
 } = materialTypeCrud;
 
 // === Nâng cao: list theo designTypeId ===

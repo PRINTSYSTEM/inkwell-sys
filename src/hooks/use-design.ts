@@ -23,7 +23,7 @@ const {
   useUpdate: useUpdateDesignBase,
 } = createCrudHooks<
   DesignResponse,
-  any, // không có POST /designs, nên không dùng create
+  never, // không có POST /designs, nên không dùng create
   UpdateDesignRequest,
   number,
   DesignListParams,
@@ -145,12 +145,16 @@ export const useAddDesignTimelineEntry = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể thêm timeline",
         variant: "destructive",
       });
@@ -201,12 +205,16 @@ export const useUploadDesignFile = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể upload file thiết kế",
         variant: "destructive",
       });
@@ -256,12 +264,16 @@ export const useUploadDesignImage = () => {
       });
 
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể upload hình",
         variant: "destructive",
       });
@@ -282,32 +294,50 @@ export const useUploadDesignImage = () => {
 export const useGenerateDesignExcel = () => {
   const { toast } = useToast();
 
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    string,
-    [number]
-  >(async (id: number) => {
-    const res = await apiRequest.post<string>(
-      API_SUFFIX.DESIGN_GENERATE_EXCEL(id)
-    );
-    return res.data;
-  });
+  // Không cần trả data ra ngoài, chỉ cần download file
+  const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
+    async (id: number) => {
+      const res = await apiRequest.post<ArrayBuffer>(
+        API_SUFFIX.DESIGN_GENERATE_EXCEL(id),
+        null,
+        {
+          responseType: "arraybuffer",
+        }
+      );
+
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `design-${id}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    }
+  );
 
   const mutate = async (id: number) => {
     try {
-      const result = await execute(id);
+      await execute(id);
 
       toast({
         title: "Thành công",
-        description: "Đã tạo file Excel cho thiết kế",
+        description: "Đã tạo và tải file Excel cho thiết kế",
       });
-
-      return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       toast({
         title: "Lỗi",
         description:
-          err?.response?.data?.message ||
-          err?.message ||
+          error?.response?.data?.message ||
+          error?.message ||
           "Không thể tạo file Excel",
         variant: "destructive",
       });
@@ -316,7 +346,6 @@ export const useGenerateDesignExcel = () => {
   };
 
   return {
-    data,
     loading,
     error,
     mutate,
@@ -324,4 +353,17 @@ export const useGenerateDesignExcel = () => {
   };
 };
 
+// GET /api/designs/by-customer/:id
+export const useDesignsByCustomer = (customerId: number) => {
+  return useQuery({
+    queryKey: [designKeys.all[0], "by-customer", customerId],
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignResponse[]>(
+        API_SUFFIX.DESIGN_BY_CUSTOMER(customerId)
+      );
+      return res.data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
 export { designCrudApi, designKeys };

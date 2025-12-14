@@ -81,7 +81,11 @@ export default function ProductionListPage() {
     productionsResp
   );
 
-  const productions: ProductionResponse[] = parseProdResp?.items || [];
+  // Memoize productions to prevent dependency warnings
+  const productions = useMemo<ProductionResponse[]>(
+    () => parseProdResp?.items || [],
+    [parseProdResp?.items]
+  );
 
   const { mutate: createProduction, isPending: creating } =
     useCreateProduction();

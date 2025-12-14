@@ -194,12 +194,12 @@ export default function DesignTypesPage() {
   // ====== MATERIAL HANDLERS (GIỮ API CŨ) ======
 
   const handleCreateMaterial = (material: CreateMaterialTypeRequest) => {
+    // Prioritize: material.designTypeId -> selectedDesignType.id
+    const designTypeId = material.designTypeId || selectedDesignType?.id || 0;
+
     const payload: CreateMaterialTypeRequest = {
       ...material,
-      designTypeId:
-        Number(material.designTypeId) ??
-        Number(selectedDesignType?.id) ??
-        Number(material.designTypeId),
+      designTypeId: Number(designTypeId),
     };
 
     if (!payload.designTypeId) {
@@ -231,7 +231,7 @@ export default function DesignTypesPage() {
       updatedAt,
       statusType,
       ...data
-    } = updates as any;
+    } = updates as Record<string, unknown>;
 
     updateMaterialTypeMutation(
       {
