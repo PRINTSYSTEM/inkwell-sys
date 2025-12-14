@@ -46,7 +46,6 @@ export default function OrdersPage() {
 
   // chỉ 1 hook duy nhất, bên trong tự chọn endpoint theo role
   const { data, isLoading, isError, error } = useOrdersByRole(role, listParams);
-  console.log(data);
 
   const orders = data?.items ?? [];
 
