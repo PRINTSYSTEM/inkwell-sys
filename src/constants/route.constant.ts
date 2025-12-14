@@ -15,6 +15,7 @@ export const ROUTE_PATHS = {
     MY_WORK: "/design/my-work" as const,
     MANAGEMENT: "/design/management" as const,
     DETAIL_BASE: "/design/detail" as const, // prefix cho /design/detail/:id
+    DESIGNER_DETAIL: "/design/designer" as const, // prefix cho /design/designer/:id
   },
 
   ORDERS: {

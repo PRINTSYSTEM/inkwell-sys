@@ -76,7 +76,7 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Tất cả thiết kế",
         icon: Eye,
         path: ROUTE_PATHS.DESIGN.ALL,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD,ROLE.DESIGN],
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD, ROLE.DESIGN],
       },
       {
         id: "design-my-work",
@@ -90,8 +90,8 @@ export const MENU_ITEMS: MenuItem[] = [
 
   // ==== Khách hàng & Đơn hàng ====
   {
-    id: "customer-orders",
-    title: "Khách hàng & Đơn hàng",
+    id: "customer",
+    title: "Khách hàng",
     icon: Users,
     allowedRoles: [
       ROLE.ADMIN,
@@ -103,30 +103,22 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.PRODUCTION,
       ROLE.PRODUCTION_LEAD,
     ],
-    children: [
-      {
-        id: "customers",
-        title: "Khách hàng",
-        icon: Users,
-        path: ROUTE_PATHS.CUSTOMERS.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN, ROLE.DESIGN_LEAD],
-      },
-      {
-        id: "orders",
-        title: "Đơn hàng",
-        icon: FileText,
-        path: ROUTE_PATHS.ORDERS.ROOT,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-          ROLE.PRODUCTION,
-          ROLE.PRODUCTION_LEAD,
-          ROLE.DESIGN,
-          ROLE.DESIGN_LEAD,
-        ],
-      },
+    path: ROUTE_PATHS.CUSTOMERS.ROOT,
+  },
+  {
+    id: "orders",
+    title: "Đơn hàng",
+    icon: FileText,
+    path: ROUTE_PATHS.ORDERS.ROOT,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
+      ROLE.PRODUCTION,
+      ROLE.PRODUCTION_LEAD,
+      ROLE.DESIGN,
+      ROLE.DESIGN_LEAD,
     ],
   },
 

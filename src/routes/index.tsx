@@ -19,6 +19,9 @@ const DesignDetailPage = lazy(
   () => import("@/pages/design/detail/DesignDetailPage")
 );
 const DesignManagement = lazy(() => import("@/pages/design/Designers"));
+const DesignerDetailPage = lazy(
+  () => import("@/pages/design/DesignerDetailView")
+);
 
 // Orders
 const Orders = lazy(() => import("@/pages/orders/OrderList"));
@@ -163,6 +166,15 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <DesignManagement />
+              </Suspense>
+            ),
+          },
+          {
+            // /design/designer/:id
+            path: "designer/:id",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DesignerDetailPage />
               </Suspense>
             ),
           },

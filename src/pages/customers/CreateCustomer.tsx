@@ -32,7 +32,7 @@ export default function CreateCustomer() {
     phone: "",
     address: "",
     type: "company",
-    maxDebt: 20000000,
+    maxDebt: 50000000,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -64,7 +64,7 @@ export default function CreateCustomer() {
 
   const validateForm = () => {
     try {
-      CreateCustomerRequestSchema.parse(form);
+      CreateCustomerRequestSchema.safeParse(form);
       setErrors({});
       return true;
     } catch (error: unknown) {
@@ -425,9 +425,11 @@ export default function CreateCustomer() {
                 <Input
                   id="maxDebt"
                   type="number"
-                  placeholder="20000000"
+                  placeholder="50000000"
                   value={form.maxDebt}
-                  onChange={(e) => handleInput("maxDebt", e.target.value)}
+                  onChange={(e) =>
+                    handleInput("maxDebt", Number(e.target.value))
+                  }
                   className={`text-lg font-semibold ${
                     errors.maxDebt ? "border-destructive" : ""
                   }`}

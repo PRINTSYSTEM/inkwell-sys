@@ -18,16 +18,16 @@ import { DeleteDesignerDialog } from "@/components/design/delete-designer-dialog
 
 import type { UserResponse } from "@/Schema";
 import { useCreateUser, useUpdateUser, useUsers } from "@/hooks";
-import DesignerDetail from "./DesignerDetailView";
+import { useNavigate } from "react-router-dom";
 
 type Designer = UserResponse;
 
 export default function DesignersPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDesigner, setSelectedDesigner] = useState<Designer | null>(
     null
   );
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -65,8 +65,9 @@ export default function DesignersPage() {
   const { mutateAsync: updateUser } = useUpdateUser();
 
   const handleDesignerClick = (designer: Designer) => {
-    setSelectedDesigner(designer);
-    setIsDialogOpen(true);
+    if (designer.id) {
+      navigate(`/design/designer/${designer.id}`);
+    }
   };
 
   const handleAddDesigner = () => {
@@ -346,12 +347,6 @@ export default function DesignersPage() {
           onOpenChange={setIsDeleteDialogOpen}
           designer={selectedDesigner}
           onSuccess={handleDeleteSuccess}
-        />
-
-        <DesignerDetail
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          selectedDesigner={selectedDesigner}
         />
       </div>
     </div>
