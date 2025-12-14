@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Plus,
@@ -36,28 +37,41 @@ import {
   Clock,
   Eye,
   Package,
+  Loader2,
+  FileText,
+  User,
+  Layers,
+  Calendar,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
 import { useProductions, useCreateProduction } from "@/hooks/use-production";
+import { useProofingOrdersForProduction } from "@/hooks/use-proofing-order";
+import { useAuth } from "@/hooks/use-auth";
 import {
   ProductionResponse,
   ProductionResponsePagedResponseSchema,
   safeParseSchema,
   type ProductionListParams,
+  type ProofingOrderResponse,
 } from "@/Schema";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { productionStatusLabels } from "@/lib/status-utils";
 
 export default function ProductionListPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [proofingOrderId, setProofingOrderId] = useState("");
-  const [productionLeadId, setProductionLeadId] = useState("");
+  const [selectedProofingOrderId, setSelectedProofingOrderId] = useState<
+    number | null
+  >(null);
   const [notes, setNotes] = useState("");
+  const [proofingSearchTerm, setProofingSearchTerm] = useState("");
   const [debouncedSearch] = useDebounce(searchTerm, 300);
+  const [debouncedProofingSearch] = useDebounce(proofingSearchTerm, 300);
 
   const queryParams = useMemo<ProductionListParams>(() => {
     const params: ProductionListParams = {
@@ -90,6 +104,55 @@ export default function ProductionListPage() {
   const { mutate: createProduction, isPending: creating } =
     useCreateProduction();
 
+  // Fetch proofing orders waiting for production
+  const { data: proofingOrdersResp, isLoading: isLoadingProofingOrders } =
+    useProofingOrdersForProduction({
+      pageNumber: 1,
+      pageSize: 100,
+    });
+
+  const proofingOrders = useMemo<ProofingOrderResponse[]>(
+    () => proofingOrdersResp?.items || [],
+    [proofingOrdersResp?.items]
+  );
+
+  // Filter proofing orders by search term
+  const filteredProofingOrders = useMemo(() => {
+    if (!debouncedProofingSearch.trim()) {
+      return proofingOrders;
+    }
+
+    const search = debouncedProofingSearch.toLowerCase().trim();
+    return proofingOrders.filter((order) => {
+      const codeMatch = order.code?.toLowerCase().includes(search);
+      const materialMatch = order.materialType?.name
+        ?.toLowerCase()
+        .includes(search);
+      const creatorMatch = order.createdBy?.fullName
+        ?.toLowerCase()
+        .includes(search);
+      const designMatch = order.proofingOrderDesigns?.some(
+        (pod) =>
+          pod.design?.designName?.toLowerCase().includes(search) ||
+          pod.design?.code?.toLowerCase().includes(search)
+      );
+      const idMatch = order.id?.toString().includes(search);
+
+      return (
+        codeMatch || materialMatch || creatorMatch || designMatch || idMatch
+      );
+    });
+  }, [proofingOrders, debouncedProofingSearch]);
+
+  // Get selected proofing order details
+  const selectedProofingOrder = useMemo(() => {
+    if (!selectedProofingOrderId) return null;
+    return (
+      proofingOrders.find((order) => order.id === selectedProofingOrderId) ||
+      null
+    );
+  }, [proofingOrders, selectedProofingOrderId]);
+
   const filteredProductions = useMemo(
     () =>
       productions?.filter((prod: ProductionResponse) => {
@@ -111,29 +174,49 @@ export default function ProductionListPage() {
   );
 
   const handleCreateProduction = async () => {
-    if (!proofingOrderId || !productionLeadId) {
+    if (!selectedProofingOrderId) {
       toast({
         variant: "destructive",
         title: "Thiếu thông tin",
-        description: "Vui lòng điền đầy đủ thông tin",
+        description: "Vui lòng chọn một bình bài để tạo lệnh sản xuất",
+      });
+      return;
+    }
+
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "Lỗi xác thực",
+        description: "Không thể lấy thông tin người dùng",
       });
       return;
     }
 
     try {
       await createProduction({
-        proofingOrderId: Number(proofingOrderId),
-        productionLeadId: Number(productionLeadId),
+        proofingOrderId: selectedProofingOrderId,
+        productionLeadId: user.id,
         notes: notes || undefined,
       });
       setIsCreateDialogOpen(false);
-      setProofingOrderId("");
-      setProductionLeadId("");
+      setSelectedProofingOrderId(null);
       setNotes("");
+      setProofingSearchTerm("");
     } catch (error) {
       // Error handled by hook
     }
   };
+
+  const formatDateTime = (dateStr?: string | null) =>
+    dateStr
+      ? new Date(dateStr).toLocaleString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "N/A";
 
   const stats = useMemo(
     () => ({
@@ -337,58 +420,332 @@ export default function ProductionListPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tạo đơn sản xuất mới</DialogTitle>
+      <Dialog
+        open={isCreateDialogOpen}
+        onOpenChange={(open) => {
+          setIsCreateDialogOpen(open);
+          if (!open) {
+            setSelectedProofingOrderId(null);
+            setNotes("");
+            setProofingSearchTerm("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-6xl max-h-[90vh] p-0 gap-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+            <DialogTitle className="text-2xl">Tạo đơn sản xuất mới</DialogTitle>
             <DialogDescription>
-              Nhập thông tin để tạo đơn sản xuất từ lệnh bình bài
+              Chọn một bình bài đang chờ sản xuất để tạo lệnh sản xuất
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>ID Lệnh bình bài</Label>
-              <Input
-                type="number"
-                placeholder="Nhập ID lệnh bình bài"
-                value={proofingOrderId}
-                onChange={(e) => setProofingOrderId(e.target.value)}
-              />
+          <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
+            {/* Left Panel: Proofing Orders List */}
+            <div className="flex-1 flex flex-col border-r overflow-hidden">
+              <div className="p-4 border-b space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Tìm kiếm theo mã, vật liệu, người tạo, thiết kế..."
+                    className="pl-10"
+                    value={proofingSearchTerm}
+                    onChange={(e) => setProofingSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {filteredProofingOrders.length} bình bài
+                    {debouncedProofingSearch &&
+                      ` (${proofingOrders.length} tổng cộng)`}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {isLoadingProofingOrders ? (
+                  <div className="flex flex-col items-center justify-center h-full py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Đang tải danh sách bình bài...
+                    </p>
+                  </div>
+                ) : filteredProofingOrders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full py-12 px-4">
+                    <FileText className="h-12 w-12 text-muted-foreground mb-3" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      {debouncedProofingSearch
+                        ? "Không tìm thấy bình bài nào phù hợp"
+                        : "Không có bình bài nào đang chờ sản xuất"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12"></TableHead>
+                          <TableHead>Mã bình bài</TableHead>
+                          <TableHead>Vật liệu</TableHead>
+                          <TableHead>Số lượng</TableHead>
+                          <TableHead>Người tạo</TableHead>
+                          <TableHead>Ngày tạo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProofingOrders.map((order) => {
+                          const isSelected =
+                            selectedProofingOrderId === order.id;
+                          return (
+                            <TableRow
+                              key={order.id}
+                              className={`cursor-pointer transition-colors ${
+                                isSelected
+                                  ? "bg-primary/10 hover:bg-primary/15"
+                                  : "hover:bg-muted/50"
+                              }`}
+                              onClick={() =>
+                                setSelectedProofingOrderId(order.id || null)
+                              }
+                            >
+                              <TableCell>
+                                <div className="flex items-center justify-center">
+                                  {isSelected ? (
+                                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                                  ) : (
+                                    <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <span>{order.code || `BB${order.id}`}</span>
+                                  <StatusBadge
+                                    status={
+                                      order.status || "waiting_for_production"
+                                    }
+                                    label={
+                                      order.status === "waiting_for_production"
+                                        ? "Chờ sản xuất"
+                                        : order.status || ""
+                                    }
+                                  />
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm">
+                                  {order.materialType?.name || "N/A"}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">
+                                  {order.totalQuantity || 0}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm">
+                                  {order.createdBy?.fullName || "N/A"}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDateTime(order.createdAt)}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>ID Người phụ trách sản xuất</Label>
-              <Input
-                type="number"
-                placeholder="Nhập ID người phụ trách"
-                value={productionLeadId}
-                onChange={(e) => setProductionLeadId(e.target.value)}
-              />
-            </div>
+            {/* Right Panel: Selected Order Details */}
+            <div className="w-full lg:w-96 flex flex-col border-t lg:border-t-0 lg:border-l">
+              {selectedProofingOrder ? (
+                <>
+                  <div className="p-4 border-b bg-muted/30">
+                    <h3 className="font-semibold text-lg mb-1">
+                      Chi tiết bình bài
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedProofingOrder.code ||
+                        `BB${selectedProofingOrder.id}`}
+                    </p>
+                  </div>
 
-            <div className="space-y-2">
-              <Label>Ghi chú (tùy chọn)</Label>
-              <Textarea
-                placeholder="Nhập ghi chú cho đơn sản xuất..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {/* Basic Info */}
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                          <Layers className="h-3 w-3" />
+                          Vật liệu
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {selectedProofingOrder.materialType?.name || "N/A"}
+                        </p>
+                        {selectedProofingOrder.materialType?.code && (
+                          <p className="text-xs text-muted-foreground">
+                            {selectedProofingOrder.materialType.code}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                          <Package className="h-3 w-3" />
+                          Tổng số lượng
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {selectedProofingOrder.totalQuantity || 0} sản phẩm
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                          <User className="h-3 w-3" />
+                          Người tạo
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {selectedProofingOrder.createdBy?.fullName || "N/A"}
+                        </p>
+                        {selectedProofingOrder.createdBy?.email && (
+                          <p className="text-xs text-muted-foreground">
+                            {selectedProofingOrder.createdBy.email}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+                          <Calendar className="h-3 w-3" />
+                          Ngày tạo
+                        </Label>
+                        <p className="text-sm">
+                          {formatDateTime(selectedProofingOrder.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Designs */}
+                    {selectedProofingOrder.proofingOrderDesigns &&
+                      selectedProofingOrder.proofingOrderDesigns.length > 0 && (
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            Thiết kế (
+                            {selectedProofingOrder.proofingOrderDesigns.length})
+                          </Label>
+                          <div className="space-y-2">
+                            {selectedProofingOrder.proofingOrderDesigns.map(
+                              (pod) => (
+                                <Card key={pod.id} className="p-3">
+                                  <div className="space-y-1">
+                                    <p className="text-sm font-medium">
+                                      {pod.design?.designName ||
+                                        pod.design?.code ||
+                                        "N/A"}
+                                    </p>
+                                    {pod.design?.code && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Mã: {pod.design.code}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <Badge variant="outline">
+                                        Số lượng: {pod.quantity}
+                                      </Badge>
+                                      {pod.design?.dimensions && (
+                                        <Badge variant="outline">
+                                          {pod.design.dimensions}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </Card>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Notes */}
+                    {selectedProofingOrder.notes && (
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">
+                          Ghi chú bình bài
+                        </Label>
+                        <Card className="p-3 bg-muted/30">
+                          <p className="text-sm whitespace-pre-wrap">
+                            {selectedProofingOrder.notes}
+                          </p>
+                        </Card>
+                      </div>
+                    )}
+
+                    {/* Production Notes Input */}
+                    <div className="space-y-2 pt-2 border-t">
+                      <Label htmlFor="production-notes">
+                        Ghi chú cho lệnh sản xuất (tùy chọn)
+                      </Label>
+                      <Textarea
+                        id="production-notes"
+                        placeholder="Nhập ghi chú cho đơn sản xuất..."
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        rows={4}
+                        className="resize-none"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                  <FileText className="h-12 w-12 text-muted-foreground mb-3" />
+                  <p className="text-sm font-medium mb-1">Chưa chọn bình bài</p>
+                  <p className="text-xs text-muted-foreground">
+                    Vui lòng chọn một bình bài từ danh sách bên trái để xem chi
+                    tiết
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsCreateDialogOpen(false)}
-            >
-              Hủy
-            </Button>
-            <Button onClick={handleCreateProduction} disabled={creating}>
-              <Plus className="h-4 w-4 mr-2" />
-              {creating ? "Đang tạo..." : "Tạo đơn"}
-            </Button>
+          <DialogFooter className="px-6 py-4 border-t flex-shrink-0 bg-background">
+            <div className="flex items-center gap-3 w-full justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCreateDialogOpen(false);
+                  setSelectedProofingOrderId(null);
+                  setNotes("");
+                  setProofingSearchTerm("");
+                }}
+                className="flex-shrink-0"
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleCreateProduction}
+                disabled={creating || !selectedProofingOrderId}
+                className="flex-shrink-0 min-w-[140px]"
+              >
+                {creating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Đang tạo...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tạo đơn sản xuất
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -80,13 +80,7 @@ const AttendanceReports = lazy(
   () => import("@/pages/attendance/AttendanceReports")
 );
 
-// Admin
-const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
-const AdminPermissions = lazy(() => import("@/pages/admin/AdminPermissions"));
-const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
-
 // Reports / Notifications
-const Reports = lazy(() => import("@/pages/Reports"));
 const NotificationCenter = lazy(
   () => import("@/pages/notifications/NotificationCenter")
 );
@@ -431,55 +425,6 @@ export const router = createBrowserRouter([
             ),
           },
         ],
-      },
-
-      // ===== ADMIN =====
-      {
-        path: lastSegment(ROUTE_PATHS.ADMIN.ROOT), // "admin"
-        children: [
-          {
-            index: true,
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <AdminDashboard />
-              </Suspense>
-            ),
-          },
-          {
-            path: lastSegment(ROUTE_PATHS.ADMIN.USERS), // "users"
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <AdminDashboard />
-              </Suspense>
-            ),
-          },
-          {
-            path: lastSegment(ROUTE_PATHS.ADMIN.ROLES), // "roles"
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <AdminPermissions />
-              </Suspense>
-            ),
-          },
-          {
-            path: lastSegment(ROUTE_PATHS.ADMIN.ANALYTICS), // "analytics"
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <AdminSettings />
-              </Suspense>
-            ),
-          },
-        ],
-      },
-
-      // ===== REPORTS =====
-      {
-        path: lastSegment(ROUTE_PATHS.REPORTS), // "reports"
-        element: (
-          <Suspense fallback={<div>Loading...</div>}>
-            <Reports />
-          </Suspense>
-        ),
       },
 
       // ===== NOTIFICATIONS =====

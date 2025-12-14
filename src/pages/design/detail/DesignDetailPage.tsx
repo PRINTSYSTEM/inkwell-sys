@@ -45,6 +45,9 @@ import {
   CheckCircle2,
   ArrowRight,
   FileSpreadsheet,
+  Receipt,
+  Truck,
+  CheckCircle2 as CheckCircleIcon,
 } from "lucide-react";
 
 import {
@@ -62,8 +65,19 @@ import { TimelineEntryDialog } from "@/components/design/timeline-entry-dialog";
 
 import type { DesignResponse, DesignTimelineEntryResponse } from "@/Schema";
 import { ROLE } from "@/constants";
-import { useAuth } from "@/hooks";
+import {
+  useAuth,
+  useOrder,
+  useExportOrderInvoice,
+  useExportOrderDeliveryNote,
+  useUpdateOrder,
+} from "@/hooks";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { orderStatusLabels } from "@/lib/status-utils";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/http";
+import { API_SUFFIX } from "@/apis";
+import type { OrderDetailResponse } from "@/Schema";
 
 export default function DesignDetailPage() {
   const params = useParams();
@@ -108,6 +122,46 @@ export default function DesignDetailPage() {
   const { mutate: uploadImage } = useUploadDesignImage();
   const { mutate: addTimeline } = useAddDesignTimelineEntry();
 
+  // Fetch orderDetail by designId to get orderId
+  // Note: This assumes there's an API endpoint or we need to fetch orders and filter
+  // For now, we'll try to get orderId from available order details
+  const { data: orderDetails } = useQuery<OrderDetailResponse[]>({
+    queryKey: ["order-details", "by-design", designId],
+    enabled: enabled && !!designId,
+    queryFn: async () => {
+      try {
+        // Try to fetch orderDetails that contain this design
+        // This might need a different API endpoint
+        const res = await apiRequest.get<OrderDetailResponse[]>(
+          API_SUFFIX.PROOFING_AVAILABLE_ORDER_DETAILS,
+          {
+            params: {},
+          }
+        );
+        return res.data.filter((od) => od.designId === designId);
+      } catch {
+        // If API doesn't support this, return empty array
+        return [];
+      }
+    },
+  });
+
+  // Get orderId from orderDetail
+  const orderId = orderDetails?.[0]?.orderId || null;
+
+  // Fetch order if we have orderId
+  const { data: order, isLoading: orderLoading } = useOrder(
+    orderId,
+    enabled && !!orderId
+  );
+
+  // Export hooks
+  const { mutate: exportInvoice, loading: exportingInvoice } =
+    useExportOrderInvoice();
+  const { mutate: exportDeliveryNote, loading: exportingDeliveryNote } =
+    useExportOrderDeliveryNote();
+  const { mutate: updateOrder, isPending: updatingOrder } = useUpdateOrder();
+
   // Use 'status' field from DesignResponse
   const currentStatus = (design?.status ?? "received_info") as DesignStatus;
 
@@ -145,6 +199,43 @@ export default function DesignDetailPage() {
     currentStatus === "designing" &&
     validNextStatuses.includes("waiting_for_customer_approval") &&
     !design?.designFileUrl;
+
+  // Check if user can see export buttons (accounting or admin)
+  const canExportDocuments =
+    (user?.role === ROLE.ACCOUNTING || user?.role === ROLE.ADMIN) &&
+    order?.status === "production_completed";
+
+  // Check if user can complete order (accounting only)
+  const canCompleteOrder =
+    user?.role === ROLE.ACCOUNTING && order?.status === "delivering";
+
+  const handleExportInvoice = () => {
+    if (orderId) {
+      exportInvoice(orderId);
+    }
+  };
+
+  const handleExportDeliveryNote = () => {
+    if (orderId) {
+      exportDeliveryNote(orderId);
+    }
+  };
+
+  const handleCompleteOrder = async () => {
+    if (!orderId) return;
+    try {
+      await updateOrder({
+        id: orderId,
+        data: { status: "completed" },
+      });
+      toast({
+        title: "Thành công",
+        description: "Đã hoàn thành đơn hàng",
+      });
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
 
   const handleStatusTransition = (targetStatus: DesignStatus) => {
     if (!targetStatus) return;
@@ -334,6 +425,48 @@ export default function DesignDetailPage() {
                   </span>
                 )}
               </div>
+              {/* Order Actions */}
+              {order && (
+                <div className="flex items-center gap-2">
+                  {canExportDocuments && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleExportInvoice}
+                        disabled={exportingInvoice}
+                        className="gap-2"
+                      >
+                        <Receipt className="h-4 w-4" />
+                        {exportingInvoice ? "Đang xuất..." : "Xuất hóa đơn"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleExportDeliveryNote}
+                        disabled={exportingDeliveryNote}
+                        className="gap-2"
+                      >
+                        <Truck className="h-4 w-4" />
+                        {exportingDeliveryNote
+                          ? "Đang xuất..."
+                          : "Xuất phiếu giao hàng"}
+                      </Button>
+                    </>
+                  )}
+                  {canCompleteOrder && (
+                    <Button
+                      size="sm"
+                      onClick={handleCompleteOrder}
+                      disabled={updatingOrder}
+                      className="gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircleIcon className="h-4 w-4" />
+                      {updatingOrder ? "Đang xử lý..." : "Hoàn thành đơn hàng"}
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

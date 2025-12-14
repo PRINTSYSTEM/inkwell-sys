@@ -168,7 +168,7 @@ export const MENU_ITEMS: MenuItem[] = [
         id: "production",
         title: "Danh sách sản xuất",
         icon: Layers,
-        path: ROUTE_PATHS.PROOFING.ROOT,
+        path: ROUTE_PATHS.PRODUCTION.ROOT,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,

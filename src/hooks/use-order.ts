@@ -285,14 +285,19 @@ export const useExportOrderInvoice = () => {
       const res = await apiRequest.post<ArrayBuffer>(
         API_SUFFIX.ORDER_EXPORT_INVOICE(id),
         null,
-        { responseType: "arraybuffer" }
+        {
+          responseType: "arraybuffer",
+        }
       );
 
-      const blob = new Blob([res.data], { type: "application/pdf" });
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `order-${id}-invoice.pdf`;
+      link.download = `order-${id}-invoice.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -335,14 +340,19 @@ export const useExportOrderDeliveryNote = () => {
       const res = await apiRequest.post<ArrayBuffer>(
         API_SUFFIX.ORDER_EXPORT_DELIVERY_NOTE(id),
         null,
-        { responseType: "arraybuffer" }
+        {
+          responseType: "arraybuffer",
+        }
       );
 
-      const blob = new Blob([res.data], { type: "application/pdf" });
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `order-${id}-delivery-note.pdf`;
+      link.download = `order-${id}-delivery-note.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -353,6 +363,10 @@ export const useExportOrderDeliveryNote = () => {
   const mutate = async (id: number) => {
     try {
       await execute(id);
+      toast({
+        title: "Thành công",
+        description: "Đã xuất phiếu giao hàng",
+      });
     } catch (err: unknown) {
       const error = err as {
         response?: { data?: { message?: string } };

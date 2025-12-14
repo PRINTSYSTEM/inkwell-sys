@@ -182,9 +182,10 @@ export default function OrdersPage() {
                 {!isLoading &&
                   !isError &&
                   orders.map((order) => {
-                    const customerType = order.customerCompanyName
-                      ? "company"
-                      : "retail";
+                    const customerType =
+                      order.customerCompanyName || order.customer?.companyName
+                        ? "company"
+                        : "retail";
 
                     const remaining =
                       (order.totalAmount || 0) - (order.depositAmount || 0);
