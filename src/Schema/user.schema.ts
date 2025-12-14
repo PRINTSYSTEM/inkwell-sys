@@ -5,8 +5,8 @@ import {
   DateSchema,
   NameSchema,
   createPagedResponseSchema,
+  UserRoleSchema,
 } from "./Common";
-import { UserRoleSchema } from "./common/enums";
 
 // ===== UserResponse =====
 
