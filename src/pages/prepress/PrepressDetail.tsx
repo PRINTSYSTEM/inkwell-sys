@@ -90,6 +90,19 @@ export default function ProofingOrderDetailPage() {
 
   const handleUpdateStatus = async () => {
     if (!order?.id) return;
+
+    // Kiểm tra lại xem đã có file bình bài chưa
+    if (!order.proofingFileUrl) {
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description:
+          "Vui lòng upload file bình bài trước khi chuyển trạng thái",
+      });
+      setIsConfirmStatusDialogOpen(false);
+      return;
+    }
+
     try {
       // Chỉ cho phép chuyển từ waiting_for_file sang waiting_for_production
       const targetStatus = "waiting_for_production";
@@ -172,7 +185,7 @@ export default function ProofingOrderDetailPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/proofing-orders")}
+            onClick={() => navigate("/proofing")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -197,6 +210,12 @@ export default function ProofingOrderDetailPage() {
               variant="outline"
               className="gap-2 bg-transparent"
               onClick={handleStatusChangeClick}
+              disabled={!order.proofingFileUrl}
+              title={
+                !order.proofingFileUrl
+                  ? "Vui lòng upload file bình bài trước"
+                  : "Chuyển sang chờ sản xuất"
+              }
             >
               <Edit className="h-4 w-4" />
               Chuyển sang chờ sản xuất
@@ -528,17 +547,25 @@ export default function ProofingOrderDetailPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Xác nhận chuyển trạng thái</DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn chuyển trạng thái từ{" "}
-              <strong>
-                {proofingStatusLabels[order?.status || ""] || order?.status}
-              </strong>{" "}
-              sang{" "}
-              <strong>
-                {proofingStatusLabels["waiting_for_production"] ||
-                  "Chờ sản xuất"}
-              </strong>{" "}
-              không?
+            <DialogDescription className="space-y-2">
+              <p>
+                Bạn có chắc chắn muốn chuyển trạng thái từ{" "}
+                <strong>
+                  {proofingStatusLabels[order?.status || ""] || order?.status}
+                </strong>{" "}
+                sang{" "}
+                <strong>
+                  {proofingStatusLabels["waiting_for_production"] ||
+                    "Chờ sản xuất"}
+                </strong>{" "}
+                không?
+              </p>
+              {!order?.proofingFileUrl && (
+                <p className="text-destructive text-sm font-medium mt-2">
+                  ⚠️ Lưu ý: Bạn chưa upload file bình bài. Vui lòng upload file
+                  trước khi chuyển trạng thái.
+                </p>
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -549,7 +576,12 @@ export default function ProofingOrderDetailPage() {
             >
               Hủy
             </Button>
-            <Button onClick={handleUpdateStatus}>Xác nhận</Button>
+            <Button
+              onClick={handleUpdateStatus}
+              disabled={!order?.proofingFileUrl}
+            >
+              Xác nhận
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
