@@ -6,6 +6,8 @@ export * from "./use-toast";
 // Export new utility hooks
 export * from "./use-filters";
 export * from "./use-design";
+export * from "./use-form-validation";
+export * from "./use-validated-mutation";
 
 // Re-export hook helpers for convenience
 export { filterHelpers } from "./use-filters";

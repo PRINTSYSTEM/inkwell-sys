@@ -120,7 +120,7 @@ export function OrderFlowDiagram({
     } else {
       steps.push({
         id: "payment",
-        label: "Duyệt nợ",
+        label: "Duyệt công nợ",
         completed: isAtOrPast(["debt_approved", "waiting_for_proofing"]),
         active: isExactly(["waiting_for_deposit", "deposit_received"]),
       });

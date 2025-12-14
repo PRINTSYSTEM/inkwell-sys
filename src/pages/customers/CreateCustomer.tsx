@@ -1,10 +1,10 @@
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateCustomer } from "@/hooks";
+import { useCreateCustomer, useFormValidation } from "@/hooks";
 import { CreateCustomerRequest, CreateCustomerRequestSchema } from "@/Schema";
+import { FormFieldError } from "@/components/ui/form-field-error";
 import {
   ArrowLeft,
   Save,
@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 export default function CreateCustomer() {
   const navigate = useNavigate();
@@ -35,14 +34,23 @@ export default function CreateCustomer() {
     maxDebt: 50000000,
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
   const [generatedCode, setGeneratedCode] = useState("");
   const {
     mutateAsync: createCustomer,
     isPending,
     isSuccess,
   } = useCreateCustomer();
+
+  // Form validation hook
+  const {
+    errors,
+    validateAndParse,
+    clearFieldError,
+    touchField,
+    getError,
+    scrollToFirstError,
+  } = useFormValidation(CreateCustomerRequestSchema);
+
   const generateShortName = (full: string) => {
     const arr = full.trim().split(" ");
     const last2 = arr.slice(-2);
@@ -57,47 +65,48 @@ export default function CreateCustomer() {
     value: string | number | null
   ) => {
     setForm((p) => ({ ...p, [field]: value }));
-    setErrors((e) => ({ ...e, [field]: "" }));
+    clearFieldError(field as string);
     if (field === "representativeName")
       setGeneratedCode(generatePreviewCode(String(value ?? "")));
   };
 
-  const validateForm = () => {
-    try {
-      CreateCustomerRequestSchema.safeParse(form);
-      setErrors({});
-      return true;
-    } catch (error: unknown) {
-      const validationErrors: Record<string, string> = {};
-      if (error instanceof z.ZodError) {
-        error.errors.forEach((err) => {
-          const field = err.path[0];
-          if (field && typeof field === "string") {
-            validationErrors[field] = err.message;
-          }
-        });
-      }
-      setErrors(validationErrors);
-      return false;
-    }
+  const handleBlur = (field: keyof CreateCustomerRequest) => {
+    touchField(field as string);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!validateForm()) {
-      toast.error("Vui lòng kiểm tra lại thông tin");
+
+    // Prepare form data - convert empty strings to undefined for optional fields
+    const formData = {
+      name: form.name?.trim() || "",
+      companyName: form.companyName?.trim() || undefined,
+      representativeName: form.representativeName?.trim() || "",
+      phone: form.phone?.trim() || "",
+      taxCode: form.taxCode?.trim() || "",
+      address: form.address?.trim() || "",
+      type: form.type || "",
+      currentDebt: form.currentDebt,
+      maxDebt: Number(form.maxDebt) || 0,
+    };
+
+    // Validate and parse form data
+    const payload = validateAndParse(formData);
+
+    if (!payload) {
+      // Scroll to first error field
+      setTimeout(() => {
+        scrollToFirstError();
+      }, 100);
       return;
     }
 
     try {
-      const payload = CreateCustomerRequestSchema.parse({
-        ...form,
-        maxDebt: Number(form.maxDebt) || 0,
-      });
       await createCustomer(payload);
       setTimeout(() => navigate("/customers"), 2000);
-    } catch {
-      toast.error("Dữ liệu không hợp lệ");
+    } catch (error) {
+      // Error is already handled by the mutation hook
+      console.error("Error creating customer:", error);
     }
   };
 
@@ -181,13 +190,10 @@ export default function CreateCustomer() {
                     placeholder="Nhập tên khách hàng"
                     value={form.name}
                     onChange={(e) => handleInput("name", e.target.value)}
-                    className={errors.name ? "border-destructive" : ""}
+                    onBlur={() => handleBlur("name")}
+                    className={getError("name") ? "border-destructive" : ""}
                   />
-                  {errors.name && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      {errors.name}
-                    </p>
-                  )}
+                  <FormFieldError error={getError("name")} />
                 </div>
 
                 <div className="space-y-2">
@@ -206,15 +212,12 @@ export default function CreateCustomer() {
                     onChange={(e) =>
                       handleInput("representativeName", e.target.value)
                     }
+                    onBlur={() => handleBlur("representativeName")}
                     className={
-                      errors.representativeName ? "border-destructive" : ""
+                      getError("representativeName") ? "border-destructive" : ""
                     }
                   />
-                  {errors.representativeName && (
-                    <p className="text-sm text-destructive">
-                      {errors.representativeName}
-                    </p>
-                  )}
+                  <FormFieldError error={getError("representativeName")} />
                 </div>
 
                 <div className="space-y-2">
@@ -292,9 +295,7 @@ export default function CreateCustomer() {
                       </p>
                     </button>
                   </div>
-                  {errors.type && (
-                    <p className="text-sm text-destructive">{errors.type}</p>
-                  )}
+                  <FormFieldError error={getError("type")} />
                 </div>
               </div>
             </div>
@@ -329,11 +330,10 @@ export default function CreateCustomer() {
                       placeholder="0912 345 678"
                       value={form.phone || ""}
                       onChange={(e) => handleInput("phone", e.target.value)}
-                      className={errors.phone ? "border-destructive" : ""}
+                      onBlur={() => handleBlur("phone")}
+                      className={getError("phone") ? "border-destructive" : ""}
                     />
-                    {errors.phone && (
-                      <p className="text-sm text-destructive">{errors.phone}</p>
-                    )}
+                    <FormFieldError error={getError("phone")} />
                   </div>
 
                   <div className="space-y-2">
@@ -349,13 +349,12 @@ export default function CreateCustomer() {
                       placeholder="0123456789"
                       value={form.taxCode || ""}
                       onChange={(e) => handleInput("taxCode", e.target.value)}
-                      className={errors.taxCode ? "border-destructive" : ""}
+                      onBlur={() => handleBlur("taxCode")}
+                      className={
+                        getError("taxCode") ? "border-destructive" : ""
+                      }
                     />
-                    {errors.taxCode && (
-                      <p className="text-sm text-destructive">
-                        {errors.taxCode}
-                      </p>
-                    )}
+                    <FormFieldError error={getError("taxCode")} />
                   </div>
                 </div>
 
@@ -372,13 +371,12 @@ export default function CreateCustomer() {
                     placeholder="Nhập địa chỉ đầy đủ"
                     value={form.address || ""}
                     onChange={(e) => handleInput("address", e.target.value)}
+                    onBlur={() => handleBlur("address")}
                     className={`min-h-24 ${
-                      errors.address ? "border-destructive" : ""
+                      getError("address") ? "border-destructive" : ""
                     }`}
                   />
-                  {errors.address && (
-                    <p className="text-sm text-destructive">{errors.address}</p>
-                  )}
+                  <FormFieldError error={getError("address")} />
                 </div>
               </div>
             </div>
@@ -430,13 +428,12 @@ export default function CreateCustomer() {
                   onChange={(e) =>
                     handleInput("maxDebt", Number(e.target.value))
                   }
+                  onBlur={() => handleBlur("maxDebt")}
                   className={`text-lg font-semibold ${
-                    errors.maxDebt ? "border-destructive" : ""
+                    getError("maxDebt") ? "border-destructive" : ""
                   }`}
                 />
-                {errors.maxDebt && (
-                  <p className="text-sm text-destructive">{errors.maxDebt}</p>
-                )}
+                <FormFieldError error={getError("maxDebt")} />
                 <p className="text-xs text-muted-foreground">
                   ≈{" "}
                   {new Intl.NumberFormat("vi-VN").format(Number(form.maxDebt))}{" "}

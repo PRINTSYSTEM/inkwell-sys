@@ -18,7 +18,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useCustomers } from "@/hooks/use-customer";
+import { useCustomers, useExportDebtComparison } from "@/hooks/use-customer";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -56,9 +56,23 @@ export default function Customers() {
     pageSize: itemsPerPage,
     search: debouncedSearch || "",
   });
-
+  const [exportingId, setExportingId] = useState<number | null>(null);
   const customers: CustomerResponse[] = customersResponse?.items || [];
   const totalCount = customersResponse?.totalCount || 0;
+
+  const { mutate: exportDebtComparison, loading: exporting } =
+    useExportDebtComparison();
+
+  const handleExportDebtComparison = async (customerId: number) => {
+    setExportingId(customerId);
+    try {
+      await exportDebtComparison(customerId);
+    } catch {
+      // Error handled in hook
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   // Calculate stats from current data (could be enhanced with separate stats API)
   const stats = {
@@ -344,6 +358,15 @@ export default function Customers() {
                               >
                                 <Eye className="h-4 w-4 mr-2" />
                                 Xem chi tiết
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleExportDebtComparison(customer.id)
+                                }
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Xuất báo cáo công nợ
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>

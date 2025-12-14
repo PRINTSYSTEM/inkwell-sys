@@ -44,6 +44,9 @@ export const productionStatusLabels: Record<string, string> =
 export const orderDetailItemStatusLabels: Record<string, string> =
   ENTITY_CONFIG.orderDetailItemStatuses.values;
 
+export const orderDetailDerivedStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.orderDetailDerivedStatuses.values;
+
 // Trạng thái thanh toán (Accounting)
 export const paymentStatusLabels: Record<string, string> =
   ENTITY_CONFIG.paymentStatuses.values;

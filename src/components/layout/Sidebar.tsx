@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/auth";
+import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard,
   ShoppingCart,

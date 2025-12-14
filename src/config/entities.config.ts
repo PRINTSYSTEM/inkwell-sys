@@ -59,16 +59,27 @@ export const ENTITY_CONFIG = {
       completed: "Hoàn thành",
     },
   },
+  orderDetailDerivedStatuses: {
+    entityType: "OrderDetail",
+    description:
+      "Trạng thái chi tiết đơn hàng trước chốt in (đồng bộ từ Design.Status)",
+    values: {
+      received_info: "Nhận thông tin",
+      designing: "Đang thiết kế",
+      editing: "Đang chỉnh sửa",
+      waiting_for_customer_approval: "Chờ khách duyệt",
+      confirmed_for_printing: "Đã chốt in",
+    },
+  },
   orderDetailItemStatuses: {
     entityType: "OrderDetail",
-    description: "Trạng thái mục trong đơn hàng",
+    description: "Trạng thái chi tiết đơn hàng sau chốt in",
     values: {
-      pending: "Chờ xử lý",
-      designing: "Đang thiết kế",
       waiting_for_proofing: "Chờ bình bài",
-      proofing: "Đang bình bài",
       waiting_for_production: "Chờ sản xuất",
       in_production: "Đang sản xuất",
+      production_completed: "Hoàn thành sản xuất",
+      delivering: "Đang giao hàng",
       completed: "Hoàn thành",
     },
   },

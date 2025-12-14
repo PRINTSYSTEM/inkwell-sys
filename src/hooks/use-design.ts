@@ -69,6 +69,8 @@ export const useDesignsByUser = (
   userId: number | null,
   params?: {
     status?: string;
+    pageNumber?: number;
+    pageSize?: number;
   },
   enabled = true
 ) => {
