@@ -361,8 +361,12 @@ export default function ProofingOrderDetailPage() {
                         <TableCell>{pod.quantity.toLocaleString()}</TableCell>
                         <TableCell>
                           <StatusBadge
-                            status={pod.design.designStatus}
-                            label={designStatusLabels[pod.design.designStatus]}
+                            status={pod.design.designStatus as string}
+                            label={
+                              designStatusLabels[
+                                pod.design.designStatus as string
+                              ]
+                            }
                           />
                         </TableCell>
                         <TableCell className="text-right">
