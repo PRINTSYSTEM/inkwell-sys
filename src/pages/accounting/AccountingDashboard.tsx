@@ -56,7 +56,7 @@ import {
   orderStatusLabels,
   paymentMethodLabels,
 } from "@/lib/status-utils";
-import type { OrderResponse } from "@/Schema";
+import type { OrderResponse, UserRole } from "@/Schema";
 import type { ConfirmPaymentRequest } from "@/Schema/accounting.schema";
 import { ROLE } from "@/constants";
 
@@ -82,7 +82,7 @@ export default function AccountingDashboard() {
     data: ordersData,
     isLoading: ordersLoading,
     refetch: refetchOrders,
-  } = useOrdersByRole(user?.role ?? ROLE.ACCOUNTING, {
+  } = useOrdersByRole((user?.role as UserRole) ?? ROLE.ACCOUNTING, {
     pageNumber,
     pageSize,
     search: searchTerm || undefined,
@@ -110,7 +110,10 @@ export default function AccountingDashboard() {
         o.status === "waiting_for_deposit" || o.status === "deposit_received"
     ).length,
     completed: orders.filter((o) => o.status === "completed").length,
-    totalAmount: orders.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0),
+    totalAmount: orders.reduce(
+      (sum, o) => sum + (typeof o.totalAmount === "number" ? o.totalAmount : 0),
+      0
+    ),
   };
 
   const handleOpenPaymentDialog = async (order: OrderResponse) => {
@@ -177,7 +180,9 @@ export default function AccountingDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Kế toán</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            Danh sách đơn hàng cần xử lý
+          </h1>
           <p className="text-muted-foreground mt-1">
             Quản lý thanh toán và theo dõi công nợ
           </p>
@@ -254,12 +259,6 @@ export default function AccountingDashboard() {
       {/* Order Management Table */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Quản lý thanh toán đơn hàng
-            </CardTitle>
-          </div>
           <div className="flex items-center gap-4 mt-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

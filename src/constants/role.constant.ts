@@ -1,3 +1,5 @@
+import { ENTITY_CONFIG } from "@/config/entities.config";
+
 export const ROLE = {
   ADMIN: "admin",
   MANAGER: "manager",
@@ -9,3 +11,5 @@ export const ROLE = {
   ACCOUNTING_LEAD: "accounting_lead",
   PROOFER: "proofer",
 } as const;
+
+export const ROLE_LABELS: Record<string, string> = ENTITY_CONFIG.roles.values;

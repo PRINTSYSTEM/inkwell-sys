@@ -254,7 +254,7 @@ export const MENU_ITEMS: MenuItem[] = [
     children: [
       {
         id: "accounting-dashboard",
-        title: "Quản lý thanh toán",
+        title: "Chờ xử lý",
         icon: Calculator,
         path: ROUTE_PATHS.ACCOUNTING.ROOT,
         allowedRoles: [

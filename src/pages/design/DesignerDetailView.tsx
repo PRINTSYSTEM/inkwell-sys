@@ -81,10 +81,21 @@ export default function DesignerDetailPage() {
     isError: designerError,
   } = useUser(designerId, !!designerId);
 
-  // Fetch designs by user
+  // Fetch all designs for stats (without filters)
+  const { data: allDesignsData } = useDesignsByUser(
+    designerId,
+    undefined, // No filters for stats
+    !!designerId
+  );
+
+  // Fetch designs by user with filters and pagination
   const { data, isLoading, isError } = useDesignsByUser(
     designerId,
-    statusFilter === "all" ? undefined : { status: statusFilter },
+    {
+      ...(statusFilter === "all" ? {} : { status: statusFilter }),
+      pageNumber: currentPage,
+      pageSize,
+    },
     !!designerId
   );
 
@@ -125,21 +136,32 @@ export default function DesignerDetailPage() {
     );
   }, [designs, searchQuery]);
 
-  // Stats
+  // Stats - calculate from all designs (not filtered)
+  const allDesigns: DesignResponse[] = useMemo(() => {
+    if (!allDesignsData) return [];
+    if (Array.isArray(allDesignsData)) return allDesignsData;
+    return allDesignsData.items ?? [];
+  }, [allDesignsData]);
+
   const stats = useMemo(() => {
+    const allDesignsTotalCount = Array.isArray(allDesignsData)
+      ? allDesignsData.length
+      : (allDesignsData as PagedData)?.totalCount || allDesigns.length;
+
     return {
-      total: totalCount,
-      received_info: designs.filter((d) => d.status === "received_info").length,
-      designing: designs.filter((d) => d.status === "designing").length,
-      editing: designs.filter((d) => d.status === "editing").length,
-      waiting_for_customer_approval: designs.filter(
+      total: allDesignsTotalCount,
+      received_info: allDesigns.filter((d) => d.status === "received_info")
+        .length,
+      designing: allDesigns.filter((d) => d.status === "designing").length,
+      editing: allDesigns.filter((d) => d.status === "editing").length,
+      waiting_for_customer_approval: allDesigns.filter(
         (d) => d.status === "waiting_for_customer_approval"
       ).length,
-      confirmed_for_printing: designs.filter(
+      confirmed_for_printing: allDesigns.filter(
         (d) => d.status === "confirmed_for_printing"
       ).length,
     };
-  }, [designs, totalCount]);
+  }, [allDesigns, allDesignsData]);
 
   // Get status info
   const getStatusInfo = (design: DesignResponse) => {
@@ -330,7 +352,6 @@ export default function DesignerDetailPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[80px]">Ảnh</TableHead>
                 <TableHead className="min-w-[120px]">Mã thiết kế</TableHead>
                 <TableHead className="min-w-[200px]">Tên thiết kế</TableHead>
                 <TableHead className="min-w-[120px]">Loại</TableHead>
@@ -376,22 +397,6 @@ export default function DesignerDetailPage() {
                       key={design.id}
                       className="hover:bg-muted/50 cursor-pointer"
                     >
-                      {/* Thumbnail */}
-                      <TableCell>
-                        <Avatar className="w-12 h-12 rounded-lg">
-                          {design.designImageUrl ? (
-                            <AvatarImage
-                              src={design.designImageUrl}
-                              alt={design.designName || "Design"}
-                              className="object-cover"
-                            />
-                          ) : null}
-                          <AvatarFallback className="rounded-lg bg-muted">
-                            <ImageIcon className="w-5 h-5 text-muted-foreground/50" />
-                          </AvatarFallback>
-                        </Avatar>
-                      </TableCell>
-
                       {/* Code */}
                       <TableCell>
                         <Link

@@ -1,10 +1,10 @@
-import { LogOut, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import { useAuth } from '@/hooks/use-auth';
-import { useNavigate } from 'react-router-dom';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import NotificationBell from '@/components/NotificationBell';
+import { LogOut, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/use-auth";
+import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import NotificationBell from "@/components/NotificationBell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,15 +12,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
+import { ROLE_LABELS } from "@/constants/role.constant";
 
 const roleNames = {
-  admin: 'Quản trị viên',
-  production_manager: 'Trưởng sản xuất',
-  accountant: 'Kế toán',
-  designer: 'Thiết kế',
-  prepress: 'Bình bài',
-  operator: 'Vận hành',
+  admin: "Quản trị viên",
+  production_manager: "Trưởng sản xuất",
+  accountant: "Kế toán",
+  designer: "Thiết kế",
+  prepress: "Bình bài",
+  operator: "Vận hành",
 };
 
 export function AppHeader() {
@@ -29,7 +30,7 @@ export function AppHeader() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   if (!user) return null;
@@ -43,8 +44,6 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-4">
-          <NotificationBell userId={user.id.toString()} />
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">
@@ -55,19 +54,24 @@ export function AppHeader() {
                 </Avatar>
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-medium">{user.fullName}</p>
-                  <p className="text-xs text-muted-foreground">{roleNames[user.role] || user.role}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {ROLE_LABELS[user.role] || user.role}
+                  </p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <DropdownMenuItem onClick={() => navigate("/profile")}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Thông tin cá nhân</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="text-destructive"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Đăng xuất</span>
               </DropdownMenuItem>

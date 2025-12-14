@@ -383,12 +383,9 @@ export default function OrderDetailPage() {
                                   <span className="text-xs text-muted-foreground">
                                     #{index + 1}
                                   </span>
-                                  <Link
-                                    to={`/design/detail/${design?.id}`}
-                                    className="font-semibold text-primary hover:underline"
-                                  >
+                                  <p className="font-semibold text-primary hover:underline">
                                     {design?.code || "—"}
-                                  </Link>
+                                  </p>
                                   <StatusBadge
                                     status={orderDetail.status}
                                     label={

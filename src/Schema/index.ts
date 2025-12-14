@@ -78,6 +78,55 @@ export function formatValidationErrors(
 }
 
 /**
+ * Utility function to get validation errors as a flat object (first error per field)
+ * @param error Zod validation error
+ * @returns Formatted error object with field paths and first error message
+ */
+export function formatValidationErrorsFlat(
+  error: z.ZodError
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  error.errors.forEach((err) => {
+    const path = err.path.join(".");
+    // Only set the first error for each field
+    if (!errors[path]) {
+      errors[path] = err.message;
+    }
+  });
+
+  return errors;
+}
+
+/**
+ * Utility function to get all validation error messages as an array
+ * @param error Zod validation error
+ * @returns Array of error messages
+ */
+export function getValidationErrorMessages(error: z.ZodError): string[] {
+  return error.errors.map((err) => {
+    const path = err.path.length > 0 ? `${err.path.join(".")}: ` : "";
+    return `${path}${err.message}`;
+  });
+}
+
+/**
+ * Utility function to get a single error message for a specific field
+ * @param error Zod validation error
+ * @param fieldPath Field path (e.g., "name" or "address.street")
+ * @returns First error message for the field, or undefined
+ */
+export function getFieldError(
+  error: z.ZodError,
+  fieldPath: string
+): string | undefined {
+  const fieldErrors = error.errors.filter(
+    (err) => err.path.join(".") === fieldPath
+  );
+  return fieldErrors.length > 0 ? fieldErrors[0].message : undefined;
+}
+
+/**
  * Utility function to create a partial update schema from a full schema
  * @param schema Original schema
  * @returns Partial schema where all fields are optional

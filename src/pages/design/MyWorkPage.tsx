@@ -282,7 +282,6 @@ export default function MyWorkPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[80px]">Ảnh</TableHead>
                 <TableHead className="min-w-[120px]">Mã thiết kế</TableHead>
                 <TableHead className="min-w-[200px]">Tên thiết kế</TableHead>
                 <TableHead className="min-w-[120px]">Loại</TableHead>
@@ -304,22 +303,6 @@ export default function MyWorkPage() {
                       key={design.id}
                       className="hover:bg-muted/50 cursor-pointer"
                     >
-                      {/* Thumbnail */}
-                      <TableCell>
-                        <Avatar className="w-12 h-12 rounded-lg">
-                          {design.designImageUrl ? (
-                            <AvatarImage
-                              src={design.designImageUrl}
-                              alt={design.designName || "Design"}
-                              className="object-cover"
-                            />
-                          ) : null}
-                          <AvatarFallback className="rounded-lg bg-muted">
-                            <ImageIcon className="w-5 h-5 text-muted-foreground/50" />
-                          </AvatarFallback>
-                        </Avatar>
-                      </TableCell>
-
                       {/* Code */}
                       <TableCell>
                         <Link

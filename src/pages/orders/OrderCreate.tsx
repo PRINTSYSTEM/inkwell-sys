@@ -922,7 +922,7 @@ export default function CreateOrderPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0 pb-4">
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">
@@ -964,10 +964,10 @@ export default function CreateOrderPage() {
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[360px] p-0" align="start">
+                        <PopoverContent className="w-full p-0" align="start">
                           <Command>
                             <CommandInput
-                              placeholder="Tìm theo tên hoặc mã khách hàng..."
+                              placeholder="Tìm theo tên công ty hoặc mã khách hàng..."
                               className="h-9 text-sm"
                             />
                             <CommandList>
@@ -1024,39 +1024,6 @@ export default function CreateOrderPage() {
                         </PopoverContent>
                       </Popover>
                     </div>
-
-                    {selectedCustomer && (
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">
-                          Thông tin nhanh
-                        </Label>
-                        <div className="flex items-start gap-2 rounded-md border bg-muted/40 px-3 py-2">
-                          <Badge
-                            variant="outline"
-                            className="font-mono text-xs mt-0.5"
-                          >
-                            {selectedCustomer.code}
-                          </Badge>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-sm font-medium">
-                              {selectedCustomer.name ||
-                                selectedCustomer.companyName ||
-                                selectedCustomer.representativeName}
-                            </span>
-                            {selectedCustomer.phone && (
-                              <span className="text-xs text-muted-foreground">
-                                {selectedCustomer.phone}
-                              </span>
-                            )}
-                            {selectedCustomer.address && (
-                              <span className="text-xs text-muted-foreground">
-                                {selectedCustomer.address}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   <div className="space-y-2">
