@@ -71,7 +71,6 @@ export const useUpdateOrder = () => useUpdateOrderBase();
 // POST /orders/{id}/generate-excel
 export const useGenerateOrderExcel = () => {
   const { toast } = useToast();
-
   // Không cần trả data ra ngoài, chỉ cần download file
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
