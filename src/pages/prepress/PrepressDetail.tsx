@@ -56,15 +56,18 @@ import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
 import { IdSchema } from "@/Schema";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { designStatusLabels, proofingStatusLabels } from "@/lib/status-utils";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
 export default function ProofingOrderDetailPage() {
   const params = useParams();
   const navigate = useNavigate();
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [isUpdateStatusOpen, setIsUpdateStatusOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState("");
+  const [isConfirmStatusDialogOpen, setIsConfirmStatusDialogOpen] =
+    useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
 
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
@@ -82,24 +85,46 @@ export default function ProofingOrderDetailPage() {
   const order = safeParseSchema(ProofingOrderResponseSchema, orderResp);
   const orderDesigns = order?.proofingOrderDesigns ?? [];
 
-  useEffect(() => {
-    if (order?.status) setNewStatus(order.status);
-  }, [order?.status]);
-
   const { mutate: updateProofing } = useUpdateProofingOrder();
   const { mutate: uploadProofing } = useUploadProofingFile();
 
   const handleUpdateStatus = async () => {
     if (!order?.id) return;
+
+    // Kiểm tra lại xem đã có file bình bài chưa
+    if (!order.proofingFileUrl) {
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description:
+          "Vui lòng upload file bình bài trước khi chuyển trạng thái",
+      });
+      setIsConfirmStatusDialogOpen(false);
+      return;
+    }
+
     try {
-      await updateProofing({ id: order.id, data: { status: newStatus } });
-      setIsUpdateStatusOpen(false);
+      // Chỉ cho phép chuyển từ waiting_for_file sang waiting_for_production
+      const targetStatus = "waiting_for_production";
+      await updateProofing({ id: order.id, data: { status: targetStatus } });
+      setIsConfirmStatusDialogOpen(false);
+      toast({
+        title: "Thành công",
+        description: "Đã chuyển trạng thái sang chờ sản xuất",
+      });
     } catch (error) {
       toast({
-        variant: "warning",
+        variant: "destructive",
         title: "Lỗi",
         description: "Không thể cập nhật trạng thái",
       });
+    }
+  };
+
+  const handleStatusChangeClick = () => {
+    // Chỉ cho phép khi status là waiting_for_file
+    if (order?.status === "waiting_for_file") {
+      setIsConfirmStatusDialogOpen(true);
     }
   };
 
@@ -160,7 +185,7 @@ export default function ProofingOrderDetailPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/proofing-orders")}
+            onClick={() => navigate("/proofing")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -179,14 +204,23 @@ export default function ProofingOrderDetailPage() {
             status={order.status}
             label={proofingStatusLabels[order.status]}
           />
-          <Button
-            variant="outline"
-            className="gap-2 bg-transparent"
-            onClick={() => setIsUpdateStatusOpen(true)}
-          >
-            <Edit className="h-4 w-4" />
-            Cập nhật trạng thái
-          </Button>
+          {/* Chỉ hiển thị button khi status là waiting_for_file */}
+          {order.status === "waiting_for_file" && (
+            <Button
+              variant="outline"
+              className="gap-2 bg-transparent"
+              onClick={handleStatusChangeClick}
+              disabled={!order.proofingFileUrl}
+              title={
+                !order.proofingFileUrl
+                  ? "Vui lòng upload file bình bài trước"
+                  : "Chuyển sang chờ sản xuất"
+              }
+            >
+              <Edit className="h-4 w-4" />
+              Chuyển sang chờ sản xuất
+            </Button>
+          )}
           {!order.proofingFileUrl && (
             <Button
               className="gap-2"
@@ -268,21 +302,6 @@ export default function ProofingOrderDetailPage() {
                         className="gap-2 bg-transparent"
                         asChild
                       >
-                        <a
-                          href={order.proofingFileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Xem file
-                        </a>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 bg-transparent"
-                        asChild
-                      >
                         <a href={order.proofingFileUrl} download>
                           <Download className="h-4 w-4" />
                           Tải xuống
@@ -313,7 +332,6 @@ export default function ProofingOrderDetailPage() {
                       <TableHead>Tên design</TableHead>
                       <TableHead>Kích thước</TableHead>
                       <TableHead>Số lượng</TableHead>
-                      <TableHead>Trạng thái</TableHead>
                       <TableHead className="text-right">File</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -359,27 +377,18 @@ export default function ProofingOrderDetailPage() {
                           </div>
                         </TableCell>
                         <TableCell>{pod.quantity.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <StatusBadge
-                            status={pod.design.designStatus as string}
-                            label={
-                              designStatusLabels[
-                                pod.design.designStatus as string
-                              ]
-                            }
-                          />
-                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             {pod.design.designImageUrl && (
-                              <Button variant="ghost" size="sm" asChild>
-                                <a
-                                  href={pod.design.designImageUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </a>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setViewingImageUrl(pod.design.designImageUrl);
+                                  setImageViewerOpen(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
                               </Button>
                             )}
                             {pod.design.designFileUrl && (
@@ -530,42 +539,49 @@ export default function ProofingOrderDetailPage() {
         </div>
       </div>
 
-      {/* Update Status Dialog */}
-      <Dialog open={isUpdateStatusOpen} onOpenChange={setIsUpdateStatusOpen}>
+      {/* Confirm Status Change Dialog */}
+      <Dialog
+        open={isConfirmStatusDialogOpen}
+        onOpenChange={setIsConfirmStatusDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cập nhật trạng thái</DialogTitle>
-            <DialogDescription>
-              Thay đổi trạng thái xử lý của lệnh bình bài
+            <DialogTitle>Xác nhận chuyển trạng thái</DialogTitle>
+            <DialogDescription className="space-y-2">
+              <p>
+                Bạn có chắc chắn muốn chuyển trạng thái từ{" "}
+                <strong>
+                  {proofingStatusLabels[order?.status || ""] || order?.status}
+                </strong>{" "}
+                sang{" "}
+                <strong>
+                  {proofingStatusLabels["waiting_for_production"] ||
+                    "Chờ sản xuất"}
+                </strong>{" "}
+                không?
+              </p>
+              {!order?.proofingFileUrl && (
+                <p className="text-destructive text-sm font-medium mt-2">
+                  ⚠️ Lưu ý: Bạn chưa upload file bình bài. Vui lòng upload file
+                  trước khi chuyển trạng thái.
+                </p>
+              )}
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Trạng thái</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(proofingStatusLabels).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsUpdateStatusOpen(false)}
+              onClick={() => setIsConfirmStatusDialogOpen(false)}
             >
               Hủy
             </Button>
-            <Button onClick={handleUpdateStatus}>Cập nhật</Button>
+            <Button
+              onClick={handleUpdateStatus}
+              disabled={!order?.proofingFileUrl}
+            >
+              Xác nhận
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -611,6 +627,21 @@ export default function ProofingOrderDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Viewer Dialog */}
+      {viewingImageUrl && (
+        <ImageViewerDialog
+          imageUrl={viewingImageUrl}
+          open={imageViewerOpen}
+          onOpenChange={(open) => {
+            setImageViewerOpen(open);
+            if (!open) {
+              // Clear image URL when dialog closes
+              setViewingImageUrl(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

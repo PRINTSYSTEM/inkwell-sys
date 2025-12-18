@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DesignItem } from "@/types/proofing";
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useCreateProofingOrderFromDesigns } from "@/hooks/use-proofing-order";
@@ -28,24 +29,57 @@ export function CreateProofingOrderModal({
   onSuccess,
 }: CreateProofingOrderModalProps) {
   const [notes, setNotes] = useState("");
+  const [totalQuantity, setTotalQuantity] = useState<number>(1);
   const { mutate, loading } = useCreateProofingOrderFromDesigns();
 
   const materialTypeName =
     selectedDesigns.length > 0 ? selectedDesigns[0].materialTypeName : "";
 
+  // Tính tổng quantity mặc định từ selected designs
+  const defaultTotalQuantity = useMemo(() => {
+    return selectedDesigns.reduce(
+      (sum, design) => sum + (design.quantity || 0),
+      0
+    );
+  }, [selectedDesigns]);
+
+  // Set default quantity khi dialog mở
+  useEffect(() => {
+    if (open) {
+      if (defaultTotalQuantity > 0) {
+        setTotalQuantity(defaultTotalQuantity);
+      } else {
+        setTotalQuantity(1);
+      }
+    } else {
+      // Reset khi dialog đóng
+      setNotes("");
+      setTotalQuantity(1);
+    }
+  }, [open, defaultTotalQuantity]);
+
   const handleSubmit = async () => {
     try {
+      // Validate quantity
+      if (
+        !totalQuantity ||
+        totalQuantity < 1 ||
+        !Number.isInteger(totalQuantity)
+      ) {
+        return;
+      }
+
       // Extract order detail IDs from selected designs
       const orderDetailIds = selectedDesigns.map((design) => design.id);
 
       await mutate({
         orderDetailIds,
         notes: notes || undefined,
+        totalQuantity,
       });
 
       onSuccess();
       onOpenChange(false);
-      setNotes("");
     } catch (error) {
       // Error handling is done in the hook
       console.error("Failed to create proofing order:", error);
@@ -93,6 +127,39 @@ export function CreateProofingOrderModal({
             </div>
           </div>
 
+          {/* Total Quantity */}
+          <div className="space-y-2">
+            <Label htmlFor="totalQuantity">
+              Tổng số lượng <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="totalQuantity"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="Nhập tổng số lượng"
+              value={totalQuantity}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "") {
+                  setTotalQuantity(0);
+                } else {
+                  const numValue = parseInt(value, 10);
+                  if (!isNaN(numValue) && numValue > 0) {
+                    setTotalQuantity(numValue);
+                  }
+                }
+              }}
+              required
+            />
+            {defaultTotalQuantity > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Tổng số lượng mặc định từ các designs:{" "}
+                {defaultTotalQuantity.toLocaleString()}
+              </p>
+            )}
+          </div>
+
           {/* Notes */}
           <div className="space-y-2">
             <Label htmlFor="notes">Ghi chú</Label>
@@ -114,7 +181,10 @@ export function CreateProofingOrderModal({
           >
             Hủy
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || !totalQuantity || totalQuantity < 1}
+          >
             {loading ? "Đang tạo..." : "Tạo Order"}
           </Button>
         </DialogFooter>

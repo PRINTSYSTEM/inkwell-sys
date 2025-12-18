@@ -91,6 +91,10 @@ export const CreateProofingOrderFromDesignsRequestSchema = z
   .object({
     orderDetailIds: z.array(IdSchema).min(1, "Cần ít nhất 1 chi tiết đơn hàng"),
     notes: z.string().nullable().optional(),
+    totalQuantity: z
+      .number()
+      .int()
+      .min(1, "Cần ít nhất 1 sản phẩm để tạo bình bài"),
   })
   .passthrough();
 

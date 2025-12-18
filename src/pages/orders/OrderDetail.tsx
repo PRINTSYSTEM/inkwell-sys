@@ -51,6 +51,7 @@ import {
   orderStatusLabels,
   designStatusLabels,
   orderDetailItemStatusLabels,
+  orderDetailDerivedStatusLabels,
   customerTypeLabels,
   proofingStatusLabels,
   productionStatusLabels,
@@ -91,6 +92,11 @@ export default function OrderDetailPage() {
   const canViewPrice = role !== ROLE.DESIGN && role !== ROLE.DESIGN_LEAD;
   const canViewDesigner =
     role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD || role === ROLE.ADMIN;
+
+  const canExportExcel =
+    role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.ADMIN ||
+    role === ROLE.ACCOUNTING;
 
   // ===== PROOFING & PRODUCTION =====
   // Note: ProofingOrderListParams không có orderId để filter
@@ -178,15 +184,17 @@ export default function OrderDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => setPrintDialogOpen(true)}
-            >
-              <Printer className="w-4 h-4" />
-              In đơn
-            </Button>
+            {canExportExcel && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setPrintDialogOpen(true)}
+              >
+                <Printer className="w-4 h-4" />
+                In đơn
+              </Button>
+            )}
 
             <Button
               variant="outline"
@@ -338,6 +346,22 @@ export default function OrderDetailPage() {
                 <div className="space-y-3">
                   {order.orderDetails.map((orderDetail, index) => {
                     const design = orderDetail.design;
+
+                    // Xác định status và label dựa trên isCutOver
+                    const isCutOver = orderDetail.isCutOver ?? false;
+                    const statusValue = isCutOver
+                      ? orderDetail.status
+                      : orderDetail.derivedStatus;
+                    const statusLabel = isCutOver
+                      ? orderDetailItemStatusLabels[orderDetail.status || ""] ||
+                        orderDetail.status ||
+                        "N/A"
+                      : orderDetailDerivedStatusLabels[
+                          orderDetail.derivedStatus || ""
+                        ] ||
+                        orderDetail.derivedStatus ||
+                        "N/A";
+
                     return (
                       <div
                         key={orderDetail.id}
@@ -371,14 +395,8 @@ export default function OrderDetailPage() {
                                     {design?.code || "—"}
                                   </p>
                                   <StatusBadge
-                                    status={orderDetail.status}
-                                    label={
-                                      orderDetailItemStatusLabels[
-                                        orderDetail.status || ""
-                                      ] ||
-                                      orderDetail.status ||
-                                      "N/A"
-                                    }
+                                    status={statusValue || ""}
+                                    label={statusLabel}
                                   />
                                 </div>
                                 <h4 className="font-medium">

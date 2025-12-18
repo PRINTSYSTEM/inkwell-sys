@@ -32,6 +32,7 @@ import {
   TrendingUp,
   AlertTriangle,
   Loader2,
+  Download,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -104,12 +105,12 @@ export default function ProductionDetailPage() {
   }, [production?.status]);
 
   const showUpdateButton = useMemo(() => {
-    return production?.status === "in_progress";
+    return production?.status === "in_production";
   }, [production?.status]);
 
   const showCompleteButton = useMemo(() => {
     return (
-      production?.status === "in_progress" &&
+      production?.status === "in_production" &&
       (production?.progressPercent || 0) >= 100
     );
   }, [production?.status, production?.progressPercent]);
@@ -384,10 +385,34 @@ export default function ProductionDetailPage() {
           ) : proofingOrder ? (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Thông tin bình bài
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Thông tin bình bài
+                  </CardTitle>
+                  {proofingOrder.proofingFileUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => {
+                        if (proofingOrder.proofingFileUrl) {
+                          const link = document.createElement("a");
+                          link.href = proofingOrder.proofingFileUrl;
+                          link.download = `binh-bai-${
+                            proofingOrder.code || proofingOrder.id
+                          }.pdf`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                      Tải file bình bài
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">

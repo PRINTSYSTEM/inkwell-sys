@@ -4,8 +4,6 @@ import { Copy, Check } from "lucide-react";
 interface Props {
   code: string;
   designName: string; // "KING AZ"
-  quantity: number | string; // 500
-  quantitySuffix?: string; // "g"
   dimensions: string; // "325 x 80"
   extraNote?: string; // "bao gồm 15mm mép dán"
   createdAt: string; // "2025-11-26T10:38:30.3642249"
@@ -14,21 +12,7 @@ interface Props {
 export default function DesignCode(props: Props) {
   const [copied, setCopied] = useState(false);
 
-  const {
-    code,
-    designName,
-    quantity,
-    quantitySuffix = "",
-    dimensions,
-    extraNote,
-    createdAt,
-  } = props;
-
-  // 1) Format quantity
-  const fullQuantity = useMemo(() => {
-    const suffix = quantitySuffix.toString().trim();
-    return suffix.length > 0 ? `${quantity}${suffix}` : quantity;
-  }, [quantity, quantitySuffix]);
+  const { code, designName, dimensions, extraNote, createdAt } = props;
 
   // 2) Format date string "2025-11-26T10:38:30.3642249" -> "26/11/2025"
   const formattedDate = useMemo(() => {
@@ -45,7 +29,7 @@ export default function DesignCode(props: Props) {
   }, [createdAt]);
 
   const handleCopyToClipboard = async () => {
-    const text = `${code}: ${designName} - ${fullQuantity} - KT: ${dimensions}mm${
+    const text = `${code}: ${designName} - KT: ${dimensions}mm${
       extraNote ? ` (${extraNote})` : ""
     } - Ngày ${formattedDate}`;
     await navigator.clipboard.writeText(text);
@@ -61,10 +45,6 @@ export default function DesignCode(props: Props) {
       {/* MATERIAL + DESIGN NAME */}
       {/* <span className="font-bold uppercase">{materialType}</span> */}
       <span className="font-semibold uppercase">{designName}</span>
-
-      {/* - 500g - */}
-      <span className="font-normal">-</span>
-      <span className="font-bold">{fullQuantity}</span>
 
       {/* - KT: 325 x 80mm */}
       <span className="font-normal">-</span>

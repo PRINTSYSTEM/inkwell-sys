@@ -1,6 +1,6 @@
-import { DesignItem } from '@/types/proofing';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
+import { DesignItem } from "@/types/proofing";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -8,8 +8,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 interface DesignTableProps {
   designs: DesignItem[];
@@ -50,9 +50,9 @@ export function DesignTable({
               <TableRow
                 key={design.id}
                 className={cn(
-                  'cursor-pointer',
-                  isSelected && 'bg-primary/5',
-                  !selectable && !isSelected && 'opacity-50 cursor-not-allowed'
+                  "cursor-pointer",
+                  isSelected && "bg-primary/5",
+                  !selectable && !isSelected && "opacity-50 cursor-not-allowed"
                 )}
                 onClick={() => {
                   if (selectable || isSelected) {
@@ -100,7 +100,7 @@ export function DesignTable({
                   {design.quantity.toLocaleString()}
                 </TableCell>
                 <TableCell className="text-right">
-                  {design.unitPrice.toLocaleString()}đ
+                  {/* {design.unitPrice.toLocaleString()}đ */}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {design.orderId}

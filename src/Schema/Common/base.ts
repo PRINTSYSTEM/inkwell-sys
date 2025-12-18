@@ -1,6 +1,5 @@
 // src/Schema/common/base.ts
 import { z } from "zod";
-
 // ===== Primitive helpers =====
 
 export const IdSchema = z.number().int();
