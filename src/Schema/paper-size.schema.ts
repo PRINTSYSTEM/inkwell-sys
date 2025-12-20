@@ -10,7 +10,7 @@ export const PaperSizeResponseSchema = z
     name: z.string().nullable().optional(),
     width: z.number().nullable().optional(),
     height: z.number().nullable().optional(),
-    isCustom: z.boolean().optional(),
+    isCustom: z.boolean().optional(), // boolean (not nullable) in swagger
   })
   .passthrough();
 

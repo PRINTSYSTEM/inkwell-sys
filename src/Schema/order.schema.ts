@@ -2,8 +2,8 @@
 // Schema cho "Đơn hàng" (Order)
 // Bao gồm: response chi tiết đơn, payload tạo/cập nhật, và các biến thể phục vụ designer
 import { z } from "zod";
-import { IdSchema, DateSchema, createPagedResponseSchema } from "./Common";
-import { UserInfoSchema } from "./Common";
+import { IdSchema, DateSchema, createPagedResponseSchema } from "./common";
+import { UserInfoSchema } from "./common";
 import {
   DesignResponseSchema,
   DesignResponseForDesignerSchema,
@@ -24,14 +24,14 @@ export const OrderDetailResponseSchema = z
     totalPrice: z.number().nullable().optional(),
     requirements: z.string().nullable().optional(),
     additionalNotes: z.string().nullable().optional(),
-    orderTotalAmount: z.number().optional(), // Added from swagger
-    orderDepositAmount: z.number().optional(), // Added from swagger
+    orderTotalAmount: z.number().optional(), // number (not nullable) in swagger
+    orderDepositAmount: z.number().optional(), // number (not nullable) in swagger
     derivedStatus: z.string().nullable().optional(),
     cutOverAt: DateSchema.nullable().optional(),
     itemStatus: z.string().nullable().optional(),
-    isCutOver: z.boolean().readonly().optional(), // readOnly in swagger
-    status: z.string().nullable().readonly().optional(), // readOnly in swagger
-    statusType: z.string().nullable().readonly().optional(), // readOnly in swagger
+    isCutOver: z.boolean().optional(), // readOnly in swagger (Zod doesn't support readOnly, but we mark it as optional for response)
+    status: z.string().nullable().optional(), // readOnly in swagger
+    statusType: z.string().nullable().optional(), // readOnly in swagger
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
   })

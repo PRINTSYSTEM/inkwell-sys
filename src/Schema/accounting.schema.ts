@@ -1,6 +1,6 @@
 // src/Schema/accounting.schema.ts
 import { z } from "zod";
-import { IdSchema, DateSchema } from "./Common";
+import { IdSchema, DateSchema } from "./common";
 
 // ===== AccountingResponse =====
 

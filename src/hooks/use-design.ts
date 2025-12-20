@@ -8,6 +8,7 @@ import type {
   MyDesignListParams,
   DesignTimelineEntryResponse,
   UpdateDesignRequest,
+  DesignByCustomerListParams,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -358,16 +359,17 @@ export const useGenerateDesignExcel = () => {
 };
 
 // GET /api/designs/by-customer/:id
-export const useDesignsByCustomer = (customerId: number) => {
+export const useDesignsByCustomer = (params?: DesignByCustomerListParams) => {
   return useQuery({
-    queryKey: [designKeys.all[0], "by-customer", customerId],
+    queryKey: [designKeys.all[0], "by-customer", params ?? {}],
+    enabled: !!params?.customerId, // Only query when customerId is provided
     queryFn: async () => {
-      const res = await apiRequest.get<DesignResponse[]>(
-        API_SUFFIX.DESIGN_BY_CUSTOMER(customerId)
+      const res = await apiRequest.get<DesignResponsePagedResponse>(
+        API_SUFFIX.DESIGN_BY_CUSTOMER(params?.customerId as number),
+        { params }
       );
-      return res.data || [];
+      return res.data;
     },
     staleTime: 5 * 60 * 1000,
   });
 };
-export { designCrudApi, designKeys };

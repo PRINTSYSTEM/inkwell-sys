@@ -60,6 +60,8 @@ export const API_SUFFIX = {
     `/orders/${id}/export-delivery-note`,
   ORDER_GENERATE_EXCEL: (id: number) => `/orders/${id}/generate-excel`,
 
+  ORDERS_MY: "/orders/my",
+
   // ========== INVOICE ==========
   ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`,
   CUSTOMER_EXPORT_DEBT_COMPARISON: (id: number) =>

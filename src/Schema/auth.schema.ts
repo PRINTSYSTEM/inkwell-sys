@@ -1,6 +1,6 @@
 // src/Schema/auth.schema.ts
 import { z } from "zod";
-import { UserInfoSchema } from "./Common";
+import { UserInfoSchema } from "./common";
 
 // ---------------------------
 // LoginRequest
@@ -63,18 +63,13 @@ export function validateLoginResponse(data: unknown): LoginResponse {
 
 // ---------------------------
 // ChangePasswordRequest
+// Updated to match swagger.json: currentPassword, newPassword, confirmPassword required
 // ---------------------------
 export const ChangePasswordRequestSchema = z
   .object({
-    currentPassword: z.string().min(1),
-    newPassword: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-        "Password must include uppercase, lowercase and number"
-      ),
-    confirmPassword: z.string().min(1),
+    currentPassword: z.string().min(1), // Required in swagger, minLength 1
+    newPassword: z.string().min(6).max(100), // Required in swagger, minLength 6, maxLength 100
+    confirmPassword: z.string().min(1), // Required in swagger, minLength 1
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
     message: "Confirm password must match new password",

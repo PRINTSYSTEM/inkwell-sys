@@ -38,12 +38,14 @@ export const createPagedResponseSchema = <T extends z.ZodTypeAny>(
   });
 
 // ===== Backend error response =====
+// Updated to match swagger.json ErrorResponse
 
 export const BackendErrorResponseSchema = z
   .object({
     statusCode: z.number().int(),
     error: z.string().nullable().optional(),
     timeStamp: DateSchema.optional(),
+    details: z.record(z.unknown()).nullable().optional(), // Added from swagger
   })
   .passthrough();
 

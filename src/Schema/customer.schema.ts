@@ -5,8 +5,8 @@ import {
   DateSchema,
   NameSchema,
   createPagedResponseSchema,
-} from "./Common";
-import { UserInfoSchema } from "./Common";
+} from "./common";
+import { UserInfoSchema } from "./common";
 
 // ===== CustomerResponse =====
 

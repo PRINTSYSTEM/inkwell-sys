@@ -7,8 +7,8 @@ import {
   DateSchema,
   NameSchema,
   createPagedResponseSchema,
-} from "./Common";
-import { UserInfoSchema } from "./Common";
+} from "./common";
+import { UserInfoSchema } from "./common";
 
 // ===== MaterialTypeResponse =====
 // Dữ liệu trả về từ API cho một chất liệu thiết kế
@@ -136,11 +136,11 @@ export type BulkCreateMaterialTypeRequest = z.infer<
 
 export const UpdateMaterialTypeRequestSchema = z
   .object({
-    name: z.string().max(255).nullable().optional(),
-    displayOrder: z.number().int().min(0).nullable().optional(),
+    name: z.string().min(0).max(255).nullable().optional(), // Updated to match swagger
+    displayOrder: z.number().int().min(0).max(2147483647).nullable().optional(), // Updated max from swagger
     description: z.string().nullable().optional(),
     pricePerCm2: z.number().min(0).nullable().optional(),
-    minimumQuantity: z.number().int().min(0).nullable().optional(),
+    // minimumQuantity not in UpdateMaterialTypeRequest in swagger.json
     designTypeId: IdSchema.nullable().optional(),
     status: z
       .string()

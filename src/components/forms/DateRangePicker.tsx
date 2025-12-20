@@ -1,18 +1,17 @@
-import React, { useState } from 'react';
-import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
-import { Calendar as CalendarIcon, X } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
+import { useState } from "react";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { Calendar as CalendarIcon, X, ChevronDown } from "lucide-react";
+import { DateRange } from "react-day-picker";
 
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Badge } from '@/components/ui/badge';
+} from "@/components/ui/popover";
 
 export interface DateRangePickerProps {
   value?: DateRange;
@@ -20,21 +19,9 @@ export interface DateRangePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  
-  // Calendar props
   numberOfMonths?: number;
-  disabledDates?: (date: Date) => boolean;
-  minDate?: Date;
-  maxDate?: Date;
-  
-  // Display options
   showClear?: boolean;
   showPresets?: boolean;
-  formatStr?: string;
-  
-  // Callbacks
-  onOpen?: () => void;
-  onClose?: () => void;
 }
 
 interface DatePreset {
@@ -42,228 +29,178 @@ interface DatePreset {
   range: DateRange;
 }
 
-export const DateRangePicker: React.FC<DateRangePickerProps> = ({
+const createPresets = (): DatePreset[] => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const last7Days = new Date(today);
+  last7Days.setDate(last7Days.getDate() - 6);
+
+  const last30Days = new Date(today);
+  last30Days.setDate(last30Days.getDate() - 29);
+
+  const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+
+  return [
+    { label: "Hôm nay", range: { from: today, to: today } },
+    { label: "Hôm qua", range: { from: yesterday, to: yesterday } },
+    { label: "7 ngày qua", range: { from: last7Days, to: today } },
+    { label: "30 ngày qua", range: { from: last30Days, to: today } },
+    { label: "Tháng này", range: { from: thisMonthStart, to: today } },
+    { label: "Tháng trước", range: { from: lastMonthStart, to: lastMonthEnd } },
+  ];
+};
+
+export function DateRangePicker({
   value,
   onValueChange,
-  placeholder = "Chọn khoảng thời gian",
+  placeholder = "Chọn ngày",
   disabled = false,
   className,
-  
   numberOfMonths = 2,
-  disabledDates,
-  minDate,
-  maxDate,
-  
   showClear = true,
   showPresets = true,
-  formatStr = 'dd/MM/yyyy',
-  
-  onOpen,
-  onClose
-}) => {
+}: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
-
-  const createPresets = (): DatePreset[] => {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const last7Days = new Date(today);
-    last7Days.setDate(last7Days.getDate() - 7);
-    
-    const last30Days = new Date(today);
-    last30Days.setDate(last30Days.getDate() - 30);
-    
-    const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
-    
-    const thisYear = new Date(today.getFullYear(), 0, 1);
-    const lastYear = new Date(today.getFullYear() - 1, 0, 1);
-    const lastYearEnd = new Date(today.getFullYear() - 1, 11, 31);
-
-    return [
-      {
-        label: 'Hôm nay',
-        range: { from: today, to: today }
-      },
-      {
-        label: 'Hôm qua',
-        range: { from: yesterday, to: yesterday }
-      },
-      {
-        label: '7 ngày qua',
-        range: { from: last7Days, to: today }
-      },
-      {
-        label: '30 ngày qua',
-        range: { from: last30Days, to: today }
-      },
-      {
-        label: 'Tháng này',
-        range: { from: thisMonth, to: today }
-      },
-      {
-        label: 'Tháng trước',
-        range: { from: lastMonth, to: lastMonthEnd }
-      },
-      {
-        label: 'Năm này',
-        range: { from: thisYear, to: today }
-      },
-      {
-        label: 'Năm trước',
-        range: { from: lastYear, to: lastYearEnd }
-      }
-    ];
-  };
-
   const presets = createPresets();
-
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
-    if (newOpen) {
-      onOpen?.();
-    } else {
-      onClose?.();
-    }
-  };
-
-  const handleClear = () => {
-    onValueChange?.(undefined);
-  };
 
   const handlePresetSelect = (preset: DatePreset) => {
     onValueChange?.(preset.range);
   };
 
-  const formatDateRange = (range: DateRange | undefined) => {
-    if (!range?.from) {
-      return placeholder;
-    }
-
-    if (!range.to) {
-      return format(range.from, formatStr, { locale: vi });
-    }
-
-    if (range.from.getTime() === range.to.getTime()) {
-      return format(range.from, formatStr, { locale: vi });
-    }
-
-    return `${format(range.from, formatStr, { locale: vi })} - ${format(range.to, formatStr, { locale: vi })}`;
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onValueChange?.(undefined);
   };
 
-  const isDateDisabled = (date: Date) => {
-    if (disabledDates?.(date)) return true;
-    if (minDate && date < minDate) return true;
-    if (maxDate && date > maxDate) return true;
-    return false;
+  const formatDateRange = () => {
+    if (!value?.from) return placeholder;
+
+    const fromStr = format(value.from, "dd/MM/yyyy", { locale: vi });
+    if (!value.to || value.from.getTime() === value.to.getTime()) {
+      return fromStr;
+    }
+    return `${fromStr} - ${format(value.to, "dd/MM/yyyy", { locale: vi })}`;
   };
+
+  const getDayCount = () => {
+    if (!value?.from || !value?.to) return null;
+    const days =
+      Math.ceil(
+        (value.to.getTime() - value.from.getTime()) / (1000 * 60 * 60 * 24)
+      ) + 1;
+    return days;
+  };
+
+  const dayCount = getDayCount();
 
   return (
-    <div className={cn('grid gap-2', className)}>
-      <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          <Button
-            id="date"
-            variant="outline"
-            className={cn(
-              'justify-start text-left font-normal',
-              !value && 'text-muted-foreground'
-            )}
-            disabled={disabled}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            <span className="flex-1 truncate">
-              {formatDateRange(value)}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          disabled={disabled}
+          className={cn(
+            "justify-start text-left font-normal h-9 bg-muted/50 border-0 hover:bg-muted",
+            !value?.from && "text-muted-foreground",
+            className
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+          <span className="truncate">{formatDateRange()}</span>
+          {dayCount && (
+            <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+              {dayCount} ngày
             </span>
-            {value?.from && showClear && (
-              <Button
-                variant="ghost"
-                size="sm" 
-                className="h-4 w-4 p-0 hover:bg-transparent ml-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleClear();
-                }}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <div className="flex">
-            {/* Presets sidebar */}
-            {showPresets && (
-              <div className="border-r p-3 space-y-1 min-w-[160px]">
-                <div className="text-sm font-medium mb-2">Lựa chọn nhanh</div>
-                {presets.map((preset) => (
-                  <Button
+          )}
+          {value?.from && showClear ? (
+            <X
+              className="ml-auto h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer"
+              onClick={handleClear}
+            />
+          ) : (
+            <ChevronDown className="ml-auto h-4 w-4 text-muted-foreground" />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-auto p-0 bg-popover border shadow-lg z-50"
+        align="start"
+        sideOffset={4}
+      >
+        <div className="flex">
+          {/* Presets sidebar */}
+          {showPresets && (
+            <div className="border-r p-2 space-y-1 w-[10em] bg-muted/30">
+              <p className="text-xs font-medium text-muted-foreground mb-2 px-1.5">
+                Lựa chọn nhanh
+              </p>
+              {presets.map((preset) => {
+                const isActive =
+                  value?.from?.getTime() === preset.range.from?.getTime() &&
+                  value?.to?.getTime() === preset.range.to?.getTime();
+
+                return (
+                  <button
                     key={preset.label}
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-xs h-8"
                     onClick={() => handlePresetSelect(preset)}
+                    className={cn(
+                      "w-full text-left text-xs px-1.5 py-1 rounded-md transition-colors",
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted text-foreground"
+                    )}
                   >
                     {preset.label}
-                  </Button>
-                ))}
-                
-                {value?.from && (
-                  <>
-                    <div className="border-t pt-2 mt-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start text-xs h-8 text-muted-foreground"
-                        onClick={handleClear}
-                      >
-                        <X className="mr-2 h-3 w-3" />
-                        Xóa lựa chọn
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Calendar */}
-            <div className="p-3">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={value?.from}
-                selected={value}
-                onSelect={onValueChange}
-                numberOfMonths={numberOfMonths}
-                disabled={isDateDisabled}
-                locale={vi}
-              />
-            </div>
-          </div>
-          
-          {/* Selected range display */}
-          {value?.from && (
-            <div className="border-t p-3 bg-muted/30">
-              <div className="flex items-center justify-between">
-                <div className="text-sm">
-                  <span className="font-medium">Đã chọn: </span>
-                  <Badge variant="secondary">
-                    {formatDateRange(value)}
-                  </Badge>
-                </div>
-                
-                {value.from && value.to && (
-                  <div className="text-xs text-muted-foreground">
-                    {Math.ceil((value.to.getTime() - value.from.getTime()) / (1000 * 60 * 60 * 24)) + 1} ngày
-                  </div>
-                )}
-              </div>
+                  </button>
+                );
+              })}
+              {value?.from && (
+                <>
+                  <div className="border-t my-2" />
+                  <button
+                    onClick={() => onValueChange?.(undefined)}
+                    className="w-full text-left text-xs px-1.5 py-1 rounded-md text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-1.5"
+                  >
+                    <X className="h-3 w-3" />
+                    Xóa lựa chọn
+                  </button>
+                </>
+              )}
             </div>
           )}
-        </PopoverContent>
-      </Popover>
-    </div>
+
+          {/* Calendar */}
+          <div className="p-3">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={value?.from}
+              selected={value}
+              onSelect={onValueChange}
+              numberOfMonths={numberOfMonths}
+              locale={vi}
+              className="pointer-events-auto"
+            />
+          </div>
+        </div>
+
+        {/* Footer with selected info */}
+        {value?.from && (
+          <div className="border-t px-4 py-2 bg-muted/30">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Đã chọn:</span>
+              <span className="font-medium">{formatDateRange()}</span>
+            </div>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
-};
+}

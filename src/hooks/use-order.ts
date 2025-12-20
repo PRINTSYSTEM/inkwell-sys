@@ -5,12 +5,15 @@ import type {
   OrderResponse,
   OrderResponsePagedResponse,
   OrderListParams,
+  OrdersForDesignerListParams,
+  OrdersForAccountingListParams,
   CreateOrderRequest,
   UpdateOrderRequest,
   CreateOrderWithExistingDesignsRequest,
   AddDesignToOrderRequest,
   OrderResponseForDesignerPagedResponse,
   UserRole,
+  OrdersMyListParams,
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
@@ -260,7 +263,10 @@ export const useAddDesignToOrder = () => {
 // ================== ORDER: LIST FOR DESIGNER ==================
 // GET /orders/for-designer
 
-const useOrdersForDesigner = (params?: OrderListParams, enabled = true) => {
+const useOrdersForDesigner = (
+  params?: OrdersForDesignerListParams,
+  enabled = true
+) => {
   return useQuery<OrderResponseForDesignerPagedResponse>({
     queryKey: [orderKeys.all[0], "for-designer", params],
     enabled,
@@ -277,7 +283,10 @@ const useOrdersForDesigner = (params?: OrderListParams, enabled = true) => {
 // ================== ORDER: LIST FOR ACCOUNTING ==================
 // GET /orders/for-accounting
 
-const useOrdersForAccounting = (params?: OrderListParams, enabled = true) => {
+const useOrdersForAccounting = (
+  params?: OrdersForAccountingListParams,
+  enabled = true
+) => {
   return useQuery<OrderResponsePagedResponse>({
     queryKey: [orderKeys.all[0], "for-accounting", params],
     enabled,
@@ -405,9 +414,24 @@ export const useExportOrderDeliveryNote = () => {
   return { loading, error, mutate, reset };
 };
 
-export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
-  const finalParams = normalizeParams(params ?? ({} as OrderListParams));
+export const useMyOrders = (
+  params?: OrdersMyListParams,
+  enabled: boolean = true
+) => {
+  return useQuery<OrderResponsePagedResponse>({
+    queryKey: [orderKeys.all[0], "my", params ?? {}],
+    enabled,
+    queryFn: async () => {
+      const res = await apiRequest.get<OrderResponsePagedResponse>(
+        API_SUFFIX.ORDERS_MY,
+        { params }
+      );
+      return res.data;
+    },
+  });
+};
 
+export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
   // Determine which hook should be enabled based on role
   const isAdminRole =
     role === ROLE.ADMIN ||
@@ -416,21 +440,47 @@ export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
     role === ROLE.PRODUCTION ||
     role === ROLE.PRODUCTION_LEAD ||
     role === ROLE.ACCOUNTING_LEAD;
-  const isDesignerRole = role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD;
+  const isDesignerRole = role === ROLE.DESIGN;
   const isAccountingRole = role === ROLE.ACCOUNTING;
+  const isDesignerLeadRole = role === ROLE.DESIGN_LEAD;
+
+  // Normalize and convert params based on role
+  const adminParams = normalizeParams(params ?? ({} as OrderListParams));
+  const designerParams: OrdersForDesignerListParams = {
+    pageNumber: params?.pageNumber,
+    pageSize: params?.pageSize,
+    status: params?.status,
+    startDate: params?.startDate,
+    endDate: params?.endDate,
+  };
+  const accountingParams: OrdersForAccountingListParams = {
+    pageNumber: params?.pageNumber,
+    pageSize: params?.pageSize,
+    status: params?.status,
+    startDate: params?.startDate,
+    endDate: params?.endDate,
+  };
 
   // Call all hooks unconditionally to satisfy Rules of Hooks
   // But only enable the query for the current role to optimize performance
-  const adminResult = useOrderListBaseWithEnabled(finalParams, isAdminRole);
-  const designerResult = useOrdersForDesigner(finalParams, isDesignerRole);
+  const adminResult = useOrderListBaseWithEnabled(adminParams, isAdminRole);
+  const designerResult = useMyOrders(designerParams, isDesignerRole);
   const accountingResult = useOrdersForAccounting(
-    finalParams,
+    accountingParams,
     isAccountingRole
+  );
+  const designerLeadResult = useOrdersForDesigner(
+    designerParams,
+    isDesignerLeadRole
   );
 
   // Return the appropriate result based on role
   if (isDesignerRole) {
     return designerResult;
+  }
+
+  if (isDesignerLeadRole) {
+    return designerLeadResult;
   }
 
   if (isAccountingRole) {

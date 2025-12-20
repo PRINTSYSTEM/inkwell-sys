@@ -7,20 +7,17 @@ import {
   IdSchema,
   NameSchema,
   createPagedResponseSchema,
-} from "./Common";
+} from "./common";
 
 // CreateDesignTypeRequest
+// Updated to match swagger.json: code, name, status required
 export const CreateDesignTypeRequestSchema = z
   .object({
-    code: z
-      .string()
-      .min(2, "Mã loại thiết kế quá ngắn")
-      .max(20, "Mã loại thiết kế quá dài")
-      .regex(/^[A-Z0-9-]+$/, "Mã chỉ gồm A-Z, số và dấu gạch ngang"),
-    name: NameSchema,
-    displayOrder: z.number().int().min(0).default(0),
-    description: z.string().max(500).nullable().optional(),
-    status: CommonStatusSchema,
+    code: z.string().min(0).max(20), // Required in swagger
+    name: z.string().min(0).max(255), // Required in swagger
+    displayOrder: z.number().int().min(0).max(2147483647).optional(),
+    description: z.string().nullable().optional(),
+    status: z.string().regex(/^(active|inactive)$/), // Required in swagger, pattern from swagger
   })
   .passthrough();
 
@@ -29,12 +26,17 @@ export type CreateDesignTypeRequest = z.infer<
 >;
 
 // UpdateDesignTypeRequest
+// Updated to match swagger.json: all fields optional, nullable
 export const UpdateDesignTypeRequestSchema = z
   .object({
-    name: NameSchema.nullable().optional(),
-    displayOrder: z.number().int().min(0).nullable().optional(),
+    name: z.string().min(0).max(255).nullable().optional(), // Updated to match swagger
+    displayOrder: z.number().int().min(0).max(2147483647).nullable().optional(), // Updated max from swagger
     description: z.string().nullable().optional(),
-    status: CommonStatusSchema.nullable().optional(),
+    status: z
+      .string()
+      .regex(/^(active|inactive)$/)
+      .nullable()
+      .optional(), // Updated to match swagger pattern
   })
   .passthrough();
 

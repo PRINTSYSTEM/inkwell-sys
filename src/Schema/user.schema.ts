@@ -6,7 +6,7 @@ import {
   NameSchema,
   createPagedResponseSchema,
   UserRoleSchema,
-} from "./Common";
+} from "./common";
 
 // ===== UserResponse =====
 
@@ -36,43 +36,40 @@ export type UserResponsePagedResponse = z.infer<
 >;
 
 // ===== CreateUserRequest =====
+// Updated to match swagger.json: username, password, fullName, role required
 
 export const CreateUserRequestSchema = z
   .object({
-    username: z
+    username: z.string().min(0).max(100), // Required in swagger, maxLength 100
+    password: z.string().min(6).max(100), // Required in swagger, minLength 6, maxLength 100
+    fullName: z.string().min(0).max(255), // Required in swagger, maxLength 255
+    role: z
       .string()
-      .min(3, "Username phải có ít nhất 3 ký tự")
-      .max(30, "Username tối đa 30 ký tự")
-      .regex(/^[a-zA-Z0-9_]+$/, "Username chỉ chứa chữ, số và _"),
-    password: z
-      .string()
-      .min(8, "Mật khẩu tối thiểu 8 ký tự")
-      .max(100, "Mật khẩu quá dài")
       .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-        "Mật khẩu phải có chữ hoa, chữ thường và số"
-      ),
-    fullName: NameSchema,
-    role: UserRoleSchema,
-    email: z.string().email("Email không hợp lệ").nullable().optional(),
-    phone: z
-      .string()
-      .regex(/^[0-9+\-\s()]{8,20}$/, "Số điện thoại không hợp lệ")
-      .nullable()
-      .optional(),
+        /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/
+      ), // Required in swagger, pattern from swagger
+    email: z.string().email().max(255).nullable().optional(), // Optional, format email, maxLength 255
+    phone: z.string().min(0).max(20).nullable().optional(), // Optional, format tel, maxLength 20
   })
   .passthrough();
 
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
 // ===== UpdateUserRequest =====
+// Updated to match swagger.json: all fields optional, nullable
 
 export const UpdateUserRequestSchema = z
   .object({
-    fullName: NameSchema.nullable().optional(),
-    role: UserRoleSchema.nullable().optional(),
-    email: z.string().email().nullable().optional(),
-    phone: z.string().max(20).nullable().optional(),
+    fullName: z.string().min(0).max(255).nullable().optional(), // Updated to match swagger
+    role: z
+      .string()
+      .regex(
+        /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/
+      )
+      .nullable()
+      .optional(), // Updated to match swagger pattern
+    email: z.string().email().min(0).max(255).nullable().optional(), // Updated to match swagger
+    phone: z.string().min(0).max(20).nullable().optional(), // Updated to match swagger
     isActive: z.boolean().nullable().optional(),
   })
   .passthrough();

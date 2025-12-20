@@ -21,10 +21,7 @@ export type PlateExportResponse = z.infer<typeof PlateExportResponseSchema>;
 
 export const RecordPlateExportRequestSchema = z
   .object({
-    vendorName: z
-      .string()
-      .min(1, "Tên nhà cung cấp là bắt buộc")
-      .max(255, "Tên nhà cung cấp không được vượt quá 255 ký tự"),
+    vendorName: z.string().min(0).max(255), // Required in swagger, maxLength 255, minLength 0
     sentAt: DateSchema.nullable().optional(),
     receivedAt: DateSchema.nullable().optional(),
     notes: z.string().nullable().optional(),

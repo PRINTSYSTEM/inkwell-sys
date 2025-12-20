@@ -1,6 +1,6 @@
 // src/Schema/params.schema.ts
 import { z } from "zod";
-import { IdSchema } from "./Common";
+import { IdSchema } from "./common";
 
 // ==== Base paged params ====
 
@@ -22,6 +22,17 @@ export const CustomerListParamsSchema = PagedParamsSchema.extend({
 
 export type CustomerListParams = z.infer<typeof CustomerListParamsSchema>;
 
+// ==== Design list params (/api/designs/by-customer/:id) ====
+
+export const DesignByCustomerListParamsSchema = PagedParamsSchema.extend({
+  customerId: IdSchema.nullable().optional(),
+  search: z.string().nullable().optional(),
+});
+
+export type DesignByCustomerListParams = z.infer<
+  typeof DesignByCustomerListParamsSchema
+>;
+
 // ==== Design list params (/api/designs) ====
 
 export const DesignListParamsSchema = PagedParamsSchema.extend({
@@ -30,6 +41,8 @@ export const DesignListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
   month: z.number().int().min(1).max(12).optional(),
   year: z.number().int().min(2000).optional(),
+  startDate: z.string().nullable().optional(), // date-time format
+  endDate: z.string().nullable().optional(), // date-time format
 });
 
 export type DesignListParams = z.infer<typeof DesignListParamsSchema>;
@@ -38,6 +51,8 @@ export const MyDesignListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
   month: z.number().int().min(1).max(12).optional(),
   year: z.number().int().min(2000).optional(),
+  startDate: z.string().nullable().optional(), // date-time format
+  endDate: z.string().nullable().optional(), // date-time format
 });
 
 export type MyDesignListParams = z.infer<typeof MyDesignListParamsSchema>;
@@ -47,6 +62,8 @@ export type MyDesignListParams = z.infer<typeof MyDesignListParamsSchema>;
 export const OrderListParamsSchema = PagedParamsSchema.extend({
   customerId: IdSchema.nullable().optional(),
   status: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(), // date-time format
+  endDate: z.string().nullable().optional(), // date-time format
 });
 
 export type OrderListParams = z.infer<typeof OrderListParamsSchema>;
@@ -65,11 +82,22 @@ export type OrdersForDesignerListParams = z.infer<
 
 export const OrdersForAccountingListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
+  filterType: z.string().nullable().optional(), // Added from swagger
 });
 
 export type OrdersForAccountingListParams = z.infer<
   typeof OrdersForAccountingListParamsSchema
 >;
+
+// ==== Orders my (/api/orders/my) ====
+
+export const OrdersMyListParamsSchema = PagedParamsSchema.extend({
+  status: z.string().nullable().optional(),
+  startDate: z.string().nullable().optional(), // date-time format
+  endDate: z.string().nullable().optional(), // date-time format
+});
+
+export type OrdersMyListParams = z.infer<typeof OrdersMyListParamsSchema>;
 
 // ==== ProofingOrder list (/api/proofing-orders) ====
 

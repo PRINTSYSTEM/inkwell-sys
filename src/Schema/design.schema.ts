@@ -5,8 +5,8 @@ import {
   DateSchema,
   NameSchema,
   createPagedResponseSchema,
-} from "./Common";
-import { UserInfoSchema } from "./Common";
+} from "./common";
+import { UserInfoSchema } from "./common";
 import { DesignTypeResponseSchema } from "./design-type.schema";
 import {
   MaterialTypeResponseSchema,
@@ -120,8 +120,8 @@ export type CreateDesignRequest = z.infer<typeof CreateDesignRequestSchema>;
 export const UpdateDesignRequestSchema = z
   .object({
     assignedDesignerId: IdSchema.nullable().optional(),
-    designName: z.string().max(255).nullable().optional(),
-    designStatus: z.string().max(50).nullable().optional(),
+    designName: z.string().min(0).max(255).nullable().optional(), // Updated to match swagger
+    designStatus: z.string().min(0).max(50).nullable().optional(), // Updated to match swagger
     designFileUrl: z.string().nullable().optional(),
     excelFileUrl: z.string().nullable().optional(),
     length: z.number().min(0).nullable().optional(), // Added from swagger

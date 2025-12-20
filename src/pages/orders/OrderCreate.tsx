@@ -10,6 +10,7 @@ import {
   FileText,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,8 +91,20 @@ export default function OrderCreatePage() {
   const [selectedCustomer, setSelectedCustomer] =
     useState<CustomerSummaryResponse | null>(null);
 
-  const { data: existingDesigns = [], isLoading: loadingExistingDesigns } =
-    useDesignsByCustomer(selectedCustomer?.id || 0);
+  // Search state for existing designs
+  const [designSearchQuery, setDesignSearchQuery] = useState<string>("");
+  const [debouncedSearchQuery] = useDebounce(designSearchQuery, 300);
+
+  const { data: existingDesignsData, isLoading: loadingExistingDesigns } =
+    useDesignsByCustomer(
+      selectedCustomer?.id
+        ? {
+            customerId: selectedCustomer.id,
+            search: debouncedSearchQuery.trim() || undefined,
+          }
+        : undefined
+    );
+  const existingDesigns = existingDesignsData?.items || [];
 
   // Customer state
   const [customerComboOpen, setCustomerComboOpen] = useState(false);
@@ -121,6 +134,7 @@ export default function OrderCreatePage() {
   const handleCustomerSelect = (customer: CustomerSummaryResponse) => {
     setSelectedCustomer(customer);
     setDesigns([]);
+    setDesignSearchQuery(""); // Reset search when customer changes
     setCustomerComboOpen(false);
   };
 
@@ -532,6 +546,18 @@ export default function OrderCreatePage() {
                         <p className="text-xs text-muted-foreground">
                           Click vào thiết kế để thêm vào đơn hàng
                         </p>
+                        {/* Search input for designs */}
+                        <div className="space-y-2">
+                          <Input
+                            type="text"
+                            placeholder="Tìm theo tên thiết kế hoặc mã thiết kế..."
+                            value={designSearchQuery}
+                            onChange={(e) =>
+                              setDesignSearchQuery(e.target.value)
+                            }
+                            className="h-9 text-sm bg-background"
+                          />
+                        </div>
                         <div className="grid gap-3 md:grid-cols-2">
                           {loadingExistingDesigns ? (
                             <div className="col-span-2 text-center py-4 text-sm text-muted-foreground">

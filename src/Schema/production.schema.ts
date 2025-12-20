@@ -1,7 +1,7 @@
 // src/Schema/production.schema.ts
 import { z } from "zod";
-import { IdSchema, DateSchema, createPagedResponseSchema } from "./Common";
-import { UserInfoSchema } from "./Common";
+import { IdSchema, DateSchema, createPagedResponseSchema } from "./common";
+import { UserInfoSchema } from "./common";
 
 // ===== ProductionResponse =====
 
@@ -57,10 +57,10 @@ export type CreateProductionRequest = z.infer<
 
 export const UpdateProductionRequestSchema = z
   .object({
-    status: z.string().max(50).nullable().optional(),
+    status: z.string().min(0).max(50).nullable().optional(), // Updated to match swagger
     progressPercent: z.number().int().min(0).max(100).nullable().optional(),
     defectNotes: z.string().nullable().optional(),
-    wastage: z.number().min(0).nullable().optional(),
+    wastage: z.number().min(0).nullable().optional(), // float in swagger, but number is fine
     startedAt: DateSchema.nullable().optional(),
     completedAt: DateSchema.nullable().optional(),
   })
