@@ -6,7 +6,7 @@ import {
   NameSchema,
   createPagedResponseSchema,
   UserRoleSchema,
-} from "./common";
+} from "./Common";
 
 // ===== UserResponse =====
 

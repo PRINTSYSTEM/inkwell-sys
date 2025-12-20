@@ -1,6 +1,6 @@
 // Common Schemas
 
-export * from "./common";
+export * from "./Common";
 // Entity Schemas
 export * from "./user.schema";
 export * from "./notification.schema";

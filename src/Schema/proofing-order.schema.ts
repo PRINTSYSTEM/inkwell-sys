@@ -1,7 +1,7 @@
 // src/Schema/proofing-order.schema.ts
 import { z } from "zod";
-import { IdSchema, DateSchema, createPagedResponseSchema } from "./common";
-import { UserInfoSchema } from "./common";
+import { IdSchema, DateSchema, createPagedResponseSchema } from "./Common";
+import { UserInfoSchema } from "./Common";
 import { MaterialTypeResponseSchema } from "./material-type.schema";
 import { DesignResponseSchema } from "./design.schema";
 import { ProductionResponseSchema } from "./production.schema";
