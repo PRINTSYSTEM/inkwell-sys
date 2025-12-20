@@ -182,7 +182,7 @@ export default function ProofingOrderPage() {
         <div>
           <h1 className="text-2xl font-bold">Designs Chờ Proofing</h1>
           <p className="text-muted-foreground">
-            Tổng cộng {data?.totalCount || 0} designs
+            Tổng cộng {data?.total || 0} designs
           </p>
         </div>
 

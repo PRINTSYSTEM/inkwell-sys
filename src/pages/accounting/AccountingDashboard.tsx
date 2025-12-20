@@ -100,7 +100,7 @@ export default function AccountingDashboard() {
     useAccountingByOrder(selectedOrder?.id ?? null, !!selectedOrder);
 
   const orders = ordersData?.items ?? [];
-  const totalCount = ordersData?.totalCount ?? 0;
+  const totalCount = ordersData?.total ?? 0;
 
   // Calculate stats from orders
   const stats = {

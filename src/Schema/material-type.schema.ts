@@ -13,6 +13,45 @@ import { UserInfoSchema } from "./Common";
 // ===== MaterialTypeResponse =====
 // Dữ liệu trả về từ API cho một chất liệu thiết kế
 
+// ===== MaterialTypeClassificationOptionResponse =====
+// Schema for classification options (sides, process, etc.)
+
+export const MaterialTypeClassificationOptionResponseSchema = z
+  .object({
+    id: IdSchema.optional(),
+    code: z.string().nullable().optional(),
+    value: z.string().nullable().optional(),
+    displayOrder: z.number().int().optional(),
+  })
+  .passthrough();
+
+export type MaterialTypeClassificationOptionResponse = z.infer<
+  typeof MaterialTypeClassificationOptionResponseSchema
+>;
+
+// ===== MaterialTypeClassificationResponse =====
+// Schema for classification groups
+
+export const MaterialTypeClassificationResponseSchema = z
+  .object({
+    id: IdSchema.optional(),
+    classificationKey: z.string().nullable().optional(),
+    classificationName: z.string().nullable().optional(),
+    displayOrder: z.number().int().optional(),
+    options: z
+      .array(MaterialTypeClassificationOptionResponseSchema)
+      .nullable()
+      .optional(),
+  })
+  .passthrough();
+
+export type MaterialTypeClassificationResponse = z.infer<
+  typeof MaterialTypeClassificationResponseSchema
+>;
+
+// ===== MaterialTypeResponse =====
+// Dữ liệu trả về từ API cho một chất liệu thiết kế
+
 export const MaterialTypeResponseSchema = z
   .object({
     id: IdSchema.optional(),
@@ -21,7 +60,7 @@ export const MaterialTypeResponseSchema = z
     displayOrder: z.number().int().optional(),
     description: z.string().nullable().optional(),
     pricePerCm2: z.number().optional(),
-    minimumQuantity: z.number().int().optional(),
+    minimumQuantity: z.number().int().optional(), // Added from swagger
     designTypeId: IdSchema.nullable().optional(),
     status: z.string().nullable().optional(),
     statusType: z.string().nullable().optional(),
@@ -29,23 +68,9 @@ export const MaterialTypeResponseSchema = z
     updatedAt: DateSchema.optional(),
     createdBy: UserInfoSchema.nullable().optional(),
     classifications: z
-      .array(
-        z.object({
-          id: IdSchema,
-          classificationKey: z.string(),
-          classificationName: z.string(),
-          displayOrder: z.number().int(),
-          options: z.array(
-            z.object({
-              id: IdSchema,
-              code: z.string(),
-              value: z.string(),
-              displayOrder: z.number().int(),
-            })
-          ),
-        })
-      )
-      .optional(),
+      .array(MaterialTypeClassificationResponseSchema)
+      .nullable()
+      .optional(), // Added from swagger
   })
   .passthrough();
 

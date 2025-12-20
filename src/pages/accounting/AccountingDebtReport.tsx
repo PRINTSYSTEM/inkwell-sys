@@ -46,7 +46,7 @@ export default function AccountingDebtReport() {
     useExportDebtComparison();
 
   const customers = customersData?.items ?? [];
-  const totalCount = customersData?.totalCount ?? 0;
+  const totalCount = customersData?.total ?? 0;
 
   // Calculate stats
   const stats = {

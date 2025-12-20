@@ -32,9 +32,24 @@ export type AccountingResponse = z.infer<typeof AccountingResponseSchema>;
 
 export const ConfirmPaymentRequestSchema = z
   .object({
-    amount: z.number().min(0.01),
-    paymentMethod: z.string().nullable().optional(),
-    notes: z.string().nullable().optional(),
+    amount: z
+      .number({
+        required_error: "Số tiền thanh toán là bắt buộc",
+        invalid_type_error: "Số tiền phải là số",
+      })
+      .min(0.01, "Số tiền thanh toán phải lớn hơn 0"),
+    paymentMethod: z
+      .string({
+        invalid_type_error: "Phương thức thanh toán phải là chuỗi",
+      })
+      .nullable()
+      .optional(),
+    notes: z
+      .string({
+        invalid_type_error: "Ghi chú phải là chuỗi",
+      })
+      .nullable()
+      .optional(),
   })
   .passthrough();
 

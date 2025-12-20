@@ -37,8 +37,8 @@ export default function DesignersPage() {
   });
 
   const designers: Designer[] = data?.items ?? [];
-  const totalCount = data?.totalCount ?? designers.length;
-  const pageNumber = data?.pageNumber ?? 1;
+  const totalCount = data?.total ?? designers.length;
+  const pageNumber = data?.page ?? 1;
   const totalPages = data?.totalPages ?? 1;
 
   const normalizedSearch = searchQuery.toLowerCase().trim();

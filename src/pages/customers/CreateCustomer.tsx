@@ -2,7 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateCustomer, useFormValidation, useCheckDuplicateCompany } from "@/hooks";
+import {
+  useCreateCustomer,
+  useFormValidation,
+  useCheckDuplicateCompany,
+} from "@/hooks";
 import { CreateCustomerRequest, CreateCustomerRequestSchema } from "@/Schema";
 import { FormFieldError } from "@/components/ui/form-field-error";
 import {
@@ -37,7 +41,8 @@ export default function CreateCustomer() {
 
   const [generatedCode, setGeneratedCode] = useState("");
   const [duplicateCompany, setDuplicateCompany] = useState<string | null>(null);
-  const { check: checkDuplicate, loading: checkingDuplicate } = useCheckDuplicateCompany();
+  const { check: checkDuplicate, loading: checkingDuplicate } =
+    useCheckDuplicateCompany();
   const {
     mutateAsync: createCustomer,
     isPending,
@@ -69,7 +74,7 @@ export default function CreateCustomer() {
   ) => {
     setForm((p) => ({ ...p, [field]: value }));
     clearFieldError(field as string);
-    if (field === "representativeName")
+    if (field === "companyName")
       setGeneratedCode(generatePreviewCode(String(value ?? "")));
   };
 
@@ -249,9 +254,16 @@ export default function CreateCustomer() {
                       id="companyName"
                       placeholder="Nhập tên công ty (nếu có)"
                       value={form.companyName || ""}
-                      onChange={(e) => handleInput("companyName", e.target.value)}
+                      onChange={(e) =>
+                        handleInput("companyName", e.target.value)
+                      }
                       onBlur={() => handleBlur("companyName")}
-                      className={duplicateCompany === form.companyName?.trim() && duplicateCompany !== null ? "border-amber-500 bg-amber-50/50" : ""}
+                      className={
+                        duplicateCompany === form.companyName?.trim() &&
+                        duplicateCompany !== null
+                          ? "border-amber-500 bg-amber-50/50"
+                          : ""
+                      }
                     />
                     {checkingDuplicate && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -259,12 +271,15 @@ export default function CreateCustomer() {
                       </div>
                     )}
                   </div>
-                  {duplicateCompany === form.companyName?.trim() && duplicateCompany !== null && (
-                    <div className="flex items-center gap-2 text-amber-600 text-xs mt-1 animate-in fade-in slide-in-from-top-1">
-                      <AlertCircle className="h-3.5 w-3.5" />
-                      <span>Tên công ty "{duplicateCompany}" đã có trong hệ thống!</span>
-                    </div>
-                  )}
+                  {duplicateCompany === form.companyName?.trim() &&
+                    duplicateCompany !== null && (
+                      <div className="flex items-center gap-2 text-amber-600 text-xs mt-1 animate-in fade-in slide-in-from-top-1">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        <span>
+                          Tên công ty "{duplicateCompany}" đã có trong hệ thống!
+                        </span>
+                      </div>
+                    )}
                 </div>
 
                 <div className="space-y-2">
@@ -276,22 +291,25 @@ export default function CreateCustomer() {
                     <button
                       type="button"
                       onClick={() => handleInput("type", "company")}
-                      className={`p-4 rounded-lg border-2 transition-all ${form.type === "company"
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "border-border hover:border-primary/50"
-                        }`}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        form.type === "company"
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "border-border hover:border-primary/50"
+                      }`}
                     >
                       <Building2
-                        className={`h-5 w-5 mx-auto mb-2 ${form.type === "company"
-                          ? "text-primary"
-                          : "text-muted-foreground"
-                          }`}
+                        className={`h-5 w-5 mx-auto mb-2 ${
+                          form.type === "company"
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }`}
                       />
                       <p
-                        className={`text-sm font-medium ${form.type === "company"
-                          ? "text-foreground"
-                          : "text-muted-foreground"
-                          }`}
+                        className={`text-sm font-medium ${
+                          form.type === "company"
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }`}
                       >
                         Khách công ty
                       </p>
@@ -299,22 +317,25 @@ export default function CreateCustomer() {
                     <button
                       type="button"
                       onClick={() => handleInput("type", "retail")}
-                      className={`p-4 rounded-lg border-2 transition-all ${form.type === "retail"
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "border-border hover:border-primary/50"
-                        }`}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        form.type === "retail"
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "border-border hover:border-primary/50"
+                      }`}
                     >
                       <User
-                        className={`h-5 w-5 mx-auto mb-2 ${form.type === "retail"
-                          ? "text-primary"
-                          : "text-muted-foreground"
-                          }`}
+                        className={`h-5 w-5 mx-auto mb-2 ${
+                          form.type === "retail"
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }`}
                       />
                       <p
-                        className={`text-sm font-medium ${form.type === "retail"
-                          ? "text-foreground"
-                          : "text-muted-foreground"
-                          }`}
+                        className={`text-sm font-medium ${
+                          form.type === "retail"
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }`}
                       >
                         Khách lẻ
                       </p>
@@ -397,8 +418,9 @@ export default function CreateCustomer() {
                     value={form.address || ""}
                     onChange={(e) => handleInput("address", e.target.value)}
                     onBlur={() => handleBlur("address")}
-                    className={`min-h-24 ${getError("address") ? "border-destructive" : ""
-                      }`}
+                    className={`min-h-24 ${
+                      getError("address") ? "border-destructive" : ""
+                    }`}
                   />
                   <FormFieldError error={getError("address")} />
                 </div>
@@ -453,8 +475,9 @@ export default function CreateCustomer() {
                     handleInput("maxDebt", Number(e.target.value))
                   }
                   onBlur={() => handleBlur("maxDebt")}
-                  className={`text-lg font-semibold ${getError("maxDebt") ? "border-destructive" : ""
-                    }`}
+                  className={`text-lg font-semibold ${
+                    getError("maxDebt") ? "border-destructive" : ""
+                  }`}
                 />
                 <FormFieldError error={getError("maxDebt")} />
                 <p className="text-xs text-muted-foreground">

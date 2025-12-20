@@ -8,15 +8,11 @@ import {
 } from "./Common";
 import { UserInfoSchema } from "./Common";
 import { DesignTypeResponseSchema } from "./design-type.schema";
-import { MaterialTypeResponseSchema } from "./material-type.schema";
-
-// ===== Classification Option Schema =====
-export const MaterialTypeClassificationOptionSchema = z.object({
-  id: IdSchema,
-  code: z.string(),
-  value: z.string(),
-  displayOrder: z.number().int(),
-});
+import {
+  MaterialTypeResponseSchema,
+  MaterialTypeClassificationOptionResponseSchema,
+} from "./material-type.schema";
+import { CustomerSummaryResponseSchema } from "./customer.schema";
 
 // ===== DesignTimelineEntryResponse =====
 
@@ -49,29 +45,28 @@ export const DesignResponseSchema = z
     materialType: MaterialTypeResponseSchema.nullable().optional(),
     designName: z.string().nullable().optional(),
     dimensions: z.string().nullable().optional(),
-    length: z.number().nullable().optional(),
+    length: z.number().nullable().optional(), // Added from swagger
     width: z.number().nullable().optional(),
     height: z.number().nullable().optional(),
-    depth: z.number().nullable().optional(),
+    depth: z.number().nullable().optional(), // Added from swagger
     areaCm2: z.number().nullable().optional(),
-    sidesClassificationOptionId: IdSchema.nullable().optional(),
-    processClassificationOptionId: IdSchema.nullable().optional(),
-    sidesClassificationOption: MaterialTypeClassificationOptionSchema.nullable().optional(),
-    processClassificationOption: MaterialTypeClassificationOptionSchema.nullable().optional(),
+    sidesClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
+    processClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
+    sidesClassificationOption:
+      MaterialTypeClassificationOptionResponseSchema.nullable().optional(), // Added from swagger
+    processClassificationOption:
+      MaterialTypeClassificationOptionResponseSchema.nullable().optional(), // Added from swagger
     designFileUrl: z.string().nullable().optional(),
     designImageUrl: z.string().nullable().optional(),
     excelFileUrl: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
-
-    // STT 9: Thông tin bổ sung cho danh sách
-    customer: z.any().nullable().optional(), // CustomerSummaryResponse
-    latestOrderCode: z.string().nullable().optional(),
-    latestRequirements: z.string().nullable().optional(),
-
+    customer: CustomerSummaryResponseSchema.nullable().optional(), // Added from swagger
+    latestOrderCode: z.string().nullable().optional(), // Added from swagger
+    latestRequirements: z.string().nullable().optional(), // Added from swagger
     status: z.string().nullable().optional(),
     statusType: z.string().nullable().optional(),
     createdAt: DateSchema.optional(),
-    updatedAt: DateSchema.optional(),
+    updatedAt: DateSchema.nullable().optional(), // nullable in swagger
     timelineEntries: z
       .array(DesignTimelineEntryResponseSchema)
       .nullable()
@@ -129,12 +124,12 @@ export const UpdateDesignRequestSchema = z
     designStatus: z.string().max(50).nullable().optional(),
     designFileUrl: z.string().nullable().optional(),
     excelFileUrl: z.string().nullable().optional(),
-    length: z.number().min(0).nullable().optional(),
+    length: z.number().min(0).nullable().optional(), // Added from swagger
     width: z.number().min(0).nullable().optional(),
     height: z.number().min(0).nullable().optional(),
-    depth: z.number().min(0).nullable().optional(),
-    sidesClassificationOptionId: IdSchema.nullable().optional(),
-    processClassificationOptionId: IdSchema.nullable().optional(),
+    depth: z.number().min(0).nullable().optional(), // Added from swagger
+    sidesClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
+    processClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
     requirements: z.string().nullable().optional(),
     additionalNotes: z.string().nullable().optional(),
   })

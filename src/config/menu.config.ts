@@ -76,7 +76,7 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Tất cả thiết kế",
         icon: Eye,
         path: ROUTE_PATHS.DESIGN.ALL,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD, ROLE.DESIGN],
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD],
       },
       {
         id: "design-my-work",

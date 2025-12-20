@@ -109,11 +109,11 @@ export default function DesignerDetailPage() {
 
   // hỗ trợ cả 2 dạng: Array<Design> hoặc { items, totalPages, ... }
   type PagedData = {
-    items?: DesignResponse[];
+    items?: DesignResponse[] | null;
+    size?: number;
+    page?: number;
+    total?: number;
     totalPages?: number;
-    totalCount?: number;
-    hasPreviousPage?: boolean;
-    hasNextPage?: boolean;
   };
   const pagedData = data as PagedData | undefined;
 
@@ -123,13 +123,14 @@ export default function DesignerDetailPage() {
 
   const totalCount = Array.isArray(data)
     ? data.length
-    : pagedData?.totalCount || designs.length;
+    : pagedData?.total || designs.length;
   const totalPages =
     !Array.isArray(data) && typeof pagedData?.totalPages === "number"
       ? pagedData.totalPages
       : 1;
-  const hasPreviousPage = pagedData?.hasPreviousPage || false;
-  const hasNextPage = pagedData?.hasNextPage || false;
+  const currentPageNum = pagedData?.page || currentPage;
+  const hasPreviousPage = currentPageNum > 1;
+  const hasNextPage = currentPageNum < totalPages;
 
   // Filter by search query (client-side)
   const filteredDesigns = useMemo(() => {
@@ -154,7 +155,7 @@ export default function DesignerDetailPage() {
   const stats = useMemo(() => {
     const allDesignsTotalCount = Array.isArray(allDesignsData)
       ? allDesignsData.length
-      : (allDesignsData as PagedData)?.totalCount || allDesigns.length;
+      : (allDesignsData as PagedData)?.total || allDesigns.length;
 
     return {
       total: allDesignsTotalCount,

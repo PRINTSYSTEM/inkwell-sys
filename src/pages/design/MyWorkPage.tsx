@@ -81,10 +81,11 @@ export default function MyWorkPage() {
   const { mutate: generateExcel } = useGenerateDesignExcel();
 
   // Derived data
-  const totalCount = data?.totalCount || 0;
+  const totalCount = data?.total || 0;
   const totalPages = data?.totalPages || 1;
-  const hasPreviousPage = data?.hasPreviousPage || false;
-  const hasNextPage = data?.hasNextPage || false;
+  const currentPageNum = data?.page || currentPage;
+  const hasPreviousPage = currentPageNum > 1;
+  const hasNextPage = currentPageNum < totalPages;
 
   // Memoize designs to avoid useMemo dependency warnings
   const memoizedDesigns = useMemo(() => data?.items || [], [data?.items]);

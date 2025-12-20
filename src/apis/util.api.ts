@@ -30,6 +30,21 @@ export const API_SUFFIX = {
   USER_BY_USERNAME: (username: string) => `/users/username/${username}`,
   USER_CHANGE_PASSWORD: (id: number) => `/users/${id}/change-password`,
   USERS_DESIGNERS: "/users/designers",
+  USER_KPI: (id: number, fromDate?: string, toDate?: string) => {
+    const base = `/users/${id}/kpi`;
+    const params = new URLSearchParams();
+    if (fromDate) params.append("fromDate", fromDate);
+    if (toDate) params.append("toDate", toDate);
+    return params.toString() ? `${base}?${params.toString()}` : base;
+  },
+  USER_KPI_TEAM: (fromDate?: string, toDate?: string, role?: string) => {
+    const base = "/users/kpi/team";
+    const params = new URLSearchParams();
+    if (fromDate) params.append("fromDate", fromDate);
+    if (toDate) params.append("toDate", toDate);
+    if (role) params.append("role", role);
+    return params.toString() ? `${base}?${params.toString()}` : base;
+  },
 
   // ========== ORDERS ==========
   ORDERS: "/orders",
@@ -43,7 +58,7 @@ export const API_SUFFIX = {
   ORDER_EXPORT_INVOICE: (id: number) => `/orders/${id}/export-invoice`,
   ORDER_EXPORT_DELIVERY_NOTE: (id: number) =>
     `/orders/${id}/export-delivery-note`,
-  ORDER_EXCEL: (id: number) => `/orders/${id}/generate-excel`,
+  ORDER_GENERATE_EXCEL: (id: number) => `/orders/${id}/generate-excel`,
 
   // ========== INVOICE ==========
   ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`,
@@ -54,12 +69,22 @@ export const API_SUFFIX = {
   ACCOUNTING_BY_ORDER: (orderId: number) => `/accountings/order/${orderId}`,
   ACCOUNTING_CONFIRM_PAYMENT: (accountingId: number) =>
     `/accountings/${accountingId}/confirm-payment`,
+  ACCOUNTING_CONFIRM_DEPOSIT: (orderId: number, depositAmount?: number) => {
+    const base = `/accountings/order/${orderId}/confirm-deposit`;
+    return depositAmount != null
+      ? `${base}?depositAmount=${depositAmount}`
+      : base;
+  },
+  ACCOUNTING_APPROVE_DEBT: (orderId: number) =>
+    `/accountings/order/${orderId}/approve-debt`,
 
   // ========== CUSTOMERS ==========
   CUSTOMERS: "/customers",
   CUSTOMER_BY_ID: (id: number) => `/customers/${id}`,
   CUSTOMER_CHECK_DUPLICATE_COMPANY: (name: string) =>
-    `/customers/check-duplicate-company?companyName=${encodeURIComponent(name)}`,
+    `/customers/check-duplicate-company?companyName=${encodeURIComponent(
+      name
+    )}`,
 
   // ========== DESIGN TYPES ==========
   DESIGN_TYPES: "/designs/types",
@@ -93,22 +118,30 @@ export const API_SUFFIX = {
   PROOFING_ORDER_BY_ID: (id: number) => `/proofing-orders/${id}`,
   PROOFING_FROM_DESIGNS: "/proofing-orders/from-designs",
   PROOFING_AVAILABLE_ORDER_DETAILS: "/proofing-orders/available-order-details",
+  PROOFING_BY_ORDER_DETAIL: (orderDetailId: number) =>
+    `/proofing-orders/by-order-detail/${orderDetailId}`,
   PROOFING_FOR_PRODUCTION: "/proofing-orders/for-production",
   PROOFING_UPLOAD_FILE: (id: number) => `/proofing-orders/${id}/upload-file`,
   PROOFING_UPLOAD_IMAGE: (id: number) => `/proofing-orders/${id}/upload-image`,
   PAPER_SIZES: "/paper-sizes",
-  PROOFING_RECORD_PLATE: (id: number) => `/proofing-orders/${id}/record-plate-export`,
-  PROOFING_RECORD_DIE: (id: number) => `/proofing-orders/${id}/record-die-export`,
+  PROOFING_RECORD_PLATE: (id: number) =>
+    `/proofing-orders/${id}/record-plate-export`,
+  PROOFING_RECORD_DIE: (id: number) =>
+    `/proofing-orders/${id}/record-die-export`,
   PROOFING_UPDATE_FILE: (id: number) => `/proofing-orders/${id}/update-file`,
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
   PROOFING_COMPLETE: (id: number) => `/proofing-orders/${id}/complete`,
+  PROOFING_APPROVE: (id: number) => `/proofing-orders/${id}/approve`,
   PROOFING_START_PRODUCTION: (id: number) =>
     `/proofing-orders/${id}/start-production`,
   PROOFING_COMPLETE_PRODUCTION: (id: number) =>
     `/proofing-orders/${id}/complete-production`,
   PROOFING_HAND_TO_PRODUCTION: (id: number) =>
     `/proofing-orders/${id}/hand-to-production`,
+
+  PROOFING_PLATE_EXPORT: (id: number) => `/proofing-orders/${id}/plate-export`,
+  PROOFING_DIE_EXPORT: (id: number) => `/proofing-orders/${id}/die-export`,
 
   // ========== PRODUCTIONS ==========
   PRODUCTIONS: "/productions",

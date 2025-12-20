@@ -13,12 +13,10 @@ type ApiError = {
 import type {
   ProofingOrderResponse,
   ProofingOrderResponsePagedResponse,
-  PaperSizeResponse,
 } from "@/Schema/proofing-order.schema";
-import {
-  PaperSizeResponseSchema,
-  ProofingOrderResponseSchema,
-} from "@/Schema/proofing-order.schema";
+import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
+import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
+import { PaperSizeResponseSchema } from "@/Schema/paper-size.schema";
 import type {
   ProofingOrderListParams,
   CreateProofingOrderRequest,

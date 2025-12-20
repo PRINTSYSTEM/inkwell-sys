@@ -12,15 +12,15 @@ export const NameSchema = z.string().max(255);
 export type Name = z.infer<typeof NameSchema>;
 
 // ===== PagedResponse base =====
+// Updated to match swagger.json pagination structure: size, page, total, totalPages, items
 
 export const PagedResponseBaseSchema = z
   .object({
-    totalCount: z.number().int(),
-    pageNumber: z.number().int(),
-    pageSize: z.number().int(),
-    totalPages: z.number().int().optional(),
-    hasPreviousPage: z.boolean().optional(),
-    hasNextPage: z.boolean().optional(),
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(z.any()).nullable().optional(),
   })
   .passthrough();
 
@@ -29,7 +29,11 @@ export type PagedResponseBase = z.infer<typeof PagedResponseBaseSchema>;
 export const createPagedResponseSchema = <T extends z.ZodTypeAny>(
   itemSchema: T
 ) =>
-  PagedResponseBaseSchema.extend({
+  z.object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
     items: z.array(itemSchema).nullable().optional(),
   });
 

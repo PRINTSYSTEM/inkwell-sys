@@ -58,7 +58,7 @@ export default function Customers() {
   });
   const [exportingId, setExportingId] = useState<number | null>(null);
   const customers: CustomerResponse[] = customersResponse?.items || [];
-  const totalCount = customersResponse?.totalCount || 0;
+  const totalCount = customersResponse?.total || 0;
 
   const { mutate: exportDebtComparison, loading: exporting } =
     useExportDebtComparison();

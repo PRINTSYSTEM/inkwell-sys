@@ -1,46 +1,13 @@
 // src/Schema/proofing-order.schema.ts
 import { z } from "zod";
-import { IdSchema, DateSchema, createPagedResponseSchema } from "./Common";
-import { UserInfoSchema } from "./Common";
+import { IdSchema, DateSchema, createPagedResponseSchema } from "./common";
+import { UserInfoSchema } from "./common";
 import { MaterialTypeResponseSchema } from "./material-type.schema";
 import { DesignResponseSchema } from "./design.schema";
 import { ProductionResponseSchema } from "./production.schema";
-
-// ===== PaperSizeResponse =====
-
-export const PaperSizeResponseSchema = z.object({
-  id: IdSchema,
-  name: z.string(),
-  width: z.number().nullable().optional(),
-  height: z.number().nullable().optional(),
-  isCustom: z.boolean(),
-});
-
-export type PaperSizeResponse = z.infer<typeof PaperSizeResponseSchema>;
-
-// ===== PlateExportResponse =====
-
-export const PlateExportResponseSchema = z.object({
-  id: IdSchema,
-  vendorName: z.string().nullable().optional(),
-  sentAt: DateSchema.nullable().optional(),
-  receivedAt: DateSchema.nullable().optional(),
-  notes: z.string().nullable().optional(),
-  createdAt: DateSchema.optional(),
-});
-
-export type PlateExportResponse = z.infer<typeof PlateExportResponseSchema>;
-
-// ===== DieExportResponse =====
-
-export const DieExportResponseSchema = z.object({
-  id: IdSchema,
-  imageUrl: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  createdAt: DateSchema.optional(),
-});
-
-export type DieExportResponse = z.infer<typeof DieExportResponseSchema>;
+import { PaperSizeResponseSchema } from "./paper-size.schema";
+import { PlateExportResponseSchema } from "./plate-export.schema";
+import { DieExportResponseSchema } from "./die-export.schema";
 
 // ===== ProofingOrderDesignResponse =====
 
@@ -79,25 +46,22 @@ export const ProofingOrderResponseSchema = z
 
     status: z.string().nullable().optional(),
     proofingFileUrl: z.string().nullable().optional(),
-    imageUrl: z.string().nullable().optional(),
+    imageUrl: z.string().nullable().optional(), // Added from swagger
     notes: z.string().nullable().optional(),
 
-    // Yêu cầu #14: Thông tin duyệt
-    approvedById: IdSchema.nullable().optional(),
-    approvedBy: UserInfoSchema.nullable().optional(),
-    approvedAt: DateSchema.nullable().optional(),
-    finalQuantity: z.number().int().nullable().optional(),
+    approvedById: IdSchema.nullable().optional(), // Added from swagger
+    approvedBy: UserInfoSchema.nullable().optional(), // Added from swagger
+    approvedAt: DateSchema.nullable().optional(), // Added from swagger
+    finalQuantity: z.number().int().nullable().optional(), // Added from swagger
 
-    // Yêu cầu #17: Khổ giấy
-    paperSizeId: IdSchema.nullable().optional(),
-    paperSize: PaperSizeResponseSchema.nullable().optional(),
-    customPaperSize: z.string().nullable().optional(),
+    paperSizeId: IdSchema.nullable().optional(), // Added from swagger
+    paperSize: PaperSizeResponseSchema.nullable().optional(), // Added from swagger
+    customPaperSize: z.string().nullable().optional(), // Added from swagger
 
-    // Yêu cầu #18, #19, #20: Xuất kẽm và khuôn bế
-    isPlateExported: z.boolean().optional(),
-    isDieExported: z.boolean().optional(),
-    plateExport: PlateExportResponseSchema.nullable().optional(),
-    dieExport: DieExportResponseSchema.nullable().optional(),
+    isPlateExported: z.boolean().optional(), // Added from swagger
+    isDieExported: z.boolean().optional(), // Added from swagger
+    plateExport: PlateExportResponseSchema.nullable().optional(), // Added from swagger
+    dieExport: DieExportResponseSchema.nullable().optional(), // Added from swagger
 
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
@@ -130,6 +94,8 @@ export const CreateProofingOrderRequestSchema = z
     designIds: z.array(IdSchema).min(1, "Cần ít nhất 1 thiết kế"),
     assignedToId: IdSchema.nullable().optional(),
     notes: z.string().nullable().optional(),
+    paperSizeId: IdSchema.nullable().optional(), // Added from swagger
+    customPaperSize: z.string().nullable().optional(), // Added from swagger
   })
   .passthrough();
 
@@ -139,21 +105,32 @@ export type CreateProofingOrderRequest = z.infer<
 
 // ===== CreateProofingOrderFromDesignsRequest =====
 
+// ===== CreateProofingOrderDetailItem =====
+
+export const CreateProofingOrderDetailItemSchema = z
+  .object({
+    orderDetailId: IdSchema,
+    quantity: z.number().int(),
+  })
+  .passthrough();
+
+export type CreateProofingOrderDetailItem = z.infer<
+  typeof CreateProofingOrderDetailItemSchema
+>;
+
 export const CreateProofingOrderFromDesignsRequestSchema = z
   .object({
-    orderDetailItems: z.array(
-      z.object({
-        orderDetailId: IdSchema,
-        quantity: z.number().int().min(1, "Số lượng phải ít nhất là 1"),
-      })
-    ).min(1, "Cần ít nhất 1 chi tiết đơn hàng"),
-    notes: z.string().nullable().optional(),
+    orderDetailItems: z
+      .array(CreateProofingOrderDetailItemSchema)
+      .min(1, "Cần ít nhất 1 chi tiết đơn hàng"),
     totalQuantity: z
       .number()
       .int()
-      .min(1, "Cần ít nhất 1 sản phẩm để tạo bình bài"),
-    paperSizeId: IdSchema.nullable().optional(),
-    customPaperSize: z.string().nullable().optional(),
+      .min(1)
+      .max(2147483647, "Số lượng không được vượt quá 2147483647"),
+    notes: z.string().nullable().optional(),
+    paperSizeId: IdSchema.nullable().optional(), // Added from swagger
+    customPaperSize: z.string().nullable().optional(), // Added from swagger
   })
   .passthrough();
 
@@ -165,48 +142,30 @@ export type CreateProofingOrderFromDesignsRequest = z.infer<
 
 export const UpdateProofingOrderRequestSchema = z
   .object({
-    assignedToId: IdSchema.nullable().optional(),
     status: z.string().max(50).nullable().optional(),
     proofingFileUrl: z.string().nullable().optional(),
+    assignedToId: IdSchema.nullable().optional(),
     notes: z.string().nullable().optional(),
+    paperSizeId: IdSchema.nullable().optional(), // Added from swagger
+    customPaperSize: z.string().nullable().optional(), // Added from swagger
   })
   .passthrough();
 
-export type UpdateProofingOrderRequest = z.infer<
-  typeof UpdateProofingOrderRequestSchema
->;
-
 // ===== ApproveProofingOrderRequest =====
 
-export const ApproveProofingOrderRequestSchema = z.object({
-  finalQuantity: z.number().int().nullable().optional(),
-  approvalNotes: z.string().nullable().optional(),
-});
+export const ApproveProofingOrderRequestSchema = z
+  .object({
+    finalQuantity: z.number().int().nullable().optional(),
+    approvalNotes: z.string().nullable().optional(),
+  })
+  .passthrough();
 
 export type ApproveProofingOrderRequest = z.infer<
   typeof ApproveProofingOrderRequestSchema
 >;
 
-// ===== RecordPlateExportRequest =====
+// ===== UpdateProofingOrderRequest =====
 
-export const RecordPlateExportRequestSchema = z.object({
-  vendorName: z.string().min(1, "Vui lòng nhập đơn vị ghi kẽm"),
-  sentAt: DateSchema.nullable().optional(),
-  receivedAt: DateSchema.nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
-
-export type RecordPlateExportRequest = z.infer<
-  typeof RecordPlateExportRequestSchema
->;
-
-// ===== RecordDieExportRequest =====
-
-export const RecordDieExportRequestSchema = z.object({
-  imageUrl: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
-
-export type RecordDieExportRequest = z.infer<
-  typeof RecordDieExportRequestSchema
+export type UpdateProofingOrderRequest = z.infer<
+  typeof UpdateProofingOrderRequestSchema
 >;

@@ -49,7 +49,7 @@ export default function OrdersPage() {
 
   const orders = data?.items ?? [];
 
-  const totalOrders = data?.totalCount ?? orders.length;
+  const totalOrders = data?.total ?? orders.length;
 
   // quyền tạo đơn:
   // - accounting: KHÔNG được tạo

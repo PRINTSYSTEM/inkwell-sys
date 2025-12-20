@@ -76,7 +76,7 @@ export const useGenerateOrderExcel = () => {
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
       const res = await apiRequest.post<ArrayBuffer>(
-        API_SUFFIX.ORDER_EXCEL(id),
+        API_SUFFIX.ORDER_GENERATE_EXCEL(id),
         null,
         {
           responseType: "arraybuffer",

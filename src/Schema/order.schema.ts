@@ -24,12 +24,14 @@ export const OrderDetailResponseSchema = z
     totalPrice: z.number().nullable().optional(),
     requirements: z.string().nullable().optional(),
     additionalNotes: z.string().nullable().optional(),
+    orderTotalAmount: z.number().optional(), // Added from swagger
+    orderDepositAmount: z.number().optional(), // Added from swagger
     derivedStatus: z.string().nullable().optional(),
     cutOverAt: DateSchema.nullable().optional(),
     itemStatus: z.string().nullable().optional(),
-    isCutOver: z.boolean().optional(),
-    status: z.string().nullable().optional(),
-    statusType: z.string().nullable().optional(),
+    isCutOver: z.boolean().readonly().optional(), // readOnly in swagger
+    status: z.string().nullable().readonly().optional(), // readOnly in swagger
+    statusType: z.string().nullable().readonly().optional(), // readOnly in swagger
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
   })
@@ -127,17 +129,17 @@ export const CreateDesignRequestEmbeddedSchema = z.object({
   materialTypeId: IdSchema.nullable().optional(),
   assignedDesignerId: IdSchema.nullable().optional(),
   designName: z.string().max(255).nullable().optional(),
-  length: z.number().min(0).nullable().optional(),
+  length: z.number().min(0).nullable().optional(), // Added from swagger
   width: z.number().min(0).nullable().optional(),
   height: z.number().min(0).nullable().optional(),
-  depth: z.number().min(0).nullable().optional(),
-  sidesClassificationOptionId: IdSchema.nullable().optional(),
-  processClassificationOptionId: IdSchema.nullable().optional(),
+  depth: z.number().min(0).nullable().optional(), // Added from swagger
+  sidesClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
+  processClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
   requirements: z.string().nullable().optional(),
   additionalNotes: z.string().nullable().optional(),
 
   // Required for both
-  quantity: z.number().int().min(1),
+  quantity: z.number().int().min(1).max(2147483647), // Added max from swagger
 });
 
 export type CreateDesignRequestEmbedded = z.infer<
@@ -226,7 +228,7 @@ export type CreateOrderWithExistingDesignsRequest = z.infer<
 export const AddDesignToOrderRequestSchema = z
   .object({
     designId: IdSchema,
-    quantity: z.number().int().min(1),
+    quantity: z.number().int().min(1).max(2147483647), // Added max from swagger
   })
   .passthrough();
 

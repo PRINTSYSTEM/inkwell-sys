@@ -58,15 +58,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Kiểu generic cho response phân trang từ backend
+// Kiểu generic cho response phân trang từ backend (updated to match swagger)
 type PagedResponse<T> = {
-  items: T[];
-  totalCount: number;
-  pageNumber: number;
-  pageSize: number;
+  items: T[] | null;
+  size: number;
+  page: number;
+  total: number;
   totalPages: number;
-  hasPreviousPage: boolean;
-  hasNextPage: boolean;
 };
 
 export default function DesignTypesPage() {
@@ -94,23 +92,19 @@ export default function DesignTypesPage() {
     if (!designTypesData) {
       return {
         items: [],
-        totalCount: 0,
-        pageNumber: 1,
-        pageSize: 10,
+        size: 10,
+        page: 1,
+        total: 0,
         totalPages: 1,
-        hasPreviousPage: false,
-        hasNextPage: false,
       };
     }
     if (Array.isArray(designTypesData)) {
       return {
         items: designTypesData,
-        totalCount: designTypesData.length,
-        pageNumber: 1,
-        pageSize: designTypesData.length || 10,
+        size: designTypesData.length || 10,
+        page: 1,
+        total: designTypesData.length,
         totalPages: 1,
-        hasPreviousPage: false,
-        hasNextPage: false,
       };
     }
     // It's a paged response - use unknown first to satisfy TypeScript
@@ -267,9 +261,9 @@ export default function DesignTypesPage() {
     });
   };
 
-  // ====== Stats (dùng totalCount từ backend nếu có) ======
+  // ====== Stats (dùng total từ backend nếu có) ======
   const stats = {
-    total: designTypesPaged.totalCount ?? designTypes.length,
+    total: designTypesPaged.total ?? designTypes.length,
     active: designTypes.filter((dt) => dt.status === "active").length, // trong trang hiện tại
     totalMaterials: 0, // Material types sẽ được fetch trong dialog khi cần
   };
@@ -288,10 +282,12 @@ export default function DesignTypesPage() {
 
   const startIndex =
     designTypes.length > 0
-      ? (designTypesPaged.pageNumber - 1) * designTypesPaged.pageSize + 1
+      ? (designTypesPaged.page - 1) * designTypesPaged.size + 1
       : 0;
   const endIndex =
     designTypes.length > 0 ? startIndex + designTypes.length - 1 : 0;
+  const hasPreviousPage = designTypesPaged.page > 1;
+  const hasNextPage = designTypesPaged.page < designTypesPaged.totalPages;
 
   // ====== Loading / Error ======
   if (isLoading) {
@@ -542,7 +538,7 @@ export default function DesignTypesPage() {
                   </span>{" "}
                   trên{" "}
                   <span className="font-semibold">
-                    {designTypesPaged.totalCount}
+                    {designTypesPaged.total}
                   </span>{" "}
                   loại thiết kế
                 </span>
@@ -554,7 +550,7 @@ export default function DesignTypesPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={!designTypesPaged.hasPreviousPage}
+                disabled={!hasPreviousPage}
                 onClick={() => handlePageChange(pageNumber - 1)}
               >
                 Trước
@@ -562,14 +558,14 @@ export default function DesignTypesPage() {
               <span>
                 Trang{" "}
                 <span className="font-semibold">
-                  {designTypesPaged.pageNumber}
+                  {designTypesPaged.page}
                 </span>{" "}
                 / {designTypesPaged.totalPages || 1}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={!designTypesPaged.hasNextPage}
+                disabled={!hasNextPage}
                 onClick={() => handlePageChange(pageNumber + 1)}
               >
                 Sau
