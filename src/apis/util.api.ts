@@ -58,6 +58,8 @@ export const API_SUFFIX = {
   // ========== CUSTOMERS ==========
   CUSTOMERS: "/customers",
   CUSTOMER_BY_ID: (id: number) => `/customers/${id}`,
+  CUSTOMER_CHECK_DUPLICATE_COMPANY: (name: string) =>
+    `/customers/check-duplicate-company?companyName=${encodeURIComponent(name)}`,
 
   // ========== DESIGN TYPES ==========
   DESIGN_TYPES: "/designs/types",
@@ -93,6 +95,10 @@ export const API_SUFFIX = {
   PROOFING_AVAILABLE_ORDER_DETAILS: "/proofing-orders/available-order-details",
   PROOFING_FOR_PRODUCTION: "/proofing-orders/for-production",
   PROOFING_UPLOAD_FILE: (id: number) => `/proofing-orders/${id}/upload-file`,
+  PROOFING_UPLOAD_IMAGE: (id: number) => `/proofing-orders/${id}/upload-image`,
+  PAPER_SIZES: "/paper-sizes",
+  PROOFING_RECORD_PLATE: (id: number) => `/proofing-orders/${id}/record-plate-export`,
+  PROOFING_RECORD_DIE: (id: number) => `/proofing-orders/${id}/record-die-export`,
   PROOFING_UPDATE_FILE: (id: number) => `/proofing-orders/${id}/update-file`,
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
@@ -101,6 +107,8 @@ export const API_SUFFIX = {
     `/proofing-orders/${id}/start-production`,
   PROOFING_COMPLETE_PRODUCTION: (id: number) =>
     `/proofing-orders/${id}/complete-production`,
+  PROOFING_HAND_TO_PRODUCTION: (id: number) =>
+    `/proofing-orders/${id}/hand-to-production`,
 
   // ========== PRODUCTIONS ==========
   PRODUCTIONS: "/productions",

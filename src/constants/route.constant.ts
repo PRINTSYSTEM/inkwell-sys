@@ -74,6 +74,15 @@ export const ROUTE_PATHS = {
     ANALYTICS: "/admin/analytics" as const,
   },
 
+  MANAGER: {
+    ROOT: "/manager" as const,
+    DASHBOARD: "/manager/dashboard" as const,
+    EMPLOYEES: "/manager/employees" as const,
+    EMPLOYEE_DETAIL: "/manager/employees" as const, // prefix cho /manager/employees/:id
+    ASSIGNMENTS: "/manager/assignments" as const,
+    PERFORMANCE: "/manager/performance" as const,
+  },
+
   REPORTS: "/reports" as const,
   NOTIFICATIONS: "/notifications" as const,
 } as const;

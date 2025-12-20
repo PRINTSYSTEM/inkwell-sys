@@ -1,4 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
@@ -12,11 +13,20 @@ type ApiError = {
 import type {
   ProofingOrderResponse,
   ProofingOrderResponsePagedResponse,
+  PaperSizeResponse,
+} from "@/Schema/proofing-order.schema";
+import {
+  PaperSizeResponseSchema,
+  ProofingOrderResponseSchema,
+} from "@/Schema/proofing-order.schema";
+import type {
   ProofingOrderListParams,
   CreateProofingOrderRequest,
   CreateProofingOrderFromDesignsRequest,
   UpdateProofingOrderRequest,
   OrderDetailResponse,
+  RecordPlateExportRequest,
+  RecordDieExportRequest,
 } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
@@ -283,6 +293,63 @@ export const useUploadProofingFile = () => {
   return { data, loading, error, mutate, reset };
 };
 
+export const useUploadProofingImage = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProofingOrderResponse,
+    [{ proofingOrderId: number; file: File }]
+  >(async ({ proofingOrderId, file }) => {
+    const form = new FormData();
+    form.append("imageFile", file);
+
+    const res = await apiRequest.post<ProofingOrderResponse>(
+      API_SUFFIX.PROOFING_UPLOAD_IMAGE(proofingOrderId),
+      form,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return res.data;
+  });
+
+  const mutate = async (args: { proofingOrderId: number; file: File }) => {
+    try {
+      const result = await execute(args);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: proofingKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+
+      toast({
+        title: "Thành công",
+        description: "Đã upload ảnh bình bài",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast({
+        title: "Lỗi",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể upload ảnh bình bài",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
 // PUT /proofing-orders/{id}/update-file
 export const useUpdateProofingFile = () => {
   const queryClient = useQueryClient();
@@ -533,4 +600,113 @@ export const useCompleteProductionFromProofing = () => {
   };
 
   return { data, loading, error, mutate, reset };
+};
+export const usePaperSizes = () => {
+  return useQuery({
+    queryKey: ["paper-sizes"],
+    queryFn: async () => {
+      const response = await apiRequest.get(API_SUFFIX.PAPER_SIZES);
+      return z.array(PaperSizeResponseSchema).parse(response);
+    },
+  });
+};
+
+export const useRecordPlateExport = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      request,
+    }: {
+      id: number;
+      request: RecordPlateExportRequest;
+    }) => {
+      const response = await apiRequest.post(
+        API_SUFFIX.PROOFING_RECORD_PLATE(id),
+        request
+      );
+      return ProofingOrderResponseSchema.parse(response);
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["proofing-order", id] });
+      toast({
+        title: "Ghi nhận xuất kẽm thành công",
+        description: "Thông tin xuất kẽm đã được lưu lại.",
+      });
+    },
+    onError: (error: ApiError) => {
+      toast({
+        title: "Ghi nhận xuất kẽm thất bại",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useRecordDieExport = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      request,
+    }: {
+      id: number;
+      request: RecordDieExportRequest;
+    }) => {
+      const response = await apiRequest.post(
+        API_SUFFIX.PROOFING_RECORD_DIE(id),
+        request
+      );
+      return ProofingOrderResponseSchema.parse(response);
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["proofing-order", id] });
+      toast({
+        title: "Ghi nhận khuôn bế thành công",
+        description: "Thông tin khuôn bế đã được lưu lại.",
+      });
+    },
+    onError: (error: ApiError) => {
+      toast({
+        title: "Ghi nhận khuôn bế thất bại",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
+};
+export const useHandToProduction = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest.put(
+        API_SUFFIX.PROOFING_HAND_TO_PRODUCTION(id)
+      );
+      return ProofingOrderResponseSchema.parse(response.data);
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["proofing-order", id] });
+      toast({
+        title: "Bàn giao sản xuất thành công",
+        description: "Lệnh bình bài đã được chuyển sang bộ phận sản xuất.",
+      });
+    },
+    onError: (error: ApiError) => {
+      toast({
+        title: "Bàn giao sản xuất thất bại",
+        description: error.response?.data?.message || error.message,
+        variant: "destructive",
+      });
+    },
+  });
 };

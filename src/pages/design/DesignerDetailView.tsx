@@ -16,6 +16,7 @@ import {
   Loader2,
   SlidersHorizontal,
   Eye,
+  Calendar,
   type LucideIcon,
 } from "lucide-react";
 
@@ -72,6 +73,8 @@ export default function DesignerDetailPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth() + 1 + "");
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear() + "");
   const pageSize = 20;
 
   // Fetch designer info
@@ -81,10 +84,13 @@ export default function DesignerDetailPage() {
     isError: designerError,
   } = useUser(designerId, !!designerId);
 
-  // Fetch all designs for stats (without filters)
+  // Fetch all designs for stats (filtered by month/year)
   const { data: allDesignsData } = useDesignsByUser(
     designerId,
-    undefined, // No filters for stats
+    {
+      month: selectedMonth ? Number(selectedMonth) : undefined,
+      year: selectedYear ? Number(selectedYear) : undefined,
+    },
     !!designerId
   );
 
@@ -95,6 +101,8 @@ export default function DesignerDetailPage() {
       ...(statusFilter === "all" ? {} : { status: statusFilter }),
       pageNumber: currentPage,
       pageSize,
+      month: selectedMonth ? Number(selectedMonth) : undefined,
+      year: selectedYear ? Number(selectedYear) : undefined,
     },
     !!designerId
   );
@@ -235,20 +243,51 @@ export default function DesignerDetailPage() {
                 {designer.fullName || "Chưa có tên"}
               </h1>
               <p className="text-muted-foreground">
-                @{designer.username || "unknown"} • Quản lý {totalCount} thiết
-                kế
+                @{designer.username || "unknown"} • Thống kê tháng {selectedMonth}/{selectedYear}
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Date Selectors */}
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-muted-foreground mr-1" />
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[120px] bg-card">
+              <SelectValue placeholder="Tháng" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 12 }, (_, i) => (
+                <SelectItem key={i + 1} value={(i + 1).toString()}>
+                  Tháng {i + 1}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-[110px] bg-card">
+              <SelectValue placeholder="Năm" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 5 }, (_, i) => {
+                const year = new Date().getFullYear() - 2 + i;
+                return (
+                  <SelectItem key={year} value={year.toString()}>
+                    Năm {year}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Card
-          className={`cursor-pointer transition-all ${
-            statusFilter === "all" ? "ring-2 ring-primary" : "hover:shadow-md"
-          }`}
+          className={`cursor-pointer transition-all ${statusFilter === "all" ? "ring-2 ring-primary" : "hover:shadow-md"
+            }`}
           onClick={() => {
             setStatusFilter("all");
             setCurrentPage(1);
@@ -269,9 +308,8 @@ export default function DesignerDetailPage() {
           return (
             <Card
               key={key}
-              className={`cursor-pointer transition-all ${
-                isActive ? "ring-2 ring-primary" : "hover:shadow-md"
-              } ${config.bgColor}`}
+              className={`cursor-pointer transition-all ${isActive ? "ring-2 ring-primary" : "hover:shadow-md"
+                } ${config.bgColor}`}
               onClick={() => {
                 setStatusFilter(key);
                 setCurrentPage(1);
@@ -428,13 +466,27 @@ export default function DesignerDetailPage() {
                         </span>
                       </TableCell>
 
-                      {/* Dimensions */}
+                      {/* Dimensions - STT 2: Show L x W x H */}
                       <TableCell>
-                        <span className="text-sm font-mono">
-                          {design.width && design.height
-                            ? `${design.width}×${design.height}`
-                            : design.dimensions || "—"}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-mono">
+                            {design.dimensions || "—"}
+                          </span>
+                          {(design.sidesClassificationOption || design.processClassificationOption) && (
+                            <div className="flex gap-1 mt-1">
+                              {design.sidesClassificationOption && (
+                                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-blue-50/50">
+                                  {design.sidesClassificationOption.value}
+                                </Badge>
+                              )}
+                              {design.processClassificationOption && (
+                                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-amber-50/50">
+                                  {design.processClassificationOption.value}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
 
                       {/* Status */}

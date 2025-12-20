@@ -127,8 +127,12 @@ export const CreateDesignRequestEmbeddedSchema = z.object({
   materialTypeId: IdSchema.nullable().optional(),
   assignedDesignerId: IdSchema.nullable().optional(),
   designName: z.string().max(255).nullable().optional(),
+  length: z.number().min(0).nullable().optional(),
   width: z.number().min(0).nullable().optional(),
   height: z.number().min(0).nullable().optional(),
+  depth: z.number().min(0).nullable().optional(),
+  sidesClassificationOptionId: IdSchema.nullable().optional(),
+  processClassificationOptionId: IdSchema.nullable().optional(),
   requirements: z.string().nullable().optional(),
   additionalNotes: z.string().nullable().optional(),
 

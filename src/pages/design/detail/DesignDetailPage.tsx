@@ -579,11 +579,10 @@ export default function DesignDetailPage() {
                                   handleStatusTransition(nextStatus)
                                 }
                                 disabled={updatingStatus || !canTransition}
-                                className={`w-full justify-start gap-2 ${
-                                  nextStatus === "confirmed_for_printing"
-                                    ? "bg-green-600 hover:bg-green-700"
-                                    : ""
-                                }`}
+                                className={`w-full justify-start gap-2 ${nextStatus === "confirmed_for_printing"
+                                  ? "bg-green-600 hover:bg-green-700"
+                                  : ""
+                                  }`}
                               >
                                 <ArrowRight className="h-3.5 w-3.5" />
                                 {designStatusLabels[nextStatus]}
@@ -648,11 +647,29 @@ export default function DesignDetailPage() {
                         Chất liệu
                       </p>
                     </div>
-                    <p className="font-semibold text-xs">
+                    <p className="font-semibold text-xs text-amber-900 dark:text-amber-100 uppercase">
                       {d.materialType?.name ?? "-"}
                     </p>
                   </div>
                 </div>
+
+                {/* STT 4, 7, 8: Classification Options */}
+                {(d.sidesClassificationOption || d.processClassificationOption) && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {d.sidesClassificationOption && (
+                      <div className="p-2 border rounded-md">
+                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">Số mặt</p>
+                        <p className="text-xs font-medium">{d.sidesClassificationOption.value}</p>
+                      </div>
+                    )}
+                    {d.processClassificationOption && (
+                      <div className="p-2 border rounded-md">
+                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">Gia công</p>
+                        <p className="text-xs font-medium">{d.processClassificationOption.value}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <Separator />
 
@@ -662,38 +679,34 @@ export default function DesignDetailPage() {
                     <Ruler className="h-3.5 w-3.5 text-green-600" />
                     <p className="text-xs font-semibold">Thông số kích thước</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {/* Chiều dài (mới) */}
+                    <div className="bg-muted/50 p-2 rounded text-center">
+                      <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">L (Dài)</p>
+                      <p className="font-bold text-xs">{d.length != null ? `${d.length} mm` : "—"}</p>
+                    </div>
                     {/* Chiều rộng */}
                     <div className="bg-muted/50 p-2 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground mb-0.5">
-                        Chiều rộng
-                      </p>
-                      <p className="font-bold text-xs">
-                        {d.width != null ? `${d.width} mm` : "—"}
-                      </p>
+                      <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">W (Rộng)</p>
+                      <p className="font-bold text-xs">{d.width != null ? `${d.width} mm` : "—"}</p>
                     </div>
-
                     {/* Chiều cao */}
                     <div className="bg-muted/50 p-2 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground mb-0.5">
-                        Chiều cao
-                      </p>
-                      <p className="font-bold text-xs">
-                        {d.height != null ? `${d.height} mm` : "—"}
-                      </p>
+                      <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">H (Cao)</p>
+                      <p className="font-bold text-xs">{d.height != null ? `${d.height} mm` : "—"}</p>
                     </div>
-
-                    {/* Diện tích */}
+                    {/* Chiều sâu (mới) */}
                     <div className="bg-muted/50 p-2 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground mb-0.5">
-                        Diện tích
-                      </p>
-                      <p className="font-bold text-xs">
-                        {d.areaCm2 != null
-                          ? `${(d.areaCm2 / 100).toFixed(2)} cm²`
-                          : "—"}
-                      </p>
+                      <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">D (Sâu)</p>
+                      <p className="font-bold text-xs">{d.depth != null ? `${d.depth} mm` : "—"}</p>
                     </div>
+                  </div>
+
+                  <div className="mt-2 bg-muted/20 p-2 rounded flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Diện tích tính toán:</span>
+                    <span className="font-bold">
+                      {d.areaCm2 != null ? `${(d.areaCm2 / 100).toFixed(2)} cm²` : "—"}
+                    </span>
                   </div>
 
                   {/* Dimensions string if available */}
