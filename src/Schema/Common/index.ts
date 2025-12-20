@@ -8,7 +8,6 @@ import { z } from "zod";
 import { DateSchema, IdSchema, createPagedResponseSchema } from "./base";
 
 // ===== UserInfo =====
-
 export const UserInfoSchema = z
   .object({
     id: IdSchema,
