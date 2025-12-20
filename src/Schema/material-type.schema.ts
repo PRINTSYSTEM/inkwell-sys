@@ -96,6 +96,7 @@ export const CreateMaterialTypeRequestSchema = z
     displayOrder: z.number().int().min(0).optional(),
     description: z.string().nullable().optional(),
     pricePerCm2: z.number().min(0),
+    minimumQuantity: z.number().int().min(0).optional(),
     designTypeId: IdSchema.nullable().optional(),
     status: z.string().regex(/^(active|inactive)$/),
   })
@@ -139,6 +140,7 @@ export const UpdateMaterialTypeRequestSchema = z
     displayOrder: z.number().int().min(0).nullable().optional(),
     description: z.string().nullable().optional(),
     pricePerCm2: z.number().min(0).nullable().optional(),
+    minimumQuantity: z.number().int().min(0).nullable().optional(),
     designTypeId: IdSchema.nullable().optional(),
     status: z
       .string()

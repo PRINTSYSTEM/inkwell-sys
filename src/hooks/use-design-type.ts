@@ -19,6 +19,7 @@ const designTypeCrud = createCrudHooks<
 >({
   rootKey: "design-types",
   basePath: API_SUFFIX.DESIGN_TYPES,
+  getItems: (resp) => resp.items ?? [],
   messages: {
     createSuccess: "Đã tạo loại thiết kế thành công",
     updateSuccess: "Đã cập nhật loại thiết kế thành công",

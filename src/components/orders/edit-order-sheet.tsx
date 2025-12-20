@@ -85,7 +85,7 @@ export function EditOrderSheet({
     payload.note = note.trim() ? note.trim() : null;
 
     const deliveryDateIso = fromDateTimeLocalValue(deliveryDateLocal);
-    payload.deliveryDate = new Date(deliveryDateIso || "");
+    payload.deliveryDate = deliveryDateIso || "";
 
     await updateOrder({
       id: order.id,

@@ -5,6 +5,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,6 +117,17 @@ export default function DesignDetailPage() {
   } | null>(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showTimelineDialog, setShowTimelineDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    designName: "",
+    length: 0,
+    width: 0,
+    height: 0,
+    requirements: "",
+    additionalNotes: "",
+    sidesClassificationOptionId: undefined as number | undefined,
+    processClassificationOptionId: undefined as number | undefined,
+  });
 
   const [pendingStatus, setPendingStatus] = useState<DesignStatus | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -150,6 +164,9 @@ export default function DesignDetailPage() {
 
   // Get orderId from orderDetail
   const orderId = orderDetails?.[0]?.orderId || null;
+
+  // Check if design has proofing orders (if orderDetail exists, it means design is in a proofing order)
+  const hasProofingOrder = orderDetails && orderDetails.length > 0;
 
   // Fetch order if we have orderId
   const { data: order, isLoading: orderLoading } = useOrder(
@@ -343,6 +360,78 @@ export default function DesignDetailPage() {
       });
     }
   };
+
+  // ==== HANDLERS FOR EDITING DESIGN ====
+  const handleStartEdit = () => {
+    if (!design) return;
+    setEditFormData({
+      designName: design.designName || "",
+      length: design.length || 0,
+      width: design.width || 0,
+      height: design.height || 0,
+      requirements: design.latestRequirements || "",
+      additionalNotes: design.notes || "",
+      sidesClassificationOptionId:
+        design.sidesClassificationOptionId || undefined,
+      processClassificationOptionId:
+        design.processClassificationOptionId || undefined,
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditFormData({
+      designName: "",
+      length: 0,
+      width: 0,
+      height: 0,
+      requirements: "",
+      additionalNotes: "",
+      sidesClassificationOptionId: undefined,
+      processClassificationOptionId: undefined,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!design) return;
+    try {
+      await updateDesign.mutateAsync({
+        id: designId,
+        data: {
+          designName: editFormData.designName || null,
+          length: editFormData.length || null,
+          width: editFormData.width || null,
+          height: editFormData.height || null,
+          requirements: editFormData.requirements || null,
+          additionalNotes: editFormData.additionalNotes || null,
+          sidesClassificationOptionId:
+            editFormData.sidesClassificationOptionId || null,
+          processClassificationOptionId:
+            editFormData.processClassificationOptionId || null,
+        },
+      });
+      toast({
+        title: "Thành công",
+        description: "Đã cập nhật thông tin thiết kế",
+      });
+      setIsEditing(false);
+      refetchDesign();
+    } catch (error) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể cập nhật thiết kế. Vui lòng thử lại.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Check if can edit design
+  const canEditDesign =
+    (user?.role === ROLE.DESIGN ||
+      user?.role === ROLE.DESIGN_LEAD ||
+      user?.role === ROLE.ADMIN) &&
+    !hasProofingOrder; // Only block if has proofing order
 
   // ==== RENDER ====
 
@@ -579,10 +668,11 @@ export default function DesignDetailPage() {
                                   handleStatusTransition(nextStatus)
                                 }
                                 disabled={updatingStatus || !canTransition}
-                                className={`w-full justify-start gap-2 ${nextStatus === "confirmed_for_printing"
-                                  ? "bg-green-600 hover:bg-green-700"
-                                  : ""
-                                  }`}
+                                className={`w-full justify-start gap-2 ${
+                                  nextStatus === "confirmed_for_printing"
+                                    ? "bg-green-600 hover:bg-green-700"
+                                    : ""
+                                }`}
                               >
                                 <ArrowRight className="h-3.5 w-3.5" />
                                 {designStatusLabels[nextStatus]}
@@ -654,18 +744,27 @@ export default function DesignDetailPage() {
                 </div>
 
                 {/* STT 4, 7, 8: Classification Options */}
-                {(d.sidesClassificationOption || d.processClassificationOption) && (
+                {(d.sidesClassificationOption ||
+                  d.processClassificationOption) && (
                   <div className="grid grid-cols-2 gap-2">
                     {d.sidesClassificationOption && (
                       <div className="p-2 border rounded-md">
-                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">Số mặt</p>
-                        <p className="text-xs font-medium">{d.sidesClassificationOption.value}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">
+                          Số mặt
+                        </p>
+                        <p className="text-xs font-medium">
+                          {d.sidesClassificationOption.value}
+                        </p>
                       </div>
                     )}
                     {d.processClassificationOption && (
                       <div className="p-2 border rounded-md">
-                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">Gia công</p>
-                        <p className="text-xs font-medium">{d.processClassificationOption.value}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">
+                          Gia công
+                        </p>
+                        <p className="text-xs font-medium">
+                          {d.processClassificationOption.value}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -675,37 +774,203 @@ export default function DesignDetailPage() {
 
                 {/* Specs - Based on DesignResponse schema */}
                 <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Ruler className="h-3.5 w-3.5 text-green-600" />
-                    <p className="text-xs font-semibold">Thông số kích thước</p>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {/* Chiều dài (mới) */}
-                    <div className="bg-muted/50 p-2 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">L (Dài)</p>
-                      <p className="font-bold text-xs">{d.length != null ? `${d.length} mm` : "—"}</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <Ruler className="h-3.5 w-3.5 text-green-600" />
+                      <p className="text-xs font-semibold">
+                        Thông số kích thước
+                      </p>
                     </div>
-                    {/* Chiều rộng */}
-                    <div className="bg-muted/50 p-2 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">W (Rộng)</p>
-                      <p className="font-bold text-xs">{d.width != null ? `${d.width} mm` : "—"}</p>
-                    </div>
-                    {/* Chiều cao */}
-                    <div className="bg-muted/50 p-2 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">H (Cao)</p>
-                      <p className="font-bold text-xs">{d.height != null ? `${d.height} mm` : "—"}</p>
-                    </div>
-                    {/* Chiều sâu (mới) */}
-                    <div className="bg-muted/50 p-2 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">D (Sâu)</p>
-                      <p className="font-bold text-xs">{d.depth != null ? `${d.depth} mm` : "—"}</p>
-                    </div>
+                    {canEditDesign && !isEditing && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleStartEdit}
+                        className="h-7 text-xs gap-1"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Chỉnh sửa
+                      </Button>
+                    )}
+                    {isEditing && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                          className="h-7 text-xs"
+                        >
+                          Hủy
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveEdit}
+                          disabled={updateDesign.isPending}
+                          className="h-7 text-xs"
+                        >
+                          {updateDesign.isPending ? "Đang lưu..." : "Lưu"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
+                  {hasProofingOrder && (
+                    <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded text-xs">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                        <p className="text-amber-800 dark:text-amber-200">
+                          <strong>Lưu ý:</strong> Thiết kế này đã có lệnh bình
+                          bài, không thể chỉnh sửa.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {isEditing ? (
+                    <div className="space-y-4">
+                      {/* Số lượng - Hiển thị ở trên */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Số lượng</Label>
+                        <div className="bg-muted/50 p-3 rounded text-center">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Số lượng đặt hàng
+                          </p>
+                          <p className="font-bold text-sm">
+                            {orderDetails?.[0]?.quantity || "—"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Kích thước - Hiển thị trên cùng một hàng ngang */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">
+                          Kích thước (mm){" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground uppercase">
+                              Dài (L)
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editFormData.length || ""}
+                              onChange={(e) =>
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  length:
+                                    e.target.value === ""
+                                      ? 0
+                                      : Number(e.target.value),
+                                }))
+                              }
+                              className="h-9 text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground uppercase">
+                              Rộng (W)
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editFormData.width || ""}
+                              onChange={(e) =>
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  width:
+                                    e.target.value === ""
+                                      ? 0
+                                      : Number(e.target.value),
+                                }))
+                              }
+                              className="h-9 text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground uppercase">
+                              Cao (H)
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editFormData.height || ""}
+                              onChange={(e) =>
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  height:
+                                    e.target.value === ""
+                                      ? 0
+                                      : Number(e.target.value),
+                                }))
+                              }
+                              className="h-9 text-sm"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Số lượng - Hiển thị ở trên */}
+                      <div className="mb-3 space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">
+                          Số lượng
+                        </Label>
+                        <div className="bg-muted/50 p-2 rounded text-center">
+                          <p className="font-bold text-sm">
+                            {orderDetails?.[0]?.quantity || "—"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Kích thước - Hiển thị trên cùng một hàng ngang */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground">
+                          Kích thước (mm)
+                        </Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="bg-muted/50 p-2 rounded text-center">
+                            <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">
+                              L (Dài)
+                            </p>
+                            <p className="font-bold text-xs">
+                              {d.length != null ? `${d.length}` : "0"}
+                            </p>
+                          </div>
+                          <div className="bg-muted/50 p-2 rounded text-center">
+                            <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">
+                              W (Rộng)
+                            </p>
+                            <p className="font-bold text-xs">
+                              {d.width != null ? `${d.width}` : "0"}
+                            </p>
+                          </div>
+                          <div className="bg-muted/50 p-2 rounded text-center">
+                            <p className="text-[10px] text-muted-foreground mb-0.5 uppercase font-medium">
+                              H (Cao)
+                            </p>
+                            <p className="font-bold text-xs">
+                              {d.height != null ? `${d.height}` : "0"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   <div className="mt-2 bg-muted/20 p-2 rounded flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Diện tích tính toán:</span>
+                    <span className="text-muted-foreground">
+                      Diện tích tính toán:
+                    </span>
                     <span className="font-bold">
-                      {d.areaCm2 != null ? `${(d.areaCm2 / 100).toFixed(2)} cm²` : "—"}
+                      {d.areaCm2 != null
+                        ? `${(d.areaCm2 / 100).toFixed(2)} cm²`
+                        : "—"}
                     </span>
                   </div>
 

@@ -39,11 +39,7 @@ export function ImageViewerDialog({
               <X className="h-4 w-4" />
             </Button>
           </div>
-          {title && (
-            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-3">
-              <p className="text-sm font-medium">{title}</p>
-            </div>
-          )}
+
           <img
             src={imageUrl || "/placeholder.svg"}
             alt={title || "Image"}

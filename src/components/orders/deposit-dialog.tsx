@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/status-utils";
-import { PaymentMethod } from "@/Schema";
 import { useUpdateOrder } from "@/hooks";
 
 type DepositDialogProps = {
@@ -30,6 +29,8 @@ type DepositDialogProps = {
   totalAmount: number;
   currentDeposit: number;
 };
+
+type PaymentMethod = "cash" | "bank_transfer" | "card" | "e_wallet";
 
 const paymentMethodOptions: { value: PaymentMethod; label: string }[] = [
   { value: "cash", label: "Tiền mặt" },

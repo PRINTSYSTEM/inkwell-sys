@@ -40,6 +40,7 @@ type MaterialFormState = {
   description: string;
   price: string;
   pricePerCm2: string;
+  minimumQuantity: string;
   status: "active" | "inactive";
 };
 
@@ -57,6 +58,7 @@ export function MaterialTypeFormDialog({
     description: "",
     price: "",
     pricePerCm2: "",
+    minimumQuantity: "",
     status: "active",
   });
 
@@ -73,6 +75,10 @@ export function MaterialTypeFormDialog({
           editingMaterial.pricePerCm2 != null
             ? String(editingMaterial.pricePerCm2)
             : "",
+        minimumQuantity:
+          editingMaterial.minimumQuantity != null
+            ? String(editingMaterial.minimumQuantity)
+            : "",
         status: editingMaterial.status as "active" | "inactive",
       });
     } else {
@@ -83,6 +89,7 @@ export function MaterialTypeFormDialog({
         description: "",
         price: "",
         pricePerCm2: "",
+        minimumQuantity: "",
         status: "active",
       });
     }
@@ -96,6 +103,10 @@ export function MaterialTypeFormDialog({
       formData.price.trim() === "" ? 0 : Number(formData.price);
     const pricePerCm2Number =
       formData.pricePerCm2.trim() === "" ? 0 : Number(formData.pricePerCm2);
+    const minimumQuantityNumber =
+      formData.minimumQuantity.trim() === ""
+        ? undefined
+        : Number(formData.minimumQuantity);
 
     // Nếu muốn bắt buộc > 0 thì check kỹ:
     // if (!priceNumber || !pricePerCm2Number) { ... } // chú ý: 0 là falsy
@@ -107,6 +118,7 @@ export function MaterialTypeFormDialog({
       description: formData.description,
       price: priceNumber,
       pricePerCm2: pricePerCm2Number,
+      minimumQuantity: minimumQuantityNumber,
       designTypeId, // luôn gắn từ props
       status: formData.status,
     };
@@ -257,6 +269,28 @@ export function MaterialTypeFormDialog({
                   Giá tính theo diện tích cm²
                 </p>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="minimumQuantity">
+                Số lượng tối thiểu
+              </Label>
+              <Input
+                id="minimumQuantity"
+                type="number"
+                min="0"
+                value={formData.minimumQuantity}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    minimumQuantity: e.target.value,
+                  }))
+                }
+                placeholder="0"
+                className="pr-12"
+              />
+              <p className="text-xs text-muted-foreground">
+                Số lượng tối thiểu khi đặt hàng với chất liệu này (để trống nếu không giới hạn)
+              </p>
             </div>
           </div>
 
