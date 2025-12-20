@@ -79,6 +79,34 @@ export interface UpdateUserParams {
     notes?: string;
 }
 
+// Valid roles list for runtime validation
+const VALID_ROLES = [
+    "admin",
+    "manager",
+    "accounting",
+    "accounting_lead",
+    "design",
+    "design_lead",
+    "proofer",
+    "production",
+    "production_lead",
+] as const;
+
+type ValidRole = typeof VALID_ROLES[number];
+
+/**
+ * Validate and transform role string to valid Employee role
+ */
+function validateRole(roleString: string): Employee["role"] {
+    const lowerRole = roleString.toLowerCase();
+    if (VALID_ROLES.includes(lowerRole as ValidRole)) {
+        return lowerRole as Employee["role"];
+    }
+    // Default to a safe fallback for unknown roles
+    console.warn(`Unknown role "${roleString}", defaulting to "design"`);
+    return "design";
+}
+
 /**
  * Transform backend UserResponse to frontend Employee type
  */
@@ -89,7 +117,7 @@ function transformToEmployee(user: UserResponse): Employee {
         fullName: user.fullName,
         email: user.email || "",
         phone: user.phone,
-        role: user.role.toLowerCase() as Employee["role"],
+        role: validateRole(user.role),
         status: user.isActive ? "active" : "inactive",
         permissions: [],
         createdAt: user.createdAt,
@@ -132,7 +160,7 @@ function transformKpiToMetrics(kpi: UserKpiResponse): EmployeeMetrics {
         totalDesigns,
         completedDesigns,
         inProgressDesigns,
-        pendingDesigns: totalDesigns - completedDesigns - inProgressDesigns,
+        pendingDesigns: Math.max(0, totalDesigns - completedDesigns - inProgressDesigns),
         averageCompletionTime: kpi.averageDesignTimeHours / 24, // Convert hours to days
         completionRate: kpi.designCompletionRate,
         workloadScore: Math.min(100, (inProgressDesigns / Math.max(1, totalDesigns)) * 100),

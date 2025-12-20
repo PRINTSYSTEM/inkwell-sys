@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -340,7 +340,8 @@ export default function ProofingOrderDetailPage() {
           )}
           {!order.imageUrl && (
             <Button
-              className="gap-2 variant-outline"
+              variant="outline"
+              className="gap-2"
               onClick={() => setIsImageUploadDialogOpen(true)}
             >
               <FileImage className="h-4 w-4" />
@@ -981,9 +982,9 @@ export default function ProofingOrderDetailPage() {
             >
               Hủy
             </Button>
-            <Button onClick={handleUploadImage} disabled={!uploadImage}>
+            <Button onClick={handleUploadImage} disabled={!uploadImage || isUploadingImage}>
               <Upload className="h-4 w-4 mr-2" />
-              Upload
+              {isUploadingImage ? "Đang upload..." : "Upload"}
             </Button>
           </DialogFooter>
         </DialogContent>

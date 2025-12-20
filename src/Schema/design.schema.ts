@@ -102,7 +102,7 @@ export const CreateDesignRequestSchema = z
     length: z.number().min(0, "Chiều dài không thể âm").nullable().optional(),
     width: z.number().min(0, "Chiều rộng không thể âm").nullable().optional(),
     height: z.number().min(0, "Chiều cao không thể âm").nullable().optional(),
-    depth: z.number().min(0, "Chiều cao (cao) không thể âm").nullable().optional(),
+    depth: z.number().min(0, "Chiều sâu không thể âm").nullable().optional(),
     sidesClassificationOptionId: IdSchema.nullable().optional(),
     processClassificationOptionId: IdSchema.nullable().optional(),
     requirements: z.string().max(2000).nullable().optional(),

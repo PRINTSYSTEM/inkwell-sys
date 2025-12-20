@@ -606,7 +606,7 @@ export const usePaperSizes = () => {
     queryKey: ["paper-sizes"],
     queryFn: async () => {
       const response = await apiRequest.get(API_SUFFIX.PAPER_SIZES);
-      return z.array(PaperSizeResponseSchema).parse(response);
+      return z.array(PaperSizeResponseSchema).parse(response.data);
     },
   });
 };
@@ -627,11 +627,11 @@ export const useRecordPlateExport = () => {
         API_SUFFIX.PROOFING_RECORD_PLATE(id),
         request
       );
-      return ProofingOrderResponseSchema.parse(response);
+      return ProofingOrderResponseSchema.parse(response.data);
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["proofing-order", id] });
+      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
       toast({
         title: "Ghi nhận xuất kẽm thành công",
         description: "Thông tin xuất kẽm đã được lưu lại.",
@@ -663,11 +663,11 @@ export const useRecordDieExport = () => {
         API_SUFFIX.PROOFING_RECORD_DIE(id),
         request
       );
-      return ProofingOrderResponseSchema.parse(response);
+      return ProofingOrderResponseSchema.parse(response.data);
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
-      queryClient.invalidateQueries({ queryKey: ["proofing-order", id] });
+      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
       toast({
         title: "Ghi nhận khuôn bế thành công",
         description: "Thông tin khuôn bế đã được lưu lại.",

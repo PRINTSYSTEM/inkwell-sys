@@ -790,9 +790,9 @@ export default function CreateOrderPage() {
           d.quantity > 0 &&
           // validation số lượng tối thiểu
           (!d.minQuantity || d.quantity >= d.minQuantity) &&
-          d.length >= 0 &&
-          d.width >= 0 &&
-          d.height >= 0
+          (d.length ?? 0) > 0 &&
+          (d.width ?? 0) > 0 &&
+          (d.height ?? 0) > 0
         );
       }
     });

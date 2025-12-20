@@ -252,7 +252,7 @@ export default function DesignerDetailPage() {
         {/* Date Selectors */}
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-muted-foreground mr-1" />
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+          <Select value={selectedMonth} onValueChange={(v) => { setSelectedMonth(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-[120px] bg-card">
               <SelectValue placeholder="Tháng" />
             </SelectTrigger>
@@ -265,7 +265,7 @@ export default function DesignerDetailPage() {
             </SelectContent>
           </Select>
 
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <Select value={selectedYear} onValueChange={(v) => { setSelectedYear(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-[110px] bg-card">
               <SelectValue placeholder="Năm" />
             </SelectTrigger>
