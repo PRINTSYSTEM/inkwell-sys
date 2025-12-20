@@ -1,4 +1,4 @@
-// src/Schema/common/enums.ts
+// src/Schema/Common/enums.ts
 import { z } from "zod";
 
 // ===== UserRole (swagger: regex pattern trên CreateUserRequest/UpdateUserRequest) =====

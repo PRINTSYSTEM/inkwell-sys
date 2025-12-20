@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { IdSchema, DateSchema } from "./Common/base";
+import { IdSchema, DateSchema } from "./Common";
 
 // Notification Type Enum
 export const NotificationTypeEnum = z.enum([

@@ -1,4 +1,4 @@
-// src/Schema/common/base.ts
+// src/Schema/Common/base.ts
 import { z } from "zod";
 // ===== Primitive helpers =====
 

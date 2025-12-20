@@ -1,5 +1,4 @@
-// src/Schema/common/index.ts
-export * from "./base";
+// src/Schema/Common/index.ts
 export * from "./enums";
 
 // Các schema dùng chung từ swagger:
