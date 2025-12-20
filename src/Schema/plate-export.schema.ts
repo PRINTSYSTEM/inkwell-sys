@@ -1,6 +1,6 @@
 // src/Schema/plate-export.schema.ts
 import { z } from "zod";
-import { IdSchema, DateSchema } from "./common";
+import { IdSchema, DateSchema } from "./Common";
 
 // ===== PlateExportResponse =====
 

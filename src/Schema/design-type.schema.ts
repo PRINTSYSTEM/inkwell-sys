@@ -7,7 +7,7 @@ import {
   IdSchema,
   NameSchema,
   createPagedResponseSchema,
-} from "./common";
+} from "./Common";
 
 // CreateDesignTypeRequest
 // Updated to match swagger.json: code, name, status required

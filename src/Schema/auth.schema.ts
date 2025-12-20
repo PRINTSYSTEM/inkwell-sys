@@ -1,6 +1,6 @@
 // src/Schema/auth.schema.ts
 import { z } from "zod";
-import { UserInfoSchema } from "./common";
+import { UserInfoSchema } from "./Common";
 
 // ---------------------------
 // LoginRequest

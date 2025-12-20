@@ -1,6 +1,6 @@
 // src/Schema/paper-size.schema.ts
 import { z } from "zod";
-import { IdSchema } from "./common";
+import { IdSchema } from "./Common";
 
 // ===== PaperSizeResponse =====
 
