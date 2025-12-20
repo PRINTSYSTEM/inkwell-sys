@@ -21,12 +21,31 @@ export const MaterialTypeResponseSchema = z
     displayOrder: z.number().int().optional(),
     description: z.string().nullable().optional(),
     pricePerCm2: z.number().optional(),
+    minimumQuantity: z.number().int().optional(),
     designTypeId: IdSchema.nullable().optional(),
     status: z.string().nullable().optional(),
     statusType: z.string().nullable().optional(),
     createdAt: DateSchema.optional(),
     updatedAt: DateSchema.optional(),
     createdBy: UserInfoSchema.nullable().optional(),
+    classifications: z
+      .array(
+        z.object({
+          id: IdSchema,
+          classificationKey: z.string(),
+          classificationName: z.string(),
+          displayOrder: z.number().int(),
+          options: z.array(
+            z.object({
+              id: IdSchema,
+              code: z.string(),
+              value: z.string(),
+              displayOrder: z.number().int(),
+            })
+          ),
+        })
+      )
+      .optional(),
   })
   .passthrough();
 

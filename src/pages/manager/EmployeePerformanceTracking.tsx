@@ -63,8 +63,8 @@ import {
 import { toast } from '@/hooks/use-toast';
 
 import { Employee, EmployeeMetrics, EmployeeAssignment } from '@/types/employee';
-import { EmployeePerformanceService } from '@/services/employeeService';
 import { UserManagementService } from '@/services/userService';
+import { EmployeePerformanceService } from '@/services/employeeService';
 
 // TODO: Chart data types - Consider moving to shared types or keeping as UI-specific interfaces
 interface ChartDataPoint {
@@ -95,21 +95,21 @@ const PerformanceTrendChart: React.FC<{ data: ChartDataPoint[] }> = ({ data }) =
         <YAxis />
         <Tooltip />
         <Legend />
-        <Area 
-          type="monotone" 
-          dataKey="completionRate" 
+        <Area
+          type="monotone"
+          dataKey="completionRate"
           stackId="1"
-          stroke="#8884d8" 
-          fill="#8884d8" 
+          stroke="#8884d8"
+          fill="#8884d8"
           fillOpacity={0.6}
           name="Tỷ lệ hoàn thành (%)"
         />
-        <Area 
-          type="monotone" 
-          dataKey="productivity" 
+        <Area
+          type="monotone"
+          dataKey="productivity"
           stackId="2"
-          stroke="#82ca9d" 
-          fill="#82ca9d" 
+          stroke="#82ca9d"
+          fill="#82ca9d"
           fillOpacity={0.6}
           name="Hiệu suất (%)"
         />
@@ -261,8 +261,8 @@ const EmployeePerformanceRow: React.FC<{
         </div>
       </TableCell>
       <TableCell>
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
           onClick={() => onViewDetails(employee.id)}
         >
@@ -307,7 +307,7 @@ const EmployeePerformanceTracking: React.FC = () => {
       setLoading(true);
       const userListResponse = await UserManagementService.getUsers({});
       const allEmployees = userListResponse.users;
-      
+
       // Filter by department if selected
       const filteredEmployees = selectedDepartment && selectedDepartment !== 'all'
         ? allEmployees.filter(emp => emp.department === selectedDepartment)
@@ -369,15 +369,15 @@ const EmployeePerformanceTracking: React.FC = () => {
     if (employees.length === 0) return null;
 
     const totalEmployees = employees.length;
-    const avgCompletionRate = employees.reduce((sum, emp) => 
+    const avgCompletionRate = employees.reduce((sum, emp) =>
       sum + (employeeMetrics[emp.id]?.completionRate || 0), 0) / totalEmployees;
-    const avgWorkload = employees.reduce((sum, emp) => 
+    const avgWorkload = employees.reduce((sum, emp) =>
       sum + emp.currentWorkload, 0) / totalEmployees;
-    const totalDesigns = employees.reduce((sum, emp) => 
+    const totalDesigns = employees.reduce((sum, emp) =>
       sum + (employeeMetrics[emp.id]?.totalDesigns || 0), 0);
-    const totalCompleted = employees.reduce((sum, emp) => 
+    const totalCompleted = employees.reduce((sum, emp) =>
       sum + (employeeMetrics[emp.id]?.completedDesigns || 0), 0);
-    const avgScore = employees.reduce((sum, emp) => 
+    const avgScore = employees.reduce((sum, emp) =>
       sum + (employeeMetrics[emp.id]?.averageScore || 0), 0) / totalEmployees;
 
     return {
@@ -430,7 +430,7 @@ const EmployeePerformanceTracking: React.FC = () => {
               <SelectItem value="dept-sales">Phòng kinh doanh</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Chọn kỳ" />
@@ -447,7 +447,7 @@ const EmployeePerformanceTracking: React.FC = () => {
             <RefreshCw className="h-4 w-4 mr-2" />
             Làm mới
           </Button>
-          
+
           <Button size="sm">
             <Download className="h-4 w-4 mr-2" />
             Xuất báo cáo
@@ -569,8 +569,8 @@ const EmployeePerformanceTracking: React.FC = () => {
                           {metrics?.completedDesigns || 0} thiết kế
                         </p>
                       </div>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => navigate(`/manager/employees/${employee.id}`)}
                       >
@@ -694,7 +694,7 @@ const EmployeePerformanceTracking: React.FC = () => {
                       {employees.filter(emp => emp.currentWorkload > 80).length} nhân viên đang quá tải
                     </p>
                   </div>
-                  
+
                   <div className="p-3 bg-green-50 rounded-lg">
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
@@ -727,10 +727,10 @@ const EmployeePerformanceTracking: React.FC = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="completionRate" 
-                      stroke="#8884d8" 
+                    <Line
+                      type="monotone"
+                      dataKey="completionRate"
+                      stroke="#8884d8"
                       strokeWidth={2}
                       name="Tỷ lệ hoàn thành (%)"
                     />
@@ -751,10 +751,10 @@ const EmployeePerformanceTracking: React.FC = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="productivity" 
-                      stroke="#82ca9d" 
+                    <Line
+                      type="monotone"
+                      dataKey="productivity"
+                      stroke="#82ca9d"
                       strokeWidth={2}
                       name="Hiệu suất (%)"
                     />
@@ -779,14 +779,14 @@ const EmployeePerformanceTracking: React.FC = () => {
                   <p className="text-2xl font-bold text-green-600">+5%</p>
                   <p className="text-xs text-muted-foreground">Dự kiến tăng hiệu suất</p>
                 </div>
-                
+
                 <div className="text-center p-4 border rounded-lg">
                   <Target className="h-8 w-8 mx-auto mb-2 text-blue-600" />
                   <h4 className="font-medium">Quý này</h4>
                   <p className="text-2xl font-bold text-blue-600">92%</p>
                   <p className="text-xs text-muted-foreground">Mục tiêu hoàn thành</p>
                 </div>
-                
+
                 <div className="text-center p-4 border rounded-lg">
                   <Award className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
                   <h4 className="font-medium">Top performer</h4>

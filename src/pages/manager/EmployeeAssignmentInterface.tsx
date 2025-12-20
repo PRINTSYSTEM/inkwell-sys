@@ -90,6 +90,7 @@ import {
 } from '@/types/assignment';
 import { AssignmentManagementService } from '@/services/assignmentService';
 
+
 // Assignment Card Component
 const AssignmentCard: React.FC<{
   assignment: Assignment;
@@ -172,7 +173,7 @@ const AssignmentCard: React.FC<{
           </DropdownMenu>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between">
           <Badge variant="outline" className={`text-xs ${getPriorityColor()}`}>
@@ -265,7 +266,7 @@ const WorkloadCard: React.FC<{ workload: WorkloadBalance }> = ({ workload }) => 
           {getPerformanceIcon()}
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
@@ -527,7 +528,7 @@ const AssignmentFormDialog: React.FC<{
               <TabsTrigger value="skills">Kỹ năng</TabsTrigger>
               <TabsTrigger value="details">Chi tiết</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="requirements" className="space-y-4">
               <div>
                 <Label>Yêu cầu công việc</Label>
@@ -558,7 +559,7 @@ const AssignmentFormDialog: React.FC<{
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="skills" className="space-y-4">
               <div>
                 <Label>Kỹ năng cần thiết</Label>
@@ -589,7 +590,7 @@ const AssignmentFormDialog: React.FC<{
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="details" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -757,7 +758,7 @@ const EmployeeAssignmentInterface: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
-  
+
   // Dialog states
   const [assignmentFormOpen, setAssignmentFormOpen] = useState(false);
   const [suggestionsDialogOpen, setSuggestionsDialogOpen] = useState(false);
@@ -861,7 +862,7 @@ const EmployeeAssignmentInterface: React.FC = () => {
   // Handle assign task
   const handleAssignTask = async (assignmentId: string, employeeId: string) => {
     try {
-      await AssignmentManagementService.assignTask(assignmentId, employeeId);
+      await AssignmentManagementService.assignToEmployee(assignmentId, employeeId);
       toast({
         title: "Thành công",
         description: "Phân công thành công",
@@ -880,10 +881,10 @@ const EmployeeAssignmentInterface: React.FC = () => {
   // Filter assignments
   const filteredAssignments = assignments.filter(assignment => {
     const matchesSearch = assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         assignment.description.toLowerCase().includes(searchTerm.toLowerCase());
+      assignment.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || assignment.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || assignment.priority === priorityFilter;
-    
+
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -998,7 +999,7 @@ const EmployeeAssignmentInterface: React.FC = () => {
               className="pl-10"
             />
           </div>
-          
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Trạng thái" />
@@ -1069,14 +1070,14 @@ const EmployeeAssignmentInterface: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium capitalize">
                     {status === 'unassigned' ? 'Chưa phân công' :
-                     status === 'assigned' ? 'Đã phân công' :
-                     status === 'in_progress' ? 'Đang thực hiện' :
-                     status === 'review' ? 'Đang review' :
-                     'Hoàn thành'}
+                      status === 'assigned' ? 'Đã phân công' :
+                        status === 'in_progress' ? 'Đang thực hiện' :
+                          status === 'review' ? 'Đang review' :
+                            'Hoàn thành'}
                   </h3>
                   <Badge variant="outline">{assignments.length}</Badge>
                 </div>
-                
+
                 <div className="space-y-2 min-h-[200px]">
                   {assignments.map((assignment) => (
                     <AssignmentCard
@@ -1133,9 +1134,9 @@ const EmployeeAssignmentInterface: React.FC = () => {
                       <TableCell>
                         <Badge variant="outline" className={
                           assignment.priority === 'urgent' ? 'text-red-600' :
-                          assignment.priority === 'high' ? 'text-orange-600' :
-                          assignment.priority === 'medium' ? 'text-blue-600' :
-                          'text-green-600'
+                            assignment.priority === 'high' ? 'text-orange-600' :
+                              assignment.priority === 'medium' ? 'text-blue-600' :
+                                'text-green-600'
                         }>
                           {assignment.priority}
                         </Badge>

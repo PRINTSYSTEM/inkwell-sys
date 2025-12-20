@@ -28,12 +28,16 @@ export const DesignListParamsSchema = PagedParamsSchema.extend({
   customerId: IdSchema.nullable().optional(),
   designerId: IdSchema.nullable().optional(),
   status: z.string().nullable().optional(),
+  month: z.number().int().min(1).max(12).optional(),
+  year: z.number().int().min(2000).optional(),
 });
 
 export type DesignListParams = z.infer<typeof DesignListParamsSchema>;
 
 export const MyDesignListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
+  month: z.number().int().min(1).max(12).optional(),
+  year: z.number().int().min(2000).optional(),
 });
 
 export type MyDesignListParams = z.infer<typeof MyDesignListParamsSchema>;

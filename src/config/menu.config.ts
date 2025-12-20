@@ -293,6 +293,37 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
+  // ==== Quản lý nhân viên ====
+  {
+    id: "employee-management",
+    title: "Quản lý nhân viên",
+    icon: UserPlus,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+    children: [
+      {
+        id: "manager-dashboard",
+        title: "Tổng quan",
+        icon: LayoutDashboard,
+        path: ROUTE_PATHS.MANAGER.DASHBOARD,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
+      {
+        id: "employee-assignments",
+        title: "Phân công công việc",
+        icon: Briefcase,
+        path: ROUTE_PATHS.MANAGER.ASSIGNMENTS,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
+      {
+        id: "employee-performance",
+        title: "Hiệu suất nhân viên",
+        icon: BarChart3,
+        path: ROUTE_PATHS.MANAGER.PERFORMANCE,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
+    ],
+  },
+
   // ==== Hành chính ====
   {
     id: "hr",

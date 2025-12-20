@@ -60,7 +60,7 @@ export default function AllDesignsPage() {
   const filteredDesigns = useMemo(
     () =>
       filterActions.applyFilters<DesignWithSearch>(designsWithSearch, {
-        searchFields: ["code", "designerFullName"],
+        searchFields: ["code", "designerFullName", "latestOrderCode", "customer.name", "latestRequirements"],
       }),
     [designsWithSearch, filterActions]
   );
@@ -224,10 +224,12 @@ export default function AllDesignsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Mã thiết kế</TableHead>
-                      <TableHead>Tên</TableHead>
+                      <TableHead>Mã đơn hàng</TableHead>
+                      <TableHead>Khách hàng</TableHead>
+                      <TableHead>Tên thiết kế</TableHead>
+                      <TableHead>Yêu cầu</TableHead>
                       <TableHead>Trạng thái</TableHead>
                       <TableHead>Loại</TableHead>
-                      <TableHead>Chất liệu</TableHead>
                       <TableHead>Kích thước</TableHead>
                       <TableHead className="text-right">Thao tác</TableHead>
                     </TableRow>
@@ -242,22 +244,28 @@ export default function AllDesignsPage() {
                         <TableCell className="font-medium">
                           {design.code || `DES-${design.id}`}
                         </TableCell>
-                        <TableCell>{design.designName || "—"}</TableCell>
+                        <TableCell>
+                          {design.latestOrderCode ? (
+                            <Badge variant="outline" className="font-mono text-[10px]">
+                              {design.latestOrderCode}
+                            </Badge>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell className="max-w-[150px] truncate">
+                          {design.customer?.name || design.customer?.companyName || "—"}
+                        </TableCell>
+                        <TableCell className="max-w-[150px] truncate">
+                          {design.designName || "—"}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                          {design.latestRequirements || "—"}
+                        </TableCell>
                         <TableCell>{getStatusBadge(design.status)}</TableCell>
                         <TableCell>{design.designType?.name || "—"}</TableCell>
                         <TableCell>
-                          {design.materialType?.name || "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Ruler className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex items-center gap-1 font-mono text-[11px]">
                             <span>{design.dimensions || "—"}</span>
                           </div>
-                          {design.width && design.height && (
-                            <div className="text-xs text-muted-foreground">
-                              {design.width} x {design.height} cm
-                            </div>
-                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button

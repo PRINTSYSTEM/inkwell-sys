@@ -112,3 +112,20 @@ export const useExportDebtComparison = () => {
     reset,
   };
 };
+
+// ================== CHECK DUPLICATE COMPANY ==================
+export const useCheckDuplicateCompany = () => {
+  const { execute, loading } = useAsyncCallback<boolean, [string]>(
+    async (name: string) => {
+      const res = await apiRequest.get<boolean>(
+        API_SUFFIX.CUSTOMER_CHECK_DUPLICATE_COMPANY(name)
+      );
+      return res.data;
+    }
+  );
+
+  return {
+    check: execute,
+    loading,
+  };
+};

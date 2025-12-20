@@ -61,8 +61,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 
 import { Employee, EmployeeAssignment, EmployeeMetrics } from '@/types/employee';
-import { UserManagementService } from '@/services/userService';
 import { EmployeePerformanceService } from '@/services/employeeService';
+import { UserManagementService } from '@/services/userService';
+
 
 // Performance timeline component
 const PerformanceTimeline: React.FC<{
@@ -78,9 +79,9 @@ const PerformanceTimeline: React.FC<{
       {data.slice(0, 7).map((item, index) => (
         <div key={index} className="flex items-center space-x-4">
           <div className="w-16 text-xs text-muted-foreground">
-            {new Date(item.date).toLocaleDateString('vi-VN', { 
-              month: 'short', 
-              day: 'numeric' 
+            {new Date(item.date).toLocaleDateString('vi-VN', {
+              month: 'short',
+              day: 'numeric'
             })}
           </div>
           <div className="flex-1 space-y-1">
@@ -140,12 +141,12 @@ const AssignmentStatusCard: React.FC<{
             <h4 className="font-medium text-sm mb-1">{assignment.designName}</h4>
             <p className="text-xs text-muted-foreground">#{assignment.designCode}</p>
           </div>
-          <Badge 
-            variant="outline" 
+          <Badge
+            variant="outline"
             className={`text-xs ${getPriorityColor(assignment.priority)}`}
           >
-            {assignment.priority === 'high' ? 'Cao' : 
-             assignment.priority === 'medium' ? 'Trung bình' : 'Thấp'}
+            {assignment.priority === 'high' ? 'Cao' :
+              assignment.priority === 'medium' ? 'Trung bình' : 'Thấp'}
           </Badge>
         </div>
 
@@ -161,9 +162,9 @@ const AssignmentStatusCard: React.FC<{
           <div className="flex items-center space-x-1">
             <Clock className="h-3 w-3" />
             <span>
-              {isOverdue ? `Quá hạn ${Math.abs(daysLeft)} ngày` : 
-               daysLeft <= 0 ? 'Hôm nay' :
-               `Còn ${daysLeft} ngày`}
+              {isOverdue ? `Quá hạn ${Math.abs(daysLeft)} ngày` :
+                daysLeft <= 0 ? 'Hôm nay' :
+                  `Còn ${daysLeft} ngày`}
             </span>
           </div>
           <span className={isOverdue ? 'text-red-600' : ''}>
@@ -172,15 +173,15 @@ const AssignmentStatusCard: React.FC<{
         </div>
 
         <div className="flex items-center justify-between">
-          <Badge 
-            variant="outline" 
+          <Badge
+            variant="outline"
             className={`text-xs ${getStatusColor(assignment.status)}`}
           >
             {assignment.status === 'completed' ? 'Hoàn thành' :
-             assignment.status === 'in_progress' ? 'Đang làm' :
-             assignment.status === 'review' ? 'Chờ review' : 'Chờ bắt đầu'}
+              assignment.status === 'in_progress' ? 'Đang làm' :
+                assignment.status === 'review' ? 'Chờ review' : 'Chờ bắt đầu'}
           </Badge>
-          
+
           <Select
             value={assignment.status}
             onValueChange={(value) => onUpdateStatus(assignment.id, value)}
@@ -376,9 +377,9 @@ const EmployeeDetailView: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => navigate('/manager/dashboard')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -420,13 +421,13 @@ const EmployeeDetailView: React.FC = () => {
                 {employee.fullName.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
-            
+
             <div className="flex-1 space-y-4">
               <div>
                 <h2 className="text-2xl font-bold">{employee.fullName}</h2>
                 <p className="text-muted-foreground">{employee.role} - {employee.departmentName}</p>
               </div>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="flex items-center space-x-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
@@ -471,8 +472,8 @@ const EmployeeDetailView: React.FC = () => {
             <div className="text-2xl font-bold">{employee.currentWorkload}%</div>
             <Progress value={employee.currentWorkload} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">
-              {employee.currentWorkload > 80 ? 'Quá tải' : 
-               employee.currentWorkload > 60 ? 'Bình thường' : 'Còn trống'}
+              {employee.currentWorkload > 80 ? 'Quá tải' :
+                employee.currentWorkload > 60 ? 'Bình thường' : 'Còn trống'}
             </p>
           </CardContent>
         </Card>
@@ -547,9 +548,9 @@ const EmployeeDetailView: React.FC = () => {
                     />
                   ))}
                   {activeAssignments.length > 3 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setActiveTab('assignments')}
                     >
                       Xem tất cả {activeAssignments.length} công việc
@@ -775,8 +776,8 @@ const EmployeeDetailView: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-muted-foreground">
-                          {assignment.completedAt && 
-                           new Date(assignment.completedAt).toLocaleDateString('vi-VN')}
+                          {assignment.completedAt &&
+                            new Date(assignment.completedAt).toLocaleDateString('vi-VN')}
                         </span>
                       </TableCell>
                     </TableRow>

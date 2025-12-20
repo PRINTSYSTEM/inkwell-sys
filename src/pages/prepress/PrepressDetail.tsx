@@ -34,14 +34,19 @@ import {
   Upload,
   Download,
   Eye,
-  UserIcon,
+  User as UserIcon,
   Calendar,
   Package,
   Layers,
   FileImage,
   AlertCircle,
   Edit,
+  Search,
+  Settings2,
+  Trash2,
+  CheckCircle2,
 } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { Input } from "@/components/ui/input";
@@ -49,7 +54,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   useProofingOrder,
   useUploadProofingFile,
+  useUploadProofingImage,
   useUpdateProofingOrder,
+  useUpdateProofingFile,
+  useRecordPlateExport,
+  useRecordDieExport,
+  useHandToProduction,
 } from "@/hooks/use-proofing-order";
 import { safeParseSchema } from "@/Schema";
 import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
@@ -63,11 +73,25 @@ export default function ProofingOrderDetailPage() {
   const navigate = useNavigate();
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [isUpdateFileDialogOpen, setIsUpdateFileDialogOpen] = useState(false);
+  const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
+  const [isPlateExportDialogOpen, setIsPlateExportDialogOpen] = useState(false);
+  const [isDieExportDialogOpen, setIsDieExportDialogOpen] = useState(false);
   const [isConfirmStatusDialogOpen, setIsConfirmStatusDialogOpen] =
     useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadImage, setUploadImage] = useState<File | null>(null);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+  const [plateExportData, setPlateExportData] = useState({
+    vendorName: "",
+    sentAt: "",
+    receivedAt: "",
+    notes: "",
+  });
+  const [dieExportData, setDieExportData] = useState({
+    notes: "",
+  });
 
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
@@ -86,7 +110,12 @@ export default function ProofingOrderDetailPage() {
   const orderDesigns = order?.proofingOrderDesigns ?? [];
 
   const { mutate: updateProofing } = useUpdateProofingOrder();
-  const { mutate: uploadProofing } = useUploadProofingFile();
+  const { mutate: uploadProofing, loading: isUploadingFile } = useUploadProofingFile();
+  const { mutate: updateFileMutate, loading: isUpdatingFile } = useUpdateProofingFile();
+  const { mutate: uploadImageMutate, loading: isUploadingImage } = useUploadProofingImage();
+  const { mutate: recordPlateMutate, isPending: isRecordingPlate } = useRecordPlateExport();
+  const { mutate: recordDieMutate, isPending: isRecordingDie } = useRecordDieExport();
+  const { mutate: handToProductionMutate, isPending: isHandingToProduction } = useHandToProduction();
 
   const handleUpdateStatus = async () => {
     if (!order?.id) return;
@@ -121,6 +150,11 @@ export default function ProofingOrderDetailPage() {
     }
   };
 
+  const handleHandToProduction = async () => {
+    if (!order?.id) return;
+    handToProductionMutate(order.id);
+  };
+
   const handleStatusChangeClick = () => {
     // Chỉ cho phép khi status là waiting_for_file
     if (order?.status === "waiting_for_file") {
@@ -128,17 +162,91 @@ export default function ProofingOrderDetailPage() {
     }
   };
 
+  const handleUpdateFile = async () => {
+    if (!uploadFile) return;
+
+    try {
+      await updateFileMutate({
+        proofingOrderId: idValue,
+        file: uploadFile,
+      });
+      setIsUpdateFileDialogOpen(false);
+      setUploadFile(null);
+    } catch (error) {
+      console.error("Failed to update proofing file:", error);
+    }
+  };
+
+  const handleRecordPlate = async () => {
+    if (!plateExportData.vendorName) {
+      toast({
+        title: "Thiếu thông tin",
+        description: "Vui lòng nhập đơn vị ghi kẽm",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await recordPlateMutate({
+        id: idValue,
+        request: {
+          vendorName: plateExportData.vendorName,
+          sentAt: plateExportData.sentAt ? new Date(plateExportData.sentAt).toISOString() : undefined,
+          receivedAt: plateExportData.receivedAt ? new Date(plateExportData.receivedAt).toISOString() : undefined,
+          notes: plateExportData.notes,
+        },
+      });
+      setIsPlateExportDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to record plate export:", error);
+    }
+  };
+
+  const handleRecordDie = async () => {
+    try {
+      await recordDieMutate({
+        id: idValue,
+        request: {
+          notes: dieExportData.notes,
+        },
+      });
+      setIsDieExportDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to record die export:", error);
+    }
+  };
+
   const handleUploadFile = async () => {
     if (!uploadFile || !order?.id) return;
     try {
-      await uploadProofing({ proofingOrderId: order.id, file: uploadFile });
+      await uploadProofing({
+        proofingOrderId: order.id,
+        file: uploadFile,
+      });
       setIsUploadDialogOpen(false);
       setUploadFile(null);
     } catch (error) {
+      console.error("Failed to upload proofing file:", error);
       toast({
-        variant: "warning",
+        variant: "destructive",
         title: "Lỗi",
         description: "Không thể upload file",
+      });
+    }
+  };
+
+  const handleUploadImage = async () => {
+    if (!uploadImage || !order?.id) return;
+    try {
+      await uploadImageMutate({ proofingOrderId: order.id, file: uploadImage });
+      setIsImageUploadDialogOpen(false);
+      setUploadImage(null);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể upload ảnh",
       });
     }
   };
@@ -230,6 +338,15 @@ export default function ProofingOrderDetailPage() {
               Upload file bình bài
             </Button>
           )}
+          {!order.imageUrl && (
+            <Button
+              className="gap-2 variant-outline"
+              onClick={() => setIsImageUploadDialogOpen(true)}
+            >
+              <FileImage className="h-4 w-4" />
+              Upload ảnh bình bài
+            </Button>
+          )}
         </div>
       </div>
 
@@ -279,6 +396,19 @@ export default function ProofingOrderDetailPage() {
                     {order.proofingOrderDesigns.length}
                   </p>
                 </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs">
+                    Khổ giấy in
+                  </Label>
+                  <p className="font-semibold text-lg">
+                    {order.paperSize?.name || order.customPaperSize || "Chưa xác định"}
+                    {order.paperSize?.width && order.paperSize?.height && (
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({order.paperSize.width}x{order.paperSize.height})
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
 
               <Separator />
@@ -287,6 +417,50 @@ export default function ProofingOrderDetailPage() {
                 <Label className="text-muted-foreground text-xs">Ghi chú</Label>
                 <p className="text-sm">{order.notes || "Không có ghi chú"}</p>
               </div>
+
+              {order.imageUrl && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">
+                      Ảnh bình bài (Preview)
+                    </Label>
+                    <div className="relative group aspect-video rounded-lg overflow-hidden border bg-muted">
+                      <img
+                        src={order.imageUrl}
+                        alt="Proofing Preview"
+                        className="w-full h-full object-contain cursor-pointer transition-transform group-hover:scale-105"
+                        onClick={() => {
+                          setViewingImageUrl(order.imageUrl!);
+                          setImageViewerOpen(true);
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => {
+                            setViewingImageUrl(order.imageUrl!);
+                            setImageViewerOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Xem ảnh
+                        </Button>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => setIsImageUploadDialogOpen(true)}
+                    >
+                      Thay đổi ảnh
+                    </Button>
+                  </div>
+                </>
+              )}
 
               {order.proofingFileUrl && (
                 <>
@@ -411,6 +585,108 @@ export default function ProofingOrderDetailPage() {
 
         {/* Right Column - Timeline & Info */}
         <div className="space-y-6">
+          {/* Prepress Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Settings2 className="h-4 w-4" />
+                Thông tin Prepress
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Plate Export Info */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${order.isPlateExported ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <span className="font-medium text-sm">Xuất bản kẽm</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => setIsPlateExportDialogOpen(true)}
+                  >
+                    {order.isPlateExported ? "Cập nhật" : "Ghi nhận"}
+                  </Button>
+                </div>
+                {order.plateExport ? (
+                  <div className="bg-muted/30 rounded-md p-3 text-sm space-y-1">
+                    <p><span className="text-muted-foreground mr-2">Đơn vị:</span> {order.plateExport.vendorName}</p>
+                    <p><span className="text-muted-foreground mr-2">Gửi đi:</span> {order.plateExport.sentAt ? format(new Date(order.plateExport.sentAt), "dd/MM/yyyy HH:mm") : "-"}</p>
+                    <p><span className="text-muted-foreground mr-2">Có kẽm:</span> {order.plateExport.receivedAt ? format(new Date(order.plateExport.receivedAt), "dd/MM/yyyy HH:mm") : "Đang chờ"}</p>
+                    {order.plateExport.notes && <p className="text-xs italic text-muted-foreground mt-1 border-t pt-1">"{order.plateExport.notes}"</p>}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic pl-4">Chưa có thông tin xuất kẽm</p>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Die Export Info */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${order.isDieExported ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <span className="font-medium text-sm">Xuất khuôn bế</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => setIsDieExportDialogOpen(true)}
+                  >
+                    {order.isDieExported ? "Cập nhật" : "Ghi nhận"}
+                  </Button>
+                </div>
+                {order.dieExport ? (
+                  <div className="bg-muted/30 rounded-md p-3 text-sm space-y-2">
+                    {order.dieExport.imageUrl && (
+                      <div className="relative aspect-video rounded border overflow-hidden bg-black/5">
+                        <img
+                          src={order.dieExport.imageUrl}
+                          alt="Khuôn bế"
+                          className="w-full h-full object-contain cursor-pointer"
+                          onClick={() => {
+                            setViewingImageUrl(order.dieExport!.imageUrl!);
+                            setImageViewerOpen(true);
+                          }}
+                        />
+                      </div>
+                    )}
+                    {order.dieExport.notes && <p className="text-xs italic text-muted-foreground">"{order.dieExport.notes}"</p>}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic pl-4">Chưa có thông tin khuôn bế</p>
+                )}
+              </div>
+
+              {order.status === "waiting_for_production" && (
+                <div className="pt-2">
+                  <Button
+                    className="w-full gap-2"
+                    disabled={!order.isPlateExported || !order.approvedById || isHandingToProduction}
+                    onClick={handleHandToProduction}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Bàn giao sản xuất
+                  </Button>
+                  {!order.isPlateExported && (
+                    <p className="text-[10px] text-destructive mt-1 text-center">
+                      * Cần ghi nhận xuất kẽm trước khi bàn giao
+                    </p>
+                  )}
+                  {!order.approvedById && (
+                    <p className="text-[10px] text-destructive mt-1 text-center">
+                      * Cần được duyệt trước khi bàn giao
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* People Card */}
           <Card>
             <CardHeader>
@@ -461,6 +737,40 @@ export default function ProofingOrderDetailPage() {
                   </p>
                 )}
               </div>
+
+              {order.approvedBy && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">
+                      Người duyệt
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <UserIcon className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-green-700">
+                          {order.approvedBy.fullName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(order.approvedAt!).toLocaleString("vi-VN", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    {order.finalQuantity && (
+                      <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
+                        <p className="text-xs text-green-800 font-medium">
+                          Số lượng duyệt chốt: {order.finalQuantity.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -628,6 +938,57 @@ export default function ProofingOrderDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Upload Image Dialog */}
+      <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload ảnh bình bài</DialogTitle>
+            <DialogDescription>
+              Tải lên ảnh preview của bản bình bài (JPG, PNG,...)
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Chọn ảnh</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setUploadImage(e.target.files?.[0] || null)}
+              />
+              {uploadImage && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Đã chọn: {uploadImage.name} (
+                    {(uploadImage.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                  <div className="aspect-video relative rounded-lg overflow-hidden border">
+                    <img
+                      src={URL.createObjectURL(uploadImage)}
+                      alt="Preview"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsImageUploadDialogOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button onClick={handleUploadImage} disabled={!uploadImage}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Image Viewer Dialog */}
       {viewingImageUrl && (
         <ImageViewerDialog
@@ -642,6 +1003,96 @@ export default function ProofingOrderDetailPage() {
           }}
         />
       )}
+      {/* Plate Export Dialog */}
+      <Dialog open={isPlateExportDialogOpen} onOpenChange={setIsPlateExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ghi nhận xuất bản kẽm</DialogTitle>
+            <DialogDescription>
+              Nhập thông tin đơn vị và thời gian gửi kẽm.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="vendorName">Đơn vị ghi kẽm</Label>
+              <Input
+                id="vendorName"
+                placeholder="Ví dụ: Thiên Nam, Ánh Sáng..."
+                value={plateExportData.vendorName}
+                onChange={(e) => setPlateExportData({ ...plateExportData, vendorName: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sentAt">Thời gian gửi đi</Label>
+                <Input
+                  id="sentAt"
+                  type="datetime-local"
+                  value={plateExportData.sentAt}
+                  onChange={(e) => setPlateExportData({ ...plateExportData, sentAt: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="receivedAt">Thời gian có kẽm (dự kiến)</Label>
+                <Input
+                  id="receivedAt"
+                  type="datetime-local"
+                  value={plateExportData.receivedAt}
+                  onChange={(e) => setPlateExportData({ ...plateExportData, receivedAt: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plateNotes">Ghi chú</Label>
+              <Input
+                id="plateNotes"
+                placeholder="Nhập ghi chú nếu có"
+                value={plateExportData.notes}
+                onChange={(e) => setPlateExportData({ ...plateExportData, notes: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPlateExportDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleRecordPlate} disabled={isRecordingPlate}>
+              {isRecordingPlate ? "Đang lưu..." : "Lưu thông tin"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Die Export Dialog */}
+      <Dialog open={isDieExportDialogOpen} onOpenChange={setIsDieExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ghi nhận khuôn bế</DialogTitle>
+            <DialogDescription>
+              Lưu thông tin về khuôn bế cho bình bài này.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="dieNotes">Ghi chú khuôn bế</Label>
+              <Input
+                id="dieNotes"
+                placeholder="Nhập ghi chú, mã khuôn..."
+                value={dieExportData.notes}
+                onChange={(e) => setDieExportData({ ...dieExportData, notes: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDieExportDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleRecordDie} disabled={isRecordingDie}>
+              {isRecordingDie ? "Đang lưu..." : "Lưu thông tin"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

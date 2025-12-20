@@ -72,6 +72,8 @@ type CreateDesignRequestUI = CreateDesignRequestEmbedded & {
   id: string; // id cho UI (unique key cho React)
   designCode?: string; // code của design gốc (nếu từ existing)
   isFromExisting?: boolean; // đánh dấu là từ thiết kế có sẵn (existing)
+  // Optional metadata for validation
+  minQuantity?: number;
 };
 
 // Chuẩn hóa mọi kiểu response (items, data, array) về mảng
@@ -245,109 +247,208 @@ const DesignRequestItem: React.FC<DesignRequestItemProps> = ({
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Loại thiết kế */}
+      <div className="grid gap-4">
+        {/* Số lượng - Lên TRÊN (STT 2) */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">
-            Loại thiết kế <span className="text-destructive">*</span>
+            Số lượng <span className="text-destructive">*</span>
+            {design.minQuantity ? (
+              <span className="ml-2 text-[10px] text-blue-500 font-normal">
+                (Tối thiểu: {design.minQuantity})
+              </span>
+            ) : null}
           </Label>
-          <Select
-            value={
-              design.designTypeId ? String(design.designTypeId) : undefined
-            }
-            onValueChange={(value) =>
-              onChange(design.id, {
-                designTypeId: Number(value) || 0,
-                // đổi loại thiết kế thì reset chất liệu
-                materialTypeId: 0,
-              })
-            }
-          >
-            <SelectTrigger className="bg-background h-10 text-sm">
-              <SelectValue placeholder="Chọn loại thiết kế..." />
-            </SelectTrigger>
-            <SelectContent>
-              {designTypes.map((type) => (
-                <SelectItem
-                  key={type.id.toString()}
-                  value={type.id.toString()}
-                  className="text-sm"
-                >
-                  <div className="flex flex-col">
-                    <span>{type.name}</span>
-                    {type.description && (
-                      <span className="text-xs text-muted-foreground">
-                        {type.description}
-                      </span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-1">
+            <Input
+              type="number"
+              placeholder="1000"
+              value={design.quantity || ""}
+              onChange={(e) =>
+                onChange(design.id, {
+                  quantity: e.target.value === "" ? 0 : Number(e.target.value),
+                })
+              }
+              className={`bg-background h-10 text-sm max-w-[200px] ${design.minQuantity &&
+                design.quantity > 0 &&
+                design.quantity < design.minQuantity
+                ? "border-destructive focus-visible:ring-destructive"
+                : ""
+                }`}
+            />
+            {design.minQuantity &&
+              design.quantity > 0 &&
+              design.quantity < design.minQuantity && (
+                <p className="text-[10px] text-destructive">
+                  Số lượng nhỏ hơn mức tối thiểu ({design.minQuantity})
+                </p>
+              )}
+          </div>
         </div>
 
-        {/* Chất liệu */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">
-            Chất liệu <span className="text-destructive">*</span>
-          </Label>
-          <Select
-            value={
-              design.materialTypeId ? String(design.materialTypeId) : undefined
-            }
-            onValueChange={(value) =>
-              onChange(design.id, {
-                materialTypeId: Number(value) || 0,
-              })
-            }
-            disabled={!design.designTypeId}
-          >
-            <SelectTrigger className="bg-background h-10 text-sm">
-              <SelectValue
-                placeholder={
-                  !design.designTypeId
-                    ? "Chọn loại thiết kế trước"
-                    : loadingMaterials
-                    ? "Đang tải..."
-                    : materialsError
-                    ? "Lỗi tải chất liệu"
-                    : "Chọn chất liệu..."
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {materialsError && (
-                <SelectItem value="__error" disabled>
-                  Không thể tải danh sách chất liệu
-                </SelectItem>
-              )}
-              {!materialsError &&
-                !loadingMaterials &&
-                materials.length === 0 && (
-                  <SelectItem value="__empty" disabled>
-                    Không có chất liệu phù hợp
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Loại thiết kế */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              Loại thiết kế <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={
+                design.designTypeId ? String(design.designTypeId) : undefined
+              }
+              onValueChange={(value) =>
+                onChange(design.id, {
+                  designTypeId: Number(value) || 0,
+                  // đổi loại thiết kế thì reset chất liệu
+                  materialTypeId: 0,
+                  sidesClassificationOptionId: undefined,
+                  processClassificationOptionId: undefined,
+                })
+              }
+            >
+              <SelectTrigger className="bg-background h-10 text-sm">
+                <SelectValue placeholder="Chọn loại thiết kế..." />
+              </SelectTrigger>
+              <SelectContent>
+                {designTypes.map((type) => (
+                  <SelectItem
+                    key={type.id.toString()}
+                    value={type.id.toString()}
+                    className="text-sm"
+                  >
+                    <div className="flex flex-col">
+                      <span>{type.name}</span>
+                      {type.description && (
+                        <span className="text-xs text-muted-foreground">
+                          {type.description}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Chất liệu */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              Chất liệu <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={
+                design.materialTypeId
+                  ? String(design.materialTypeId)
+                  : undefined
+              }
+              onValueChange={(value) => {
+                const materialId = Number(value);
+                const mat = materials.find((m) => m.id === materialId);
+                onChange(design.id, {
+                  materialTypeId: materialId || 0,
+                  minQuantity: mat?.minimumQuantity || 0,
+                  sidesClassificationOptionId: undefined,
+                  processClassificationOptionId: undefined,
+                });
+              }}
+              disabled={!design.designTypeId}
+            >
+              <SelectTrigger className="bg-background h-10 text-sm">
+                <SelectValue
+                  placeholder={
+                    !design.designTypeId
+                      ? "Chọn loại thiết kế trước"
+                      : loadingMaterials
+                        ? "Đang tải..."
+                        : materialsError
+                          ? "Lỗi tải chất liệu"
+                          : "Chọn chất liệu..."
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {materialsError && (
+                  <SelectItem value="__error" disabled>
+                    Không thể tải danh sách chất liệu
                   </SelectItem>
                 )}
-              {materials.map((material: MaterialTypeResponse) => (
-                <SelectItem
-                  key={material.id}
-                  value={material.id.toString()}
-                  className="text-sm"
-                >
-                  <div className="flex flex-col">
-                    <span>{material.name}</span>
-                    {material.description && (
-                      <span className="text-xs text-muted-foreground">
-                        {material.description}
-                      </span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                {!materialsError &&
+                  !loadingMaterials &&
+                  materials.length === 0 && (
+                    <SelectItem value="__empty" disabled>
+                      Không có chất liệu phù hợp
+                    </SelectItem>
+                  )}
+                {materials.map((material: MaterialTypeResponse) => (
+                  <SelectItem
+                    key={material.id}
+                    value={material.id.toString()}
+                    className="text-sm"
+                  >
+                    <div className="flex flex-col">
+                      <span>{material.name}</span>
+                      {material.description && (
+                        <span className="text-xs text-muted-foreground">
+                          {material.description}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
+        {/* Các trường phân loại động (STT 7, 8) */}
+        {design.materialTypeId > 0 && materials.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {materials
+              .find((m) => m.id === design.materialTypeId)
+              ?.classifications?.map((cls) => (
+                <div key={cls.id} className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    {cls.classificationName}{" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={
+                      cls.classificationKey === "sides"
+                        ? design.sidesClassificationOptionId?.toString()
+                        : design.processClassificationOptionId?.toString()
+                    }
+                    onValueChange={(value) => {
+                      if (cls.classificationKey === "sides") {
+                        onChange(design.id, {
+                          sidesClassificationOptionId: Number(value),
+                        });
+                      } else {
+                        onChange(design.id, {
+                          processClassificationOptionId: Number(value),
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-background h-10 text-sm">
+                      <SelectValue
+                        placeholder={`Chọn ${cls.classificationName.toLowerCase()}...`}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cls.options.map((opt) => (
+                        <SelectItem
+                          key={opt.id}
+                          value={opt.id.toString()}
+                          className="text-sm"
+                        >
+                          {opt.value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+          </div>
+        )}
 
         {/* Tên thiết kế */}
         <div className="space-y-2">
@@ -364,58 +465,56 @@ const DesignRequestItem: React.FC<DesignRequestItemProps> = ({
           />
         </div>
 
-        {/* Rộng */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">
-            Rộng (mm) <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            type="number"
-            placeholder="280"
-            value={design.width || ""}
-            onChange={(e) =>
-              onChange(design.id, {
-                width: e.target.value === "" ? 0 : Number(e.target.value),
-              })
-            }
-            className="bg-background h-10 text-sm"
-          />
-        </div>
-
-        {/* Cao */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">
-            Cao (mm) <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            type="number"
-            placeholder="153"
-            value={design.height || ""}
-            onChange={(e) =>
-              onChange(design.id, {
-                height: e.target.value === "" ? 0 : Number(e.target.value),
-              })
-            }
-            className="bg-background h-10 text-sm"
-          />
-        </div>
-
-        {/* Số lượng */}
-        <div className="space-y-2 ">
-          <Label className="text-sm font-medium">
-            Số lượng <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            type="number"
-            placeholder="1000"
-            value={design.quantity || ""}
-            onChange={(e) =>
-              onChange(design.id, {
-                quantity: e.target.value === "" ? 0 : Number(e.target.value),
-              })
-            }
-            className="bg-background h-10 text-sm max-w-[200px]"
-          />
+        {/* Kích thước Chung hàng (STT 2) */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-muted-foreground">
+              Dài (mm) <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              type="number"
+              placeholder="0"
+              value={design.length || ""}
+              onChange={(e) =>
+                onChange(design.id, {
+                  length: e.target.value === "" ? 0 : Number(e.target.value),
+                })
+              }
+              className="bg-background h-10 text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-muted-foreground">
+              Rộng (mm) <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              type="number"
+              placeholder="0"
+              value={design.width || ""}
+              onChange={(e) =>
+                onChange(design.id, {
+                  width: e.target.value === "" ? 0 : Number(e.target.value),
+                })
+              }
+              className="bg-background h-10 text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-muted-foreground">
+              Cao (mm) <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              type="number"
+              placeholder="0"
+              value={design.height || ""}
+              onChange={(e) =>
+                onChange(design.id, {
+                  height: e.target.value === "" ? 0 : Number(e.target.value),
+                })
+              }
+              className="bg-background h-10 text-sm"
+            />
+          </div>
         </div>
 
         {/* Yêu cầu thiết kế */}
@@ -544,10 +643,13 @@ export default function CreateOrderPage() {
           assignedDesignerId: 0,
           quantity: 0,
           designName: "",
+          length: 0,
           width: 0,
           height: 0,
+          depth: 0,
           requirements: "",
           additionalNotes: "",
+          minQuantity: 0,
         },
       ]);
     }
@@ -565,10 +667,13 @@ export default function CreateOrderPage() {
         assignedDesignerId: 0,
         quantity: 0,
         designName: "",
+        length: 0,
         width: 0,
         height: 0,
+        depth: 0,
         requirements: "",
         additionalNotes: "",
+        minQuantity: 0,
       },
     ]);
   };
@@ -618,8 +723,10 @@ export default function CreateOrderPage() {
             assignedDesignerId: 0,
             quantity: 0,
             designName: "",
+            length: 0,
             width: 0,
             height: 0,
+            depth: 0,
             requirements: "",
             additionalNotes: "",
           },
@@ -647,8 +754,10 @@ export default function CreateOrderPage() {
         assignedDesignerId: user?.id || design.designerId || 0,
         quantity: 0, // User needs to specify quantity
         designName: design.designName || "",
+        length: design.length || 0,
         width: design.width || 0,
         height: design.height || 0,
+        depth: design.depth || 0,
         requirements: "",
         additionalNotes: "",
       };
@@ -676,12 +785,14 @@ export default function CreateOrderPage() {
       } else {
         // New design: cần đầy đủ thông tin
         return (
-          d.designTypeId > 0 &&
           d.materialTypeId > 0 &&
           d.designName?.trim() &&
           d.quantity > 0 &&
-          d.width > 0 &&
-          d.height > 0
+          // validation số lượng tối thiểu
+          (!d.minQuantity || d.quantity >= d.minQuantity) &&
+          d.length >= 0 &&
+          d.width >= 0 &&
+          d.height >= 0
         );
       }
     });
@@ -792,8 +903,12 @@ export default function CreateOrderPage() {
             assignedDesignerId: user?.id || rest.assignedDesignerId || null,
             quantity: rest.quantity,
             designName: rest.designName || null,
+            length: rest.length || null,
             width: rest.width || null,
             height: rest.height || null,
+            depth: rest.depth || null,
+            sidesClassificationOptionId: rest.sidesClassificationOptionId || null,
+            processClassificationOptionId: rest.processClassificationOptionId || null,
             requirements: rest.requirements || null,
             additionalNotes: rest.additionalNotes || null,
           };
@@ -832,10 +947,11 @@ export default function CreateOrderPage() {
           navigate("/orders");
         },
         onError: (err: unknown) => {
-          const error = err as { response?: { data?: { message?: string } } };
+          const error = err as { response?: { data?: { error?: string; message?: string } } };
           toast({
-            title: "Lỗi",
+            title: "Không thành công",
             description:
+              error?.response?.data?.error ||
               error?.response?.data?.message ||
               "Không thể tạo đơn hàng, vui lòng thử lại",
             variant: "destructive",
@@ -952,15 +1068,13 @@ export default function CreateOrderPage() {
                             className="w-full justify-between bg-background h-10 px-3 text-sm"
                           >
                             {selectedCustomer
-                              ? `${
-                                  selectedCustomer.name ||
-                                  selectedCustomer.representativeName
-                                } - ${selectedCustomer.code} - ${
-                                  selectedCustomer.companyName
-                                }`
+                              ? `${selectedCustomer.name ||
+                              selectedCustomer.representativeName
+                              } - ${selectedCustomer.code} - ${selectedCustomer.companyName
+                              }`
                               : loadingCustomers
-                              ? "Đang tải khách hàng..."
-                              : "Tìm và chọn khách hàng..."}
+                                ? "Đang tải khách hàng..."
+                                : "Tìm và chọn khách hàng..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
@@ -990,11 +1104,10 @@ export default function CreateOrderPage() {
                                     className="py-1.5 text-sm"
                                   >
                                     <Check
-                                      className={`mr-2 h-4 w-4 ${
-                                        selectedCustomer?.id === customer.id
-                                          ? "opacity-100"
-                                          : "opacity-0"
-                                      }`}
+                                      className={`mr-2 h-4 w-4 ${selectedCustomer?.id === customer.id
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                        }`}
                                     />
                                     <div className="flex flex-col gap-0.5">
                                       <span className="font-medium">
@@ -1310,8 +1423,8 @@ export default function CreateOrderPage() {
                       <span>
                         {formData.deliveryDate
                           ? new Date(formData.deliveryDate).toLocaleString(
-                              "vi-VN"
-                            )
+                            "vi-VN"
+                          )
                           : "Chưa đặt"}
                       </span>
                     </div>

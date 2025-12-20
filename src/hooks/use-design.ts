@@ -71,6 +71,8 @@ export const useDesignsByUser = (
     status?: string;
     pageNumber?: number;
     pageSize?: number;
+    month?: number;
+    year?: number;
   },
   enabled = true
 ) => {
