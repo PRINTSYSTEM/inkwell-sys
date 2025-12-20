@@ -25,6 +25,7 @@ import {
 
 type DesignWithSearch = DesignResponse & {
   designerFullName: string;
+  customerName: string;
 };
 
 export default function AllDesignsPage() {
@@ -52,6 +53,7 @@ export default function AllDesignsPage() {
       designs.map((d) => ({
         ...d,
         designerFullName: d.designer?.fullName ?? "",
+        customerName: d.customer?.name ?? d.customer?.companyName ?? "",
       })),
     [designs]
   );
@@ -60,7 +62,7 @@ export default function AllDesignsPage() {
   const filteredDesigns = useMemo(
     () =>
       filterActions.applyFilters<DesignWithSearch>(designsWithSearch, {
-        searchFields: ["code", "designerFullName", "latestOrderCode", "customer.name", "latestRequirements"],
+        searchFields: ["code", "designerFullName", "latestOrderCode", "customerName", "latestRequirements"],
       }),
     [designsWithSearch, filterActions]
   );

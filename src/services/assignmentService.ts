@@ -16,6 +16,36 @@ import type {
     AssignmentBulkAction,
 } from "@/types/assignment";
 
+// Default empty metrics constant to avoid duplication
+const DEFAULT_ASSIGNMENT_METRICS: AssignmentMetrics = {
+    total: 0,
+    byStatus: {
+        unassigned: 0,
+        assigned: 0,
+        in_progress: 0,
+        review: 0,
+        completed: 0,
+        cancelled: 0,
+    },
+    byPriority: {
+        low: 0,
+        medium: 0,
+        high: 0,
+        urgent: 0,
+    },
+    byType: {
+        design: 0,
+        review: 0,
+        production: 0,
+        quality_check: 0,
+        maintenance: 0,
+    },
+    avgCompletionTime: 0,
+    onTimeRate: 0,
+    overdue: 0,
+    unassigned: 0,
+};
+
 // API response types
 interface AssignmentsResponse {
     assignments: Assignment[];
@@ -293,9 +323,11 @@ class AssignmentManagementServiceClass extends BaseService {
      */
     async getTeamWorkload(departmentId?: string): Promise<TeamWorkload[]> {
         try {
-            const url = departmentId
-                ? `/${this.resourceName}/workload?departmentId=${departmentId}`
-                : `/${this.resourceName}/workload`;
+            let url = `/${this.resourceName}/workload`;
+            if (departmentId) {
+                const params = new URLSearchParams({ departmentId });
+                url += `?${params.toString()}`;
+            }
 
             const res = await this.request<TeamWorkload[]>({
                 method: "GET",
@@ -372,7 +404,11 @@ class AssignmentManagementServiceClass extends BaseService {
         try {
             let url = `/${this.resourceName}/metrics`;
             if (dateRange) {
-                url += `?startDate=${dateRange.start}&endDate=${dateRange.end}`;
+                const params = new URLSearchParams({
+                    startDate: dateRange.start,
+                    endDate: dateRange.end,
+                });
+                url += `?${params.toString()}`;
             }
 
             const res = await this.request<AssignmentMetrics>({
@@ -381,68 +417,13 @@ class AssignmentManagementServiceClass extends BaseService {
             });
 
             if (!res.success || !res.data) {
-                // Return default empty metrics
-                return {
-                    total: 0,
-                    byStatus: {
-                        unassigned: 0,
-                        assigned: 0,
-                        in_progress: 0,
-                        review: 0,
-                        completed: 0,
-                        cancelled: 0,
-                    },
-                    byPriority: {
-                        low: 0,
-                        medium: 0,
-                        high: 0,
-                        urgent: 0,
-                    },
-                    byType: {
-                        design: 0,
-                        review: 0,
-                        production: 0,
-                        quality_check: 0,
-                        maintenance: 0,
-                    },
-                    avgCompletionTime: 0,
-                    onTimeRate: 0,
-                    overdue: 0,
-                    unassigned: 0,
-                };
+                return DEFAULT_ASSIGNMENT_METRICS;
             }
 
             return res.data;
         } catch (error) {
             console.error("Failed to fetch assignment metrics:", error);
-            return {
-                total: 0,
-                byStatus: {
-                    unassigned: 0,
-                    assigned: 0,
-                    in_progress: 0,
-                    review: 0,
-                    completed: 0,
-                    cancelled: 0,
-                },
-                byPriority: {
-                    low: 0,
-                    medium: 0,
-                    high: 0,
-                    urgent: 0,
-                },
-                byType: {
-                    design: 0,
-                    review: 0,
-                    production: 0,
-                    quality_check: 0,
-                    maintenance: 0,
-                },
-                avgCompletionTime: 0,
-                onTimeRate: 0,
-                overdue: 0,
-                unassigned: 0,
-            };
+            return DEFAULT_ASSIGNMENT_METRICS;
         }
     }
 

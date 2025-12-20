@@ -88,12 +88,14 @@ export function CreateProofingOrderModal({
     }
   }, [designQuantities]);
 
-  const handleQuantityChange = (id: number, value: string) => {
+  const handleQuantityChange = (id: number, value: string, maxQty: number) => {
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (!isNaN(numValue) && numValue >= 0) {
+      // Clamp to max quantity
+      const clampedValue = Math.min(numValue, maxQty);
       setDesignQuantities(prev => ({
         ...prev,
-        [id]: numValue
+        [id]: clampedValue
       }));
     }
   };
@@ -173,7 +175,7 @@ export function CreateProofingOrderModal({
                       max={design.quantity}
                       className="h-8 text-right font-mono"
                       value={designQuantities[design.id] || 0}
-                      onChange={(e) => handleQuantityChange(design.id, e.target.value)}
+                      onChange={(e) => handleQuantityChange(design.id, e.target.value, design.quantity)}
                     />
                   </div>
                 </div>

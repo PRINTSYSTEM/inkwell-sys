@@ -336,39 +336,46 @@ class EmployeePerformanceServiceClass extends BaseService {
         employeeId: string,
         months: number = 6
     ): Promise<MonthlyMetrics[]> {
-        const results: MonthlyMetrics[] = [];
         const now = new Date();
 
-        for (let i = months - 1; i >= 0; i--) {
-            const fromDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const toDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+        // Build date ranges for all months
+        const dateRanges = Array.from({ length: months }, (_, i) => {
+            const index = months - 1 - i;
+            const fromDate = new Date(now.getFullYear(), now.getMonth() - index, 1);
+            const toDate = new Date(now.getFullYear(), now.getMonth() - index + 1, 0);
+            return { fromDate, toDate };
+        });
 
-            try {
-                const metrics = await this.getEmployeeMetricsForPeriod(
-                    employeeId,
-                    fromDate,
-                    toDate
-                );
+        // Fetch all metrics in parallel
+        const results = await Promise.all(
+            dateRanges.map(async ({ fromDate, toDate }) => {
+                const monthLabel = `${fromDate.getFullYear()}-${String(
+                    fromDate.getMonth() + 1
+                ).padStart(2, "0")}`;
 
-                results.push({
-                    month: `${fromDate.getFullYear()}-${String(
-                        fromDate.getMonth() + 1
-                    ).padStart(2, "0")}`,
-                    designsCompleted: metrics.completedDesigns,
-                    averageTime: metrics.averageCompletionTime,
-                    qualityScore: metrics.qualityScore,
-                });
-            } catch {
-                results.push({
-                    month: `${fromDate.getFullYear()}-${String(
-                        fromDate.getMonth() + 1
-                    ).padStart(2, "0")}`,
-                    designsCompleted: 0,
-                    averageTime: 0,
-                    qualityScore: 0,
-                });
-            }
-        }
+                try {
+                    const metrics = await this.getEmployeeMetricsForPeriod(
+                        employeeId,
+                        fromDate,
+                        toDate
+                    );
+
+                    return {
+                        month: monthLabel,
+                        designsCompleted: metrics.completedDesigns,
+                        averageTime: metrics.averageCompletionTime,
+                        qualityScore: metrics.qualityScore,
+                    };
+                } catch {
+                    return {
+                        month: monthLabel,
+                        designsCompleted: 0,
+                        averageTime: 0,
+                        qualityScore: 0,
+                    };
+                }
+            })
+        );
 
         return results;
     }

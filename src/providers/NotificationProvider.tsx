@@ -50,8 +50,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             .build();
 
         newConnection.on("ReceiveNotification", (message: NotificationMessage) => {
-            console.log("🔔 Notification received:", message);
-
             // Hiển thị toast dựa trên type
             toast(message.title, {
                 description: message.message,
@@ -65,12 +63,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
         newConnection.start()
             .then(() => {
-                console.log("📡 Connected to NotificationHub");
                 setIsConnected(true);
                 setConnection(newConnection);
             })
             .catch(err => {
-                console.error("❌ SignalR Connection Error: ", err);
+                console.error("SignalR Connection Error: ", err);
+                toast.error("Lỗi kết nối", {
+                    description: "Không thể kết nối tới server thông báo. Một số thông báo có thể bị trễ.",
+                    duration: 5000,
+                });
             });
 
         return () => {
