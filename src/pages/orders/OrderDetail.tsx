@@ -737,7 +737,7 @@ export default function OrderDetailPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Phụ trách:</span>
                   <span className="font-medium">
-                    {order.assignedUser?.fullName || "—"}
+                    {order.creator?.fullName || "—"}
                   </span>
                 </div>
 
