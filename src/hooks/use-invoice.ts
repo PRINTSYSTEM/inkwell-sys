@@ -1,6 +1,6 @@
 // src/hooks/invoice.hooks.ts
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import type { InvoiceFileResponse } from "@/Schema/invoice.schema";
 import { API_SUFFIX } from "@/apis";
@@ -38,7 +38,6 @@ export const useOrderInvoice = (
 // -> dùng khi bấm "Xuất hoá đơn"
 export const useGenerateOrderInvoice = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     InvoiceFileResponse,
@@ -59,8 +58,7 @@ export const useGenerateOrderInvoice = () => {
         queryKey: invoiceKeys.byOrder(orderId),
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã tạo/cập nhật hoá đơn cho đơn hàng",
       });
 
@@ -75,10 +73,8 @@ export const useGenerateOrderInvoice = () => {
         error?.message ||
         "Không thể tạo hoá đơn";
 
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: message,
-        variant: "destructive",
       });
 
       throw err;

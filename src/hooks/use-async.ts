@@ -1,6 +1,7 @@
 // src/hooks/use-async.ts
-import { ServiceError, serviceUtils } from "@/services/BaseService";
+import { ServiceError } from "@/services/BaseService";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getErrorMessage } from "./use-base";
 
 // ================== COMMON TYPES ==================
 
@@ -119,16 +120,6 @@ export function useAsyncData<T>(
     },
     [cacheKey, cacheTime]
   );
-
-  const getErrorMessage = (error: unknown): string => {
-    if (error instanceof ServiceError) {
-      return serviceUtils.formatErrorMessage(error);
-    }
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return "Có lỗi xảy ra";
-  };
 
   // Fetch với retry
   const fetchWithRetry = useCallback(
@@ -258,7 +249,6 @@ export function useAsyncData<T>(
 
     return () => {
       if (abortControllerRef.current instanceof AbortController) {
-        // @ts-expect-error - abort may not exist on some implementations
         abortControllerRef.current.abort?.();
       }
       if (retryTimeoutRef.current) {
@@ -488,16 +478,6 @@ export function useAsync<T>(asyncFunction: () => Promise<T>, immediate = true) {
     error: null,
   });
 
-  const getErrorMessage = (error: unknown): string => {
-    if (error instanceof ServiceError) {
-      return serviceUtils.formatErrorMessage(error);
-    }
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return "Đã xảy ra lỗi không xác định";
-  };
-
   const execute = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
 
@@ -540,16 +520,6 @@ export function useAsyncCallback<T, Args extends unknown[]>(
     loading: false,
     error: null,
   });
-
-  const getErrorMessage = (error: unknown): string => {
-    if (error instanceof ServiceError) {
-      return serviceUtils.formatErrorMessage(error);
-    }
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return "Đã xảy ra lỗi không xác định";
-  };
 
   const execute = useCallback(
     async (...args: Args) => {

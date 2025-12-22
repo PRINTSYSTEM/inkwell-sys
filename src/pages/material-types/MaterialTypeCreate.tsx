@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   MaterialTypeEntity,
   CreateMaterialTypeRequest,
@@ -23,7 +23,6 @@ import {
 export default function MaterialTypeCreate() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { toast } = useToast();
   const isEdit = Boolean(id);
 
   const [loading, setLoading] = useState(isEdit);

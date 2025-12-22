@@ -415,7 +415,10 @@ export default function OrderCreatePage() {
                           className="w-full justify-between bg-background h-10 px-3 text-sm"
                         >
                           {selectedCustomer
-                            ? `${selectedCustomer.name} - ${selectedCustomer.code} - ${selectedCustomer.companyName}`
+                            ? `${selectedCustomer.name} - ${selectedCustomer.code}` +
+                              (selectedCustomer.companyName
+                                ? ` - ${selectedCustomer.companyName}`
+                                : "")
                             : "Tìm và chọn khách hàng..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -458,8 +461,10 @@ export default function OrderCreatePage() {
                                   <div className="flex flex-col gap-0.5">
                                     <span className="font-medium">
                                       {customer.name || ""} -{" "}
-                                      {customer.code || ""} -{" "}
-                                      {customer.companyName || ""}
+                                      {customer.code || ""}
+                                      {customer.companyName
+                                        ? ` - ${customer.companyName}`
+                                        : ""}
                                     </span>
                                     {customer.phone && (
                                       <span className="text-xs text-muted-foreground">

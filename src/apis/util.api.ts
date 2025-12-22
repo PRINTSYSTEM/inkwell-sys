@@ -120,16 +120,16 @@ export const API_SUFFIX = {
   PROOFING_ORDER_BY_ID: (id: number) => `/proofing-orders/${id}`,
   PROOFING_FROM_DESIGNS: "/proofing-orders/from-designs",
   PROOFING_AVAILABLE_ORDER_DETAILS: "/proofing-orders/available-order-details",
-  PROOFING_BY_ORDER_DETAIL: (orderDetailId: number) =>
-    `/proofing-orders/by-order-detail/${orderDetailId}`,
+  PROOFING_BY_ORDER: (orderId: number) =>
+    `/proofing-orders/by-order/${orderId}`,
   PROOFING_FOR_PRODUCTION: "/proofing-orders/for-production",
   PROOFING_UPLOAD_FILE: (id: number) => `/proofing-orders/${id}/upload-file`,
   PROOFING_UPLOAD_IMAGE: (id: number) => `/proofing-orders/${id}/upload-image`,
   PAPER_SIZES: "/paper-sizes",
   PROOFING_RECORD_PLATE: (id: number) =>
-    `/proofing-orders/${id}/record-plate-export`,
+    `/proofing-orders/${id}/plate-export`,
   PROOFING_RECORD_DIE: (id: number) =>
-    `/proofing-orders/${id}/record-die-export`,
+    `/proofing-orders/${id}/die-export`,
   PROOFING_UPDATE_FILE: (id: number) => `/proofing-orders/${id}/update-file`,
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
@@ -141,9 +141,6 @@ export const API_SUFFIX = {
     `/proofing-orders/${id}/complete-production`,
   PROOFING_HAND_TO_PRODUCTION: (id: number) =>
     `/proofing-orders/${id}/hand-to-production`,
-
-  PROOFING_PLATE_EXPORT: (id: number) => `/proofing-orders/${id}/plate-export`,
-  PROOFING_DIE_EXPORT: (id: number) => `/proofing-orders/${id}/die-export`,
 
   // ========== PRODUCTIONS ==========
   PRODUCTIONS: "/productions",

@@ -4,6 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
   Edit,
   Save,
@@ -38,6 +45,7 @@ import {
   orderStatusLabels,
   formatCurrency,
   formatDate,
+  customerTypeLabels,
 } from "@/lib/status-utils";
 
 import { CustomerResponse, UpdateCustomerRequestSchema } from "@/Schema";
@@ -354,13 +362,36 @@ export default function CustomerDetail() {
 
               <div className="space-y-2">
                 <Label htmlFor="type">Loại khách hàng</Label>
-                <Input
-                  id="type"
-                  value={editForm?.type || ""}
-                  onChange={(e) => handleInputChange("type", e.target.value)}
-                  disabled={!isEditing}
-                  placeholder="good, warning, blocked"
-                />
+                {isEditing ? (
+                  <Select
+                    value={editForm?.type || ""}
+                    onValueChange={(value) => handleInputChange("type", value)}
+                  >
+                    <SelectTrigger id="type">
+                      <SelectValue placeholder="Chọn loại khách hàng" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="retail">Khách lẻ</SelectItem>
+                      <SelectItem value="company">Khách công ty</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm">
+                    {editForm?.type && customerTypeLabels[editForm.type] ? (
+                      <Badge
+                        className={
+                          editForm.type === "company"
+                            ? "bg-purple-100 text-purple-700 hover:bg-purple-100 dark:bg-purple-950 dark:text-purple-400"
+                            : "bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-400"
+                        }
+                      >
+                        {customerTypeLabels[editForm.type]}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">Chưa có</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

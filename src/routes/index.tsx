@@ -67,6 +67,9 @@ const ProductTemplates = lazy(
 const AccountingDashboard = lazy(
   () => import("@/pages/accounting/AccountingDashboard")
 );
+const AccountingOrderDetail = lazy(
+  () => import("@/pages/accounting/AccountingOrderDetail")
+);
 const AccountingDebtReport = lazy(
   () => import("@/pages/accounting/AccountingDebtReport")
 );
@@ -398,6 +401,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <AccountingDashboard />
+              </Suspense>
+            ),
+          },
+          {
+            path: "orders/:id",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <AccountingOrderDetail />
               </Suspense>
             ),
           },

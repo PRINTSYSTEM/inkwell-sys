@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { UserResponse } from "@/Schema";
 
 interface DeleteDesignerDialogProps {
@@ -25,7 +25,6 @@ export function DeleteDesignerDialog({
   designer,
   onSuccess,
 }: DeleteDesignerDialogProps) {
-  const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -44,18 +43,15 @@ export function DeleteDesignerDialog({
         throw new Error("Failed to delete designer");
       }
 
-      toast({
-        title: "Xóa thành công",
+      toast.success("Xóa thành công", {
         description: `Đã xóa nhân viên ${designer.fullName}`,
       });
 
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể xóa nhân viên này",
-        variant: "destructive",
       });
     } finally {
       setIsDeleting(false);

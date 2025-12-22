@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   useDesign,
   useDesignTimeline,
@@ -247,8 +247,7 @@ export default function DesignDetailPage() {
         id: orderId,
         data: { status: "completed" },
       });
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã hoàn thành đơn hàng",
       });
     } catch (error) {
@@ -274,10 +273,8 @@ export default function DesignDetailPage() {
         pendingStatus
       );
 
-      toast({
-        title: "Không thể thay đổi trạng thái",
+      toast.error("Không thể thay đổi trạng thái", {
         description: errorMessage,
-        variant: "destructive",
       });
 
       setShowConfirmDialog(false);
@@ -291,11 +288,9 @@ export default function DesignDetailPage() {
       pendingStatus === "waiting_for_customer_approval"
     ) {
       if (!design.designFileUrl) {
-        toast({
-          title: "Không thể chuyển trạng thái",
+        toast.error("Không thể chuyển trạng thái", {
           description:
             "Vui lòng upload file thiết kế trước khi chuyển sang trạng thái 'Chờ khách duyệt'",
-          variant: "destructive",
         });
 
         setShowConfirmDialog(false);
@@ -313,18 +308,15 @@ export default function DesignDetailPage() {
         data: { designStatus: pendingStatus },
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: `Trạng thái đã được cập nhật thành ${designStatusLabels[pendingStatus]}`,
       });
 
       setShowConfirmDialog(false);
       setPendingStatus(null);
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể cập nhật trạng thái. Vui lòng thử lại.",
-        variant: "destructive",
       });
     } finally {
       setUpdatingStatus(false);
@@ -339,10 +331,8 @@ export default function DesignDetailPage() {
       await uploadImage({ id: designId, file: image });
       setShowFileUpload(false);
     } catch {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể upload file",
-        variant: "destructive",
       });
     }
   };
@@ -353,10 +343,8 @@ export default function DesignDetailPage() {
       await addTimeline({ id: designId, file: image, description });
       setShowTimelineDialog(false);
     } catch {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể thêm timeline",
-        variant: "destructive",
       });
     }
   };
@@ -418,10 +406,8 @@ export default function DesignDetailPage() {
       setIsEditing(false);
       refetchDesign();
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể cập nhật thiết kế. Vui lòng thử lại.",
-        variant: "destructive",
       });
     }
   };

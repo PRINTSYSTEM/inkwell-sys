@@ -22,14 +22,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { MaterialTypeEntity } from '@/Schema/material-type.schema';
 import { useMaterialType, useUpdateMaterialType, useDeleteMaterialType } from '@/hooks/use-material-type';
 
 export default function MaterialTypeDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [materialType, setMaterialType] = useState<MaterialTypeEntity | null>(null);
@@ -39,10 +38,8 @@ export default function MaterialTypeDetail() {
   useEffect(() => {
     const loadMaterialType = async () => {
       if (!id) {
-        toast({
-          title: "Lỗi",
+        toast.error("Lỗi", {
           description: "ID loại vật liệu không hợp lệ",
-          variant: "destructive",
         });
         navigate('/material-types');
         return;
@@ -54,18 +51,14 @@ export default function MaterialTypeDetail() {
         if (data) {
           setMaterialType(data);
         } else {
-          toast({
-            title: "Lỗi",
+          toast.error("Lỗi", {
             description: "Không tìm thấy loại vật liệu",
-            variant: "destructive",
           });
           navigate('/material-types');
         }
       } catch (error) {
-        toast({
-          title: "Lỗi",
+        toast.error("Lỗi", {
           description: "Không thể tải thông tin loại vật liệu",
-          variant: "destructive",
         });
         navigate('/material-types');
       } finally {
@@ -82,17 +75,14 @@ export default function MaterialTypeDetail() {
     try {
       setDeleting(true);
       await materialTypeService.deleteMaterialType(materialType.id);
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã xóa loại vật liệu",
       });
       navigate('/material-types');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Không thể xóa loại vật liệu";
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: message,
-        variant: "destructive",
       });
     } finally {
       setDeleting(false);
@@ -103,8 +93,7 @@ export default function MaterialTypeDetail() {
   const handleCopyCode = () => {
     if (materialType?.code) {
       navigator.clipboard.writeText(materialType.code);
-      toast({
-        title: "Đã sao chép",
+      toast.success("Đã sao chép", {
         description: `Đã sao chép mã "${materialType.code}" vào clipboard`,
       });
     }

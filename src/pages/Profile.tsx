@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 const roleNames = {
   admin: 'Quản trị viên',
@@ -44,14 +44,11 @@ export default function Profile() {
       // Simulate API call - in real app, call user service
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      toast({
-        title: "Cập nhật thành công",
+      toast.success("Cập nhật thành công", {
         description: "Thông tin cá nhân đã được cập nhật.",
       });
     } catch (error) {
-      toast({
-        variant: "destructive", 
-        title: "Lỗi cập nhật",
+      toast.error("Lỗi cập nhật", {
         description: "Không thể cập nhật thông tin. Vui lòng thử lại.",
       });
     } finally {

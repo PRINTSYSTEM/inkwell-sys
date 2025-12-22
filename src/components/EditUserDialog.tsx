@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { User, UpdateUserRequest, USER_ROLES, userApiService } from '@/services/userApiService';
 
 interface EditUserDialogProps {
@@ -29,7 +29,6 @@ interface EditUserDialogProps {
 }
 
 export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: EditUserDialogProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<UpdateUserRequest>({
     fullName: '',
@@ -58,10 +57,8 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
     if (!user) return;
 
     if (!formData.fullName || !formData.email || !formData.role) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Vui lòng điền đầy đủ thông tin bắt buộc",
-        variant: "destructive",
       });
       return;
     }
@@ -70,8 +67,7 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
       setLoading(true);
       await userApiService.updateUser(user.id, formData);
       
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã cập nhật thông tin nhân viên thành công",
       });
 
@@ -79,10 +75,8 @@ export default function EditUserDialog({ user, open, onOpenChange, onUserUpdated
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating user:', error);
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: error instanceof Error ? error.message : "Không thể cập nhật thông tin nhân viên",
-        variant: "destructive",
       });
     } finally {
       setLoading(false);

@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 import { DesignAssignmentService } from '@/services/designAssignmentService';
 import DesignerList from '@/components/DesignerList';
@@ -301,11 +301,15 @@ const DesignSystemTestPage: React.FC = () => {
     setRunning(false);
     
     const successCount = results.filter(r => r.status === 'success').length;
-    toast({
-      title: "Tests Completed",
-      description: `${successCount}/${results.length} tests passed`,
-      variant: successCount === results.length ? "default" : "destructive"
-    });
+    if (successCount === results.length) {
+      toast.success("Tests Completed", {
+        description: `${successCount}/${results.length} tests passed`,
+      });
+    } else {
+      toast.error("Tests Completed", {
+        description: `${successCount}/${results.length} tests passed`,
+      });
+    }
   };
 
   const loadData = useCallback(async () => {
@@ -319,10 +323,8 @@ const DesignSystemTestPage: React.FC = () => {
       setAssignments(assignmentData.data);
     } catch (error) {
       console.error('Error loading data:', error);
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to load test data",
-        variant: "destructive"
       });
     }
   }, []);

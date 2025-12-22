@@ -1,6 +1,6 @@
 // src/hooks/use-accounting.ts
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import type {
   AccountingResponse,
@@ -42,7 +42,6 @@ export const useAccountingByOrder = (
 
 export const useCreateAccountingForOrder = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     AccountingResponse,
@@ -68,8 +67,7 @@ export const useCreateAccountingForOrder = () => {
         queryKey: ["orders"],
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã tạo bản ghi kế toán cho đơn hàng",
       });
 
@@ -84,10 +82,8 @@ export const useCreateAccountingForOrder = () => {
         error?.message ||
         "Không thể tạo bản ghi kế toán";
 
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: message,
-        variant: "destructive",
       });
 
       throw err;
@@ -108,7 +104,6 @@ export const useCreateAccountingForOrder = () => {
 
 export const useConfirmPayment = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     AccountingResponse,
@@ -143,8 +138,7 @@ export const useConfirmPayment = () => {
         queryKey: ["customers"],
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã xác nhận thanh toán",
       });
 
@@ -159,10 +153,135 @@ export const useConfirmPayment = () => {
         error?.message ||
         "Không thể xác nhận thanh toán";
 
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: message,
-        variant: "destructive",
+      });
+
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+// ===== POST /accountings/order/{orderId}/confirm-deposit =====
+// Xác nhận cọc
+
+export const useConfirmDeposit = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    AccountingResponse,
+    [number, number?]
+  >(async (orderId: number, depositAmount?: number) => {
+    const res = await apiRequest.post<AccountingResponse>(
+      API_SUFFIX.ACCOUNTING_CONFIRM_DEPOSIT(orderId, depositAmount)
+    );
+    return res.data;
+  });
+
+  const mutate = async (orderId: number, depositAmount?: number) => {
+    try {
+      const result = await execute(orderId, depositAmount);
+
+      queryClient.invalidateQueries({
+        queryKey: accountingKeys.all,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: accountingKeys.byOrder(orderId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["orders"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã xác nhận cọc",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể xác nhận cọc";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+// ===== POST /accountings/order/{orderId}/approve-debt =====
+// Duyệt công nợ
+
+export const useApproveDebt = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    void,
+    [number]
+  >(async (orderId: number) => {
+    await apiRequest.post(API_SUFFIX.ACCOUNTING_APPROVE_DEBT(orderId));
+  });
+
+  const mutate = async (orderId: number) => {
+    try {
+      await execute(orderId);
+
+      queryClient.invalidateQueries({
+        queryKey: accountingKeys.all,
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: accountingKeys.byOrder(orderId),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["orders"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["customers"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã duyệt công nợ",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể duyệt công nợ";
+
+      toast.error("Lỗi", {
+        description: message,
       });
 
       throw err;

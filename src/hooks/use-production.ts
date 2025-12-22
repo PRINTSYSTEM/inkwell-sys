@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
 
@@ -74,7 +74,6 @@ export const useProductionsByProofingOrder = (
 // POST /productions/{id}/start
 export const useStartProduction = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProductionResponse,
@@ -98,21 +97,18 @@ export const useStartProduction = () => {
         queryKey: productionKeys.detail(result.id),
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã bắt đầu sản xuất",
       });
 
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể bắt đầu sản xuất",
-        variant: "destructive",
       });
       throw err;
     }
@@ -130,7 +126,6 @@ export const useStartProduction = () => {
 // POST /productions/{id}/complete
 export const useCompleteProduction = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProductionResponse,
@@ -154,21 +149,18 @@ export const useCompleteProduction = () => {
         queryKey: productionKeys.detail(result.id),
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã hoàn thành sản xuất",
       });
 
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể hoàn thành sản xuất",
-        variant: "destructive",
       });
       throw err;
     }

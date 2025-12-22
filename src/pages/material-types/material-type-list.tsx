@@ -47,6 +47,7 @@ export function MaterialTypeList({
             <TableHead className="w-[120px]">Mã</TableHead>
             <TableHead>Tên chất liệu</TableHead>
             <TableHead className="text-right w-[140px]">Giá/cm²</TableHead>
+            <TableHead className="text-right w-[140px]">Số lượng tối thiểu</TableHead>
             <TableHead className="w-[120px]">Trạng thái</TableHead>
             <TableHead className="text-right w-[120px]">Thao tác</TableHead>
           </TableRow>
@@ -75,13 +76,17 @@ export function MaterialTypeList({
                 </div>
               </TableCell>
               <TableCell className="text-right">
+                <span className="font-semibold">
+                  {material.pricePerCm2?.toLocaleString("vi-VN") || "0"}
+                </span>
                 <span className="text-xs text-muted-foreground ml-1">đ</span>
               </TableCell>
               <TableCell className="text-right">
                 <span className="font-semibold">
-                  {material.pricePerCm2.toLocaleString("vi-VN")}
+                  {material.minimumQuantity != null
+                    ? material.minimumQuantity.toLocaleString("vi-VN")
+                    : "-"}
                 </span>
-                <span className="text-xs text-muted-foreground ml-1">đ</span>
               </TableCell>
               <TableCell>
                 <Badge

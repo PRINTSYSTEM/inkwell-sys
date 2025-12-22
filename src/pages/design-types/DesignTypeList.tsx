@@ -13,7 +13,7 @@ const MaterialTypeDialogLazy = lazy(() =>
   }))
 );
 
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
 import {
@@ -68,7 +68,6 @@ type PagedResponse<T> = {
 };
 
 export default function DesignTypesPage() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // ====== Search & Pagination state ======
@@ -192,10 +191,8 @@ export default function DesignTypesPage() {
     };
 
     if (!payload.designTypeId) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Thiếu designTypeId khi tạo chất liệu",
-        variant: "destructive",
       });
       return;
     }
@@ -206,8 +203,7 @@ export default function DesignTypesPage() {
         queryClient.invalidateQueries({
           queryKey: ["materials-by-design-type", designTypeId],
         });
-        toast({
-          title: "Thành công",
+        toast.success("Thành công", {
           description: "Đã thêm chất liệu mới",
         });
       },
@@ -237,8 +233,7 @@ export default function DesignTypesPage() {
           queryClient.invalidateQueries({
             queryKey: ["materials-by-design-type"],
           });
-          toast({
-            title: "Thành công",
+          toast.success("Thành công", {
             description: "Đã cập nhật chất liệu",
           });
         },
@@ -253,8 +248,7 @@ export default function DesignTypesPage() {
         queryClient.invalidateQueries({
           queryKey: ["materials-by-design-type"],
         });
-        toast({
-          title: "Thành công",
+        toast.success("Thành công", {
           description: "Đã xóa chất liệu",
         });
       },

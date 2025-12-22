@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { UserResponse, CreateUserRequest, UpdateUserRequest } from "@/Schema";
 
 interface DesignerFormDialogProps {
@@ -41,7 +41,6 @@ export function DesignerFormDialog({
   onSuccess,
   onSubmit,
 }: DesignerFormDialogProps) {
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
@@ -103,8 +102,7 @@ export function DesignerFormDialog({
         await onSubmit(createData);
       }
 
-      toast({
-        title: designer ? "Cập nhật thành công" : "Thêm mới thành công",
+      toast.success(designer ? "Cập nhật thành công" : "Thêm mới thành công", {
         description: designer
           ? `Đã cập nhật thông tin nhân viên ${formData.fullName}`
           : `Đã thêm nhân viên ${formData.fullName}`,
@@ -113,12 +111,10 @@ export function DesignerFormDialog({
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: designer
           ? "Không thể cập nhật nhân viên"
           : "Không thể thêm nhân viên mới",
-        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
