@@ -1,7 +1,7 @@
 // src/hooks/material-type.hooks.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import type {
   MaterialTypeResponse, // = MaterialTypeResponse
   CreateMaterialTypeRequest,
@@ -70,7 +70,6 @@ export const useMaterialsByDesignType = (
 // POST /designs/materials/bulk
 export const useBulkAddMaterials = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (data: BulkCreateMaterialTypeRequest) => {
@@ -86,16 +85,13 @@ export const useBulkAddMaterials = () => {
         queryKey: ["materials-by-design-type"],
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã thêm nhiều chất liệu thành công",
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: error.message || "Không thể thêm chất liệu",
-        variant: "destructive",
       });
     },
   });

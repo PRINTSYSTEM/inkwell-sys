@@ -1,4 +1,4 @@
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
 import type {
@@ -73,7 +73,6 @@ export const useUpdateOrder = () => useUpdateOrderBase();
 
 // POST /orders/{id}/generate-excel
 export const useGenerateOrderExcel = () => {
-  const { toast } = useToast();
 
   // Không cần trả data ra ngoài, chỉ cần download file
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
@@ -105,8 +104,7 @@ export const useGenerateOrderExcel = () => {
     try {
       await execute(id);
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã tạo và tải file Excel cho đơn hàng",
       });
     } catch (err: unknown) {
@@ -114,13 +112,11 @@ export const useGenerateOrderExcel = () => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể tạo file Excel",
-        variant: "destructive",
       });
       throw err;
     }
@@ -140,7 +136,6 @@ export { orderCrudApi, orderKeys };
 
 export const useCreateOrderWithExistingDesigns = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     OrderResponse,
@@ -165,8 +160,7 @@ export const useCreateOrderWithExistingDesigns = () => {
       }
       queryClient.invalidateQueries({ queryKey: orderKeys.all });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã tạo đơn hàng từ thiết kế có sẵn",
       });
 
@@ -176,13 +170,11 @@ export const useCreateOrderWithExistingDesigns = () => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể tạo đơn hàng từ thiết kế có sẵn",
-        variant: "destructive",
       });
       throw err;
     }
@@ -202,7 +194,6 @@ export const useCreateOrderWithExistingDesigns = () => {
 
 export const useAddDesignToOrder = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     OrderResponse,
@@ -229,8 +220,7 @@ export const useAddDesignToOrder = () => {
       }
       queryClient.invalidateQueries({ queryKey: orderKeys.all });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã thêm thiết kế vào đơn hàng",
       });
 
@@ -240,13 +230,11 @@ export const useAddDesignToOrder = () => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể thêm thiết kế vào đơn",
-        variant: "destructive",
       });
       throw err;
     }
@@ -283,7 +271,7 @@ const useOrdersForDesigner = (
 // ================== ORDER: LIST FOR ACCOUNTING ==================
 // GET /orders/for-accounting
 
-const useOrdersForAccounting = (
+export const useOrdersForAccounting = (
   params?: OrdersForAccountingListParams,
   enabled = true
 ) => {
@@ -305,7 +293,6 @@ const useOrdersForAccounting = (
 // POST /orders/{id}/export-delivery-note
 
 export const useExportOrderInvoice = () => {
-  const { toast } = useToast();
 
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
@@ -335,8 +322,7 @@ export const useExportOrderInvoice = () => {
   const mutate = async (id: number) => {
     try {
       await execute(id);
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã xuất hoá đơn đơn hàng",
       });
     } catch (err: unknown) {
@@ -344,13 +330,11 @@ export const useExportOrderInvoice = () => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể xuất hoá đơn",
-        variant: "destructive",
       });
       throw err;
     }
@@ -360,7 +344,6 @@ export const useExportOrderInvoice = () => {
 };
 
 export const useExportOrderDeliveryNote = () => {
-  const { toast } = useToast();
 
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
@@ -390,8 +373,7 @@ export const useExportOrderDeliveryNote = () => {
   const mutate = async (id: number) => {
     try {
       await execute(id);
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã xuất phiếu giao hàng",
       });
     } catch (err: unknown) {
@@ -399,13 +381,11 @@ export const useExportOrderDeliveryNote = () => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể xuất phiếu giao hàng",
-        variant: "destructive",
       });
       throw err;
     }

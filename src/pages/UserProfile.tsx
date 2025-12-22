@@ -26,13 +26,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { userApiService, UpdateUserRequest, USER_ROLES, User } from '@/services/userApiService';
 import { authAPI } from '@/services/authService';
 
 export default function UserProfile() {
   const navigate = useNavigate();
-  const { toast } = useToast();
   
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,10 +75,8 @@ export default function UserProfile() {
         });
       } catch (error) {
         console.error('Error loading user profile:', error);
-        toast({
-          title: "Lỗi",
+        toast.error("Lỗi", {
           description: "Không thể tải thông tin profile",
-          variant: "destructive",
         });
       } finally {
         setLoading(false);
@@ -87,16 +84,14 @@ export default function UserProfile() {
     };
 
     loadUserProfile();
-  }, [navigate, toast]);
+  }, [navigate]);
 
   const handleUpdateProfile = async () => {
     if (!user) return;
 
     if (!profileData.fullName || !profileData.email) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Vui lòng điền đầy đủ thông tin bắt buộc",
-        variant: "destructive",
       });
       return;
     }
@@ -114,16 +109,13 @@ export default function UserProfile() {
       // Update user in local state
       setUser(prev => ({ ...prev, ...updateData }));
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã cập nhật thông tin profile thành công",
       });
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: error instanceof Error ? error.message : "Không thể cập nhật thông tin profile",
-        variant: "destructive",
       });
     } finally {
       setIsUpdating(false);
@@ -134,28 +126,22 @@ export default function UserProfile() {
     if (!user) return;
 
     if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Vui lòng điền đầy đủ thông tin",
-        variant: "destructive",
       });
       return;
     }
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Mật khẩu mới không khớp",
-        variant: "destructive",
       });
       return;
     }
 
     if (passwordData.newPassword.length < 6) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Mật khẩu mới phải có ít nhất 6 ký tự",
-        variant: "destructive",
       });
       return;
     }
@@ -164,8 +150,7 @@ export default function UserProfile() {
       setIsUpdating(true);
       await userApiService.changePassword(user.id, passwordData);
       
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã đổi mật khẩu thành công. Bạn sẽ được đăng xuất để đăng nhập lại.",
       });
 
@@ -185,10 +170,8 @@ export default function UserProfile() {
 
     } catch (error) {
       console.error('Error changing password:', error);
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: error instanceof Error ? error.message : "Không thể đổi mật khẩu",
-        variant: "destructive",
       });
     } finally {
       setIsUpdating(false);

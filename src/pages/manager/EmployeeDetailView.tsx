@@ -58,7 +58,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 import { Employee, EmployeeAssignment, EmployeeMetrics } from '@/types/employee';
 import { EmployeePerformanceService } from '@/services/employeeService';
@@ -294,10 +294,8 @@ const EmployeeDetailView: React.FC = () => {
       setAssignments(assignmentsData);
       setMetrics(metricsData);
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể tải thông tin nhân viên",
-        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -314,16 +312,13 @@ const EmployeeDetailView: React.FC = () => {
   const handleUpdateAssignmentStatus = async (assignmentId: string, status: 'pending' | 'in_progress' | 'review' | 'completed' | 'cancelled' | 'assigned') => {
     try {
       await EmployeePerformanceService.updateAssignmentStatus(assignmentId, status);
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Cập nhật trạng thái công việc thành công",
       });
       loadEmployeeData();
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể cập nhật trạng thái",
-        variant: "destructive",
       });
     }
   };
@@ -336,16 +331,13 @@ const EmployeeDetailView: React.FC = () => {
       await UserManagementService.updateUser(employee.id, {
         notes: (employee.notes || '') + '\n' + `[${new Date().toLocaleDateString('vi-VN')}] ${note}`
       });
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã lưu ghi chú",
       });
       loadEmployeeData();
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể lưu ghi chú",
-        variant: "destructive",
       });
     }
   };

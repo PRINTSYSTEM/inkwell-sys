@@ -1,7 +1,6 @@
 // Export existing hooks
 export * from "./use-async";
 export * from "./use-auth";
-export * from "./use-toast";
 
 // Export new utility hooks
 export * from "./use-filters";

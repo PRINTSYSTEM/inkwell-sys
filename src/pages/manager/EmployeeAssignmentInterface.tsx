@@ -75,7 +75,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 import {
   Assignment,
@@ -792,10 +792,8 @@ const EmployeeAssignmentInterface: React.FC = () => {
       setTeamWorkload(teamWorkloadData);
       setMetrics(metricsData);
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể tải dữ liệu assignments",
-        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -806,17 +804,14 @@ const EmployeeAssignmentInterface: React.FC = () => {
   const handleCreateAssignment = async (data: AssignmentFormData) => {
     try {
       await AssignmentManagementService.createAssignment(data);
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Tạo assignment mới thành công",
       });
       setAssignmentFormOpen(false);
       loadData();
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể tạo assignment",
-        variant: "destructive",
       });
     }
   };
@@ -827,18 +822,15 @@ const EmployeeAssignmentInterface: React.FC = () => {
 
     try {
       await AssignmentManagementService.updateAssignment(editingAssignment.id, data);
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Cập nhật assignment thành công",
       });
       setAssignmentFormOpen(false);
       setEditingAssignment(null);
       loadData();
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể cập nhật assignment",
-        variant: "destructive",
       });
     }
   };
@@ -851,10 +843,8 @@ const EmployeeAssignmentInterface: React.FC = () => {
       setSuggestions(suggestionsData);
       setSuggestionsDialogOpen(true);
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể tải gợi ý phân công",
-        variant: "destructive",
       });
     }
   };
@@ -863,17 +853,14 @@ const EmployeeAssignmentInterface: React.FC = () => {
   const handleAssignTask = async (assignmentId: string, employeeId: string) => {
     try {
       await AssignmentManagementService.assignToEmployee(assignmentId, employeeId);
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Phân công thành công",
       });
       setSuggestionsDialogOpen(false);
       loadData();
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể phân công assignment",
-        variant: "destructive",
       });
     }
   };

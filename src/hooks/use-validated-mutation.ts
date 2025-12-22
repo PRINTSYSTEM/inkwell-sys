@@ -1,7 +1,7 @@
 import { useMutation, UseMutationResult } from "@tanstack/react-query";
 import { z, ZodSchema } from "zod";
 import { validateSchema, formatValidationErrorsFlat } from "@/Schema";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 /**
  * Hook to wrap a mutation with schema validation
@@ -22,7 +22,6 @@ export function useValidatedMutation<
     showValidationErrors?: boolean;
   }
 ) {
-  const { toast } = useToast();
   const { validateBeforeMutate = true, showValidationErrors = true } =
     options ?? {};
 
@@ -35,13 +34,11 @@ export function useValidatedMutation<
         const errorMessages = Object.values(formattedErrors);
 
         if (showValidationErrors) {
-          toast({
-            title: "Dữ liệu không hợp lệ",
+          toast.error("Dữ liệu không hợp lệ", {
             description:
               errorMessages.length > 0
                 ? errorMessages[0]
                 : "Vui lòng kiểm tra lại thông tin",
-            variant: "destructive",
           });
         }
 
@@ -70,13 +67,11 @@ export function useValidatedMutation<
           const errorMessages = Object.values(formattedErrors);
 
           if (showValidationErrors) {
-            toast({
-              title: "Dữ liệu không hợp lệ",
+            toast.error("Dữ liệu không hợp lệ", {
               description:
                 errorMessages.length > 0
                   ? errorMessages[0]
                   : "Vui lòng kiểm tra lại thông tin",
-              variant: "destructive",
             });
           }
           return;

@@ -57,7 +57,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 import { DesignAssignment, DesignAssignmentStatus, DesignAssignmentPriority } from '@/types/design-monitoring';
 import { Employee } from '@/types/employee';
@@ -184,17 +184,14 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
         onStatusUpdate(assignmentId, status);
       } else {
         await DesignAssignmentService.updateAssignmentStatus(assignmentId, { status });
-        toast({
-          title: "Thành công",
+        toast.success("Thành công", {
           description: "Đã cập nhật trạng thái assignment",
         });
         onRefresh?.();
       }
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể cập nhật trạng thái",
-        variant: "destructive",
       });
     }
   };

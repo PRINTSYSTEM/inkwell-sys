@@ -42,7 +42,7 @@ import {
   Upload,
   Filter
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 // Material type options
 const MATERIAL_TYPE_OPTIONS: Array<{ value: MaterialType; label: string }> = [
@@ -98,7 +98,6 @@ export default function MaterialManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalMaterials, setTotalMaterials] = useState(0);
   
-  const { toast } = useToast();
   const pageSize = 10;
 
   // Load data
@@ -123,10 +122,8 @@ export default function MaterialManagement() {
       setTotalMaterials(response.total);
     } catch (error) {
       console.error('Error loading materials:', error);
-      toast({
-        title: 'Lỗi',
+      toast.error('Lỗi', {
         description: 'Không thể tải dữ liệu chất liệu',
-        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -162,10 +159,8 @@ export default function MaterialManagement() {
     e.preventDefault();
     
     if (!formData.code.trim() || !formData.name.trim() || !formData.type) {
-      toast({
-        title: 'Lỗi',
+      toast.error('Lỗi', {
         description: 'Vui lòng điền đầy đủ thông tin bắt buộc',
-        variant: 'destructive'
       });
       return;
     }
@@ -178,15 +173,13 @@ export default function MaterialManagement() {
 
       if (isEditing && editingId) {
         await MaterialService.updateMaterial(editingId, materialData);
-        toast({
-          title: 'Thành công',
-          description: 'Cập nhật chất liệu thành công'
+        toast.success('Thành công', {
+          description: 'Cập nhật chất liệu thành công',
         });
       } else {
         await MaterialService.createMaterial(materialData);
-        toast({
-          title: 'Thành công',
-          description: 'Tạo chất liệu thành công'
+        toast.success('Thành công', {
+          description: 'Tạo chất liệu thành công',
         });
       }
       
@@ -197,10 +190,8 @@ export default function MaterialManagement() {
     } catch (error) {
       console.error('Error saving material:', error);
       const errorMessage = error instanceof Error ? error.message : 'Không thể lưu chất liệu';
-      toast({
-        title: 'Lỗi',
+      toast.error('Lỗi', {
         description: errorMessage,
-        variant: 'destructive'
       });
     }
   };
@@ -234,17 +225,14 @@ export default function MaterialManagement() {
 
     try {
       await MaterialService.deleteMaterial(id);
-      toast({
-        title: 'Thành công',
-        description: 'Xóa chất liệu thành công'
+      toast.success('Thành công', {
+        description: 'Xóa chất liệu thành công',
       });
       await loadMaterials();
     } catch (error) {
       console.error('Error deleting material:', error);
-      toast({
-        title: 'Lỗi',
+      toast.error('Lỗi', {
         description: 'Không thể xóa chất liệu',
-        variant: 'destructive'
       });
     }
   };
@@ -253,17 +241,14 @@ export default function MaterialManagement() {
   const handleStockUpdate = async (id: string, newStock: number, reason: string) => {
     try {
       await MaterialService.updateStock(id, newStock, reason);
-      toast({
-        title: 'Thành công',
-        description: 'Cập nhật tồn kho thành công'
+      toast.success('Thành công', {
+        description: 'Cập nhật tồn kho thành công',
       });
       await loadMaterials();
     } catch (error) {
       console.error('Error updating stock:', error);
-      toast({
-        title: 'Lỗi',
+      toast.error('Lỗi', {
         description: 'Không thể cập nhật tồn kho',
-        variant: 'destructive'
       });
     }
   };

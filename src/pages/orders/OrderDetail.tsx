@@ -65,7 +65,12 @@ import type {
   UserRole,
   ProofingOrderResponse,
 } from "@/Schema";
-import { useAuth, useOrder, useGenerateDesignExcel } from "@/hooks";
+import {
+  useAuth,
+  useOrder,
+  useGenerateDesignExcel,
+  useProofingOrdersByOrder,
+} from "@/hooks";
 import { ROLE } from "@/constants";
 
 export default function OrderDetailPage() {
@@ -103,7 +108,9 @@ export default function OrderDetailPage() {
   // Các proofing orders liên quan sẽ cần được fetch từ API riêng hoặc
   // thông qua orderDetails -> design -> proofingOrders
   // Tạm thời để trống, sẽ implement khi có API phù hợp
-  const relatedProofing: ProofingOrderResponse[] = [];
+
+  const { data: relatedProofingOrders } = useProofingOrdersByOrder(orderId);
+  const relatedProofing: ProofingOrderResponse[] = relatedProofingOrders ?? [];
   const relatedProductions: ProductionResponse[] = [];
 
   // ===== LOADING =====

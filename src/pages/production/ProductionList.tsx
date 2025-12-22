@@ -44,7 +44,7 @@ import {
   Calendar,
   CheckCircle2,
 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { useProductions, useCreateProduction } from "@/hooks/use-production";
 import { useProofingOrdersForProduction } from "@/hooks/use-proofing-order";
@@ -175,18 +175,14 @@ export default function ProductionListPage() {
 
   const handleCreateProduction = async () => {
     if (!selectedProofingOrderId) {
-      toast({
-        variant: "destructive",
-        title: "Thiếu thông tin",
+      toast.error("Thiếu thông tin", {
         description: "Vui lòng chọn một bình bài để tạo lệnh sản xuất",
       });
       return;
     }
 
     if (!user?.id) {
-      toast({
-        variant: "destructive",
-        title: "Lỗi xác thực",
+      toast.error("Lỗi xác thực", {
         description: "Không thể lấy thông tin người dùng",
       });
       return;

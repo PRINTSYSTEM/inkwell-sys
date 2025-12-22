@@ -49,5 +49,3 @@ export * from './tooltip';
 // Toast related exports
 export * from './sonner';
 export { toast } from './toast-utils';
-export { Toaster } from './toaster';
-export { useToast } from './use-toast';

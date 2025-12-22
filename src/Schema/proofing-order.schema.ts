@@ -45,6 +45,7 @@ export const ProofingOrderResponseSchema = z
     totalQuantity: z.number().int().optional(),
 
     status: z.string().nullable().optional(),
+    statusType: z.string().nullable().optional(),
     proofingFileUrl: z.string().nullable().optional(),
     imageUrl: z.string().nullable().optional(), // Added from swagger
     notes: z.string().nullable().optional(),

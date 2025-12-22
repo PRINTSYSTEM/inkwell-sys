@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
 
@@ -25,6 +25,7 @@ import type {
   OrderDetailResponse,
   RecordPlateExportRequest,
   RecordDieExportRequest,
+  ApproveProofingOrderRequest,
 } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
@@ -67,7 +68,6 @@ export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();
 // POST /proofing-orders/from-designs
 export const useCreateProofingOrderFromDesigns = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
@@ -90,21 +90,18 @@ export const useCreateProofingOrderFromDesigns = () => {
         queryKey: [proofingKeys.all[0], "available-order-details"],
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã tạo bình bài từ danh sách thiết kế",
       });
 
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể tạo bình bài",
-        variant: "destructive",
       });
       throw err;
     }
@@ -211,6 +208,25 @@ export const useAvailableOrderDetailsForProofing = (params?: {
 };
 
 export { proofingCrudApi, proofingKeys };
+
+// ================== PROOFING BY ORDER ==================
+// GET /proofing-orders/by-order/{orderId}
+export const useProofingOrdersByOrder = (
+  orderId: number | null,
+  enabled = true
+) => {
+  return useQuery<ProofingOrderResponse[]>({
+    queryKey: [proofingKeys.all[0], "by-order", orderId],
+    enabled: enabled && !!orderId,
+    queryFn: async () => {
+      const res = await apiRequest.get<ProofingOrderResponse[]>(
+        API_SUFFIX.PROOFING_BY_ORDER(orderId as number)
+      );
+      return res.data;
+    },
+  });
+};
+
 // ================== PROOFING FOR PRODUCTION ==================
 // GET /proofing-orders/for-production
 
@@ -236,7 +252,6 @@ export const useProofingOrdersForProduction = (params?: {
 
 export const useUploadProofingFile = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
@@ -268,21 +283,18 @@ export const useUploadProofingFile = () => {
       }
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã upload file bình bài",
       });
 
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể upload file bình bài",
-        variant: "destructive",
       });
       throw err;
     }
@@ -293,7 +305,6 @@ export const useUploadProofingFile = () => {
 
 export const useUploadProofingImage = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
@@ -325,21 +336,18 @@ export const useUploadProofingImage = () => {
       }
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã upload ảnh bình bài",
       });
 
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể upload ảnh bình bài",
-        variant: "destructive",
       });
       throw err;
     }
@@ -351,7 +359,6 @@ export const useUploadProofingImage = () => {
 // PUT /proofing-orders/{id}/update-file
 export const useUpdateProofingFile = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
@@ -383,21 +390,18 @@ export const useUpdateProofingFile = () => {
       }
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã cập nhật file bình bài",
       });
 
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể cập nhật file bình bài",
-        variant: "destructive",
       });
       throw err;
     }
@@ -407,8 +411,6 @@ export const useUpdateProofingFile = () => {
 };
 
 export const useDownloadProofingFile = () => {
-  const { toast } = useToast();
-
   const { loading, error, execute, reset } = useAsyncCallback<
     void,
     [{ proofingOrderId: number; filename?: string }]
@@ -437,13 +439,11 @@ export const useDownloadProofingFile = () => {
       await execute(args);
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể tải file bình bài",
-        variant: "destructive",
       });
       throw err;
     }
@@ -458,7 +458,6 @@ export const useDownloadProofingFile = () => {
 
 export const useCompleteProofingOrder = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
@@ -481,21 +480,18 @@ export const useCompleteProofingOrder = () => {
       }
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã hoàn tất bình bài",
       });
 
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể hoàn tất bình bài",
-        variant: "destructive",
       });
       throw err;
     }
@@ -506,7 +502,6 @@ export const useCompleteProofingOrder = () => {
 
 export const useStartProductionFromProofing = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
@@ -529,21 +524,18 @@ export const useStartProductionFromProofing = () => {
       }
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã bắt đầu sản xuất cho bình bài",
       });
 
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể bắt đầu sản xuất",
-        variant: "destructive",
       });
       throw err;
     }
@@ -554,7 +546,6 @@ export const useStartProductionFromProofing = () => {
 
 export const useCompleteProductionFromProofing = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
@@ -577,21 +568,18 @@ export const useCompleteProductionFromProofing = () => {
       }
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã hoàn tất sản xuất cho bình bài",
       });
 
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể hoàn tất sản xuất",
-        variant: "destructive",
       });
       throw err;
     }
@@ -599,6 +587,55 @@ export const useCompleteProductionFromProofing = () => {
 
   return { data, loading, error, mutate, reset };
 };
+
+// ================== APPROVE PROOFING ORDER ==================
+// PUT /proofing-orders/{id}/approve
+
+export const useApproveProofingOrder = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProofingOrderResponse,
+    [number, ApproveProofingOrderRequest]
+  >(async (id: number, payload: ApproveProofingOrderRequest) => {
+    const res = await apiRequest.put<ProofingOrderResponse>(
+      API_SUFFIX.PROOFING_APPROVE(id),
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number, payload: ApproveProofingOrderRequest) => {
+    try {
+      const result = await execute(id, payload);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: proofingKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+
+      toast.success("Thành công", {
+        description: "Đã duyệt bình bài",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể duyệt bình bài",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
 export const usePaperSizes = () => {
   return useQuery({
     queryKey: ["paper-sizes"],
@@ -611,7 +648,6 @@ export const usePaperSizes = () => {
 
 export const useRecordPlateExport = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({
@@ -630,16 +666,13 @@ export const useRecordPlateExport = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
-      toast({
-        title: "Ghi nhận xuất kẽm thành công",
+      toast.success("Ghi nhận xuất kẽm thành công", {
         description: "Thông tin xuất kẽm đã được lưu lại.",
       });
     },
     onError: (error: ApiError) => {
-      toast({
-        title: "Ghi nhận xuất kẽm thất bại",
+      toast.error("Ghi nhận xuất kẽm thất bại", {
         description: error.response?.data?.message || error.message,
-        variant: "destructive",
       });
     },
   });
@@ -647,7 +680,6 @@ export const useRecordPlateExport = () => {
 
 export const useRecordDieExport = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({
@@ -666,23 +698,19 @@ export const useRecordDieExport = () => {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
-      toast({
-        title: "Ghi nhận khuôn bế thành công",
+      toast.success("Ghi nhận khuôn bế thành công", {
         description: "Thông tin khuôn bế đã được lưu lại.",
       });
     },
     onError: (error: ApiError) => {
-      toast({
-        title: "Ghi nhận khuôn bế thất bại",
+      toast.error("Ghi nhận khuôn bế thất bại", {
         description: error.response?.data?.message || error.message,
-        variant: "destructive",
       });
     },
   });
 };
 export const useHandToProduction = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (id: number) => {
@@ -694,16 +722,13 @@ export const useHandToProduction = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       queryClient.invalidateQueries({ queryKey: ["proofing-order", id] });
-      toast({
-        title: "Bàn giao sản xuất thành công",
+      toast.success("Bàn giao sản xuất thành công", {
         description: "Lệnh bình bài đã được chuyển sang bộ phận sản xuất.",
       });
     },
     onError: (error: ApiError) => {
-      toast({
-        title: "Bàn giao sản xuất thất bại",
+      toast.error("Bàn giao sản xuất thất bại", {
         description: error.response?.data?.message || error.message,
-        variant: "destructive",
       });
     },
   });

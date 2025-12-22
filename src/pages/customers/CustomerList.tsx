@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { useCustomers, useExportDebtComparison } from "@/hooks/use-customer";
 import { Badge } from "@/components/ui/badge";
+import { DebtStatusBadge } from "@/components/accounting/StatusBadges";
 import {
   Table,
   TableBody,
@@ -308,22 +309,10 @@ export default function Customers() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              customer.debtStatus === "good"
-                                ? "default"
-                                : customer.debtStatus === "warning"
-                                ? "secondary"
-                                : "destructive"
-                            }
+                          <DebtStatusBadge
+                            status={customer.debtStatus}
                             className="text-xs"
-                          >
-                            {customer.debtStatus === "good"
-                              ? "Tốt"
-                              : customer.debtStatus === "warning"
-                              ? "Cảnh báo"
-                              : "Bị chặn"}
-                          </Badge>
+                          />
                         </TableCell>
                         <TableCell>
                           <span

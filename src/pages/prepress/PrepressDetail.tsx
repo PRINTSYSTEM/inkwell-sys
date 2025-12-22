@@ -47,8 +47,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { format } from "date-fns";
-import { toast } from "@/hooks/use-toast";
-import { Toaster } from "@/components/ui/toaster";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -110,21 +109,25 @@ export default function ProofingOrderDetailPage() {
   const orderDesigns = order?.proofingOrderDesigns ?? [];
 
   const { mutate: updateProofing } = useUpdateProofingOrder();
-  const { mutate: uploadProofing, loading: isUploadingFile } = useUploadProofingFile();
-  const { mutate: updateFileMutate, loading: isUpdatingFile } = useUpdateProofingFile();
-  const { mutate: uploadImageMutate, loading: isUploadingImage } = useUploadProofingImage();
-  const { mutate: recordPlateMutate, isPending: isRecordingPlate } = useRecordPlateExport();
-  const { mutate: recordDieMutate, isPending: isRecordingDie } = useRecordDieExport();
-  const { mutate: handToProductionMutate, isPending: isHandingToProduction } = useHandToProduction();
+  const { mutate: uploadProofing, loading: isUploadingFile } =
+    useUploadProofingFile();
+  const { mutate: updateFileMutate, loading: isUpdatingFile } =
+    useUpdateProofingFile();
+  const { mutate: uploadImageMutate, loading: isUploadingImage } =
+    useUploadProofingImage();
+  const { mutate: recordPlateMutate, isPending: isRecordingPlate } =
+    useRecordPlateExport();
+  const { mutate: recordDieMutate, isPending: isRecordingDie } =
+    useRecordDieExport();
+  const { mutate: handToProductionMutate, isPending: isHandingToProduction } =
+    useHandToProduction();
 
   const handleUpdateStatus = async () => {
     if (!order?.id) return;
 
     // Kiểm tra lại xem đã có file bình bài chưa
     if (!order.proofingFileUrl) {
-      toast({
-        variant: "destructive",
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           "Vui lòng upload file bình bài trước khi chuyển trạng thái",
       });
@@ -137,14 +140,11 @@ export default function ProofingOrderDetailPage() {
       const targetStatus = "waiting_for_production";
       await updateProofing({ id: order.id, data: { status: targetStatus } });
       setIsConfirmStatusDialogOpen(false);
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã chuyển trạng thái sang chờ sản xuất",
       });
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể cập nhật trạng thái",
       });
     }
@@ -179,10 +179,8 @@ export default function ProofingOrderDetailPage() {
 
   const handleRecordPlate = async () => {
     if (!plateExportData.vendorName) {
-      toast({
-        title: "Thiếu thông tin",
+      toast.error("Thiếu thông tin", {
         description: "Vui lòng nhập đơn vị ghi kẽm",
-        variant: "destructive",
       });
       return;
     }
@@ -192,8 +190,12 @@ export default function ProofingOrderDetailPage() {
         id: idValue,
         request: {
           vendorName: plateExportData.vendorName,
-          sentAt: plateExportData.sentAt ? new Date(plateExportData.sentAt).toISOString() : undefined,
-          receivedAt: plateExportData.receivedAt ? new Date(plateExportData.receivedAt).toISOString() : undefined,
+          sentAt: plateExportData.sentAt
+            ? new Date(plateExportData.sentAt).toISOString()
+            : undefined,
+          receivedAt: plateExportData.receivedAt
+            ? new Date(plateExportData.receivedAt).toISOString()
+            : undefined,
           notes: plateExportData.notes,
         },
       });
@@ -228,9 +230,7 @@ export default function ProofingOrderDetailPage() {
       setUploadFile(null);
     } catch (error) {
       console.error("Failed to upload proofing file:", error);
-      toast({
-        variant: "destructive",
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể upload file",
       });
     }
@@ -243,9 +243,7 @@ export default function ProofingOrderDetailPage() {
       setIsImageUploadDialogOpen(false);
       setUploadImage(null);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể upload ảnh",
       });
     }
@@ -285,8 +283,6 @@ export default function ProofingOrderDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6 space-y-6">
-      <Toaster />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -402,7 +398,9 @@ export default function ProofingOrderDetailPage() {
                     Khổ giấy in
                   </Label>
                   <p className="font-semibold text-lg">
-                    {order.paperSize?.name || order.customPaperSize || "Chưa xác định"}
+                    {order.paperSize?.name ||
+                      order.customPaperSize ||
+                      "Chưa xác định"}
                     {order.paperSize?.width && order.paperSize?.height && (
                       <span className="text-xs text-muted-foreground ml-1">
                         ({order.paperSize.width}x{order.paperSize.height})
@@ -599,7 +597,11 @@ export default function ProofingOrderDetailPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${order.isPlateExported ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        order.isPlateExported ? "bg-green-500" : "bg-yellow-500"
+                      }`}
+                    />
                     <span className="font-medium text-sm">Xuất bản kẽm</span>
                   </div>
                   <Button
@@ -613,13 +615,44 @@ export default function ProofingOrderDetailPage() {
                 </div>
                 {order.plateExport ? (
                   <div className="bg-muted/30 rounded-md p-3 text-sm space-y-1">
-                    <p><span className="text-muted-foreground mr-2">Đơn vị:</span> {order.plateExport.vendorName}</p>
-                    <p><span className="text-muted-foreground mr-2">Gửi đi:</span> {order.plateExport.sentAt ? format(new Date(order.plateExport.sentAt), "dd/MM/yyyy HH:mm") : "-"}</p>
-                    <p><span className="text-muted-foreground mr-2">Có kẽm:</span> {order.plateExport.receivedAt ? format(new Date(order.plateExport.receivedAt), "dd/MM/yyyy HH:mm") : "Đang chờ"}</p>
-                    {order.plateExport.notes && <p className="text-xs italic text-muted-foreground mt-1 border-t pt-1">"{order.plateExport.notes}"</p>}
+                    <p>
+                      <span className="text-muted-foreground mr-2">
+                        Đơn vị:
+                      </span>{" "}
+                      {order.plateExport.vendorName}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground mr-2">
+                        Gửi đi:
+                      </span>{" "}
+                      {order.plateExport.sentAt
+                        ? format(
+                            new Date(order.plateExport.sentAt),
+                            "dd/MM/yyyy HH:mm"
+                          )
+                        : "-"}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground mr-2">
+                        Có kẽm:
+                      </span>{" "}
+                      {order.plateExport.receivedAt
+                        ? format(
+                            new Date(order.plateExport.receivedAt),
+                            "dd/MM/yyyy HH:mm"
+                          )
+                        : "Đang chờ"}
+                    </p>
+                    {order.plateExport.notes && (
+                      <p className="text-xs italic text-muted-foreground mt-1 border-t pt-1">
+                        "{order.plateExport.notes}"
+                      </p>
+                    )}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic pl-4">Chưa có thông tin xuất kẽm</p>
+                  <p className="text-xs text-muted-foreground italic pl-4">
+                    Chưa có thông tin xuất kẽm
+                  </p>
                 )}
               </div>
 
@@ -629,7 +662,11 @@ export default function ProofingOrderDetailPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${order.isDieExported ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        order.isDieExported ? "bg-green-500" : "bg-yellow-500"
+                      }`}
+                    />
                     <span className="font-medium text-sm">Xuất khuôn bế</span>
                   </div>
                   <Button
@@ -656,10 +693,16 @@ export default function ProofingOrderDetailPage() {
                         />
                       </div>
                     )}
-                    {order.dieExport.notes && <p className="text-xs italic text-muted-foreground">"{order.dieExport.notes}"</p>}
+                    {order.dieExport.notes && (
+                      <p className="text-xs italic text-muted-foreground">
+                        "{order.dieExport.notes}"
+                      </p>
+                    )}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic pl-4">Chưa có thông tin khuôn bế</p>
+                  <p className="text-xs text-muted-foreground italic pl-4">
+                    Chưa có thông tin khuôn bế
+                  </p>
                 )}
               </div>
 
@@ -667,7 +710,11 @@ export default function ProofingOrderDetailPage() {
                 <div className="pt-2">
                   <Button
                     className="w-full gap-2"
-                    disabled={!order.isPlateExported || !order.approvedById || isHandingToProduction}
+                    disabled={
+                      !order.isPlateExported ||
+                      !order.approvedById ||
+                      isHandingToProduction
+                    }
                     onClick={handleHandToProduction}
                   >
                     <CheckCircle2 className="h-4 w-4" />
@@ -765,7 +812,8 @@ export default function ProofingOrderDetailPage() {
                     {order.finalQuantity && (
                       <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
                         <p className="text-xs text-green-800 font-medium">
-                          Số lượng duyệt chốt: {order.finalQuantity.toLocaleString()}
+                          Số lượng duyệt chốt:{" "}
+                          {order.finalQuantity.toLocaleString()}
                         </p>
                       </div>
                     )}
@@ -940,7 +988,10 @@ export default function ProofingOrderDetailPage() {
       </Dialog>
 
       {/* Upload Image Dialog */}
-      <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
+      <Dialog
+        open={isImageUploadDialogOpen}
+        onOpenChange={setIsImageUploadDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Upload ảnh bình bài</DialogTitle>
@@ -982,7 +1033,10 @@ export default function ProofingOrderDetailPage() {
             >
               Hủy
             </Button>
-            <Button onClick={handleUploadImage} disabled={!uploadImage || isUploadingImage}>
+            <Button
+              onClick={handleUploadImage}
+              disabled={!uploadImage || isUploadingImage}
+            >
               <Upload className="h-4 w-4 mr-2" />
               {isUploadingImage ? "Đang upload..." : "Upload"}
             </Button>
@@ -1005,7 +1059,10 @@ export default function ProofingOrderDetailPage() {
         />
       )}
       {/* Plate Export Dialog */}
-      <Dialog open={isPlateExportDialogOpen} onOpenChange={setIsPlateExportDialogOpen}>
+      <Dialog
+        open={isPlateExportDialogOpen}
+        onOpenChange={setIsPlateExportDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Ghi nhận xuất bản kẽm</DialogTitle>
@@ -1020,7 +1077,12 @@ export default function ProofingOrderDetailPage() {
                 id="vendorName"
                 placeholder="Ví dụ: Thiên Nam, Ánh Sáng..."
                 value={plateExportData.vendorName}
-                onChange={(e) => setPlateExportData({ ...plateExportData, vendorName: e.target.value })}
+                onChange={(e) =>
+                  setPlateExportData({
+                    ...plateExportData,
+                    vendorName: e.target.value,
+                  })
+                }
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -1030,7 +1092,12 @@ export default function ProofingOrderDetailPage() {
                   id="sentAt"
                   type="datetime-local"
                   value={plateExportData.sentAt}
-                  onChange={(e) => setPlateExportData({ ...plateExportData, sentAt: e.target.value })}
+                  onChange={(e) =>
+                    setPlateExportData({
+                      ...plateExportData,
+                      sentAt: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -1039,7 +1106,12 @@ export default function ProofingOrderDetailPage() {
                   id="receivedAt"
                   type="datetime-local"
                   value={plateExportData.receivedAt}
-                  onChange={(e) => setPlateExportData({ ...plateExportData, receivedAt: e.target.value })}
+                  onChange={(e) =>
+                    setPlateExportData({
+                      ...plateExportData,
+                      receivedAt: e.target.value,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -1049,12 +1121,20 @@ export default function ProofingOrderDetailPage() {
                 id="plateNotes"
                 placeholder="Nhập ghi chú nếu có"
                 value={plateExportData.notes}
-                onChange={(e) => setPlateExportData({ ...plateExportData, notes: e.target.value })}
+                onChange={(e) =>
+                  setPlateExportData({
+                    ...plateExportData,
+                    notes: e.target.value,
+                  })
+                }
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPlateExportDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsPlateExportDialogOpen(false)}
+            >
               Hủy
             </Button>
             <Button onClick={handleRecordPlate} disabled={isRecordingPlate}>
@@ -1065,7 +1145,10 @@ export default function ProofingOrderDetailPage() {
       </Dialog>
 
       {/* Die Export Dialog */}
-      <Dialog open={isDieExportDialogOpen} onOpenChange={setIsDieExportDialogOpen}>
+      <Dialog
+        open={isDieExportDialogOpen}
+        onOpenChange={setIsDieExportDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Ghi nhận khuôn bế</DialogTitle>
@@ -1080,12 +1163,17 @@ export default function ProofingOrderDetailPage() {
                 id="dieNotes"
                 placeholder="Nhập ghi chú, mã khuôn..."
                 value={dieExportData.notes}
-                onChange={(e) => setDieExportData({ ...dieExportData, notes: e.target.value })}
+                onChange={(e) =>
+                  setDieExportData({ ...dieExportData, notes: e.target.value })
+                }
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDieExportDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDieExportDialogOpen(false)}
+            >
               Hủy
             </Button>
             <Button onClick={handleRecordDie} disabled={isRecordingDie}>

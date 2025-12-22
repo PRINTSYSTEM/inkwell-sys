@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import type {
   DesignResponse,
@@ -111,7 +111,6 @@ export const useDesignTimeline = (id: number | null, enabled = true) => {
 // POST /api/designs/{id}/timeline (multipart/form-data)
 export const useAddDesignTimelineEntry = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     DesignTimelineEntryResponse,
@@ -144,8 +143,7 @@ export const useAddDesignTimelineEntry = () => {
         queryKey: designKeys.detail(payload.id),
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã thêm file/timeline cho thiết kế",
       });
 
@@ -155,13 +153,11 @@ export const useAddDesignTimelineEntry = () => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể thêm timeline",
-        variant: "destructive",
       });
       throw err;
     }
@@ -179,7 +175,6 @@ export const useAddDesignTimelineEntry = () => {
 // POST /api/designs/{id}/upload-design-file
 export const useUploadDesignFile = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     string,
@@ -204,8 +199,7 @@ export const useUploadDesignFile = () => {
         queryKey: designKeys.detail(payload.id),
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã upload file thiết kế",
       });
 
@@ -215,13 +209,11 @@ export const useUploadDesignFile = () => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể upload file thiết kế",
-        variant: "destructive",
       });
       throw err;
     }
@@ -239,7 +231,6 @@ export const useUploadDesignFile = () => {
 // POST /api/designs/{id}/upload-design-image
 export const useUploadDesignImage = () => {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     string,
@@ -263,8 +254,7 @@ export const useUploadDesignImage = () => {
         queryKey: designKeys.detail(payload.id),
       });
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã upload hình thiết kế",
       });
 
@@ -274,13 +264,11 @@ export const useUploadDesignImage = () => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể upload hình",
-        variant: "destructive",
       });
       throw err;
     }
@@ -297,7 +285,6 @@ export const useUploadDesignImage = () => {
 
 // POST /api/designs/{id}/generate-excel
 export const useGenerateDesignExcel = () => {
-  const { toast } = useToast();
 
   // Không cần trả data ra ngoài, chỉ cần download file
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
@@ -329,8 +316,7 @@ export const useGenerateDesignExcel = () => {
     try {
       await execute(id);
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã tạo và tải file Excel cho thiết kế",
       });
     } catch (err: unknown) {
@@ -338,13 +324,11 @@ export const useGenerateDesignExcel = () => {
         response?: { data?: { message?: string } };
         message?: string;
       };
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể tạo file Excel",
-        variant: "destructive",
       });
       throw err;
     }

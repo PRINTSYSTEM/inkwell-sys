@@ -60,7 +60,7 @@ import {
   Area,
   AreaChart
 } from 'recharts';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 import { Employee, EmployeeMetrics, EmployeeAssignment } from '@/types/employee';
 import { UserManagementService } from '@/services/userService';
@@ -329,10 +329,8 @@ const EmployeePerformanceTracking: React.FC = () => {
 
       setEmployeeMetrics(metricsMap);
     } catch (error) {
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: "Không thể tải dữ liệu hiệu suất",
-        variant: "destructive",
       });
     } finally {
       setLoading(false);

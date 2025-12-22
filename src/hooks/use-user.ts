@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 
 // Error type for API responses
@@ -78,7 +78,6 @@ export const useUserByUsername = (username: string | null, enabled = true) => {
 
 // POST /users/{id}/change-password
 export const useChangeUserPassword = () => {
-  const { toast } = useToast();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     void,
@@ -94,19 +93,16 @@ export const useChangeUserPassword = () => {
     try {
       await execute(payload);
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã đổi mật khẩu thành công",
       });
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description:
           error?.response?.data?.message ||
           error?.message ||
           "Không thể đổi mật khẩu",
-        variant: "destructive",
       });
       throw err;
     }

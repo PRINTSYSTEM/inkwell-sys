@@ -46,7 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 import { DesignerWorkload } from '@/types/design-monitoring';
 import { Employee } from '@/types/employee';

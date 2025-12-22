@@ -8,7 +8,7 @@ import { createCrudHooks } from "./use-base";
 import { CustomerListParams } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 
 // Không có DELETE trong swagger → vẫn dùng createCrudHooks nhưng KHÔNG export useDelete.
@@ -33,6 +33,10 @@ const {
   messages: {
     createSuccess: "Đã tạo khách hàng thành công",
     updateSuccess: "Đã cập nhật khách hàng thành công",
+    deleteSuccess: "Đã xóa khách hàng thành công",
+    deleteError: "Không thể xóa khách hàng",
+    createError: "Không thể tạo khách hàng",
+    updateError: "Không thể cập nhật khách hàng",
   },
 });
 
@@ -54,8 +58,6 @@ export const customerQueryKeys = customerKeys;
 // Xuất file thống kê công nợ của khách hàng
 
 export const useExportDebtComparison = () => {
-  const { toast } = useToast();
-
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (customerId: number) => {
       const res = await apiRequest.post<ArrayBuffer>(
@@ -82,8 +84,7 @@ export const useExportDebtComparison = () => {
     try {
       await execute(customerId);
 
-      toast({
-        title: "Thành công",
+      toast.success("Thành công", {
         description: "Đã xuất báo cáo đối chiếu công nợ",
       });
     } catch (err: unknown) {
@@ -96,10 +97,8 @@ export const useExportDebtComparison = () => {
         error?.message ||
         "Không thể xuất báo cáo đối chiếu công nợ";
 
-      toast({
-        title: "Lỗi",
+      toast.error("Lỗi", {
         description: message,
-        variant: "destructive",
       });
       throw err;
     }
