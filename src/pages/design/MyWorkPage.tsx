@@ -75,7 +75,7 @@ export default function MyWorkPage() {
   const { data, isLoading, isError } = useMyDesigns({
     pageNumber: currentPage,
     pageSize,
-    status: statusFilter === "all" ? undefined : statusFilter,
+    status: statusFilter === "all" ? "" : statusFilter,
   });
 
   const { mutate: generateExcel } = useGenerateDesignExcel();

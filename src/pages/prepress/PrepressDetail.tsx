@@ -503,6 +503,7 @@ export default function ProofingOrderDetailPage() {
                       <TableHead>Hình ảnh</TableHead>
                       <TableHead>Mã design</TableHead>
                       <TableHead>Tên design</TableHead>
+                      <TableHead>Người thiết kế</TableHead>
                       <TableHead>Kích thước</TableHead>
                       <TableHead>Số lượng</TableHead>
                       <TableHead className="text-right">File</TableHead>
@@ -538,6 +539,27 @@ export default function ProofingOrderDetailPage() {
                               {pod.design.designType.name}
                             </p>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {pod.design.designer ? (
+                            <div className="flex items-center gap-2">
+                              <UserIcon className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {pod.design.designer.fullName || "-"}
+                                </p>
+                                {pod.design.designer.email && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {pod.design.designer.email}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm italic">
+                              Chưa phân công
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">

@@ -270,7 +270,7 @@ export default function ProofingOrdersPage() {
                           label={
                             proofingStatusLabels[order.status || ""] ||
                             order.status ||
-                            "N/A"
+                            "Không xác định"
                           }
                         />
                       </TableCell>

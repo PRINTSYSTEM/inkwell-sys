@@ -91,18 +91,6 @@ const NotificationCenter = lazy(
   () => import("@/pages/notifications/NotificationCenter")
 );
 
-// Manager
-const ManagerDashboard = lazy(() => import("@/pages/manager/ManagerDashboard"));
-const EmployeeAssignmentInterface = lazy(
-  () => import("@/pages/manager/EmployeeAssignmentInterface")
-);
-const EmployeePerformanceTracking = lazy(
-  () => import("@/pages/manager/EmployeePerformanceTracking")
-);
-const EmployeeDetailView = lazy(
-  () => import("@/pages/manager/EmployeeDetailView")
-);
-
 // Misc
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -463,51 +451,6 @@ export const router = createBrowserRouter([
       },
 
       // ===== MANAGER =====
-      {
-        path: lastSegment(ROUTE_PATHS.MANAGER.ROOT), // "manager"
-        children: [
-          {
-            index: true,
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <ManagerDashboard />
-              </Suspense>
-            ),
-          },
-          {
-            path: "dashboard",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <ManagerDashboard />
-              </Suspense>
-            ),
-          },
-          {
-            path: "assignments",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <EmployeeAssignmentInterface />
-              </Suspense>
-            ),
-          },
-          {
-            path: "performance",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <EmployeePerformanceTracking />
-              </Suspense>
-            ),
-          },
-          {
-            path: "employees/:id",
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <EmployeeDetailView />
-              </Suspense>
-            ),
-          },
-        ],
-      },
 
       // ===== NOTIFICATIONS =====
       {
