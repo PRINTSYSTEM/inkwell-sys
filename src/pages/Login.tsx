@@ -75,7 +75,7 @@ export default function Login() {
             />
           </div>
           <CardTitle className="text-2xl font-bold">QUANG ĐẠT</CardTitle>
-          <CardDescription>DESIN - PRINTING</CardDescription>
+          <CardDescription>DESIGN - PRINTING</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
