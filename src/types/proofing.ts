@@ -10,8 +10,14 @@ export interface DesignItem {
   height: number;
   unit: string;
   quantity: number;
+  availableQuantity?: number; // Số lượng tối đa có thể tạo bình bài
   unitPrice: number;
   orderId: string;
+  orderCode: string;
+  customerName: string;
+  customerCompanyName?: string;
+  requirements: string;
+  additionalNotes: string;
   thumbnailUrl: string;
   createdAt: string;
 }

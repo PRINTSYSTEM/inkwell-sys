@@ -79,7 +79,7 @@ export function FilterSection({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="gap-2">
-              Loại Design
+              Loại Thiết Kế
               {selectedDesignTypes.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
                   {selectedDesignTypes.length}

@@ -105,7 +105,7 @@ export default function OrderList() {
   // Call API
   const { data, isLoading, isError, error } = useOrdersByRole(role, listParams);
 
-  const orders = data?.items ?? [];
+  const orders = useMemo(() => data?.items ?? [], [data?.items]);
   const totalOrders = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 

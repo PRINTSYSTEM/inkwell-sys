@@ -17,6 +17,9 @@ import {
   SlidersHorizontal,
   Eye,
   Calendar,
+  TrendingUp,
+  Target,
+  DollarSign,
   type LucideIcon,
 } from "lucide-react";
 
@@ -47,13 +50,20 @@ import {
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-import { useDesignsByUser, useUser } from "@/hooks";
+import { useDesignsByUser, useUser, useUserKpi } from "@/hooks";
 import type { DesignResponse } from "@/Schema";
 import {
   designStatusConfig,
   formatDate,
+  formatCurrency,
   type DesignStatusKey,
 } from "@/lib/status-utils";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import { CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 
 // Icon mapping for design statuses
 const DESIGN_STATUS_ICONS: Record<DesignStatusKey, LucideIcon> = {
@@ -73,9 +83,30 @@ export default function DesignerDetailPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth() + 1 + "");
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear() + "");
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    new Date().getMonth() + 1 + ""
+  );
+  const [selectedYear, setSelectedYear] = useState<string>(
+    new Date().getFullYear() + ""
+  );
+  const [kpiDateRange, setKpiDateRange] = useState<DateRange | undefined>(
+    undefined
+  );
+  const [showKpi, setShowKpi] = useState(false);
   const pageSize = 20;
+
+  // Calculate date range for current month
+  const currentMonthDateRange = useMemo(() => {
+    const now = new Date();
+    const year = Number(selectedYear);
+    const month = Number(selectedMonth);
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    return {
+      from: firstDay,
+      to: lastDay,
+    };
+  }, [selectedMonth, selectedYear]);
 
   // Fetch designer info
   const {
@@ -83,6 +114,18 @@ export default function DesignerDetailPage() {
     isLoading: designerLoading,
     isError: designerError,
   } = useUser(designerId, !!designerId);
+
+  // Fetch KPI data
+  const { data: kpiData, isLoading: loadingKpi } = useUserKpi(
+    designerId,
+    kpiDateRange?.from
+      ? format(kpiDateRange.from, "yyyy-MM-dd'T'00:00:00.000'Z'")
+      : undefined,
+    kpiDateRange?.to
+      ? format(kpiDateRange.to, "yyyy-MM-dd'T'23:59:59.999'Z'")
+      : undefined,
+    showKpi && !!designerId && !!kpiDateRange?.from && !!kpiDateRange?.to
+  );
 
   // Fetch all designs for stats (filtered by month/year)
   const { data: allDesignsData } = useDesignsByUser(
@@ -117,9 +160,10 @@ export default function DesignerDetailPage() {
   };
   const pagedData = data as PagedData | undefined;
 
-  const designs: DesignResponse[] = Array.isArray(data)
-    ? data
-    : pagedData?.items ?? [];
+  const designs: DesignResponse[] = useMemo(
+    () => (Array.isArray(data) ? data : pagedData?.items ?? []),
+    [data, pagedData?.items]
+  );
 
   const totalCount = Array.isArray(data)
     ? data.length
@@ -244,7 +288,8 @@ export default function DesignerDetailPage() {
                 {designer.fullName || "Chưa có tên"}
               </h1>
               <p className="text-muted-foreground">
-                @{designer.username || "unknown"} • Thống kê tháng {selectedMonth}/{selectedYear}
+                @{designer.username || "unknown"} • Thống kê tháng{" "}
+                {selectedMonth}/{selectedYear}
               </p>
             </div>
           </div>
@@ -253,7 +298,13 @@ export default function DesignerDetailPage() {
         {/* Date Selectors */}
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-muted-foreground mr-1" />
-          <Select value={selectedMonth} onValueChange={(v) => { setSelectedMonth(v); setCurrentPage(1); }}>
+          <Select
+            value={selectedMonth}
+            onValueChange={(v) => {
+              setSelectedMonth(v);
+              setCurrentPage(1);
+            }}
+          >
             <SelectTrigger className="w-[120px] bg-card">
               <SelectValue placeholder="Tháng" />
             </SelectTrigger>
@@ -266,7 +317,13 @@ export default function DesignerDetailPage() {
             </SelectContent>
           </Select>
 
-          <Select value={selectedYear} onValueChange={(v) => { setSelectedYear(v); setCurrentPage(1); }}>
+          <Select
+            value={selectedYear}
+            onValueChange={(v) => {
+              setSelectedYear(v);
+              setCurrentPage(1);
+            }}
+          >
             <SelectTrigger className="w-[110px] bg-card">
               <SelectValue placeholder="Năm" />
             </SelectTrigger>
@@ -284,11 +341,126 @@ export default function DesignerDetailPage() {
         </div>
       </div>
 
+      {/* KPI Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Chỉ số KPI
+            </CardTitle>
+            <Button
+              variant={showKpi ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setShowKpi(!showKpi);
+                if (!showKpi && !kpiDateRange) {
+                  setKpiDateRange(currentMonthDateRange);
+                }
+              }}
+            >
+              {showKpi ? "Ẩn KPI" : "Xem KPI"}
+            </Button>
+          </div>
+        </CardHeader>
+        {showKpi && (
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Chọn khoảng thời gian để tính KPI</Label>
+              <DateRangePicker
+                value={kpiDateRange}
+                onValueChange={setKpiDateRange}
+                placeholder="Chọn từ ngày đến ngày"
+              />
+            </div>
+            {loadingKpi ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : kpiData && kpiDateRange?.from && kpiDateRange?.to ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="h-4 w-4 text-blue-600" />
+                      <p className="text-sm text-muted-foreground">
+                        Đã chốt in
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold">
+                      {kpiData.designsCompleted ?? 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      / {kpiData.totalDesignsAssigned ?? 0} được giao
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      <p className="text-sm text-muted-foreground">
+                        Tỷ lệ hoàn thành
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold">
+                      {kpiData.designCompletionRate
+                        ? `${(kpiData.designCompletionRate * 100).toFixed(1)}%`
+                        : "0%"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Thiết kế
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="h-4 w-4 text-orange-600" />
+                      <p className="text-sm text-muted-foreground">
+                        Thời gian TB
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold">
+                      {kpiData.averageDesignTimeHours
+                        ? `${kpiData.averageDesignTimeHours.toFixed(1)}h`
+                        : "—"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Giờ/thiết kế
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="h-4 w-4 text-purple-600" />
+                      <p className="text-sm text-muted-foreground">Doanh thu</p>
+                    </div>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(kpiData.totalRevenueGenerated ?? 0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tổng doanh thu
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Vui lòng chọn khoảng thời gian để xem KPI
+              </p>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Card
-          className={`cursor-pointer transition-all ${statusFilter === "all" ? "ring-2 ring-primary" : "hover:shadow-md"
-            }`}
+          className={`cursor-pointer transition-all ${
+            statusFilter === "all" ? "ring-2 ring-primary" : "hover:shadow-md"
+          }`}
           onClick={() => {
             setStatusFilter("all");
             setCurrentPage(1);
@@ -309,8 +481,9 @@ export default function DesignerDetailPage() {
           return (
             <Card
               key={key}
-              className={`cursor-pointer transition-all ${isActive ? "ring-2 ring-primary" : "hover:shadow-md"
-                } ${config.bgColor}`}
+              className={`cursor-pointer transition-all ${
+                isActive ? "ring-2 ring-primary" : "hover:shadow-md"
+              } ${config.bgColor}`}
               onClick={() => {
                 setStatusFilter(key);
                 setCurrentPage(1);
@@ -473,15 +646,22 @@ export default function DesignerDetailPage() {
                           <span className="text-sm font-mono">
                             {design.dimensions || "—"}
                           </span>
-                          {(design.sidesClassificationOption || design.processClassificationOption) && (
+                          {(design.sidesClassificationOption ||
+                            design.processClassificationOption) && (
                             <div className="flex gap-1 mt-1">
                               {design.sidesClassificationOption && (
-                                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-blue-50/50">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[9px] px-1 py-0 h-4 bg-blue-50/50"
+                                >
                                   {design.sidesClassificationOption.value}
                                 </Badge>
                               )}
                               {design.processClassificationOption && (
-                                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-amber-50/50">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[9px] px-1 py-0 h-4 bg-amber-50/50"
+                                >
                                   {design.processClassificationOption.value}
                                 </Badge>
                               )}

@@ -152,13 +152,15 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-lg">
-            PS
-          </div>
+        <div className="flex items-center gap-3">
+          <img
+            src="/images/logo.png"
+            alt="QUANG DAT DESIGN - PRINTING"
+            className="h-12 w-auto object-contain"
+          />
           <div>
             <h2 className="text-lg font-bold text-sidebar-foreground">
-              PrintSys
+              Quang Đạt
             </h2>
             <p className="text-xs text-sidebar-foreground/70">
               Hệ thống quản lý in ấn

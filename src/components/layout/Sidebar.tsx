@@ -168,10 +168,12 @@ export function Sidebar({ className }: { className?: string }) {
       {/* Header */}
       <div className="flex h-14 items-center border-b px-4">
         <div className="flex items-center gap-2 font-semibold">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground text-sm font-bold">
-            IW
-          </div>
-          InkWell System
+          <img
+            src="/images/logo.png"
+            alt="QUANG DAT DESIGN - PRINTING"
+            className="h-10 w-auto object-contain"
+          />
+          Quang Đạt
         </div>
       </div>
 

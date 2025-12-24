@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,11 @@ import {
   Loader2,
   Users,
   CheckCircle,
+  History,
+  Calendar,
+  FileSpreadsheet,
+  MoreVertical,
+  X,
 } from "lucide-react";
 import {
   Table,
@@ -23,7 +28,39 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useCustomers, useExportDebtComparison } from "@/hooks/use-customer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+import {
+  useCustomers,
+  useExportDebtComparison,
+  useCustomerDebtHistory,
+  useCustomerMonthlyDebt,
+  useCustomerDebtSummary,
+} from "@/hooks/use-customer";
+import { useExportDebt } from "@/hooks/use-accounting";
 import { formatCurrency } from "@/lib/status-utils";
 
 export default function AccountingDebtReport() {
@@ -32,6 +69,30 @@ export default function AccountingDebtReport() {
   const [pageNumber, setPageNumber] = useState(1);
   const pageSize = 20;
   const [exportingId, setExportingId] = useState<number | null>(null);
+
+  // Debt history dialog state
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
+    null
+  );
+  const [showDebtHistoryDialog, setShowDebtHistoryDialog] = useState(false);
+  const [debtHistoryDateRange, setDebtHistoryDateRange] =
+    useState<DateRange | undefined>(undefined);
+
+  // Monthly debt state
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    new Date().getMonth() + 1
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(
+    new Date().getFullYear()
+  );
+
+  // Export debt by month state
+  const [exportMonth, setExportMonth] = useState<number>(
+    new Date().getMonth() + 1
+  );
+  const [exportYear, setExportYear] = useState<number>(
+    new Date().getFullYear()
+  );
 
   // Fetch customers
   const { data: customersData, isLoading } = useCustomers({
@@ -45,7 +106,59 @@ export default function AccountingDebtReport() {
   const { mutate: exportDebtComparison, loading: exporting } =
     useExportDebtComparison();
 
-  const customers = customersData?.items ?? [];
+  // Debt history hook
+  const { data: debtHistory, isLoading: loadingDebtHistory } =
+    useCustomerDebtHistory(
+      selectedCustomerId,
+      debtHistoryDateRange?.from && debtHistoryDateRange?.to
+        ? {
+            startDate: format(
+              debtHistoryDateRange.from,
+              "yyyy-MM-dd'T'00:00:00.000'Z'"
+            ),
+            endDate: format(
+              debtHistoryDateRange.to,
+              "yyyy-MM-dd'T'23:59:59.999'Z'"
+            ),
+          }
+        : undefined,
+      showDebtHistoryDialog && !!selectedCustomerId
+    );
+
+  // Monthly debt hook
+  const { data: monthlyDebt, isLoading: loadingMonthlyDebt } =
+    useCustomerMonthlyDebt(
+      selectedCustomerId,
+      {
+        year: selectedYear,
+        month: selectedMonth,
+      },
+      showDebtHistoryDialog && !!selectedCustomerId
+    );
+
+  // Debt summary hook
+  const { data: debtSummary, isLoading: loadingDebtSummary } =
+    useCustomerDebtSummary(
+      selectedCustomerId,
+      debtHistoryDateRange?.from && debtHistoryDateRange?.to
+        ? {
+            startDate: format(
+              debtHistoryDateRange.from,
+              "yyyy-MM-dd'T'00:00:00.000'Z'"
+            ),
+            endDate: format(
+              debtHistoryDateRange.to,
+              "yyyy-MM-dd'T'23:59:59.999'Z'"
+            ),
+          }
+        : undefined,
+      showDebtHistoryDialog && !!selectedCustomerId
+    );
+
+  // Export debt hook
+  const { mutate: exportDebt, loading: exportingDebt } = useExportDebt();
+
+  const customers = useMemo(() => customersData?.items ?? [], [customersData?.items]);
   const totalCount = customersData?.total ?? 0;
 
   // Calculate stats
@@ -71,6 +184,48 @@ export default function AccountingDebtReport() {
       setExportingId(null);
     }
   };
+
+  const handleViewDebtHistory = (customerId: number) => {
+    setSelectedCustomerId(customerId);
+    setShowDebtHistoryDialog(true);
+    // Set default date range to current month
+    const now = new Date();
+    setSelectedMonth(now.getMonth() + 1);
+    setSelectedYear(now.getFullYear());
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    setDebtHistoryDateRange({
+      from: firstDay,
+      to: lastDay,
+    });
+  };
+
+  // Update date range when month/year changes
+  const handleMonthYearChange = (month: number, year: number) => {
+    setSelectedMonth(month);
+    setSelectedYear(year);
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    setDebtHistoryDateRange({
+      from: firstDay,
+      to: lastDay,
+    });
+  };
+
+  const handleExportDebtByMonth = () => {
+    const firstDay = new Date(exportYear, exportMonth - 1, 1);
+    const lastDay = new Date(exportYear, exportMonth, 0);
+    exportDebt({
+      startDate: format(firstDay, "yyyy-MM-dd'T'00:00:00.000'Z'"),
+      endDate: format(lastDay, "yyyy-MM-dd'T'23:59:59.999'Z'"),
+      year: exportYear,
+      month: exportMonth,
+    });
+  };
+
+  const selectedCustomer = useMemo(() => {
+    return customers.find((c) => c.id === selectedCustomerId);
+  }, [customers, selectedCustomerId]);
 
   const getDebtStatusBadge = (status: string | null | undefined) => {
     if (!status) return null;
@@ -361,22 +516,41 @@ export default function AccountingDebtReport() {
                             {getDebtStatusBadge(customer.debtStatus)}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleExportDebtComparison(customer.id!)
-                              }
-                              disabled={
-                                exporting && exportingId === customer.id
-                              }
-                            >
-                              {exporting && exportingId === customer.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Download className="h-4 w-4" />
-                              )}
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={
+                                    exporting && exportingId === customer.id
+                                  }
+                                >
+                                  {exporting && exportingId === customer.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <MoreVertical className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleViewDebtHistory(customer.id!)
+                                  }
+                                >
+                                  <History className="h-4 w-4 mr-2" />
+                                  Xem lịch sử công nợ
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleExportDebtComparison(customer.id!)
+                                  }
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Xuất đối chiếu công nợ
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
@@ -413,6 +587,349 @@ export default function AccountingDebtReport() {
           )}
         </CardContent>
       </Card>
+
+      {/* Export Debt by Month Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="h-5 w-5" />
+            Xuất công nợ theo tháng
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 items-end">
+            <div className="flex-1">
+              <Label>Tháng</Label>
+              <Select
+                value={exportMonth.toString()}
+                onValueChange={(v) => setExportMonth(parseInt(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                    <SelectItem key={month} value={month.toString()}>
+                      Tháng {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <Label>Năm</Label>
+              <Select
+                value={exportYear.toString()}
+                onValueChange={(v) => setExportYear(parseInt(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from(
+                    { length: 5 },
+                    (_, i) => new Date().getFullYear() - 2 + i
+                  ).map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={handleExportDebtByMonth}
+              disabled={exportingDebt}
+            >
+              {exportingDebt ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xuất...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Xuất Excel
+                </>
+              )}
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Xuất báo cáo công nợ từ ngày 1 đến ngày cuối tháng (bao gồm nợ và
+            thanh toán)
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Debt History Dialog */}
+      <Dialog
+        open={showDebtHistoryDialog}
+        onOpenChange={setShowDebtHistoryDialog}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Lịch sử công nợ - {selectedCustomer?.name || ""}
+            </DialogTitle>
+            <DialogDescription>
+              Xem chi tiết lịch sử công nợ và thanh toán của khách hàng
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Monthly Debt Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Công nợ đầu tháng {selectedMonth}/{selectedYear}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingMonthlyDebt ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : monthlyDebt ? (
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Công nợ đầu kỳ
+                      </p>
+                      <p className="text-xl font-bold">
+                        {formatCurrency(monthlyDebt.openingDebt ?? 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Phát sinh trong tháng
+                      </p>
+                      <p className="text-xl font-bold text-red-600">
+                        {formatCurrency(monthlyDebt.changeInMonth ?? 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Công nợ cuối kỳ
+                      </p>
+                      <p className="text-xl font-bold">
+                        {formatCurrency(monthlyDebt.closingDebt ?? 0)}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Chưa có dữ liệu công nợ cho tháng này
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Date Range Selector */}
+            <div className="space-y-2">
+              <Label>Chọn khoảng thời gian</Label>
+              <div className="flex gap-4 items-end">
+                <div className="flex-1">
+                  <DateRangePicker
+                    value={debtHistoryDateRange}
+                    onValueChange={setDebtHistoryDateRange}
+                    placeholder="Chọn từ ngày đến ngày"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Select
+                    value={selectedMonth.toString()}
+                    onValueChange={(v) =>
+                      handleMonthYearChange(parseInt(v), selectedYear)
+                    }
+                  >
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                        (month) => (
+                          <SelectItem key={month} value={month.toString()}>
+                            Tháng {month}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={selectedYear.toString()}
+                    onValueChange={(v) =>
+                      handleMonthYearChange(selectedMonth, parseInt(v))
+                    }
+                  >
+                    <SelectTrigger className="w-[110px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from(
+                        { length: 5 },
+                        (_, i) => new Date().getFullYear() - 2 + i
+                      ).map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Debt Summary */}
+            {debtHistoryDateRange?.from && debtHistoryDateRange?.to && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    Tổng hợp công nợ từ{" "}
+                    {format(debtHistoryDateRange.from, "dd/MM/yyyy", {
+                      locale: vi,
+                    })}{" "}
+                    đến{" "}
+                    {format(debtHistoryDateRange.to, "dd/MM/yyyy", {
+                      locale: vi,
+                    })}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loadingDebtSummary ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : debtSummary ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Công nợ đầu kỳ
+                        </p>
+                        <p className="text-xl font-bold">
+                          {formatCurrency(debtSummary.openingDebt ?? 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Tổng phát sinh
+                        </p>
+                        <p className="text-xl font-bold text-red-600">
+                          {formatCurrency(debtSummary.totalDebtIncurred ?? 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Tổng thanh toán
+                        </p>
+                        <p className="text-xl font-bold text-green-600">
+                          {formatCurrency(debtSummary.totalPaymentReceived ?? 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Công nợ cuối kỳ
+                        </p>
+                        <p className="text-xl font-bold">
+                          {formatCurrency(debtSummary.closingDebt ?? 0)}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Chưa có dữ liệu
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Debt History Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Chi tiết lịch sử công nợ</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingDebtHistory ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : debtHistory && debtHistory.length > 0 ? (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Ngày</TableHead>
+                          <TableHead>Loại</TableHead>
+                          <TableHead>Đơn hàng</TableHead>
+                          <TableHead>Công nợ trước</TableHead>
+                          <TableHead>Thay đổi</TableHead>
+                          <TableHead>Công nợ sau</TableHead>
+                          <TableHead>Ghi chú</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {debtHistory.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              {item.createdAt
+                                ? format(
+                                    new Date(item.createdAt),
+                                    "dd/MM/yyyy HH:mm",
+                                    { locale: vi }
+                                  )
+                                : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  item.changeType === "payment"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
+                                {item.changeTypeDisplay || item.changeType || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {item.orderCode || "—"}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(item.previousDebt ?? 0)}
+                            </TableCell>
+                            <TableCell
+                              className={
+                                (item.changeAmount ?? 0) > 0
+                                  ? "text-red-600 font-medium"
+                                  : "text-green-600 font-medium"
+                              }
+                            >
+                              {(item.changeAmount ?? 0) > 0 ? "+" : ""}
+                              {formatCurrency(item.changeAmount ?? 0)}
+                            </TableCell>
+                            <TableCell>
+                              {formatCurrency(item.newDebt ?? 0)}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {item.note || "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <History className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground">
+                      Chưa có lịch sử công nợ trong khoảng thời gian này
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

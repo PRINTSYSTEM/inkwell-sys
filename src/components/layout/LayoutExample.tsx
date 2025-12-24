@@ -296,12 +296,14 @@ export const LayoutExample: React.FC = () => {
       groups={sidebarGroups}
       header={
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Building className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <img
+            src="/images/logo.png"
+            alt="QUANG DAT DESIGN - PRINTING"
+            className="h-8 w-auto object-contain"
+          />
           {!sidebarCollapsed && (
             <div>
-              <div className="font-semibold text-sm">InkWell System</div>
+              <div className="font-semibold text-sm">Quang Đạt</div>
               <div className="text-xs text-muted-foreground">v2.0</div>
             </div>
           )}

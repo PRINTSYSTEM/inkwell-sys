@@ -66,6 +66,9 @@ import { IdSchema } from "@/Schema";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { designStatusLabels, proofingStatusLabels } from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { downloadFile } from "@/lib/download-utils";
+import { API_SUFFIX } from "@/apis/util.api";
+import { apiRequest } from "@/lib/http";
 
 export default function ProofingOrderDetailPage() {
   const params = useParams();
@@ -91,6 +94,7 @@ export default function ProofingOrderDetailPage() {
   const [dieExportData, setDieExportData] = useState({
     notes: "",
   });
+  const [dieExportImage, setDieExportImage] = useState<File | null>(null);
 
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
@@ -207,15 +211,42 @@ export default function ProofingOrderDetailPage() {
 
   const handleRecordDie = async () => {
     try {
+      let imageUrl: string | undefined = undefined;
+
+      // Upload image first if provided
+      if (dieExportImage) {
+        const form = new FormData();
+        form.append("imageFile", dieExportImage);
+        
+        const uploadResponse = await apiRequest.post<ProofingOrderResponse>(
+          API_SUFFIX.PROOFING_UPLOAD_IMAGE(idValue),
+          form,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        
+        // Get imageUrl from response
+        imageUrl = uploadResponse.data.imageUrl || undefined;
+      }
+
+      // Record die export with imageUrl and notes
       await recordDieMutate({
         id: idValue,
         request: {
+          imageUrl: imageUrl || order?.dieExport?.imageUrl || undefined,
           notes: dieExportData.notes,
         },
       });
       setIsDieExportDialogOpen(false);
+      setDieExportImage(null);
     } catch (error) {
       console.error("Failed to record die export:", error);
+      toast.error("Lỗi", {
+        description: "Không thể ghi nhận khuôn bế",
+      });
     }
   };
 
@@ -248,6 +279,43 @@ export default function ProofingOrderDetailPage() {
       });
     }
   };
+
+  // Initialize plate export data when dialog opens
+  useEffect(() => {
+    if (isPlateExportDialogOpen && order?.plateExport) {
+      setPlateExportData({
+        vendorName: order.plateExport.vendorName || "",
+        sentAt: order.plateExport.sentAt
+          ? format(new Date(order.plateExport.sentAt), "yyyy-MM-dd'T'HH:mm")
+          : "",
+        receivedAt: order.plateExport.receivedAt
+          ? format(new Date(order.plateExport.receivedAt), "yyyy-MM-dd'T'HH:mm")
+          : "",
+        notes: order.plateExport.notes || "",
+      });
+    } else if (!isPlateExportDialogOpen) {
+      setPlateExportData({
+        vendorName: "",
+        sentAt: "",
+        receivedAt: "",
+        notes: "",
+      });
+    }
+  }, [isPlateExportDialogOpen, order?.plateExport]);
+
+  // Initialize die export data when dialog opens
+  useEffect(() => {
+    if (isDieExportDialogOpen && order?.dieExport) {
+      setDieExportData({
+        notes: order.dieExport.notes || "",
+      });
+    } else if (!isDieExportDialogOpen) {
+      setDieExportData({
+        notes: "",
+      });
+      setDieExportImage(null);
+    }
+  }, [isDieExportDialogOpen, order?.dieExport]);
 
   if (isLoading) {
     return (
@@ -325,7 +393,7 @@ export default function ProofingOrderDetailPage() {
               Chuyển sang chờ sản xuất
             </Button>
           )}
-          {!order.proofingFileUrl && (
+          {!order.proofingFileUrl && !order.isPlateExported && (
             <Button
               className="gap-2"
               onClick={() => setIsUploadDialogOpen(true)}
@@ -334,7 +402,7 @@ export default function ProofingOrderDetailPage() {
               Upload file bình bài
             </Button>
           )}
-          {!order.imageUrl && (
+          {!order.imageUrl && !order.isPlateExported && (
             <Button
               variant="outline"
               className="gap-2"
@@ -343,6 +411,12 @@ export default function ProofingOrderDetailPage() {
               <FileImage className="h-4 w-4" />
               Upload ảnh bình bài
             </Button>
+          )}
+          {order.isPlateExported && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <span>Đã xuất kẽm - Không thể chỉnh sửa bình bài</span>
+            </div>
           )}
         </div>
       </div>
@@ -449,14 +523,16 @@ export default function ProofingOrderDetailPage() {
                         </Button>
                       </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => setIsImageUploadDialogOpen(true)}
-                    >
-                      Thay đổi ảnh
-                    </Button>
+                    {!order.isPlateExported && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => setIsImageUploadDialogOpen(true)}
+                      >
+                        Thay đổi ảnh
+                      </Button>
+                    )}
                   </div>
                 </>
               )}
@@ -473,13 +549,26 @@ export default function ProofingOrderDetailPage() {
                         variant="outline"
                         size="sm"
                         className="gap-2 bg-transparent"
-                        asChild
+                        onClick={() => {
+                          if (order.proofingFileUrl) {
+                            downloadFile(order.proofingFileUrl, order.code || `BB-${order.id}`);
+                          }
+                        }}
                       >
-                        <a href={order.proofingFileUrl} download>
-                          <Download className="h-4 w-4" />
-                          Tải xuống
-                        </a>
+                        <Download className="h-4 w-4" />
+                        Tải xuống
                       </Button>
+                      {!order.isPlateExported && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setIsUpdateFileDialogOpen(true)}
+                        >
+                          <Edit className="h-4 w-4" />
+                          Cập nhật file
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </>
@@ -587,10 +676,19 @@ export default function ProofingOrderDetailPage() {
                               </Button>
                             )}
                             {pod.design.designFileUrl && (
-                              <Button variant="ghost" size="sm" asChild>
-                                <a href={pod.design.designFileUrl} download>
-                                  <Download className="h-4 w-4" />
-                                </a>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (pod.design.designFileUrl) {
+                                    downloadFile(
+                                      pod.design.designFileUrl,
+                                      pod.design.code || `DES-${pod.design.id}`
+                                    );
+                                  }
+                                }}
+                              >
+                                <Download className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
@@ -734,6 +832,7 @@ export default function ProofingOrderDetailPage() {
                     className="w-full gap-2"
                     disabled={
                       !order.isPlateExported ||
+                      !order.isDieExported ||
                       !order.approvedById ||
                       isHandingToProduction
                     }
@@ -742,9 +841,9 @@ export default function ProofingOrderDetailPage() {
                     <CheckCircle2 className="h-4 w-4" />
                     Bàn giao sản xuất
                   </Button>
-                  {!order.isPlateExported && (
+                  {(!order.isPlateExported || !order.isDieExported) && (
                     <p className="text-[10px] text-destructive mt-1 text-center">
-                      * Cần ghi nhận xuất kẽm trước khi bàn giao
+                      * Cần hoàn thành xuất kẽm và xuất khuôn bế trước khi bàn giao
                     </p>
                   )}
                   {!order.approvedById && (
@@ -1169,16 +1268,59 @@ export default function ProofingOrderDetailPage() {
       {/* Die Export Dialog */}
       <Dialog
         open={isDieExportDialogOpen}
-        onOpenChange={setIsDieExportDialogOpen}
+        onOpenChange={(open) => {
+          setIsDieExportDialogOpen(open);
+          if (!open) {
+            setDieExportImage(null);
+          }
+        }}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Ghi nhận khuôn bế</DialogTitle>
             <DialogDescription>
-              Lưu thông tin về khuôn bế cho bình bài này.
+              Upload hình và ghi chú về khuôn bế cho bình bài này.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="dieImage">Hình khuôn bế</Label>
+              <Input
+                id="dieImage"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setDieExportImage(e.target.files?.[0] || null)}
+              />
+              {dieExportImage && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Đã chọn: {dieExportImage.name} (
+                    {(dieExportImage.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                  <div className="aspect-video relative rounded-lg overflow-hidden border">
+                    <img
+                      src={URL.createObjectURL(dieExportImage)}
+                      alt="Preview khuôn bế"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+              {!dieExportImage && order?.dieExport?.imageUrl && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Hình hiện tại:
+                  </p>
+                  <div className="aspect-video relative rounded-lg overflow-hidden border">
+                    <img
+                      src={order.dieExport.imageUrl}
+                      alt="Khuôn bế hiện tại"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="dieNotes">Ghi chú khuôn bế</Label>
               <Input
@@ -1194,7 +1336,10 @@ export default function ProofingOrderDetailPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsDieExportDialogOpen(false)}
+              onClick={() => {
+                setIsDieExportDialogOpen(false);
+                setDieExportImage(null);
+              }}
             >
               Hủy
             </Button>

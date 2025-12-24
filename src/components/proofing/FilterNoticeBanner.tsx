@@ -16,7 +16,7 @@ export function FilterNoticeBanner({
       <Search className="h-4 w-4" />
       <AlertDescription className="flex items-center justify-between w-full">
         <span>
-          Đang hiển thị designs với vật liệu:{' '}
+          Đang hiển thị thiết kế với vật liệu:{' '}
           <strong>{materialTypeName}</strong>
         </span>
         <Button

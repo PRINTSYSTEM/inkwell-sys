@@ -30,7 +30,11 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ZodError } from "zod";
-import { UserResponse, UpdateUserRequestSchema } from "@/Schema";
+import {
+  UserResponse,
+  UpdateUserRequestSchema,
+  UpdateUserRequest,
+} from "@/Schema";
 import { ROLE_LABELS as RoleLabels } from "@/constants/role.constant";
 import {
   Dialog,
@@ -85,7 +89,7 @@ export default function EmployeeDetail() {
 
     try {
       // Prepare update data
-      const updateData: any = {};
+      const updateData: Partial<UpdateUserRequest> = {};
       if (editForm.fullName !== user?.fullName)
         updateData.fullName = editForm.fullName;
       if (editForm.role !== user?.role) updateData.role = editForm.role;
@@ -121,7 +125,10 @@ export default function EmployeeDetail() {
     }
   };
 
-  const handleInputChange = (field: keyof UserResponse, value: any) => {
+  const handleInputChange = (
+    field: keyof UserResponse,
+    value: string | boolean | undefined
+  ) => {
     if (editForm) {
       setEditForm({
         ...editForm,

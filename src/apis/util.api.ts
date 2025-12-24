@@ -79,6 +79,7 @@ export const API_SUFFIX = {
   },
   ACCOUNTING_APPROVE_DEBT: (orderId: number) =>
     `/accountings/order/${orderId}/approve-debt`,
+  ACCOUNTING_EXPORT_DEBT: "/accountings/export-debt",
 
   // ========== CUSTOMERS ==========
   CUSTOMERS: "/customers",
@@ -87,6 +88,9 @@ export const API_SUFFIX = {
     `/customers/check-duplicate-company?companyName=${encodeURIComponent(
       name
     )}`,
+  CUSTOMER_DEBT_HISTORY: (id: number) => `/customers/${id}/debt-history`,
+  CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
+  CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
 
   // ========== DESIGN TYPES ==========
   DESIGN_TYPES: "/designs/types",
@@ -141,6 +145,8 @@ export const API_SUFFIX = {
     `/proofing-orders/${id}/complete-production`,
   PROOFING_HAND_TO_PRODUCTION: (id: number) =>
     `/proofing-orders/${id}/hand-to-production`,
+  PROOFING_AVAILABLE_QUANTITY: (designId: number) =>
+    `/proofing-orders/available-quantity/${designId}`,
 
   // ========== PRODUCTIONS ==========
   PRODUCTIONS: "/productions",

@@ -1,25 +1,17 @@
 // src/providers/NotificationProvider.tsx
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 import { toast } from "sonner";
 import { useAuthContext } from "@/context/auth-context";
+import { NotificationContext } from "@/context/notification-context";
 
 interface NotificationMessage {
   type: string;
   title: string;
   message: string;
-  data?: any;
+  data?: Record<string, unknown>;
   timestamp: string;
 }
-
-interface NotificationContextValue {
-  connection: signalR.HubConnection | null;
-  isConnected: boolean;
-}
-
-const NotificationContext = createContext<NotificationContextValue | undefined>(
-  undefined
-);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -91,6 +83,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       newConnection.stop();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, isAuthenticated]);
 
   return (
@@ -98,14 +91,4 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       {children}
     </NotificationContext.Provider>
   );
-};
-
-export const useNotification = () => {
-  const context = useContext(NotificationContext);
-  if (context === undefined) {
-    throw new Error(
-      "useNotification must be used within a NotificationProvider"
-    );
-  }
-  return context;
 };

@@ -67,7 +67,7 @@ export default function MaterialTypeDetail() {
     };
 
     loadMaterialType();
-  }, [id, toast, navigate]);
+  }, [id, navigate]);
 
   const handleDelete = async () => {
     if (!materialType?.id) return;
