@@ -163,7 +163,7 @@ export function AppSidebar() {
               QUANG ĐẠT
             </h2>
             <p className="text-xs text-sidebar-foreground/70">
-              DESIN - PRINTING
+              DESIGN - PRINTING
             </p>
           </div>
         </div>
