@@ -74,8 +74,8 @@ export default function Login() {
               className="h-20 w-auto object-contain"
             />
           </div>
-          <CardTitle className="text-2xl font-bold">Quang Đạt</CardTitle>
-          <CardDescription>Hệ thống quản lý in ấn nội bộ</CardDescription>
+          <CardTitle className="text-2xl font-bold">QUANG ĐẠT</CardTitle>
+          <CardDescription>DESIN - PRINTING</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

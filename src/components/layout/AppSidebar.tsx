@@ -160,10 +160,10 @@ export function AppSidebar() {
           />
           <div>
             <h2 className="text-lg font-bold text-sidebar-foreground">
-              Quang Đạt
+              QUANG ĐẠT
             </h2>
             <p className="text-xs text-sidebar-foreground/70">
-              Hệ thống quản lý in ấn
+              DESIN - PRINTING
             </p>
           </div>
         </div>

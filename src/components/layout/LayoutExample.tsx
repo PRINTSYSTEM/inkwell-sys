@@ -1,128 +1,138 @@
-import React, { useState } from 'react';
-import { 
-  PageLayout, 
-  SectionLayout, 
-  ContentLayout, 
-  SidebarLayout, 
+import React, { useState } from "react";
+import {
+  PageLayout,
+  SectionLayout,
+  ContentLayout,
+  SidebarLayout,
   GridItem,
   type SidebarItem,
   type SidebarGroup,
-  type PageAction
-} from '@/components/layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { 
-  Home, 
-  Users, 
-  Settings, 
-  FileText, 
-  BarChart3, 
-  Plus, 
-  Download, 
+  type PageAction,
+} from "@/components/layout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Home,
+  Users,
+  Settings,
+  FileText,
+  BarChart3,
+  Plus,
+  Download,
   RefreshCw,
   Search,
   Filter,
   User,
   Building,
-  Calendar
-} from 'lucide-react';
+  Calendar,
+} from "lucide-react";
 
 export const LayoutExample: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Sample sidebar configuration
   const sidebarItems: SidebarItem[] = [
     {
-      id: 'dashboard',
-      label: 'Dashboard',
+      id: "dashboard",
+      label: "Dashboard",
       icon: Home,
-      active: activeTab === 'dashboard',
-      onClick: () => setActiveTab('dashboard')
-    }
+      active: activeTab === "dashboard",
+      onClick: () => setActiveTab("dashboard"),
+    },
   ];
 
   const sidebarGroups: SidebarGroup[] = [
     {
-      id: 'management',
-      label: 'Quản lý',
+      id: "management",
+      label: "Quản lý",
       items: [
         {
-          id: 'employees',
-          label: 'Nhân viên',
+          id: "employees",
+          label: "Nhân viên",
           icon: Users,
-          active: activeTab === 'employees',
-          onClick: () => setActiveTab('employees'),
-          badge: { text: '23', variant: 'secondary' }
+          active: activeTab === "employees",
+          onClick: () => setActiveTab("employees"),
+          badge: { text: "23", variant: "secondary" },
         },
         {
-          id: 'departments',
-          label: 'Phòng ban',
+          id: "departments",
+          label: "Phòng ban",
           icon: Building,
-          active: activeTab === 'departments',
-          onClick: () => setActiveTab('departments')
+          active: activeTab === "departments",
+          onClick: () => setActiveTab("departments"),
         },
         {
-          id: 'projects',
-          label: 'Dự án',
+          id: "projects",
+          label: "Dự án",
           icon: FileText,
-          active: activeTab === 'projects',
-          onClick: () => setActiveTab('projects'),
-          badge: { text: '5', variant: 'destructive' }
-        }
-      ]
+          active: activeTab === "projects",
+          onClick: () => setActiveTab("projects"),
+          badge: { text: "5", variant: "destructive" },
+        },
+      ],
     },
     {
-      id: 'analytics',
-      label: 'Báo cáo',
+      id: "analytics",
+      label: "Báo cáo",
       items: [
         {
-          id: 'reports',
-          label: 'Báo cáo',
+          id: "reports",
+          label: "Báo cáo",
           icon: BarChart3,
-          active: activeTab === 'reports',
-          onClick: () => setActiveTab('reports')
+          active: activeTab === "reports",
+          onClick: () => setActiveTab("reports"),
         },
         {
-          id: 'calendar',
-          label: 'Lịch làm việc',
+          id: "calendar",
+          label: "Lịch làm việc",
           icon: Calendar,
-          active: activeTab === 'calendar',
-          onClick: () => setActiveTab('calendar')
-        }
-      ]
-    }
+          active: activeTab === "calendar",
+          onClick: () => setActiveTab("calendar"),
+        },
+      ],
+    },
   ];
 
   // Page actions
   const pageActions: PageAction[] = [
     {
-      id: 'add',
-      label: 'Thêm mới',
+      id: "add",
+      label: "Thêm mới",
       icon: Plus,
-      onClick: () => console.log('Add new'),
-      variant: 'default'
+      onClick: () => console.log("Add new"),
+      variant: "default",
     },
     {
-      id: 'export',
-      label: 'Xuất file',
+      id: "export",
+      label: "Xuất file",
       icon: Download,
-      onClick: () => console.log('Export'),
-      variant: 'outline'
+      onClick: () => console.log("Export"),
+      variant: "outline",
     },
     {
-      id: 'refresh',
-      label: 'Làm mới',
+      id: "refresh",
+      label: "Làm mới",
       icon: RefreshCw,
-      onClick: () => console.log('Refresh'),
-      variant: 'ghost'
-    }
+      onClick: () => console.log("Refresh"),
+      variant: "ghost",
+    },
   ];
 
   const renderDashboardContent = () => (
-    <ContentLayout variant="grid" columns={4} responsive={{ sm: 1, md: 2, lg: 4 }}>
+    <ContentLayout
+      variant="grid"
+      columns={4}
+      responsive={{ sm: 1, md: 2, lg: 4 }}
+    >
       <GridItem span={1} card>
         <div className="text-center p-4">
           <Users className="h-8 w-8 mx-auto mb-2 text-blue-500" />
@@ -130,7 +140,7 @@ export const LayoutExample: React.FC = () => {
           <div className="text-sm text-muted-foreground">Nhân viên</div>
         </div>
       </GridItem>
-      
+
       <GridItem span={1} card>
         <div className="text-center p-4">
           <FileText className="h-8 w-8 mx-auto mb-2 text-green-500" />
@@ -138,7 +148,7 @@ export const LayoutExample: React.FC = () => {
           <div className="text-sm text-muted-foreground">Dự án</div>
         </div>
       </GridItem>
-      
+
       <GridItem span={1} card>
         <div className="text-center p-4">
           <BarChart3 className="h-8 w-8 mx-auto mb-2 text-orange-500" />
@@ -146,7 +156,7 @@ export const LayoutExample: React.FC = () => {
           <div className="text-sm text-muted-foreground">Hiệu suất</div>
         </div>
       </GridItem>
-      
+
       <GridItem span={1} card>
         <div className="text-center p-4">
           <Calendar className="h-8 w-8 mx-auto mb-2 text-purple-500" />
@@ -154,17 +164,21 @@ export const LayoutExample: React.FC = () => {
           <div className="text-sm text-muted-foreground">Nhiệm vụ</div>
         </div>
       </GridItem>
-      
+
       <GridItem span={4}>
         <Card>
           <CardHeader>
             <CardTitle>Biểu đồ hiệu suất</CardTitle>
-            <CardDescription>Theo dõi hiệu suất làm việc theo thời gian</CardDescription>
+            <CardDescription>
+              Theo dõi hiệu suất làm việc theo thời gian
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64 flex items-center justify-center bg-muted/50 rounded">
               <BarChart3 className="h-12 w-12 text-muted-foreground" />
-              <span className="ml-2 text-muted-foreground">Chart placeholder</span>
+              <span className="ml-2 text-muted-foreground">
+                Chart placeholder
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -180,17 +194,17 @@ export const LayoutExample: React.FC = () => {
         variant="bordered"
         actions={[
           {
-            id: 'search',
-            label: 'Tìm kiếm',
+            id: "search",
+            label: "Tìm kiếm",
             icon: Search,
-            onClick: () => console.log('Search')
+            onClick: () => console.log("Search"),
           },
           {
-            id: 'filter',
-            label: 'Lọc',
+            id: "filter",
+            label: "Lọc",
             icon: Filter,
-            onClick: () => console.log('Filter')
-          }
+            onClick: () => console.log("Filter"),
+          },
         ]}
       >
         <ContentLayout variant="flex" gap="md">
@@ -206,17 +220,21 @@ export const LayoutExample: React.FC = () => {
       <SectionLayout
         title="Danh sách nhân viên"
         description="Quản lý thông tin nhân viên trong hệ thống"
-        badge={{ text: '156', variant: 'secondary' }}
+        badge={{ text: "156", variant: "secondary" }}
         actions={[
           {
-            id: 'add-employee',
-            label: 'Thêm nhân viên',
+            id: "add-employee",
+            label: "Thêm nhân viên",
             icon: Plus,
-            onClick: () => console.log('Add employee')
-          }
+            onClick: () => console.log("Add employee"),
+          },
         ]}
       >
-        <ContentLayout variant="grid" columns={3} responsive={{ sm: 1, md: 2, lg: 3 }}>
+        <ContentLayout
+          variant="grid"
+          columns={3}
+          responsive={{ sm: 1, md: 2, lg: 3 }}
+        >
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <GridItem key={i} card>
               <div className="p-4">
@@ -226,7 +244,9 @@ export const LayoutExample: React.FC = () => {
                   </div>
                   <div>
                     <div className="font-medium">Nhân viên {i}</div>
-                    <div className="text-sm text-muted-foreground">Designer</div>
+                    <div className="text-sm text-muted-foreground">
+                      Designer
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-2 text-sm">
@@ -249,11 +269,11 @@ export const LayoutExample: React.FC = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard':
+      case "dashboard":
         return renderDashboardContent();
-      case 'employees':
+      case "employees":
         return renderEmployeesContent();
-      case 'departments':
+      case "departments":
         return (
           <SectionLayout title="Phòng ban" variant="card">
             <div className="p-8 text-center text-muted-foreground">
@@ -261,7 +281,7 @@ export const LayoutExample: React.FC = () => {
             </div>
           </SectionLayout>
         );
-      case 'projects':
+      case "projects":
         return (
           <SectionLayout title="Dự án" variant="card">
             <div className="p-8 text-center text-muted-foreground">
@@ -269,7 +289,7 @@ export const LayoutExample: React.FC = () => {
             </div>
           </SectionLayout>
         );
-      case 'reports':
+      case "reports":
         return (
           <SectionLayout title="Báo cáo" variant="card">
             <div className="p-8 text-center text-muted-foreground">
@@ -277,7 +297,7 @@ export const LayoutExample: React.FC = () => {
             </div>
           </SectionLayout>
         );
-      case 'calendar':
+      case "calendar":
         return (
           <SectionLayout title="Lịch làm việc" variant="card">
             <div className="p-8 text-center text-muted-foreground">
@@ -303,7 +323,7 @@ export const LayoutExample: React.FC = () => {
           />
           {!sidebarCollapsed && (
             <div>
-              <div className="font-semibold text-sm">Quang Đạt</div>
+              <div className="font-semibold text-sm">QUANG ĐẠT</div>
               <div className="text-xs text-muted-foreground">v2.0</div>
             </div>
           )}
@@ -317,7 +337,9 @@ export const LayoutExample: React.FC = () => {
           {!sidebarCollapsed && (
             <div className="flex-1">
               <div className="text-sm font-medium">Admin User</div>
-              <div className="text-xs text-muted-foreground">admin@inkwell.com</div>
+              <div className="text-xs text-muted-foreground">
+                admin@inkwell.com
+              </div>
             </div>
           )}
         </div>
@@ -325,36 +347,50 @@ export const LayoutExample: React.FC = () => {
       onToggle={setSidebarCollapsed}
     >
       <PageLayout
-        title={activeTab === 'dashboard' ? 'Dashboard' : 
-               activeTab === 'employees' ? 'Quản lý nhân viên' :
-               activeTab === 'departments' ? 'Quản lý phòng ban' :
-               activeTab === 'projects' ? 'Quản lý dự án' :
-               activeTab === 'reports' ? 'Báo cáo' :
-               'Lịch làm việc'}
+        title={
+          activeTab === "dashboard"
+            ? "Dashboard"
+            : activeTab === "employees"
+            ? "Quản lý nhân viên"
+            : activeTab === "departments"
+            ? "Quản lý phòng ban"
+            : activeTab === "projects"
+            ? "Quản lý dự án"
+            : activeTab === "reports"
+            ? "Báo cáo"
+            : "Lịch làm việc"
+        }
         description={
-          activeTab === 'dashboard' ? 'Tổng quan hoạt động hệ thống' :
-          activeTab === 'employees' ? 'Quản lý thông tin và hiệu suất nhân viên' :
-          'Nội dung trang ' + activeTab
+          activeTab === "dashboard"
+            ? "Tổng quan hoạt động hệ thống"
+            : activeTab === "employees"
+            ? "Quản lý thông tin và hiệu suất nhân viên"
+            : "Nội dung trang " + activeTab
         }
         breadcrumbs={[
-          { label: 'Trang chủ' },
-          { label: activeTab === 'dashboard' ? 'Dashboard' : 
-                   activeTab === 'employees' ? 'Nhân viên' :
-                   activeTab }
+          { label: "Trang chủ" },
+          {
+            label:
+              activeTab === "dashboard"
+                ? "Dashboard"
+                : activeTab === "employees"
+                ? "Nhân viên"
+                : activeTab,
+          },
         ]}
         actions={pageActions}
         badge={
-          activeTab === 'employees' ? { text: '156 nhân viên', variant: 'secondary' } :
-          activeTab === 'projects' ? { text: '5 cần xử lý', variant: 'destructive' } :
-          undefined
+          activeTab === "employees"
+            ? { text: "156 nhân viên", variant: "secondary" }
+            : activeTab === "projects"
+            ? { text: "5 cần xử lý", variant: "destructive" }
+            : undefined
         }
         maxWidth="7xl"
         padding={false}
         className="bg-muted/30"
       >
-        <div className="p-6">
-          {renderContent()}
-        </div>
+        <div className="p-6">{renderContent()}</div>
       </PageLayout>
     </SidebarLayout>
   );

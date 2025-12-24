@@ -170,10 +170,10 @@ export function Sidebar({ className }: { className?: string }) {
         <div className="flex items-center gap-2 font-semibold">
           <img
             src="/images/logo.png"
-            alt="QUANG DAT DESIGN - PRINTING"
+            alt="QUANG ĐẠT DESIGN - PRINTING"
             className="h-10 w-auto object-contain"
           />
-          Quang Đạt
+          QUANG ĐẠT
         </div>
       </div>
 
