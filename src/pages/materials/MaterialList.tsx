@@ -128,7 +128,7 @@ export default function MaterialManagement() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery, selectedType, showLowStock, pageSize, toast]);
+  }, [page, searchQuery, selectedType, showLowStock, pageSize]);
 
   useEffect(() => {
     loadMaterials();

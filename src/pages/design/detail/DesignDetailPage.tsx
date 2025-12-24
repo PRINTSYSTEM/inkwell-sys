@@ -83,6 +83,7 @@ import { API_SUFFIX } from "@/apis";
 import type { OrderDetailResponse } from "@/Schema";
 import DesignCodeGeneratorComponent from "@/components/DesignCodeGenerator";
 import DesignCode from "@/components/design/design-code";
+import { downloadFile } from "@/lib/download-utils";
 
 export default function DesignDetailPage() {
   const params = useParams();
@@ -1091,16 +1092,17 @@ export default function DesignDetailPage() {
                             size="sm"
                             variant="outline"
                             className="flex-1 bg-transparent"
-                            asChild
+                            onClick={() => {
+                              if (d.designFileUrl) {
+                                downloadFile(
+                                  d.designFileUrl,
+                                  d.code || `DES-${d.id}`
+                                );
+                              }
+                            }}
                           >
-                            <a
-                              href={d.designFileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <Download className="h-3.5 w-3.5 mr-2" />
-                              Tải file AI
-                            </a>
+                            <Download className="h-3.5 w-3.5 mr-2" />
+                            Tải file AI
                           </Button>
                         )}
                         {d.excelFileUrl && (
@@ -1108,16 +1110,17 @@ export default function DesignDetailPage() {
                             size="sm"
                             variant="outline"
                             className="flex-1 bg-transparent"
-                            asChild
+                            onClick={() => {
+                              if (d.excelFileUrl) {
+                                downloadFile(
+                                  d.excelFileUrl,
+                                  `${d.code || `DES-${d.id}`}.xlsx`
+                                );
+                              }
+                            }}
                           >
-                            <a
-                              href={d.excelFileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />
-                              Tải Excel
-                            </a>
+                            <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />
+                            Tải Excel
                           </Button>
                         )}
                         <Button
@@ -1232,12 +1235,17 @@ export default function DesignDetailPage() {
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs bg-transparent"
-                            asChild
+                            onClick={() => {
+                              if (entry.fileUrl) {
+                                downloadFile(
+                                  entry.fileUrl,
+                                  `${d.code || `DES-${d.id}`}-timeline-${entry.id}`
+                                );
+                              }
+                            }}
                           >
-                            <a href={entry.fileUrl} download>
-                              <Download className="h-3 w-3 mr-1.5" />
-                              Tải hình ảnh
-                            </a>
+                            <Download className="h-3 w-3 mr-1.5" />
+                            Tải hình ảnh
                           </Button>
                         )}
                       </div>

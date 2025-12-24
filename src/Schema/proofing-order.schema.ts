@@ -170,3 +170,13 @@ export type ApproveProofingOrderRequest = z.infer<
 export type UpdateProofingOrderRequest = z.infer<
   typeof UpdateProofingOrderRequestSchema
 >;
+
+// ===== AvailableQuantityResponse =====
+// Response from /api/proofing-orders/available-quantity/{designId}
+// Swagger shows empty schema, but based on endpoint name, it likely returns a number (available quantity)
+// Using z.unknown() to be flexible, but can be cast to number when used
+
+export const AvailableQuantityResponseSchema = z.unknown();
+export type AvailableQuantityResponse = z.infer<
+  typeof AvailableQuantityResponseSchema
+>;

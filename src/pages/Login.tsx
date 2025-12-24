@@ -68,12 +68,14 @@ export default function Login() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-2xl">
-              PS
-            </div>
+            <img
+              src="/images/logo.png"
+              alt="QUANG DAT DESIGN - PRINTING"
+              className="h-20 w-auto object-contain"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold">InkWell System</CardTitle>
-          <CardDescription>Hệ thống quản lý in ấn nội bộ</CardDescription>
+          <CardTitle className="text-2xl font-bold">QUANG ĐẠT</CardTitle>
+          <CardDescription>DESIN - PRINTING</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -3,13 +3,23 @@ import type {
   CustomerSummaryResponsePagedResponse,
   CreateCustomerRequest,
   UpdateCustomerRequest,
+  CustomerDebtHistoryResponse,
+  CustomerMonthlyDebtResponse,
+  CustomerDebtSummaryResponse,
 } from "@/Schema/customer.schema";
 import { createCrudHooks } from "./use-base";
-import { CustomerListParams } from "@/Schema";
+import {
+  CustomerListParams,
+  CustomerDebtHistoryParams,
+  CustomerMonthlyDebtParams,
+  CustomerDebtSummaryParams,
+} from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
+import { useQuery } from "@tanstack/react-query";
+import { normalizeParams } from "@/apis/util.api";
 
 // Không có DELETE trong swagger → vẫn dùng createCrudHooks nhưng KHÔNG export useDelete.
 const {
@@ -128,4 +138,73 @@ export const useCheckDuplicateCompany = () => {
     loading,
     error,
   };
+};
+
+// ================== GET CUSTOMER DEBT HISTORY ==================
+// GET /customers/{id}/debt-history
+
+export const useCustomerDebtHistory = (
+  customerId: number | null,
+  params?: CustomerDebtHistoryParams,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "debt-history", params],
+    enabled: enabled && !!customerId,
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(params ?? {});
+      const res = await apiRequest.get<CustomerDebtHistoryResponse[]>(
+        API_SUFFIX.CUSTOMER_DEBT_HISTORY(customerId as number),
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+// ================== GET CUSTOMER MONTHLY DEBT ==================
+// GET /customers/{id}/monthly-debt
+
+export const useCustomerMonthlyDebt = (
+  customerId: number | null,
+  params?: CustomerMonthlyDebtParams,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "monthly-debt", params],
+    enabled: enabled && !!customerId,
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(params ?? {});
+      const res = await apiRequest.get<CustomerMonthlyDebtResponse>(
+        API_SUFFIX.CUSTOMER_MONTHLY_DEBT(customerId as number),
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+// ================== GET CUSTOMER DEBT SUMMARY ==================
+// GET /customers/{id}/debt-summary
+
+export const useCustomerDebtSummary = (
+  customerId: number | null,
+  params?: CustomerDebtSummaryParams,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "debt-summary", params],
+    enabled: enabled && !!customerId,
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(params ?? {});
+      const res = await apiRequest.get<CustomerDebtSummaryResponse>(
+        API_SUFFIX.CUSTOMER_DEBT_SUMMARY(customerId as number),
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 };

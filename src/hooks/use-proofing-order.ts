@@ -155,10 +155,52 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             quantity: od.quantity || 0,
             unitPrice: od.unitPrice || 0,
             orderId: od.orderId?.toString() || "",
+            orderCode: design.latestOrderCode || "",
+            customerName: design.customer?.name || "",
+            customerCompanyName: design.customer?.companyName || "",
+            requirements: od.requirements || "",
+            additionalNotes: od.additionalNotes || "",
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
+            designId: design.id, // Store designId for fetching available quantity
           };
         });
+
+      // Fetch available quantities for all designs in parallel
+      const availableQuantities = await Promise.allSettled(
+        designs.map(async (design) => {
+          const designId = (design as typeof design & { designId?: number }).designId;
+          if (!designId) return { orderDetailId: design.id, availableQuantity: null };
+          try {
+            const res = await apiRequest.get<number>(
+              API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId)
+            );
+            return {
+              orderDetailId: design.id,
+              availableQuantity: typeof res.data === "number" ? res.data : null,
+            };
+          } catch {
+            return { orderDetailId: design.id, availableQuantity: null };
+          }
+        })
+      );
+
+      // Map available quantities to designs
+      const quantityMap = new Map<number, number | null>();
+      availableQuantities.forEach((result) => {
+        if (result.status === "fulfilled") {
+          quantityMap.set(result.value.designId, result.value.availableQuantity);
+        }
+      });
+
+      // Add availableQuantity to each design and remove designId
+      const designsWithQuantity = designs.map((design) => {
+        const { designId, ...rest } = design as typeof design & { designId?: number };
+        return {
+          ...rest,
+          availableQuantity: quantityMap.get(design.id) ?? undefined,
+        };
+      });
 
       // Extract unique design types with counts
       const designTypeMap = new Map<
@@ -197,10 +239,10 @@ export const useAvailableOrderDetailsForProofing = (params?: {
       });
 
       return {
-        designs,
+        designs: designsWithQuantity,
         designTypeOptions: Array.from(designTypeMap.values()),
         materialTypeOptions: Array.from(materialTypeMap.values()),
-        totalCount: designs.length,
+        totalCount: designsWithQuantity.length,
       };
     },
     staleTime: 2 * 60 * 1000,
@@ -731,5 +773,27 @@ export const useHandToProduction = () => {
         description: error.response?.data?.message || error.message,
       });
     },
+  });
+};
+
+// ===== GET /proofing-orders/available-quantity/{designId} =====
+// Lấy số lượng khả dụng của design cho bình bài
+
+export const useAvailableQuantity = (
+  designId: number | null,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: [proofingKeys.all[0], "available-quantity", designId],
+    enabled: enabled && !!designId,
+    queryFn: async () => {
+      const res = await apiRequest.get<unknown>(
+        API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId as number)
+      );
+      // Swagger shows empty schema, but likely returns a number (quantity)
+      // Cast to number if it's a number, otherwise return as-is
+      return typeof res.data === "number" ? res.data : res.data;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 };

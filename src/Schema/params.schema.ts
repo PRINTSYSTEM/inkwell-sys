@@ -167,3 +167,42 @@ export const MaterialTypeListParamsSchema = PagedParamsSchema.extend({
 export type MaterialTypeListParams = z.infer<
   typeof MaterialTypeListParamsSchema
 >;
+
+// ==== Customer debt history params (/api/customers/{id}/debt-history) ====
+
+export const CustomerDebtHistoryParamsSchema = z
+  .object({
+    startDate: z.string().nullable().optional(), // date-time format
+    endDate: z.string().nullable().optional(), // date-time format
+  })
+  .passthrough();
+
+export type CustomerDebtHistoryParams = z.infer<
+  typeof CustomerDebtHistoryParamsSchema
+>;
+
+// ==== Customer monthly debt params (/api/customers/{id}/monthly-debt) ====
+
+export const CustomerMonthlyDebtParamsSchema = z
+  .object({
+    year: z.number().int().min(2000).nullable().optional(),
+    month: z.number().int().min(1).max(12).nullable().optional(),
+  })
+  .passthrough();
+
+export type CustomerMonthlyDebtParams = z.infer<
+  typeof CustomerMonthlyDebtParamsSchema
+>;
+
+// ==== Customer debt summary params (/api/customers/{id}/debt-summary) ====
+
+export const CustomerDebtSummaryParamsSchema = z
+  .object({
+    startDate: z.string().nullable().optional(), // date-time format
+    endDate: z.string().nullable().optional(), // date-time format
+  })
+  .passthrough();
+
+export type CustomerDebtSummaryParams = z.infer<
+  typeof CustomerDebtSummaryParamsSchema
+>;

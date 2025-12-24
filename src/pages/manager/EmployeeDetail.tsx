@@ -24,13 +24,21 @@ import {
   XCircle,
   Loader2,
 } from "lucide-react";
-import { useUser, useUpdateUser, useChangeUserPassword } from "@/hooks/use-user";
+import {
+  useUser,
+  useUpdateUser,
+  useChangeUserPassword,
+} from "@/hooks/use-user";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ZodError } from "zod";
-import { UserResponse, UpdateUserRequestSchema } from "@/Schema";
+import {
+  UserResponse,
+  UpdateUserRequestSchema,
+  UpdateUserRequest,
+} from "@/Schema";
 import { ROLE_LABELS as RoleLabels } from "@/constants/role.constant";
 import {
   Dialog,
@@ -85,7 +93,7 @@ export default function EmployeeDetail() {
 
     try {
       // Prepare update data
-      const updateData: any = {};
+      const updateData: Partial<UpdateUserRequest> = {};
       if (editForm.fullName !== user?.fullName)
         updateData.fullName = editForm.fullName;
       if (editForm.role !== user?.role) updateData.role = editForm.role;
@@ -121,7 +129,10 @@ export default function EmployeeDetail() {
     }
   };
 
-  const handleInputChange = (field: keyof UserResponse, value: any) => {
+  const handleInputChange = (
+    field: keyof UserResponse,
+    value: string | boolean | undefined
+  ) => {
     if (editForm) {
       setEditForm({
         ...editForm,
@@ -245,7 +256,11 @@ export default function EmployeeDetail() {
                 <X className="h-4 w-4" />
                 Hủy
               </Button>
-              <Button onClick={handleSave} className="gap-2" disabled={isPending}>
+              <Button
+                onClick={handleSave}
+                className="gap-2"
+                disabled={isPending}
+              >
                 {isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -323,7 +338,9 @@ export default function EmployeeDetail() {
                   {isEditing ? (
                     <Select
                       value={editForm.role || ""}
-                      onValueChange={(value) => handleInputChange("role", value)}
+                      onValueChange={(value) =>
+                        handleInputChange("role", value)
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Chọn vai trò" />
@@ -461,7 +478,9 @@ export default function EmployeeDetail() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label className="text-muted-foreground">Cập nhật lần cuối</Label>
+                <Label className="text-muted-foreground">
+                  Cập nhật lần cuối
+                </Label>
                 <p className="text-sm">
                   {user.updatedAt
                     ? new Date(user.updatedAt).toLocaleDateString("vi-VN", {
@@ -480,7 +499,10 @@ export default function EmployeeDetail() {
       </div>
 
       {/* Change Password Dialog */}
-      <Dialog open={changePasswordDialog} onOpenChange={setChangePasswordDialog}>
+      <Dialog
+        open={changePasswordDialog}
+        onOpenChange={setChangePasswordDialog}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Đổi mật khẩu</DialogTitle>
@@ -548,4 +570,3 @@ export default function EmployeeDetail() {
     </div>
   );
 }
-

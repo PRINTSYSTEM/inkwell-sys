@@ -15,6 +15,8 @@ import type {
   CreateUserRequest,
   UpdateUserRequest,
   ChangePasswordRequest,
+  UserKpiResponse,
+  TeamKpiSummaryResponse,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -78,7 +80,6 @@ export const useUserByUsername = (username: string | null, enabled = true) => {
 
 // POST /users/{id}/change-password
 export const useChangeUserPassword = () => {
-
   const { data, loading, error, execute, reset } = useAsyncCallback<
     void,
     [{ id: number; data: ChangePasswordRequest }]
@@ -115,6 +116,48 @@ export const useChangeUserPassword = () => {
     mutate,
     reset,
   };
+};
+
+// ====== KPI Hooks ======
+
+// GET /users/{id}/kpi
+export const useUserKpi = (
+  userId: number | null,
+  fromDate?: string,
+  toDate?: string,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: [rootKey, "kpi", userId, fromDate, toDate],
+    enabled: enabled && !!userId,
+    queryFn: async () => {
+      const res = await apiRequest.get<UserKpiResponse>(
+        API_SUFFIX.USER_KPI(userId as number, fromDate, toDate)
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+// GET /users/kpi/team
+export const useTeamKpi = (
+  fromDate?: string,
+  toDate?: string,
+  role?: string,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: [rootKey, "kpi", "team", fromDate, toDate, role],
+    enabled,
+    queryFn: async () => {
+      const res = await apiRequest.get<TeamKpiSummaryResponse>(
+        API_SUFFIX.USER_KPI_TEAM(fromDate, toDate, role)
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 };
 
 export { userCrudApi, userKeys };

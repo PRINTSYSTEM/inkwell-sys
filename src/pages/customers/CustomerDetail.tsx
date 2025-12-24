@@ -68,7 +68,7 @@ export default function CustomerDetail() {
     pageSize: 100, // Get all orders for this customer
   });
 
-  const orders = ordersData?.items ?? [];
+  const orders = useMemo(() => ordersData?.items ?? [], [ordersData?.items]);
 
   // Calculate statistics
   const stats = useMemo(() => {

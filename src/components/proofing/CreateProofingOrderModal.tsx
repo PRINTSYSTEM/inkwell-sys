@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Layers,
+  Package,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Hash,
+  Maximize2,
+  Settings,
+  MessageSquare,
+  Sparkles,
+} from "lucide-react";
 import { useCreateProofingOrderFromDesigns, usePaperSizes } from "@/hooks/use-proofing-order";
+import { cn } from "@/lib/utils";
 
 interface CreateProofingOrderModalProps {
   open: boolean;
@@ -47,38 +70,23 @@ export function CreateProofingOrderModal({
   const materialTypeName =
     selectedDesigns.length > 0 ? selectedDesigns[0].materialTypeName : "";
 
-  // Tính tổng quantity mặc định từ selected designs
-  const defaultTotalQuantity = useMemo(() => {
-    return selectedDesigns.reduce(
-      (sum, design) => sum + (design.quantity || 0),
-      0
-    );
-  }, [selectedDesigns]);
-
   // Set default quantities khi dialog mở
   useEffect(() => {
     if (open) {
-      if (defaultTotalQuantity > 0) {
-        setTotalQuantity(defaultTotalQuantity);
-      } else {
-        setTotalQuantity(1);
-      }
-
-      // Initialize individual design quantities
       const initialQuantities: Record<number, number> = {};
       selectedDesigns.forEach(design => {
-        initialQuantities[design.id] = design.quantity || 0;
+        initialQuantities[design.id] = 0;
       });
       setDesignQuantities(initialQuantities);
+      setTotalQuantity(0);
     } else {
-      // Reset khi dialog đóng
       setNotes("");
-      setTotalQuantity(1);
+      setTotalQuantity(0);
       setDesignQuantities({});
       setPaperSizeId("none");
       setCustomPaperSize("");
     }
-  }, [open, defaultTotalQuantity, selectedDesigns]);
+  }, [open, selectedDesigns]);
 
   // Update total quantity when individual quantities change
   useEffect(() => {
@@ -88,11 +96,16 @@ export function CreateProofingOrderModal({
     }
   }, [designQuantities]);
 
-  const handleQuantityChange = (id: number, value: string, maxQty: number) => {
+  const handleQuantityChange = (
+    id: number,
+    value: string,
+    maxQty: number,
+    availableQty?: number
+  ) => {
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (!isNaN(numValue) && numValue >= 0) {
-      // Clamp to max quantity
-      const clampedValue = Math.min(numValue, maxQty);
+      const maxAvailable = availableQty !== undefined ? availableQty : maxQty;
+      const clampedValue = Math.min(numValue, maxAvailable);
       setDesignQuantities(prev => ({
         ...prev,
         [id]: clampedValue
@@ -102,7 +115,6 @@ export function CreateProofingOrderModal({
 
   const handleSubmit = async () => {
     try {
-      // Validate quantity
       if (
         !totalQuantity ||
         totalQuantity < 1 ||
@@ -111,7 +123,21 @@ export function CreateProofingOrderModal({
         return;
       }
 
-      // Convert designQuantities to orderDetailItems format
+      const invalidDesigns = selectedDesigns.filter((design) => {
+        const qty = designQuantities[design.id] || 0;
+        if (design.availableQuantity !== undefined) {
+          return qty > design.availableQuantity;
+        }
+        return qty > design.quantity;
+      });
+
+      if (invalidDesigns.length > 0) {
+        alert(
+          `Số lượng lấy vượt quá số lượng còn lại chưa bình bài cho ${invalidDesigns.length} thiết kế. Vui lòng kiểm tra lại.`
+        );
+        return;
+      }
+
       const orderDetailItems = Object.entries(designQuantities)
         .filter(([_, qty]) => qty > 0)
         .map(([id, qty]) => ({
@@ -120,7 +146,7 @@ export function CreateProofingOrderModal({
         }));
 
       if (orderDetailItems.length === 0) {
-        alert("Vui lòng chọn ít nhất một thiết kế với số lượng lớn hơn 0");
+        alert("Vui lòng nhập số lượng lấy cho ít nhất một thiết kế (lớn hơn 0)");
         return;
       }
 
@@ -135,152 +161,370 @@ export function CreateProofingOrderModal({
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      // Error handling is done in the hook
       console.error("Failed to create proofing order:", error);
     }
   };
 
+  const totalSelectedQuantity = useMemo(() => {
+    return Object.values(designQuantities).reduce((sum, qty) => sum + qty, 0);
+  }, [designQuantities]);
+
+  const hasValidQuantities = useMemo(() => {
+    return selectedDesigns.some((design) => {
+      const qty = designQuantities[design.id] || 0;
+      return qty > 0;
+    });
+  }, [selectedDesigns, designQuantities]);
+
+  const selectedCount = useMemo(() => {
+    return Object.values(designQuantities).filter(qty => qty > 0).length;
+  }, [designQuantities]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Tạo Proofing Order</DialogTitle>
-          <DialogDescription>
-            Xác nhận tạo proofing order với {selectedDesigns.length} designs đã
-            chọn. Bạn có thể điều chỉnh số lượng cho từng thiết kế.
-          </DialogDescription>
+      <DialogContent className="max-w-6xl max-h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
+        {/* Compact Header */}
+        <DialogHeader className="px-5 py-3 border-b shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-md bg-primary/10">
+                <Sparkles className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-semibold">
+                  Tạo Lệnh Bình Bài
+                </DialogTitle>
+                <DialogDescription className="text-xs mt-0.5">
+                  {selectedDesigns.length} thiết kế • {selectedCount} đã nhập số lượng
+                </DialogDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground">Tổng số lượng</div>
+                <div className="text-sm font-bold text-primary">
+                  {totalSelectedQuantity.toLocaleString()}
+                </div>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                <Package className="h-3 w-3 mr-1" />
+                {materialTypeName}
+              </Badge>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Selected Designs with Quantity Inputs */}
-          <div className="space-y-3">
-            <Label>Chi tiết thiết kế và số lượng</Label>
-            <div className="space-y-2 rounded-md border p-3 bg-muted/20">
-              {selectedDesigns.map((design) => (
-                <div
-                  key={design.id}
-                  className="grid grid-cols-12 gap-2 items-center text-sm border-b pb-2 last:border-0 last:pb-0"
-                >
-                  <div className="col-span-8 space-y-0.5">
-                    <p className="font-medium truncate">{design.name}</p>
-                    <p className="text-xs text-muted-foreground font-mono">
-                      {design.code} • Tối đa: {design.quantity.toLocaleString()}
-                    </p>
+        {/* Main Content - 2 Column Layout */}
+        <div className="flex-1 overflow-hidden flex min-h-0">
+          {/* Left Column - Designs Table */}
+          <div className="flex-1 overflow-auto border-r">
+            <Table>
+              <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                <TableRow>
+                  <TableHead className="w-12 text-center">#</TableHead>
+                  <TableHead className="min-w-[200px]">Thiết kế</TableHead>
+                  <TableHead className="w-24 text-right">Đặt hàng</TableHead>
+                  <TableHead className="w-24 text-right">Còn lại</TableHead>
+                  <TableHead className="w-48">Số lượng lấy</TableHead>
+                  <TableHead className="w-28 text-right">Sau khi lấy</TableHead>
+                  <TableHead className="w-16 text-center">Trạng thái</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedDesigns.map((design, index) => {
+                  const currentQty = designQuantities[design.id] || 0;
+                  const maxQty = design.availableQuantity !== undefined
+                    ? design.availableQuantity
+                    : design.quantity;
+                  const remainingQty = design.availableQuantity !== undefined
+                    ? design.availableQuantity - currentQty
+                    : design.quantity - currentQty;
+                  const isValid = currentQty > 0 && currentQty <= maxQty;
+                  const isExceeded = currentQty > maxQty;
+
+                  return (
+                    <TableRow
+                      key={design.id}
+                      className={cn(
+                        "hover:bg-muted/30",
+                        isValid && "bg-green-50/30",
+                        isExceeded && "bg-red-50/30"
+                      )}
+                    >
+                      <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                        {index + 1}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-sm">{design.name}</div>
+                          <code className="text-xs text-muted-foreground font-mono">
+                            {design.code}
+                          </code>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm font-medium">
+                          {design.quantity.toLocaleString()}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {design.availableQuantity !== undefined ? (
+                          <span
+                            className={cn(
+                              "text-sm font-medium",
+                              design.availableQuantity > 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                            )}
+                          >
+                            {design.availableQuantity.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            max={maxQty}
+                            className={cn(
+                              "h-9 flex-1 text-right font-mono text-base font-semibold",
+                              isExceeded && "border-destructive focus-visible:ring-destructive"
+                            )}
+                            value={currentQty || ""}
+                            onChange={(e) =>
+                              handleQuantityChange(
+                                design.id,
+                                e.target.value,
+                                design.quantity,
+                                design.availableQuantity
+                              )
+                            }
+                            placeholder="0"
+                          />
+                          <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                            /{maxQty.toLocaleString()}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span
+                          className={cn(
+                            "text-sm font-medium",
+                            remainingQty >= 0 ? "text-blue-600" : "text-orange-600"
+                          )}
+                        >
+                          {remainingQty >= 0 ? remainingQty.toLocaleString() : "0"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {isExceeded ? (
+                          <AlertCircle className="h-4 w-4 text-destructive mx-auto" />
+                        ) : isValid ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Right Column - Configuration Panel */}
+          <div className="w-[420px] flex flex-col border-l bg-muted/20 shrink-0">
+            {/* Summary Section */}
+            <div className="p-4 border-b bg-background">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                <FileText className="h-4 w-4 text-primary" />
+                Tóm tắt
+              </h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2.5 rounded-md bg-muted/50 border text-sm">
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Thiết kế</span>
                   </div>
-                  <div className="col-span-4">
-                    <Input
-                      type="number"
-                      size={1}
-                      min="0"
-                      max={design.quantity}
-                      className="h-8 text-right font-mono"
-                      value={designQuantities[design.id] || 0}
-                      onChange={(e) => handleQuantityChange(design.id, e.target.value, design.quantity)}
-                    />
+                  <span className="font-bold">{selectedDesigns.length}</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-md bg-muted/50 border text-sm">
+                  <div className="flex items-center gap-2">
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Tổng số lượng</span>
+                  </div>
+                  <span className="font-bold text-primary">
+                    {totalSelectedQuantity.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 rounded-md bg-muted/50 border text-sm">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Vật liệu</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {materialTypeName || "N/A"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Configuration Section */}
+            <div className="flex-1 overflow-auto p-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                    <Settings className="h-4 w-4 text-primary" />
+                    Cấu hình
+                  </h3>
+                  <div className="space-y-3">
+                    {/* Total Quantity */}
+                    <div className="space-y-2">
+                      <Label htmlFor="totalQuantity" className="text-sm font-medium">
+                        Tổng số lượng <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="totalQuantity"
+                          type="number"
+                          min="1"
+                          step="1"
+                          className="pl-9 h-10 font-semibold"
+                          placeholder="0"
+                          value={totalQuantity || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "") {
+                              setTotalQuantity(0);
+                            } else {
+                              const numValue = parseInt(value, 10);
+                              if (!isNaN(numValue) && numValue > 0) {
+                                setTotalQuantity(numValue);
+                              }
+                            }
+                          }}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Paper Size */}
+                    <div className="space-y-2">
+                      <Label htmlFor="paperSizeId" className="text-sm font-medium">
+                        Khổ giấy in
+                      </Label>
+                      <Select value={paperSizeId} onValueChange={setPaperSizeId}>
+                        <SelectTrigger id="paperSizeId" className="h-10">
+                          <Maximize2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <SelectValue placeholder="Chọn khổ giấy" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Chưa xác định</SelectItem>
+                          {paperSizes?.map((ps) => (
+                            <SelectItem key={ps.id} value={ps.id.toString()}>
+                              {ps.name}{" "}
+                              {ps.width && ps.height
+                                ? `(${ps.width}×${ps.height})`
+                                : ""}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="custom">-- Nhập thủ công --</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Custom Paper Size */}
+                    {paperSizeId === "custom" ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="customPaperSize" className="text-sm font-medium">
+                          Khổ giấy tùy chỉnh
+                        </Label>
+                        <Input
+                          id="customPaperSize"
+                          className="h-10"
+                          placeholder="Ví dụ: 31×43, 65×86..."
+                          value={customPaperSize}
+                          onChange={(e) => setCustomPaperSize(e.target.value)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-muted-foreground">
+                          Kích thước
+                        </Label>
+                        <div className="h-10 flex items-center px-3 rounded-md border bg-background text-sm text-muted-foreground">
+                          {paperSizeId !== "none" && paperSizes?.find((ps) => ps.id.toString() === paperSizeId) ? (
+                            <span>
+                              {paperSizes.find((ps) => ps.id.toString() === paperSizeId)?.width} ×{" "}
+                              {paperSizes.find((ps) => ps.id.toString() === paperSizeId)?.height}
+                            </span>
+                          ) : (
+                            <span className="italic">Chưa chọn</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Total Quantity */}
-            <div className="space-y-2">
-              <Label htmlFor="totalQuantity">
-                Tổng số lượng <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="totalQuantity"
-                type="number"
-                min="1"
-                step="1"
-                className="font-bold text-lg h-11"
-                placeholder="Nhập tổng số lượng"
-                value={totalQuantity}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "") {
-                    setTotalQuantity(0);
-                  } else {
-                    const numValue = parseInt(value, 10);
-                    if (!isNaN(numValue) && numValue > 0) {
-                      setTotalQuantity(numValue);
-                    }
-                  }
-                }}
-                required
-              />
-            </div>
-
-            {/* Material Type (auto-filled) */}
-            <div className="space-y-2">
-              <Label>Vật liệu</Label>
-              <div className="flex h-11 items-center justify-center rounded-md border bg-muted/50 px-3">
-                <Badge variant="secondary" className="text-xs">{materialTypeName}</Badge>
+                {/* Notes Section */}
+                <div>
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    Ghi chú
+                  </h3>
+                  <Textarea
+                    id="notes"
+                    className="min-h-[100px] resize-none"
+                    placeholder="Nhập ghi chú cho lệnh bình bài này (tùy chọn)..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 border-t pt-4">
-            {/* Paper Size Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="paperSizeId">Khổ giấy in</Label>
-              <Select value={paperSizeId} onValueChange={setPaperSizeId}>
-                <SelectTrigger id="paperSizeId">
-                  <SelectValue placeholder="Chọn khổ giấy" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover">
-                  <SelectItem value="none">Chưa xác định</SelectItem>
-                  {paperSizes?.map((ps) => (
-                    <SelectItem key={ps.id} value={ps.id.toString()}>
-                      {ps.name} {ps.width && ps.height ? `(${ps.width}x${ps.height})` : ""}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="custom">-- Nhập thủ công --</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Custom Paper Size Input */}
-            {paperSizeId === "custom" && (
-              <div className="space-y-2">
-                <Label htmlFor="customPaperSize">Khổ giấy tùy chỉnh</Label>
-                <Input
-                  id="customPaperSize"
-                  placeholder="Ví dụ: 31x43, 65x86..."
-                  value={customPaperSize}
-                  onChange={(e) => setCustomPaperSize(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Ghi chú</Label>
-            <Textarea
-              id="notes"
-              placeholder="Nhập ghi chú cho lệnh bình bài này..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
           </div>
         </div>
 
-        <DialogFooter>
+        {/* Footer */}
+        <DialogFooter className="px-5 py-3 border-t shrink-0 gap-2">
+          <div className="flex-1 text-xs text-muted-foreground">
+            {selectedCount > 0 && (
+              <span>
+                {selectedCount}/{selectedDesigns.length} thiết kế đã nhập số lượng
+              </span>
+            )}
+          </div>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={loading}
+            size="sm"
+            className="h-9"
           >
             Hủy
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading || !totalQuantity || totalQuantity < 1}
+            disabled={loading || !hasValidQuantities || totalQuantity < 1}
+            size="sm"
+            className="h-9 gap-1.5 min-w-[120px]"
           >
-            {loading ? "Đang tạo..." : "Tạo Order"}
+            {loading ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Đang tạo...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Tạo Lệnh
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

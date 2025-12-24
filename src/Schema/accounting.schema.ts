@@ -61,3 +61,17 @@ export const DebtComparisonFileResponseSchema = z.string();
 export type DebtComparisonFileResponse = z.infer<
   typeof DebtComparisonFileResponseSchema
 >;
+
+// ===== ExportDebtRequest =====
+
+export const ExportDebtRequestSchema = z
+  .object({
+    customerId: IdSchema.nullable().optional(),
+    startDate: DateSchema.nullable().optional(),
+    endDate: DateSchema.nullable().optional(),
+    year: z.number().int().nullable().optional(),
+    month: z.number().int().nullable().optional(),
+  })
+  .passthrough();
+
+export type ExportDebtRequest = z.infer<typeof ExportDebtRequestSchema>;

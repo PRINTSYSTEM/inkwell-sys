@@ -12,9 +12,10 @@ import {
 import { PaymentList, InvoiceList } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
 import { useMemo } from "react";
+import type { OrderResponse } from "@/Schema/order.schema";
 
 // Helper to calculate summary stats from orders
-const calculateSummaryStats = (orders: any[]) => {
+const calculateSummaryStats = (orders: OrderResponse[]) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 

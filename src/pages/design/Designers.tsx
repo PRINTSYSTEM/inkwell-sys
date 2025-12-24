@@ -1,5 +1,5 @@
 // src/pages/DesignersPage.tsx
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -11,14 +11,32 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Mail, Phone, User, Eye, Edit, Trash2 } from "lucide-react";
+import {
+  Search,
+  Mail,
+  Phone,
+  User,
+  Eye,
+  Edit,
+  Trash2,
+  Calendar,
+  TrendingUp,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DesignerFormDialog } from "@/components/design/designer-form-dialog";
 import { DeleteDesignerDialog } from "@/components/design/delete-designer-dialog";
 
 import type { UserResponse } from "@/Schema";
-import { useCreateUser, useUpdateUser, useUsers } from "@/hooks";
+import { useCreateUser, useUpdateUser, useUsers, useTeamKpi } from "@/hooks";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 
 type Designer = UserResponse;
 
@@ -30,11 +48,36 @@ export default function DesignersPage() {
   );
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    new Date().getMonth() + 1
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(
+    new Date().getFullYear()
+  );
+  const [showKpi, setShowKpi] = useState(false);
 
   // ====== Lấy danh sách designer (user.role = "design") ======
   const { data, isLoading } = useUsers({
     role: "design", // UserListParams.role là string
   });
+
+  // Calculate date range for selected month
+  const monthDateRange = useMemo(() => {
+    const firstDay = new Date(selectedYear, selectedMonth - 1, 1);
+    const lastDay = new Date(selectedYear, selectedMonth, 0);
+    return {
+      from: format(firstDay, "yyyy-MM-dd'T'00:00:00.000'Z'"),
+      to: format(lastDay, "yyyy-MM-dd'T'23:59:59.999'Z'"),
+    };
+  }, [selectedMonth, selectedYear]);
+
+  // Fetch team KPI
+  const { data: teamKpi, isLoading: loadingTeamKpi } = useTeamKpi(
+    monthDateRange.from,
+    monthDateRange.to,
+    "design",
+    showKpi
+  );
 
   const designers: Designer[] = data?.items ?? [];
   const totalCount = data?.total ?? designers.length;
@@ -107,14 +150,135 @@ export default function DesignersPage() {
               Quản lý danh sách nhân viên thiết kế và công việc của họ
             </p>
           </div>
-          <Button
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-            onClick={handleAddDesigner}
-          >
-            <User className="mr-2 h-4 w-4" />
-            Thêm nhân viên
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-slate-600" />
+              <Select
+                value={selectedMonth.toString()}
+                onValueChange={(v) => setSelectedMonth(parseInt(v))}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                    <SelectItem key={month} value={month.toString()}>
+                      Tháng {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedYear.toString()}
+                onValueChange={(v) => setSelectedYear(parseInt(v))}
+              >
+                <SelectTrigger className="w-[110px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from(
+                    { length: 5 },
+                    (_, i) => new Date().getFullYear() - 2 + i
+                  ).map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant={showKpi ? "default" : "outline"}
+              onClick={() => setShowKpi(!showKpi)}
+            >
+              <TrendingUp className="mr-2 h-4 w-4" />
+              {showKpi ? "Ẩn KPI" : "Xem KPI"}
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              onClick={handleAddDesigner}
+            >
+              <User className="mr-2 h-4 w-4" />
+              Thêm nhân viên
+            </Button>
+          </div>
         </div>
+
+        {/* Team KPI Section */}
+        {showKpi && (
+          <Card className="border-l-4 border-l-purple-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-purple-600" />
+                KPI Tổng hợp - Tháng {selectedMonth}/{selectedYear}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingTeamKpi ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-slate-500 text-sm">
+                    Đang tải dữ liệu KPI...
+                  </div>
+                </div>
+              ) : teamKpi ? (
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                    <p className="text-sm text-slate-600 mb-1">
+                      Tổng đã chốt in
+                    </p>
+                    <p className="text-3xl font-bold text-blue-700">
+                      {teamKpi.totalDesignsCompleted ?? 0}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Thiết kế đã hoàn thành
+                    </p>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                    <p className="text-sm text-slate-600 mb-1">
+                      Tổng bình bài
+                    </p>
+                    <p className="text-3xl font-bold text-green-700">
+                      {teamKpi.totalProofingOrdersCompleted ?? 0}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Lệnh bình bài hoàn thành
+                    </p>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+                    <p className="text-sm text-slate-600 mb-1">
+                      Tổng sản xuất
+                    </p>
+                    <p className="text-3xl font-bold text-orange-700">
+                      {teamKpi.totalProductionsCompleted ?? 0}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Lệnh sản xuất hoàn thành
+                    </p>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                    <p className="text-sm text-slate-600 mb-1">Tổng doanh thu</p>
+                    <p className="text-3xl font-bold text-purple-700">
+                      {teamKpi.totalRevenue
+                        ? new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                            notation: "compact",
+                          }).format(teamKpi.totalRevenue)
+                        : "0"}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Doanh thu trong tháng
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 text-center py-4">
+                  Chưa có dữ liệu KPI cho tháng này
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">

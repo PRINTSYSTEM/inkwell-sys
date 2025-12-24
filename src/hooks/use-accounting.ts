@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/http";
 import type {
   AccountingResponse,
   ConfirmPaymentRequest,
+  ExportDebtRequest,
 } from "@/Schema/accounting.schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
@@ -290,6 +291,75 @@ export const useApproveDebt = () => {
 
   return {
     data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+// ===== POST /accountings/export-debt =====
+// Xuất báo cáo công nợ
+
+export const useExportDebt = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<
+    ArrayBuffer,
+    [ExportDebtRequest]
+  >(async (payload: ExportDebtRequest) => {
+    const res = await apiRequest.post<ArrayBuffer>(
+      API_SUFFIX.ACCOUNTING_EXPORT_DEBT,
+      payload,
+      { responseType: "arraybuffer" }
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: ExportDebtRequest) => {
+    try {
+      const blob = await execute(payload);
+
+      const fileBlob = new Blob([blob], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      
+      // Generate filename based on payload
+      const filename = payload.customerId
+        ? `debt-report-customer-${payload.customerId}.xlsx`
+        : payload.year && payload.month
+        ? `debt-report-${payload.year}-${payload.month}.xlsx`
+        : `debt-report.xlsx`;
+      
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Thành công", {
+        description: "Đã xuất báo cáo công nợ",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể xuất báo cáo công nợ";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return {
     loading,
     error,
     mutate,

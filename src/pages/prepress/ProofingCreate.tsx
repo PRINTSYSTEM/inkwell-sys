@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LayoutGrid, List, Plus } from "lucide-react";
+import { LayoutGrid, List, Plus, FolderTree, FileText } from "lucide-react";
 import { useAvailableOrderDetailsForProofing } from "@/hooks";
 
 const ITEMS_PER_PAGE_OPTIONS = [12, 24, 48];
@@ -51,6 +51,7 @@ export default function ProofingOrderPage() {
 
   // View states
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [groupByOrder, setGroupByOrder] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
 
@@ -155,6 +156,27 @@ export default function ProofingOrderPage() {
     selectedIds,
   ]);
 
+  // Group by order if enabled
+  const groupedByOrder = useMemo(() => {
+    if (!groupByOrder) return null;
+
+    const groups = new Map<string, DesignItem[]>();
+    filteredAndSortedDesigns.forEach((design) => {
+      const key = design.orderCode || design.orderId || "unknown";
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(design);
+    });
+
+    return Array.from(groups.entries()).map(([orderCode, designs]) => ({
+      orderCode,
+      customerName: designs[0]?.customerName || "",
+      customerCompanyName: designs[0]?.customerCompanyName || "",
+      designs,
+    }));
+  }, [filteredAndSortedDesigns, groupByOrder]);
+
   // Pagination
   const totalPages = Math.ceil(filteredAndSortedDesigns.length / itemsPerPage);
   const paginatedDesigns = useMemo(() => {
@@ -180,9 +202,9 @@ export default function ProofingOrderPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Designs Chờ Proofing</h1>
+          <h1 className="text-2xl font-bold">Thiết kế Chờ Bình Bài</h1>
           <p className="text-muted-foreground">
-            Tổng cộng {data?.total || 0} designs
+            Tổng cộng {data?.totalCount || 0} thiết kế
           </p>
         </div>
 
@@ -214,6 +236,17 @@ export default function ProofingOrderPage() {
             </Button>
           </div>
 
+          {/* Group by Order Toggle */}
+          <Button
+            variant={groupByOrder ? "default" : "outline"}
+            size="sm"
+            onClick={() => setGroupByOrder(!groupByOrder)}
+            className="gap-2"
+          >
+            <FolderTree className="h-4 w-4" />
+            {groupByOrder ? "Bỏ nhóm" : "Nhóm theo đơn"}
+          </Button>
+
           {/* Create Order Button */}
           <Button
             onClick={() => setIsModalOpen(true)}
@@ -221,7 +254,7 @@ export default function ProofingOrderPage() {
             className="gap-2"
           >
             <Plus className="h-4 w-4" />
-            Tạo Proofing Order
+            Tạo Lệnh Bình Bài
           </Button>
         </div>
       </div>
@@ -259,7 +292,50 @@ export default function ProofingOrderPage() {
         </div>
       ) : paginatedDesigns.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-muted-foreground">Không có design nào phù hợp.</p>
+          <p className="text-muted-foreground">
+            Không có thiết kế nào phù hợp.
+          </p>
+        </div>
+      ) : groupByOrder && groupedByOrder ? (
+        <div className="space-y-6">
+          {groupedByOrder.map((group) => (
+            <div key={group.orderCode} className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+                <FileText className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-semibold">{group.orderCode}</p>
+                  {(group.customerName || group.customerCompanyName) && (
+                    <p className="text-sm text-muted-foreground">
+                      {group.customerCompanyName || group.customerName}
+                    </p>
+                  )}
+                </div>
+                <Badge variant="secondary" className="ml-auto">
+                  {group.designs.length} thiết kế
+                </Badge>
+              </div>
+              {viewMode === "grid" ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                  {group.designs.map((design) => (
+                    <DesignCard
+                      key={design.id}
+                      design={design}
+                      isSelected={isSelected(design.id)}
+                      canSelect={canSelect(design)}
+                      onToggle={toggleSelection}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <DesignTable
+                  designs={group.designs}
+                  selectedIds={selectedIds}
+                  canSelect={canSelect}
+                  onToggle={toggleSelection}
+                />
+              )}
+            </div>
+          ))}
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
@@ -292,7 +368,7 @@ export default function ProofingOrderPage() {
                 currentPage * itemsPerPage,
                 filteredAndSortedDesigns.length
               )}{" "}
-              của {filteredAndSortedDesigns.length} designs
+              của {filteredAndSortedDesigns.length} thiết kế
             </span>
             <Select
               value={itemsPerPage.toString()}
