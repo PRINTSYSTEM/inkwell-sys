@@ -68,6 +68,37 @@ type PagedResponse<T> = {
   totalPages: number;
 };
 
+// Component to display average price per m² for a design type
+function DesignTypeAvgPrice({ designTypeId }: { designTypeId?: number }) {
+  const { data: materialsData } = useMaterialsByDesignType(
+    designTypeId,
+    undefined
+  );
+
+  const materials = Array.isArray(materialsData) ? materialsData : [];
+
+  if (materials.length === 0) {
+    return <span className="text-sm text-slate-400">—</span>;
+  }
+
+  const activeMaterials = materials.filter((m) => m.status === "active");
+  if (activeMaterials.length === 0) {
+    return <span className="text-sm text-slate-400">—</span>;
+  }
+
+  const avgPricePerCm2 =
+    activeMaterials.reduce((sum, m) => sum + (m.pricePerCm2 || 0), 0) /
+    activeMaterials.length;
+  const avgPricePerM2 = avgPricePerCm2 * 10000;
+
+  return (
+    <span className="font-semibold text-primary">
+      {avgPricePerM2.toLocaleString("vi-VN")}
+      <span className="text-xs text-muted-foreground ml-1">đ</span>
+    </span>
+  );
+}
+
 export default function DesignTypesPage() {
   const queryClient = useQueryClient();
 
@@ -402,6 +433,7 @@ export default function DesignTypesPage() {
                   <TableHead className="font-semibold text-slate-700">
                     Thứ tự
                   </TableHead>
+
                   <TableHead className="font-semibold text-slate-700">
                     Trạng thái
                   </TableHead>
