@@ -3,13 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Building2, User, FileText, AlertCircle } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Building2, User, FileText } from "lucide-react";
 
 interface DesignCardProps {
   design: DesignItem;
@@ -128,50 +122,14 @@ export function DesignCard({
           )}
         </div>
 
-        {/* Requirements */}
-        {design.requirements && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-start gap-1.5 p-2 bg-amber-50 dark:bg-amber-950/20 rounded text-xs border border-amber-200 dark:border-amber-800 cursor-help">
-                  <AlertCircle className="h-3 w-3 text-amber-600 mt-0.5 shrink-0" />
-                  <p className="text-amber-800 dark:text-amber-200 line-clamp-2">
-                    {design.requirements}
-                  </p>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p className="font-semibold mb-1">Yêu cầu:</p>
-                <p>{design.requirements}</p>
-                {design.additionalNotes && (
-                  <>
-                    <p className="font-semibold mb-1 mt-2">Ghi chú:</p>
-                    <p>{design.additionalNotes}</p>
-                  </>
-                )}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-
-        {/* Additional Notes (if no requirements) */}
-        {!design.requirements && design.additionalNotes && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-start gap-1.5 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs border border-blue-200 dark:border-blue-800 cursor-help">
-                  <FileText className="h-3 w-3 text-blue-600 mt-0.5 shrink-0" />
-                  <p className="text-blue-800 dark:text-blue-200 line-clamp-2">
-                    {design.additionalNotes}
-                  </p>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p className="font-semibold mb-1">Ghi chú:</p>
-                <p>{design.additionalNotes}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        {/* Quy trình sản xuất */}
+        {design.processClassificationOptionName && (
+          <div className="flex items-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs border border-blue-200 dark:border-blue-800">
+            <FileText className="h-3 w-3 text-blue-600 mt-0.5 shrink-0" />
+            <span className="text-blue-800 dark:text-blue-200 font-medium">
+              Quy trình: {design.processClassificationOptionName}
+            </span>
+          </div>
         )}
       </CardContent>
     </Card>

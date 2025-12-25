@@ -7,7 +7,7 @@ import { ENTITY_CONFIG } from "@/config/entities.config";
 export const orderStatusLabels: Record<string, string> =
   ENTITY_CONFIG.orderStatuses.values;
 
-// Mô tả chi tiết cho từng trạng thái đơn hàng
+// Mô tả chi tiết cho từng trạng thái đơn hàng (đồng bộ với ENTITY_CONFIG)
 export const orderStatusDescription: Record<string, string> = {
   pending: "Đơn hàng vừa được tạo, mới nhận thông tin từ khách.",
   designing: "Đơn hàng đang được thiết kế.",
@@ -63,6 +63,10 @@ export const commonStatusLabels: Record<string, string> =
 export const paymentMethodLabels: Record<string, string> =
   ENTITY_CONFIG.paymentMethods.values;
 
+// Loại cán màng (LaminationType)
+export const laminationTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.laminationTypes.values;
+
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
 
@@ -116,6 +120,7 @@ export function getStatusVariant(
     "waiting_for_file",
     "waiting_for_deposit",
     "not_paid",
+    "not_completed",
   ];
 
   const successStatuses = [
@@ -124,6 +129,7 @@ export function getStatusVariant(
     "production_completed",
     "completed",
     "fully_paid",
+    "invoice_issued",
   ];
 
   const inProgressStatuses = [
@@ -131,6 +137,7 @@ export function getStatusVariant(
     "editing",
     "in_production",
     "deposit_received",
+    "delivering",
   ];
 
   if (successStatuses.includes(status)) return "success";
@@ -150,35 +157,38 @@ export function getStatusVariant(
 // - xanh lá / emerald: các trạng thái done / confirmed / fully_paid
 // - đỏ: cancelled / not_paid (nếu muốn nhấn mạnh)
 export const statusColorMap: Record<string, string> = {
-  // ===== ORDER =====
+  // ===== ORDER STATUSES =====
   pending: "bg-slate-100 text-slate-800 border-slate-200",
-
   designing: "bg-blue-50 text-blue-700 border-blue-200",
   editing: "bg-sky-50 text-sky-700 border-sky-200",
-
   waiting_for_customer_approval: "bg-amber-50 text-amber-700 border-amber-200",
-
   confirmed_for_printing: "bg-emerald-50 text-emerald-700 border-emerald-200",
-
   waiting_for_deposit: "bg-amber-100 text-amber-800 border-amber-300",
   deposit_received: "bg-indigo-50 text-indigo-700 border-indigo-200",
   debt_approved: "bg-green-50 text-green-700 border-green-200",
-
   waiting_for_proofing: "bg-violet-50 text-violet-700 border-violet-200",
   waiting_for_production: "bg-indigo-50 text-indigo-700 border-indigo-200",
-
   in_production: "bg-cyan-50 text-cyan-700 border-cyan-200",
-
   production_completed: "bg-green-50 text-green-700 border-green-200",
+  invoice_issued: "bg-teal-50 text-teal-700 border-teal-200",
+  delivering: "bg-blue-50 text-blue-700 border-blue-200",
   completed: "bg-green-100 text-green-800 border-green-200",
-
   cancelled: "bg-red-50 text-red-700 border-red-200",
 
-  // ===== DESIGN =====
+  // ===== DESIGN STATUSES (dùng chung với Order) =====
   received_info: "bg-slate-100 text-slate-800 border-slate-200",
 
-  // ===== PROOFING =====
+  // ===== PROOFING ORDER STATUSES =====
   waiting_for_file: "bg-slate-100 text-slate-800 border-slate-200",
+  not_completed: "bg-slate-100 text-slate-800 border-slate-200",
+  paused: "bg-yellow-50 text-yellow-700 border-yellow-200",
+
+  // ===== ORDER DETAIL ITEM STATUSES (dùng chung với Order) =====
+  // waiting_for_proofing, waiting_for_production, in_production, 
+  // production_completed, delivering, completed đã được định nghĩa ở trên
+
+  // ===== PRODUCTION STATUSES (dùng chung với Order) =====
+  // waiting_for_production, in_production, completed đã được định nghĩa ở trên
 
   // ===== PAYMENT =====
   not_paid: "bg-rose-50 text-rose-700 border-rose-200",
@@ -196,6 +206,12 @@ export const statusColorMap: Record<string, string> = {
   // ===== COMMON =====
   active: "bg-emerald-50 text-emerald-700 border-emerald-200",
   inactive: "bg-slate-100 text-slate-800 border-slate-200",
+
+  // ===== LAMINATION TYPES =====
+  glossy: "bg-blue-50 text-blue-700 border-blue-200",
+  matte: "bg-slate-50 text-slate-700 border-slate-200",
+  soft_touch: "bg-purple-50 text-purple-700 border-purple-200",
+  none: "bg-gray-50 text-gray-600 border-gray-200",
 };
 
 // Hàm helper: trả về class tailwind cho badge

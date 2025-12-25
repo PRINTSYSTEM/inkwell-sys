@@ -62,6 +62,7 @@ import {
 } from "@/hooks/use-customer";
 import { useExportDebt } from "@/hooks/use-accounting";
 import { formatCurrency } from "@/lib/status-utils";
+import { DebtStatusBadge } from "@/components/accounting/StatusBadges";
 
 export default function AccountingDebtReport() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -227,25 +228,7 @@ export default function AccountingDebtReport() {
     return customers.find((c) => c.id === selectedCustomerId);
   }, [customers, selectedCustomerId]);
 
-  const getDebtStatusBadge = (status: string | null | undefined) => {
-    if (!status) return null;
-
-    const config: Record<
-      string,
-      { label: string; variant: "default" | "secondary" | "destructive" }
-    > = {
-      good: { label: "Tốt", variant: "default" },
-      warning: { label: "Cảnh báo", variant: "secondary" },
-      blocked: { label: "Bị chặn", variant: "destructive" },
-    };
-
-    const { label, variant } = config[status] ?? {
-      label: status,
-      variant: "default" as const,
-    };
-
-    return <Badge variant={variant}>{label}</Badge>;
-  };
+  // Removed getDebtStatusBadge - use DebtStatusBadge from StatusBadges instead
 
   const getDebtRatioColor = (ratio: number) => {
     if (ratio > 100) return "text-red-600";
@@ -513,7 +496,7 @@ export default function AccountingDebtReport() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {getDebtStatusBadge(customer.debtStatus)}
+                            <DebtStatusBadge status={customer.debtStatus} />
                           </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>

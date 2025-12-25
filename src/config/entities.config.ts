@@ -53,10 +53,9 @@ export const ENTITY_CONFIG = {
     entityType: "ProofingOrder",
     description: "Trạng thái bình bài",
     values: {
-      waiting_for_file: "Chờ file in",
-      waiting_for_production: "Chờ sản xuất",
-      in_production: "Đang sản xuất",
+      not_completed: "Chưa hoàn thành",
       completed: "Hoàn thành",
+      paused: "Tạm dừng",
     },
   },
   orderDetailDerivedStatuses: {
@@ -126,6 +125,16 @@ export const ENTITY_CONFIG = {
     values: {
       active: "Hoạt động",
       inactive: "Không hoạt động",
+    },
+  },
+  laminationTypes: {
+    entityType: "Design,OrderDetail",
+    description: "Loại cán màng",
+    values: {
+      glossy: "Cán bóng",
+      matte: "Cán mờ",
+      soft_touch: "Cán mềm (Soft touch)",
+      none: "Không cán",
     },
   },
 };

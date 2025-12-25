@@ -16,6 +16,7 @@ import {
   Printer,
   Truck,
   AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,19 @@ import {
   useExportOrderDeliveryNote,
 } from "@/hooks/use-order";
 import { useCreateAccountingForOrder } from "@/hooks/use-accounting";
+import { useCreateInvoice } from "@/hooks/use-invoice";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import type { OrderResponse } from "@/Schema";
 
 // Helper to derive customer type
@@ -72,6 +86,33 @@ function canIssueInvoice(order: OrderResponse): boolean {
   return order.depositAmount >= order.totalAmount && order.totalAmount > 0;
 }
 
+// Check if customer information is complete for invoice issuance
+function isCustomerInfoComplete(order: OrderResponse): boolean {
+  const customer = order.customer;
+  if (!customer) return false;
+
+  const customerName = typeof customer.name === "string" ? customer.name : "";
+  const customerPhone = typeof customer.phone === "string" ? customer.phone : "";
+  const customerAddress = typeof customer.address === "string" ? customer.address : "";
+  const customerEmail = typeof customer.email === "string" ? customer.email : "";
+  const customerCompanyName = typeof customer.companyName === "string" ? customer.companyName : "";
+  const customerTaxCode = typeof customer.taxCode === "string" ? customer.taxCode : "";
+
+  const isCompany = !!customerCompanyName;
+
+  // Required fields: name, phone, address, email
+  if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim() || !customerEmail.trim()) {
+    return false;
+  }
+
+  // For company: also need taxCode
+  if (isCompany && !customerTaxCode.trim()) {
+    return false;
+  }
+
+  return true;
+}
+
 export function InvoiceList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,6 +122,8 @@ export function InvoiceList() {
     null
   );
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(new Set());
+  const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -94,6 +137,7 @@ export function InvoiceList() {
   const exportInvoiceMutation = useExportOrderInvoice();
   const exportDeliveryNoteMutation = useExportOrderDeliveryNote();
   const createAccountingMutation = useCreateAccountingForOrder();
+  const createInvoiceMutation = useCreateInvoice();
 
   // Filter orders client-side
   const filteredOrders = useMemo(() => {
@@ -173,6 +217,72 @@ export function InvoiceList() {
     refetch();
   };
 
+  // Handle checkbox selection
+  const handleToggleOrder = (orderId: number) => {
+    setSelectedOrderIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedOrderIds.size === filteredOrders.length) {
+      setSelectedOrderIds(new Set());
+    } else {
+      setSelectedOrderIds(new Set(filteredOrders.map((o) => o.id).filter((id): id is number => !!id)));
+    }
+  };
+
+  // Handle create invoice from selected orders
+  const handleCreateInvoiceFromSelected = () => {
+    if (selectedOrderIds.size === 0) {
+      toast.error("Vui lòng chọn ít nhất một đơn hàng");
+      return;
+    }
+
+    // Check if all selected orders have complete customer info
+    const selectedOrders = filteredOrders.filter((o) => o.id && selectedOrderIds.has(o.id));
+    const incompleteOrders = selectedOrders.filter((o) => !isCustomerInfoComplete(o));
+
+    if (incompleteOrders.length > 0) {
+      toast.error(
+        `Có ${incompleteOrders.length} đơn hàng thiếu thông tin khách hàng. Vui lòng cập nhật trước khi xuất hóa đơn.`
+      );
+      return;
+    }
+
+    setIsCreateInvoiceDialogOpen(true);
+  };
+
+  const handleConfirmCreateInvoice = async () => {
+    if (selectedOrderIds.size === 0) return;
+
+    try {
+      await createInvoiceMutation.mutateAsync({
+        orderIds: Array.from(selectedOrderIds),
+      });
+      setSelectedOrderIds(new Set());
+      setIsCreateInvoiceDialogOpen(false);
+      refetch();
+    } catch (error) {
+      // Error is handled by the hook
+    }
+  };
+
+  // Get selected orders for display
+  const selectedOrders = useMemo(() => {
+    return filteredOrders.filter((o) => o.id && selectedOrderIds.has(o.id));
+  }, [filteredOrders, selectedOrderIds]);
+
+  const totalSelectedAmount = useMemo(() => {
+    return selectedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  }, [selectedOrders]);
+
   // Convert API order to modal format
   const selectedOrderForModal = selectedOrder
     ? {
@@ -217,46 +327,79 @@ export function InvoiceList() {
         </Alert>
       )}
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Tìm kiếm theo mã đơn, tên khách, SĐT..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Select
-            value={invoiceStatusFilter}
-            onValueChange={setInvoiceStatusFilter}
-          >
-            <SelectTrigger className="w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Trạng thái HĐ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="not_issued">Chưa xuất</SelectItem>
-              <SelectItem value="issued">Đã xuất</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+      {/* Filters and Actions */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Tìm kiếm theo mã đơn, tên khách, SĐT..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
             />
-          </Button>
-          <Button variant="outline" size="icon">
-            <Download className="h-4 w-4" />
-          </Button>
+          </div>
+          <div className="flex gap-2">
+            <Select
+              value={invoiceStatusFilter}
+              onValueChange={setInvoiceStatusFilter}
+            >
+              <SelectTrigger className="w-[180px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Trạng thái HĐ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="not_issued">Chưa xuất</SelectItem>
+                <SelectItem value="issued">Đã xuất</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
+            <Button variant="outline" size="icon">
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
+
+        {/* Selection Actions */}
+        {selectedOrderIds.size > 0 && (
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">
+                Đã chọn {selectedOrderIds.size} đơn hàng
+              </span>
+              <Badge variant="secondary">
+                Tổng: {formatCurrency(totalSelectedAmount)}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedOrderIds(new Set())}
+              >
+                Bỏ chọn
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleCreateInvoiceFromSelected}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Xuất hóa đơn ({selectedOrderIds.size})
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -264,6 +407,12 @@ export function InvoiceList() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={filteredOrders.length > 0 && selectedOrderIds.size === filteredOrders.length}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
               <TableHead className="w-[140px]">Mã đơn</TableHead>
               <TableHead>Khách hàng</TableHead>
               <TableHead className="text-right">Tổng tiền</TableHead>
@@ -287,7 +436,7 @@ export function InvoiceList() {
             ) : filteredOrders.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="h-24 text-center text-muted-foreground"
                 >
                   Không tìm thấy đơn hàng nào.
@@ -297,23 +446,40 @@ export function InvoiceList() {
               filteredOrders.map((order) => {
                 const customerType = deriveCustomerType(order.customer);
                 const canInvoice = canIssueInvoice(order);
+                const customerInfoComplete = isCustomerInfoComplete(order);
                 // For demo: consider invoice issued if order is fully paid and completed
                 const invoiceStatus =
                   canInvoice && order.status === "completed"
                     ? "issued"
                     : "not_issued";
+                const isSelected = order.id ? selectedOrderIds.has(order.id) : false;
 
                 return (
-                  <TableRow key={order.id} className="group">
+                  <TableRow
+                    key={order.id}
+                    className={`group ${isSelected ? "bg-muted/50" : ""}`}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => order.id && handleToggleOrder(order.id)}
+                        disabled={!customerInfoComplete && invoiceStatus === "not_issued"}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium font-mono text-sm">
                       {order.code}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        <div className="font-medium text-sm">
-                          {order.customer?.companyName ||
-                            order.customer?.name ||
-                            "—"}
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-sm">
+                            {order.customer?.companyName ||
+                              order.customer?.name ||
+                              "—"}
+                          </div>
+                          {!customerInfoComplete && invoiceStatus === "not_issued" && (
+                            <AlertTriangle className="h-3 w-3 text-warning" title="Thiếu thông tin khách hàng" />
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">
@@ -430,6 +596,64 @@ export function InvoiceList() {
         order={selectedOrderForModal}
         onConfirm={handleInvoiceConfirm}
       />
+
+      {/* Create Invoice Dialog */}
+      <Dialog open={isCreateInvoiceDialogOpen} onOpenChange={setIsCreateInvoiceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Xuất hóa đơn cho {selectedOrderIds.size} đơn hàng</DialogTitle>
+            <DialogDescription>
+              Xác nhận xuất hóa đơn cho các đơn hàng đã chọn. Tất cả đơn hàng sẽ được gộp vào một hóa đơn.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[50vh] pr-4">
+            <div className="space-y-3">
+              {selectedOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{order.code}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {order.customer?.companyName || order.customer?.name || "—"}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium text-sm">
+                      {formatCurrency(order.totalAmount || 0)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border-t">
+            <span className="font-medium">Tổng cộng:</span>
+            <span className="text-lg font-bold">{formatCurrency(totalSelectedAmount)}</span>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateInvoiceDialogOpen(false)}
+              disabled={createInvoiceMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleConfirmCreateInvoice}
+              disabled={createInvoiceMutation.isPending}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {createInvoiceMutation.isPending ? "Đang tạo..." : "Xác nhận xuất hóa đơn"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

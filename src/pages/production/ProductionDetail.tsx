@@ -505,15 +505,18 @@ export default function ProductionDetailPage() {
                 {proofingOrder.notes && (
                   <>
                     <Separator />
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">
-                        Ghi chú bình bài
-                      </Label>
-                      <Card className="p-3 bg-muted/30">
-                        <p className="text-sm whitespace-pre-wrap">
-                          {proofingOrder.notes}
-                        </p>
-                      </Card>
+                    <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                            Ghi chú bình bài
+                          </p>
+                          <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed">
+                            {proofingOrder.notes}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </>
                 )}

@@ -7,7 +7,9 @@ import { IdSchema, DateSchema } from "./Common";
 export const PlateExportResponseSchema = z
   .object({
     id: IdSchema.optional(),
+    plateVendorId: IdSchema.nullable().optional(),
     vendorName: z.string().nullable().optional(),
+    plateCount: z.number().int().nullable().optional(),
     sentAt: DateSchema.nullable().optional(),
     receivedAt: DateSchema.nullable().optional(),
     notes: z.string().nullable().optional(),
@@ -21,7 +23,9 @@ export type PlateExportResponse = z.infer<typeof PlateExportResponseSchema>;
 
 export const RecordPlateExportRequestSchema = z
   .object({
-    vendorName: z.string().min(0).max(255), // Required in swagger, maxLength 255, minLength 0
+    plateVendorId: IdSchema.nullable().optional(),
+    vendorName: z.string().min(0).max(255).nullable().optional(),
+    plateCount: z.number().int().min(1).max(6),
     sentAt: DateSchema.nullable().optional(),
     receivedAt: DateSchema.nullable().optional(),
     notes: z.string().nullable().optional(),

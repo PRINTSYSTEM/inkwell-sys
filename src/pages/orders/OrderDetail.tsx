@@ -19,6 +19,9 @@ import {
   Loader2,
   ImageIcon,
   AlertCircle,
+  Mail,
+  AlertTriangle,
+  Hash,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -144,10 +147,35 @@ export default function OrderDetailPage() {
   }
 
   // ===== DERIVED STATE =====
-  const customerType = order.customer?.companyName ? "company" : "retail";
+  // Use customer from order response
+  const customer = order.customer;
+  const customerCompanyName =
+    typeof customer?.companyName === "string" ? customer.companyName : null;
+  const customerType = customerCompanyName ? "company" : "retail";
   const hasDeposit = (order.depositAmount || 0) > 0;
   const remainingAmount = (order.totalAmount || 0) - (order.depositAmount || 0);
   const orderDetailsCount = order.orderDetails?.length || 0;
+
+  // ===== CHECK CUSTOMER INFO COMPLETENESS =====
+  // Thông tin cần thiết để xuất hóa đơn:
+  // - name (tên khách hàng)
+  // - phone (số điện thoại)
+  // - address (địa chỉ)
+  // - email (email)
+  const missingFields: string[] = [];
+  const customerName = typeof customer?.name === "string" ? customer.name : "";
+  const customerPhone =
+    typeof customer?.phone === "string" ? customer.phone : "";
+  const customerAddress =
+    typeof customer?.address === "string" ? customer.address : "";
+  const customerEmail =
+    typeof customer?.email === "string" ? customer.email : "";
+
+  if (!customerName.trim()) missingFields.push("Tên khách hàng");
+  if (!customerPhone.trim()) missingFields.push("Số điện thoại");
+  if (!customerAddress.trim()) missingFields.push("Địa chỉ");
+  if (!customerEmail.trim()) missingFields.push("Email");
+  const isCustomerInfoComplete = missingFields.length === 0;
 
   return (
     <div className="space-y-6">
@@ -191,6 +219,16 @@ export default function OrderDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-2"
+              onClick={() => setEditSheetOpen(true)}
+            >
+              <FileText className="w-4 h-4" />
+              Chỉnh sửa đơn hàng
+            </Button>
+
             {canExportExcel && (
               <Button
                 variant="outline"
@@ -218,14 +256,15 @@ export default function OrderDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setEditSheetOpen(true)}>
-                  Chỉnh sửa đơn hàng
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setDepositDialogOpen(true)}>
                   Cập nhật đặt cọc
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setInvoiceDialogOpen(true)}>
+                <DropdownMenuItem
+                  onClick={() => setInvoiceDialogOpen(true)}
+                  disabled={!isCustomerInfoComplete}
+                >
                   Xuất hóa đơn
+                  {!isCustomerInfoComplete && " (Thiếu thông tin KH)"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -439,6 +478,45 @@ export default function OrderDetailPage() {
                                   {orderDetail.quantity?.toLocaleString()}
                                 </p>
                               </div>
+                              {orderDetail.laminationType && (
+                                <div>
+                                  <p className="text-muted-foreground text-xs">
+                                    Cán màn
+                                  </p>
+                                  <p className="font-medium">
+                                    {orderDetail.laminationType === "bóng"
+                                      ? "Bóng"
+                                      : orderDetail.laminationType === "mờ"
+                                      ? "Mờ"
+                                      : typeof orderDetail.laminationType ===
+                                        "string"
+                                      ? orderDetail.laminationType
+                                      : "—"}
+                                  </p>
+                                </div>
+                              )}
+                              {design?.sidesClassificationOption && (
+                                <div>
+                                  <p className="text-muted-foreground text-xs">
+                                    Mặt cắt
+                                  </p>
+                                  <p className="font-medium">
+                                    {design.sidesClassificationOption.value ||
+                                      "—"}
+                                  </p>
+                                </div>
+                              )}
+                              {design?.processClassificationOption && (
+                                <div>
+                                  <p className="text-muted-foreground text-xs">
+                                    Quy trình SX
+                                  </p>
+                                  <p className="font-medium">
+                                    {design.processClassificationOption.value ||
+                                      "—"}
+                                  </p>
+                                </div>
+                              )}
                               {canViewPrice && (
                                 <>
                                   <div>
@@ -671,19 +749,49 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Warning banner if customer info is incomplete */}
+              {!isCustomerInfoComplete && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                        Thông tin khách hàng chưa đầy đủ
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                        Cần cập nhật để có thể xuất hóa đơn:
+                      </p>
+                      <ul className="text-xs text-amber-700 dark:text-amber-300 mt-1.5 list-disc list-inside space-y-0.5">
+                        {missingFields.map((field) => (
+                          <li key={field}>{field}</li>
+                        ))}
+                      </ul>
+                      <Link
+                        to={`/customers/${customer?.id}`}
+                        className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline mt-2 inline-block"
+                      >
+                        Cập nhật thông tin khách hàng →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-start gap-3">
                 <Avatar className="h-10 w-10">
                   <AvatarFallback>
-                    {order.customer?.name?.charAt(0)?.toUpperCase() || "K"}
+                    {customerName.charAt(0)?.toUpperCase() || "K"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">
-                    {order.customer?.name}
+                    {customerName || "Chưa có tên"}
                   </p>
-                  {order.customer?.companyName && (
+                  {customer?.companyName && (
                     <p className="text-sm text-muted-foreground truncate">
-                      {order.customer.companyName}
+                      {typeof customer.companyName === "string"
+                        ? customer.companyName
+                        : ""}
                     </p>
                   )}
                   <Badge variant="secondary" className="mt-1 text-xs">
@@ -697,22 +805,40 @@ export default function OrderDetailPage() {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground w-20">Mã KH:</span>
-                  <span className="font-medium">{order.customer?.code}</span>
+                  <span className="font-medium">
+                    {typeof customer?.code === "string" ? customer.code : "—"}
+                  </span>
                 </div>
-                {order.customer?.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <span>{customerPhone || "Chưa có"}</span>
+                </div>
+                {customerEmail ? (
                   <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span>{order.customer.phone}</span>
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <span>{customerEmail}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="w-4 h-4" />
+                    <span>Chưa có email</span>
                   </div>
                 )}
-                {order.customer?.address && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                    <span className="text-muted-foreground">
-                      {order.customer.address}
-                    </span>
-                  </div>
-                )}
+                {customerType === "company" &&
+                  customer?.taxCode &&
+                  typeof customer.taxCode === "string" &&
+                  customer.taxCode.trim() && (
+                    <div className="flex items-center gap-2">
+                      <Hash className="w-4 h-4 text-muted-foreground" />
+                      <span>{customer.taxCode}</span>
+                    </div>
+                  )}
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <span className="text-muted-foreground">
+                    {customerAddress || "Chưa có địa chỉ"}
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -737,7 +863,9 @@ export default function OrderDetailPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Phụ trách:</span>
                   <span className="font-medium">
-                    {order.creator?.fullName || "—"}
+                    {order.assignedUser?.fullName ||
+                      order.creator?.fullName ||
+                      "—"}
                   </span>
                 </div>
 
@@ -755,11 +883,23 @@ export default function OrderDetailPage() {
                     <p className="text-muted-foreground text-xs mb-1">
                       Ghi chú:
                     </p>
-                    <p className="text-sm bg-muted/50 p-2 rounded-md">
+                    <p className="text-sm bg-muted/50 p-2 rounded-md whitespace-pre-wrap">
                       {order.note}
                     </p>
                   </div>
                 )}
+
+                <Separator />
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={() => setEditSheetOpen(true)}
+                >
+                  <FileText className="w-4 h-4" />
+                  Chỉnh sửa thông tin
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -827,6 +967,7 @@ export default function OrderDetailPage() {
         open={invoiceDialogOpen}
         onOpenChange={setInvoiceDialogOpen}
         orderId={order.id}
+        isCustomerInfoComplete={isCustomerInfoComplete}
       />
 
       <EditOrderSheet

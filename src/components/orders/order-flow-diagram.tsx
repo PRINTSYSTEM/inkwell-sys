@@ -36,6 +36,7 @@ interface OrderFlowDiagramProps {
 }
 
 // Define status order for comparison
+// Note: delivering comes before invoice_issued (giao hàng trước xuất hóa đơn)
 const STATUS_ORDER: OrderStatus[] = [
   "pending",
   "designing",
@@ -49,8 +50,8 @@ const STATUS_ORDER: OrderStatus[] = [
   "waiting_for_production",
   "in_production",
   "production_completed",
-  "invoice_issued",
   "delivering",
+  "invoice_issued",
   "completed",
 ];
 
@@ -142,20 +143,20 @@ export function OrderFlowDiagram({
       active: isExactly(["waiting_for_production", "in_production"]),
     });
 
-    // 7. Xuất HĐ (invoice_issued)
-    steps.push({
-      id: "invoice",
-      label: "Xuất HĐ",
-      completed: isAtOrPast(["delivering"]),
-      active: isExactly(["production_completed", "invoice_issued"]),
-    });
-
-    // 8. Giao hàng (delivering)
+    // 7. Giao hàng (delivering) - giao hàng trước xuất hóa đơn
     steps.push({
       id: "delivering",
       label: "Giao hàng",
-      completed: isAtOrPast(["completed"]),
+      completed: isAtOrPast(["invoice_issued", "completed"]),
       active: isExactly(["delivering"]),
+    });
+
+    // 8. Xuất HĐ (invoice_issued) - có thể xuất nhiều lần
+    steps.push({
+      id: "invoice",
+      label: "Xuất HĐ",
+      completed: isAtOrPast(["completed"]),
+      active: isExactly(["invoice_issued"]),
     });
 
     // 9. Hoàn thành (completed)

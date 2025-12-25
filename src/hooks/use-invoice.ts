@@ -1,91 +1,207 @@
-// src/hooks/invoice.hooks.ts
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+// src/hooks/use-invoice.ts
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
-import type { InvoiceFileResponse } from "@/Schema/invoice.schema";
 import { API_SUFFIX } from "@/apis";
-import { useAsyncCallback } from "@/hooks/use-async"; // <- hook async bạn đã có
+import { normalizeParams } from "@/apis/util.api";
+import { toast } from "sonner";
+import type {
+  InvoiceResponse,
+  CreateInvoiceRequest,
+  UpdateInvoiceRequest,
+  InvoiceFileResponse,
+} from "@/Schema/invoice.schema";
 
-// Error type for API responses
-type ApiError = {
-  response?: { data?: { message?: string } };
-  message?: string;
+// ================== GET INVOICES ==================
+// GET /invoices
+export interface InvoicesParams {
+  pageNumber?: number;
+  pageSize?: number;
+  status?: string;
+  search?: string;
+}
+
+export const useInvoices = (params?: InvoicesParams) => {
+  return useQuery({
+    queryKey: ["invoices", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<InvoiceResponse[]>(API_SUFFIX.INVOICES, {
+        params: normalizedParams,
+      });
+      return res.data;
+    },
+  });
 };
 
-export const invoiceKeys = {
-  byOrder: (orderId: number | null) => ["invoice", "order", orderId] as const,
+// ================== GET INVOICE BY ID ==================
+// GET /invoices/{id}
+export const useInvoice = (id: number | null, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["invoice", id],
+    enabled: enabled && !!id,
+    queryFn: async () => {
+      const res = await apiRequest.get<InvoiceResponse>(
+        API_SUFFIX.INVOICE_BY_ID(id as number)
+      );
+      return res.data;
+    },
+  });
 };
 
-// GET /invoices/order/{orderId}
-export const useOrderInvoice = (
+// ================== GET INVOICES BY ORDER ==================
+// GET /invoices/by-order/{orderId}
+export const useInvoicesByOrder = (
   orderId: number | null,
   enabled: boolean = true
 ) => {
   return useQuery({
-    queryKey: invoiceKeys.byOrder(orderId),
+    queryKey: ["invoices", "by-order", orderId],
+    enabled: enabled && !!orderId,
+    queryFn: async () => {
+      const res = await apiRequest.get<InvoiceResponse[]>(
+        API_SUFFIX.INVOICES_BY_ORDER(orderId as number)
+      );
+      return res.data;
+    },
+  });
+};
+
+// ================== CREATE INVOICE ==================
+// POST /invoices
+export const useCreateInvoice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateInvoiceRequest) => {
+      const res = await apiRequest.post<InvoiceResponse>(
+        API_SUFFIX.INVOICES,
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      if (data.orders?.[0]?.orderId) {
+        queryClient.invalidateQueries({
+          queryKey: ["invoices", "by-order", data.orders[0].orderId],
+        });
+      }
+      toast.success("Tạo hóa đơn thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// ================== UPDATE INVOICE ==================
+// PUT /invoices/{id}
+export const useUpdateInvoice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: UpdateInvoiceRequest;
+    }) => {
+      const res = await apiRequest.put<InvoiceResponse>(
+        API_SUFFIX.INVOICE_BY_ID(id),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      if (data.orders?.[0]?.orderId) {
+        queryClient.invalidateQueries({
+          queryKey: ["invoices", "by-order", data.orders[0].orderId],
+        });
+      }
+      toast.success("Cập nhật hóa đơn thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// ================== EXPORT INVOICE ==================
+// GET /invoices/{id}/export-sinvoice
+export const useExportInvoice = () => {
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest.get<Blob>(API_SUFFIX.INVOICE_EXPORT(id), {
+        responseType: "blob",
+      });
+      return res.data;
+    },
+    onSuccess: (blob, id) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `invoice-${id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("Xuất hóa đơn thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// ================== GET INVOICE BY ORDER (Legacy) ==================
+// GET /invoices/order/{orderId}
+export const useInvoiceByOrder = (
+  orderId: number | null,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["invoice", "by-order", orderId],
     enabled: enabled && !!orderId,
     queryFn: async () => {
       const res = await apiRequest.get<InvoiceFileResponse>(
-        API_SUFFIX.ORDER_INVOICE(orderId as number)
+        API_SUFFIX.INVOICE_BY_ORDER(orderId as number)
       );
-      return res.data; // string
+      return res.data;
     },
-    staleTime: 5 * 60 * 1000,
   });
 };
 
+// ================== CREATE INVOICE FROM ORDER (Legacy) ==================
 // POST /invoices/order/{orderId}
-// -> dùng khi bấm "Xuất hoá đơn"
-export const useGenerateOrderInvoice = () => {
+export const useCreateInvoiceFromOrder = () => {
   const queryClient = useQueryClient();
 
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    InvoiceFileResponse,
-    [number]
-  >(async (orderId: number) => {
-    const res = await apiRequest.post<InvoiceFileResponse>(
-      API_SUFFIX.ORDER_INVOICE(orderId)
-    );
-    return res.data; // string
-  });
-
-  const mutate = async (orderId: number) => {
-    try {
-      const result = await execute(orderId);
-
-      // refresh lại GET /invoices/order/{orderId}
+  return useMutation({
+    mutationFn: async (orderId: number) => {
+      const res = await apiRequest.post<InvoiceFileResponse>(
+        API_SUFFIX.INVOICE_BY_ORDER(orderId)
+      );
+      return res.data;
+    },
+    onSuccess: (_, orderId) => {
       queryClient.invalidateQueries({
-        queryKey: invoiceKeys.byOrder(orderId),
+        queryKey: ["invoice", "by-order", orderId],
       });
-
-      toast.success("Thành công", {
-        description: "Đã tạo/cập nhật hoá đơn cho đơn hàng",
-      });
-
-      // tuỳ BE trả gì:
-      // - nếu là URL: có thể window.open(result, "_blank")
-      // - nếu là mã hoá đơn: hiển thị trong UI
-      return result;
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Không thể tạo hoá đơn";
-
-      toast.error("Lỗi", {
-        description: message,
-      });
-
-      throw err;
-    }
-  };
-
-  return {
-    data, // string | null (invoice result)
-    loading, // trạng thái đang gọi API
-    error, // message lỗi (string | null)
-    mutate, // (orderId: number) => Promise<string>
-    reset, // reset state về null
-  };
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Tạo hóa đơn từ đơn hàng thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
 };
+
+// ================== ALIASES FOR COMPATIBILITY ==================
+// These are aliases for backward compatibility with existing UI components
+export const useOrderInvoice = useInvoiceByOrder;
+export const useGenerateOrderInvoice = useCreateInvoiceFromOrder;

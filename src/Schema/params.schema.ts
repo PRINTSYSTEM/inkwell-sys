@@ -206,3 +206,12 @@ export const CustomerDebtSummaryParamsSchema = z
 export type CustomerDebtSummaryParams = z.infer<
   typeof CustomerDebtSummaryParamsSchema
 >;
+
+// ==== Customer orders params (/api/customers/{id}/orders) ====
+export const CustomerOrdersParamsSchema = PagedParamsSchema.extend({
+  customerId: IdSchema.nullable().optional(),
+  status: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
+});
+
+export type CustomerOrdersParams = z.infer<typeof CustomerOrdersParamsSchema>;

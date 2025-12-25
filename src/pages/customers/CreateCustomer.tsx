@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Sparkles,
   AlertCircle,
+  Mail,
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -34,6 +35,7 @@ export default function CreateCustomer() {
     representativeName: "",
     taxCode: "",
     phone: "",
+    email: "",
     address: "",
     type: "company",
     maxDebt: 50000000,
@@ -100,13 +102,14 @@ export default function CreateCustomer() {
 
     // Prepare form data - convert empty strings to undefined for optional fields
     const formData = {
-      name: form.name?.trim() || "",
+      name: form.name?.trim() || undefined,
       companyName: form.companyName?.trim() || undefined,
-      representativeName: form.representativeName?.trim() || "",
-      phone: form.phone?.trim() || "",
-      taxCode: form.taxCode?.trim() || "",
-      address: form.address?.trim() || "",
-      type: form.type || "",
+      representativeName: form.representativeName?.trim() || undefined,
+      phone: form.phone?.trim() || undefined,
+      email: form.email?.trim() || undefined,
+      taxCode: form.taxCode?.trim() || undefined,
+      address: form.address?.trim() || undefined,
+      type: form.type || undefined,
       currentDebt: form.currentDebt,
       maxDebt: Number(form.maxDebt) || 0,
     };
@@ -204,7 +207,7 @@ export default function CreateCustomer() {
                     className="text-sm font-medium flex items-center gap-2"
                   >
                     <User className="h-4 w-4 text-muted-foreground" />
-                    Tên khách hàng <span className="text-destructive">*</span>
+                    Tên khách hàng
                   </Label>
                   <Input
                     id="name"
@@ -223,8 +226,7 @@ export default function CreateCustomer() {
                     className="text-sm font-medium flex items-center gap-2"
                   >
                     <User className="h-4 w-4 text-muted-foreground" />
-                    Tên người đại diện{" "}
-                    <span className="text-destructive">*</span>
+                    Tên người đại diện
                   </Label>
                   <Input
                     id="representativeName"
@@ -285,7 +287,7 @@ export default function CreateCustomer() {
                 <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-2">
                     <Hash className="h-4 w-4 text-muted-foreground" />
-                    Loại khách hàng <span className="text-destructive">*</span>
+                    Loại khách hàng
                   </Label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -369,7 +371,7 @@ export default function CreateCustomer() {
                       className="text-sm font-medium flex items-center gap-2"
                     >
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      Số điện thoại <span className="text-destructive">*</span>
+                      Số điện thoại
                     </Label>
                     <Input
                       id="phone"
@@ -384,11 +386,33 @@ export default function CreateCustomer() {
 
                   <div className="space-y-2">
                     <Label
+                      htmlFor="email"
+                      className="text-sm font-medium flex items-center gap-2"
+                    >
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="example@email.com"
+                      value={form.email || ""}
+                      onChange={(e) => handleInput("email", e.target.value)}
+                      onBlur={() => handleBlur("email")}
+                      className={getError("email") ? "border-destructive" : ""}
+                    />
+                    <FormFieldError error={getError("email")} />
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label
                       htmlFor="taxCode"
                       className="text-sm font-medium flex items-center gap-2"
                     >
                       <Hash className="h-4 w-4 text-muted-foreground" />
-                      Mã số thuế <span className="text-destructive">*</span>
+                      Mã số thuế
                     </Label>
                     <Input
                       id="taxCode"
@@ -410,7 +434,7 @@ export default function CreateCustomer() {
                     className="text-sm font-medium flex items-center gap-2"
                   >
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    Địa chỉ <span className="text-destructive">*</span>
+                    Địa chỉ
                   </Label>
                   <Textarea
                     id="address"
@@ -464,7 +488,7 @@ export default function CreateCustomer() {
               </div>
               <div className="p-6 space-y-2">
                 <Label htmlFor="maxDebt" className="text-sm font-medium">
-                  Số tiền (VNĐ) <span className="text-destructive">*</span>
+                  Số tiền (VNĐ)
                 </Label>
                 <Input
                   id="maxDebt"

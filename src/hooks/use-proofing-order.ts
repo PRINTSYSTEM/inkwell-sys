@@ -158,8 +158,7 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             orderCode: design.latestOrderCode || "",
             customerName: design.customer?.name || "",
             customerCompanyName: design.customer?.companyName || "",
-            requirements: od.requirements || "",
-            additionalNotes: od.additionalNotes || "",
+            processClassificationOptionName: design.processClassificationOption?.value || undefined,
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
             designId: design.id, // Store designId for fetching available quantity
