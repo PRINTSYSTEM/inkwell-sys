@@ -433,9 +433,7 @@ export default function DesignTypesPage() {
                   <TableHead className="font-semibold text-slate-700">
                     Thứ tự
                   </TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-right">
-                    Giá TB/m²
-                  </TableHead>
+
                   <TableHead className="font-semibold text-slate-700">
                     Trạng thái
                   </TableHead>
@@ -487,9 +485,7 @@ export default function DesignTypesPage() {
                           {designType.displayOrder}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <DesignTypeAvgPrice designTypeId={designType.id} />
-                      </TableCell>
+
                       <TableCell>
                         <Badge
                           variant={
@@ -589,10 +585,8 @@ export default function DesignTypesPage() {
               </Button>
               <span>
                 Trang{" "}
-                <span className="font-semibold">
-                  {designTypesPaged.page}
-                </span>{" "}
-                / {designTypesPaged.totalPages || 1}
+                <span className="font-semibold">{designTypesPaged.page}</span> /{" "}
+                {designTypesPaged.totalPages || 1}
               </span>
               <Button
                 variant="outline"
