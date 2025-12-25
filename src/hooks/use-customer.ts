@@ -4,8 +4,11 @@ import type {
   CreateCustomerRequest,
   UpdateCustomerRequest,
   CustomerDebtHistoryResponse,
+  CustomerDebtHistoryResponsePagedResponse,
   CustomerMonthlyDebtResponse,
   CustomerDebtSummaryResponse,
+  CustomerStatisticsResponse,
+  CustomerOrdersResponsePagedResponse,
 } from "@/Schema/customer.schema";
 import { createCrudHooks } from "./use-base";
 import {
@@ -13,6 +16,8 @@ import {
   CustomerDebtHistoryParams,
   CustomerMonthlyDebtParams,
   CustomerDebtSummaryParams,
+  OrderResponsePagedResponse,
+  CustomerOrdersParams,
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
@@ -153,10 +158,11 @@ export const useCustomerDebtHistory = (
     enabled: enabled && !!customerId,
     queryFn: async () => {
       const normalizedParams = normalizeParams(params ?? {});
-      const res = await apiRequest.get<CustomerDebtHistoryResponse[]>(
-        API_SUFFIX.CUSTOMER_DEBT_HISTORY(customerId as number),
-        { params: normalizedParams }
-      );
+      const res =
+        await apiRequest.get<CustomerDebtHistoryResponsePagedResponse>(
+          API_SUFFIX.CUSTOMER_DEBT_HISTORY(customerId as number),
+          { params: normalizedParams }
+        );
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -208,3 +214,69 @@ export const useCustomerDebtSummary = (
     staleTime: 5 * 60 * 1000,
   });
 };
+
+// ================== GET CUSTOMER ORDERS ==================
+export function useCustomerOrders(
+  params: CustomerOrdersParams & { enabled?: boolean }
+) {
+  const { enabled = true, ...queryParams } = params;
+  return useQuery({
+    queryKey: ["customerOrders", queryParams],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(queryParams ?? {});
+      const res = await apiRequest.get<CustomerOrdersResponsePagedResponse>(
+        API_SUFFIX.CUSTOMER_ORDERS(queryParams.customerId as number),
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+    enabled: enabled && !!queryParams.customerId,
+  });
+}
+
+// ================== GET CUSTOMER STATISTICS ==================
+// GET /customers/{id}/statistics
+export const useCustomerStatistics = (
+  customerId: number | null,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "statistics"],
+    enabled: enabled && !!customerId,
+    queryFn: async () => {
+      const res = await apiRequest.get<CustomerStatisticsResponse>(
+        API_SUFFIX.CUSTOMER_STATISTICS(customerId as number)
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+// ================== GET CUSTOMER FAVORITE STATS ==================
+// TODO: Implement when API endpoint is available
+export function useCustomerFavoriteStats(
+  customerId: number,
+  enabled: boolean = true
+) {
+  return useQuery<{
+    topDesignTypes: Array<{ name: string; count: number; percentage: number }>;
+    topMaterialTypes: Array<{
+      name: string;
+      count: number;
+      percentage: number;
+    }>;
+    commonQuantities: number[];
+  }>({
+    queryKey: ["customerFavoriteStats", customerId],
+    queryFn: async () => {
+      // Placeholder - return empty stats until API is implemented
+      return {
+        topDesignTypes: [],
+        topMaterialTypes: [],
+        commonQuantities: [],
+      };
+    },
+    enabled: enabled && !!customerId,
+  });
+}

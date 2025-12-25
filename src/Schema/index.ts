@@ -13,11 +13,13 @@ export * from "./production.schema";
 export * from "./customer.schema";
 export * from "./invoice.schema";
 export * from "./accounting.schema";
+export * from "./delivery-note.schema";
 export * from "./auth.schema";
 export * from "./params.schema";
 export * from "./paper-size.schema";
 export * from "./plate-export.schema";
 export * from "./die-export.schema";
+export * from "./plate-vendor.schema";
 
 // Re-export zod for convenience
 import { z } from "zod";

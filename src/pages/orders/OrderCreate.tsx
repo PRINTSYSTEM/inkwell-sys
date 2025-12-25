@@ -54,6 +54,7 @@ import {
 } from "@/hooks";
 import type { CreateOrderRequest } from "@/Schema/order.schema";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { ENTITY_CONFIG } from "@/config/entities.config";
 
 // ===== Main Component =====
 export default function OrderCreatePage() {
@@ -190,7 +191,8 @@ export default function OrderCreatePage() {
 
   const handleConfirmExistingDesign = (
     design: DesignResponse,
-    quantity: number
+    quantity: number,
+    laminationType: string
   ) => {
     const newDesign: CreateDesignRequestUI = {
       id: `existing-${design.id}-${Date.now()}`,
@@ -204,6 +206,7 @@ export default function OrderCreatePage() {
       length: design.length || 0,
       width: design.width || 0,
       height: design.height || 0,
+      laminationType: laminationType,
     };
     setDesigns((prev) => [...prev, newDesign]);
     toast.success("Đã thêm thiết kế có sẵn");
@@ -266,6 +269,20 @@ export default function OrderCreatePage() {
         return;
       }
 
+      // Check lamination type (bắt buộc) - validate against config
+      const validLaminationTypes = Object.keys(
+        ENTITY_CONFIG.laminationTypes.values
+      );
+      if (
+        !design.laminationType ||
+        !validLaminationTypes.includes(design.laminationType)
+      ) {
+        toast.error(
+          `Thiết kế "${design.designName || "Chưa đặt tên"}" chưa chọn loại cán màn`
+        );
+        return;
+      }
+
       // Check minimum quantity
       if (
         design.minQuantity &&
@@ -289,10 +306,11 @@ export default function OrderCreatePage() {
       // Transform designs to API format
       const designRequests = designs.map((design) => {
         if (design.isFromExisting && design.designId) {
-          // Existing design: only need designId and quantity
+          // Existing design: include designId, quantity, and laminationType (bắt buộc)
           return {
             designId: design.designId,
             quantity: design.quantity,
+            laminationType: design.laminationType, // Bắt buộc, không null
           };
         } else {
           // New design: include all fields
@@ -322,6 +340,7 @@ export default function OrderCreatePage() {
             requirements: design.requirements?.trim() || null,
             additionalNotes: design.additionalNotes?.trim() || null,
             quantity: design.quantity,
+            laminationType: design.laminationType, // Bắt buộc, không null
           };
         }
       });

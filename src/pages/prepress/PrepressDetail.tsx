@@ -486,10 +486,22 @@ export default function ProofingOrderDetailPage() {
 
               <Separator />
 
-              <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs">Ghi chú</Label>
-                <p className="text-sm">{order.notes || "Không có ghi chú"}</p>
-              </div>
+              {/* Notes - Display prominently */}
+              {order.notes && (
+                <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                        Ghi chú bình bài
+                      </p>
+                      <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed">
+                        {order.notes}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {order.imageUrl && (
                 <>
@@ -595,6 +607,9 @@ export default function ProofingOrderDetailPage() {
                       <TableHead>Người thiết kế</TableHead>
                       <TableHead>Kích thước</TableHead>
                       <TableHead>Số lượng</TableHead>
+                      <TableHead>Mặt cắt</TableHead>
+                      <TableHead>Quy trình SX</TableHead>
+                      <TableHead>Cán màn</TableHead>
                       <TableHead className="text-right">File</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -661,6 +676,27 @@ export default function ProofingOrderDetailPage() {
                           </div>
                         </TableCell>
                         <TableCell>{pod.quantity.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {pod.design.sidesClassificationOption?.value || "—"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {pod.design.processClassificationOption?.value || "—"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">
+                            {pod.laminationType
+                              ? pod.laminationType === "bóng"
+                                ? "Bóng"
+                                : pod.laminationType === "mờ"
+                                ? "Mờ"
+                                : pod.laminationType
+                              : "—"}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             {pod.design.designImageUrl && (

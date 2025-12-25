@@ -584,6 +584,23 @@ export default function DesignDetailPage() {
                   </div>
                 </div>
 
+                {/* Design Notes - Display prominently */}
+                {d.notes && (
+                  <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                          Ghi chú thiết kế
+                        </p>
+                        <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed">
+                          {d.notes}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                     Trạng thái thiết kế
@@ -730,32 +747,43 @@ export default function DesignDetailPage() {
                   </div>
                 </div>
 
-                {/* STT 4, 7, 8: Classification Options */}
-                {(d.sidesClassificationOption ||
-                  d.processClassificationOption) && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {d.sidesClassificationOption && (
-                      <div className="p-2 border rounded-md">
-                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">
-                          Số mặt
-                        </p>
-                        <p className="text-xs font-medium">
-                          {d.sidesClassificationOption.value}
-                        </p>
-                      </div>
-                    )}
-                    {d.processClassificationOption && (
-                      <div className="p-2 border rounded-md">
-                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">
-                          Gia công
-                        </p>
-                        <p className="text-xs font-medium">
-                          {d.processClassificationOption.value}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Mặt cắt, Quy trình SX, Cán màn */}
+                <div className="grid grid-cols-2 gap-2">
+                  {d.sidesClassificationOption && (
+                    <div className="p-2 border rounded-md bg-blue-50/50 dark:bg-blue-950/20">
+                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">
+                        Mặt cắt
+                      </p>
+                      <p className="text-xs font-medium">
+                        {d.sidesClassificationOption.value}
+                      </p>
+                    </div>
+                  )}
+                  {d.processClassificationOption && (
+                    <div className="p-2 border rounded-md bg-purple-50/50 dark:bg-purple-950/20">
+                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">
+                        Quy trình SX
+                      </p>
+                      <p className="text-xs font-medium">
+                        {d.processClassificationOption.value}
+                      </p>
+                    </div>
+                  )}
+                  {orderDetails?.[0]?.laminationType && (
+                    <div className="p-2 border rounded-md bg-amber-50/50 dark:bg-amber-950/20">
+                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">
+                        Cán màn
+                      </p>
+                      <p className="text-xs font-medium">
+                        {orderDetails[0].laminationType === "bóng"
+                          ? "Bóng"
+                          : orderDetails[0].laminationType === "mờ"
+                          ? "Mờ"
+                          : orderDetails[0].laminationType}
+                      </p>
+                    </div>
+                  )}
+                </div>
 
                 <Separator />
 

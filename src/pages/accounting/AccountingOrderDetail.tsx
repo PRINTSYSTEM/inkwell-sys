@@ -475,15 +475,15 @@ export default function AccountingOrderDetail() {
 
               {/* Notes */}
               {order.note && (
-                <Card>
-                  <CardHeader className="pb-3">
+                <Card className="border-amber-200 dark:border-amber-800">
+                  <CardHeader className="pb-3 bg-amber-50/50 dark:bg-amber-950/20">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-primary" />
+                      <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                       Ghi chú đơn hàng
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                  <CardContent className="pt-4">
+                    <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap leading-relaxed">
                       {order.note}
                     </p>
                   </CardContent>

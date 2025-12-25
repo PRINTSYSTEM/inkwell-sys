@@ -16,8 +16,7 @@ export interface DesignItem {
   orderCode: string;
   customerName: string;
   customerCompanyName?: string;
-  requirements: string;
-  additionalNotes: string;
+  processClassificationOptionName?: string; // Quy trình sản xuất
   thumbnailUrl: string;
   createdAt: string;
 }

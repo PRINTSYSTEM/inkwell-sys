@@ -135,6 +135,7 @@ export const CreateDesignRequestEmbeddedSchema = z.object({
   depth: z.number().min(0).nullable().optional(), // Added from swagger
   sidesClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
   processClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
+  laminationType: z.string().nullable().optional(),
   requirements: z.string().nullable().optional(),
   additionalNotes: z.string().nullable().optional(),
 

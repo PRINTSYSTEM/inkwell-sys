@@ -64,6 +64,16 @@ export const ROUTE_PATHS = {
     EXPENSES: "/accounting/expenses" as const,
   },
 
+  DELIVERY_NOTES: {
+    ROOT: "/delivery-notes" as const,
+    DETAIL_BASE: "/delivery-notes" as const, // prefix cho /delivery-notes/:id
+  },
+
+  INVOICES: {
+    ROOT: "/invoices" as const,
+    DETAIL_BASE: "/invoices" as const, // prefix cho /invoices/:id
+  },
+
   ATTENDANCE: {
     ROOT: "/attendance" as const,
   },

@@ -80,6 +80,17 @@ const AccountingExpenses = lazy(
   () => import("@/pages/accounting/AccountingExpenses")
 );
 
+// Delivery Notes
+const DeliveryNoteList = lazy(
+  () => import("@/pages/delivery-notes/DeliveryNoteList")
+);
+const DeliveryNoteDetail = lazy(
+  () => import("@/pages/delivery-notes/DeliveryNoteDetail")
+);
+
+// Invoices
+const InvoiceDetail = lazy(() => import("@/pages/invoices/InvoiceDetail"));
+
 // Attendance
 const Attendance = lazy(() => import("@/pages/Attendance"));
 const AttendanceReports = lazy(
@@ -421,6 +432,44 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <AccountingExpenses />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
+      // ===== DELIVERY NOTES =====
+      {
+        path: lastSegment(ROUTE_PATHS.DELIVERY_NOTES.ROOT), // "delivery-notes"
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DeliveryNoteList />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DeliveryNoteDetail />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
+      // ===== INVOICES =====
+      {
+        path: lastSegment(ROUTE_PATHS.INVOICES.ROOT), // "invoices"
+        children: [
+          {
+            path: ":id",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <InvoiceDetail />
               </Suspense>
             ),
           },

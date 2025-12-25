@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2, AlertCircle, CheckCircle2, Package, Layers, Ruler, FileText } from "lucide-react";
+import { ENTITY_CONFIG } from "@/config/entities.config";
 
 // Type definition for DesignType - matches API response
 export type DesignTypeResponse = {
@@ -37,6 +38,7 @@ export type CreateDesignRequestUI = {
   minQuantity?: number;
   sidesClassificationOptionId?: number;
   processClassificationOptionId?: number;
+  laminationType?: string | null;
 };
 
 type DesignCardProps = {
@@ -210,6 +212,21 @@ export const DesignCard: React.FC<DesignCardProps> = ({
                   <p className="text-xs text-muted-foreground mb-0.5">Kích thước</p>
                   <p className="font-medium">
                     {design.length || 0} × {design.width || 0} × {design.height || 0} mm
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Cán màn */}
+            {design.laminationType && (
+              <div className="flex items-start gap-2">
+                <Layers className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground mb-0.5">Cán màn</p>
+                  <p className="font-medium">
+                    {ENTITY_CONFIG.laminationTypes.values[
+                      design.laminationType as keyof typeof ENTITY_CONFIG.laminationTypes.values
+                    ] || design.laminationType}
                   </p>
                 </div>
               </div>

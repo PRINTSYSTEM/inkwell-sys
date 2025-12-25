@@ -13,6 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Package,
   Layers,
   Ruler,
@@ -26,7 +33,7 @@ type ExistingDesignModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   design: DesignResponse | null;
-  onConfirm: (design: DesignResponse, quantity: number) => void;
+  onConfirm: (design: DesignResponse, quantity: number, laminationType: string) => void;
 };
 
 export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
@@ -36,18 +43,29 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
   onConfirm,
 }) => {
   const [quantity, setQuantity] = useState<number>(0);
+  const [laminationType, setLaminationType] = useState<string>("");
 
-  // Reset quantity when modal opens/closes
+  // Reset quantity and laminationType when modal opens/closes
   useEffect(() => {
     if (open) {
       setQuantity(0);
+      setLaminationType("");
     }
   }, [open]);
 
   const handleConfirm = () => {
-    if (design && quantity > 0) {
-      onConfirm(design, quantity);
+    const validLaminationTypes = Object.keys(
+      ENTITY_CONFIG.laminationTypes.values
+    );
+    if (
+      design &&
+      quantity > 0 &&
+      laminationType &&
+      validLaminationTypes.includes(laminationType)
+    ) {
+      onConfirm(design, quantity, laminationType);
       setQuantity(0);
+      setLaminationType("");
       onOpenChange(false);
     }
   };
@@ -235,43 +253,69 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
           <Separator />
 
           {/* Quantity input - Only editable field */}
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                Số lượng <span className="text-destructive">*</span>
-              </Label>
-              {minQuantity && minQuantity > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Số lượng tối thiểu:{" "}
-                  <span className="font-medium text-blue-600 dark:text-blue-400">
-                    {minQuantity.toLocaleString("vi-VN")}
-                  </span>
-                </p>
-              )}
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">
+                  Số lượng <span className="text-destructive">*</span>
+                </Label>
+                {minQuantity && minQuantity > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Số lượng tối thiểu:{" "}
+                    <span className="font-medium text-blue-600 dark:text-blue-400">
+                      {minQuantity.toLocaleString("vi-VN")}
+                    </span>
+                  </p>
+                )}
+              </div>
+              <Input
+                type="number"
+                placeholder="VD: 1000"
+                value={quantity || ""}
+                onChange={(e) =>
+                  setQuantity(e.target.value === "" ? 0 : Number(e.target.value))
+                }
+                className="h-11 w-full"
+                min={minQuantity && minQuantity > 0 ? minQuantity : 1}
+                autoFocus
+              />
+              {minQuantity &&
+                minQuantity > 0 &&
+                quantity > 0 &&
+                quantity < minQuantity && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>
+                      Số lượng nhỏ hơn mức tối thiểu (
+                      {minQuantity.toLocaleString("vi-VN")})
+                    </span>
+                  </p>
+                )}
             </div>
-            <Input
-              type="number"
-              placeholder="VD: 1000"
-              value={quantity || ""}
-              onChange={(e) =>
-                setQuantity(e.target.value === "" ? 0 : Number(e.target.value))
-              }
-              className="h-11 w-full"
-              min={minQuantity && minQuantity > 0 ? minQuantity : 1}
-              autoFocus
-            />
-            {minQuantity &&
-              minQuantity > 0 &&
-              quantity > 0 &&
-              quantity < minQuantity && (
-                <p className="text-xs text-destructive flex items-center gap-1">
-                  <span>⚠️</span>
-                  <span>
-                    Số lượng nhỏ hơn mức tối thiểu (
-                    {minQuantity.toLocaleString("vi-VN")})
-                  </span>
-                </p>
-              )}
+
+            {/* Cán màn - Bắt buộc */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">
+                Cán màn <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={laminationType}
+                onValueChange={(value) => setLaminationType(value)}
+              >
+                <SelectTrigger className="h-11 w-full">
+                  <SelectValue placeholder="Chọn loại cán màn" />
+                </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(
+                      ENTITY_CONFIG.laminationTypes.values
+                    ).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -288,7 +332,11 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
             onClick={handleConfirm}
             disabled={
               quantity <= 0 ||
-              (minQuantity && minQuantity > 0 && quantity < minQuantity)
+              (minQuantity && minQuantity > 0 && quantity < minQuantity) ||
+              !laminationType ||
+              !Object.keys(ENTITY_CONFIG.laminationTypes.values).includes(
+                laminationType
+              )
             }
           >
             Thêm vào đơn

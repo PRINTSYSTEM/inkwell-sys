@@ -27,6 +27,8 @@ import {
   FileText,
 } from "lucide-react";
 import type { CreateDesignRequestUI, DesignTypeResponse } from "./DesignCard";
+import { useMaterialTypeDetail } from "@/hooks/use-material-type";
+import { ENTITY_CONFIG } from "@/config/entities.config";
 
 // Material type definition
 export type MaterialClassificationOption = {
@@ -89,6 +91,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     height: 0,
     requirements: "",
     additionalNotes: "",
+    laminationType: undefined,
   });
 
   // Reset form when modal opens with design data
@@ -108,6 +111,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         height: 0,
         requirements: "",
         additionalNotes: "",
+        laminationType: undefined,
       });
       setCurrentStep(1);
     }
@@ -144,9 +148,17 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     }));
   };
 
-  const selectedMaterial = materials.find(
-    (m) => m.id === formData.materialTypeId
+  // Get material detail from API when on step 2 (quy trình nâng cao)
+  const { data: materialDetail } = useMaterialTypeDetail(
+    currentStep === 2 && formData.materialTypeId > 0
+      ? formData.materialTypeId
+      : null,
+    currentStep === 2 && formData.materialTypeId > 0
   );
+
+  // Use materialDetail if available (from API), otherwise fallback to materials list
+  const selectedMaterial =
+    materialDetail || materials.find((m) => m.id === formData.materialTypeId);
 
   // Check if this is an existing design (read-only except quantity)
   const isExistingDesign = formData.isFromExisting && formData.designId;
@@ -165,7 +177,18 @@ export const DesignModal: React.FC<DesignModalProps> = ({
           formData.quantity > 0
         );
       case 2:
-        // Step 2: Các option nâng cao (không bắt buộc, nhưng nếu có classification thì phải chọn)
+        // Step 2: Các option nâng cao - Cán màn bắt buộc, classification nếu có thì phải chọn
+        // Bắt buộc chọn cán màn - check against valid lamination types from config
+        const validLaminationTypes = Object.keys(
+          ENTITY_CONFIG.laminationTypes.values
+        );
+        if (
+          !formData.laminationType ||
+          !validLaminationTypes.includes(formData.laminationType)
+        ) {
+          return false;
+        }
+        // Nếu có classification thì phải chọn
         if (formData.materialTypeId <= 0) return true;
         const mat = materials.find((m) => m.id === formData.materialTypeId);
         if (mat?.classifications) {
@@ -489,6 +512,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   </p>
                 )}
               </div>
+
             </div>
           )}
 
@@ -555,6 +579,32 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     ))}
                   </div>
                 )}
+
+              {/* Cán màn - Bắt buộc */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">
+                  Cán màn <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={formData.laminationType || ""}
+                  onValueChange={(value) =>
+                    updateField("laminationType", value)
+                  }
+                >
+                  <SelectTrigger className="max-w-xs h-11">
+                    <SelectValue placeholder="Chọn loại cán màn" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(
+                      ENTITY_CONFIG.laminationTypes.values
+                    ).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Yêu cầu thiết kế */}
               <div className="space-y-3">

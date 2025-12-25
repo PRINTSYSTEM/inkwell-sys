@@ -10,13 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { Building2, User, FileText, AlertCircle } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Building2, User, FileText } from "lucide-react";
 
 interface DesignTableProps {
   designs: DesignItem[];
@@ -47,7 +41,7 @@ export function DesignTable({
             <TableHead>Kích thước</TableHead>
             <TableHead className="text-right">SL đặt</TableHead>
             <TableHead className="text-right">SL có thể bình bài</TableHead>
-            <TableHead>Yêu cầu</TableHead>
+            <TableHead>Quy trình SX</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -154,35 +148,12 @@ export function DesignTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  {(design.requirements || design.additionalNotes) && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center gap-1 cursor-help">
-                            <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
-                            <span className="text-xs text-muted-foreground">
-                              {design.requirements
-                                ? "Có yêu cầu"
-                                : "Có ghi chú"}
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-md">
-                          {design.requirements && (
-                            <>
-                              <p className="font-semibold mb-1">Yêu cầu:</p>
-                              <p className="mb-2">{design.requirements}</p>
-                            </>
-                          )}
-                          {design.additionalNotes && (
-                            <>
-                              <p className="font-semibold mb-1">Ghi chú:</p>
-                              <p>{design.additionalNotes}</p>
-                            </>
-                          )}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  {design.processClassificationOptionName ? (
+                    <Badge variant="outline" className="text-xs">
+                      {design.processClassificationOptionName}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">—</span>
                   )}
                 </TableCell>
               </TableRow>

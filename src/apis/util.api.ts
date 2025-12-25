@@ -63,7 +63,12 @@ export const API_SUFFIX = {
   ORDERS_MY: "/orders/my",
 
   // ========== INVOICE ==========
-  ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`,
+  INVOICES: "/invoices",
+  INVOICE_BY_ID: (id: number) => `/invoices/${id}`,
+  INVOICE_BY_ORDER: (orderId: number) => `/invoices/order/${orderId}`,
+  INVOICES_BY_ORDER: (orderId: number) => `/invoices/by-order/${orderId}`,
+  INVOICE_EXPORT: (id: number) => `/invoices/${id}/export-sinvoice`,
+  ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`, // Legacy, use INVOICE_BY_ORDER
   CUSTOMER_EXPORT_DEBT_COMPARISON: (id: number) =>
     `/customers/${id}/export-debt-comparison`,
 
@@ -91,6 +96,8 @@ export const API_SUFFIX = {
   CUSTOMER_DEBT_HISTORY: (id: number) => `/customers/${id}/debt-history`,
   CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
   CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
+  CUSTOMER_STATISTICS: (id: number) => `/customers/${id}/statistics`,
+  CUSTOMER_ORDERS: (id: number) => `/customers/${id}/order-history`,
 
   // ========== DESIGN TYPES ==========
   DESIGN_TYPES: "/designs/types",
@@ -130,10 +137,8 @@ export const API_SUFFIX = {
   PROOFING_UPLOAD_FILE: (id: number) => `/proofing-orders/${id}/upload-file`,
   PROOFING_UPLOAD_IMAGE: (id: number) => `/proofing-orders/${id}/upload-image`,
   PAPER_SIZES: "/paper-sizes",
-  PROOFING_RECORD_PLATE: (id: number) =>
-    `/proofing-orders/${id}/plate-export`,
-  PROOFING_RECORD_DIE: (id: number) =>
-    `/proofing-orders/${id}/die-export`,
+  PROOFING_RECORD_PLATE: (id: number) => `/proofing-orders/${id}/plate-export`,
+  PROOFING_RECORD_DIE: (id: number) => `/proofing-orders/${id}/die-export`,
   PROOFING_UPDATE_FILE: (id: number) => `/proofing-orders/${id}/update-file`,
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
@@ -148,6 +153,11 @@ export const API_SUFFIX = {
   PROOFING_AVAILABLE_QUANTITY: (designId: number) =>
     `/proofing-orders/available-quantity/${designId}`,
 
+  // ========== PLATE VENDORS ==========
+  PLATE_VENDORS: "/plate-vendors",
+  PLATE_VENDOR_BY_ID: (id: number) => `/plate-vendors/${id}`,
+  PLATE_VENDORS_ACTIVE: "/plate-vendors/active",
+
   // ========== PRODUCTIONS ==========
   PRODUCTIONS: "/productions",
   PRODUCTION_BY_ID: (id: number) => `/productions/${id}`,
@@ -155,4 +165,11 @@ export const API_SUFFIX = {
     `/productions/proofing-order/${proofingOrderId}`,
   PRODUCTION_START: (id: number) => `/productions/${id}/start`,
   PRODUCTION_COMPLETE: (id: number) => `/productions/${id}/complete`,
+
+  // ========== DELIVERY NOTES ==========
+  DELIVERY_NOTES: "/delivery-notes",
+  DELIVERY_NOTE_BY_ID: (id: number) => `/delivery-notes/${id}`,
+  DELIVERY_NOTE_STATUS: (id: number) => `/delivery-notes/${id}/status`,
+  DELIVERY_NOTE_EXPORT_PDF: (id: number) => `/delivery-notes/${id}/export-pdf`,
+  DELIVERY_NOTE_RECREATE: "/delivery-notes/recreate",
 };

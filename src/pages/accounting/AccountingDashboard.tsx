@@ -119,12 +119,18 @@ export default function Accounting() {
 
         {/* Tabs */}
         <Tabs defaultValue="payment" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="payment" className="gap-2">
+          <TabsList className="grid w-full max-w-md grid-cols-2 bg-muted/50">
+            <TabsTrigger 
+              value="payment" 
+              className="gap-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
               <CreditCard className="h-4 w-4" />
               Thanh toán
             </TabsTrigger>
-            <TabsTrigger value="invoice" className="gap-2">
+            <TabsTrigger 
+              value="invoice" 
+              className="gap-2 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            >
               <FileText className="h-4 w-4" />
               Hóa đơn
             </TabsTrigger>
