@@ -9,6 +9,7 @@ import type {
   OrdersForAccountingListParams,
   CreateOrderRequest,
   UpdateOrderRequest,
+  UpdateOrderForAccountingRequest,
   CreateOrderWithExistingDesignsRequest,
   AddDesignToOrderRequest,
   OrderResponseForDesignerPagedResponse,
@@ -286,6 +287,68 @@ export const useOrdersForAccounting = (
       return res.data;
     },
   });
+};
+
+// ================== ORDER: UPDATE FOR ACCOUNTING ==================
+// PUT /orders/{id}/accounting
+
+export const useUpdateOrderForAccounting = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderResponse,
+    [number, UpdateOrderForAccountingRequest]
+  >(async (id: number, payload: UpdateOrderForAccountingRequest) => {
+    const res = await apiRequest.put<OrderResponse>(
+      API_SUFFIX.ORDER_UPDATE_FOR_ACCOUNTING(id),
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (
+    id: number,
+    payload: UpdateOrderForAccountingRequest
+  ) => {
+    try {
+      const result = await execute(id, payload);
+
+      // Invalidate order detail
+      queryClient.invalidateQueries({
+        queryKey: orderKeys.detail(id),
+      });
+
+      // Invalidate orders list
+      queryClient.invalidateQueries({
+        queryKey: ["orders"],
+      });
+
+      // Invalidate accounting queries
+      queryClient.invalidateQueries({
+        queryKey: ["accounting"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật đơn hàng thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật đơn hàng",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
 };
 
 // ================== ORDER: EXPORT INVOICE / DELIVERY NOTE ==================

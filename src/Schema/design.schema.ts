@@ -1,4 +1,5 @@
 // src/Schema/design.schema.ts
+// Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
 import {
   IdSchema,
@@ -13,130 +14,60 @@ import {
   MaterialTypeClassificationOptionResponseSchema,
 } from "./material-type.schema";
 import { CustomerSummaryResponseSchema } from "./customer.schema";
+import {
+  DesignTimelineEntryResponseSchema as GenDesignTimelineEntryResponseSchema,
+  DesignResponseSchema as GenDesignResponseSchema,
+  DesignResponsePaginateSchema as GenDesignResponsePaginateSchema,
+  CreateDesignRequestSchema as GenCreateDesignRequestSchema,
+  UpdateDesignRequestSchema as GenUpdateDesignRequestSchema,
+  postApidesignsIdtimeline_BodySchema as GenPostApidesignsIdtimelineBodySchema,
+} from "./generated";
 
 // ===== DesignTimelineEntryResponse =====
-
-export const DesignTimelineEntryResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    fileUrl: z.string().nullable().optional(),
-    description: z.string().nullable().optional(),
-    createdAt: DateSchema.optional(),
-    createdBy: UserInfoSchema.optional(),
-  })
-  .passthrough();
-
+export const DesignTimelineEntryResponseSchema =
+  GenDesignTimelineEntryResponseSchema.passthrough();
 export type DesignTimelineEntryResponse = z.infer<
   typeof DesignTimelineEntryResponseSchema
 >;
 
 // ===== DesignResponse =====
-
-export const DesignResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    code: z.string().nullable().optional(),
-    customerId: IdSchema.optional(),
-    designerId: IdSchema.optional(),
-    designer: UserInfoSchema.nullable().optional(),
-    designTypeId: IdSchema.optional(),
-    designType: DesignTypeResponseSchema.nullable().optional(),
-    materialTypeId: IdSchema.optional(),
-    materialType: MaterialTypeResponseSchema.nullable().optional(),
-    designName: z.string().nullable().optional(),
-    dimensions: z.string().nullable().optional(),
-    length: z.number().nullable().optional(), // Added from swagger
-    width: z.number().nullable().optional(),
-    height: z.number().nullable().optional(),
-    depth: z.number().nullable().optional(), // Added from swagger
-    areaCm2: z.number().nullable().optional(),
-    sidesClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
-    processClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
-    sidesClassificationOption:
-      MaterialTypeClassificationOptionResponseSchema.nullable().optional(), // Added from swagger
-    processClassificationOption:
-      MaterialTypeClassificationOptionResponseSchema.nullable().optional(), // Added from swagger
-    designFileUrl: z.string().nullable().optional(),
-    designImageUrl: z.string().nullable().optional(),
-    excelFileUrl: z.string().nullable().optional(),
-    notes: z.string().nullable().optional(),
-    customer: CustomerSummaryResponseSchema.nullable().optional(), // Added from swagger
-    latestOrderCode: z.string().nullable().optional(), // Added from swagger
-    latestRequirements: z.string().nullable().optional(), // Added from swagger
-    status: z.string().nullable().optional(),
-    statusType: z.string().nullable().optional(),
-    createdAt: DateSchema.optional(),
-    updatedAt: DateSchema.nullable().optional(), // nullable in swagger
-    timelineEntries: z
-      .array(DesignTimelineEntryResponseSchema)
-      .nullable()
-      .optional(),
-  })
-  .passthrough();
-
+export const DesignResponseSchema = GenDesignResponseSchema.passthrough();
 export type DesignResponse = z.infer<typeof DesignResponseSchema>;
 
 // ===== PagedResponse =====
-
 export const DesignResponsePagedResponseSchema =
   createPagedResponseSchema(DesignResponseSchema);
-
 export type DesignResponsePagedResponse = z.infer<
   typeof DesignResponsePagedResponseSchema
 >;
 
+// Re-export generated paginate schema for compatibility
+export { GenDesignResponsePaginateSchema as DesignResponsePaginateSchema };
+export type DesignResponsePaginate = z.infer<
+  typeof GenDesignResponsePaginateSchema
+>;
+
+// Note: DesignResponsePaginateSchema is also available from generated.ts
+
 // ===== CreateDesignRequest =====
-
-export const CreateDesignRequestSchema = z
-  .object({
-    designTypeId: IdSchema,
-    materialTypeId: IdSchema,
-    assignedDesignerId: IdSchema.nullable().optional(),
-    quantity: z.number().int().min(1, "Số lượng tối thiểu là 1"),
-    designName: NameSchema.nullable().optional(),
-    length: z.number().min(0, "Chiều dài không thể âm").nullable().optional(),
-    width: z.number().min(0, "Chiều rộng không thể âm").nullable().optional(),
-    height: z.number().min(0, "Chiều cao không thể âm").nullable().optional(),
-    depth: z.number().min(0, "Chiều sâu không thể âm").nullable().optional(),
-    sidesClassificationOptionId: IdSchema.nullable().optional(),
-    processClassificationOptionId: IdSchema.nullable().optional(),
-    requirements: z.string().max(2000).nullable().optional(),
-    additionalNotes: z.string().max(1000).nullable().optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.width != null && data.height != null) {
-        return data.width >= 0 && data.height >= 0;
-      }
-      return true;
-    },
-    { message: "Kích thước không hợp lệ" }
-  );
-
+// Base from generated, but keep custom refine for validation
+export const CreateDesignRequestSchema = GenCreateDesignRequestSchema.refine(
+  (data) => {
+    if (data.width != null && data.height != null) {
+      return data.width >= 0 && data.height >= 0;
+    }
+    return true;
+  },
+  { message: "Kích thước không hợp lệ" }
+);
 export type CreateDesignRequest = z.infer<typeof CreateDesignRequestSchema>;
 
 // ===== UpdateDesignRequest =====
-
-export const UpdateDesignRequestSchema = z
-  .object({
-    assignedDesignerId: IdSchema.nullable().optional(),
-    designName: z.string().min(0).max(255).nullable().optional(), // Updated to match swagger
-    designStatus: z.string().min(0).max(50).nullable().optional(), // Updated to match swagger
-    designFileUrl: z.string().nullable().optional(),
-    excelFileUrl: z.string().nullable().optional(),
-    length: z.number().min(0).nullable().optional(), // Added from swagger
-    width: z.number().min(0).nullable().optional(),
-    height: z.number().min(0).nullable().optional(),
-    depth: z.number().min(0).nullable().optional(), // Added from swagger
-    sidesClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
-    processClassificationOptionId: IdSchema.nullable().optional(), // Added from swagger
-    requirements: z.string().nullable().optional(),
-    additionalNotes: z.string().nullable().optional(),
-  })
-  .passthrough();
-
+export const UpdateDesignRequestSchema = GenUpdateDesignRequestSchema.passthrough();
 export type UpdateDesignRequest = z.infer<typeof UpdateDesignRequestSchema>;
 
+// ===== DesignResponseForDesigner =====
+// Custom schema - not in generated, keep as is
 export const DesignResponseForDesignerSchema = z
   .object({
     id: IdSchema.optional(),
@@ -180,14 +111,9 @@ export type DesignResponseForDesigner = z.infer<
 >;
 
 // ===== CreateDesignTimelineEntryRequest =====
-
-export const CreateDesignTimelineEntryRequestSchema = z
-  .object({
-    File: z.string(), // binary file - handled as FormData
-    Description: z.string().nullable().optional(),
-  })
-  .passthrough();
-
+// Use generated postApidesignsIdtimeline_Body schema
+export const CreateDesignTimelineEntryRequestSchema =
+  GenPostApidesignsIdtimelineBodySchema.passthrough();
 export type CreateDesignTimelineEntryRequest = z.infer<
   typeof CreateDesignTimelineEntryRequestSchema
 >;

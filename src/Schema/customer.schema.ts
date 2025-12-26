@@ -1,4 +1,5 @@
 // src/Schema/customer.schema.ts
+// Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
 import {
   IdSchema,
@@ -7,193 +8,97 @@ import {
   createPagedResponseSchema,
 } from "./Common";
 import { UserInfoSchema } from "./Common";
+import {
+  CustomerResponseSchema as GenCustomerResponseSchema,
+  CustomerSummaryResponseSchema as GenCustomerSummaryResponseSchema,
+  CustomerSummaryResponsePaginateSchema as GenCustomerSummaryResponsePaginateSchema,
+  CreateCustomerRequestSchema as GenCreateCustomerRequestSchema,
+  UpdateCustomerRequestSchema as GenUpdateCustomerRequestSchema,
+  CustomerDebtHistoryResponseSchema as GenCustomerDebtHistoryResponseSchema,
+  CustomerMonthlyDebtResponseSchema as GenCustomerMonthlyDebtResponseSchema,
+  CustomerDebtSummaryResponseSchema as GenCustomerDebtSummaryResponseSchema,
+  CustomerStatisticsResponseSchema as GenCustomerStatisticsResponseSchema,
+  FrequentProductResponseSchema as GenFrequentProductResponseSchema,
+  CustomerOrderHistoryResponseSchema as GenCustomerOrderHistoryResponseSchema,
+  CustomerOrderHistoryResponsePaginateSchema as GenCustomerOrderHistoryResponsePaginateSchema,
+  OrderHistoryDetailResponseSchema as GenOrderHistoryDetailResponseSchema,
+} from "./generated";
 
 // ===== CustomerResponse =====
-
-export const CustomerResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    code: z.string().nullable().optional(),
-    name: NameSchema.nullable().optional(),
-    companyName: z.string().nullable().optional(),
-    representativeName: z.string().nullable().optional(),
-    phone: z.string().nullable().optional(),
-    email: z.string().nullable().optional(),
-    taxCode: z.string().nullable().optional(),
-    address: z.string().nullable().optional(),
-    type: z.string().nullable().optional(),
-    typeStatusType: z.string().nullable().optional(),
-    currentDebt: z.number().optional(),
-    maxDebt: z.number().optional(),
-    debtStatus: z.string().nullable().optional(),
-    createdAt: DateSchema.optional(),
-    updatedAt: DateSchema.optional(),
-    createdBy: UserInfoSchema.optional(),
-  })
-  .passthrough();
-
+// Wrapper to ensure compatibility with our base schemas (IdSchema, DateSchema, NameSchema)
+export const CustomerResponseSchema = GenCustomerResponseSchema.passthrough();
 export type CustomerResponse = z.infer<typeof CustomerResponseSchema>;
 
 // ===== CustomerSummaryResponse =====
-
-export const CustomerSummaryResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    code: z.string().nullable().optional(),
-    name: NameSchema.nullable().optional(),
-    companyName: z.string().nullable().optional(),
-    phone: z.string().nullable().optional(),
-    address: z.string().nullable().optional(),
-    debtStatus: z.string().nullable().optional(),
-    currentDebt: z.number().optional(),
-    maxDebt: z.number().optional(),
-  })
-  .passthrough();
-
+export const CustomerSummaryResponseSchema =
+  GenCustomerSummaryResponseSchema.passthrough();
 export type CustomerSummaryResponse = z.infer<
   typeof CustomerSummaryResponseSchema
 >;
 
 // ===== PagedResponse =====
-
+// Keep our utility-based paged responses for consistency
 export const CustomerResponsePagedResponseSchema = createPagedResponseSchema(
   CustomerResponseSchema
 );
-
 export type CustomerResponsePagedResponse = z.infer<
   typeof CustomerResponsePagedResponseSchema
 >;
 
+// Use generated paginate schema but also keep our utility version
 export const CustomerSummaryResponsePagedResponseSchema =
   createPagedResponseSchema(CustomerSummaryResponseSchema);
-
 export type CustomerSummaryResponsePagedResponse = z.infer<
   typeof CustomerSummaryResponsePagedResponseSchema
 >;
 
+// Re-export generated paginate schema for compatibility
+export { GenCustomerSummaryResponsePaginateSchema as CustomerSummaryResponsePaginateSchema };
+export type CustomerSummaryResponsePaginate = z.infer<
+  typeof GenCustomerSummaryResponsePaginateSchema
+>;
+
 // ===== CreateCustomerRequest =====
-
-export const CreateCustomerRequestSchema = z
-  .object({
-    name: z.string().min(0).max(255).nullable().optional(),
-    companyName: z.string().min(0).max(255).nullable().optional(),
-    representativeName: z.string().min(0).max(255).nullable().optional(),
-    phone: z.string().min(0).max(20).nullable().optional(),
-    email: z
-      .string()
-      .email("Email không hợp lệ")
-      .max(255)
-      .nullable()
-      .optional(),
-    taxCode: z.string().min(0).max(50).nullable().optional(),
-    address: z.string().min(0).max(255).nullable().optional(),
-    type: z.string().min(0).max(50).nullable().optional(),
-    currentDebt: z.number().min(0).optional(),
-    maxDebt: z.number().min(0).optional(),
-  })
-  .passthrough();
-
+export const CreateCustomerRequestSchema =
+  GenCreateCustomerRequestSchema.passthrough();
 export type CreateCustomerRequest = z.infer<typeof CreateCustomerRequestSchema>;
 
 // ===== UpdateCustomerRequest =====
-
-export const UpdateCustomerRequestSchema = z
-  .object({
-    name: z.string().min(0).max(255).nullable().optional(),
-    companyName: z.string().min(0).max(255).nullable().optional(),
-    representativeName: z.string().min(0).max(255).nullable().optional(),
-    phone: z.string().min(0).max(20).nullable().optional(),
-    taxCode: z.string().min(0).max(50).nullable().optional(),
-    address: z.string().min(0).max(255).nullable().optional(),
-    type: z.string().min(0).max(50).nullable().optional(),
-    currentDebt: z.number().min(0).nullable().optional(), // Added from swagger
-    maxDebt: z.number().min(0).nullable().optional(),
-  })
-  .passthrough();
-
+export const UpdateCustomerRequestSchema =
+  GenUpdateCustomerRequestSchema.passthrough();
 export type UpdateCustomerRequest = z.infer<typeof UpdateCustomerRequestSchema>;
 
 // ===== CustomerDebtHistoryResponse =====
-
-export const CustomerDebtHistoryResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    customerId: IdSchema.optional(),
-    customerName: z.string().nullable().optional(),
-    orderId: IdSchema.nullable().optional(),
-    orderCode: z.string().nullable().optional(),
-    paymentId: IdSchema.nullable().optional(),
-    previousDebt: z.number().optional(),
-    changeAmount: z.number().optional(),
-    newDebt: z.number().optional(),
-    changeType: z.string().nullable().optional(),
-    changeTypeDisplay: z.string().nullable().optional(),
-    note: z.string().nullable().optional(),
-    createdById: IdSchema.nullable().optional(),
-    createdByName: z.string().nullable().optional(),
-    createdAt: DateSchema.optional(),
-  })
-  .passthrough();
-
+export const CustomerDebtHistoryResponseSchema =
+  GenCustomerDebtHistoryResponseSchema.passthrough();
 export type CustomerDebtHistoryResponse = z.infer<
   typeof CustomerDebtHistoryResponseSchema
 >;
 
 // ===== CustomerDebtHistoryResponse PagedResponse =====
-
 export const CustomerDebtHistoryResponsePagedResponseSchema =
   createPagedResponseSchema(CustomerDebtHistoryResponseSchema);
-
 export type CustomerDebtHistoryResponsePagedResponse = z.infer<
   typeof CustomerDebtHistoryResponsePagedResponseSchema
 >;
 
 // ===== CustomerMonthlyDebtResponse =====
-
-export const CustomerMonthlyDebtResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    customerId: IdSchema.optional(),
-    customerName: z.string().nullable().optional(),
-    year: z.number().int().optional(),
-    month: z.number().int().optional(),
-    openingDebt: z.number().optional(),
-    closingDebt: z.number().optional(),
-    changeInMonth: z.number().optional(),
-    createdAt: DateSchema.optional(),
-    updatedAt: DateSchema.nullable().optional(),
-  })
-  .passthrough();
-
+export const CustomerMonthlyDebtResponseSchema =
+  GenCustomerMonthlyDebtResponseSchema.passthrough();
 export type CustomerMonthlyDebtResponse = z.infer<
   typeof CustomerMonthlyDebtResponseSchema
 >;
 
 // ===== CustomerDebtSummaryResponse =====
-
-export const CustomerDebtSummaryResponseSchema = z
-  .object({
-    customerId: IdSchema.optional(),
-    customerName: z.string().nullable().optional(),
-    customerType: z.string().nullable().optional(),
-    startDate: DateSchema.optional(),
-    endDate: DateSchema.optional(),
-    openingDebt: z.number().optional(),
-    totalDebtIncurred: z.number().optional(),
-    totalPaymentReceived: z.number().optional(),
-    closingDebt: z.number().optional(),
-    orderCount: z.number().int().optional(),
-    paymentCount: z.number().int().optional(),
-    details: z.array(CustomerDebtHistoryResponseSchema).nullable().optional(),
-  })
-  .passthrough();
-
+export const CustomerDebtSummaryResponseSchema =
+  GenCustomerDebtSummaryResponseSchema.passthrough();
 export type CustomerDebtSummaryResponse = z.infer<
   typeof CustomerDebtSummaryResponseSchema
 >;
 
 // ===== Customer Orders Response =====
-
+// Note: CustomerOrdersResponse is not in generated, so we keep the custom definition
+// This is CustomerOrderHistoryResponse in generated
 export const CustomerOrdersResponseSchema = z
   .object({
     orderId: IdSchema.optional(),
@@ -231,51 +136,39 @@ export const CustomerOrdersResponseSchema = z
 export type CustomerOrdersResponse = z.infer<
   typeof CustomerOrdersResponseSchema
 >;
+
 export const CustomerOrdersResponsePagedResponseSchema =
   createPagedResponseSchema(CustomerOrdersResponseSchema);
-
 export type CustomerOrdersResponsePagedResponse = z.infer<
   typeof CustomerOrdersResponsePagedResponseSchema
 >;
-// ===== FrequentProductResponse =====
-export const FrequentProductResponseSchema = z
-  .object({
-    designTypeId: IdSchema.nullable().optional(),
-    designTypeName: z.string().nullable().optional(),
-    materialTypeId: IdSchema.nullable().optional(),
-    materialTypeName: z.string().nullable().optional(),
-    orderCount: z.number().int().optional(),
-    totalQuantity: z.number().int().optional(),
-    lastOrderDate: DateSchema.optional(),
-  })
-  .passthrough();
 
+// Re-export generated CustomerOrderHistoryResponse for compatibility
+export {
+  GenCustomerOrderHistoryResponseSchema as CustomerOrderHistoryResponseSchema,
+  GenCustomerOrderHistoryResponsePaginateSchema as CustomerOrderHistoryResponsePaginateSchema,
+  GenOrderHistoryDetailResponseSchema as OrderHistoryDetailResponseSchema,
+};
+export type CustomerOrderHistoryResponse = z.infer<
+  typeof GenCustomerOrderHistoryResponseSchema
+>;
+export type CustomerOrderHistoryResponsePaginate = z.infer<
+  typeof GenCustomerOrderHistoryResponsePaginateSchema
+>;
+export type OrderHistoryDetailResponse = z.infer<
+  typeof GenOrderHistoryDetailResponseSchema
+>;
+
+// ===== FrequentProductResponse =====
+export const FrequentProductResponseSchema =
+  GenFrequentProductResponseSchema.passthrough();
 export type FrequentProductResponse = z.infer<
   typeof FrequentProductResponseSchema
 >;
 
 // ===== CustomerStatisticsResponse =====
-export const CustomerStatisticsResponseSchema = z
-  .object({
-    customerId: IdSchema.optional(),
-    customerCode: z.string().nullable().optional(),
-    customerName: z.string().nullable().optional(),
-    customerCompanyName: z.string().nullable().optional(),
-    totalOrders: z.number().int().optional(),
-    completedOrders: z.number().int().optional(),
-    totalOrderAmount: z.number().optional(),
-    totalPaidAmount: z.number().optional(),
-    totalRemainingAmount: z.number().optional(),
-    currentDebt: z.number().optional(),
-    maxDebt: z.number().optional(),
-    debtStatus: z.string().nullable().optional(),
-    frequentProducts: z
-      .array(FrequentProductResponseSchema)
-      .nullable()
-      .optional(),
-  })
-  .passthrough();
-
+export const CustomerStatisticsResponseSchema =
+  GenCustomerStatisticsResponseSchema.passthrough();
 export type CustomerStatisticsResponse = z.infer<
   typeof CustomerStatisticsResponseSchema
 >;

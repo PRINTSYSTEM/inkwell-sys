@@ -1,61 +1,45 @@
 // src/Schema/plate-vendor.schema.ts
+// Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
-import { IdSchema, DateSchema, createPagedResponseSchema } from "./Common";
+import { createPagedResponseSchema } from "./Common";
+import {
+  PlateVendorResponseSchema as GenPlateVendorResponseSchema,
+  PlateVendorResponsePaginateSchema as GenPlateVendorResponsePaginateSchema,
+  CreatePlateVendorRequestSchema as GenCreatePlateVendorRequestSchema,
+  UpdatePlateVendorRequestSchema as GenUpdatePlateVendorRequestSchema,
+} from "./generated";
 
 // ===== PlateVendorResponse =====
-
-export const PlateVendorResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    name: z.string().nullable().optional(),
-    phone: z.string().nullable().optional(),
-    email: z.string().nullable().optional(),
-    address: z.string().nullable().optional(),
-    note: z.string().nullable().optional(),
-    isActive: z.boolean().optional(),
-    createdAt: DateSchema.optional(),
-    updatedAt: DateSchema.nullable().optional(),
-  })
-  .passthrough();
-
+export const PlateVendorResponseSchema =
+  GenPlateVendorResponseSchema.passthrough();
 export type PlateVendorResponse = z.infer<typeof PlateVendorResponseSchema>;
 
 // ===== PagedResponse =====
-
-export const PlateVendorResponsePagedResponseSchema =
-  createPagedResponseSchema(PlateVendorResponseSchema);
-
+export const PlateVendorResponsePagedResponseSchema = createPagedResponseSchema(
+  PlateVendorResponseSchema
+);
 export type PlateVendorResponsePagedResponse = z.infer<
   typeof PlateVendorResponsePagedResponseSchema
 >;
 
+// Re-export generated paginate schema for compatibility
+export {
+  GenPlateVendorResponsePaginateSchema as PlateVendorResponsePaginateSchema,
+};
+export type PlateVendorResponsePaginate = z.infer<
+  typeof GenPlateVendorResponsePaginateSchema
+>;
+
 // ===== CreatePlateVendorRequest =====
-
-export const CreatePlateVendorRequestSchema = z
-  .object({
-    name: z.string().min(0).max(255),
-    phone: z.string().min(0).max(20).nullable().optional(),
-    email: z.string().email().max(255).nullable().optional(),
-    address: z.string().nullable().optional(),
-  })
-  .passthrough();
-
+export const CreatePlateVendorRequestSchema =
+  GenCreatePlateVendorRequestSchema.passthrough();
 export type CreatePlateVendorRequest = z.infer<
   typeof CreatePlateVendorRequestSchema
 >;
 
 // ===== UpdatePlateVendorRequest =====
-
-export const UpdatePlateVendorRequestSchema = z
-  .object({
-    name: z.string().min(0).max(255).nullable().optional(),
-    phone: z.string().min(0).max(20).nullable().optional(),
-    email: z.string().email().max(255).nullable().optional(),
-    address: z.string().nullable().optional(),
-  })
-  .passthrough();
-
+export const UpdatePlateVendorRequestSchema =
+  GenUpdatePlateVendorRequestSchema.passthrough();
 export type UpdatePlateVendorRequest = z.infer<
   typeof UpdatePlateVendorRequestSchema
 >;
-
