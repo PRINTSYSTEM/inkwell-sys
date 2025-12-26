@@ -1,6 +1,5 @@
 // src/Schema/material-type.schema.ts
 // Wrapper around generated schemas - keeps utilities and stable exports
-// Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
 import {
   IdSchema,
@@ -43,13 +42,9 @@ export type MaterialTypeClassificationResponse = z.infer<
 // ===== MaterialTypeResponse =====
 export const MaterialTypeResponseSchema =
   GenMaterialTypeResponseSchema.passthrough();
-export const MaterialTypeResponseSchema =
-  GenMaterialTypeResponseSchema.passthrough();
 export type MaterialTypeResponse = z.infer<typeof MaterialTypeResponseSchema>;
 
 // ===== PagedResponse =====
-export const MaterialTypeResponsePagedResponseSchema =
-  createPagedResponseSchema(MaterialTypeResponseSchema);
 export const MaterialTypeResponsePagedResponseSchema =
   createPagedResponseSchema(MaterialTypeResponseSchema);
 export type MaterialTypeResponsePagedResponse = z.infer<
@@ -62,15 +57,7 @@ export type MaterialTypeResponsePaginate = z.infer<
   typeof GenMaterialTypeResponsePaginateSchema
 >;
 
-// Re-export generated paginate schema for compatibility
-export { GenMaterialTypeResponsePaginateSchema as MaterialTypeResponsePaginateSchema };
-export type MaterialTypeResponsePaginate = z.infer<
-  typeof GenMaterialTypeResponsePaginateSchema
->;
-
 // ===== CreateMaterialTypeRequest =====
-export const CreateMaterialTypeRequestSchema =
-  GenCreateMaterialTypeRequestSchema.passthrough();
 export const CreateMaterialTypeRequestSchema =
   GenCreateMaterialTypeRequestSchema.passthrough();
 export type CreateMaterialTypeRequest = z.infer<
@@ -80,21 +67,8 @@ export type CreateMaterialTypeRequest = z.infer<
 // ===== MaterialTypeItem (for bulk create) =====
 export const MaterialTypeItemSchema = GenMaterialTypeItemSchema.passthrough();
 export type MaterialTypeItem = z.infer<typeof MaterialTypeItemSchema>;
-export const MaterialTypeItemSchema = GenMaterialTypeItemSchema.passthrough();
-export type MaterialTypeItem = z.infer<typeof MaterialTypeItemSchema>;
 
 // ===== BulkCreateMaterialTypeRequest =====
-// Base from generated, but keep custom validation
-export const BulkCreateMaterialTypeRequestSchema =
-  GenBulkCreateMaterialTypeRequestSchema.refine(
-    (data) => {
-      if (data.materials && data.materials.length < 1) {
-        return false;
-      }
-      return true;
-    },
-    { message: "Cần ít nhất 1 chất liệu", path: ["materials"] }
-  );
 // Base from generated, but keep custom validation
 export const BulkCreateMaterialTypeRequestSchema =
   GenBulkCreateMaterialTypeRequestSchema.refine(
@@ -111,8 +85,6 @@ export type BulkCreateMaterialTypeRequest = z.infer<
 >;
 
 // ===== UpdateMaterialTypeRequest =====
-export const UpdateMaterialTypeRequestSchema =
-  GenUpdateMaterialTypeRequestSchema.passthrough();
 export const UpdateMaterialTypeRequestSchema =
   GenUpdateMaterialTypeRequestSchema.passthrough();
 export type UpdateMaterialTypeRequest = z.infer<
