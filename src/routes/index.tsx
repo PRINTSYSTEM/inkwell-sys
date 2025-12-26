@@ -63,19 +63,9 @@ const ProductTemplates = lazy(
   () => import("@/pages/inventory/ProductTemplatesPage")
 );
 
-// Accounting
-const AccountingDashboard = lazy(
-  () => import("@/pages/accounting/AccountingDashboard")
-);
-const PaymentPage = lazy(
-  () => import("@/pages/accounting/PaymentPage")
-);
-const InvoicePage = lazy(
-  () => import("@/pages/accounting/InvoicePage")
-);
-const DeliveryPage = lazy(
-  () => import("@/pages/accounting/DeliveryPage")
-);
+const PaymentPage = lazy(() => import("@/pages/accounting/PaymentPage"));
+const InvoicePage = lazy(() => import("@/pages/accounting/InvoicePage"));
+const DeliveryPage = lazy(() => import("@/pages/accounting/DeliveryPage"));
 const AccountingOrderDetail = lazy(
   () => import("@/pages/accounting/AccountingOrderDetail")
 );
@@ -404,14 +394,6 @@ export const router = createBrowserRouter([
       {
         path: lastSegment(ROUTE_PATHS.ACCOUNTING.ROOT), // "accounting"
         children: [
-          {
-            index: true,
-            element: (
-              <Suspense fallback={<div>Loading...</div>}>
-                <AccountingDashboard />
-              </Suspense>
-            ),
-          },
           {
             path: "payment",
             element: (

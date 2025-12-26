@@ -219,20 +219,6 @@ export const MENU_ITEMS: MenuItem[] = [
         allowedRoles: [ROLE.ADMIN],
       },
       {
-        id: "admin-analytics",
-        title: "Phân tích phòng ban",
-        icon: BarChart3,
-        path: ROUTE_PATHS.ADMIN.ANALYTICS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-      },
-      {
-        id: "material-types",
-        title: "Loại chất liệu",
-        icon: Layers,
-        path: ROUTE_PATHS.MATERIAL_TYPES.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-      },
-      {
         id: "design-types",
         title: "Loại thiết kế",
         icon: Settings,
@@ -254,18 +240,6 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.ACCOUNTING_LEAD,
     ],
     children: [
-      {
-        id: "accounting-dashboard",
-        title: "Chờ xử lý",
-        icon: Calculator,
-        path: ROUTE_PATHS.ACCOUNTING.ROOT,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
       {
         id: "accounting-payment",
         title: "Thanh toán",

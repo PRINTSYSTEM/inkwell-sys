@@ -26,3 +26,6 @@ dist-ssr
 .env.local
 .env.production
 .env.*
+
+# Schema generation cache
+.schema-cache.json

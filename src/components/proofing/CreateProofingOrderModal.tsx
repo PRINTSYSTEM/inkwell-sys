@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { DesignItem } from "@/types/proofing";
+import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
+import type { CreateProofingOrderFromDesignsRequest } from "@/Schema/proofing-order.schema";
 import {
   Dialog,
   DialogContent,
@@ -42,13 +44,15 @@ import {
   MessageSquare,
   Sparkles,
 } from "lucide-react";
-import { useCreateProofingOrderFromDesigns, usePaperSizes } from "@/hooks/use-proofing-order";
 import { cn } from "@/lib/utils";
 
 interface CreateProofingOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDesigns: DesignItem[];
+  paperSizes?: PaperSizeResponse[];
+  onSubmit: (data: CreateProofingOrderFromDesignsRequest) => Promise<void>;
+  isSubmitting?: boolean;
   onSuccess: () => void;
 }
 
@@ -56,29 +60,31 @@ export function CreateProofingOrderModal({
   open,
   onOpenChange,
   selectedDesigns,
+  paperSizes = [],
+  onSubmit,
+  isSubmitting = false,
   onSuccess,
 }: CreateProofingOrderModalProps) {
   const [notes, setNotes] = useState("");
   const [proofingSheetQuantity, setProofingSheetQuantity] = useState<number>(1); // Số lượng tờ bình bài được in ra
-  const [designQuantities, setDesignQuantities] = useState<Record<number, number>>({});
+  const [designQuantities, setDesignQuantities] = useState<
+    Record<number, number>
+  >({});
   const [paperSizeId, setPaperSizeId] = useState<string>("none");
   const [customPaperSize, setCustomPaperSize] = useState("");
-
-  const { data: paperSizes } = usePaperSizes();
-  const { mutate, loading } = useCreateProofingOrderFromDesigns();
 
   const materialTypeName =
     selectedDesigns.length > 0 ? selectedDesigns[0].materialTypeName : "";
 
-  // Set default quantities khi dialog mở
+  // Set default quantities when modal opens
   useEffect(() => {
     if (open) {
       const initialQuantities: Record<number, number> = {};
-      selectedDesigns.forEach(design => {
+      selectedDesigns.forEach((design) => {
         initialQuantities[design.id] = 0;
       });
       setDesignQuantities(initialQuantities);
-      setProofingSheetQuantity(1); // Default số lượng tờ bình bài
+      setProofingSheetQuantity(1);
     } else {
       setNotes("");
       setProofingSheetQuantity(1);
@@ -98,9 +104,9 @@ export function CreateProofingOrderModal({
     if (!isNaN(numValue) && numValue >= 0) {
       const maxAvailable = availableQty !== undefined ? availableQty : maxQty;
       const clampedValue = Math.min(numValue, maxAvailable);
-      setDesignQuantities(prev => ({
+      setDesignQuantities((prev) => ({
         ...prev,
-        [id]: clampedValue
+        [id]: clampedValue,
       }));
     }
   };
@@ -139,18 +145,20 @@ export function CreateProofingOrderModal({
         }));
 
       if (orderDetailItems.length === 0) {
-        alert("Vui lòng nhập số lượng lấy cho ít nhất một thiết kế (lớn hơn 0)");
+        alert(
+          "Vui lòng nhập số lượng lấy cho ít nhất một thiết kế (lớn hơn 0)"
+        );
         return;
       }
 
-      // Tính tổng số lượng của các design để gửi lên API
-      const totalDesignQuantity = Object.values(designQuantities).reduce((sum, qty) => sum + qty, 0);
-
-      await mutate({
+      await onSubmit({
         orderDetailItems,
         notes: notes || undefined,
-        totalQuantity: totalDesignQuantity, // Tổng số lượng của các design
-        paperSizeId: paperSizeId === "none" || paperSizeId === "custom" ? undefined : Number(paperSizeId),
+        totalQuantity: proofingSheetQuantity, // Tổng số lượng của các design
+        paperSizeId:
+          paperSizeId === "none" || paperSizeId === "custom"
+            ? undefined
+            : Number(paperSizeId),
         customPaperSize: paperSizeId === "custom" ? customPaperSize : undefined,
       });
 
@@ -173,7 +181,7 @@ export function CreateProofingOrderModal({
   }, [selectedDesigns, designQuantities]);
 
   const selectedCount = useMemo(() => {
-    return Object.values(designQuantities).filter(qty => qty > 0).length;
+    return Object.values(designQuantities).filter((qty) => qty > 0).length;
   }, [designQuantities]);
 
   return (
@@ -191,17 +199,12 @@ export function CreateProofingOrderModal({
                   Tạo Lệnh Bình Bài
                 </DialogTitle>
                 <DialogDescription className="text-xs mt-0.5">
-                  {selectedDesigns.length} thiết kế • {selectedCount} đã nhập số lượng
+                  {selectedDesigns.length} thiết kế • {selectedCount} đã nhập số
+                  lượng
                 </DialogDescription>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-xs text-muted-foreground">Tổng số lượng thiết kế</div>
-                <div className="text-sm font-bold text-primary">
-                  {totalSelectedQuantity.toLocaleString()}
-                </div>
-              </div>
               <Badge variant="secondary" className="text-xs">
                 <Package className="h-3 w-3 mr-1" />
                 {materialTypeName}
@@ -229,12 +232,14 @@ export function CreateProofingOrderModal({
               <TableBody>
                 {selectedDesigns.map((design, index) => {
                   const currentQty = designQuantities[design.id] || 0;
-                  const maxQty = design.availableQuantity !== undefined
-                    ? design.availableQuantity
-                    : design.quantity;
-                  const remainingQty = design.availableQuantity !== undefined
-                    ? design.availableQuantity - currentQty
-                    : design.quantity - currentQty;
+                  const maxQty =
+                    design.availableQuantity !== undefined
+                      ? design.availableQuantity
+                      : design.quantity;
+                  const remainingQty =
+                    design.availableQuantity !== undefined
+                      ? design.availableQuantity - currentQty
+                      : design.quantity - currentQty;
                   const isValid = currentQty > 0 && currentQty <= maxQty;
                   const isExceeded = currentQty > maxQty;
 
@@ -252,7 +257,9 @@ export function CreateProofingOrderModal({
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium text-sm">{design.name}</div>
+                          <div className="font-medium text-sm">
+                            {design.name}
+                          </div>
                           <code className="text-xs text-muted-foreground font-mono">
                             {design.code}
                           </code>
@@ -276,7 +283,9 @@ export function CreateProofingOrderModal({
                             {design.availableQuantity.toLocaleString()}
                           </span>
                         ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
+                          <span className="text-sm text-muted-foreground">
+                            -
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -287,7 +296,8 @@ export function CreateProofingOrderModal({
                             max={maxQty}
                             className={cn(
                               "h-9 flex-1 text-right font-mono text-base font-semibold",
-                              isExceeded && "border-destructive focus-visible:ring-destructive"
+                              isExceeded &&
+                                "border-destructive focus-visible:ring-destructive"
                             )}
                             value={currentQty || ""}
                             onChange={(e) =>
@@ -309,10 +319,14 @@ export function CreateProofingOrderModal({
                         <span
                           className={cn(
                             "text-sm font-medium",
-                            remainingQty >= 0 ? "text-blue-600" : "text-orange-600"
+                            remainingQty >= 0
+                              ? "text-blue-600"
+                              : "text-orange-600"
                           )}
                         >
-                          {remainingQty >= 0 ? remainingQty.toLocaleString() : "0"}
+                          {remainingQty >= 0
+                            ? remainingQty.toLocaleString()
+                            : "0"}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
@@ -321,7 +335,9 @@ export function CreateProofingOrderModal({
                         ) : isValid ? (
                           <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
                         ) : (
-                          <span className="text-xs text-muted-foreground">-</span>
+                          <span className="text-xs text-muted-foreground">
+                            -
+                          </span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -333,54 +349,19 @@ export function CreateProofingOrderModal({
 
           {/* Right Column - Configuration Panel */}
           <div className="w-[420px] flex flex-col border-l bg-muted/20 shrink-0">
-            {/* Summary Section */}
-            <div className="p-4 border-b bg-background">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
-                <FileText className="h-4 w-4 text-primary" />
-                Tóm tắt
-              </h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2.5 rounded-md bg-muted/50 border text-sm">
-                  <div className="flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Thiết kế</span>
-                  </div>
-                  <span className="font-bold">{selectedDesigns.length}</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-md bg-muted/50 border text-sm">
-                  <div className="flex items-center gap-2">
-                    <Hash className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Tổng số lượng</span>
-                  </div>
-                  <span className="font-bold text-primary">
-                    {totalSelectedQuantity.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-md bg-muted/50 border text-sm">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Vật liệu</span>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {materialTypeName || "N/A"}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
             {/* Configuration Section */}
             <div className="flex-1 overflow-auto p-4">
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
-                    <Settings className="h-4 w-4 text-primary" />
-                    Cấu hình
-                  </h3>
                   <div className="space-y-3">
                     {/* Proofing Sheet Quantity */}
                     <div className="space-y-2">
-                      <Label htmlFor="proofingSheetQuantity" className="text-sm font-medium">
-                        Số lượng tờ bình bài <span className="text-destructive">*</span>
+                      <Label
+                        htmlFor="proofingSheetQuantity"
+                        className="text-sm font-medium"
+                      >
+                        Số lượng tờ bình bài{" "}
+                        <span className="text-destructive">*</span>
                       </Label>
                       <div className="relative">
                         <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -407,16 +388,23 @@ export function CreateProofingOrderModal({
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Số lượng tờ bình bài được in ra (không phải tổng số lượng thiết kế)
+                        Số lượng tờ bình bài được in ra (không phải tổng số
+                        lượng thiết kế)
                       </p>
                     </div>
 
                     {/* Paper Size */}
                     <div className="space-y-2">
-                      <Label htmlFor="paperSizeId" className="text-sm font-medium">
+                      <Label
+                        htmlFor="paperSizeId"
+                        className="text-sm font-medium"
+                      >
                         Khổ giấy in
                       </Label>
-                      <Select value={paperSizeId} onValueChange={setPaperSizeId}>
+                      <Select
+                        value={paperSizeId}
+                        onValueChange={setPaperSizeId}
+                      >
                         <SelectTrigger id="paperSizeId" className="h-10">
                           <Maximize2 className="h-4 w-4 mr-2 text-muted-foreground" />
                           <SelectValue placeholder="Chọn khổ giấy" />
@@ -431,7 +419,9 @@ export function CreateProofingOrderModal({
                                 : ""}
                             </SelectItem>
                           ))}
-                          <SelectItem value="custom">-- Nhập thủ công --</SelectItem>
+                          <SelectItem value="custom">
+                            -- Nhập thủ công --
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -439,7 +429,10 @@ export function CreateProofingOrderModal({
                     {/* Custom Paper Size */}
                     {paperSizeId === "custom" ? (
                       <div className="space-y-2">
-                        <Label htmlFor="customPaperSize" className="text-sm font-medium">
+                        <Label
+                          htmlFor="customPaperSize"
+                          className="text-sm font-medium"
+                        >
                           Khổ giấy tùy chỉnh
                         </Label>
                         <Input
@@ -456,10 +449,22 @@ export function CreateProofingOrderModal({
                           Kích thước
                         </Label>
                         <div className="h-10 flex items-center px-3 rounded-md border bg-background text-sm text-muted-foreground">
-                          {paperSizeId !== "none" && paperSizes?.find((ps) => ps.id.toString() === paperSizeId) ? (
+                          {paperSizeId !== "none" &&
+                          paperSizes?.find(
+                            (ps) => ps.id.toString() === paperSizeId
+                          ) ? (
                             <span>
-                              {paperSizes.find((ps) => ps.id.toString() === paperSizeId)?.width} ×{" "}
-                              {paperSizes.find((ps) => ps.id.toString() === paperSizeId)?.height}
+                              {
+                                paperSizes.find(
+                                  (ps) => ps.id.toString() === paperSizeId
+                                )?.width
+                              }{" "}
+                              ×{" "}
+                              {
+                                paperSizes.find(
+                                  (ps) => ps.id.toString() === paperSizeId
+                                )?.height
+                              }
                             </span>
                           ) : (
                             <span className="italic">Chưa chọn</span>
@@ -494,14 +499,15 @@ export function CreateProofingOrderModal({
           <div className="flex-1 text-xs text-muted-foreground">
             {selectedCount > 0 && (
               <span>
-                {selectedCount}/{selectedDesigns.length} thiết kế đã nhập số lượng
+                {selectedCount}/{selectedDesigns.length} thiết kế đã nhập số
+                lượng
               </span>
             )}
           </div>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={loading}
+            disabled={isSubmitting}
             size="sm"
             className="h-9"
           >
@@ -509,11 +515,13 @@ export function CreateProofingOrderModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading || !hasValidQuantities || proofingSheetQuantity < 1}
+            disabled={
+              isSubmitting || !hasValidQuantities || proofingSheetQuantity < 1
+            }
             size="sm"
             className="h-9 gap-1.5 min-w-[120px]"
           >
-            {loading ? (
+            {isSubmitting ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Đang tạo...

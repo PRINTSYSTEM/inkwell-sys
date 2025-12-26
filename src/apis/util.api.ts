@@ -59,6 +59,7 @@ export const API_SUFFIX = {
   ORDER_EXPORT_INVOICE: (id: number) => `/orders/${id}/export-invoice`,
   ORDER_EXPORT_DELIVERY_NOTE: (id: number) =>
     `/orders/${id}/export-delivery-note`,
+  ORDER_EXPORT_PDF: (id: number) => `/orders/${id}/export-pdf`,
   ORDER_GENERATE_EXCEL: (id: number) => `/orders/${id}/generate-excel`,
 
   ORDERS_MY: "/orders/my",

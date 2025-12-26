@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
+import { apiRequest } from "@/lib/http";
+import { API_SUFFIX } from "@/apis";
 import { DesignItem, ViewFilter, SortOption, ViewMode } from "@/types/proofing";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
 import { DesignCard } from "@/components/proofing/DesignCard";
@@ -26,6 +28,10 @@ import {
 } from "@/components/ui/select";
 import { LayoutGrid, List, Plus, FolderTree, FileText } from "lucide-react";
 import { useAvailableOrderDetailsForProofing } from "@/hooks";
+import {
+  useCreateProofingOrderFromDesigns,
+  usePaperSizes,
+} from "@/hooks/use-proofing-order";
 
 const ITEMS_PER_PAGE_OPTIONS = [12, 24, 48];
 
@@ -57,6 +63,8 @@ export default function ProofingOrderPage() {
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [designsWithQuantity, setDesignsWithQuantity] = useState<DesignItem[]>([]);
+  const [loadingQuantities, setLoadingQuantities] = useState(false);
 
   // API call with smart filtering
   const { data, isLoading } = useAvailableOrderDetailsForProofing({
@@ -193,8 +201,66 @@ export default function ProofingOrderPage() {
     clearSelection();
   };
 
+  // Hooks for modal
+  const { data: paperSizes } = usePaperSizes();
+  const { mutate: createProofingOrder, loading: isCreating } = useCreateProofingOrderFromDesigns();
+
   const handleCreateOrderSuccess = () => {
     clearSelection();
+    setDesignsWithQuantity([]);
+  };
+
+  const handleSubmitProofingOrder = async (data: Parameters<typeof createProofingOrder>[0]) => {
+    await createProofingOrder(data);
+  };
+
+  const handleOpenModal = async () => {
+    if (selectedDesigns.length === 0) return;
+    
+    setLoadingQuantities(true);
+
+    // Fetch available quantities for all selected designs in parallel
+    try {
+      const results = await Promise.allSettled(
+        selectedDesigns.map(async (design) => {
+          const designId = design.designId;
+          if (!designId) {
+            return { ...design, availableQuantity: undefined };
+          }
+          try {
+            const res = await apiRequest.get<number>(
+              API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId)
+            );
+            return {
+              ...design,
+              availableQuantity:
+                typeof res.data === "number" ? res.data : undefined,
+            };
+          } catch {
+            return { ...design, availableQuantity: undefined };
+          }
+        })
+      );
+
+      const designs = results.map((result, index) => {
+        if (result.status === "fulfilled") {
+          return result.value;
+        }
+        // Fallback to original design if fetch failed
+        return selectedDesigns[index] || selectedDesigns[0];
+      });
+
+      setDesignsWithQuantity(designs);
+      // Open modal after fetching quantities
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch available quantities:", error);
+      // Fallback to original designs if all fetches fail
+      setDesignsWithQuantity(selectedDesigns);
+      setIsModalOpen(true);
+    } finally {
+      setLoadingQuantities(false);
+    }
   };
 
   return (
@@ -249,12 +315,21 @@ export default function ProofingOrderPage() {
 
           {/* Create Order Button */}
           <Button
-            onClick={() => setIsModalOpen(true)}
-            disabled={selectedDesigns.length === 0}
+            onClick={handleOpenModal}
+            disabled={selectedDesigns.length === 0 || loadingQuantities}
             className="gap-2"
           >
-            <Plus className="h-4 w-4" />
-            Tạo Lệnh Bình Bài
+            {loadingQuantities ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Đang tải...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Tạo Lệnh Bình Bài
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -455,7 +530,10 @@ export default function ProofingOrderPage() {
       <CreateProofingOrderModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
-        selectedDesigns={selectedDesigns}
+        selectedDesigns={designsWithQuantity.length > 0 ? designsWithQuantity : selectedDesigns}
+        paperSizes={paperSizes}
+        onSubmit={handleSubmitProofingOrder}
+        isSubmitting={isCreating}
         onSuccess={handleCreateOrderSuccess}
       />
     </div>
