@@ -1171,7 +1171,7 @@ const CreateUserRequest = z.object({
     .string()
     .min(1)
     .regex(
-      /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/,
+      /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/
     ),
   email: z.string().min(0).max(255).email().nullish(),
   phone: z.string().min(0).max(20).nullish(),
@@ -1204,7 +1204,7 @@ const UpdateUserRequest = z
     role: z
       .string()
       .regex(
-        /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/,
+        /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/
       )
       .nullable(),
     email: z.string().min(0).max(255).email().nullable(),
