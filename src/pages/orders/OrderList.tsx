@@ -166,10 +166,6 @@ export default function OrderList() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Download className="h-4 w-4" />
-              Xuất file
-            </Button>
             {canCreateOrder && (
               <Link to="/orders/new">
                 <Button size="sm" className="gap-2">
