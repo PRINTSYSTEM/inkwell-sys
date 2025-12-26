@@ -89,6 +89,7 @@ export const ENTITY_CONFIG = {
       waiting_for_production: "Chờ sản xuất",
       in_production: "Đang sản xuất",
       completed: "Hoàn thành",
+      paused: "Tạm dừng",
     },
   },
   paymentStatuses: {
@@ -133,8 +134,6 @@ export const ENTITY_CONFIG = {
     values: {
       glossy: "Cán bóng",
       matte: "Cán mờ",
-      soft_touch: "Cán mềm (Soft touch)",
-      none: "Không cán",
     },
   },
 };

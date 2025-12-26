@@ -361,23 +361,6 @@ const DesignTypeResponse = z
     createdBy: UserInfo,
   })
   .partial();
-const MaterialTypeClassificationOptionResponse = z
-  .object({
-    id: z.number().int(),
-    code: z.string().nullable(),
-    value: z.string().nullable(),
-    displayOrder: z.number().int(),
-  })
-  .partial();
-const MaterialTypeClassificationResponse = z
-  .object({
-    id: z.number().int(),
-    classificationKey: z.string().nullable(),
-    classificationName: z.string().nullable(),
-    displayOrder: z.number().int(),
-    options: z.array(MaterialTypeClassificationOptionResponse).nullable(),
-  })
-  .partial();
 const MaterialTypeResponse = z
   .object({
     id: z.number().int(),
@@ -393,7 +376,6 @@ const MaterialTypeResponse = z
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }),
     createdBy: UserInfo,
-    classifications: z.array(MaterialTypeClassificationResponse).nullable(),
   })
   .partial();
 const DesignTimelineEntryResponse = z
@@ -421,12 +403,9 @@ const DesignResponse = z
     length: z.number().nullable(),
     width: z.number().nullable(),
     height: z.number().nullable(),
-    depth: z.number().nullable(),
     areaM2: z.number().nullable(),
-    sidesClassificationOptionId: z.number().int().nullable(),
-    processClassificationOptionId: z.number().int().nullable(),
-    sidesClassificationOption: MaterialTypeClassificationOptionResponse,
-    processClassificationOption: MaterialTypeClassificationOptionResponse,
+    sidesClassification: z.string().nullable(),
+    processClassification: z.string().nullable(),
     sidesClassificationName: z.string().nullable(),
     processClassificationName: z.string().nullable(),
     laminationType: z.string().nullable(),
@@ -456,9 +435,8 @@ const UpdateDesignRequest = z
     length: z.number().gte(0).nullable(),
     width: z.number().gte(0).nullable(),
     height: z.number().gte(0).nullable(),
-    depth: z.number().gte(0).nullable(),
-    sidesClassificationOptionId: z.number().int().nullable(),
-    processClassificationOptionId: z.number().int().nullable(),
+    sidesClassification: z.string().nullable(),
+    processClassification: z.string().nullable(),
     laminationType: z.string().min(0).max(20).nullable(),
     requirements: z.string().nullable(),
     additionalNotes: z.string().nullable(),
@@ -650,9 +628,8 @@ const CreateDesignRequest = z.object({
   length: z.number().gte(0).nullish(),
   width: z.number().gte(0).nullish(),
   height: z.number().gte(0).nullish(),
-  depth: z.number().gte(0).nullish(),
-  sidesClassificationOptionId: z.number().int().nullish(),
-  processClassificationOptionId: z.number().int().nullish(),
+  sidesClassification: z.string().nullish(),
+  processClassification: z.string().nullish(),
   laminationType: z.string().min(0).max(20).nullish(),
   requirements: z.string().nullish(),
   additionalNotes: z.string().nullish(),
@@ -1194,7 +1171,7 @@ const CreateUserRequest = z.object({
     .string()
     .min(1)
     .regex(
-      /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/,
+      /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/
     ),
   email: z.string().min(0).max(255).email().nullish(),
   phone: z.string().min(0).max(20).nullish(),
@@ -1227,7 +1204,7 @@ const UpdateUserRequest = z
     role: z
       .string()
       .regex(
-        /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/,
+        /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/
       )
       .nullable(),
     email: z.string().min(0).max(255).email().nullable(),
@@ -1308,8 +1285,6 @@ export const schemas = {
   UpdateDeliveryStatusRequest,
   RecreateDeliveryNoteRequest,
   DesignTypeResponse,
-  MaterialTypeClassificationOptionResponse,
-  MaterialTypeClassificationResponse,
   MaterialTypeResponse,
   DesignTimelineEntryResponse,
   DesignResponse,

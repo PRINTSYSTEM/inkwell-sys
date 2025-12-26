@@ -166,14 +166,13 @@ export const DesignModal: React.FC<DesignModalProps> = ({
   const canGoNext = () => {
     switch (currentStep) {
       case 1:
-        // Step 1: Tên thiết kế, loại thiết kế, chất liệu, kích thước, số lượng
+        // Step 1: Tên thiết kế, loại thiết kế, chất liệu, kích thước (dài, rộng bắt buộc, cao không bắt buộc), số lượng
         return (
           formData.designName?.trim() &&
           formData.designTypeId > 0 &&
           formData.materialTypeId > 0 &&
           (formData.length ?? 0) > 0 &&
           (formData.width ?? 0) > 0 &&
-          (formData.height ?? 0) > 0 &&
           formData.quantity > 0
         );
       case 2:
@@ -428,7 +427,9 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                 </Label>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Dài</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Dài <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       type="number"
                       placeholder="0"
@@ -445,7 +446,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">
-                      Rộng
+                      Rộng <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       type="number"
@@ -512,7 +513,6 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   </p>
                 )}
               </div>
-
             </div>
           )}
 
@@ -521,6 +521,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
             <div className="space-y-6">
               {/* Dynamic classifications - Số mặt in, Quy trình sản xuất - Cùng một hàng */}
               {selectedMaterial?.classifications &&
+                Array.isArray(selectedMaterial.classifications) &&
                 selectedMaterial.classifications.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {selectedMaterial.classifications.map((cls) => (
@@ -595,13 +596,13 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     <SelectValue placeholder="Chọn loại cán màn" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(
-                      ENTITY_CONFIG.laminationTypes.values
-                    ).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
+                    {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(
+                      ([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      )
+                    )}
                   </SelectContent>
                 </Select>
               </div>

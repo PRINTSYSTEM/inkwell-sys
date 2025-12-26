@@ -49,6 +49,7 @@ import { InvoiceDialog } from "@/components/orders/invoice-dialog";
 import { EditOrderSheet } from "@/components/orders/edit-order-sheet";
 import { StatusUpdateDialog } from "@/components/orders/status-update-dialog";
 import { PrintOrderDialog } from "@/components/orders/print-order-dialog";
+import { CustomerUpdateDialog } from "@/components/orders/customer-update-dialog";
 
 import {
   orderStatusLabels,
@@ -74,12 +75,14 @@ import {
   useGenerateDesignExcel,
   useProofingOrdersByOrder,
 } from "@/hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import { ROLE } from "@/constants";
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const orderId = Number.parseInt(id || "0", 10);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const role = user?.role as UserRole;
 
@@ -89,6 +92,7 @@ export default function OrderDetailPage() {
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [customerUpdateDialogOpen, setCustomerUpdateDialogOpen] = useState(false);
 
   // ===== FETCH ORDER =====
   const {
@@ -149,20 +153,18 @@ export default function OrderDetailPage() {
   // ===== DERIVED STATE =====
   // Use customer from order response
   const customer = order.customer;
-  const customerCompanyName =
-    typeof customer?.companyName === "string" ? customer.companyName : null;
-  const customerType = customerCompanyName ? "company" : "retail";
   const hasDeposit = (order.depositAmount || 0) > 0;
   const remainingAmount = (order.totalAmount || 0) - (order.depositAmount || 0);
   const orderDetailsCount = order.orderDetails?.length || 0;
 
   // ===== CHECK CUSTOMER INFO COMPLETENESS =====
+  // Use missingFields from backend if available, otherwise check manually
   // Thông tin cần thiết để xuất hóa đơn:
-  // - name (tên khách hàng)
-  // - phone (số điện thoại)
-  // - address (địa chỉ)
-  // - email (email)
-  const missingFields: string[] = [];
+  // - name (tên khách hàng) - bắt buộc
+  // - phone (số điện thoại) - bắt buộc
+  // - address (địa chỉ) - bắt buộc
+  // - email (email) - bắt buộc cho company, không bắt buộc cho retail
+  // - taxCode (mã số thuế) - bắt buộc cho company nếu field tồn tại
   const customerName = typeof customer?.name === "string" ? customer.name : "";
   const customerPhone =
     typeof customer?.phone === "string" ? customer.phone : "";
@@ -170,11 +172,38 @@ export default function OrderDetailPage() {
     typeof customer?.address === "string" ? customer.address : "";
   const customerEmail =
     typeof customer?.email === "string" ? customer.email : "";
+  const customerCompanyName =
+    typeof customer?.companyName === "string" ? customer.companyName : "";
+  // taxCode may not exist in CustomerSummaryResponse (used in OrderResponse)
+  const customerTaxCode =
+    "taxCode" in customer && typeof customer.taxCode === "string"
+      ? customer.taxCode
+      : "";
 
-  if (!customerName.trim()) missingFields.push("Tên khách hàng");
-  if (!customerPhone.trim()) missingFields.push("Số điện thoại");
-  if (!customerAddress.trim()) missingFields.push("Địa chỉ");
-  if (!customerEmail.trim()) missingFields.push("Email");
+  const isCompany = !!customerCompanyName;
+  const customerType = isCompany ? "company" : "retail";
+
+  // Use missingFields from backend if available
+  let missingFields: string[] = [];
+  if (order.missingFields && Array.isArray(order.missingFields)) {
+    missingFields = order.missingFields;
+  } else {
+    // Fallback: check manually
+    if (!customerName.trim()) missingFields.push("Tên khách hàng");
+    if (!customerPhone.trim()) missingFields.push("Số điện thoại");
+    if (!customerAddress.trim()) missingFields.push("Địa chỉ");
+    
+    // Email: required for company, optional for retail
+    if (isCompany && !customerEmail.trim()) {
+      missingFields.push("Email");
+    }
+    
+    // TaxCode: required for company if field exists
+    if (isCompany && "taxCode" in customer && !customerTaxCode.trim()) {
+      missingFields.push("Mã số thuế");
+    }
+  }
+
   const isCustomerInfoComplete = missingFields.length === 0;
 
   return (
@@ -766,12 +795,14 @@ export default function OrderDetailPage() {
                           <li key={field}>{field}</li>
                         ))}
                       </ul>
-                      <Link
-                        to={`/customers/${customer?.id}`}
-                        className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline mt-2 inline-block"
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 text-xs h-7"
+                        onClick={() => setCustomerUpdateDialogOpen(true)}
                       >
-                        Cập nhật thông tin khách hàng →
-                      </Link>
+                        Cập nhật thông tin khách hàng
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -997,6 +1028,16 @@ export default function OrderDetailPage() {
         open={printDialogOpen}
         onOpenChange={setPrintDialogOpen}
         orderId={order.id}
+      />
+
+      <CustomerUpdateDialog
+        open={customerUpdateDialogOpen}
+        onOpenChange={setCustomerUpdateDialogOpen}
+        customer={customer || null}
+        onSuccess={() => {
+          // Invalidate order query to refetch with updated customer info
+          queryClient.invalidateQueries({ queryKey: ["orders", orderId] });
+        }}
       />
     </div>
   );

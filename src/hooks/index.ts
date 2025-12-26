@@ -22,3 +22,4 @@ export * from "./use-invoice";
 export * from "./use-delivery-note";
 export * from "./use-accounting";
 export * from "./use-order";
+export * from "./use-plate-vendor";

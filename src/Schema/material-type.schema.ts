@@ -11,8 +11,6 @@ import { UserInfoSchema } from "./Common";
 import {
   MaterialTypeResponseSchema as GenMaterialTypeResponseSchema,
   MaterialTypeResponsePaginateSchema as GenMaterialTypeResponsePaginateSchema,
-  MaterialTypeClassificationResponseSchema as GenMaterialTypeClassificationResponseSchema,
-  MaterialTypeClassificationOptionResponseSchema as GenMaterialTypeClassificationOptionResponseSchema,
   CreateMaterialTypeRequestSchema as GenCreateMaterialTypeRequestSchema,
   UpdateMaterialTypeRequestSchema as GenUpdateMaterialTypeRequestSchema,
   MaterialTypeItemSchema as GenMaterialTypeItemSchema,
@@ -20,15 +18,23 @@ import {
 } from "./generated";
 
 // ===== MaterialTypeClassificationOptionResponse =====
-export const MaterialTypeClassificationOptionResponseSchema =
-  GenMaterialTypeClassificationOptionResponseSchema.passthrough();
+// Custom schema - not in generated (used in MaterialTypeResponse.classifications)
+export const MaterialTypeClassificationOptionResponseSchema = z.object({
+  id: IdSchema,
+  value: z.string(),
+});
 export type MaterialTypeClassificationOptionResponse = z.infer<
   typeof MaterialTypeClassificationOptionResponseSchema
 >;
 
 // ===== MaterialTypeClassificationResponse =====
-export const MaterialTypeClassificationResponseSchema =
-  GenMaterialTypeClassificationResponseSchema.passthrough();
+// Custom schema - not in generated (used in MaterialTypeResponse.classifications)
+export const MaterialTypeClassificationResponseSchema = z.object({
+  id: IdSchema,
+  classificationName: z.string(),
+  classificationKey: z.string(),
+  options: z.array(MaterialTypeClassificationOptionResponseSchema),
+});
 export type MaterialTypeClassificationResponse = z.infer<
   typeof MaterialTypeClassificationResponseSchema
 >;
@@ -39,17 +45,14 @@ export const MaterialTypeResponseSchema =
 export type MaterialTypeResponse = z.infer<typeof MaterialTypeResponseSchema>;
 
 // ===== PagedResponse =====
-export const MaterialTypeResponsePagedResponseSchema = createPagedResponseSchema(
-  MaterialTypeResponseSchema
-);
+export const MaterialTypeResponsePagedResponseSchema =
+  createPagedResponseSchema(MaterialTypeResponseSchema);
 export type MaterialTypeResponsePagedResponse = z.infer<
   typeof MaterialTypeResponsePagedResponseSchema
 >;
 
 // Re-export generated paginate schema for compatibility
-export {
-  GenMaterialTypeResponsePaginateSchema as MaterialTypeResponsePaginateSchema,
-};
+export { GenMaterialTypeResponsePaginateSchema as MaterialTypeResponsePaginateSchema };
 export type MaterialTypeResponsePaginate = z.infer<
   typeof GenMaterialTypeResponsePaginateSchema
 >;
