@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -106,8 +106,10 @@ export default function OrderDetailPage() {
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [customerUpdateDialogOpen, setCustomerUpdateDialogOpen] =
     useState(false);
-  const [recipientUpdateDialogOpen, setRecipientUpdateDialogOpen] =
-    useState(false);
+  const [isEditingRecipient, setIsEditingRecipient] = useState(false);
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [recipientAddress, setRecipientAddress] = useState("");
 
   // ===== FETCH ORDER =====
   const {
@@ -131,6 +133,15 @@ export default function OrderDetailPage() {
     role === ROLE.ADMIN;
 
   const { mutate: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
+
+  // Initialize recipient form data when order loads
+  useEffect(() => {
+    if (order) {
+      setRecipientName(order.recipientName || "");
+      setRecipientPhone(order.recipientPhone || "");
+      setRecipientAddress(order.recipientAddress || "");
+    }
+  }, [order]);
 
   // ===== PROOFING & PRODUCTION =====
   // Note: ProofingOrderListParams không có orderId để filter
@@ -930,71 +941,6 @@ export default function OrderDetailPage() {
                   </div>
                 )}
 
-                {/* Recipient Info */}
-                {(order.recipientName ||
-                  order.recipientPhone ||
-                  order.recipientAddress) && (
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-muted-foreground text-xs font-medium">
-                        Người nhận:
-                      </p>
-                      {canUpdateRecipient && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs px-2"
-                          onClick={() => setRecipientUpdateDialogOpen(true)}
-                        >
-                          <Edit className="w-3 h-3 mr-1" />
-                          Sửa
-                        </Button>
-                      )}
-                    </div>
-                    <div className="space-y-1 text-sm">
-                      {order.recipientName && (
-                        <p>
-                          <span className="text-muted-foreground">Tên: </span>
-                          {order.recipientName}
-                        </p>
-                      )}
-                      {order.recipientPhone && (
-                        <p>
-                          <span className="text-muted-foreground">
-                            Điện thoại:{" "}
-                          </span>
-                          {order.recipientPhone}
-                        </p>
-                      )}
-                      {order.recipientAddress && (
-                        <p>
-                          <span className="text-muted-foreground">
-                            Địa chỉ:{" "}
-                          </span>
-                          {order.recipientAddress}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {canUpdateRecipient &&
-                  !order.recipientName &&
-                  !order.recipientPhone &&
-                  !order.recipientAddress && (
-                    <div className="pt-2 border-t">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full gap-2 text-xs"
-                        onClick={() => setRecipientUpdateDialogOpen(true)}
-                      >
-                        <User className="w-3 h-3" />
-                        Thêm thông tin người nhận
-                      </Button>
-                    </div>
-                  )}
-
                 {order.note && (
                   <div className="pt-2">
                     <p className="text-muted-foreground text-xs mb-1">
@@ -1018,6 +964,189 @@ export default function OrderDetailPage() {
                   Chỉnh sửa thông tin
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Recipient Info Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" />
+                  Thông tin nhận hàng
+                </CardTitle>
+                {canUpdateRecipient && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      if (isEditingRecipient) {
+                        // Save
+                        updateOrder(
+                          {
+                            id: order.id,
+                            data: {
+                              recipientName: recipientName.trim() || null,
+                              recipientPhone: recipientPhone.trim() || null,
+                              recipientAddress: recipientAddress.trim() || null,
+                            },
+                          },
+                          {
+                            onSuccess: () => {
+                              setIsEditingRecipient(false);
+                              // Query will be auto-invalidated by useUpdateOrder's onSuccess
+                            },
+                            onError: () => {
+                              // Keep edit mode open on error so user can retry
+                            },
+                          }
+                        );
+                      } else {
+                        // Edit mode
+                        setIsEditingRecipient(true);
+                      }
+                    }}
+                    disabled={isUpdatingOrder}
+                  >
+                    {isEditingRecipient ? (
+                      <>
+                        {isUpdatingOrder ? (
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        ) : (
+                          <Edit className="w-3 h-3 mr-1" />
+                        )}
+                        {isUpdatingOrder ? "Đang lưu..." : "Lưu"}
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="w-3 h-3 mr-1" />
+                        Sửa
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Warning if missing info */}
+              {(!order.recipientName ||
+                !order.recipientPhone ||
+                !order.recipientAddress) && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+                        Thiếu thông tin người nhận
+                      </p>
+                      <ul className="text-xs text-amber-700 dark:text-amber-300 mt-1 list-disc list-inside space-y-0.5">
+                        {!order.recipientName && <li>Tên người nhận</li>}
+                        {!order.recipientPhone && <li>Số điện thoại</li>}
+                        {!order.recipientAddress && <li>Địa chỉ</li>}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Recipient Fields */}
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    Tên người nhận
+                    {!order.recipientName && (
+                      <span className="text-destructive ml-1">*</span>
+                    )}
+                  </Label>
+                  {isEditingRecipient ? (
+                    <Input
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      placeholder="Nhập tên người nhận"
+                      className="h-9 text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm font-medium">
+                      {order.recipientName || (
+                        <span className="text-muted-foreground italic">
+                          Chưa có thông tin
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    Số điện thoại
+                    {!order.recipientPhone && (
+                      <span className="text-destructive ml-1">*</span>
+                    )}
+                  </Label>
+                  {isEditingRecipient ? (
+                    <Input
+                      value={recipientPhone}
+                      onChange={(e) => setRecipientPhone(e.target.value)}
+                      placeholder="Nhập số điện thoại"
+                      className="h-9 text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm font-medium">
+                      {order.recipientPhone || (
+                        <span className="text-muted-foreground italic">
+                          Chưa có thông tin
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    Địa chỉ
+                    {!order.recipientAddress && (
+                      <span className="text-destructive ml-1">*</span>
+                    )}
+                  </Label>
+                  {isEditingRecipient ? (
+                    <Input
+                      value={recipientAddress}
+                      onChange={(e) => setRecipientAddress(e.target.value)}
+                      placeholder="Nhập địa chỉ người nhận"
+                      className="h-9 text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm font-medium">
+                      {order.recipientAddress || (
+                        <span className="text-muted-foreground italic">
+                          Chưa có thông tin
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {isEditingRecipient && (
+                <div className="flex gap-2 pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs h-8"
+                    onClick={() => {
+                      // Reset to original values
+                      setRecipientName(order.recipientName || "");
+                      setRecipientPhone(order.recipientPhone || "");
+                      setRecipientAddress(order.recipientAddress || "");
+                      setIsEditingRecipient(false);
+                    }}
+                    disabled={isUpdatingOrder}
+                  >
+                    Hủy
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1125,117 +1254,6 @@ export default function OrderDetailPage() {
           queryClient.invalidateQueries({ queryKey: ["orders", orderId] });
         }}
       />
-
-      {/* Recipient Update Dialog */}
-      <Dialog
-        open={recipientUpdateDialogOpen}
-        onOpenChange={setRecipientUpdateDialogOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cập nhật thông tin người nhận</DialogTitle>
-            <DialogDescription>
-              Cập nhật thông tin người nhận hàng (nếu khác với khách hàng)
-            </DialogDescription>
-          </DialogHeader>
-          <RecipientUpdateForm
-            order={order}
-            onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: ["orders", orderId] });
-              setRecipientUpdateDialogOpen(false);
-            }}
-            onCancel={() => setRecipientUpdateDialogOpen(false)}
-            isUpdating={isUpdatingOrder}
-            updateOrder={updateOrder}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
-  );
-}
-
-// Recipient Update Form Component
-function RecipientUpdateForm({
-  order,
-  onSuccess,
-  onCancel,
-  isUpdating,
-  updateOrder,
-}: {
-  order: {
-    id?: number;
-    recipientName?: string | null;
-    recipientPhone?: string | null;
-    recipientAddress?: string | null;
-  };
-  onSuccess: () => void;
-  onCancel: () => void;
-  isUpdating: boolean;
-  updateOrder: (params: {
-    id: number;
-    data: import("@/Schema").UpdateOrderRequest;
-  }) => void;
-}) {
-  const [recipientName, setRecipientName] = useState(order.recipientName || "");
-  const [recipientPhone, setRecipientPhone] = useState(
-    order.recipientPhone || ""
-  );
-  const [recipientAddress, setRecipientAddress] = useState(
-    order.recipientAddress || ""
-  );
-
-  const handleSubmit = () => {
-    if (!order.id) return;
-    updateOrder({
-      id: order.id,
-      data: {
-        recipientName: recipientName.trim() || null,
-        recipientPhone: recipientPhone.trim() || null,
-        recipientAddress: recipientAddress.trim() || null,
-      },
-    });
-    onSuccess();
-  };
-
-  return (
-    <>
-      <div className="space-y-4 py-4">
-        <div className="space-y-2">
-          <Label htmlFor="recipientName">Tên người nhận</Label>
-          <Input
-            id="recipientName"
-            value={recipientName}
-            onChange={(e) => setRecipientName(e.target.value)}
-            placeholder="Nhập tên người nhận"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="recipientPhone">Số điện thoại</Label>
-          <Input
-            id="recipientPhone"
-            value={recipientPhone}
-            onChange={(e) => setRecipientPhone(e.target.value)}
-            placeholder="Nhập số điện thoại"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="recipientAddress">Địa chỉ</Label>
-          <Input
-            id="recipientAddress"
-            value={recipientAddress}
-            onChange={(e) => setRecipientAddress(e.target.value)}
-            placeholder="Nhập địa chỉ người nhận"
-          />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onCancel} disabled={isUpdating}>
-          Hủy
-        </Button>
-        <Button onClick={handleSubmit} disabled={isUpdating}>
-          {isUpdating ? "Đang lưu..." : "Lưu"}
-        </Button>
-      </DialogFooter>
-    </>
   );
 }

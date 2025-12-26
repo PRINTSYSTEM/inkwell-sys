@@ -753,6 +753,12 @@ const UpdateOrderRequest = z
     deliveryDate: z.string().datetime({ offset: true }).nullable(),
     note: z.string().nullable(),
     assignedToUserId: z.number().int().nullable(),
+    customerName: z.string().nullable(),
+    customerCompanyName: z.string().nullable(),
+    customerPhone: z.string().nullable(),
+    customerEmail: z.string().nullable(),
+    customerTaxCode: z.string().nullable(),
+    customerAddress: z.string().nullable(),
     recipientCustomerId: z.number().int().nullable(),
     recipientName: z.string().min(0).max(255).nullable(),
     recipientPhone: z.string().min(0).max(20).nullable(),
@@ -1171,7 +1177,7 @@ const CreateUserRequest = z.object({
     .string()
     .min(1)
     .regex(
-      /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/
+      /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/,
     ),
   email: z.string().min(0).max(255).email().nullish(),
   phone: z.string().min(0).max(20).nullish(),
@@ -1204,7 +1210,7 @@ const UpdateUserRequest = z
     role: z
       .string()
       .regex(
-        /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/
+        /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/,
       )
       .nullable(),
     email: z.string().min(0).max(255).email().nullable(),
@@ -2580,6 +2586,25 @@ const endpoints = makeApi([
     response: z.unknown(),
   },
   {
+    method: "delete",
+    path: "/api/orders/:orderId/designs/:orderDetailId",
+    alias: "deleteApiordersOrderIddesignsOrderDetailId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "orderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "orderDetailId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: OrderResponse,
+  },
+  {
     method: "get",
     path: "/api/orders/for-accounting",
     alias: "getApiordersforAccounting",
@@ -3283,6 +3308,25 @@ const endpoints = makeApi([
       },
       {
         name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ProofingOrderResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/proofing-orders/:proofingOrderId/designs/:proofingOrderDesignId",
+    alias: "deleteApiproofingOrdersProofingOrderIddesignsProofingOrderDesignId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "proofingOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "proofingOrderDesignId",
         type: "Path",
         schema: z.number().int(),
       },

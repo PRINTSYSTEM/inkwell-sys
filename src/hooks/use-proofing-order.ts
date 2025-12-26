@@ -161,45 +161,12 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             processClassificationOptionName: design.processClassificationOption?.value || undefined,
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
-            designId: design.id, // Store designId for fetching available quantity
+            designId: design.id, // Store designId for fetching available quantity later
           };
         });
 
-      // Fetch available quantities for all designs in parallel
-      const availableQuantities = await Promise.allSettled(
-        designs.map(async (design) => {
-          const designId = (design as typeof design & { designId?: number }).designId;
-          if (!designId) return { orderDetailId: design.id, availableQuantity: null };
-          try {
-            const res = await apiRequest.get<number>(
-              API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId)
-            );
-            return {
-              orderDetailId: design.id,
-              availableQuantity: typeof res.data === "number" ? res.data : null,
-            };
-          } catch {
-            return { orderDetailId: design.id, availableQuantity: null };
-          }
-        })
-      );
-
-      // Map available quantities to designs
-      const quantityMap = new Map<number, number | null>();
-      availableQuantities.forEach((result) => {
-        if (result.status === "fulfilled") {
-          quantityMap.set(result.value.designId, result.value.availableQuantity);
-        }
-      });
-
-      // Add availableQuantity to each design and remove designId
-      const designsWithQuantity = designs.map((design) => {
-        const { designId, ...rest } = design as typeof design & { designId?: number };
-        return {
-          ...rest,
-          availableQuantity: quantityMap.get(design.id) ?? undefined,
-        };
-      });
+      // Don't fetch availableQuantity here - will be fetched when modal opens
+      const designsWithQuantity = designs;
 
       // Extract unique design types with counts
       const designTypeMap = new Map<

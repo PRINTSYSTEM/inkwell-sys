@@ -19,6 +19,7 @@ export interface DesignItem {
   processClassificationOptionName?: string; // Quy trình sản xuất
   thumbnailUrl: string;
   createdAt: string;
+  designId?: number; // Design ID for fetching available quantity
 }
 
 export interface FilterOption {
