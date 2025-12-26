@@ -19,6 +19,8 @@ import {
   UserPlus,
   FileBarChart,
   User,
+  CreditCard,
+  Truck,
 } from "lucide-react";
 import type { UserRole } from "@/Schema";
 import { ROLE, ROUTE_PATHS } from "@/constants";
@@ -257,6 +259,42 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Chờ xử lý",
         icon: Calculator,
         path: ROUTE_PATHS.ACCOUNTING.ROOT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
+        id: "accounting-payment",
+        title: "Thanh toán",
+        icon: CreditCard,
+        path: ROUTE_PATHS.ACCOUNTING.PAYMENT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
+        id: "accounting-invoice",
+        title: "Hóa đơn",
+        icon: FileText,
+        path: ROUTE_PATHS.ACCOUNTING.INVOICE,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
+        id: "accounting-delivery",
+        title: "Giao hàng",
+        icon: Truck,
+        path: ROUTE_PATHS.ACCOUNTING.DELIVERY,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,

@@ -59,7 +59,7 @@ export function CreateProofingOrderModal({
   onSuccess,
 }: CreateProofingOrderModalProps) {
   const [notes, setNotes] = useState("");
-  const [totalQuantity, setTotalQuantity] = useState<number>(1);
+  const [proofingSheetQuantity, setProofingSheetQuantity] = useState<number>(1); // Số lượng tờ bình bài được in ra
   const [designQuantities, setDesignQuantities] = useState<Record<number, number>>({});
   const [paperSizeId, setPaperSizeId] = useState<string>("none");
   const [customPaperSize, setCustomPaperSize] = useState("");
@@ -78,23 +78,15 @@ export function CreateProofingOrderModal({
         initialQuantities[design.id] = 0;
       });
       setDesignQuantities(initialQuantities);
-      setTotalQuantity(0);
+      setProofingSheetQuantity(1); // Default số lượng tờ bình bài
     } else {
       setNotes("");
-      setTotalQuantity(0);
+      setProofingSheetQuantity(1);
       setDesignQuantities({});
       setPaperSizeId("none");
       setCustomPaperSize("");
     }
   }, [open, selectedDesigns]);
-
-  // Update total quantity when individual quantities change
-  useEffect(() => {
-    const sum = Object.values(designQuantities).reduce((a, b) => a + b, 0);
-    if (sum > 0) {
-      setTotalQuantity(sum);
-    }
-  }, [designQuantities]);
 
   const handleQuantityChange = (
     id: number,
@@ -116,10 +108,11 @@ export function CreateProofingOrderModal({
   const handleSubmit = async () => {
     try {
       if (
-        !totalQuantity ||
-        totalQuantity < 1 ||
-        !Number.isInteger(totalQuantity)
+        !proofingSheetQuantity ||
+        proofingSheetQuantity < 1 ||
+        !Number.isInteger(proofingSheetQuantity)
       ) {
+        alert("Vui lòng nhập số lượng tờ bình bài (lớn hơn 0)");
         return;
       }
 
@@ -150,10 +143,13 @@ export function CreateProofingOrderModal({
         return;
       }
 
+      // Tính tổng số lượng của các design để gửi lên API
+      const totalDesignQuantity = Object.values(designQuantities).reduce((sum, qty) => sum + qty, 0);
+
       await mutate({
         orderDetailItems,
         notes: notes || undefined,
-        totalQuantity,
+        totalQuantity: totalDesignQuantity, // Tổng số lượng của các design
         paperSizeId: paperSizeId === "none" || paperSizeId === "custom" ? undefined : Number(paperSizeId),
         customPaperSize: paperSizeId === "custom" ? customPaperSize : undefined,
       });
@@ -201,7 +197,7 @@ export function CreateProofingOrderModal({
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <div className="text-xs text-muted-foreground">Tổng số lượng</div>
+                <div className="text-xs text-muted-foreground">Tổng số lượng thiết kế</div>
                 <div className="text-sm font-bold text-primary">
                   {totalSelectedQuantity.toLocaleString()}
                 </div>
@@ -381,35 +377,38 @@ export function CreateProofingOrderModal({
                     Cấu hình
                   </h3>
                   <div className="space-y-3">
-                    {/* Total Quantity */}
+                    {/* Proofing Sheet Quantity */}
                     <div className="space-y-2">
-                      <Label htmlFor="totalQuantity" className="text-sm font-medium">
-                        Tổng số lượng <span className="text-destructive">*</span>
+                      <Label htmlFor="proofingSheetQuantity" className="text-sm font-medium">
+                        Số lượng tờ bình bài <span className="text-destructive">*</span>
                       </Label>
                       <div className="relative">
                         <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                          id="totalQuantity"
+                          id="proofingSheetQuantity"
                           type="number"
                           min="1"
                           step="1"
                           className="pl-9 h-10 font-semibold"
-                          placeholder="0"
-                          value={totalQuantity || ""}
+                          placeholder="Nhập số lượng tờ bình bài"
+                          value={proofingSheetQuantity || ""}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (value === "") {
-                              setTotalQuantity(0);
+                              setProofingSheetQuantity(0);
                             } else {
                               const numValue = parseInt(value, 10);
                               if (!isNaN(numValue) && numValue > 0) {
-                                setTotalQuantity(numValue);
+                                setProofingSheetQuantity(numValue);
                               }
                             }
                           }}
                           required
                         />
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Số lượng tờ bình bài được in ra (không phải tổng số lượng thiết kế)
+                      </p>
                     </div>
 
                     {/* Paper Size */}
@@ -510,7 +509,7 @@ export function CreateProofingOrderModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={loading || !hasValidQuantities || totalQuantity < 1}
+            disabled={loading || !hasValidQuantities || proofingSheetQuantity < 1}
             size="sm"
             className="h-9 gap-1.5 min-w-[120px]"
           >

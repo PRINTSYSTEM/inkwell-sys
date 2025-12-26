@@ -7,16 +7,11 @@ import {
   Filter,
   MoreHorizontal,
   Eye,
-  FileText,
+  Truck,
   ChevronLeft,
   ChevronRight,
-  Download,
   RefreshCw,
-  ExternalLink,
-  Printer,
-  Truck,
   AlertCircle,
-  AlertTriangle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -46,19 +41,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-import {
-  OrderStatusBadge,
-  InvoiceStatusBadge,
-  CustomerTypeBadge,
-  InvoiceConfirmDialog,
-} from "@/components/accounting";
+import { OrderStatusBadge, CustomerTypeBadge } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
-import {
-  useExportOrderInvoice,
-  useExportOrderDeliveryNote,
-} from "@/hooks/use-order";
-import { useCreateAccountingForOrder } from "@/hooks/use-accounting";
-import { useCreateInvoice } from "@/hooks/use-invoice";
+import { useCreateDeliveryNote } from "@/hooks/use-delivery-note";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -86,148 +71,51 @@ function deriveCustomerType(
   return customer?.companyName ? "company" : "retail";
 }
 
-// For invoice list, we check if order is complete (fully paid) to determine if invoice can be issued
-// In a real app, this would come from backend accounting data
-function canIssueInvoice(order: OrderResponse): boolean {
-  // Must be fully paid
-  if (order.depositAmount < order.totalAmount || order.totalAmount <= 0) {
-    return false;
-  }
-  // Must have delivery note (status is delivering or completed)
-  // Giao hàng xong mới được xuất hóa đơn
+// Check if order is ready for delivery (production completed)
+function isReadyForDelivery(order: OrderResponse): boolean {
+  return order.status === "production_completed";
+}
+
+// Check if order already has delivery note (status is delivering or completed)
+function hasDeliveryNote(order: OrderResponse): boolean {
   return order.status === "delivering" || order.status === "completed";
 }
 
-// Check if customer information is complete for invoice issuance
-function isCustomerInfoComplete(order: OrderResponse): boolean {
-  const customer = order.customer;
-  if (!customer) return false;
-
-  const customerName = typeof customer.name === "string" ? customer.name : "";
-  const customerPhone =
-    typeof customer.phone === "string" ? customer.phone : "";
-  const customerAddress =
-    typeof customer.address === "string" ? customer.address : "";
-  const customerEmail =
-    typeof customer.email === "string" ? customer.email : "";
-  const customerCompanyName =
-    typeof customer.companyName === "string" ? customer.companyName : "";
-  // taxCode may not exist in CustomerSummaryResponse (used in OrderResponse)
-  const customerTaxCode =
-    "taxCode" in customer && typeof customer.taxCode === "string"
-      ? customer.taxCode
-      : "";
-
-  const isCompany = !!customerCompanyName;
-
-  // Required fields: name, phone, address, email
-  if (
-    !customerName.trim() ||
-    !customerPhone.trim() ||
-    !customerAddress.trim() ||
-    !customerEmail.trim()
-  ) {
-    return false;
-  }
-
-  // For company: also need taxCode (if field exists)
-  if (isCompany && "taxCode" in customer && !customerTaxCode.trim()) {
-    return false;
-  }
-
-  return true;
-}
-
-// Get reason why invoice cannot be issued
-function getInvoiceDisableReason(
-  order: OrderResponse,
-  canInvoice: boolean,
-  customerInfoComplete: boolean,
-  invoiceStatus: string
-): string | null {
-  if (invoiceStatus === "issued") {
-    return "Đã xuất hóa đơn";
-  }
-
-  // Check if order has been delivered (must deliver before issuing invoice)
-  const hasDelivery =
-    order.status === "delivering" || order.status === "completed";
-  if (!hasDelivery) {
-    return "Phải giao hàng trước khi xuất hóa đơn";
-  }
-
-  if (!canInvoice) {
-    const totalAmount = order.totalAmount || 0;
-    const depositAmount = order.depositAmount || 0;
-    const remaining = totalAmount - depositAmount;
-    return `Đơn hàng chưa thanh toán đủ. Còn thiếu ${new Intl.NumberFormat(
-      "vi-VN",
-      {
-        style: "currency",
-        currency: "VND",
-      }
-    ).format(remaining)}`;
-  }
-
-  if (!customerInfoComplete) {
-    const customer = order.customer;
-    const missingFields: string[] = [];
-
-    if (!customer?.name?.trim()) missingFields.push("Tên khách hàng");
-    if (!customer?.phone?.trim()) missingFields.push("Số điện thoại");
-    if (!customer?.address?.trim()) missingFields.push("Địa chỉ");
-    if (!customer?.email?.trim()) missingFields.push("Email");
-
-    // Check taxCode only if field exists (may not be in CustomerSummaryResponse)
-    if (customer?.companyName && "taxCode" in customer) {
-      const taxCode =
-        typeof customer.taxCode === "string" ? customer.taxCode : "";
-      if (!taxCode.trim()) {
-        missingFields.push("Mã số thuế");
-      }
-    }
-
-    return `Thiếu thông tin khách hàng: ${missingFields.join(", ")}`;
-  }
-
-  return null;
-}
-
-export function InvoiceList() {
+export function DeliveryList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("all");
+  const [deliveryStatusFilter, setDeliveryStatusFilter] =
+    useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(
-    null
-  );
-  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(
     new Set()
   );
-  const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] =
+  const [isCreateDeliveryDialogOpen, setIsCreateDeliveryDialogOpen] =
     useState(false);
 
   const itemsPerPage = 10;
 
-  // Fetch orders from API - filter for invoice orders
+  // Fetch orders from API - filter for production completed orders
   const { data, isLoading, isError, error, refetch } = useOrdersForAccounting({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    filterType: "invoice",
+    filterType: "delivery", // Assuming this filter exists, or we'll filter client-side
   });
 
-  const exportInvoiceMutation = useExportOrderInvoice();
-  const exportDeliveryNoteMutation = useExportOrderDeliveryNote();
-  const createAccountingMutation = useCreateAccountingForOrder();
-  const createInvoiceMutation = useCreateInvoice();
+  const createDeliveryNoteMutation = useCreateDeliveryNote();
 
-  // Filter orders client-side
+  // Filter orders client-side - only show production_completed orders
   const filteredOrders = useMemo(() => {
     if (!data?.items) return [];
 
-    // Filter only orders that can have invoices (fully paid)
     return data.items.filter((order) => {
+      // Only show orders that are ready for delivery (production_completed)
+      // or already delivering/completed (to show delivery status)
+      const isReady = isReadyForDelivery(order);
+      const hasDelivery = hasDeliveryNote(order);
+
+      if (!isReady && !hasDelivery) return false;
+
       const matchesSearch =
         !searchQuery ||
         order.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -239,13 +127,20 @@ export function InvoiceList() {
           .includes(searchQuery.toLowerCase()) ||
         order.customer?.phone?.includes(searchQuery);
 
-      // For demo purposes, we'll show all orders but highlight which can have invoices
-      return matchesSearch;
+      // Filter by delivery status
+      const matchesStatus =
+        deliveryStatusFilter === "all" ||
+        (deliveryStatusFilter === "ready" && isReady) ||
+        (deliveryStatusFilter === "delivering" &&
+          order.status === "delivering") ||
+        (deliveryStatusFilter === "delivered" && order.status === "completed");
+
+      return matchesSearch && matchesStatus;
     });
-  }, [data?.items, searchQuery]);
+  }, [data?.items, searchQuery, deliveryStatusFilter]);
 
   const totalPages = data?.totalPages || 1;
-  const totalItems = data?.total || 0;
+  const totalItems = filteredOrders.length;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -260,40 +155,7 @@ export function InvoiceList() {
   };
 
   const handleViewDetails = (order: OrderResponse) => {
-    navigate(`/accounting/orders/${order.id}?tab=invoice`);
-  };
-
-  const handleCreateInvoice = (order: OrderResponse) => {
-    setSelectedOrder(order);
-    setIsInvoiceDialogOpen(true);
-  };
-
-  const handleInvoiceConfirm = async (orderId: string | number) => {
-    try {
-      await createAccountingMutation.mutate(Number(orderId));
-      setIsInvoiceDialogOpen(false);
-      refetch();
-    } catch (error) {
-      console.error("Error creating accounting:", error);
-    }
-  };
-
-  const handleExportInvoice = async (order: OrderResponse) => {
-    if (!order.id) return;
-    try {
-      await exportInvoiceMutation.mutate(order.id);
-    } catch (error) {
-      console.error("Error exporting invoice:", error);
-    }
-  };
-
-  const handleExportDeliveryNote = async (order: OrderResponse) => {
-    if (!order.id) return;
-    try {
-      await exportDeliveryNoteMutation.mutate(order.id);
-    } catch (error) {
-      console.error("Error exporting delivery note:", error);
-    }
+    navigate(`/accounting/orders/${order.id}?tab=delivery`);
   };
 
   const handleRefresh = () => {
@@ -304,6 +166,14 @@ export function InvoiceList() {
   const handleToggleOrder = (orderId: number) => {
     const orderToToggle = filteredOrders.find((o) => o.id === orderId);
     if (!orderToToggle) return;
+
+    // Only allow selecting orders that are ready for delivery (not already delivered)
+    if (!isReadyForDelivery(orderToToggle)) {
+      toast.error(
+        "Chỉ có thể chọn các đơn hàng đã hoàn thành sản xuất và chưa giao hàng"
+      );
+      return;
+    }
 
     setSelectedOrderIds((prev) => {
       const newSet = new Set(prev);
@@ -341,7 +211,7 @@ export function InvoiceList() {
           } else {
             // Different customer - show error
             toast.error(
-              "Chỉ có thể chọn các hóa đơn cùng một khách hàng. Vui lòng bỏ chọn các hóa đơn hiện tại trước."
+              "Chỉ có thể chọn các đơn hàng cùng một khách hàng. Vui lòng bỏ chọn các đơn hàng hiện tại trước."
             );
           }
         }
@@ -354,7 +224,7 @@ export function InvoiceList() {
     if (selectedOrderIds.size === filteredOrders.length) {
       setSelectedOrderIds(new Set());
     } else {
-      // Only select orders from the same customer
+      // Only select orders from the same customer that are ready for delivery
       // If there are already selected orders, only select from that customer
       if (selectedOrderIds.size > 0) {
         const firstSelectedOrder = filteredOrders.find(
@@ -363,17 +233,25 @@ export function InvoiceList() {
         if (firstSelectedOrder?.customer?.id) {
           const customerId = firstSelectedOrder.customer.id;
           const sameCustomerOrders = filteredOrders
-            .filter((o) => o.customer?.id === customerId && o.id)
+            .filter(
+              (o) =>
+                o.customer?.id === customerId && o.id && isReadyForDelivery(o)
+            )
             .map((o) => o.id!)
             .filter((id): id is number => !!id);
           setSelectedOrderIds(new Set(sameCustomerOrders));
         }
       } else {
-        // No selection yet - select all orders from the first customer on the page
+        // No selection yet - select all orders from the first customer on the page that are ready
         if (filteredOrders.length > 0 && filteredOrders[0].customer?.id) {
           const firstCustomerId = filteredOrders[0].customer.id;
           const sameCustomerOrders = filteredOrders
-            .filter((o) => o.customer?.id === firstCustomerId && o.id)
+            .filter(
+              (o) =>
+                o.customer?.id === firstCustomerId &&
+                o.id &&
+                isReadyForDelivery(o)
+            )
             .map((o) => o.id!)
             .filter((id): id is number => !!id);
           setSelectedOrderIds(new Set(sameCustomerOrders));
@@ -382,8 +260,8 @@ export function InvoiceList() {
     }
   };
 
-  // Handle create invoice from selected orders
-  const handleCreateInvoiceFromSelected = () => {
+  // Handle create delivery note from selected orders
+  const handleCreateDeliveryNoteFromSelected = () => {
     if (selectedOrderIds.size === 0) {
       toast.error("Vui lòng chọn ít nhất một đơn hàng");
       return;
@@ -405,35 +283,32 @@ export function InvoiceList() {
 
     if (!allSameCustomer) {
       toast.error(
-        "Chỉ có thể xuất hóa đơn cho các đơn hàng cùng một khách hàng"
+        "Chỉ có thể xuất phiếu giao hàng cho các đơn hàng cùng một khách hàng"
       );
       return;
     }
 
-    // Check if all selected orders have complete customer info
-    const incompleteOrders = selectedOrders.filter(
-      (o) => !isCustomerInfoComplete(o)
-    );
-
-    if (incompleteOrders.length > 0) {
+    // Check if all selected orders are ready for delivery
+    const notReadyOrders = selectedOrders.filter((o) => !isReadyForDelivery(o));
+    if (notReadyOrders.length > 0) {
       toast.error(
-        `Có ${incompleteOrders.length} đơn hàng thiếu thông tin khách hàng. Vui lòng cập nhật trước khi xuất hóa đơn.`
+        "Chỉ có thể xuất phiếu giao hàng cho các đơn hàng đã hoàn thành sản xuất"
       );
       return;
     }
 
-    setIsCreateInvoiceDialogOpen(true);
+    setIsCreateDeliveryDialogOpen(true);
   };
 
-  const handleConfirmCreateInvoice = async () => {
+  const handleConfirmCreateDeliveryNote = async () => {
     if (selectedOrderIds.size === 0) return;
 
     try {
-      await createInvoiceMutation.mutateAsync({
+      await createDeliveryNoteMutation.mutateAsync({
         orderIds: Array.from(selectedOrderIds),
       });
       setSelectedOrderIds(new Set());
-      setIsCreateInvoiceDialogOpen(false);
+      setIsCreateDeliveryDialogOpen(false);
       refetch();
     } catch (error) {
       // Error is handled by the hook
@@ -451,35 +326,6 @@ export function InvoiceList() {
       0
     );
   }, [selectedOrders]);
-
-  // Convert API order to modal format
-  const selectedOrderForModal = selectedOrder
-    ? {
-        id: selectedOrder.id,
-        code: selectedOrder.code || "",
-        status: selectedOrder.status || "",
-        statusType: selectedOrder.statusType || "",
-        totalAmount: selectedOrder.totalAmount,
-        depositAmount: selectedOrder.depositAmount,
-        deliveryDate: selectedOrder.deliveryDate || "",
-        note: selectedOrder.note || "",
-        createdAt: selectedOrder.createdAt,
-        updatedAt: selectedOrder.updatedAt,
-        customer: {
-          id: selectedOrder.customer?.id || 0,
-          name: selectedOrder.customer?.name || "",
-          companyName: selectedOrder.customer?.companyName || null,
-          phone: selectedOrder.customer?.phone || "",
-          type: deriveCustomerType(selectedOrder.customer) as
-            | "company"
-            | "retail",
-        },
-        paymentStatus: "fully_paid" as const,
-        invoiceStatus: canIssueInvoice(selectedOrder)
-          ? ("not_issued" as const)
-          : ("not_issued" as const),
-      }
-    : null;
 
   return (
     <TooltipProvider>
@@ -511,17 +357,18 @@ export function InvoiceList() {
             </div>
             <div className="flex gap-2">
               <Select
-                value={invoiceStatusFilter}
-                onValueChange={setInvoiceStatusFilter}
+                value={deliveryStatusFilter}
+                onValueChange={setDeliveryStatusFilter}
               >
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Trạng thái HĐ" />
+                  <SelectValue placeholder="Trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="not_issued">Chưa xuất</SelectItem>
-                  <SelectItem value="issued">Đã xuất</SelectItem>
+                  <SelectItem value="ready">Sẵn sàng giao</SelectItem>
+                  <SelectItem value="delivering">Đang giao</SelectItem>
+                  <SelectItem value="delivered">Đã giao</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -533,9 +380,6 @@ export function InvoiceList() {
                 <RefreshCw
                   className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
                 />
-              </Button>
-              <Button variant="outline" size="icon">
-                <Download className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -561,11 +405,11 @@ export function InvoiceList() {
                 </Button>
                 <Button
                   size="sm"
-                  onClick={handleCreateInvoiceFromSelected}
+                  onClick={handleCreateDeliveryNoteFromSelected}
                   className="gap-2"
                 >
-                  <FileText className="h-4 w-4" />
-                  Xuất hóa đơn ({selectedOrderIds.size})
+                  <Truck className="h-4 w-4" />
+                  Xuất phiếu giao hàng ({selectedOrderIds.size})
                 </Button>
               </div>
             </div>
@@ -581,7 +425,9 @@ export function InvoiceList() {
                   <Checkbox
                     checked={
                       filteredOrders.length > 0 &&
-                      selectedOrderIds.size === filteredOrders.length
+                      selectedOrderIds.size ===
+                        filteredOrders.filter((o) => isReadyForDelivery(o))
+                          .length
                     }
                     onCheckedChange={handleSelectAll}
                   />
@@ -590,8 +436,10 @@ export function InvoiceList() {
                 <TableHead>Khách hàng</TableHead>
                 <TableHead className="text-right">Tổng tiền</TableHead>
                 <TableHead className="text-center">Trạng thái đơn</TableHead>
-                <TableHead className="text-center">Hóa đơn</TableHead>
-                <TableHead className="text-center">Ngày giao</TableHead>
+                <TableHead className="text-center">
+                  Trạng thái giao hàng
+                </TableHead>
+                <TableHead className="text-center">Ngày giao dự kiến</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -599,7 +447,7 @@ export function InvoiceList() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -618,26 +466,12 @@ export function InvoiceList() {
               ) : (
                 filteredOrders.map((order) => {
                   const customerType = deriveCustomerType(order.customer);
-                  const canInvoice = canIssueInvoice(order);
-                  const customerInfoComplete = isCustomerInfoComplete(order);
-                  // For demo: consider invoice issued if order is fully paid and completed
-                  const invoiceStatus =
-                    canInvoice && order.status === "completed"
-                      ? "issued"
-                      : "not_issued";
+                  const isReady = isReadyForDelivery(order);
+                  const hasDelivery = hasDeliveryNote(order);
                   const isSelected = order.id
                     ? selectedOrderIds.has(order.id)
                     : false;
-                  const isCheckboxDisabled =
-                    !customerInfoComplete ||
-                    !canInvoice ||
-                    invoiceStatus === "issued";
-                  const disableReason = getInvoiceDisableReason(
-                    order,
-                    canInvoice,
-                    customerInfoComplete,
-                    invoiceStatus
-                  );
+                  const canSelect = isReady && !hasDelivery;
 
                   return (
                     <TableRow
@@ -653,13 +487,17 @@ export function InvoiceList() {
                                 onCheckedChange={() =>
                                   order.id && handleToggleOrder(order.id)
                                 }
-                                disabled={isCheckboxDisabled}
+                                disabled={!canSelect}
                               />
                             </div>
                           </TooltipTrigger>
-                          {isCheckboxDisabled && disableReason && (
+                          {!canSelect && (
                             <TooltipContent>
-                              <p className="max-w-xs">{disableReason}</p>
+                              <p className="max-w-xs">
+                                {hasDelivery
+                                  ? "Đơn hàng đã có phiếu giao hàng"
+                                  : "Chỉ có thể chọn đơn hàng đã hoàn thành sản xuất"}
+                              </p>
                             </TooltipContent>
                           )}
                         </Tooltip>
@@ -675,17 +513,6 @@ export function InvoiceList() {
                                 order.customer?.name ||
                                 "—"}
                             </div>
-                            {!customerInfoComplete &&
-                              invoiceStatus === "not_issued" && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <AlertTriangle className="h-3 w-3 text-warning" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Thiếu thông tin khách hàng</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">
@@ -696,7 +523,7 @@ export function InvoiceList() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {formatCurrency(order.totalAmount)}
+                        {formatCurrency(order.totalAmount || 0)}
                       </TableCell>
                       <TableCell className="text-center">
                         <OrderStatusBadge
@@ -705,7 +532,23 @@ export function InvoiceList() {
                         />
                       </TableCell>
                       <TableCell className="text-center">
-                        <InvoiceStatusBadge status={invoiceStatus} />
+                        {hasDelivery ? (
+                          <Badge
+                            variant="default"
+                            className="text-xs bg-green-100 text-green-800 border-green-200"
+                          >
+                            {order.status === "delivering"
+                              ? "Đang giao"
+                              : "Đã giao"}
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200"
+                          >
+                            Chờ giao
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground">
                         {formatDate(order.deliveryDate)}
@@ -728,51 +571,6 @@ export function InvoiceList() {
                               <Eye className="h-4 w-4 mr-2" />
                               Xem chi tiết
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {invoiceStatus === "not_issued" ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="w-full">
-                                    <DropdownMenuItem
-                                      onClick={() => handleCreateInvoice(order)}
-                                      disabled={
-                                        !canInvoice || !customerInfoComplete
-                                      }
-                                      className="w-full"
-                                    >
-                                      <FileText className="h-4 w-4 mr-2" />
-                                      Xuất hóa đơn
-                                    </DropdownMenuItem>
-                                  </div>
-                                </TooltipTrigger>
-                                {(!canInvoice || !customerInfoComplete) &&
-                                  disableReason && (
-                                    <TooltipContent>
-                                      <p className="max-w-xs">
-                                        {disableReason}
-                                      </p>
-                                    </TooltipContent>
-                                  )}
-                              </Tooltip>
-                            ) : (
-                              <>
-                                <DropdownMenuItem
-                                  onClick={() => handleExportInvoice(order)}
-                                >
-                                  <Printer className="h-4 w-4 mr-2" />
-                                  In / Xuất PDF
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleExportDeliveryNote(order)
-                                  }
-                                >
-                                  <Truck className="h-4 w-4 mr-2" />
-                                  Xuất phiếu giao hàng
-                                </DropdownMenuItem>
-                              </>
-                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -816,27 +614,19 @@ export function InvoiceList() {
           </div>
         )}
 
-        {/* Modals */}
-        <InvoiceConfirmDialog
-          open={isInvoiceDialogOpen}
-          onOpenChange={setIsInvoiceDialogOpen}
-          order={selectedOrderForModal}
-          onConfirm={handleInvoiceConfirm}
-        />
-
-        {/* Create Invoice Dialog */}
+        {/* Create Delivery Note Dialog */}
         <Dialog
-          open={isCreateInvoiceDialogOpen}
-          onOpenChange={setIsCreateInvoiceDialogOpen}
+          open={isCreateDeliveryDialogOpen}
+          onOpenChange={setIsCreateDeliveryDialogOpen}
         >
           <DialogContent className="max-w-2xl max-h-[80vh]">
             <DialogHeader>
               <DialogTitle>
-                Xuất hóa đơn cho {selectedOrderIds.size} đơn hàng
+                Xuất phiếu giao hàng cho {selectedOrderIds.size} đơn hàng
               </DialogTitle>
               <DialogDescription>
-                Xác nhận xuất hóa đơn cho các đơn hàng đã chọn. Tất cả đơn hàng
-                sẽ được gộp vào một hóa đơn.
+                Xác nhận xuất phiếu giao hàng cho các đơn hàng đã chọn. Tất cả
+                đơn hàng sẽ được gộp vào một phiếu giao hàng.
               </DialogDescription>
             </DialogHeader>
 
@@ -875,20 +665,20 @@ export function InvoiceList() {
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setIsCreateInvoiceDialogOpen(false)}
-                disabled={createInvoiceMutation.isPending}
+                onClick={() => setIsCreateDeliveryDialogOpen(false)}
+                disabled={createDeliveryNoteMutation.isPending}
               >
                 Hủy
               </Button>
               <Button
-                onClick={handleConfirmCreateInvoice}
-                disabled={createInvoiceMutation.isPending}
+                onClick={handleConfirmCreateDeliveryNote}
+                disabled={createDeliveryNoteMutation.isPending}
                 className="gap-2"
               >
-                <FileText className="h-4 w-4" />
-                {createInvoiceMutation.isPending
+                <Truck className="h-4 w-4" />
+                {createDeliveryNoteMutation.isPending
                   ? "Đang tạo..."
-                  : "Xác nhận xuất hóa đơn"}
+                  : "Xác nhận xuất phiếu giao hàng"}
               </Button>
             </DialogFooter>
           </DialogContent>

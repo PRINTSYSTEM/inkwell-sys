@@ -16,6 +16,7 @@ import {
   useCustomerDebtHistory,
   useCustomerMonthlyDebt,
 } from "@/hooks/use-customer";
+import type { CustomerMonthlyDebtResponse } from "@/Schema/customer.schema";
 
 type DebtFilterType = "payment" | "invoice";
 
@@ -77,18 +78,18 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   // Handle monthlyDebtData - could be array or single object
   // Note: API might return array when month is not specified, but schema says single object
   // Handle both cases for safety
-  const monthlyDebtArray: any[] = Array.isArray(monthlyDebtData)
+  const monthlyDebtArray: CustomerMonthlyDebtResponse[] = Array.isArray(monthlyDebtData)
     ? monthlyDebtData
     : monthlyDebtData
     ? [monthlyDebtData]
     : [];
 
   // Calculate summary stats from monthlyDebtArray
-  const totalIncrease = monthlyDebtArray.reduce((sum: number, m: any) => {
+  const totalIncrease = monthlyDebtArray.reduce((sum: number, m: CustomerMonthlyDebtResponse) => {
     const changeInMonth = m.changeInMonth ?? 0;
     return sum + (changeInMonth > 0 ? changeInMonth : 0);
   }, 0);
-  const totalDecrease = monthlyDebtArray.reduce((sum: number, m: any) => {
+  const totalDecrease = monthlyDebtArray.reduce((sum: number, m: CustomerMonthlyDebtResponse) => {
     const changeInMonth = m.changeInMonth ?? 0;
     return sum + (changeInMonth < 0 ? Math.abs(changeInMonth) : 0);
   }, 0);
@@ -216,7 +217,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {monthlyDebtArray.map((item: any) => {
+                    {monthlyDebtArray.map((item: CustomerMonthlyDebtResponse) => {
                       const changeInMonth = item.changeInMonth ?? 0;
                       const increase = changeInMonth > 0 ? changeInMonth : 0;
                       const decrease =

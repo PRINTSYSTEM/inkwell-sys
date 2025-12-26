@@ -59,6 +59,9 @@ export const ROUTE_PATHS = {
 
   ACCOUNTING: {
     ROOT: "/accounting" as const,
+    PAYMENT: "/accounting/payment" as const,
+    INVOICE: "/accounting/invoice" as const,
+    DELIVERY: "/accounting/delivery" as const,
     DEBT_REPORT: "/accounting/debt-report" as const,
     REVENUE: "/accounting/revenue" as const,
     EXPENSES: "/accounting/expenses" as const,

@@ -67,6 +67,15 @@ const ProductTemplates = lazy(
 const AccountingDashboard = lazy(
   () => import("@/pages/accounting/AccountingDashboard")
 );
+const PaymentPage = lazy(
+  () => import("@/pages/accounting/PaymentPage")
+);
+const InvoicePage = lazy(
+  () => import("@/pages/accounting/InvoicePage")
+);
+const DeliveryPage = lazy(
+  () => import("@/pages/accounting/DeliveryPage")
+);
 const AccountingOrderDetail = lazy(
   () => import("@/pages/accounting/AccountingOrderDetail")
 );
@@ -400,6 +409,30 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <AccountingDashboard />
+              </Suspense>
+            ),
+          },
+          {
+            path: "payment",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <PaymentPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "invoice",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <InvoicePage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "delivery",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <DeliveryPage />
               </Suspense>
             ),
           },

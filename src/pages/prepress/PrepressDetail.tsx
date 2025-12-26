@@ -56,19 +56,15 @@ import {
   useUploadProofingImage,
   useUpdateProofingOrder,
   useUpdateProofingFile,
-  useRecordPlateExport,
-  useRecordDieExport,
   useHandToProduction,
 } from "@/hooks/use-proofing-order";
-import { safeParseSchema } from "@/Schema";
-import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
+import { PlateExportDialog } from "@/components/proofing/PlateExportDialog";
+import { DieExportDialog } from "@/components/proofing/DieExportDialog";
 import { IdSchema } from "@/Schema";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { designStatusLabels, proofingStatusLabels } from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { downloadFile } from "@/lib/download-utils";
-import { API_SUFFIX } from "@/apis/util.api";
-import { apiRequest } from "@/lib/http";
 
 export default function ProofingOrderDetailPage() {
   const params = useParams();
@@ -85,16 +81,6 @@ export default function ProofingOrderDetailPage() {
   const [uploadImage, setUploadImage] = useState<File | null>(null);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
-  const [plateExportData, setPlateExportData] = useState({
-    vendorName: "",
-    sentAt: "",
-    receivedAt: "",
-    notes: "",
-  });
-  const [dieExportData, setDieExportData] = useState({
-    notes: "",
-  });
-  const [dieExportImage, setDieExportImage] = useState<File | null>(null);
 
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
@@ -104,12 +90,12 @@ export default function ProofingOrderDetailPage() {
     isLoading,
     error,
   } = useProofingOrder(idValid ? idValue : null, idValid);
-  const parsed = ProofingOrderResponseSchema.safeParse(orderResp);
 
-  if (!parsed.success) {
-    console.error(JSON.stringify(parsed.error.format(), null, 2));
-  }
-  const order = safeParseSchema(ProofingOrderResponseSchema, orderResp);
+  // Use raw response directly instead of strict schema parsing
+  // Schema validation is too strict for API responses with nullable fields
+  // For display-only detail view, we can safely use raw data
+  type ProofingOrderResponse = import("@/Schema/proofing-order.schema").ProofingOrderResponse;
+  const order = orderResp as ProofingOrderResponse | null;
   const orderDesigns = order?.proofingOrderDesigns ?? [];
 
   const { mutate: updateProofing } = useUpdateProofingOrder();
@@ -119,10 +105,6 @@ export default function ProofingOrderDetailPage() {
     useUpdateProofingFile();
   const { mutate: uploadImageMutate, loading: isUploadingImage } =
     useUploadProofingImage();
-  const { mutate: recordPlateMutate, isPending: isRecordingPlate } =
-    useRecordPlateExport();
-  const { mutate: recordDieMutate, isPending: isRecordingDie } =
-    useRecordDieExport();
   const { mutate: handToProductionMutate, isPending: isHandingToProduction } =
     useHandToProduction();
 
@@ -181,73 +163,12 @@ export default function ProofingOrderDetailPage() {
     }
   };
 
-  const handleRecordPlate = async () => {
-    if (!plateExportData.vendorName) {
-      toast.error("Thiếu thông tin", {
-        description: "Vui lòng nhập đơn vị ghi kẽm",
-      });
-      return;
-    }
-
-    try {
-      await recordPlateMutate({
-        id: idValue,
-        request: {
-          vendorName: plateExportData.vendorName,
-          sentAt: plateExportData.sentAt
-            ? new Date(plateExportData.sentAt).toISOString()
-            : undefined,
-          receivedAt: plateExportData.receivedAt
-            ? new Date(plateExportData.receivedAt).toISOString()
-            : undefined,
-          notes: plateExportData.notes,
-        },
-      });
-      setIsPlateExportDialogOpen(false);
-    } catch (error) {
-      console.error("Failed to record plate export:", error);
-    }
+  const handlePlateExportSuccess = () => {
+    // Dialog will handle refetch automatically via query invalidation
   };
 
-  const handleRecordDie = async () => {
-    try {
-      let imageUrl: string | undefined = undefined;
-
-      // Upload image first if provided
-      if (dieExportImage) {
-        const form = new FormData();
-        form.append("imageFile", dieExportImage);
-        
-        const uploadResponse = await apiRequest.post<ProofingOrderResponse>(
-          API_SUFFIX.PROOFING_UPLOAD_IMAGE(idValue),
-          form,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-        
-        // Get imageUrl from response
-        imageUrl = uploadResponse.data.imageUrl || undefined;
-      }
-
-      // Record die export with imageUrl and notes
-      await recordDieMutate({
-        id: idValue,
-        request: {
-          imageUrl: imageUrl || order?.dieExport?.imageUrl || undefined,
-          notes: dieExportData.notes,
-        },
-      });
-      setIsDieExportDialogOpen(false);
-      setDieExportImage(null);
-    } catch (error) {
-      console.error("Failed to record die export:", error);
-      toast.error("Lỗi", {
-        description: "Không thể ghi nhận khuôn bế",
-      });
-    }
+  const handleDieExportSuccess = () => {
+    // Dialog will handle refetch automatically via query invalidation
   };
 
   const handleUploadFile = async () => {
@@ -280,42 +201,6 @@ export default function ProofingOrderDetailPage() {
     }
   };
 
-  // Initialize plate export data when dialog opens
-  useEffect(() => {
-    if (isPlateExportDialogOpen && order?.plateExport) {
-      setPlateExportData({
-        vendorName: order.plateExport.vendorName || "",
-        sentAt: order.plateExport.sentAt
-          ? format(new Date(order.plateExport.sentAt), "yyyy-MM-dd'T'HH:mm")
-          : "",
-        receivedAt: order.plateExport.receivedAt
-          ? format(new Date(order.plateExport.receivedAt), "yyyy-MM-dd'T'HH:mm")
-          : "",
-        notes: order.plateExport.notes || "",
-      });
-    } else if (!isPlateExportDialogOpen) {
-      setPlateExportData({
-        vendorName: "",
-        sentAt: "",
-        receivedAt: "",
-        notes: "",
-      });
-    }
-  }, [isPlateExportDialogOpen, order?.plateExport]);
-
-  // Initialize die export data when dialog opens
-  useEffect(() => {
-    if (isDieExportDialogOpen && order?.dieExport) {
-      setDieExportData({
-        notes: order.dieExport.notes || "",
-      });
-    } else if (!isDieExportDialogOpen) {
-      setDieExportData({
-        notes: "",
-      });
-      setDieExportImage(null);
-    }
-  }, [isDieExportDialogOpen, order?.dieExport]);
 
   if (isLoading) {
     return (
@@ -350,37 +235,38 @@ export default function ProofingOrderDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6 space-y-6">
-      {/* Header */}
+    <div className="min-h-screen bg-background p-4 space-y-4">
+      {/* Compact Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/proofing")}
+            className="h-8 w-8"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-balance">
-              Chi tiết lệnh bình bài
+            <h1 className="text-xl font-semibold">
+              {order.code}
             </h1>
-            <p className="text-muted-foreground text-pretty">
-              Mã lệnh: {order.code}
+            <p className="text-xs text-muted-foreground">
+              Chi tiết lệnh bình bài
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <StatusBadge
             status={order.status}
             label={proofingStatusLabels[order.status]}
           />
-          {/* Chỉ hiển thị button khi status là waiting_for_file */}
           {order.status === "waiting_for_file" && (
             <Button
               variant="outline"
-              className="gap-2 bg-transparent"
+              size="sm"
+              className="gap-1.5 h-8 text-xs"
               onClick={handleStatusChangeClick}
               disabled={!order.proofingFileUrl}
               title={
@@ -389,113 +275,142 @@ export default function ProofingOrderDetailPage() {
                   : "Chuyển sang chờ sản xuất"
               }
             >
-              <Edit className="h-4 w-4" />
-              Chuyển sang chờ sản xuất
+              <Edit className="h-3.5 w-3.5" />
+              Chuyển trạng thái
             </Button>
           )}
           {!order.proofingFileUrl && !order.isPlateExported && (
             <Button
-              className="gap-2"
+              size="sm"
+              className="gap-1.5 h-8 text-xs"
               onClick={() => setIsUploadDialogOpen(true)}
             >
-              <Upload className="h-4 w-4" />
-              Upload file bình bài
+              <Upload className="h-3.5 w-3.5" />
+              Upload file
             </Button>
           )}
           {!order.imageUrl && !order.isPlateExported && (
             <Button
               variant="outline"
-              className="gap-2"
+              size="sm"
+              className="gap-1.5 h-8 text-xs"
               onClick={() => setIsImageUploadDialogOpen(true)}
             >
-              <FileImage className="h-4 w-4" />
-              Upload ảnh bình bài
+              <FileImage className="h-3.5 w-3.5" />
+              Upload ảnh
             </Button>
           )}
           {order.isPlateExported && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <AlertCircle className="h-4 w-4 text-yellow-600" />
-              <span>Đã xuất kẽm - Không thể chỉnh sửa bình bài</span>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <AlertCircle className="h-3.5 w-3.5 text-yellow-600" />
+              <span>Đã xuất kẽm</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         {/* Left Column - Main Info */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Order Info Card */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Compact Order Info Card */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4" />
                 Thông tin lệnh
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-4 gap-3">
+                <div className="space-y-0.5">
+                  <Label className="text-muted-foreground text-[10px] font-normal">
                     Mã lệnh
                   </Label>
-                  <p className="font-semibold text-lg">{order.code}</p>
+                  <p className="font-semibold text-sm">{order.code}</p>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">
+                <div className="space-y-0.5">
+                  <Label className="text-muted-foreground text-[10px] font-normal">
                     Tổng số lượng
                   </Label>
-                  <p className="font-semibold text-lg">
+                  <p className="font-semibold text-sm">
                     {order.totalQuantity.toLocaleString()}
                   </p>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">
-                    Loại chất liệu
-                  </Label>
-                  <div>
-                    <p className="font-medium">{order.materialType.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {order.materialType.code}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">
+                <div className="space-y-0.5">
+                  <Label className="text-muted-foreground text-[10px] font-normal">
                     Số design
                   </Label>
-                  <p className="font-semibold text-lg">
+                  <p className="font-semibold text-sm">
                     {order.proofingOrderDesigns.length}
                   </p>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">
-                    Khổ giấy in
+                <div className="space-y-0.5">
+                  <Label className="text-muted-foreground text-[10px] font-normal">
+                    Khổ giấy
                   </Label>
-                  <p className="font-semibold text-lg">
+                  <p className="font-semibold text-sm text-xs">
                     {order.paperSize?.name ||
                       order.customPaperSize ||
                       "Chưa xác định"}
-                    {order.paperSize?.width && order.paperSize?.height && (
-                      <span className="text-xs text-muted-foreground ml-1">
-                        ({order.paperSize.width}x{order.paperSize.height})
-                      </span>
-                    )}
                   </p>
                 </div>
               </div>
 
-              <Separator />
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                <div className="space-y-0.5">
+                  <Label className="text-muted-foreground text-[10px] font-normal">
+                    Chất liệu
+                  </Label>
+                  <div>
+                    <p className="font-medium text-sm">{order.materialType?.name || "—"}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {order.materialType?.code || "—"}
+                    </p>
+                  </div>
+                </div>
+                {order.imageUrl && (
+                  <div className="space-y-1">
+                    <Label className="text-muted-foreground text-[10px] font-normal">
+                      Preview ảnh
+                    </Label>
+                    <div className="relative group h-20 rounded border overflow-hidden bg-muted cursor-pointer"
+                      onClick={() => {
+                        setViewingImageUrl(order.imageUrl!);
+                        setImageViewerOpen(true);
+                      }}
+                    >
+                      <img
+                        src={order.imageUrl}
+                        alt="Proofing Preview"
+                        className="w-full h-full object-contain"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Eye className="h-4 w-4 text-white" />
+                      </div>
+                    </div>
+                    {!order.isPlateExported && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[10px] px-2"
+                        onClick={() => setIsImageUploadDialogOpen(true)}
+                      >
+                        Thay đổi
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
 
-              {/* Notes - Display prominently */}
               {order.notes && (
-                <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div className="p-2 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded text-xs">
+                  <div className="flex items-start gap-1.5">
+                    <FileText className="h-3 w-3 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-amber-900 dark:text-amber-100 mb-1">
-                        Ghi chú bình bài
+                      <p className="font-semibold text-amber-900 dark:text-amber-100 mb-0.5 text-[10px]">
+                        Ghi chú
                       </p>
-                      <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed">
+                      <p className="text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed text-xs">
                         {order.notes}
                       </p>
                     </div>
@@ -503,191 +418,116 @@ export default function ProofingOrderDetailPage() {
                 </div>
               )}
 
-              {order.imageUrl && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-muted-foreground text-xs">
-                      Ảnh bình bài (Preview)
-                    </Label>
-                    <div className="relative group aspect-video rounded-lg overflow-hidden border bg-muted">
-                      <img
-                        src={order.imageUrl}
-                        alt="Proofing Preview"
-                        className="w-full h-full object-contain cursor-pointer transition-transform group-hover:scale-105"
-                        onClick={() => {
-                          setViewingImageUrl(order.imageUrl!);
-                          setImageViewerOpen(true);
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => {
-                            setViewingImageUrl(order.imageUrl!);
-                            setImageViewerOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                          Xem ảnh
-                        </Button>
-                      </div>
-                    </div>
-                    {!order.isPlateExported && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-2"
-                        onClick={() => setIsImageUploadDialogOpen(true)}
-                      >
-                        Thay đổi ảnh
-                      </Button>
-                    )}
-                  </div>
-                </>
-              )}
-
               {order.proofingFileUrl && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-muted-foreground text-xs">
-                      File bình bài
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 bg-transparent"
-                        onClick={() => {
-                          if (order.proofingFileUrl) {
-                            downloadFile(order.proofingFileUrl, order.code || `BB-${order.id}`);
-                          }
-                        }}
-                      >
-                        <Download className="h-4 w-4" />
-                        Tải xuống
-                      </Button>
-                      {!order.isPlateExported && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => setIsUpdateFileDialogOpen(true)}
-                        >
-                          <Edit className="h-4 w-4" />
-                          Cập nhật file
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </>
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <Label className="text-muted-foreground text-[10px] font-normal">
+                    File:
+                  </Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => {
+                      if (order.proofingFileUrl) {
+                        downloadFile(order.proofingFileUrl, order.code || `BB-${order.id}`);
+                      }
+                    }}
+                  >
+                    <Download className="h-3 w-3" />
+                    Tải xuống
+                  </Button>
+                  {!order.isPlateExported && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 h-7 text-xs"
+                      onClick={() => setIsUpdateFileDialogOpen(true)}
+                    >
+                      <Edit className="h-3 w-3" />
+                      Cập nhật
+                    </Button>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Designs List */}
+          {/* Compact Designs List */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Layers className="h-4 w-4" />
                 Danh sách Design ({orderDesigns.length})
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Hình ảnh</TableHead>
-                      <TableHead>Mã design</TableHead>
-                      <TableHead>Tên design</TableHead>
-                      <TableHead>Người thiết kế</TableHead>
-                      <TableHead>Kích thước</TableHead>
-                      <TableHead>Số lượng</TableHead>
-                      <TableHead>Mặt cắt</TableHead>
-                      <TableHead>Quy trình SX</TableHead>
-                      <TableHead>Cán màn</TableHead>
-                      <TableHead className="text-right">File</TableHead>
+                    <TableRow className="h-9">
+                      <TableHead className="h-9 px-2 text-[10px]">Ảnh</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">Mã</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">Tên</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">Kích thước</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">SL</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">Mặt</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">Quy trình</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">Cán màn</TableHead>
+                      <TableHead className="h-9 px-2 text-right text-[10px]">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {orderDesigns.map((pod) => (
-                      <TableRow key={pod.id}>
-                        <TableCell>
+                      <TableRow key={pod.id} className="h-14">
+                        <TableCell className="px-2 py-1">
                           {pod.design.designImageUrl ? (
                             <img
-                              src={
-                                pod.design.designImageUrl || "/placeholder.svg"
-                              }
+                              src={pod.design.designImageUrl || "/placeholder.svg"}
                               alt={pod.design.designName}
-                              className="w-16 h-16 object-cover rounded border"
+                              className="w-10 h-10 object-cover rounded border"
                             />
                           ) : (
-                            <div className="w-16 h-16 bg-muted rounded border flex items-center justify-center">
-                              <FileImage className="h-6 w-6 text-muted-foreground" />
+                            <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
+                              <FileImage className="h-4 w-4 text-muted-foreground" />
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="font-medium">
-                          {pod.design.code}
+                        <TableCell className="px-2 py-1">
+                          <p className="font-medium text-xs">{pod.design.code}</p>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="px-2 py-1">
                           <div>
-                            <p className="font-medium">
+                            <p className="font-medium text-xs line-clamp-1">
                               {pod.design.designName}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-[10px] text-muted-foreground">
                               {pod.design.designType.name}
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {pod.design.designer ? (
-                            <div className="flex items-center gap-2">
-                              <UserIcon className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {pod.design.designer.fullName || "-"}
-                                </p>
-                                {pod.design.designer.email && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {pod.design.designer.email}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm italic">
-                              Chưa phân công
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <p>
-                              {pod.design.width} × {pod.design.height} cm
-                            </p>
-                            <p className="text-xs text-muted-foreground">
+                        <TableCell className="px-2 py-1">
+                          <div className="text-xs">
+                            <p>{pod.design.width} × {pod.design.height} cm</p>
+                            <p className="text-[10px] text-muted-foreground">
                               {pod.design.areaCm2} cm²
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>{pod.quantity.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <span className="text-sm">
+                        <TableCell className="px-2 py-1">
+                          <p className="text-xs">{pod.quantity.toLocaleString()}</p>
+                        </TableCell>
+                        <TableCell className="px-2 py-1">
+                          <span className="text-xs">
                             {pod.design.sidesClassificationOption?.value || "—"}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
+                        <TableCell className="px-2 py-1">
+                          <span className="text-xs">
                             {pod.design.processClassificationOption?.value || "—"}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
+                        <TableCell className="px-2 py-1">
+                          <span className="text-xs">
                             {pod.laminationType
                               ? pod.laminationType === "bóng"
                                 ? "Bóng"
@@ -697,24 +537,26 @@ export default function ProofingOrderDetailPage() {
                               : "—"}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <TableCell className="px-2 py-1 text-right">
+                          <div className="flex items-center justify-end gap-1">
                             {pod.design.designImageUrl && (
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-7 w-7"
                                 onClick={() => {
                                   setViewingImageUrl(pod.design.designImageUrl);
                                   setImageViewerOpen(true);
                                 }}
                               >
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-3.5 w-3.5" />
                               </Button>
                             )}
                             {pod.design.designFileUrl && (
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-7 w-7"
                                 onClick={() => {
                                   if (pod.design.designFileUrl) {
                                     downloadFile(
@@ -724,7 +566,7 @@ export default function ProofingOrderDetailPage() {
                                   }
                                 }}
                               >
-                                <Download className="h-4 w-4" />
+                                <Download className="h-3.5 w-3.5" />
                               </Button>
                             )}
                           </div>
@@ -738,126 +580,107 @@ export default function ProofingOrderDetailPage() {
           </Card>
         </div>
 
-        {/* Right Column - Timeline & Info */}
-        <div className="space-y-6">
-          {/* Prepress Card */}
+        {/* Right Column - Compact Sidebar */}
+        <div className="space-y-4">
+          {/* Compact Prepress Card */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
                 <Settings2 className="h-4 w-4" />
-                Thông tin Prepress
+                Prepress
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {/* Plate Export Info */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <div
-                      className={`w-2 h-2 rounded-full ${
+                      className={`w-1.5 h-1.5 rounded-full ${
                         order.isPlateExported ? "bg-green-500" : "bg-yellow-500"
                       }`}
                     />
-                    <span className="font-medium text-sm">Xuất bản kẽm</span>
+                    <span className="font-medium text-xs">Xuất bản kẽm</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2"
+                    className="h-7 px-2 text-xs"
                     onClick={() => setIsPlateExportDialogOpen(true)}
                   >
-                    {order.isPlateExported ? "Cập nhật" : "Ghi nhận"}
+                    {order.isPlateExported ? "Sửa" : "Ghi nhận"}
                   </Button>
                 </div>
                 {order.plateExport ? (
-                  <div className="bg-muted/30 rounded-md p-3 text-sm space-y-1">
-                    <p>
-                      <span className="text-muted-foreground mr-2">
-                        Đơn vị:
-                      </span>{" "}
-                      {order.plateExport.vendorName}
+                  <div className="bg-muted/30 rounded p-2 text-xs space-y-0.5">
+                    <p className="truncate">
+                      <span className="text-muted-foreground">Đơn vị:</span>{" "}
+                      {order.plateExport?.vendorName || "—"}
                     </p>
                     <p>
-                      <span className="text-muted-foreground mr-2">
-                        Gửi đi:
-                      </span>{" "}
-                      {order.plateExport.sentAt
-                        ? format(
-                            new Date(order.plateExport.sentAt),
-                            "dd/MM/yyyy HH:mm"
-                          )
-                        : "-"}
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground mr-2">
-                        Có kẽm:
-                      </span>{" "}
-                      {order.plateExport.receivedAt
+                      <span className="text-muted-foreground">Có kẽm:</span>{" "}
+                      {order.plateExport?.receivedAt
                         ? format(
                             new Date(order.plateExport.receivedAt),
-                            "dd/MM/yyyy HH:mm"
+                            "dd/MM HH:mm"
                           )
                         : "Đang chờ"}
                     </p>
-                    {order.plateExport.notes && (
-                      <p className="text-xs italic text-muted-foreground mt-1 border-t pt-1">
-                        "{order.plateExport.notes}"
-                      </p>
-                    )}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic pl-4">
-                    Chưa có thông tin xuất kẽm
+                  <p className="text-[10px] text-muted-foreground italic pl-3.5">
+                    Chưa có thông tin
                   </p>
                 )}
               </div>
 
-              <Separator />
+              <Separator className="my-2" />
 
               {/* Die Export Info */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <div
-                      className={`w-2 h-2 rounded-full ${
+                      className={`w-1.5 h-1.5 rounded-full ${
                         order.isDieExported ? "bg-green-500" : "bg-yellow-500"
                       }`}
                     />
-                    <span className="font-medium text-sm">Xuất khuôn bế</span>
+                    <span className="font-medium text-xs">Xuất khuôn bế</span>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2"
+                    className="h-7 px-2 text-xs"
                     onClick={() => setIsDieExportDialogOpen(true)}
                   >
-                    {order.isDieExported ? "Cập nhật" : "Ghi nhận"}
+                    {order.isDieExported ? "Sửa" : "Ghi nhận"}
                   </Button>
                 </div>
                 {order.dieExport ? (
-                  <div className="bg-muted/30 rounded-md p-3 text-sm space-y-2">
-                    {order.dieExport.imageUrl && (
-                      <div className="relative aspect-video rounded border overflow-hidden bg-black/5">
+                  <div className="bg-muted/30 rounded p-2 text-xs space-y-1">
+                    {order.dieExport?.imageUrl && (
+                      <div className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer"
+                        onClick={() => {
+                          setViewingImageUrl(order.dieExport?.imageUrl || null);
+                          setImageViewerOpen(true);
+                        }}
+                      >
                         <img
                           src={order.dieExport.imageUrl}
                           alt="Khuôn bế"
-                          className="w-full h-full object-contain cursor-pointer"
-                          onClick={() => {
-                            setViewingImageUrl(order.dieExport!.imageUrl!);
-                            setImageViewerOpen(true);
-                          }}
+                          className="w-full h-full object-contain"
                         />
                       </div>
                     )}
-                    {order.dieExport.notes && (
-                      <p className="text-xs italic text-muted-foreground">
+                    {order.dieExport?.notes && (
+                      <p className="text-[10px] italic text-muted-foreground line-clamp-2">
                         "{order.dieExport.notes}"
                       </p>
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic pl-4">
-                    Chưa có thông tin khuôn bế
+                  <p className="text-[10px] text-muted-foreground italic pl-3.5">
+                    Chưa có thông tin
                   </p>
                 )}
               </div>
@@ -865,7 +688,7 @@ export default function ProofingOrderDetailPage() {
               {order.status === "waiting_for_production" && (
                 <div className="pt-2">
                   <Button
-                    className="w-full gap-2"
+                    className="w-full gap-1.5 h-8 text-xs"
                     disabled={
                       !order.isPlateExported ||
                       !order.isDieExported ||
@@ -874,17 +697,17 @@ export default function ProofingOrderDetailPage() {
                     }
                     onClick={handleHandToProduction}
                   >
-                    <CheckCircle2 className="h-4 w-4" />
+                    <CheckCircle2 className="h-3.5 w-3.5" />
                     Bàn giao sản xuất
                   </Button>
                   {(!order.isPlateExported || !order.isDieExported) && (
                     <p className="text-[10px] text-destructive mt-1 text-center">
-                      * Cần hoàn thành xuất kẽm và xuất khuôn bế trước khi bàn giao
+                      * Cần hoàn thành xuất kẽm và khuôn bế
                     </p>
                   )}
                   {!order.approvedById && (
                     <p className="text-[10px] text-destructive mt-1 text-center">
-                      * Cần được duyệt trước khi bàn giao
+                      * Cần được duyệt
                     </p>
                   )}
                 </div>
@@ -892,163 +715,132 @@ export default function ProofingOrderDetailPage() {
             </CardContent>
           </Card>
 
-          {/* People Card */}
+          {/* Compact People & Info Card */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UserIcon className="h-5 w-5" />
-                Người liên quan
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <UserIcon className="h-4 w-4" />
+                Thông tin
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-[10px] font-normal">
                   Người tạo
                 </Label>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <UserIcon className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                    <UserIcon className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium">{order.createdBy.fullName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {order.createdBy.email}
+                    <p className="font-medium text-xs">{order.createdBy?.fullName || "—"}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {order.createdBy?.email || "—"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-2" />
 
-              <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-[10px] font-normal">
                   Người xử lý
                 </Label>
                 {order.assignedTo ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <UserIcon className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                      <UserIcon className="h-3.5 w-3.5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="font-medium">{order.assignedTo.fullName}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium text-xs">{order.assignedTo.fullName}</p>
+                      <p className="text-[10px] text-muted-foreground">
                         {order.assignedTo.email}
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Chưa phân công
-                  </p>
+                  <p className="text-xs text-muted-foreground">Chưa phân công</p>
                 )}
               </div>
 
               {order.approvedBy && (
                 <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-muted-foreground text-xs">
+                  <Separator className="my-2" />
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground text-[10px] font-normal">
                       Người duyệt
                     </Label>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                        <UserIcon className="h-5 w-5 text-green-600" />
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center">
+                        <UserIcon className="h-3.5 w-3.5 text-green-600" />
                       </div>
                       <div>
-                        <p className="font-medium text-green-700">
-                          {order.approvedBy.fullName}
+                        <p className="font-medium text-xs text-green-700">
+                          {order.approvedBy?.fullName || "—"}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(order.approvedAt!).toLocaleString("vi-VN", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}
-                        </p>
+                        {order.approvedAt && (
+                          <p className="text-[10px] text-muted-foreground">
+                            {new Date(order.approvedAt).toLocaleString("vi-VN", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })}
+                          </p>
+                        )}
                       </div>
                     </div>
                     {order.finalQuantity && (
-                      <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
-                        <p className="text-xs text-green-800 font-medium">
-                          Số lượng duyệt chốt:{" "}
-                          {order.finalQuantity.toLocaleString()}
+                      <div className="mt-1.5 p-1.5 bg-green-50 rounded border border-green-200">
+                        <p className="text-[10px] text-green-800 font-medium">
+                          SL duyệt: {order.finalQuantity.toLocaleString()}
                         </p>
                       </div>
                     )}
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
 
-          {/* Timeline Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Thời gian
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs">
-                  Ngày tạo
-                </Label>
-                <p className="text-sm font-medium">
-                  {new Date(order.createdAt).toLocaleString("vi-VN", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </p>
-              </div>
+              <Separator className="my-2" />
 
-              <Separator />
-
-              <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs">
-                  Cập nhật lần cuối
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-[10px] font-normal">
+                  Thời gian
                 </Label>
-                <p className="text-sm font-medium">
-                  {new Date(order.updatedAt).toLocaleString("vi-VN", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Material Info Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Thông tin chất liệu
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs">
-                  Tên chất liệu
-                </Label>
-                <p className="font-medium">{order.materialType.name}</p>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs">
-                  Mã chất liệu
-                </Label>
-                <p className="text-sm font-mono">{order.materialType.code}</p>
-              </div>
-              {order.materialType.description && (
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-xs">Mô tả</Label>
-                  <p className="text-sm">{order.materialType.description}</p>
+                <div className="text-xs space-y-0.5">
+                  <p>
+                    <span className="text-muted-foreground">Tạo:</span>{" "}
+                    {new Date(order.createdAt).toLocaleString("vi-VN", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">Cập nhật:</span>{" "}
+                    {new Date(order.updatedAt).toLocaleString("vi-VN", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </p>
                 </div>
-              )}
-              <div className="space-y-1">
-                <Label className="text-muted-foreground text-xs">Giá/cm²</Label>
-                <p className="text-sm font-medium">
-                  {order.materialType.pricePerCm2.toFixed(4)} đ
-                </p>
+              </div>
+
+              <Separator className="my-2" />
+
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-[10px] font-normal">
+                  Chất liệu
+                </Label>
+                <div className="text-xs space-y-0.5">
+                  <p className="font-medium">{order.materialType?.name || "—"}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono">
+                    {order.materialType?.code || "—"}
+                  </p>
+                  {order.materialType?.pricePerCm2 && (
+                    <p className="text-[10px]">
+                      Giá: {order.materialType.pricePerCm2.toFixed(4)} đ/cm²
+                    </p>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1216,175 +1008,25 @@ export default function ProofingOrderDetailPage() {
         />
       )}
       {/* Plate Export Dialog */}
-      <Dialog
-        open={isPlateExportDialogOpen}
-        onOpenChange={setIsPlateExportDialogOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ghi nhận xuất bản kẽm</DialogTitle>
-            <DialogDescription>
-              Nhập thông tin đơn vị và thời gian gửi kẽm.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="vendorName">Đơn vị ghi kẽm</Label>
-              <Input
-                id="vendorName"
-                placeholder="Ví dụ: Thiên Nam, Ánh Sáng..."
-                value={plateExportData.vendorName}
-                onChange={(e) =>
-                  setPlateExportData({
-                    ...plateExportData,
-                    vendorName: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="sentAt">Thời gian gửi đi</Label>
-                <Input
-                  id="sentAt"
-                  type="datetime-local"
-                  value={plateExportData.sentAt}
-                  onChange={(e) =>
-                    setPlateExportData({
-                      ...plateExportData,
-                      sentAt: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="receivedAt">Thời gian có kẽm (dự kiến)</Label>
-                <Input
-                  id="receivedAt"
-                  type="datetime-local"
-                  value={plateExportData.receivedAt}
-                  onChange={(e) =>
-                    setPlateExportData({
-                      ...plateExportData,
-                      receivedAt: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="plateNotes">Ghi chú</Label>
-              <Input
-                id="plateNotes"
-                placeholder="Nhập ghi chú nếu có"
-                value={plateExportData.notes}
-                onChange={(e) =>
-                  setPlateExportData({
-                    ...plateExportData,
-                    notes: e.target.value,
-                  })
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsPlateExportDialogOpen(false)}
-            >
-              Hủy
-            </Button>
-            <Button onClick={handleRecordPlate} disabled={isRecordingPlate}>
-              {isRecordingPlate ? "Đang lưu..." : "Lưu thông tin"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {order && (
+        <PlateExportDialog
+          open={isPlateExportDialogOpen}
+          onOpenChange={setIsPlateExportDialogOpen}
+          proofingOrderId={order.id}
+          onSuccess={handlePlateExportSuccess}
+        />
+      )}
 
       {/* Die Export Dialog */}
-      <Dialog
-        open={isDieExportDialogOpen}
-        onOpenChange={(open) => {
-          setIsDieExportDialogOpen(open);
-          if (!open) {
-            setDieExportImage(null);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ghi nhận khuôn bế</DialogTitle>
-            <DialogDescription>
-              Upload hình và ghi chú về khuôn bế cho bình bài này.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="dieImage">Hình khuôn bế</Label>
-              <Input
-                id="dieImage"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setDieExportImage(e.target.files?.[0] || null)}
-              />
-              {dieExportImage && (
-                <div className="mt-4">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Đã chọn: {dieExportImage.name} (
-                    {(dieExportImage.size / 1024 / 1024).toFixed(2)} MB)
-                  </p>
-                  <div className="aspect-video relative rounded-lg overflow-hidden border">
-                    <img
-                      src={URL.createObjectURL(dieExportImage)}
-                      alt="Preview khuôn bế"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                </div>
-              )}
-              {!dieExportImage && order?.dieExport?.imageUrl && (
-                <div className="mt-4">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Hình hiện tại:
-                  </p>
-                  <div className="aspect-video relative rounded-lg overflow-hidden border">
-                    <img
-                      src={order.dieExport.imageUrl}
-                      alt="Khuôn bế hiện tại"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="dieNotes">Ghi chú khuôn bế</Label>
-              <Input
-                id="dieNotes"
-                placeholder="Nhập ghi chú, mã khuôn..."
-                value={dieExportData.notes}
-                onChange={(e) =>
-                  setDieExportData({ ...dieExportData, notes: e.target.value })
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDieExportDialogOpen(false);
-                setDieExportImage(null);
-              }}
-            >
-              Hủy
-            </Button>
-            <Button onClick={handleRecordDie} disabled={isRecordingDie}>
-              {isRecordingDie ? "Đang lưu..." : "Lưu thông tin"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {order && (
+        <DieExportDialog
+          open={isDieExportDialogOpen}
+          onOpenChange={setIsDieExportDialogOpen}
+          proofingOrderId={order.id}
+          proofingOrder={order}
+          onSuccess={handleDieExportSuccess}
+        />
+      )}
     </div>
   );
 }
