@@ -22,6 +22,7 @@ import {
   Mail,
   AlertTriangle,
   Hash,
+  Edit,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 import { OrderFlowDiagram } from "@/components/orders/order-flow-diagram";
 import { DepositDialog } from "@/components/orders/deposit-dialog";
@@ -72,6 +83,7 @@ import type {
 import {
   useAuth,
   useOrder,
+  useUpdateOrder,
   useGenerateDesignExcel,
   useProofingOrdersByOrder,
 } from "@/hooks";
@@ -92,7 +104,10 @@ export default function OrderDetailPage() {
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
-  const [customerUpdateDialogOpen, setCustomerUpdateDialogOpen] = useState(false);
+  const [customerUpdateDialogOpen, setCustomerUpdateDialogOpen] =
+    useState(false);
+  const [recipientUpdateDialogOpen, setRecipientUpdateDialogOpen] =
+    useState(false);
 
   // ===== FETCH ORDER =====
   const {
@@ -109,6 +124,13 @@ export default function OrderDetailPage() {
     role === ROLE.ACCOUNTING_LEAD ||
     role === ROLE.ADMIN ||
     role === ROLE.ACCOUNTING;
+
+  const canUpdateRecipient =
+    role === ROLE.ACCOUNTING ||
+    role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.ADMIN;
+
+  const { mutate: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
 
   // ===== PROOFING & PRODUCTION =====
   // Note: ProofingOrderListParams không có orderId để filter
@@ -192,12 +214,12 @@ export default function OrderDetailPage() {
     if (!customerName.trim()) missingFields.push("Tên khách hàng");
     if (!customerPhone.trim()) missingFields.push("Số điện thoại");
     if (!customerAddress.trim()) missingFields.push("Địa chỉ");
-    
+
     // Email: required for company, optional for retail
     if (isCompany && !customerEmail.trim()) {
       missingFields.push("Email");
     }
-    
+
     // TaxCode: required for company if field exists
     if (isCompany && "taxCode" in customer && !customerTaxCode.trim()) {
       missingFields.push("Mã số thuế");
@@ -507,42 +529,40 @@ export default function OrderDetailPage() {
                                   {orderDetail.quantity?.toLocaleString()}
                                 </p>
                               </div>
-                              {orderDetail.laminationType && (
+                              {design?.laminationType && (
                                 <div>
                                   <p className="text-muted-foreground text-xs">
                                     Cán màn
                                   </p>
                                   <p className="font-medium">
-                                    {orderDetail.laminationType === "bóng"
+                                    {design.laminationType === "bóng"
                                       ? "Bóng"
-                                      : orderDetail.laminationType === "mờ"
-                                      ? "Mờ"
-                                      : typeof orderDetail.laminationType ===
-                                        "string"
-                                      ? orderDetail.laminationType
-                                      : "—"}
+                                      : design.laminationType === "mờ"
+                                        ? "Mờ"
+                                        : typeof design.laminationType ===
+                                            "string"
+                                          ? design.laminationType
+                                          : "—"}
                                   </p>
                                 </div>
                               )}
-                              {design?.sidesClassificationOption && (
+                              {design?.sidesClassification && (
                                 <div>
                                   <p className="text-muted-foreground text-xs">
                                     Mặt cắt
                                   </p>
                                   <p className="font-medium">
-                                    {design.sidesClassificationOption.value ||
-                                      "—"}
+                                    {design.sidesClassification || "—"}
                                   </p>
                                 </div>
                               )}
-                              {design?.processClassificationOption && (
+                              {design?.processClassification && (
                                 <div>
                                   <p className="text-muted-foreground text-xs">
                                     Quy trình SX
                                   </p>
                                   <p className="font-medium">
-                                    {design.processClassificationOption.value ||
-                                      "—"}
+                                    {design.processClassification || "—"}
                                   </p>
                                 </div>
                               )}
@@ -744,8 +764,8 @@ export default function OrderDetailPage() {
                           {prod.completedAt
                             ? `Hoàn thành: ${formatDate(prod.completedAt)}`
                             : prod.startedAt
-                            ? `Bắt đầu: ${formatDate(prod.startedAt)}`
-                            : "Chưa bắt đầu"}
+                              ? `Bắt đầu: ${formatDate(prod.startedAt)}`
+                              : "Chưa bắt đầu"}
                         </div>
                       </div>
                     </div>
@@ -856,7 +876,8 @@ export default function OrderDetailPage() {
                   </div>
                 )}
                 {customerType === "company" &&
-                  customer?.taxCode &&
+                  "taxCode" in customer &&
+                  customer.taxCode &&
                   typeof customer.taxCode === "string" &&
                   customer.taxCode.trim() && (
                     <div className="flex items-center gap-2">
@@ -908,6 +929,71 @@ export default function OrderDetailPage() {
                     <p className="text-sm">{order.deliveryAddress}</p>
                   </div>
                 )}
+
+                {/* Recipient Info */}
+                {(order.recipientName ||
+                  order.recipientPhone ||
+                  order.recipientAddress) && (
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-muted-foreground text-xs font-medium">
+                        Người nhận:
+                      </p>
+                      {canUpdateRecipient && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs px-2"
+                          onClick={() => setRecipientUpdateDialogOpen(true)}
+                        >
+                          <Edit className="w-3 h-3 mr-1" />
+                          Sửa
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      {order.recipientName && (
+                        <p>
+                          <span className="text-muted-foreground">Tên: </span>
+                          {order.recipientName}
+                        </p>
+                      )}
+                      {order.recipientPhone && (
+                        <p>
+                          <span className="text-muted-foreground">
+                            Điện thoại:{" "}
+                          </span>
+                          {order.recipientPhone}
+                        </p>
+                      )}
+                      {order.recipientAddress && (
+                        <p>
+                          <span className="text-muted-foreground">
+                            Địa chỉ:{" "}
+                          </span>
+                          {order.recipientAddress}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {canUpdateRecipient &&
+                  !order.recipientName &&
+                  !order.recipientPhone &&
+                  !order.recipientAddress && (
+                    <div className="pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-2 text-xs"
+                        onClick={() => setRecipientUpdateDialogOpen(true)}
+                      >
+                        <User className="w-3 h-3" />
+                        Thêm thông tin người nhận
+                      </Button>
+                    </div>
+                  )}
 
                 {order.note && (
                   <div className="pt-2">
@@ -1039,6 +1125,117 @@ export default function OrderDetailPage() {
           queryClient.invalidateQueries({ queryKey: ["orders", orderId] });
         }}
       />
+
+      {/* Recipient Update Dialog */}
+      <Dialog
+        open={recipientUpdateDialogOpen}
+        onOpenChange={setRecipientUpdateDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cập nhật thông tin người nhận</DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin người nhận hàng (nếu khác với khách hàng)
+            </DialogDescription>
+          </DialogHeader>
+          <RecipientUpdateForm
+            order={order}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["orders", orderId] });
+              setRecipientUpdateDialogOpen(false);
+            }}
+            onCancel={() => setRecipientUpdateDialogOpen(false)}
+            isUpdating={isUpdatingOrder}
+            updateOrder={updateOrder}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// Recipient Update Form Component
+function RecipientUpdateForm({
+  order,
+  onSuccess,
+  onCancel,
+  isUpdating,
+  updateOrder,
+}: {
+  order: {
+    id?: number;
+    recipientName?: string | null;
+    recipientPhone?: string | null;
+    recipientAddress?: string | null;
+  };
+  onSuccess: () => void;
+  onCancel: () => void;
+  isUpdating: boolean;
+  updateOrder: (params: {
+    id: number;
+    data: import("@/Schema").UpdateOrderRequest;
+  }) => void;
+}) {
+  const [recipientName, setRecipientName] = useState(order.recipientName || "");
+  const [recipientPhone, setRecipientPhone] = useState(
+    order.recipientPhone || ""
+  );
+  const [recipientAddress, setRecipientAddress] = useState(
+    order.recipientAddress || ""
+  );
+
+  const handleSubmit = () => {
+    if (!order.id) return;
+    updateOrder({
+      id: order.id,
+      data: {
+        recipientName: recipientName.trim() || null,
+        recipientPhone: recipientPhone.trim() || null,
+        recipientAddress: recipientAddress.trim() || null,
+      },
+    });
+    onSuccess();
+  };
+
+  return (
+    <>
+      <div className="space-y-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="recipientName">Tên người nhận</Label>
+          <Input
+            id="recipientName"
+            value={recipientName}
+            onChange={(e) => setRecipientName(e.target.value)}
+            placeholder="Nhập tên người nhận"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="recipientPhone">Số điện thoại</Label>
+          <Input
+            id="recipientPhone"
+            value={recipientPhone}
+            onChange={(e) => setRecipientPhone(e.target.value)}
+            placeholder="Nhập số điện thoại"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="recipientAddress">Địa chỉ</Label>
+          <Input
+            id="recipientAddress"
+            value={recipientAddress}
+            onChange={(e) => setRecipientAddress(e.target.value)}
+            placeholder="Nhập địa chỉ người nhận"
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel} disabled={isUpdating}>
+          Hủy
+        </Button>
+        <Button onClick={handleSubmit} disabled={isUpdating}>
+          {isUpdating ? "Đang lưu..." : "Lưu"}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }

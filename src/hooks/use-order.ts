@@ -74,7 +74,6 @@ export const useUpdateOrder = () => useUpdateOrderBase();
 
 // POST /orders/{id}/generate-excel
 export const useGenerateOrderExcel = () => {
-
   // Không cần trả data ra ngoài, chỉ cần download file
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
@@ -356,7 +355,6 @@ export const useUpdateOrderForAccounting = () => {
 // POST /orders/{id}/export-delivery-note
 
 export const useExportOrderInvoice = () => {
-
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
       const res = await apiRequest.post<ArrayBuffer>(
@@ -407,7 +405,6 @@ export const useExportOrderInvoice = () => {
 };
 
 export const useExportOrderDeliveryNote = () => {
-
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
       const res = await apiRequest.post<ArrayBuffer>(
@@ -482,9 +479,9 @@ export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
     role === ROLE.PROOFER ||
     role === ROLE.PRODUCTION ||
     role === ROLE.PRODUCTION_LEAD ||
-    role === ROLE.ACCOUNTING_LEAD;
+    role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.ACCOUNTING;
   const isDesignerRole = role === ROLE.DESIGN;
-  const isAccountingRole = role === ROLE.ACCOUNTING;
   const isDesignerLeadRole = role === ROLE.DESIGN_LEAD;
 
   // Normalize and convert params based on role
@@ -496,22 +493,12 @@ export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
     startDate: params?.startDate,
     endDate: params?.endDate,
   };
-  const accountingParams: OrdersForAccountingListParams = {
-    pageNumber: params?.pageNumber,
-    pageSize: params?.pageSize,
-    status: params?.status,
-    startDate: params?.startDate,
-    endDate: params?.endDate,
-  };
 
   // Call all hooks unconditionally to satisfy Rules of Hooks
   // But only enable the query for the current role to optimize performance
   const adminResult = useOrderListBaseWithEnabled(adminParams, isAdminRole);
   const designerResult = useMyOrders(designerParams, isDesignerRole);
-  const accountingResult = useOrdersForAccounting(
-    accountingParams,
-    isAccountingRole
-  );
+
   const designerLeadResult = useOrdersForDesigner(
     designerParams,
     isDesignerLeadRole
@@ -524,10 +511,6 @@ export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
 
   if (isDesignerLeadRole) {
     return designerLeadResult;
-  }
-
-  if (isAccountingRole) {
-    return accountingResult;
   }
 
   // Default to admin/base for admin roles and others
