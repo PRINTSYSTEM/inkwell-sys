@@ -22,13 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Package } from "lucide-react";
-import { CreateMaterialTypeRequest, MaterialTypeEntity } from "@/Schema";
+import { CreateMaterialTypeRequest, MaterialTypeResponse } from "@/Schema";
 
 interface MaterialTypeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   designTypeId: number;
-  editingMaterial: MaterialTypeEntity | null;
+  editingMaterial: MaterialTypeResponse | null;
   onSubmit: (material: CreateMaterialTypeRequest) => void;
 }
 
