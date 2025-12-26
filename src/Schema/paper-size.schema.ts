@@ -1,17 +1,8 @@
 // src/Schema/paper-size.schema.ts
+// Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
-import { IdSchema } from "./Common";
+import { PaperSizeResponseSchema as GenPaperSizeResponseSchema } from "./generated";
 
 // ===== PaperSizeResponse =====
-
-export const PaperSizeResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    name: z.string().nullable().optional(),
-    width: z.number().nullable().optional(),
-    height: z.number().nullable().optional(),
-    isCustom: z.boolean().optional(), // boolean (not nullable) in swagger
-  })
-  .passthrough();
-
+export const PaperSizeResponseSchema = GenPaperSizeResponseSchema.passthrough();
 export type PaperSizeResponse = z.infer<typeof PaperSizeResponseSchema>;

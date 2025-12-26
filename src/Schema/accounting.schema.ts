@@ -1,77 +1,43 @@
 // src/Schema/accounting.schema.ts
+// Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
 import { IdSchema, DateSchema } from "./Common";
+import {
+  AccountingResponseSchema as GenAccountingResponseSchema,
+  ConfirmPaymentRequestSchema as GenConfirmPaymentRequestSchema,
+  ExportDebtRequestSchema as GenExportDebtRequestSchema,
+} from "./generated";
 
 // ===== AccountingResponse =====
-
-export const AccountingResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    orderId: IdSchema.optional(),
-    orderCode: z.string().nullable().optional(),
-    accountantId: IdSchema.optional(),
-    accountantName: z.string().nullable().optional(),
-    invoiceNumber: z.string().nullable().optional(),
-    invoiceUrl: z.string().nullable().optional(),
-    paymentStatus: z.string().nullable().optional(),
-    totalAmount: z.number().optional(),
-    deposit: z.number().optional(),
-    remainingAmount: z.number().optional(),
-    createdAt: DateSchema.optional(),
-    updatedAt: DateSchema.optional(),
-    customerId: IdSchema.optional(),
-    customerName: z.string().nullable().optional(),
-    customerType: z.string().nullable().optional(),
-    customerCurrentDebt: z.number().optional(),
-  })
-  .passthrough();
-
+export const AccountingResponseSchema =
+  GenAccountingResponseSchema.passthrough();
 export type AccountingResponse = z.infer<typeof AccountingResponseSchema>;
 
 // ===== ConfirmPaymentRequest =====
-
-export const ConfirmPaymentRequestSchema = z
-  .object({
-    amount: z
-      .number({
-        required_error: "Số tiền thanh toán là bắt buộc",
-        invalid_type_error: "Số tiền phải là số",
-      })
-      .min(0.01, "Số tiền thanh toán phải lớn hơn 0"),
-    paymentMethod: z
-      .string({
-        invalid_type_error: "Phương thức thanh toán phải là chuỗi",
-      })
-      .nullable()
-      .optional(),
-    notes: z
-      .string({
-        invalid_type_error: "Ghi chú phải là chuỗi",
-      })
-      .nullable()
-      .optional(),
-  })
-  .passthrough();
-
-export type ConfirmPaymentRequest = z.infer<typeof ConfirmPaymentRequestSchema>;
+// Base from generated, but keep custom validation messages
+export const ConfirmPaymentRequestSchema = GenConfirmPaymentRequestSchema.refine(
+  (data) => {
+    if (data.amount == null || data.amount <= 0) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "Số tiền thanh toán phải lớn hơn 0",
+    path: ["amount"],
+  }
+);
+export type ConfirmPaymentRequest = z.infer<
+  typeof ConfirmPaymentRequestSchema
+>;
 
 // ===== DebtComparisonFileResponse =====
-
+// Custom schema - not in generated
 export const DebtComparisonFileResponseSchema = z.string();
 export type DebtComparisonFileResponse = z.infer<
   typeof DebtComparisonFileResponseSchema
 >;
 
 // ===== ExportDebtRequest =====
-
-export const ExportDebtRequestSchema = z
-  .object({
-    customerId: IdSchema.nullable().optional(),
-    startDate: DateSchema.nullable().optional(),
-    endDate: DateSchema.nullable().optional(),
-    year: z.number().int().nullable().optional(),
-    month: z.number().int().nullable().optional(),
-  })
-  .passthrough();
-
+export const ExportDebtRequestSchema = GenExportDebtRequestSchema.passthrough();
 export type ExportDebtRequest = z.infer<typeof ExportDebtRequestSchema>;

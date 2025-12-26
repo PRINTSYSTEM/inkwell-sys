@@ -10,7 +10,8 @@
     "build:analyze": "vite build --mode production && npx vite-bundle-analyzer dist",
     "analyze": "npx webpack-bundle-analyzer dist/assets/*.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "schema:gen": "node scripts/gen-schema.mjs && node scripts/build-compat-generated.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -48,7 +49,6 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
-    "dotenv": "^17.2.3",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "jspdf": "^3.0.4",
@@ -78,12 +78,15 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
+    "dotenv": "^17.2.3",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "lovable-tagger": "^1.1.11",
+    "openapi-zod-client": "^1.18.3",
     "postcss": "^8.5.6",
+    "prettier": "^3.7.4",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",

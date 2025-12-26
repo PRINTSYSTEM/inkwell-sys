@@ -1,71 +1,45 @@
 // src/Schema/design-type.schema.ts
+// Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
+import { createPagedResponseSchema } from "./Common";
 import {
-  UserInfoSchema,
-  CommonStatusSchema,
-  DateSchema,
-  IdSchema,
-  NameSchema,
-  createPagedResponseSchema,
-} from "./Common";
+  DesignTypeResponseSchema as GenDesignTypeResponseSchema,
+  DesignTypeResponsePaginateSchema as GenDesignTypeResponsePaginateSchema,
+  CreateDesignTypeRequestSchema as GenCreateDesignTypeRequestSchema,
+  UpdateDesignTypeRequestSchema as GenUpdateDesignTypeRequestSchema,
+} from "./generated";
 
-// CreateDesignTypeRequest
-// Updated to match swagger.json: code, name, status required
-export const CreateDesignTypeRequestSchema = z
-  .object({
-    code: z.string().min(0).max(20), // Required in swagger
-    name: z.string().min(0).max(255), // Required in swagger
-    displayOrder: z.number().int().min(0).max(2147483647).optional(),
-    description: z.string().nullable().optional(),
-    status: z.string().regex(/^(active|inactive)$/), // Required in swagger, pattern from swagger
-  })
-  .passthrough();
+// ===== DesignTypeResponse =====
+export const DesignTypeResponseSchema =
+  GenDesignTypeResponseSchema.passthrough();
+export type DesignTypeResponse = z.infer<typeof DesignTypeResponseSchema>;
 
+// ===== PagedResponse =====
+export const DesignTypeListResponseSchema = createPagedResponseSchema(
+  DesignTypeResponseSchema
+);
+export type DesignTypeListResponse = z.infer<
+  typeof DesignTypeListResponseSchema
+>;
+
+// Re-export generated paginate schema for compatibility
+export {
+  GenDesignTypeResponsePaginateSchema as DesignTypeResponsePaginateSchema,
+};
+export type DesignTypeResponsePaginate = z.infer<
+  typeof GenDesignTypeResponsePaginateSchema
+>;
+
+// ===== CreateDesignTypeRequest =====
+export const CreateDesignTypeRequestSchema =
+  GenCreateDesignTypeRequestSchema.passthrough();
 export type CreateDesignTypeRequest = z.infer<
   typeof CreateDesignTypeRequestSchema
 >;
 
-// UpdateDesignTypeRequest
-// Updated to match swagger.json: all fields optional, nullable
-export const UpdateDesignTypeRequestSchema = z
-  .object({
-    name: z.string().min(0).max(255).nullable().optional(), // Updated to match swagger
-    displayOrder: z.number().int().min(0).max(2147483647).nullable().optional(), // Updated max from swagger
-    description: z.string().nullable().optional(),
-    status: z
-      .string()
-      .regex(/^(active|inactive)$/)
-      .nullable()
-      .optional(), // Updated to match swagger pattern
-  })
-  .passthrough();
-
+// ===== UpdateDesignTypeRequest =====
+export const UpdateDesignTypeRequestSchema =
+  GenUpdateDesignTypeRequestSchema.passthrough();
 export type UpdateDesignTypeRequest = z.infer<
   typeof UpdateDesignTypeRequestSchema
->;
-
-// DesignTypeResponse
-export const DesignTypeResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    code: z.string().nullable().optional(),
-    name: z.string().nullable().optional(),
-    displayOrder: z.number().int().optional(),
-    description: z.string().nullable().optional(),
-    status: z.string().nullable().optional(),
-    statusType: z.string().nullable().optional(),
-    createdAt: DateSchema.optional(),
-    updatedAt: DateSchema.optional(),
-    createdBy: UserInfoSchema.nullable().optional(),
-  })
-  .passthrough();
-
-export type DesignTypeResponse = z.infer<typeof DesignTypeResponseSchema>;
-
-export const DesignTypeListResponseSchema = createPagedResponseSchema(
-  DesignTypeResponseSchema
-);
-
-export type DesignTypeListResponse = z.infer<
-  typeof DesignTypeListResponseSchema
 >;

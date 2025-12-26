@@ -1,29 +1,18 @@
 // src/Schema/die-export.schema.ts
+// Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
-import { IdSchema, DateSchema } from "./Common";
+import {
+  DieExportResponseSchema as GenDieExportResponseSchema,
+  RecordDieExportRequestSchema as GenRecordDieExportRequestSchema,
+} from "./generated";
 
 // ===== DieExportResponse =====
-
-export const DieExportResponseSchema = z
-  .object({
-    id: IdSchema.optional(),
-    imageUrl: z.string().nullable().optional(),
-    notes: z.string().nullable().optional(),
-    createdAt: DateSchema.optional(),
-  })
-  .passthrough();
-
+export const DieExportResponseSchema = GenDieExportResponseSchema.passthrough();
 export type DieExportResponse = z.infer<typeof DieExportResponseSchema>;
 
 // ===== RecordDieExportRequest =====
-
-export const RecordDieExportRequestSchema = z
-  .object({
-    imageUrl: z.string().nullable().optional(),
-    notes: z.string().nullable().optional(),
-  })
-  .passthrough();
-
+export const RecordDieExportRequestSchema =
+  GenRecordDieExportRequestSchema.passthrough();
 export type RecordDieExportRequest = z.infer<
   typeof RecordDieExportRequestSchema
 >;
