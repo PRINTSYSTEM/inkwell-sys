@@ -105,6 +105,9 @@ async function generateCompatLayer(openApiContent) {
   await writeFile(COMPAT_FILE, lines.join("\n"), "utf8");
   console.log(`✅ Generated ${COMPAT_FILE.replace(rootDir + "/", "")}`);
   console.log(`   Exported ${keys.length} schemas with "Schema" suffix`);
+
+  await deleteFile(SWAGGER_FILE);
+  console.log(`✅ Deleted ${SWAGGER_FILE.replace(rootDir + "/", "")}`);
 }
 
 async function main() {
