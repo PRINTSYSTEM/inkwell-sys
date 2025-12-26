@@ -2,7 +2,7 @@
 // Combined script to generate openapi.zod.ts and compat layer in one go
 // This ensures proper execution order and better performance
 
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile, unlink } from "node:fs/promises";
 import { execSync } from "node:child_process";
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
@@ -106,8 +106,15 @@ async function generateCompatLayer(openApiContent) {
   console.log(`✅ Generated ${COMPAT_FILE.replace(rootDir + "/", "")}`);
   console.log(`   Exported ${keys.length} schemas with "Schema" suffix`);
 
-  await deleteFile(SWAGGER_FILE);
-  console.log(`✅ Deleted ${SWAGGER_FILE.replace(rootDir + "/", "")}`);
+  try {
+    await unlink(SWAGGER_FILE);
+    console.log(`✅ Deleted ${SWAGGER_FILE}`);
+  } catch (err) {
+    // Ignore if file doesn't exist
+    if (err.code !== "ENOENT") {
+      console.warn(`⚠️  Could not delete ${SWAGGER_FILE}:`, err.message);
+    }
+  }
 }
 
 async function main() {
