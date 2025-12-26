@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
-/* Source: C:\Users\ICT\Desktop\inkwell-sys\src\generated\openapi.zod.ts */
-/* Generated at: 2025-12-26T11:01:07.678Z */
+/* Source: src/generated/openapi.zod.ts */
+/* Generated at: 2025-12-26T12:04:10.587Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 

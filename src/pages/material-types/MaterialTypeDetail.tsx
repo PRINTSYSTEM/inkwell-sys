@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { MaterialTypeEntity } from '@/Schema/material-type.schema';
+import { MaterialTypeResponse } from '@/Schema/material-type.schema';
 import { useMaterialType, useUpdateMaterialType, useDeleteMaterialType } from '@/hooks/use-material-type';
 
 export default function MaterialTypeDetail() {
@@ -31,7 +31,7 @@ export default function MaterialTypeDetail() {
   const { id } = useParams();
 
   const [loading, setLoading] = useState(true);
-  const [materialType, setMaterialType] = useState<MaterialTypeEntity | null>(null);
+  const [materialType, setMaterialType] = useState<MaterialTypeResponse | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 

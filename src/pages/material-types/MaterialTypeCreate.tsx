@@ -15,7 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
-  MaterialTypeEntity,
+  MaterialTypeResponse,
   CreateMaterialTypeRequest,
 } from "@/Schema/material-type.schema";
 // import { useCreateMaterialType } from '@/hooks/use-material-type';
