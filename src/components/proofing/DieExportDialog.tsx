@@ -20,9 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Loader2, X } from "lucide-react";
+import { Upload, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useRecordDieExport, useUploadProofingImage } from "@/hooks/use-proofing-order";
+import { useRecordDieExportWithFile } from "@/hooks/use-proofing-order";
 import type { ProofingOrderResponse } from "@/Schema/proofing-order.schema";
 
 interface DieExportDialogProps {
@@ -50,7 +50,7 @@ export function DieExportDialog({
   proofingOrder,
   onSuccess,
 }: DieExportDialogProps) {
-  const [dieImage, setDieImage] = useState<File | null>(null);
+  const [dieFile, setDieFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [receivedAtType, setReceivedAtType] = useState<"manual" | "duration">(
     "duration"
@@ -59,14 +59,12 @@ export function DieExportDialog({
   const [receivedAtManual, setReceivedAtManual] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
 
-  const { mutate: uploadImage, isPending: uploadingImage } =
-    useUploadProofingImage();
-  const { mutate: recordDie, isPending: recordingDie } = useRecordDieExport();
+  const { mutate: recordDie, isPending: recordingDie } = useRecordDieExportWithFile();
 
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      setDieImage(null);
+      setDieFile(null);
       setImagePreview(null);
       setReceivedAtType("duration");
       setDurationHours(60);
@@ -75,18 +73,14 @@ export function DieExportDialog({
     }
   }, [open]);
 
-  // Set preview when image is selected
+  // Cleanup image preview URL when component unmounts or file changes
   useEffect(() => {
-    if (dieImage) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(dieImage);
-    } else {
-      setImagePreview(null);
-    }
-  }, [dieImage]);
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   // Calculate receivedAt based on type
   const receivedAt = receivedAtType === "manual" 
@@ -97,9 +91,10 @@ export function DieExportDialog({
         return received.toISOString();
       })();
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Kiểm tra file ảnh
       if (!file.type.startsWith("image/")) {
         toast.error("Vui lòng chọn file ảnh");
         return;
@@ -108,99 +103,73 @@ export function DieExportDialog({
         toast.error("Kích thước file không được vượt quá 10MB");
         return;
       }
-      setDieImage(file);
+      setDieFile(file);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
     }
   };
 
-  const handleRemoveImage = () => {
-    setDieImage(null);
+  const handleRemoveFile = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setDieFile(null);
     setImagePreview(null);
   };
 
-  const handleSubmit = async () => {
-    try {
-      let imageUrl: string | undefined = undefined;
-
-      // Upload image first if provided
-      if (dieImage) {
-        const formData = new FormData();
-        formData.append("imageFile", dieImage);
-
-        await new Promise<void>((resolve, reject) => {
-          uploadImage(
-            {
-              proofingOrderId,
-              file: dieImage,
-            },
-            {
-              onSuccess: (response) => {
-                imageUrl = response.imageUrl || undefined;
-                resolve();
-              },
-              onError: (error) => {
-                reject(error);
-              },
-            }
-          );
-        });
-      } else if (proofingOrder?.dieExport?.imageUrl) {
-        // Use existing image if no new image uploaded
-        imageUrl = proofingOrder.dieExport.imageUrl;
-      }
-
-      // Record die export
-      recordDie(
-        {
-          id: proofingOrderId,
-          request: {
-            imageUrl,
-            notes: notes.trim() || undefined,
-          },
-        },
-        {
-          onSuccess: () => {
-            onSuccess?.();
-            onOpenChange(false);
-          },
-        }
-      );
-    } catch (error) {
-      console.error("Failed to record die export:", error);
-      toast.error("Lỗi", {
-        description: "Không thể ghi nhận khuôn bế",
-      });
+  const handleSubmit = () => {
+    // Nếu không có file mới và không có file cũ, yêu cầu upload file
+    if (!dieFile && !proofingOrder?.dieExport?.imageUrl) {
+      toast.error("Vui lòng chọn ảnh khuôn bế");
+      return;
     }
+
+    // Record die export với file (nếu có)
+    recordDie(
+      {
+        id: proofingOrderId,
+        file: dieFile || undefined,
+        notes: notes.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          onSuccess?.();
+          onOpenChange(false);
+        },
+      }
+    );
   };
 
-  const existingImageUrl = proofingOrder?.dieExport?.imageUrl;
+  const existingFileUrl = proofingOrder?.dieExport?.imageUrl;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pb-2">
           <DialogTitle>Xuất khuôn bế</DialogTitle>
           <DialogDescription>
-            Upload hình ảnh và ghi nhận thông tin khuôn bế cho lệnh bình bài này.
+            Upload ảnh khuôn bế và ghi nhận thông tin khuôn bế cho lệnh bình bài này.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Hình ảnh khuôn bế */}
+        <div className="flex-1 overflow-y-auto space-y-4 py-4 px-1">
+          {/* Ảnh khuôn bế */}
           <div className="space-y-2">
-            <Label htmlFor="dieImage">
-              Hình ảnh khuôn bế <span className="text-destructive">*</span>
+            <Label htmlFor="dieFile">
+              Ảnh khuôn bế <span className="text-destructive">*</span>
             </Label>
-            {!dieImage && !existingImageUrl && (
+            {!dieFile && !existingFileUrl && (
               <div className="border-2 border-dashed rounded-lg p-6 text-center">
                 <Input
-                  id="dieImage"
+                  id="dieFile"
                   type="file"
                   accept="image/*"
-                  onChange={handleImageChange}
+                  onChange={handleFileChange}
                   className="hidden"
                 />
                 <label
-                  htmlFor="dieImage"
+                  htmlFor="dieFile"
                   className="cursor-pointer flex flex-col items-center gap-2"
                 >
                   <Upload className="h-8 w-8 text-muted-foreground" />
@@ -208,70 +177,79 @@ export function DieExportDialog({
                     Click để chọn ảnh hoặc kéo thả vào đây
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    JPG, PNG (tối đa 10MB)
+                    File ảnh (JPG, PNG, ...) - tối đa 10MB
                   </span>
                 </label>
               </div>
             )}
-            {(dieImage || existingImageUrl) && (
+            {(dieFile || existingFileUrl || imagePreview) && (
               <div className="space-y-2">
-                {imagePreview && (
-                  <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
-                    <img
-                      src={imagePreview}
-                      alt="Preview khuôn bế"
-                      className="w-full h-full object-contain"
-                    />
-                    {dieImage && (
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={handleRemoveImage}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                {/* Preview ảnh */}
+                <div className="border rounded-lg p-4 bg-muted/50">
+                  {(imagePreview || existingFileUrl) && (
+                    <div className="mb-3">
+                      <img
+                        src={imagePreview || existingFileUrl || ""}
+                        alt="Preview ảnh khuôn bế"
+                        className="w-full max-h-64 object-contain rounded-lg border bg-background"
+                      />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    {dieFile && (
+                      <>
+                        <div className="w-12 h-12 rounded-lg bg-background border flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {dieFile.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(dieFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={handleRemoveFile}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                    {existingFileUrl && !dieFile && (
+                      <div className="w-full">
+                        <p className="text-xs text-muted-foreground">
+                          Ảnh đã được lưu
+                        </p>
+                      </div>
                     )}
                   </div>
-                )}
-                {!imagePreview && existingImageUrl && (
-                  <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
-                    <img
-                      src={existingImageUrl}
-                      alt="Khuôn bế hiện tại"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                )}
-                {!imagePreview && !existingImageUrl && dieImage && (
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      {dieImage.name} ({(dieImage.size / 1024 / 1024).toFixed(2)} MB)
-                    </p>
-                  </div>
-                )}
+                </div>
                 <div className="flex gap-2">
                   <Input
-                    id="dieImage"
+                    id="dieFile"
                     type="file"
                     accept="image/*"
-                    onChange={handleImageChange}
+                    onChange={handleFileChange}
                     className="hidden"
                   />
-                  <label htmlFor="dieImage">
+                  <label htmlFor="dieFile">
                     <Button variant="outline" size="sm" asChild>
                       <span>
-                        {existingImageUrl && !dieImage
+                        {existingFileUrl && !dieFile
                           ? "Thay đổi ảnh"
                           : "Chọn ảnh khác"}
                       </span>
                     </Button>
                   </label>
-                  {dieImage && (
+                  {dieFile && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleRemoveImage}
+                      onClick={handleRemoveFile}
                     >
                       Xóa
                     </Button>
@@ -350,15 +328,15 @@ export function DieExportDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={recordingDie || uploadingImage || (!dieImage && !existingImageUrl)}
+            disabled={recordingDie || (!dieFile && !existingFileUrl)}
           >
-            {(recordingDie || uploadingImage) ? (
+            {recordingDie ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Đang lưu...

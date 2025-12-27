@@ -36,8 +36,10 @@ export type CreateDesignRequestUI = {
   requirements?: string;
   additionalNotes?: string;
   minQuantity?: number;
-  sidesClassificationOptionId?: number;
-  processClassificationOptionId?: number;
+  sidesClassificationOptionId?: number; // Deprecated - kept for backward compatibility
+  processClassificationOptionId?: number; // Deprecated - kept for backward compatibility
+  sidesClassification?: string | null; // New: stores classification value directly
+  processClassification?: string | null; // New: stores classification value directly
   laminationType?: string | null;
 };
 

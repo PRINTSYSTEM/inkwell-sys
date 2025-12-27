@@ -30,6 +30,39 @@ import type { CreateDesignRequestUI, DesignTypeResponse } from "./DesignCard";
 import { useMaterialTypeDetail } from "@/hooks/use-material-type";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 
+// Helper functions to determine classification requirements
+const isDecalDesignType = (designTypeName: string): boolean => {
+  return designTypeName.toLowerCase().includes("decal");
+};
+
+const isTuiDesignType = (designTypeName: string): boolean => {
+  return (
+    designTypeName.toLowerCase().includes("túi") ||
+    designTypeName.toLowerCase().includes("tui")
+  );
+};
+
+const isHopDesignType = (designTypeName: string): boolean => {
+  return (
+    designTypeName.toLowerCase().includes("hộp") ||
+    designTypeName.toLowerCase().includes("hop")
+  );
+};
+
+const isNhanDesignType = (designTypeName: string): boolean => {
+  return (
+    designTypeName.toLowerCase().includes("nhãn") ||
+    designTypeName.toLowerCase().includes("nhan")
+  );
+};
+
+const isTheTreoMaterial = (materialName: string): boolean => {
+  return (
+    materialName.toLowerCase().includes("thẻ treo") ||
+    materialName.toLowerCase().includes("the treo")
+  );
+};
+
 // Material type definition
 export type MaterialClassificationOption = {
   id: number;
@@ -84,7 +117,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     id: "",
     designTypeId: 0,
     materialTypeId: 0,
-    quantity: 0,
+    quantity: undefined,
     designName: "",
     length: 0,
     width: 0,
@@ -104,7 +137,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         id: `new-${Date.now()}`,
         designTypeId: 0,
         materialTypeId: 0,
-        quantity: 0,
+        quantity: undefined,
         designName: "",
         length: 0,
         width: 0,
@@ -112,6 +145,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         requirements: "",
         additionalNotes: "",
         laminationType: undefined,
+        sidesClassification: undefined,
+        processClassification: undefined,
       });
       setCurrentStep(1);
     }
@@ -125,27 +160,91 @@ export const DesignModal: React.FC<DesignModalProps> = ({
   };
 
   const handleSelectDesignType = (typeId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      designTypeId: typeId,
-      materialTypeId: 0,
-      sidesClassificationOptionId: undefined,
-      processClassificationOptionId: undefined,
-      minQuantity: 0,
-    }));
+    setFormData((prev) => {
+      const designType = designTypes.find((dt) => dt.id === typeId);
+      const isTui = designType ? isTuiDesignType(designType.name) : false;
+
+      return {
+        ...prev,
+        designTypeId: typeId,
+        materialTypeId: 0,
+        sidesClassificationOptionId: undefined,
+        processClassificationOptionId: undefined,
+        sidesClassification: isTui ? "two_side" : undefined, // Túi mặc định 2 mặt
+        processClassification: undefined,
+        minQuantity: undefined,
+      };
+    });
     // Notify parent to load materials for this design type
     onDesignTypeChange?.(typeId);
   };
 
   const handleSelectMaterial = (materialId: number) => {
     const mat = materials.find((m) => m.id === materialId);
-    setFormData((prev) => ({
-      ...prev,
-      materialTypeId: materialId,
-      minQuantity: mat?.minimumQuantity || 0,
-      sidesClassificationOptionId: undefined,
-      processClassificationOptionId: undefined,
-    }));
+    // #region agent log
+    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "DesignModal.tsx:140",
+        message: "handleSelectMaterial called",
+        data: {
+          materialId,
+          materialName: mat?.name,
+          minimumQuantity: mat?.minimumQuantity,
+          minimumQuantityType: typeof mat?.minimumQuantity,
+        },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "post-fix",
+        hypothesisId: "A",
+      }),
+    }).catch(() => {});
+    // #endregion
+    setFormData((prev) => {
+      // Fix: If minimumQuantity is 0 or falsy, set to undefined to prevent rendering "0"
+      const newMinQuantity =
+        mat?.minimumQuantity && mat.minimumQuantity > 0
+          ? mat.minimumQuantity
+          : undefined;
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "DesignModal.tsx:145",
+            message: "Setting minQuantity (post-fix)",
+            data: {
+              originalMinimumQuantity: mat?.minimumQuantity,
+              newMinQuantity,
+              isZero: mat?.minimumQuantity === 0,
+              isUndefined: newMinQuantity === undefined,
+              isNull: newMinQuantity === null,
+            },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "post-fix",
+            hypothesisId: "A",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
+      // Reset classifications when material changes
+      const designType = designTypes.find((dt) => dt.id === prev.designTypeId);
+      const isTui = designType ? isTuiDesignType(designType.name) : false;
+
+      return {
+        ...prev,
+        materialTypeId: materialId,
+        minQuantity: newMinQuantity,
+        sidesClassificationOptionId: undefined,
+        processClassificationOptionId: undefined,
+        sidesClassification: isTui ? "two_side" : undefined, // Túi mặc định 2 mặt
+        processClassification: undefined,
+      };
+    });
   };
 
   // Get material detail from API when on step 2 (quy trình nâng cao)
@@ -156,12 +255,45 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     currentStep === 2 && formData.materialTypeId > 0
   );
 
-  // Use materialDetail if available (from API), otherwise fallback to materials list
+  // Check if this is an existing design (read-only except quantity)
+  const isExistingDesign = formData.isFromExisting && formData.designId;
+
+  // Determine which classifications to show based on design type and material
+  const selectedDesignType = designTypes.find(
+    (dt) => dt.id === formData.designTypeId
+  );
   const selectedMaterial =
     materialDetail || materials.find((m) => m.id === formData.materialTypeId);
 
-  // Check if this is an existing design (read-only except quantity)
-  const isExistingDesign = formData.isFromExisting && formData.designId;
+  const designTypeName = selectedDesignType?.name || "";
+  const materialName = selectedMaterial?.name || "";
+
+  const isDecal = isDecalDesignType(designTypeName);
+  const isTui = isTuiDesignType(designTypeName);
+  const isHop = isHopDesignType(designTypeName);
+  const isNhan = isNhanDesignType(designTypeName);
+  const isTheTreo = isTheTreoMaterial(materialName);
+
+  // Determine which classifications to show based on rules:
+  // - decal: có cả sidesClass và processClass
+  // - thẻ treo: chỉ có sidesClass (khi là nhãn)
+  // - túi: mặc định 2 mặt, không hiển thị (tự động set)
+  // - hộp và nhãn (trừ thẻ treo): không có classification
+  const shouldShowSidesClassification =
+    isDecal || // Decal: có cả sides và process
+    (isTheTreo && isNhan); // Thẻ treo (nhãn): chỉ có sides
+
+  const shouldShowProcessClassification = isDecal; // Decal: có cả sides và process
+
+  // For Túi: automatically set to 2 mặt, don't show selector
+  useEffect(() => {
+    if (isTui && formData.sidesClassification !== "two_side") {
+      setFormData((prev) => ({
+        ...prev,
+        sidesClassification: "two_side",
+      }));
+    }
+  }, [isTui, formData.sidesClassification]);
 
   const canGoNext = () => {
     switch (currentStep) {
@@ -173,6 +305,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
           formData.materialTypeId > 0 &&
           (formData.length ?? 0) > 0 &&
           (formData.width ?? 0) > 0 &&
+          formData.quantity !== undefined &&
           formData.quantity > 0
         );
       case 2:
@@ -187,22 +320,20 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         ) {
           return false;
         }
-        // Nếu có classification thì phải chọn
-        if (formData.materialTypeId <= 0) return true;
-        const mat = materials.find((m) => m.id === formData.materialTypeId);
-        if (mat?.classifications) {
-          for (const cls of mat.classifications) {
-            if (
-              cls.classificationKey === "sides" &&
-              !formData.sidesClassificationOptionId
-            )
-              return false;
-            if (
-              cls.classificationKey === "process" &&
-              !formData.processClassificationOptionId
-            )
-              return false;
-          }
+        // Validate classifications based on design type and material rules
+        // Túi không cần validate vì đã tự động set mặc định
+        if (
+          !isTui &&
+          shouldShowSidesClassification &&
+          !formData.sidesClassification
+        ) {
+          return false;
+        }
+        if (
+          shouldShowProcessClassification &&
+          !formData.processClassification
+        ) {
+          return false;
         }
         return true;
       default:
@@ -231,6 +362,28 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     formData.minQuantity &&
     formData.quantity > 0 &&
     formData.quantity < formData.minQuantity;
+  // #region agent log
+  if (formData.minQuantity === 0) {
+    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "DesignModal.tsx:244",
+        message: "isQuantityBelowMin calculation with minQuantity=0",
+        data: {
+          minQuantity: formData.minQuantity,
+          quantity: formData.quantity,
+          minQuantityTruthy: !!formData.minQuantity,
+          isQuantityBelowMin,
+        },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "run1",
+        hypothesisId: "E",
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -483,29 +636,124 @@ export const DesignModal: React.FC<DesignModalProps> = ({
 
               {/* Số lượng */}
               <div className="space-y-3">
+                {/* #region agent log */}
+                {(() => {
+                  fetch(
+                    "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        location: "DesignModal.tsx:486",
+                        message: "Rendering quantity section (post-fix)",
+                        data: {
+                          minQuantity: formData.minQuantity,
+                          minQuantityType: typeof formData.minQuantity,
+                          minQuantityTruthy: !!formData.minQuantity,
+                          minQuantityGT0: formData.minQuantity > 0,
+                          willShowMinQuantityLabel: !!(
+                            formData.minQuantity && formData.minQuantity > 0
+                          ),
+                          isQuantityBelowMin,
+                          quantity: formData.quantity,
+                        },
+                        timestamp: Date.now(),
+                        sessionId: "debug-session",
+                        runId: "post-fix",
+                        hypothesisId: "B",
+                      }),
+                    }
+                  ).catch(() => {});
+                  return null;
+                })()}
+                {/* #endregion */}
                 <Label className="text-sm font-medium">
                   Số lượng <span className="text-destructive">*</span>
-                  {formData.minQuantity ? (
+                  {formData.minQuantity && formData.minQuantity > 0 ? (
                     <span className="ml-2 text-xs text-blue-500 font-normal">
                       (Tối thiểu: {formData.minQuantity.toLocaleString("vi-VN")}
                       )
                     </span>
                   ) : null}
+                  {/* #region agent log */}
+                  {(() => {
+                    const shouldShow =
+                      formData.minQuantity && formData.minQuantity > 0;
+                    if (!shouldShow && formData.minQuantity === 0) {
+                      fetch(
+                        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            location: "DesignModal.tsx:494",
+                            message:
+                              "MinQuantity is 0, should not show but checking if it renders anyway",
+                            data: {
+                              minQuantity: formData.minQuantity,
+                              shouldShow,
+                            },
+                            timestamp: Date.now(),
+                            sessionId: "debug-session",
+                            runId: "run1",
+                            hypothesisId: "C",
+                          }),
+                        }
+                      ).catch(() => {});
+                    }
+                    return null;
+                  })()}
+                  {/* #endregion */}
                 </Label>
                 <Input
                   type="number"
                   placeholder="VD: 1000"
-                  value={formData.quantity || ""}
-                  onChange={(e) =>
+                  value={
+                    formData.quantity !== undefined && formData.quantity > 0
+                      ? formData.quantity.toString()
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
                     updateField(
                       "quantity",
-                      e.target.value === "" ? undefined : Number(e.target.value)
-                    )
-                  }
+                      val === "" || val === "0" ? undefined : Number(val)
+                    );
+                  }}
                   className={`max-w-xs h-11 ${
                     isQuantityBelowMin ? "border-destructive" : ""
                   }`}
                 />
+                {/* #region agent log */}
+                {(() => {
+                  if (isQuantityBelowMin) {
+                    fetch(
+                      "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          location: "DesignModal.tsx:519",
+                          message:
+                            "isQuantityBelowMin is true, will show error message",
+                          data: {
+                            isQuantityBelowMin,
+                            minQuantity: formData.minQuantity,
+                            minQuantityFormatted:
+                              formData.minQuantity?.toLocaleString("vi-VN"),
+                            quantity: formData.quantity,
+                          },
+                          timestamp: Date.now(),
+                          sessionId: "debug-session",
+                          runId: "run1",
+                          hypothesisId: "D",
+                        }),
+                      }
+                    ).catch(() => {});
+                  }
+                  return null;
+                })()}
+                {/* #endregion */}
                 {isQuantityBelowMin && (
                   <p className="text-xs text-destructive">
                     Số lượng nhỏ hơn mức tối thiểu (
@@ -519,67 +767,112 @@ export const DesignModal: React.FC<DesignModalProps> = ({
           {/* Step 2: Advanced Options - Số mặt in, Quy trình sản xuất, Yêu cầu, Ghi chú */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              {/* Dynamic classifications - Số mặt in, Quy trình sản xuất - Cùng một hàng */}
-              {selectedMaterial?.classifications &&
-                Array.isArray(selectedMaterial.classifications) &&
-                selectedMaterial.classifications.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedMaterial.classifications.map((cls) => (
-                      <div key={cls.id} className="space-y-3">
-                        <Label className="text-sm font-medium">
-                          {cls.classificationName}{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <div className="flex flex-wrap gap-2">
-                          {cls.options.map((opt) => {
-                            const isSelected =
-                              cls.classificationKey === "sides"
-                                ? formData.sidesClassificationOptionId ===
-                                  opt.id
-                                : formData.processClassificationOptionId ===
-                                  opt.id;
-
-                            return (
-                              <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() => {
-                                  if (cls.classificationKey === "sides") {
-                                    updateField(
-                                      "sidesClassificationOptionId",
-                                      opt.id
-                                    );
-                                  } else {
-                                    updateField(
-                                      "processClassificationOptionId",
-                                      opt.id
-                                    );
+              {/* Classifications - Số mặt in, Quy trình sản xuất - Based on rules */}
+              {(shouldShowSidesClassification ||
+                shouldShowProcessClassification ||
+                isTui) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Số mặt in - chỉ hiển thị khi cần chọn (không phải túi) */}
+                  {shouldShowSidesClassification && !isTui && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">
+                        Số mặt in <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(
+                          ENTITY_CONFIG.sidesClassification.values
+                        ).map(([key, label]) => {
+                          const isSelected =
+                            formData.sidesClassification === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => {
+                                updateField("sidesClassification", key);
+                              }}
+                              disabled={!!isExistingDesign}
+                              className={`
+                                  px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all
+                                  ${
+                                    isSelected
+                                      ? "border-primary bg-primary text-primary-foreground"
+                                      : "border-border hover:border-primary/50"
                                   }
-                                }}
-                                disabled={!!isExistingDesign}
-                                className={`
-                                px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all
-                                ${
-                                  isSelected
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : "border-border hover:border-primary/50"
-                                }
-                                ${
-                                  isExistingDesign
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : ""
-                                }
-                              `}
-                              >
-                                {opt.value}
-                              </button>
-                            );
-                          })}
-                        </div>
+                                  ${
+                                    isExistingDesign
+                                      ? "opacity-50 cursor-not-allowed"
+                                      : ""
+                                  }
+                                `}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
+
+                  {/* Túi: mặc định 2 mặt, chỉ hiển thị thông tin (không cho chọn) */}
+                  {isTui && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Số mặt in</Label>
+                      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                        <Badge variant="outline" className="text-sm">
+                          {ENTITY_CONFIG.sidesClassification.values.two_side}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          (Mặc định cho loại túi)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quy trình sản xuất */}
+                  {shouldShowProcessClassification && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">
+                        Quy trình sản xuất{" "}
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(
+                          ENTITY_CONFIG.processClassification.values
+                        ).map(([key, label]) => {
+                          const isSelected =
+                            formData.processClassification === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => {
+                                updateField("processClassification", key);
+                              }}
+                              disabled={!!isExistingDesign}
+                              className={`
+                                  px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all
+                                  ${
+                                    isSelected
+                                      ? "border-primary bg-primary text-primary-foreground"
+                                      : "border-border hover:border-primary/50"
+                                  }
+                                  ${
+                                    isExistingDesign
+                                      ? "opacity-50 cursor-not-allowed"
+                                      : ""
+                                  }
+                                `}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Cán màn - Bắt buộc */}
               <div className="space-y-3">
