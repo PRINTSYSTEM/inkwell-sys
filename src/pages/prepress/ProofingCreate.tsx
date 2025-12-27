@@ -26,7 +26,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LayoutGrid, List, Plus, FolderTree, FileText } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  Plus,
+  FolderTree,
+  FileText,
+  Loader2,
+} from "lucide-react";
 import { useAvailableOrderDetailsForProofing } from "@/hooks";
 import {
   useCreateProofingOrderFromDesigns,
@@ -63,7 +70,9 @@ export default function ProofingOrderPage() {
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [designsWithQuantity, setDesignsWithQuantity] = useState<DesignItem[]>([]);
+  const [designsWithQuantity, setDesignsWithQuantity] = useState<DesignItem[]>(
+    []
+  );
   const [loadingQuantities, setLoadingQuantities] = useState(false);
 
   // API call with smart filtering
@@ -203,20 +212,23 @@ export default function ProofingOrderPage() {
 
   // Hooks for modal
   const { data: paperSizes } = usePaperSizes();
-  const { mutate: createProofingOrder, loading: isCreating } = useCreateProofingOrderFromDesigns();
+  const { mutate: createProofingOrder, loading: isCreating } =
+    useCreateProofingOrderFromDesigns();
 
   const handleCreateOrderSuccess = () => {
     clearSelection();
     setDesignsWithQuantity([]);
   };
 
-  const handleSubmitProofingOrder = async (data: Parameters<typeof createProofingOrder>[0]) => {
+  const handleSubmitProofingOrder = async (
+    data: Parameters<typeof createProofingOrder>[0]
+  ) => {
     await createProofingOrder(data);
   };
 
   const handleOpenModal = async () => {
     if (selectedDesigns.length === 0) return;
-    
+
     setLoadingQuantities(true);
 
     // Fetch available quantities for all selected designs in parallel
@@ -530,7 +542,9 @@ export default function ProofingOrderPage() {
       <CreateProofingOrderModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
-        selectedDesigns={designsWithQuantity.length > 0 ? designsWithQuantity : selectedDesigns}
+        selectedDesigns={
+          designsWithQuantity.length > 0 ? designsWithQuantity : selectedDesigns
+        }
         paperSizes={paperSizes}
         onSubmit={handleSubmitProofingOrder}
         isSubmitting={isCreating}

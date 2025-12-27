@@ -158,7 +158,7 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             orderCode: design.latestOrderCode || "",
             customerName: design.customer?.name || "",
             customerCompanyName: design.customer?.companyName || "",
-            processClassificationOptionName: design.processClassificationOption?.value || undefined,
+            processClassificationOptionName: design.processClassification || undefined,
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
             designId: design.id, // Store designId for fetching available quantity later
@@ -700,6 +700,54 @@ export const useRecordDieExport = () => {
       const response = await apiRequest.post(
         API_SUFFIX.PROOFING_RECORD_DIE(id),
         request
+      );
+      return ProofingOrderResponseSchema.parse(response.data);
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
+      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
+      toast.success("Ghi nhận khuôn bế thành công", {
+        description: "Thông tin khuôn bế đã được lưu lại.",
+      });
+    },
+    onError: (error: ApiError) => {
+      toast.error("Ghi nhận khuôn bế thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+// Upload file trực tiếp vào endpoint die-export
+export const useRecordDieExportWithFile = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      file,
+      notes,
+    }: {
+      id: number;
+      file?: File | null;
+      notes?: string | null;
+    }) => {
+      const formData = new FormData();
+      if (file) {
+        formData.append("imageFile", file);
+      }
+      if (notes) {
+        formData.append("notes", notes);
+      }
+
+      const response = await apiRequest.post(
+        API_SUFFIX.PROOFING_RECORD_DIE(id),
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
       return ProofingOrderResponseSchema.parse(response.data);
     },

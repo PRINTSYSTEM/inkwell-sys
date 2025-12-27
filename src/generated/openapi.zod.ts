@@ -92,6 +92,8 @@ const ConstantsResponse = z
     paymentMethods: ConstantGroup,
     commonStatuses: ConstantGroup,
     laminationTypes: ConstantGroup,
+    sidesClassification: ConstantGroup,
+    processClassification: ConstantGroup,
   })
   .partial();
 const CreateCustomerRequest = z.object({
@@ -406,10 +408,7 @@ const DesignResponse = z
     areaM2: z.number().nullable(),
     sidesClassification: z.string().nullable(),
     processClassification: z.string().nullable(),
-    sidesClassificationName: z.string().nullable(),
-    processClassificationName: z.string().nullable(),
     laminationType: z.string().nullable(),
-    laminationTypeName: z.string().nullable(),
     designFileUrl: z.string().nullable(),
     designImageUrl: z.string().nullable(),
     excelFileUrl: z.string().nullable(),

@@ -94,7 +94,8 @@ export default function ProofingOrderDetailPage() {
   // Use raw response directly instead of strict schema parsing
   // Schema validation is too strict for API responses with nullable fields
   // For display-only detail view, we can safely use raw data
-  type ProofingOrderResponse = import("@/Schema/proofing-order.schema").ProofingOrderResponse;
+  type ProofingOrderResponse =
+    import("@/Schema/proofing-order.schema").ProofingOrderResponse;
   const order = orderResp as ProofingOrderResponse | null;
   const orderDesigns = order?.proofingOrderDesigns ?? [];
 
@@ -201,7 +202,6 @@ export default function ProofingOrderDetailPage() {
     }
   };
 
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
@@ -248,9 +248,7 @@ export default function ProofingOrderDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold">
-              {order.code}
-            </h1>
+            <h1 className="text-xl font-semibold">{order.code}</h1>
             <p className="text-xs text-muted-foreground">
               Chi tiết lệnh bình bài
             </p>
@@ -362,7 +360,9 @@ export default function ProofingOrderDetailPage() {
                     Chất liệu
                   </Label>
                   <div>
-                    <p className="font-medium text-sm">{order.materialType?.name || "—"}</p>
+                    <p className="font-medium text-sm">
+                      {order.materialType?.name || "—"}
+                    </p>
                     <p className="text-[10px] text-muted-foreground">
                       {order.materialType?.code || "—"}
                     </p>
@@ -373,7 +373,8 @@ export default function ProofingOrderDetailPage() {
                     <Label className="text-muted-foreground text-[10px] font-normal">
                       Preview ảnh
                     </Label>
-                    <div className="relative group h-20 rounded border overflow-hidden bg-muted cursor-pointer"
+                    <div
+                      className="relative group h-20 rounded border overflow-hidden bg-muted cursor-pointer"
                       onClick={() => {
                         setViewingImageUrl(order.imageUrl!);
                         setImageViewerOpen(true);
@@ -429,7 +430,10 @@ export default function ProofingOrderDetailPage() {
                     className="gap-1.5 h-7 text-xs"
                     onClick={() => {
                       if (order.proofingFileUrl) {
-                        downloadFile(order.proofingFileUrl, order.code || `BB-${order.id}`);
+                        downloadFile(
+                          order.proofingFileUrl,
+                          order.code || `BB-${order.id}`
+                        );
                       }
                     }}
                   >
@@ -465,15 +469,29 @@ export default function ProofingOrderDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="h-9">
-                      <TableHead className="h-9 px-2 text-[10px]">Ảnh</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">
+                        Ảnh
+                      </TableHead>
                       <TableHead className="h-9 px-2 text-[10px]">Mã</TableHead>
-                      <TableHead className="h-9 px-2 text-[10px]">Tên</TableHead>
-                      <TableHead className="h-9 px-2 text-[10px]">Kích thước</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">
+                        Tên
+                      </TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">
+                        Kích thước
+                      </TableHead>
                       <TableHead className="h-9 px-2 text-[10px]">SL</TableHead>
-                      <TableHead className="h-9 px-2 text-[10px]">Mặt</TableHead>
-                      <TableHead className="h-9 px-2 text-[10px]">Quy trình</TableHead>
-                      <TableHead className="h-9 px-2 text-[10px]">Cán màn</TableHead>
-                      <TableHead className="h-9 px-2 text-right text-[10px]">Thao tác</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">
+                        Mặt
+                      </TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">
+                        Quy trình
+                      </TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">
+                        Cán màn
+                      </TableHead>
+                      <TableHead className="h-9 px-2 text-right text-[10px]">
+                        Thao tác
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -482,7 +500,9 @@ export default function ProofingOrderDetailPage() {
                         <TableCell className="px-2 py-1">
                           {pod.design.designImageUrl ? (
                             <img
-                              src={pod.design.designImageUrl || "/placeholder.svg"}
+                              src={
+                                pod.design.designImageUrl || "/placeholder.svg"
+                              }
                               alt={pod.design.designName}
                               className="w-10 h-10 object-cover rounded border"
                             />
@@ -493,7 +513,9 @@ export default function ProofingOrderDetailPage() {
                           )}
                         </TableCell>
                         <TableCell className="px-2 py-1">
-                          <p className="font-medium text-xs">{pod.design.code}</p>
+                          <p className="font-medium text-xs">
+                            {pod.design.code}
+                          </p>
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <div>
@@ -507,33 +529,39 @@ export default function ProofingOrderDetailPage() {
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <div className="text-xs">
-                            <p>{pod.design.width} × {pod.design.height} cm</p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {pod.design.areaCm2} cm²
+                            <p>
+                              {pod.design.width} × {pod.design.height} cm
                             </p>
+                            {pod.design.areaM2 && (
+                              <p className="text-[10px] text-muted-foreground">
+                                {(pod.design.areaM2 * 10000).toFixed(0)} cm²
+                              </p>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="px-2 py-1">
-                          <p className="text-xs">{pod.quantity.toLocaleString()}</p>
+                          <p className="text-xs">
+                            {pod.quantity.toLocaleString()}
+                          </p>
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <span className="text-xs">
-                            {pod.design.sidesClassificationOption?.value || "—"}
+                            {pod.design.sidesClassification || "—"}
                           </span>
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <span className="text-xs">
-                            {pod.design.processClassificationOption?.value || "—"}
+                            {pod.design.processClassification || "—"}
                           </span>
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <span className="text-xs">
-                            {pod.laminationType
-                              ? pod.laminationType === "bóng"
+                            {pod.design.laminationType
+                              ? pod.design.laminationType === "bóng"
                                 ? "Bóng"
-                                : pod.laminationType === "mờ"
-                                ? "Mờ"
-                                : pod.laminationType
+                                : pod.design.laminationType === "mờ"
+                                  ? "Mờ"
+                                  : pod.design.laminationType
                               : "—"}
                           </span>
                         </TableCell>
@@ -659,7 +687,8 @@ export default function ProofingOrderDetailPage() {
                 {order.dieExport ? (
                   <div className="bg-muted/30 rounded p-2 text-xs space-y-1">
                     {order.dieExport?.imageUrl && (
-                      <div className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer"
+                      <div
+                        className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer"
                         onClick={() => {
                           setViewingImageUrl(order.dieExport?.imageUrl || null);
                           setImageViewerOpen(true);
@@ -733,7 +762,9 @@ export default function ProofingOrderDetailPage() {
                     <UserIcon className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-xs">{order.createdBy?.fullName || "—"}</p>
+                    <p className="font-medium text-xs">
+                      {order.createdBy?.fullName || "—"}
+                    </p>
                     <p className="text-[10px] text-muted-foreground">
                       {order.createdBy?.email || "—"}
                     </p>
@@ -753,14 +784,18 @@ export default function ProofingOrderDetailPage() {
                       <UserIcon className="h-3.5 w-3.5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="font-medium text-xs">{order.assignedTo.fullName}</p>
+                      <p className="font-medium text-xs">
+                        {order.assignedTo.fullName}
+                      </p>
                       <p className="text-[10px] text-muted-foreground">
                         {order.assignedTo.email}
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">Chưa phân công</p>
+                  <p className="text-xs text-muted-foreground">
+                    Chưa phân công
+                  </p>
                 )}
               </div>
 
@@ -781,10 +816,13 @@ export default function ProofingOrderDetailPage() {
                         </p>
                         {order.approvedAt && (
                           <p className="text-[10px] text-muted-foreground">
-                            {new Date(order.approvedAt).toLocaleString("vi-VN", {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })}
+                            {new Date(order.approvedAt).toLocaleString(
+                              "vi-VN",
+                              {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              }
+                            )}
                           </p>
                         )}
                       </div>
@@ -831,13 +869,16 @@ export default function ProofingOrderDetailPage() {
                   Chất liệu
                 </Label>
                 <div className="text-xs space-y-0.5">
-                  <p className="font-medium">{order.materialType?.name || "—"}</p>
+                  <p className="font-medium">
+                    {order.materialType?.name || "—"}
+                  </p>
                   <p className="text-[10px] text-muted-foreground font-mono">
                     {order.materialType?.code || "—"}
                   </p>
-                  {order.materialType?.pricePerCm2 && (
+                  {order.materialType?.pricePerM2 && (
                     <p className="text-[10px]">
-                      Giá: {order.materialType.pricePerCm2.toFixed(4)} đ/cm²
+                      Giá: {(order.materialType.pricePerM2 / 10000).toFixed(4)}{" "}
+                      đ/cm²
                     </p>
                   )}
                 </div>

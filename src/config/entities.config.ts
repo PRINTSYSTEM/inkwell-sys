@@ -136,4 +136,20 @@ export const ENTITY_CONFIG = {
       matte: "Cán mờ",
     },
   },
+  sidesClassification: {
+    entityType: "Design,OrderDetail",
+    description: "Loại mặt",
+    values: {
+      one_side: "1 mặt",
+      two_side: "2 mặt",
+    },
+  },
+  processClassification: {
+    entityType: "Design,OrderDetail",
+    description: "Loại quy trình",
+    values: {
+      cut: "Cắt",
+      die_cut: "Bế",
+    },
+  },
 };

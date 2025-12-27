@@ -117,8 +117,15 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    overscroll-behavior-y: none;
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
+    overscroll-behavior-y: none;
+    overflow-x: hidden;
   }
 }
 

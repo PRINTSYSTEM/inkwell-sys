@@ -115,10 +115,6 @@ export default function OrderCreatePage() {
     notes: "",
     deliveryDate: "",
     deliveryAddress: "",
-    recipientCustomerId: null as number | null,
-    recipientName: "",
-    recipientPhone: "",
-    recipientAddress: "",
   });
 
   // Designs state
@@ -319,43 +315,7 @@ export default function OrderCreatePage() {
           };
         } else {
           // New design: include all fields
-          // Get classification values from option IDs
-          let sidesClassification: string | null = null;
-          let processClassification: string | null = null;
-
-          if (design.materialTypeId > 0) {
-            const material = materials.find(
-              (m) => m.id === design.materialTypeId
-            );
-            if (material?.classifications) {
-              // Find sides classification value
-              if (design.sidesClassificationOptionId) {
-                const sidesClass = material.classifications.find(
-                  (c) => c.classificationKey === "sides"
-                );
-                const sidesOption = sidesClass?.options.find(
-                  (o) => o.id === design.sidesClassificationOptionId
-                );
-                if (sidesOption) {
-                  sidesClassification = sidesOption.value;
-                }
-              }
-
-              // Find process classification value
-              if (design.processClassificationOptionId) {
-                const processClass = material.classifications.find(
-                  (c) => c.classificationKey === "process"
-                );
-                const processOption = processClass?.options.find(
-                  (o) => o.id === design.processClassificationOptionId
-                );
-                if (processOption) {
-                  processClassification = processOption.value;
-                }
-              }
-            }
-          }
-
+          // Use classification values directly from form (no longer from material)
           return {
             designTypeId: design.designTypeId > 0 ? design.designTypeId : null,
             materialTypeId:
@@ -368,8 +328,8 @@ export default function OrderCreatePage() {
             length: design.length && design.length > 0 ? design.length : null,
             width: design.width && design.width > 0 ? design.width : null,
             height: design.height && design.height > 0 ? design.height : null,
-            sidesClassification: sidesClassification,
-            processClassification: processClassification,
+            sidesClassification: design.sidesClassification || null,
+            processClassification: design.processClassification || null,
             requirements: design.requirements?.trim() || null,
             additionalNotes: design.additionalNotes?.trim() || null,
             quantity: design.quantity,
@@ -386,10 +346,10 @@ export default function OrderCreatePage() {
           : null,
         note: formData.notes?.trim() || null,
         deliveryAddress: formData.deliveryAddress?.trim() || null,
-        recipientCustomerId: formData.recipientCustomerId || null,
-        recipientName: formData.recipientName?.trim() || null,
-        recipientPhone: formData.recipientPhone?.trim() || null,
-        recipientAddress: formData.recipientAddress?.trim() || null,
+        recipientCustomerId: null,
+        recipientName: null,
+        recipientPhone: null,
+        recipientAddress: null,
         designRequests: designRequests,
       };
 
@@ -605,77 +565,6 @@ export default function OrderCreatePage() {
                     <p className="text-xs text-muted-foreground">
                       {formData.deliveryAddress.length}/500 ký tự
                     </p>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">
-                        Người nhận (nếu khác khách hàng)
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Để trống nếu người nhận là khách hàng đã chọn
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">
-                        Tên người nhận
-                      </Label>
-                      <Input
-                        placeholder="Nhập tên người nhận..."
-                        value={formData.recipientName}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            recipientName: e.target.value,
-                          }))
-                        }
-                        className="bg-background h-10 text-sm"
-                        maxLength={255}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">
-                        Số điện thoại người nhận
-                      </Label>
-                      <Input
-                        placeholder="Nhập SĐT người nhận..."
-                        value={formData.recipientPhone}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            recipientPhone: e.target.value,
-                          }))
-                        }
-                        className="bg-background h-10 text-sm"
-                        maxLength={20}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">
-                        Địa chỉ người nhận
-                      </Label>
-                      <Textarea
-                        placeholder="Nhập địa chỉ người nhận..."
-                        value={formData.recipientAddress}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            recipientAddress: e.target.value,
-                          }))
-                        }
-                        rows={2}
-                        className="resize-none bg-background text-sm"
-                        maxLength={500}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {formData.recipientAddress.length}/500 ký tự
-                      </p>
-                    </div>
                   </div>
                 </CardContent>
               </Card>

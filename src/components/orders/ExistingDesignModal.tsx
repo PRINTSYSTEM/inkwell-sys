@@ -169,7 +169,7 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                 )}
 
                 {/* Số mặt in */}
-                {design.sidesClassificationOption && (
+                {design.sidesClassification && (
                   <div className="flex items-start gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="min-w-0 flex-1">
@@ -177,14 +177,14 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                         Số mặt in
                       </p>
                       <p className="text-sm font-medium">
-                        {design.sidesClassificationOption.value}
+                        {design.sidesClassification}
                       </p>
                     </div>
                   </div>
                 )}
 
                 {/* Quy trình sản xuất */}
-                {design.processClassificationOption && (
+                {design.processClassification && (
                   <div className="flex items-start gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="min-w-0 flex-1">
@@ -192,7 +192,7 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                         Quy trình sản xuất
                       </p>
                       <p className="text-sm font-medium">
-                        {design.processClassificationOption.value}
+                        {design.processClassification}
                       </p>
                     </div>
                   </div>
