@@ -19,7 +19,9 @@ export * from "./params.schema";
 export * from "./paper-size.schema";
 export * from "./plate-export.schema";
 export * from "./die-export.schema";
-export * from "./plate-vendor.schema";
+export * from "./vendor.schema";
+export * from "./stock.schema";
+export * from "./report.schema";
 
 // Re-export zod for convenience
 import { z } from "zod";

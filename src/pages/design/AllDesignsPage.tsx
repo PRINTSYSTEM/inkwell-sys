@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -14,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Eye, Package, Ruler } from "lucide-react";
 import { useDesigns, useFilters } from "@/hooks";
 import type { DesignResponse } from "@/Schema";
+import { designStatusLabels } from "@/lib/status-utils";
 import {
   Table,
   TableHeader,
@@ -98,34 +100,6 @@ export default function AllDesignsPage() {
       filterState.filters["designTypeId"]?.value as number | undefined
     )?.toString() ?? "all";
 
-  const getStatusBadge = (status: string | null | undefined) => {
-    const statusMap: Record<
-      string,
-      {
-        label: string;
-        variant: "default" | "secondary" | "destructive" | "outline";
-      }
-    > = {
-      received_info: { label: "Nhận thông tin", variant: "default" },
-      designing: { label: "Đang thiết kế", variant: "secondary" },
-      editing: { label: "Đang chỉnh sửa", variant: "secondary" },
-      waiting_for_customer_approval: {
-        label: "Chờ khách duyệt",
-        variant: "outline",
-      },
-      confirmed_for_printing: { label: "Đã chốt in", variant: "default" },
-    };
-    const config = statusMap[status || ""] || {
-      label: status || "N/A",
-      variant: "default",
-    };
-    return (
-      <Badge variant={config.variant} className="font-medium">
-        {config.label}
-      </Badge>
-    );
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -180,15 +154,11 @@ export default function AllDesignsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="received_info">Nhận thông tin</SelectItem>
-                  <SelectItem value="designing">Đang thiết kế</SelectItem>
-                  <SelectItem value="editing">Đang chỉnh sửa</SelectItem>
-                  <SelectItem value="waiting_for_customer_approval">
-                    Chờ khách duyệt
-                  </SelectItem>
-                  <SelectItem value="confirmed_for_printing">
-                    Đã chốt in
-                  </SelectItem>
+                  {Object.entries(designStatusLabels).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -262,7 +232,16 @@ export default function AllDesignsPage() {
                         <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                           {design.latestRequirements || "—"}
                         </TableCell>
-                        <TableCell>{getStatusBadge(design.status)}</TableCell>
+                        <TableCell>
+                          <StatusBadge
+                            status={design.status || ""}
+                            label={
+                              designStatusLabels[design.status || ""] ||
+                              design.status ||
+                              "N/A"
+                            }
+                          />
+                        </TableCell>
                         <TableCell>{design.designType?.name || "—"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1 font-mono text-[11px]">

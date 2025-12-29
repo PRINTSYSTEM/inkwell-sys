@@ -1,4 +1,4 @@
-import { FilterOption, ViewFilter, SortOption } from '@/types/proofing';
+import type { FilterOption, ViewFilter, SortOption } from '@/types/proofing';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {

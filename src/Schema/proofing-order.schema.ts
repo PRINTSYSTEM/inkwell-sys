@@ -16,7 +16,6 @@ import {
   CreateProofingOrderFromDesignsRequestSchema as GenCreateProofingOrderFromDesignsRequestSchema,
   CreateProofingOrderDetailItemSchema as GenCreateProofingOrderDetailItemSchema,
   UpdateProofingOrderRequestSchema as GenUpdateProofingOrderRequestSchema,
-  ApproveProofingOrderRequestSchema as GenApproveProofingOrderRequestSchema,
 } from "./generated";
 
 // ===== ProofingOrderDesignResponse =====
@@ -90,13 +89,6 @@ export const UpdateProofingOrderRequestSchema =
   GenUpdateProofingOrderRequestSchema.passthrough();
 export type UpdateProofingOrderRequest = z.infer<
   typeof UpdateProofingOrderRequestSchema
->;
-
-// ===== ApproveProofingOrderRequest =====
-export const ApproveProofingOrderRequestSchema =
-  GenApproveProofingOrderRequestSchema.passthrough();
-export type ApproveProofingOrderRequest = z.infer<
-  typeof ApproveProofingOrderRequestSchema
 >;
 
 // ===== AvailableQuantityResponse =====

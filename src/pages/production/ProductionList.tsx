@@ -90,16 +90,36 @@ export default function ProductionListPage() {
     error,
   } = useProductions(queryParams);
 
+  // Try to parse with schema, but fallback to raw data if validation fails
+  // Similar to plate export issue - API returns 200 but schema validation might fail
   const parseProdResp = safeParseSchema(
     ProductionResponsePagedResponseSchema,
     productionsResp
   );
 
   // Memoize productions to prevent dependency warnings
-  const productions = useMemo<ProductionResponse[]>(
-    () => parseProdResp?.items || [],
-    [parseProdResp?.items]
-  );
+  // Use raw data if schema validation fails (API returned 200 but schema is too strict)
+  const productions = useMemo<ProductionResponse[]>(() => {
+    if (parseProdResp?.items) {
+      return parseProdResp.items;
+    }
+    // Fallback to raw data if parse failed but we have data
+    if (
+      productionsResp &&
+      typeof productionsResp === "object" &&
+      "items" in productionsResp
+    ) {
+      const rawItems = (productionsResp as { items?: unknown[] }).items;
+      if (Array.isArray(rawItems)) {
+        console.warn(
+          "Schema validation failed for productions response, using raw data:",
+          productionsResp
+        );
+        return rawItems as ProductionResponse[];
+      }
+    }
+    return [];
+  }, [parseProdResp?.items, productionsResp]);
 
   const { mutate: createProduction, isPending: creating } =
     useCreateProduction();

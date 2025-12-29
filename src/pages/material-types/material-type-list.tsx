@@ -1,5 +1,3 @@
-"use client";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,55 +41,58 @@ export function MaterialTypeList({
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
-            <TableHead className="w-[100px]">Thứ tự</TableHead>
-            <TableHead className="w-[120px]">Mã</TableHead>
-            <TableHead>Tên chất liệu</TableHead>
-            <TableHead className="text-right w-[140px]">Giá/m²</TableHead>
-            <TableHead className="text-right w-[140px]">
-              Số lượng tối thiểu
+            <TableHead className="w-[80px] text-center">Thứ tự</TableHead>
+            <TableHead className="w-[140px]">Mã chất liệu</TableHead>
+            <TableHead className="min-w-[200px]">Tên chất liệu</TableHead>
+            <TableHead className="w-[150px] text-right">Giá/m²</TableHead>
+            <TableHead className="w-[130px] text-right">
+              SL tối thiểu
             </TableHead>
-            <TableHead className="w-[120px]">Trạng thái</TableHead>
-            <TableHead className="text-right w-[120px]">Thao tác</TableHead>
+            <TableHead className="w-[110px] text-center">Trạng thái</TableHead>
+            <TableHead className="w-[100px] text-center">Thao tác</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {materials.map((material) => (
             <TableRow key={material.id} className="hover:bg-muted/30">
-              <TableCell>
+              <TableCell className="text-center">
                 <Badge variant="outline" className="font-mono text-xs">
                   #{material.displayOrder}
                 </Badge>
               </TableCell>
               <TableCell>
-                <Badge variant="secondary" className="font-mono">
+                <Badge variant="secondary" className="font-mono text-xs">
                   {material.code}
                 </Badge>
               </TableCell>
               <TableCell>
-                <div>
-                  <p className="font-medium">{material.name}</p>
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{material.name}</p>
                   {material.description && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                       {material.description}
                     </p>
                   )}
                 </div>
               </TableCell>
               <TableCell className="text-right">
-                <span className="font-semibold">
-                  {material.pricePerCm2?.toLocaleString("vi-VN") || "0"}
-                </span>
-                <span className="text-xs text-muted-foreground ml-1">đ</span>
+                <div className="flex items-center justify-end gap-1">
+                  <span className="font-semibold text-sm">
+                    {material.pricePerCm2
+                      ? (material.pricePerCm2 * 10000).toLocaleString("vi-VN")
+                      : "0"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">đ/m²</span>
+                </div>
               </TableCell>
-
               <TableCell className="text-right">
-                <span className="font-semibold">
+                <span className="font-semibold text-sm">
                   {material.minimumQuantity != null
                     ? material.minimumQuantity.toLocaleString("vi-VN")
                     : "-"}
                 </span>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-center">
                 <Badge
                   variant={
                     material.status === "active" ? "default" : "secondary"
@@ -106,12 +107,13 @@ export function MaterialTypeList({
                 </Badge>
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-1 justify-end">
+                <div className="flex items-center gap-1 justify-center">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onEdit(material)}
                     className="h-8 w-8 p-0"
+                    title="Chỉnh sửa"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -120,6 +122,7 @@ export function MaterialTypeList({
                     size="sm"
                     onClick={() => onDelete(material)}
                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    title="Xóa"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

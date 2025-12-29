@@ -16,6 +16,7 @@ import {
 import { CustomerSummaryResponseSchema } from "./customer.schema";
 import {
   DesignTimelineEntryResponseSchema as GenDesignTimelineEntryResponseSchema,
+  DesignTimelineEntryResponsePaginateSchema as GenDesignTimelineEntryResponsePaginateSchema,
   DesignResponseSchema as GenDesignResponseSchema,
   DesignResponsePaginateSchema as GenDesignResponsePaginateSchema,
   CreateDesignRequestSchema as GenCreateDesignRequestSchema,
@@ -28,6 +29,14 @@ export const DesignTimelineEntryResponseSchema =
   GenDesignTimelineEntryResponseSchema.passthrough();
 export type DesignTimelineEntryResponse = z.infer<
   typeof DesignTimelineEntryResponseSchema
+>;
+
+// Re-export generated paginate schema for compatibility
+export {
+  GenDesignTimelineEntryResponsePaginateSchema as DesignTimelineEntryResponsePaginateSchema,
+};
+export type DesignTimelineEntryResponsePaginate = z.infer<
+  typeof GenDesignTimelineEntryResponsePaginateSchema
 >;
 
 // ===== DesignResponse =====

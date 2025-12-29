@@ -45,6 +45,15 @@ export const {
 
 // === Nâng cao: list theo designTypeId ===
 // GET /designs/materials/design-type/{designTypeId}?status=...
+// API returns paginated response: { items: MaterialTypeResponse[], size, page, total, totalPages }
+type MaterialsByDesignTypeResponse = MaterialTypeResponse[] | {
+  items: MaterialTypeResponse[] | null;
+  size: number;
+  page: number;
+  total: number;
+  totalPages: number;
+};
+
 export const useMaterialsByDesignType = (
   designTypeId?: number,
   status?: string
@@ -55,11 +64,19 @@ export const useMaterialsByDesignType = (
     enabled: !!designTypeId,
 
     queryFn: async () => {
-      const res = await apiRequest.get<MaterialTypeResponse[]>(
+      const res = await apiRequest.get<MaterialsByDesignTypeResponse>(
         API_SUFFIX.MATERIAL_TYPES_BY_DESIGN_TYPE(designTypeId!),
         { params: { status: status || "" } }
       );
-      return res.data;
+      
+      // Handle paginated response: extract items array
+      if (typeof res.data === 'object' && !Array.isArray(res.data) && 'items' in res.data) {
+        const paginatedData = res.data as { items?: MaterialTypeResponse[] | null };
+        return Array.isArray(paginatedData.items) ? paginatedData.items : [];
+      }
+      
+      // Handle direct array response
+      return Array.isArray(res.data) ? res.data : [];
     },
 
     placeholderData: [],

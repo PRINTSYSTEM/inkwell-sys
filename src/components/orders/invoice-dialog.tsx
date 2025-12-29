@@ -57,7 +57,8 @@ export function InvoiceDialog({
     onOpenChange(false);
   };
 
-  const invoicesList = invoices || [];
+  // API returns InvoiceResponsePaginate, extract items
+  const invoicesList = invoices?.items ?? [];
   const isPending = createInvoice.isPending;
 
   return (

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { DesignItem } from "@/types/proofing";
+import type { DesignItem } from "@/types/proofing";
 import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
 import type { CreateProofingOrderFromDesignsRequest } from "@/Schema/proofing-order.schema";
 import {
@@ -45,6 +45,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface CreateProofingOrderModalProps {
   open: boolean;
@@ -102,8 +103,10 @@ export function CreateProofingOrderModal({
   ) => {
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (!isNaN(numValue) && numValue >= 0) {
-      const maxAvailable = availableQty !== undefined ? availableQty : maxQty;
-      const clampedValue = Math.min(numValue, maxAvailable);
+      // Use availableQty if exists and valid (>= 0), otherwise use maxQty (which is quantity)
+      const maxAvailable =
+        availableQty !== undefined && availableQty >= 0 ? availableQty : maxQty;
+      const clampedValue = Math.min(Math.max(0, numValue), maxAvailable);
       setDesignQuantities((prev) => ({
         ...prev,
         [id]: clampedValue,
@@ -113,59 +116,90 @@ export function CreateProofingOrderModal({
 
   const handleSubmit = async () => {
     try {
+      // Validate totalQuantity: must be integer >= 1 and <= 2147483647 (schema requirement)
       if (
         !proofingSheetQuantity ||
         proofingSheetQuantity < 1 ||
-        !Number.isInteger(proofingSheetQuantity)
+        !Number.isInteger(proofingSheetQuantity) ||
+        proofingSheetQuantity > 2147483647
       ) {
-        alert("Vui lòng nhập số lượng tờ bình bài (lớn hơn 0)");
+        toast.error("Lỗi", {
+          description:
+            "Số lượng tờ bình bài phải là số nguyên từ 1 đến 2,147,483,647",
+        });
         return;
       }
 
+      // Validate design quantities
       const invalidDesigns = selectedDesigns.filter((design) => {
         const qty = designQuantities[design.id] || 0;
-        if (design.availableQuantity !== undefined) {
-          return qty > design.availableQuantity;
-        }
-        return qty > design.quantity;
+        if (qty <= 0) return false; // Skip validation for zero quantities
+
+        // Use availableQuantity if exists and valid (>= 0), otherwise use quantity
+        const maxAllowedQty =
+          design.availableQuantity !== undefined &&
+          design.availableQuantity >= 0
+            ? design.availableQuantity
+            : design.quantity;
+
+        return qty > maxAllowedQty;
       });
 
       if (invalidDesigns.length > 0) {
-        alert(
-          `Số lượng lấy vượt quá số lượng còn lại chưa bình bài cho ${invalidDesigns.length} thiết kế. Vui lòng kiểm tra lại.`
-        );
+        toast.error("Lỗi", {
+          description: `Số lượng lấy vượt quá số lượng còn lại chưa bình bài cho ${invalidDesigns.length} thiết kế. Vui lòng kiểm tra lại.`,
+        });
         return;
       }
 
+      // Build orderDetailItems - filter out zero quantities and validate
       const orderDetailItems = Object.entries(designQuantities)
         .filter(([_, qty]) => qty > 0)
-        .map(([id, qty]) => ({
-          orderDetailId: parseInt(id, 10),
-          quantity: qty,
-        }));
+        .map(([id, qty]) => {
+          const quantity = Number.isInteger(qty) ? qty : Math.floor(qty);
+          if (quantity <= 0) {
+            throw new Error("Số lượng phải lớn hơn 0");
+          }
+          return {
+            orderDetailId: parseInt(id, 10),
+            quantity: quantity,
+          };
+        });
 
       if (orderDetailItems.length === 0) {
-        alert(
-          "Vui lòng nhập số lượng lấy cho ít nhất một thiết kế (lớn hơn 0)"
-        );
+        toast.error("Lỗi", {
+          description:
+            "Vui lòng nhập số lượng lấy cho ít nhất một thiết kế (lớn hơn 0)",
+        });
         return;
       }
 
-      await onSubmit({
+      // Prepare request payload according to schema
+      const payload: CreateProofingOrderFromDesignsRequest = {
         orderDetailItems,
-        notes: notes || undefined,
-        totalQuantity: proofingSheetQuantity, // Tổng số lượng của các design
+        totalQuantity: proofingSheetQuantity,
+        notes: notes?.trim() || undefined,
         paperSizeId:
           paperSizeId === "none" || paperSizeId === "custom"
             ? undefined
             : Number(paperSizeId),
-        customPaperSize: paperSizeId === "custom" ? customPaperSize : undefined,
-      });
+        customPaperSize:
+          paperSizeId === "custom" && customPaperSize?.trim()
+            ? customPaperSize.trim()
+            : undefined,
+      };
 
+      // Submit to API
+      await onSubmit(payload);
+
+      // Only call onSuccess and close modal if submit succeeds
       onSuccess();
       onOpenChange(false);
     } catch (error) {
+      // Error is already handled by the onSubmit function (via hook)
+      // Just log for debugging
       console.error("Failed to create proofing order:", error);
+      // Don't close modal on error - let user fix and retry
     }
   };
 
@@ -232,16 +266,30 @@ export function CreateProofingOrderModal({
               <TableBody>
                 {selectedDesigns.map((design, index) => {
                   const currentQty = designQuantities[design.id] || 0;
-                  const maxQty =
-                    design.availableQuantity !== undefined
+
+                  // Determine the base quantity to use: availableQuantity if exists and valid, otherwise quantity
+                  const baseAvailableQty =
+                    design.availableQuantity !== undefined &&
+                    design.availableQuantity >= 0
                       ? design.availableQuantity
                       : design.quantity;
-                  const remainingQty =
-                    design.availableQuantity !== undefined
-                      ? design.availableQuantity - currentQty
-                      : design.quantity - currentQty;
+
+                  // Max quantity that can be taken (same as baseAvailableQty)
+                  const maxQty = baseAvailableQty;
+
+                  // Remaining quantity after taking currentQty
+                  const remainingQty = Math.max(
+                    0,
+                    baseAvailableQty - currentQty
+                  );
+
+                  // Validation states
                   const isValid = currentQty > 0 && currentQty <= maxQty;
                   const isExceeded = currentQty > maxQty;
+
+                  // Check if availableQuantity was provided (even if 0)
+                  const hasAvailableQuantity =
+                    design.availableQuantity !== undefined;
 
                   return (
                     <TableRow
@@ -271,16 +319,18 @@ export function CreateProofingOrderModal({
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        {design.availableQuantity !== undefined ? (
+                        {hasAvailableQuantity ? (
                           <span
                             className={cn(
                               "text-sm font-medium",
-                              design.availableQuantity > 0
+                              design.availableQuantity! > 0
                                 ? "text-green-600"
-                                : "text-red-600"
+                                : design.availableQuantity! === 0
+                                  ? "text-orange-600"
+                                  : "text-red-600"
                             )}
                           >
-                            {design.availableQuantity.toLocaleString()}
+                            {design.availableQuantity!.toLocaleString()}
                           </span>
                         ) : (
                           <span className="text-sm text-muted-foreground">
@@ -319,14 +369,14 @@ export function CreateProofingOrderModal({
                         <span
                           className={cn(
                             "text-sm font-medium",
-                            remainingQty >= 0
+                            remainingQty > 0
                               ? "text-blue-600"
-                              : "text-orange-600"
+                              : remainingQty === 0 && currentQty > 0
+                                ? "text-orange-600"
+                                : "text-muted-foreground"
                           )}
                         >
-                          {remainingQty >= 0
-                            ? remainingQty.toLocaleString()
-                            : "0"}
+                          {remainingQty.toLocaleString()}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
@@ -369,6 +419,7 @@ export function CreateProofingOrderModal({
                           id="proofingSheetQuantity"
                           type="number"
                           min="1"
+                          max="2147483647"
                           step="1"
                           className="pl-9 h-10 font-semibold"
                           placeholder="Nhập số lượng tờ bình bài"
@@ -379,8 +430,14 @@ export function CreateProofingOrderModal({
                               setProofingSheetQuantity(0);
                             } else {
                               const numValue = parseInt(value, 10);
-                              if (!isNaN(numValue) && numValue > 0) {
+                              if (
+                                !isNaN(numValue) &&
+                                numValue > 0 &&
+                                numValue <= 2147483647
+                              ) {
                                 setProofingSheetQuantity(numValue);
+                              } else if (numValue > 2147483647) {
+                                setProofingSheetQuantity(2147483647);
                               }
                             }
                           }}

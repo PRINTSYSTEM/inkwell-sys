@@ -158,8 +158,9 @@ export const useCustomerDebtHistory = (
     enabled: enabled && !!customerId,
     queryFn: async () => {
       const normalizedParams = normalizeParams(params ?? {});
+      // API returns CustomerDebtHistoryResponsePaginate
       const res =
-        await apiRequest.get<CustomerDebtHistoryResponsePagedResponse>(
+        await apiRequest.get<CustomerDebtHistoryResponsePaginate>(
           API_SUFFIX.CUSTOMER_DEBT_HISTORY(customerId as number),
           { params: normalizedParams }
         );

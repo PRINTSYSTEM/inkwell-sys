@@ -239,6 +239,11 @@ export default function DesignTypesPage() {
           description: "Đã thêm chất liệu mới",
         });
       },
+      onError: (error: Error) => {
+        toast.error("Lỗi", {
+          description: error.message || "Không thể thêm chất liệu",
+        });
+      },
     });
   };
 
@@ -254,6 +259,9 @@ export default function DesignTypesPage() {
       ...data
     } = updates as Record<string, unknown>;
 
+    // Get designTypeId from selectedDesignType or from updates
+    const designTypeId = selectedDesignType?.id || (updates as { designTypeId?: number })?.designTypeId;
+
     updateMaterialTypeMutation(
       {
         id,
@@ -262,11 +270,23 @@ export default function DesignTypesPage() {
       {
         onSuccess: () => {
           // Invalidate materials-by-design-type query to refresh the list
-          queryClient.invalidateQueries({
-            queryKey: ["materials-by-design-type"],
-          });
+          if (designTypeId) {
+            queryClient.invalidateQueries({
+              queryKey: ["materials-by-design-type", designTypeId],
+            });
+          } else {
+            // Fallback: invalidate all materials-by-design-type queries
+            queryClient.invalidateQueries({
+              queryKey: ["materials-by-design-type"],
+            });
+          }
           toast.success("Thành công", {
             description: "Đã cập nhật chất liệu",
+          });
+        },
+        onError: (error: Error) => {
+          toast.error("Lỗi", {
+            description: error.message || "Không thể cập nhật chất liệu",
           });
         },
       }
@@ -274,14 +294,29 @@ export default function DesignTypesPage() {
   };
 
   const handleDeleteMaterial = (id: number) => {
+    // Get designTypeId from selectedDesignType
+    const designTypeId = selectedDesignType?.id;
+
     deleteMaterialTypeMutation(id, {
       onSuccess: () => {
         // Invalidate materials-by-design-type query to refresh the list
-        queryClient.invalidateQueries({
-          queryKey: ["materials-by-design-type"],
-        });
+        if (designTypeId) {
+          queryClient.invalidateQueries({
+            queryKey: ["materials-by-design-type", designTypeId],
+          });
+        } else {
+          // Fallback: invalidate all materials-by-design-type queries
+          queryClient.invalidateQueries({
+            queryKey: ["materials-by-design-type"],
+          });
+        }
         toast.success("Thành công", {
           description: "Đã xóa chất liệu",
+        });
+      },
+      onError: (error: Error) => {
+        toast.error("Lỗi", {
+          description: error.message || "Không thể xóa chất liệu",
         });
       },
     });

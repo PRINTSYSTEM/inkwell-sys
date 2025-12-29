@@ -1,5 +1,3 @@
-"use client";
-
 import type React from "react";
 
 import { useState, useEffect } from "react";
@@ -271,9 +269,7 @@ export function MaterialTypeFormDialog({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="minimumQuantity">
-                Số lượng tối thiểu
-              </Label>
+              <Label htmlFor="minimumQuantity">Số lượng tối thiểu</Label>
               <Input
                 id="minimumQuantity"
                 type="number"
@@ -289,7 +285,8 @@ export function MaterialTypeFormDialog({
                 className="pr-12"
               />
               <p className="text-xs text-muted-foreground">
-                Số lượng tối thiểu khi đặt hàng với chất liệu này (để trống nếu không giới hạn)
+                Số lượng tối thiểu khi đặt hàng với chất liệu này (để trống nếu
+                không giới hạn)
               </p>
             </div>
           </div>

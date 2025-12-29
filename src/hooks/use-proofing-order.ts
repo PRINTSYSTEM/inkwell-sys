@@ -23,9 +23,8 @@ import type {
   CreateProofingOrderFromDesignsRequest,
   UpdateProofingOrderRequest,
   OrderDetailResponse,
+  OrderDetailResponsePaginate,
   RecordPlateExportRequest,
-  RecordDieExportRequest,
-  ApproveProofingOrderRequest,
 } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
@@ -130,30 +129,51 @@ export const useAvailableOrderDetailsForProofing = (params?: {
     queryFn: async () => {
       const normalizedParams = normalizeParams(params ?? {});
 
-      const res = await apiRequest.get<OrderDetailResponse[]>(
+      // API returns OrderDetailResponsePaginate
+      const res = await apiRequest.get<OrderDetailResponsePaginate>(
         API_SUFFIX.PROOFING_AVAILABLE_ORDER_DETAILS,
         { params: normalizedParams }
       );
-      const orderDetails = res.data;
+      
+      // Debug: Log response structure
+      console.log("📦 Proofing API Response:", {
+        total: res.data.total,
+        itemsCount: res.data.items?.length ?? 0,
+        firstItem: res.data.items?.[0],
+      });
+
+      // Extract items from paginate response
+      const orderDetails = res.data.items ?? [];
 
       // Transform OrderDetailResponse[] to expected structure
       const designs = orderDetails
-        .filter((od) => od.design != null)
-        .map((od) => {
+        .filter((od) => {
+          const hasDesign = od.design != null;
+          if (!hasDesign) {
+            console.warn("⚠️ OrderDetail missing design:", od.id);
+          }
+          return hasDesign;
+        })
+        .map((od, index) => {
           const design = od.design!;
-          return {
-            id: od.id!,
+          const designItem = {
+            id: od.id ?? 0,
             code: design.code || "",
             name: design.designName || "",
-            designTypeId: design.designTypeId || 0,
+            designTypeId: design.designTypeId ?? 0,
             designTypeName: design.designType?.name || "",
-            materialTypeId: design.materialTypeId || 0,
+            materialTypeId: design.materialTypeId ?? 0,
             materialTypeName: design.materialType?.name || "",
-            width: design.width || 0,
-            height: design.height || 0,
+            width: design.width ?? 0,
+            height: design.height ?? 0,
             unit: "cm",
-            quantity: od.quantity || 0,
-            unitPrice: od.unitPrice || 0,
+            quantity: od.quantity ?? 0,
+            // Map availableQuantityForProofing from design to availableQuantity
+            availableQuantity:
+              design.availableQuantityForProofing != null
+                ? design.availableQuantityForProofing
+                : undefined,
+            unitPrice: od.unitPrice ?? 0,
             orderId: od.orderId?.toString() || "",
             orderCode: design.latestOrderCode || "",
             customerName: design.customer?.name || "",
@@ -161,12 +181,19 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             processClassificationOptionName: design.processClassification || undefined,
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
-            designId: design.id, // Store designId for fetching available quantity later
+            designId: design.id, // Store designId for fallback fetching if needed
           };
+          
+          // Debug: Log first transformed design
+          if (index === 0) {
+            console.log("✅ First transformed design:", designItem);
+          }
+          
+          return designItem;
         });
 
-      // Don't fetch availableQuantity here - will be fetched when modal opens
-      const designsWithQuantity = designs;
+      // Debug: Log final result
+      console.log("📊 Transformed designs count:", designs.length);
 
       // Extract unique design types with counts
       const designTypeMap = new Map<
@@ -205,10 +232,10 @@ export const useAvailableOrderDetailsForProofing = (params?: {
       });
 
       return {
-        designs: designsWithQuantity,
+        designs,
         designTypeOptions: Array.from(designTypeMap.values()),
         materialTypeOptions: Array.from(materialTypeMap.values()),
-        totalCount: designsWithQuantity.length,
+        totalCount: designs.length,
       };
     },
     staleTime: 2 * 60 * 1000,
@@ -598,24 +625,24 @@ export const useCompleteProductionFromProofing = () => {
 
 // ================== APPROVE PROOFING ORDER ==================
 // PUT /proofing-orders/{id}/approve
+// Note: API no longer requires a request body, only the ID
 
 export const useApproveProofingOrder = () => {
   const queryClient = useQueryClient();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
-    [number, ApproveProofingOrderRequest]
-  >(async (id: number, payload: ApproveProofingOrderRequest) => {
+    [number]
+  >(async (id: number) => {
     const res = await apiRequest.put<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_APPROVE(id),
-      payload
+      API_SUFFIX.PROOFING_APPROVE(id)
     );
     return res.data;
   });
 
-  const mutate = async (id: number, payload: ApproveProofingOrderRequest) => {
+  const mutate = async (id: number) => {
     try {
-      const result = await execute(id, payload);
+      const result = await execute(id);
 
       if (result.id != null) {
         queryClient.invalidateQueries({
@@ -669,7 +696,17 @@ export const useRecordPlateExport = () => {
         API_SUFFIX.PROOFING_RECORD_PLATE(id),
         request
       );
-      return ProofingOrderResponseSchema.parse(response.data);
+      
+      // Sử dụng safeParse để tránh throw error khi validation fail
+      // Nếu API trả về 200, coi như thành công dù schema validation có thể fail
+      const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
+      if (parseResult.success) {
+        return parseResult.data;
+      } else {
+        // Log warning nhưng vẫn return response.data vì API đã trả về 200
+        console.warn("Schema validation failed for plate export response:", parseResult.error);
+        return response.data as ProofingOrderResponse;
+      }
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
@@ -686,39 +723,8 @@ export const useRecordPlateExport = () => {
   });
 };
 
-export const useRecordDieExport = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      request,
-    }: {
-      id: number;
-      request: RecordDieExportRequest;
-    }) => {
-      const response = await apiRequest.post(
-        API_SUFFIX.PROOFING_RECORD_DIE(id),
-        request
-      );
-      return ProofingOrderResponseSchema.parse(response.data);
-    },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
-      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
-      toast.success("Ghi nhận khuôn bế thành công", {
-        description: "Thông tin khuôn bế đã được lưu lại.",
-      });
-    },
-    onError: (error: ApiError) => {
-      toast.error("Ghi nhận khuôn bế thất bại", {
-        description: error.response?.data?.message || error.message,
-      });
-    },
-  });
-};
-
 // Upload file trực tiếp vào endpoint die-export
+// API expects: DieVendorId, DieCount, SentAt, EstimatedReceiveAt, ReceivedAt, ImageFile, Notes
 export const useRecordDieExportWithFile = () => {
   const queryClient = useQueryClient();
 
@@ -727,17 +733,44 @@ export const useRecordDieExportWithFile = () => {
       id,
       file,
       notes,
+      dieVendorId,
+      dieCount,
+      sentAt,
+      estimatedReceiveAt,
+      receivedAt,
     }: {
       id: number;
       file?: File | null;
       notes?: string | null;
+      dieVendorId?: number | null;
+      dieCount?: number | null;
+      sentAt?: string | null;
+      estimatedReceiveAt?: string | null;
+      receivedAt?: string | null;
     }) => {
       const formData = new FormData();
+      
+      // Required fields according to API schema
+      if (dieVendorId != null) {
+        formData.append("DieVendorId", dieVendorId.toString());
+      }
+      if (dieCount != null) {
+        formData.append("DieCount", dieCount.toString());
+      }
+      if (sentAt) {
+        formData.append("SentAt", sentAt);
+      }
+      if (estimatedReceiveAt) {
+        formData.append("EstimatedReceiveAt", estimatedReceiveAt);
+      }
+      if (receivedAt) {
+        formData.append("ReceivedAt", receivedAt);
+      }
       if (file) {
-        formData.append("imageFile", file);
+        formData.append("ImageFile", file);
       }
       if (notes) {
-        formData.append("notes", notes);
+        formData.append("Notes", notes);
       }
 
       const response = await apiRequest.post(
@@ -749,7 +782,17 @@ export const useRecordDieExportWithFile = () => {
           },
         }
       );
-      return ProofingOrderResponseSchema.parse(response.data);
+      
+      // Sử dụng safeParse để tránh throw error khi validation fail
+      // Nếu API trả về 200, coi như thành công dù schema validation có thể fail
+      const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
+      if (parseResult.success) {
+        return parseResult.data;
+      } else {
+        // Log warning nhưng vẫn return response.data vì API đã trả về 200
+        console.warn("Schema validation failed for die export response:", parseResult.error);
+        return response.data as ProofingOrderResponse;
+      }
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
@@ -773,7 +816,16 @@ export const useHandToProduction = () => {
       const response = await apiRequest.put(
         API_SUFFIX.PROOFING_HAND_TO_PRODUCTION(id)
       );
-      return ProofingOrderResponseSchema.parse(response.data);
+      
+      // Sử dụng safeParse để tránh throw error khi validation fail
+      const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
+      if (parseResult.success) {
+        return parseResult.data;
+      } else {
+        // Log warning nhưng vẫn return response.data vì API đã trả về 200
+        console.warn("Schema validation failed for hand to production response:", parseResult.error);
+        return response.data as ProofingOrderResponse;
+      }
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });

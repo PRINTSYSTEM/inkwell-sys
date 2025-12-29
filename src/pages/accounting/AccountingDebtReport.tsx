@@ -836,7 +836,7 @@ export default function AccountingDebtReport() {
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
-                ) : debtHistory && debtHistory.length > 0 ? (
+                ) : debtHistory && debtHistory.items && debtHistory.items.length > 0 ? (
                   <div className="rounded-md border">
                     <Table>
                       <TableHeader>
@@ -851,7 +851,7 @@ export default function AccountingDebtReport() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {debtHistory.map((item) => (
+                        {debtHistory.items.map((item) => (
                           <TableRow key={item.id}>
                             <TableCell>
                               {item.createdAt

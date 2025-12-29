@@ -15,6 +15,7 @@ import {
   CreateCustomerRequestSchema as GenCreateCustomerRequestSchema,
   UpdateCustomerRequestSchema as GenUpdateCustomerRequestSchema,
   CustomerDebtHistoryResponseSchema as GenCustomerDebtHistoryResponseSchema,
+  CustomerDebtHistoryResponsePaginateSchema as GenCustomerDebtHistoryResponsePaginateSchema,
   CustomerMonthlyDebtResponseSchema as GenCustomerMonthlyDebtResponseSchema,
   CustomerDebtSummaryResponseSchema as GenCustomerDebtSummaryResponseSchema,
   CustomerStatisticsResponseSchema as GenCustomerStatisticsResponseSchema,
@@ -80,6 +81,14 @@ export const CustomerDebtHistoryResponsePagedResponseSchema =
   createPagedResponseSchema(CustomerDebtHistoryResponseSchema);
 export type CustomerDebtHistoryResponsePagedResponse = z.infer<
   typeof CustomerDebtHistoryResponsePagedResponseSchema
+>;
+
+// Re-export generated paginate schema for compatibility
+export {
+  GenCustomerDebtHistoryResponsePaginateSchema as CustomerDebtHistoryResponsePaginateSchema,
+};
+export type CustomerDebtHistoryResponsePaginate = z.infer<
+  typeof GenCustomerDebtHistoryResponsePaginateSchema
 >;
 
 // ===== CustomerMonthlyDebtResponse =====

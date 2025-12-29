@@ -1,4 +1,5 @@
 import { useState, lazy, Suspense, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ export function MaterialTypeDialog({
   onEditMaterial,
   onDeleteMaterial,
 }: MaterialTypeDialogProps) {
+  const queryClient = useQueryClient();
   const [showFormDialog, setShowFormDialog] = useState(false);
   const [editingMaterial, setEditingMaterial] =
     useState<MaterialTypeResponse | null>(null);
@@ -53,16 +55,28 @@ export function MaterialTypeDialog({
     useState<MaterialTypeResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch material types when dialog is open
+  // Fetch material types when dialog is open and designType is available
   const {
     data: materialsData,
     isLoading: isLoadingMaterials,
     isError: isErrorMaterials,
-  } = useMaterialsByDesignType(open ? designType?.id : undefined, undefined);
+    refetch: refetchMaterials,
+  } = useMaterialsByDesignType(
+    open && designType?.id ? designType.id : undefined,
+    undefined
+  );
 
-  // Normalize materials data (always array from API)
+  // Normalize materials data - handle both array and paginated response
   const materials: MaterialTypeResponse[] = useMemo(() => {
     if (!materialsData) return [];
+    
+    // Handle paginated response: { items: [...], size, page, total, totalPages }
+    if (typeof materialsData === 'object' && !Array.isArray(materialsData) && 'items' in materialsData) {
+      const paginatedData = materialsData as { items?: MaterialTypeResponse[] | null };
+      return Array.isArray(paginatedData.items) ? paginatedData.items : [];
+    }
+    
+    // Handle direct array response
     return Array.isArray(materialsData) ? materialsData : [];
   }, [materialsData]);
 
@@ -83,12 +97,26 @@ export function MaterialTypeDialog({
       onCreateMaterial(material);
     }
     handleFormClose();
+    // Invalidate and refetch materials after mutation
+    if (designType?.id) {
+      queryClient.invalidateQueries({
+        queryKey: ["materials-by-design-type", designType.id],
+      });
+      setTimeout(() => refetchMaterials(), 100);
+    }
   };
 
   const handleDeleteConfirm = () => {
     if (deletingMaterial) {
       onDeleteMaterial(deletingMaterial.id);
       setDeletingMaterial(null);
+      // Invalidate and refetch materials after deletion
+      if (designType?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ["materials-by-design-type", designType.id],
+        });
+        setTimeout(() => refetchMaterials(), 100);
+      }
     }
   };
 

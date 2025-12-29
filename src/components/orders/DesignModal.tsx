@@ -181,57 +181,14 @@ export const DesignModal: React.FC<DesignModalProps> = ({
 
   const handleSelectMaterial = (materialId: number) => {
     const mat = materials.find((m) => m.id === materialId);
-    // #region agent log
-    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "DesignModal.tsx:140",
-        message: "handleSelectMaterial called",
-        data: {
-          materialId,
-          materialName: mat?.name,
-          minimumQuantity: mat?.minimumQuantity,
-          minimumQuantityType: typeof mat?.minimumQuantity,
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "post-fix",
-        hypothesisId: "A",
-      }),
-    }).catch(() => {});
-    // #endregion
+
     setFormData((prev) => {
       // Fix: If minimumQuantity is 0 or falsy, set to undefined to prevent rendering "0"
       const newMinQuantity =
         mat?.minimumQuantity && mat.minimumQuantity > 0
           ? mat.minimumQuantity
           : undefined;
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "DesignModal.tsx:145",
-            message: "Setting minQuantity (post-fix)",
-            data: {
-              originalMinimumQuantity: mat?.minimumQuantity,
-              newMinQuantity,
-              isZero: mat?.minimumQuantity === 0,
-              isUndefined: newMinQuantity === undefined,
-              isNull: newMinQuantity === null,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "post-fix",
-            hypothesisId: "A",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
-      // Reset classifications when material changes
+
       const designType = designTypes.find((dt) => dt.id === prev.designTypeId);
       const isTui = designType ? isTuiDesignType(designType.name) : false;
 
@@ -362,28 +319,6 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     formData.minQuantity &&
     formData.quantity > 0 &&
     formData.quantity < formData.minQuantity;
-  // #region agent log
-  if (formData.minQuantity === 0) {
-    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "DesignModal.tsx:244",
-        message: "isQuantityBelowMin calculation with minQuantity=0",
-        data: {
-          minQuantity: formData.minQuantity,
-          quantity: formData.quantity,
-          minQuantityTruthy: !!formData.minQuantity,
-          isQuantityBelowMin,
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "E",
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -636,37 +571,6 @@ export const DesignModal: React.FC<DesignModalProps> = ({
 
               {/* Số lượng */}
               <div className="space-y-3">
-                {/* #region agent log */}
-                {(() => {
-                  fetch(
-                    "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        location: "DesignModal.tsx:486",
-                        message: "Rendering quantity section (post-fix)",
-                        data: {
-                          minQuantity: formData.minQuantity,
-                          minQuantityType: typeof formData.minQuantity,
-                          minQuantityTruthy: !!formData.minQuantity,
-                          minQuantityGT0: formData.minQuantity > 0,
-                          willShowMinQuantityLabel: !!(
-                            formData.minQuantity && formData.minQuantity > 0
-                          ),
-                          isQuantityBelowMin,
-                          quantity: formData.quantity,
-                        },
-                        timestamp: Date.now(),
-                        sessionId: "debug-session",
-                        runId: "post-fix",
-                        hypothesisId: "B",
-                      }),
-                    }
-                  ).catch(() => {});
-                  return null;
-                })()}
-                {/* #endregion */}
                 <Label className="text-sm font-medium">
                   Số lượng <span className="text-destructive">*</span>
                   {formData.minQuantity && formData.minQuantity > 0 ? (
@@ -675,35 +579,6 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       )
                     </span>
                   ) : null}
-                  {/* #region agent log */}
-                  {(() => {
-                    const shouldShow =
-                      formData.minQuantity && formData.minQuantity > 0;
-                    if (!shouldShow && formData.minQuantity === 0) {
-                      fetch(
-                        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-                        {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            location: "DesignModal.tsx:494",
-                            message:
-                              "MinQuantity is 0, should not show but checking if it renders anyway",
-                            data: {
-                              minQuantity: formData.minQuantity,
-                              shouldShow,
-                            },
-                            timestamp: Date.now(),
-                            sessionId: "debug-session",
-                            runId: "run1",
-                            hypothesisId: "C",
-                          }),
-                        }
-                      ).catch(() => {});
-                    }
-                    return null;
-                  })()}
-                  {/* #endregion */}
                 </Label>
                 <Input
                   type="number"
@@ -724,36 +599,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     isQuantityBelowMin ? "border-destructive" : ""
                   }`}
                 />
-                {/* #region agent log */}
-                {(() => {
-                  if (isQuantityBelowMin) {
-                    fetch(
-                      "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          location: "DesignModal.tsx:519",
-                          message:
-                            "isQuantityBelowMin is true, will show error message",
-                          data: {
-                            isQuantityBelowMin,
-                            minQuantity: formData.minQuantity,
-                            minQuantityFormatted:
-                              formData.minQuantity?.toLocaleString("vi-VN"),
-                            quantity: formData.quantity,
-                          },
-                          timestamp: Date.now(),
-                          sessionId: "debug-session",
-                          runId: "run1",
-                          hypothesisId: "D",
-                        }),
-                      }
-                    ).catch(() => {});
-                  }
-                  return null;
-                })()}
-                {/* #endregion */}
+
                 {isQuantityBelowMin && (
                   <p className="text-xs text-destructive">
                     Số lượng nhỏ hơn mức tối thiểu (

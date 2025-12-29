@@ -109,7 +109,21 @@ export default function ProofingOrderPage() {
 
   // Apply client-side filters and sorting
   const filteredAndSortedDesigns = useMemo(() => {
-    if (!data) return [];
+    if (!data) {
+      console.log("⚠️ ProofingCreate - No data available");
+      return [];
+    }
+
+    if (!data.designs) {
+      console.warn("⚠️ ProofingCreate - data.designs is undefined:", data);
+      return [];
+    }
+
+    console.log("📋 ProofingCreate - Processing designs:", {
+      totalDesigns: data.designs.length,
+      totalCount: data.totalCount,
+      firstDesign: data.designs[0],
+    });
 
     let result = [...data.designs];
 
@@ -231,39 +245,57 @@ export default function ProofingOrderPage() {
 
     setLoadingQuantities(true);
 
-    // Fetch available quantities for all selected designs in parallel
     try {
-      const results = await Promise.allSettled(
-        selectedDesigns.map(async (design) => {
-          const designId = design.designId;
-          if (!designId) {
-            return { ...design, availableQuantity: undefined };
-          }
-          try {
-            const res = await apiRequest.get<number>(
-              API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId)
-            );
-            return {
-              ...design,
-              availableQuantity:
-                typeof res.data === "number" ? res.data : undefined,
-            };
-          } catch {
-            return { ...design, availableQuantity: undefined };
-          }
-        })
+      // Check if any design is missing availableQuantity
+      const needsFetch = selectedDesigns.some(
+        (design) => design.availableQuantity === undefined && design.designId
       );
 
-      const designs = results.map((result, index) => {
-        if (result.status === "fulfilled") {
-          return result.value;
-        }
-        // Fallback to original design if fetch failed
-        return selectedDesigns[index] || selectedDesigns[0];
-      });
+      if (needsFetch) {
+        // Only fetch for designs that don't have availableQuantity from API response
+        const results = await Promise.allSettled(
+          selectedDesigns.map(async (design) => {
+            // If already has availableQuantity from response, use it
+            if (design.availableQuantity !== undefined) {
+              return design;
+            }
 
-      setDesignsWithQuantity(designs);
-      // Open modal after fetching quantities
+            // Otherwise, fetch from API as fallback
+            const designId = design.designId;
+            if (!designId) {
+              return { ...design, availableQuantity: undefined };
+            }
+
+            try {
+              const res = await apiRequest.get<number>(
+                API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId)
+              );
+              return {
+                ...design,
+                availableQuantity:
+                  typeof res.data === "number" ? res.data : undefined,
+              };
+            } catch {
+              return { ...design, availableQuantity: undefined };
+            }
+          })
+        );
+
+        const designs = results.map((result, index) => {
+          if (result.status === "fulfilled") {
+            return result.value;
+          }
+          // Fallback to original design if fetch failed
+          return selectedDesigns[index] || selectedDesigns[0];
+        });
+
+        setDesignsWithQuantity(designs);
+      } else {
+        // All designs already have availableQuantity from response
+        setDesignsWithQuantity(selectedDesigns);
+      }
+
+      // Open modal
       setIsModalOpen(true);
     } catch (error) {
       console.error("Failed to fetch available quantities:", error);
