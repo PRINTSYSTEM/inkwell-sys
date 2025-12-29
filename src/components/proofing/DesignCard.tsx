@@ -1,9 +1,10 @@
-import { DesignItem } from "@/types/proofing";
+import type { DesignItem } from "@/types/proofing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Building2, User, FileText } from "lucide-react";
+import { processClassificationLabels } from "@/lib/status-utils";
 
 interface DesignCardProps {
   design: DesignItem;
@@ -104,7 +105,9 @@ export function DesignCard({
         <div className="text-xs space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">SL đặt hàng:</span>
-            <span className="font-medium">{design.quantity.toLocaleString()}</span>
+            <span className="font-medium">
+              {design.quantity.toLocaleString()}
+            </span>
           </div>
           {design.availableQuantity !== undefined && (
             <div className="flex items-center justify-between">
@@ -127,7 +130,10 @@ export function DesignCard({
           <div className="flex items-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs border border-blue-200 dark:border-blue-800">
             <FileText className="h-3 w-3 text-blue-600 mt-0.5 shrink-0" />
             <span className="text-blue-800 dark:text-blue-200 font-medium">
-              Quy trình: {design.processClassificationOptionName}
+              Quy trình:{" "}
+              {processClassificationLabels[
+                design.processClassificationOptionName
+              ] || design.processClassificationOptionName}
             </span>
           </div>
         )}

@@ -30,8 +30,11 @@ export type PlateExportResponsePaginate = z.infer<
 >;
 
 // ===== RecordPlateExportRequest =====
+// Extend generated schema to include vendorName for cases where vendor is not in system
 export const RecordPlateExportRequestSchema =
-  GenRecordPlateExportRequestSchema.passthrough();
+  GenRecordPlateExportRequestSchema.extend({
+    vendorName: z.string().nullable().optional(),
+  }).passthrough();
 export type RecordPlateExportRequest = z.infer<
   typeof RecordPlateExportRequestSchema
 >;

@@ -6,6 +6,7 @@ import { normalizeParams } from "@/apis/util.api";
 import { toast } from "sonner";
 import type {
   InvoiceResponse,
+  InvoiceResponsePaginate,
   CreateInvoiceRequest,
   UpdateInvoiceRequest,
   InvoiceFileResponse,
@@ -27,7 +28,8 @@ export const useInvoices = (params?: InvoicesParams) => {
       const normalizedParams = normalizeParams(
         (params ?? {}) as Record<string, unknown>
       );
-      const res = await apiRequest.get<InvoiceResponse[]>(API_SUFFIX.INVOICES, {
+      // API returns InvoiceResponsePaginate
+      const res = await apiRequest.get<InvoiceResponsePaginate>(API_SUFFIX.INVOICES, {
         params: normalizedParams,
       });
       return res.data;
@@ -60,7 +62,8 @@ export const useInvoicesByOrder = (
     queryKey: ["invoices", "by-order", orderId],
     enabled: enabled && !!orderId,
     queryFn: async () => {
-      const res = await apiRequest.get<InvoiceResponse[]>(
+      // API returns InvoiceResponsePaginate
+      const res = await apiRequest.get<InvoiceResponsePaginate>(
         API_SUFFIX.INVOICES_BY_ORDER(orderId as number)
       );
       return res.data;

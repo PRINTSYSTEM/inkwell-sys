@@ -57,6 +57,19 @@ export const ROUTE_PATHS = {
     ROOT: "/material-types" as const,
   },
 
+  STOCK: {
+    ROOT: "/stock" as const,
+    STOCK_INS: "/stock/stock-ins" as const,
+    STOCK_INS_CREATE: "/stock/stock-ins/create" as const,
+    STOCK_OUTS: "/stock/stock-outs" as const,
+    STOCK_OUTS_CREATE: "/stock/stock-outs/create" as const,
+  },
+
+  VENDORS: {
+    ROOT: "/vendors" as const,
+    DETAIL_BASE: "/vendors" as const, // prefix cho /vendors/:id
+  },
+
   ACCOUNTING: {
     ROOT: "/accounting" as const,
     PAYMENT: "/accounting/payment" as const,
@@ -65,6 +78,25 @@ export const ROUTE_PATHS = {
     DEBT_REPORT: "/accounting/debt-report" as const,
     REVENUE: "/accounting/revenue" as const,
     EXPENSES: "/accounting/expenses" as const,
+    // Cash Management
+    CASH_FUNDS: "/accounting/cash-funds" as const,
+    CASH_PAYMENTS: "/accounting/cash-payments" as const,
+    CASH_RECEIPTS: "/accounting/cash-receipts" as const,
+    CASH_BOOK: "/accounting/cash-book" as const,
+    // Bank Management
+    BANK_ACCOUNTS: "/accounting/bank-accounts" as const,
+    BANK_LEDGER: "/accounting/bank-ledger" as const,
+    // AR/AP
+    AR_SUMMARY: "/accounting/ar/summary" as const,
+    AR_DETAIL: "/accounting/ar/detail" as const,
+    AR_AGING: "/accounting/ar/aging" as const,
+    AP_SUMMARY: "/accounting/ap/summary" as const,
+    AP_DETAIL: "/accounting/ap/detail" as const,
+    AP_AGING: "/accounting/ap/aging" as const,
+    COLLECTION_SCHEDULE: "/accounting/collection-schedule" as const,
+    // Expense & Payment Method
+    EXPENSE_CATEGORIES: "/accounting/expense-categories" as const,
+    PAYMENT_METHODS: "/accounting/payment-methods" as const,
   },
 
   DELIVERY_NOTES: {
@@ -96,6 +128,27 @@ export const ROUTE_PATHS = {
     PERFORMANCE: "/manager/performance" as const,
   },
 
-  REPORTS: "/reports" as const,
+  REPORTS: {
+    ROOT: "/reports" as const,
+    // Inventory Reports
+    INVENTORY: {
+      CURRENT_STOCK: "/reports/inventory/current-stock" as const,
+      SUMMARY: "/reports/inventory/summary" as const,
+      LOW_STOCK: "/reports/inventory/low-stock" as const,
+      SLOW_MOVING: "/reports/inventory/slow-moving" as const,
+      STOCK_CARD: "/reports/inventory/stock-card" as const,
+    },
+    // Sales Reports
+    SALES: {
+      BY_PERIOD: "/reports/sales/by-period" as const,
+      BY_CUSTOMER: "/reports/sales/by-customer" as const,
+      BY_DIMENSION: "/reports/sales/by-dimension" as const,
+      TOP_PRODUCTS: "/reports/sales/top-products" as const,
+      RETURNS_DISCOUNTS: "/reports/sales/returns-discounts" as const,
+      ORDER_DRILL_DOWN: "/reports/sales/order-drill-down" as const,
+    },
+    // Report Exports
+    EXPORTS: "/reports/exports" as const,
+  },
   NOTIFICATIONS: "/notifications" as const,
 } as const;

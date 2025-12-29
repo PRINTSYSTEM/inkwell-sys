@@ -71,6 +71,354 @@ const RoleDefinition = z
 const RolesResponse = z
   .object({ roles: z.array(RoleDefinition).nullable() })
   .partial();
+const BankLedgerEntryResponse = z
+  .object({
+    date: z.string().datetime({ offset: true }),
+    voucherCode: z.string().nullable(),
+    description: z.string().nullable(),
+    objectName: z.string().nullable(),
+    debitAmount: z.number(),
+    creditAmount: z.number(),
+    runningBalance: z.number(),
+    reference: z.string().nullable(),
+    voucherType: z.string().nullable(),
+    voucherId: z.number().int(),
+  })
+  .partial();
+const BankLedgerResponse = z
+  .object({
+    bankAccountId: z.number().int(),
+    bankAccountNumber: z.string().nullable(),
+    bankName: z.string().nullable(),
+    openingBalance: z.number(),
+    entries: z.array(BankLedgerEntryResponse).nullable(),
+    totalDebit: z.number(),
+    totalCredit: z.number(),
+    closingBalance: z.number(),
+  })
+  .partial();
+const CashBookEntryResponse = z
+  .object({
+    date: z.string().datetime({ offset: true }),
+    voucherCode: z.string().nullable(),
+    description: z.string().nullable(),
+    objectName: z.string().nullable(),
+    receiptAmount: z.number(),
+    paymentAmount: z.number(),
+    runningBalance: z.number(),
+    reference: z.string().nullable(),
+    voucherType: z.string().nullable(),
+    voucherId: z.number().int(),
+  })
+  .partial();
+const CashBookResponse = z
+  .object({
+    openingBalance: z.number(),
+    entries: z.array(CashBookEntryResponse).nullable(),
+    totalReceipt: z.number(),
+    totalPayment: z.number(),
+    closingBalance: z.number(),
+  })
+  .partial();
+const CreateCashPaymentRequest = z.object({
+  voucherDate: z.string().datetime({ offset: true }),
+  postingDate: z.string().datetime({ offset: true }),
+  receiverName: z.string().min(0).max(200),
+  expenseCategoryId: z.number().int(),
+  reason: z.string().min(0).max(500).nullish(),
+  amount: z.number().gte(0.01),
+  paymentMethodId: z.number().int(),
+  orderId: z.number().int().nullish(),
+  vendorId: z.number().int().nullish(),
+  cashFundId: z.number().int().nullish(),
+  bankAccountId: z.number().int().nullish(),
+  notes: z.string().min(0).max(1000).nullish(),
+});
+const CashPaymentResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    voucherDate: z.string().datetime({ offset: true }),
+    postingDate: z.string().datetime({ offset: true }),
+    receiverName: z.string().nullable(),
+    reason: z.string().nullable(),
+    amount: z.number(),
+    status: z.string().nullable(),
+    notes: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+    approvedAt: z.string().datetime({ offset: true }).nullable(),
+    postedAt: z.string().datetime({ offset: true }).nullable(),
+    expenseCategoryId: z.number().int().nullable(),
+    expenseCategoryName: z.string().nullable(),
+    paymentMethodId: z.number().int(),
+    paymentMethodName: z.string().nullable(),
+    orderId: z.number().int().nullable(),
+    orderCode: z.string().nullable(),
+    vendorId: z.number().int().nullable(),
+    vendorName: z.string().nullable(),
+    cashFundId: z.number().int().nullable(),
+    cashFundName: z.string().nullable(),
+    bankAccountId: z.number().int().nullable(),
+    bankAccountNumber: z.string().nullable(),
+    bankName: z.string().nullable(),
+    createdById: z.number().int(),
+    createdByName: z.string().nullable(),
+    approvedById: z.number().int().nullable(),
+    approvedByName: z.string().nullable(),
+    postedById: z.number().int().nullable(),
+    postedByName: z.string().nullable(),
+  })
+  .partial();
+const CashPaymentResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(CashPaymentResponse).nullable(),
+  })
+  .partial();
+const UpdateCashPaymentRequest = z.object({
+  voucherDate: z.string().datetime({ offset: true }),
+  postingDate: z.string().datetime({ offset: true }),
+  receiverName: z.string().min(0).max(200),
+  expenseCategoryId: z.number().int(),
+  reason: z.string().min(0).max(500).nullish(),
+  amount: z.number().gte(0.01),
+  paymentMethodId: z.number().int(),
+  orderId: z.number().int().nullish(),
+  vendorId: z.number().int().nullish(),
+  cashFundId: z.number().int().nullish(),
+  bankAccountId: z.number().int().nullish(),
+  notes: z.string().min(0).max(1000).nullish(),
+});
+const CreateCashReceiptRequest = z.object({
+  voucherDate: z.string().datetime({ offset: true }),
+  postingDate: z.string().datetime({ offset: true }),
+  payerName: z.string().min(0).max(200),
+  expenseCategoryId: z.number().int().nullish(),
+  reason: z.string().min(0).max(500).nullish(),
+  amount: z.number().gte(0.01),
+  paymentMethodId: z.number().int(),
+  orderId: z.number().int().nullish(),
+  invoiceId: z.number().int().nullish(),
+  customerId: z.number().int().nullish(),
+  cashFundId: z.number().int().nullish(),
+  bankAccountId: z.number().int().nullish(),
+  notes: z.string().min(0).max(1000).nullish(),
+});
+const CashReceiptResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    voucherDate: z.string().datetime({ offset: true }),
+    postingDate: z.string().datetime({ offset: true }),
+    payerName: z.string().nullable(),
+    reason: z.string().nullable(),
+    amount: z.number(),
+    status: z.string().nullable(),
+    notes: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+    approvedAt: z.string().datetime({ offset: true }).nullable(),
+    postedAt: z.string().datetime({ offset: true }).nullable(),
+    expenseCategoryId: z.number().int().nullable(),
+    expenseCategoryName: z.string().nullable(),
+    paymentMethodId: z.number().int(),
+    paymentMethodName: z.string().nullable(),
+    orderId: z.number().int().nullable(),
+    orderCode: z.string().nullable(),
+    invoiceId: z.number().int().nullable(),
+    invoiceNumber: z.string().nullable(),
+    customerId: z.number().int().nullable(),
+    customerName: z.string().nullable(),
+    cashFundId: z.number().int().nullable(),
+    cashFundName: z.string().nullable(),
+    bankAccountId: z.number().int().nullable(),
+    bankAccountNumber: z.string().nullable(),
+    bankName: z.string().nullable(),
+    createdById: z.number().int(),
+    createdByName: z.string().nullable(),
+    approvedById: z.number().int().nullable(),
+    approvedByName: z.string().nullable(),
+    postedById: z.number().int().nullable(),
+    postedByName: z.string().nullable(),
+  })
+  .partial();
+const CashReceiptResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(CashReceiptResponse).nullable(),
+  })
+  .partial();
+const UpdateCashReceiptRequest = z.object({
+  voucherDate: z.string().datetime({ offset: true }),
+  postingDate: z.string().datetime({ offset: true }),
+  payerName: z.string().min(0).max(200),
+  expenseCategoryId: z.number().int().nullish(),
+  reason: z.string().min(0).max(500).nullish(),
+  amount: z.number().gte(0.01),
+  paymentMethodId: z.number().int(),
+  orderId: z.number().int().nullish(),
+  invoiceId: z.number().int().nullish(),
+  customerId: z.number().int().nullish(),
+  cashFundId: z.number().int().nullish(),
+  bankAccountId: z.number().int().nullish(),
+  notes: z.string().min(0).max(1000).nullish(),
+});
+const ExpenseCategoryResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    type: z.string().nullable(),
+    description: z.string().nullable(),
+    isActive: z.boolean(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const ExpenseCategoryResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ExpenseCategoryResponse).nullable(),
+  })
+  .partial();
+const CreateExpenseCategoryRequest = z.object({
+  code: z.string().min(0).max(50),
+  name: z.string().min(0).max(200),
+  type: z
+    .string()
+    .min(1)
+    .regex(/^(income|expense)$/),
+  description: z.string().min(0).max(500).nullish(),
+  isActive: z.boolean().optional(),
+});
+const UpdateExpenseCategoryRequest = z.object({
+  code: z.string().min(0).max(50),
+  name: z.string().min(0).max(200),
+  type: z
+    .string()
+    .min(1)
+    .regex(/^(income|expense)$/),
+  description: z.string().min(0).max(500).nullish(),
+  isActive: z.boolean().optional(),
+});
+const PaymentMethodResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    description: z.string().nullable(),
+    isActive: z.boolean(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const PaymentMethodResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(PaymentMethodResponse).nullable(),
+  })
+  .partial();
+const CreatePaymentMethodRequest = z.object({
+  code: z.string().min(0).max(50),
+  name: z.string().min(0).max(200),
+  description: z.string().min(0).max(500).nullish(),
+  isActive: z.boolean().optional(),
+});
+const UpdatePaymentMethodRequest = z.object({
+  code: z.string().min(0).max(50),
+  name: z.string().min(0).max(200),
+  description: z.string().min(0).max(500).nullish(),
+  isActive: z.boolean().optional(),
+});
+const CashFundResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    description: z.string().nullable(),
+    openingBalance: z.number(),
+    isActive: z.boolean(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const CashFundResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(CashFundResponse).nullable(),
+  })
+  .partial();
+const CreateCashFundRequest = z.object({
+  code: z.string().min(0).max(50),
+  name: z.string().min(0).max(200),
+  description: z.string().min(0).max(500).nullish(),
+  openingBalance: z.number().gte(0).optional(),
+  isActive: z.boolean().optional(),
+});
+const UpdateCashFundRequest = z.object({
+  code: z.string().min(0).max(50),
+  name: z.string().min(0).max(200),
+  description: z.string().min(0).max(500).nullish(),
+  openingBalance: z.number().gte(0).optional(),
+  isActive: z.boolean().optional(),
+});
+const BankAccountResponse = z
+  .object({
+    id: z.number().int(),
+    accountNumber: z.string().nullable(),
+    bankName: z.string().nullable(),
+    bankBranch: z.string().nullable(),
+    accountHolder: z.string().nullable(),
+    description: z.string().nullable(),
+    openingBalance: z.number(),
+    isActive: z.boolean(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const BankAccountResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(BankAccountResponse).nullable(),
+  })
+  .partial();
+const CreateBankAccountRequest = z.object({
+  accountNumber: z.string().min(0).max(50),
+  bankName: z.string().min(0).max(200),
+  bankBranch: z.string().min(0).max(200).nullish(),
+  accountHolder: z.string().min(0).max(200),
+  description: z.string().min(0).max(500).nullish(),
+  openingBalance: z.number().gte(0).optional(),
+  isActive: z.boolean().optional(),
+});
+const UpdateBankAccountRequest = z.object({
+  accountNumber: z.string().min(0).max(50),
+  bankName: z.string().min(0).max(200),
+  bankBranch: z.string().min(0).max(200).nullish(),
+  accountHolder: z.string().min(0).max(200),
+  description: z.string().min(0).max(500).nullish(),
+  openingBalance: z.number().gte(0).optional(),
+  isActive: z.boolean().optional(),
+});
 const ConstantGroup = z
   .object({
     entityType: z.string().nullable(),
@@ -94,6 +442,7 @@ const ConstantsResponse = z
     laminationTypes: ConstantGroup,
     sidesClassification: ConstantGroup,
     processClassification: ConstantGroup,
+    vendorTypes: ConstantGroup,
   })
   .partial();
 const CreateCustomerRequest = z.object({
@@ -185,6 +534,15 @@ const CustomerDebtHistoryResponse = z
     createdById: z.number().int().nullable(),
     createdByName: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const CustomerDebtHistoryResponsePaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(CustomerDebtHistoryResponse).nullable(),
   })
   .partial();
 const CustomerMonthlyDebtResponse = z
@@ -283,6 +641,163 @@ const CustomerOrderHistoryResponsePaginate = z
     total: z.number().int(),
     totalPages: z.number().int(),
     items: z.array(CustomerOrderHistoryResponse).nullable(),
+  })
+  .partial();
+const ARSummaryResponse = z
+  .object({
+    customerId: z.number().int(),
+    customerCode: z.string().nullable(),
+    customerName: z.string().nullable(),
+    companyName: z.string().nullable(),
+    openingBalance: z.number(),
+    increase: z.number(),
+    decrease: z.number(),
+    closingBalance: z.number(),
+    overdue: z.number(),
+  })
+  .partial();
+const ARSummaryResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ARSummaryResponse).nullable(),
+  })
+  .partial();
+const ARDetailResponse = z
+  .object({
+    customerId: z.number().int(),
+    customerName: z.string().nullable(),
+    documentNumber: z.string().nullable(),
+    documentType: z.string().nullable(),
+    documentId: z.number().int().nullable(),
+    documentDate: z.string().datetime({ offset: true }),
+    dueDate: z.string().datetime({ offset: true }).nullable(),
+    amountDue: z.number(),
+    amountPaid: z.number(),
+    outstanding: z.number(),
+    overdueDays: z.number().int(),
+  })
+  .partial();
+const ARDetailResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ARDetailResponse).nullable(),
+  })
+  .partial();
+const ARAgingResponse = z
+  .object({
+    customerId: z.number().int(),
+    customerCode: z.string().nullable(),
+    customerName: z.string().nullable(),
+    companyName: z.string().nullable(),
+    notDue: z.number(),
+    days0_30: z.number(),
+    days31_60: z.number(),
+    days61_90: z.number(),
+    daysOver90: z.number(),
+    total: z.number(),
+  })
+  .partial();
+const ARAgingResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ARAgingResponse).nullable(),
+  })
+  .partial();
+const CollectionScheduleResponse = z
+  .object({
+    dueDate: z.string().datetime({ offset: true }),
+    customerId: z.number().int(),
+    customerName: z.string().nullable(),
+    documentNumber: z.string().nullable(),
+    documentType: z.string().nullable(),
+    documentId: z.number().int().nullable(),
+    amountDue: z.number(),
+    notes: z.string().nullable(),
+  })
+  .partial();
+const CollectionScheduleResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(CollectionScheduleResponse).nullable(),
+  })
+  .partial();
+const APSummaryResponse = z
+  .object({
+    vendorId: z.number().int(),
+    vendorCode: z.string().nullable(),
+    vendorName: z.string().nullable(),
+    openingBalance: z.number(),
+    increase: z.number(),
+    decrease: z.number(),
+    closingBalance: z.number(),
+    overdue: z.number(),
+  })
+  .partial();
+const APSummaryResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(APSummaryResponse).nullable(),
+  })
+  .partial();
+const APDetailResponse = z
+  .object({
+    vendorId: z.number().int(),
+    vendorName: z.string().nullable(),
+    documentNumber: z.string().nullable(),
+    documentType: z.string().nullable(),
+    documentId: z.number().int().nullable(),
+    documentDate: z.string().datetime({ offset: true }),
+    dueDate: z.string().datetime({ offset: true }).nullable(),
+    amountDue: z.number(),
+    amountPaid: z.number(),
+    outstanding: z.number(),
+    overdueDays: z.number().int(),
+  })
+  .partial();
+const APDetailResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(APDetailResponse).nullable(),
+  })
+  .partial();
+const APAgingResponse = z
+  .object({
+    vendorId: z.number().int(),
+    vendorCode: z.string().nullable(),
+    vendorName: z.string().nullable(),
+    notDue: z.number(),
+    days0_30: z.number(),
+    days31_60: z.number(),
+    days61_90: z.number(),
+    daysOver90: z.number(),
+    total: z.number(),
+  })
+  .partial();
+const APAgingResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(APAgingResponse).nullable(),
   })
   .partial();
 const CreateDeliveryNoteRequest = z.object({
@@ -453,6 +968,15 @@ const DesignResponsePaginate = z
 const postApidesignsIdtimeline_Body = z
   .object({ File: z.instanceof(File), Description: z.string().optional() })
   .passthrough();
+const DesignTimelineEntryResponsePaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(DesignTimelineEntryResponse).nullable(),
+  })
+  .partial();
 const CreateDesignTypeRequest = z.object({
   code: z.string().min(0).max(20),
   name: z.string().min(0).max(255),
@@ -481,6 +1005,117 @@ const UpdateDesignTypeRequest = z
       .string()
       .regex(/^(active|inactive)$/)
       .nullable(),
+  })
+  .partial();
+const InventorySummaryItemResponse = z
+  .object({
+    itemCode: z.string().nullable(),
+    itemName: z.string().nullable(),
+    unit: z.string().nullable(),
+    openingQuantity: z.number(),
+    inQuantity: z.number(),
+    outQuantity: z.number(),
+    closingQuantity: z.number(),
+    openingValue: z.number().nullable(),
+    inValue: z.number().nullable(),
+    outValue: z.number().nullable(),
+    closingValue: z.number().nullable(),
+  })
+  .partial();
+const InventorySummaryItemResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(InventorySummaryItemResponse).nullable(),
+  })
+  .partial();
+const StockCardEntryResponse = z
+  .object({
+    date: z.string().datetime({ offset: true }),
+    voucherCode: z.string().nullable(),
+    inQuantity: z.number(),
+    outQuantity: z.number(),
+    balance: z.number(),
+    notes: z.string().nullable(),
+    reference: z.string().nullable(),
+    voucherType: z.string().nullable(),
+    voucherId: z.number().int(),
+  })
+  .partial();
+const StockCardResponse = z
+  .object({
+    itemCode: z.string().nullable(),
+    itemName: z.string().nullable(),
+    unit: z.string().nullable(),
+    warehouse: z.string().nullable(),
+    fromDate: z.string().datetime({ offset: true }),
+    toDate: z.string().datetime({ offset: true }),
+    openingBalance: z.number(),
+    entries: z.array(StockCardEntryResponse).nullable(),
+    closingBalance: z.number(),
+  })
+  .partial();
+const CurrentStockResponse = z
+  .object({
+    warehouse: z.string().nullable(),
+    itemCode: z.string().nullable(),
+    itemName: z.string().nullable(),
+    unit: z.string().nullable(),
+    currentQuantity: z.number(),
+    stockValue: z.number(),
+    minStock: z.number(),
+    status: z.string().nullable(),
+  })
+  .partial();
+const CurrentStockResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(CurrentStockResponse).nullable(),
+  })
+  .partial();
+const LowStockResponse = z
+  .object({
+    itemCode: z.string().nullable(),
+    itemName: z.string().nullable(),
+    unit: z.string().nullable(),
+    currentQuantity: z.number(),
+    minStock: z.number(),
+    shortage: z.number(),
+    suggestedOrder: z.number(),
+  })
+  .partial();
+const LowStockResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(LowStockResponse).nullable(),
+  })
+  .partial();
+const SlowMovingResponse = z
+  .object({
+    itemCode: z.string().nullable(),
+    itemName: z.string().nullable(),
+    unit: z.string().nullable(),
+    currentQuantity: z.number(),
+    lastTxnDate: z.string().datetime({ offset: true }).nullable(),
+    daysNoMovement: z.number().int(),
+    stockValue: z.number(),
+  })
+  .partial();
+const SlowMovingResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(SlowMovingResponse).nullable(),
   })
   .partial();
 const CreateInvoiceItemRequest = z.object({
@@ -566,6 +1201,15 @@ const UpdateInvoiceRequest = z
     buyerTaxCode: z.string().nullable(),
     buyerAddress: z.string().nullable(),
     buyerEmail: z.string().nullable(),
+  })
+  .partial();
+const InvoiceResponsePaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(InvoiceResponse).nullable(),
   })
   .partial();
 const CreateMaterialTypeRequest = z.object({
@@ -942,6 +1586,23 @@ const PaymentResponsePaginate = z
     items: z.array(PaymentResponse).nullable(),
   })
   .partial();
+const VendorResponse = z
+  .object({
+    id: z.number().int(),
+    name: z.string().nullable(),
+    phone: z.string().nullable(),
+    email: z.string().nullable(),
+    address: z.string().nullable(),
+    note: z.string().nullable(),
+    vendorType: z.string().nullable(),
+    vendorTypeName: z.string().nullable(),
+    isActive: z.boolean(),
+    createdById: z.number().int(),
+    createdByName: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
 const PlateExportResponse = z
   .object({
     id: z.number().int(),
@@ -949,8 +1610,10 @@ const PlateExportResponse = z
     proofingOrderCode: z.string().nullable(),
     plateVendorId: z.number().int().nullable(),
     vendorName: z.string().nullable(),
+    plateVendor: VendorResponse,
     plateCount: z.number().int(),
     sentAt: z.string().datetime({ offset: true }).nullable(),
+    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
     receivedAt: z.string().datetime({ offset: true }).nullable(),
     notes: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
@@ -965,49 +1628,6 @@ const PlateExportResponsePaginate = z
     totalPages: z.number().int(),
     items: z.array(PlateExportResponse).nullable(),
   })
-  .partial();
-const CreatePlateVendorRequest = z.object({
-  name: z.string().min(0).max(255),
-  phone: z.string().min(0).max(20).nullish(),
-  email: z.string().min(0).max(255).email().nullish(),
-  address: z.string().min(0).max(500).nullish(),
-  note: z.string().nullish(),
-  isActive: z.boolean().optional(),
-});
-const PlateVendorResponse = z
-  .object({
-    id: z.number().int(),
-    name: z.string().nullable(),
-    phone: z.string().nullable(),
-    email: z.string().nullable(),
-    address: z.string().nullable(),
-    note: z.string().nullable(),
-    isActive: z.boolean(),
-    createdAt: z.string().datetime({ offset: true }),
-    createdBy: UserInfo,
-  })
-  .partial();
-const PlateVendorResponsePaginate = z
-  .object({
-    size: z.number().int(),
-    page: z.number().int(),
-    total: z.number().int(),
-    totalPages: z.number().int(),
-    items: z.array(PlateVendorResponse).nullable(),
-  })
-  .partial();
-const UpdatePlateVendorRequest = z
-  .object({
-    name: z.string().min(0).max(255).nullable(),
-    phone: z.string().min(0).max(20).nullable(),
-    email: z.string().min(0).max(255).email().nullable(),
-    address: z.string().min(0).max(500).nullable(),
-    note: z.string().nullable(),
-    isActive: z.boolean().nullable(),
-  })
-  .partial();
-const PlateCountOptionResponse = z
-  .object({ value: z.number().int(), label: z.string().nullable() })
   .partial();
 const CreateProductionRequest = z.object({
   proofingOrderId: z.number().int(),
@@ -1063,7 +1683,6 @@ const CompleteProductionRequest = z
 const CreateProofingOrderRequest = z.object({
   materialTypeId: z.number().int(),
   designIds: z.array(z.number().int()),
-  assignedToId: z.number().int().nullish(),
   notes: z.string().nullish(),
   paperSizeId: z.number().int().nullish(),
   customPaperSize: z.string().nullish(),
@@ -1071,9 +1690,19 @@ const CreateProofingOrderRequest = z.object({
 const DieExportResponse = z
   .object({
     id: z.number().int(),
+    proofingOrderId: z.number().int(),
+    proofingOrderCode: z.string().nullable(),
+    dieVendorId: z.number().int().nullable(),
+    vendorName: z.string().nullable(),
+    dieVendor: VendorResponse,
+    dieCount: z.number().int(),
+    sentAt: z.string().datetime({ offset: true }).nullable(),
+    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
+    receivedAt: z.string().datetime({ offset: true }).nullable(),
     imageUrl: z.string().nullable(),
     notes: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
+    createdBy: UserInfo,
   })
   .partial();
 const ProofingOrderDesignResponse = z
@@ -1094,18 +1723,12 @@ const ProofingOrderResponse = z
     materialType: MaterialTypeResponse,
     createdById: z.number().int(),
     createdBy: UserInfo,
-    assignedToId: z.number().int().nullable(),
-    assignedTo: UserInfo,
     totalQuantity: z.number().int(),
     status: z.string().nullable(),
     statusType: z.string().nullable(),
     proofingFileUrl: z.string().nullable(),
     imageUrl: z.string().nullable(),
     notes: z.string().nullable(),
-    approvedById: z.number().int().nullable(),
-    approvedBy: UserInfo,
-    approvedAt: z.string().datetime({ offset: true }).nullable(),
-    finalQuantity: z.number().int().nullable(),
     paperSizeId: z.number().int().nullable(),
     paperSize: PaperSizeResponse,
     customPaperSize: z.string().nullable(),
@@ -1143,30 +1766,252 @@ const UpdateProofingOrderRequest = z
   .object({
     status: z.string().min(0).max(50).nullable(),
     proofingFileUrl: z.string().nullable(),
-    assignedToId: z.number().int().nullable(),
     notes: z.string().nullable(),
     paperSizeId: z.number().int().nullable(),
     customPaperSize: z.string().nullable(),
   })
   .partial();
-const ApproveProofingOrderRequest = z
+const OrderDetailResponsePaginate = z
   .object({
-    finalQuantity: z.number().int().nullable(),
-    approvalNotes: z.string().nullable(),
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(OrderDetailResponse).nullable(),
   })
   .partial();
 const RecordPlateExportRequest = z
   .object({
     plateVendorId: z.number().int().nullable(),
-    vendorName: z.string().min(0).max(255).nullable(),
     plateCount: z.number().int().gte(1).lte(6),
     sentAt: z.string().datetime({ offset: true }).nullable(),
+    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
     receivedAt: z.string().datetime({ offset: true }).nullable(),
     notes: z.string().nullable(),
   })
   .partial();
-const RecordDieExportRequest = z
-  .object({ imageUrl: z.string().nullable(), notes: z.string().nullable() })
+const postApiproofingOrdersIddieExport_Body = z
+  .object({
+    DieVendorId: z.number().int(),
+    DieCount: z.number().int(),
+    SentAt: z.string().datetime({ offset: true }),
+    EstimatedReceiveAt: z.string().datetime({ offset: true }),
+    ReceivedAt: z.string().datetime({ offset: true }),
+    ImageFile: z.instanceof(File),
+    Notes: z.string(),
+  })
+  .partial()
+  .passthrough();
+const ReportExportResponse = z
+  .object({
+    id: z.number().int(),
+    reportCode: z.string().nullable(),
+    reportName: z.string().nullable(),
+    fileName: z.string().nullable(),
+    fileSize: z.number().int(),
+    fileType: z.string().nullable(),
+    filterJson: z.string().nullable(),
+    status: z.string().nullable(),
+    errorMessage: z.string().nullable(),
+    exportedById: z.number().int(),
+    exportedByName: z.string().nullable(),
+    exportedAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const ReportExportResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ReportExportResponse).nullable(),
+  })
+  .partial();
+const ProblemDetails = z
+  .object({
+    type: z.string().nullable(),
+    title: z.string().nullable(),
+    status: z.number().int().nullable(),
+    detail: z.string().nullable(),
+    instance: z.string().nullable(),
+  })
+  .partial()
+  .passthrough();
+const SalesByPeriodResponse = z
+  .object({
+    period: z.string().nullable(),
+    orderCount: z.number().int(),
+    grossRevenue: z.number(),
+    discount: z.number(),
+    returns: z.number(),
+    netRevenue: z.number(),
+    customerCount: z.number().int(),
+  })
+  .partial();
+const SalesByPeriodResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(SalesByPeriodResponse).nullable(),
+  })
+  .partial();
+const SalesByCustomerResponse = z
+  .object({
+    customerId: z.number().int(),
+    customerCode: z.string().nullable(),
+    customerName: z.string().nullable(),
+    companyName: z.string().nullable(),
+    orderCount: z.number().int(),
+    netRevenue: z.number(),
+    returns: z.number(),
+    aov: z.number(),
+    lastPurchase: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const SalesByCustomerResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(SalesByCustomerResponse).nullable(),
+  })
+  .partial();
+const SalesByDimensionResponse = z
+  .object({
+    dimensionId: z.number().int().nullable(),
+    dimensionValue: z.string().nullable(),
+    orderCount: z.number().int(),
+    netRevenue: z.number(),
+    discount: z.number(),
+    returns: z.number(),
+  })
+  .partial();
+const SalesByDimensionResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(SalesByDimensionResponse).nullable(),
+  })
+  .partial();
+const TopProductResponse = z
+  .object({
+    productCode: z.string().nullable(),
+    productName: z.string().nullable(),
+    productGroup: z.string().nullable(),
+    soldQuantity: z.number().int(),
+    netRevenue: z.number(),
+    orderCount: z.number().int(),
+    averagePrice: z.number(),
+  })
+  .partial();
+const TopProductResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(TopProductResponse).nullable(),
+  })
+  .partial();
+const ReturnsDiscountsResponse = z
+  .object({
+    period: z.string().nullable(),
+    voucherCount: z.number().int(),
+    adjustmentValue: z.number(),
+    topReason: z.string().nullable(),
+  })
+  .partial();
+const ReturnsDiscountsResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ReturnsDiscountsResponse).nullable(),
+  })
+  .partial();
+const OrderDrillDownResponse = z
+  .object({
+    orderId: z.number().int(),
+    orderCode: z.string().nullable(),
+    customerName: z.string().nullable(),
+    netAmount: z.number(),
+    status: z.string().nullable(),
+    completedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const OrderDrillDownResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(OrderDrillDownResponse).nullable(),
+  })
+  .partial();
+const StockInItemRequest = z.object({
+  itemName: z.string().min(1),
+  itemCode: z.string().nullish(),
+  unit: z.string().nullish(),
+  quantity: z.number().int().gte(1).lte(2147483647),
+  unitPrice: z.number().nullish(),
+  notes: z.string().nullish(),
+});
+const CreateStockInRequest = z.object({
+  type: z.string().nullish(),
+  supplierId: z.number().int().nullish(),
+  orderId: z.number().int().nullish(),
+  productionId: z.number().int().nullish(),
+  notes: z.string().nullish(),
+  stockInDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(StockInItemRequest),
+});
+const UpdateStockInRequest = z
+  .object({
+    type: z.string().nullable(),
+    status: z.string().nullable(),
+    supplierId: z.number().int().nullable(),
+    orderId: z.number().int().nullable(),
+    productionId: z.number().int().nullable(),
+    notes: z.string().nullable(),
+    stockInDate: z.string().datetime({ offset: true }).nullable(),
+    items: z.array(StockInItemRequest).nullable(),
+  })
+  .partial();
+const StockOutItemRequest = z.object({
+  itemName: z.string().min(1),
+  itemCode: z.string().nullish(),
+  unit: z.string().nullish(),
+  quantity: z.number().int().gte(1).lte(2147483647),
+  notes: z.string().nullish(),
+});
+const CreateStockOutRequest = z.object({
+  type: z.string().nullish(),
+  customerId: z.number().int().nullish(),
+  orderId: z.number().int().nullish(),
+  productionId: z.number().int().nullish(),
+  deliveryNoteId: z.number().int().nullish(),
+  notes: z.string().nullish(),
+  stockOutDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(StockOutItemRequest),
+});
+const UpdateStockOutRequest = z
+  .object({
+    type: z.string().nullable(),
+    status: z.string().nullable(),
+    customerId: z.number().int().nullable(),
+    orderId: z.number().int().nullable(),
+    productionId: z.number().int().nullable(),
+    deliveryNoteId: z.number().int().nullable(),
+    notes: z.string().nullable(),
+    stockOutDate: z.string().datetime({ offset: true }).nullable(),
+    items: z.array(StockOutItemRequest).nullable(),
+  })
   .partial();
 const CreateUserRequest = z.object({
   username: z.string().min(0).max(100),
@@ -1257,6 +2102,46 @@ const TeamKpiSummaryResponse = z
     totalRevenue: z.number(),
   })
   .partial();
+const CreateVendorRequest = z.object({
+  name: z.string().min(0).max(255),
+  phone: z.string().min(0).max(20).nullish(),
+  email: z.string().min(0).max(255).nullish(),
+  address: z.string().nullish(),
+  note: z.string().nullish(),
+  vendorType: z.string().min(0).max(20),
+});
+const VendorResponsePaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(VendorResponse).nullable(),
+  })
+  .partial();
+const UpdateVendorRequest = z
+  .object({
+    name: z.string().min(0).max(255).nullable(),
+    phone: z.string().min(0).max(20).nullable(),
+    email: z.string().min(0).max(255).nullable(),
+    address: z.string().nullable(),
+    note: z.string().nullable(),
+    vendorType: z.string().min(0).max(20).nullable(),
+    isActive: z.boolean().nullable(),
+  })
+  .partial();
+const VendorCountOptionResponse = z
+  .object({ value: z.number().int(), label: z.string().nullable() })
+  .partial();
+const VendorCountOptionResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(VendorCountOptionResponse).nullable(),
+  })
+  .partial();
 
 export const schemas = {
   AccountingResponse,
@@ -1268,6 +2153,34 @@ export const schemas = {
   ErrorResponse,
   RoleDefinition,
   RolesResponse,
+  BankLedgerEntryResponse,
+  BankLedgerResponse,
+  CashBookEntryResponse,
+  CashBookResponse,
+  CreateCashPaymentRequest,
+  CashPaymentResponse,
+  CashPaymentResponseIPaginate,
+  UpdateCashPaymentRequest,
+  CreateCashReceiptRequest,
+  CashReceiptResponse,
+  CashReceiptResponseIPaginate,
+  UpdateCashReceiptRequest,
+  ExpenseCategoryResponse,
+  ExpenseCategoryResponseIPaginate,
+  CreateExpenseCategoryRequest,
+  UpdateExpenseCategoryRequest,
+  PaymentMethodResponse,
+  PaymentMethodResponseIPaginate,
+  CreatePaymentMethodRequest,
+  UpdatePaymentMethodRequest,
+  CashFundResponse,
+  CashFundResponseIPaginate,
+  CreateCashFundRequest,
+  UpdateCashFundRequest,
+  BankAccountResponse,
+  BankAccountResponseIPaginate,
+  CreateBankAccountRequest,
+  UpdateBankAccountRequest,
   ConstantGroup,
   ConstantsResponse,
   CreateCustomerRequest,
@@ -1276,6 +2189,7 @@ export const schemas = {
   CustomerSummaryResponsePaginate,
   UpdateCustomerRequest,
   CustomerDebtHistoryResponse,
+  CustomerDebtHistoryResponsePaginate,
   CustomerMonthlyDebtResponse,
   CustomerDebtSummaryResponse,
   FrequentProductResponse,
@@ -1283,6 +2197,20 @@ export const schemas = {
   OrderHistoryDetailResponse,
   CustomerOrderHistoryResponse,
   CustomerOrderHistoryResponsePaginate,
+  ARSummaryResponse,
+  ARSummaryResponseIPaginate,
+  ARDetailResponse,
+  ARDetailResponseIPaginate,
+  ARAgingResponse,
+  ARAgingResponseIPaginate,
+  CollectionScheduleResponse,
+  CollectionScheduleResponseIPaginate,
+  APSummaryResponse,
+  APSummaryResponseIPaginate,
+  APDetailResponse,
+  APDetailResponseIPaginate,
+  APAgingResponse,
+  APAgingResponseIPaginate,
   CreateDeliveryNoteRequest,
   DeliveryNoteOrderResponse,
   DeliveryNoteResponse,
@@ -1296,15 +2224,27 @@ export const schemas = {
   UpdateDesignRequest,
   DesignResponsePaginate,
   postApidesignsIdtimeline_Body,
+  DesignTimelineEntryResponsePaginate,
   CreateDesignTypeRequest,
   DesignTypeResponsePaginate,
   UpdateDesignTypeRequest,
+  InventorySummaryItemResponse,
+  InventorySummaryItemResponseIPaginate,
+  StockCardEntryResponse,
+  StockCardResponse,
+  CurrentStockResponse,
+  CurrentStockResponseIPaginate,
+  LowStockResponse,
+  LowStockResponseIPaginate,
+  SlowMovingResponse,
+  SlowMovingResponseIPaginate,
   CreateInvoiceItemRequest,
   CreateInvoiceRequest,
   InvoiceOrderResponse,
   InvoiceItemResponse,
   InvoiceResponse,
   UpdateInvoiceRequest,
+  InvoiceResponsePaginate,
   CreateMaterialTypeRequest,
   MaterialTypeResponsePaginate,
   MaterialTypeItem,
@@ -1330,13 +2270,9 @@ export const schemas = {
   CreatePaymentRequest,
   PaymentResponse,
   PaymentResponsePaginate,
+  VendorResponse,
   PlateExportResponse,
   PlateExportResponsePaginate,
-  CreatePlateVendorRequest,
-  PlateVendorResponse,
-  PlateVendorResponsePaginate,
-  UpdatePlateVendorRequest,
-  PlateCountOptionResponse,
   CreateProductionRequest,
   ProductionResponse,
   ProductionResponsePaginate,
@@ -1351,9 +2287,30 @@ export const schemas = {
   CreateProofingOrderDetailItem,
   CreateProofingOrderFromDesignsRequest,
   UpdateProofingOrderRequest,
-  ApproveProofingOrderRequest,
+  OrderDetailResponsePaginate,
   RecordPlateExportRequest,
-  RecordDieExportRequest,
+  postApiproofingOrdersIddieExport_Body,
+  ReportExportResponse,
+  ReportExportResponseIPaginate,
+  ProblemDetails,
+  SalesByPeriodResponse,
+  SalesByPeriodResponseIPaginate,
+  SalesByCustomerResponse,
+  SalesByCustomerResponseIPaginate,
+  SalesByDimensionResponse,
+  SalesByDimensionResponseIPaginate,
+  TopProductResponse,
+  TopProductResponseIPaginate,
+  ReturnsDiscountsResponse,
+  ReturnsDiscountsResponseIPaginate,
+  OrderDrillDownResponse,
+  OrderDrillDownResponseIPaginate,
+  StockInItemRequest,
+  CreateStockInRequest,
+  UpdateStockInRequest,
+  StockOutItemRequest,
+  CreateStockOutRequest,
+  UpdateStockOutRequest,
   CreateUserRequest,
   UserResponse,
   UserResponsePaginate,
@@ -1361,6 +2318,11 @@ export const schemas = {
   ChangePasswordRequest,
   UserKpiResponse,
   TeamKpiSummaryResponse,
+  CreateVendorRequest,
+  VendorResponsePaginate,
+  UpdateVendorRequest,
+  VendorCountOptionResponse,
+  VendorCountOptionResponseIPaginate,
 };
 
 const endpoints = makeApi([
@@ -1493,6 +2455,728 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/bank-ledger",
+    alias: "getApibankLedger",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "bankAccountId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: BankLedgerResponse,
+  },
+  {
+    method: "get",
+    path: "/api/cash-book",
+    alias: "getApicashBook",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "cashFundId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: CashBookResponse,
+  },
+  {
+    method: "post",
+    path: "/api/cash-payments",
+    alias: "postApicashPayments",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateCashPaymentRequest,
+      },
+    ],
+    response: CashPaymentResponse,
+  },
+  {
+    method: "get",
+    path: "/api/cash-payments",
+    alias: "getApicashPayments",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "paymentMethodId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "expenseCategoryId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: CashPaymentResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/cash-payments/:id",
+    alias: "getApicashPaymentsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashPaymentResponse,
+  },
+  {
+    method: "put",
+    path: "/api/cash-payments/:id",
+    alias: "putApicashPaymentsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateCashPaymentRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashPaymentResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/cash-payments/:id",
+    alias: "deleteApicashPaymentsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/cash-payments/:id/approve",
+    alias: "postApicashPaymentsIdapprove",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashPaymentResponse,
+  },
+  {
+    method: "post",
+    path: "/api/cash-payments/:id/cancel",
+    alias: "postApicashPaymentsIdcancel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashPaymentResponse,
+  },
+  {
+    method: "post",
+    path: "/api/cash-payments/:id/post",
+    alias: "postApicashPaymentsIdpost",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashPaymentResponse,
+  },
+  {
+    method: "post",
+    path: "/api/cash-receipts",
+    alias: "postApicashReceipts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateCashReceiptRequest,
+      },
+    ],
+    response: CashReceiptResponse,
+  },
+  {
+    method: "get",
+    path: "/api/cash-receipts",
+    alias: "getApicashReceipts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "paymentMethodId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: CashReceiptResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/cash-receipts/:id",
+    alias: "getApicashReceiptsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashReceiptResponse,
+  },
+  {
+    method: "put",
+    path: "/api/cash-receipts/:id",
+    alias: "putApicashReceiptsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateCashReceiptRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashReceiptResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/cash-receipts/:id",
+    alias: "deleteApicashReceiptsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/cash-receipts/:id/approve",
+    alias: "postApicashReceiptsIdapprove",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashReceiptResponse,
+  },
+  {
+    method: "post",
+    path: "/api/cash-receipts/:id/cancel",
+    alias: "postApicashReceiptsIdcancel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashReceiptResponse,
+  },
+  {
+    method: "post",
+    path: "/api/cash-receipts/:id/post",
+    alias: "postApicashReceiptsIdpost",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashReceiptResponse,
+  },
+  {
+    method: "get",
+    path: "/api/categories/bank-accounts",
+    alias: "getApicategoriesbankAccounts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "isActive",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: BankAccountResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/categories/bank-accounts",
+    alias: "postApicategoriesbankAccounts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateBankAccountRequest,
+      },
+    ],
+    response: BankAccountResponse,
+  },
+  {
+    method: "get",
+    path: "/api/categories/bank-accounts/:id",
+    alias: "getApicategoriesbankAccountsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: BankAccountResponse,
+  },
+  {
+    method: "put",
+    path: "/api/categories/bank-accounts/:id",
+    alias: "putApicategoriesbankAccountsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateBankAccountRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: BankAccountResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/categories/bank-accounts/:id",
+    alias: "deleteApicategoriesbankAccountsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/categories/cash-funds",
+    alias: "getApicategoriescashFunds",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "isActive",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: CashFundResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/categories/cash-funds",
+    alias: "postApicategoriescashFunds",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateCashFundRequest,
+      },
+    ],
+    response: CashFundResponse,
+  },
+  {
+    method: "get",
+    path: "/api/categories/cash-funds/:id",
+    alias: "getApicategoriescashFundsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashFundResponse,
+  },
+  {
+    method: "put",
+    path: "/api/categories/cash-funds/:id",
+    alias: "putApicategoriescashFundsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateCashFundRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CashFundResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/categories/cash-funds/:id",
+    alias: "deleteApicategoriescashFundsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/categories/expense-categories",
+    alias: "getApicategoriesexpenseCategories",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "type",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "isActive",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: ExpenseCategoryResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/categories/expense-categories",
+    alias: "postApicategoriesexpenseCategories",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateExpenseCategoryRequest,
+      },
+    ],
+    response: ExpenseCategoryResponse,
+  },
+  {
+    method: "get",
+    path: "/api/categories/expense-categories/:id",
+    alias: "getApicategoriesexpenseCategoriesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ExpenseCategoryResponse,
+  },
+  {
+    method: "put",
+    path: "/api/categories/expense-categories/:id",
+    alias: "putApicategoriesexpenseCategoriesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateExpenseCategoryRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ExpenseCategoryResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/categories/expense-categories/:id",
+    alias: "deleteApicategoriesexpenseCategoriesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/categories/payment-methods",
+    alias: "getApicategoriespaymentMethods",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "isActive",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: PaymentMethodResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/categories/payment-methods",
+    alias: "postApicategoriespaymentMethods",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreatePaymentMethodRequest,
+      },
+    ],
+    response: PaymentMethodResponse,
+  },
+  {
+    method: "get",
+    path: "/api/categories/payment-methods/:id",
+    alias: "getApicategoriespaymentMethodsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: PaymentMethodResponse,
+  },
+  {
+    method: "put",
+    path: "/api/categories/payment-methods/:id",
+    alias: "putApicategoriespaymentMethodsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdatePaymentMethodRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: PaymentMethodResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/categories/payment-methods/:id",
+    alias: "deleteApicategoriespaymentMethodsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
     path: "/api/constants",
     alias: "getApiconstants",
     requestFormat: "json",
@@ -1595,8 +3279,18 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
       },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
     ],
-    response: z.array(CustomerDebtHistoryResponse),
+    response: CustomerDebtHistoryResponsePaginate,
   },
   {
     method: "get",
@@ -1697,6 +3391,345 @@ const endpoints = makeApi([
       },
     ],
     response: CustomerStatisticsResponse,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-aging",
+    alias: "getApidebtReportsapAging",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "asOfDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: APAgingResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-aging/export",
+    alias: "getApidebtReportsapAgingexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "asOfDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "saveHistory",
+        type: "Query",
+        schema: z.boolean().optional().default(true),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-detail",
+    alias: "getApidebtReportsapDetail",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: APDetailResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-summary",
+    alias: "getApidebtReportsapSummary",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: APSummaryResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-summary/export",
+    alias: "getApidebtReportsapSummaryexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "saveHistory",
+        type: "Query",
+        schema: z.boolean().optional().default(true),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-aging",
+    alias: "getApidebtReportsarAging",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "asOfDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: ARAgingResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-aging/export",
+    alias: "getApidebtReportsarAgingexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "asOfDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "saveHistory",
+        type: "Query",
+        schema: z.boolean().optional().default(true),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-detail",
+    alias: "getApidebtReportsarDetail",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: ARDetailResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-summary",
+    alias: "getApidebtReportsarSummary",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: ARSummaryResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-summary/export",
+    alias: "getApidebtReportsarSummaryexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "saveHistory",
+        type: "Query",
+        schema: z.boolean().optional().default(true),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/collection-schedule",
+    alias: "getApidebtReportscollectionSchedule",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "dueDateFrom",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "dueDateTo",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: CollectionScheduleResponseIPaginate,
   },
   {
     method: "post",
@@ -1923,8 +3956,18 @@ const endpoints = makeApi([
         type: "Path",
         schema: z.number().int(),
       },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
     ],
-    response: z.array(DesignTimelineEntryResponse),
+    response: DesignTimelineEntryResponsePaginate,
   },
   {
     method: "post",
@@ -1980,8 +4023,18 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
     ],
-    response: z.array(DesignResponse),
+    response: DesignResponsePaginate,
   },
   {
     method: "post",
@@ -2098,8 +4151,18 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
     ],
-    response: z.array(MaterialTypeResponse),
+    response: MaterialTypeResponsePaginate,
   },
   {
     method: "get",
@@ -2256,8 +4319,183 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional(),
       },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
     ],
-    response: z.array(DesignResponse),
+    response: DesignResponsePaginate,
+  },
+  {
+    method: "get",
+    path: "/api/inventory-reports/current-stock",
+    alias: "getApiinventoryReportscurrentStock",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "asOfDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "warehouse",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "itemGroup",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: CurrentStockResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/inventory-reports/low-stock",
+    alias: "getApiinventoryReportslowStock",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "warehouse",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "itemGroup",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: LowStockResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/inventory-reports/slow-moving",
+    alias: "getApiinventoryReportsslowMoving",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "warehouse",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "daysThreshold",
+        type: "Query",
+        schema: z.number().int().optional().default(90),
+      },
+    ],
+    response: SlowMovingResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/inventory-reports/stock-card/:itemCode",
+    alias: "getApiinventoryReportsstockCardItemCode",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "itemCode",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "warehouse",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: StockCardResponse,
+  },
+  {
+    method: "get",
+    path: "/api/inventory-reports/summary",
+    alias: "getApiinventoryReportssummary",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "warehouse",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "itemGroup",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "itemCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: InventorySummaryItemResponseIPaginate,
   },
   {
     method: "post",
@@ -2331,8 +4569,18 @@ const endpoints = makeApi([
         type: "Path",
         schema: z.number().int(),
       },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
     ],
-    response: z.array(InvoiceResponse),
+    response: InvoiceResponsePaginate,
   },
   {
     method: "post",
@@ -2760,8 +5008,18 @@ const endpoints = makeApi([
         type: "Path",
         schema: z.number().int(),
       },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
     ],
-    response: z.array(PaymentResponse),
+    response: PaymentResponsePaginate,
   },
   {
     method: "get",
@@ -2815,110 +5073,6 @@ const endpoints = makeApi([
       },
     ],
     response: PlateExportResponse,
-  },
-  {
-    method: "post",
-    path: "/api/plate-vendors",
-    alias: "postApiplateVendors",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: CreatePlateVendorRequest,
-      },
-    ],
-    response: PlateVendorResponse,
-  },
-  {
-    method: "get",
-    path: "/api/plate-vendors",
-    alias: "getApiplateVendors",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "pageNumber",
-        type: "Query",
-        schema: z.number().int().optional().default(1),
-      },
-      {
-        name: "pageSize",
-        type: "Query",
-        schema: z.number().int().optional().default(10),
-      },
-      {
-        name: "search",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
-        name: "isActive",
-        type: "Query",
-        schema: z.boolean().optional(),
-      },
-    ],
-    response: PlateVendorResponsePaginate,
-  },
-  {
-    method: "put",
-    path: "/api/plate-vendors/:id",
-    alias: "putApiplateVendorsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: UpdatePlateVendorRequest,
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: PlateVendorResponse,
-  },
-  {
-    method: "get",
-    path: "/api/plate-vendors/:id",
-    alias: "getApiplateVendorsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "id",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: PlateVendorResponse,
-  },
-  {
-    method: "delete",
-    path: "/api/plate-vendors/:id",
-    alias: "deleteApiplateVendorsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "id",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: z.void(),
-  },
-  {
-    method: "get",
-    path: "/api/plate-vendors/active",
-    alias: "getApiplateVendorsactive",
-    requestFormat: "json",
-    response: z.array(PlateVendorResponse),
-  },
-  {
-    method: "get",
-    path: "/api/plate-vendors/plate-count-options",
-    alias: "getApiplateVendorsplateCountOptions",
-    requestFormat: "json",
-    response: z.array(PlateCountOptionResponse),
   },
   {
     method: "post",
@@ -3131,25 +5285,6 @@ const endpoints = makeApi([
   },
   {
     method: "put",
-    path: "/api/proofing-orders/:id/approve",
-    alias: "putApiproofingOrdersIdapprove",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: ApproveProofingOrderRequest,
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: ProofingOrderResponse,
-  },
-  {
-    method: "put",
     path: "/api/proofing-orders/:id/complete",
     alias: "putApiproofingOrdersIdcomplete",
     requestFormat: "json",
@@ -3166,12 +5301,12 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/proofing-orders/:id/die-export",
     alias: "postApiproofingOrdersIddieExport",
-    requestFormat: "json",
+    requestFormat: "form-data",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: RecordDieExportRequest,
+        schema: postApiproofingOrdersIddieExport_Body,
       },
       {
         name: "id",
@@ -3343,8 +5478,18 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional(),
       },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
     ],
-    response: z.array(OrderDetailResponse),
+    response: OrderDetailResponsePaginate,
   },
   {
     method: "get",
@@ -3371,8 +5516,18 @@ const endpoints = makeApi([
         type: "Path",
         schema: z.number().int(),
       },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
     ],
-    response: z.array(ProofingOrderResponse),
+    response: ProofingOrderResponsePaginate,
   },
   {
     method: "get",
@@ -3406,6 +5561,678 @@ const endpoints = makeApi([
       },
     ],
     response: ProofingOrderResponse,
+  },
+  {
+    method: "get",
+    path: "/api/report-exports",
+    alias: "getApireportExports",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "reportCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "exportedById",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: ReportExportResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/report-exports/:id",
+    alias: "getApireportExportsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ReportExportResponse,
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/report-exports/:id",
+    alias: "deleteApireportExportsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/report-exports/:id/download",
+    alias: "getApireportExportsIddownload",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.instanceof(File),
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/by-customer",
+    alias: "getApisalesReportsbyCustomer",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "salespersonId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: SalesByCustomerResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/by-dimension",
+    alias: "getApisalesReportsbyDimension",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "dimension",
+        type: "Query",
+        schema: z.string().optional().default("salesperson"),
+      },
+    ],
+    response: SalesByDimensionResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/by-period",
+    alias: "getApisalesReportsbyPeriod",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "groupBy",
+        type: "Query",
+        schema: z.string().optional().default("month"),
+      },
+      {
+        name: "salespersonId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: SalesByPeriodResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/by-period/export",
+    alias: "getApisalesReportsbyPeriodexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "groupBy",
+        type: "Query",
+        schema: z.string().optional().default("month"),
+      },
+      {
+        name: "salespersonId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "saveHistory",
+        type: "Query",
+        schema: z.boolean().optional().default(true),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/orders-by-customer/:customerId",
+    alias: "getApisalesReportsordersByCustomerCustomerId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: OrderDrillDownResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/orders-by-period",
+    alias: "getApisalesReportsordersByPeriod",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "salespersonId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: OrderDrillDownResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/returns-discounts",
+    alias: "getApisalesReportsreturnsDiscounts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "groupBy",
+        type: "Query",
+        schema: z.string().optional().default("month"),
+      },
+    ],
+    response: ReturnsDiscountsResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/top-products",
+    alias: "getApisalesReportstopProducts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "topN",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "itemGroup",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: TopProductResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/stock-ins",
+    alias: "postApistockIns",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateStockInRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-ins",
+    alias: "getApistockIns",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "type",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-ins/:id",
+    alias: "getApistockInsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "put",
+    path: "/api/stock-ins/:id",
+    alias: "putApistockInsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateStockInRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "delete",
+    path: "/api/stock-ins/:id",
+    alias: "deleteApistockInsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-ins/:id/cancel",
+    alias: "postApistockInsIdcancel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-ins/:id/complete",
+    alias: "postApistockInsIdcomplete",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs",
+    alias: "postApistockOuts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateStockOutRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-outs",
+    alias: "getApistockOuts",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "type",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-outs/:id",
+    alias: "getApistockOutsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "put",
+    path: "/api/stock-outs/:id",
+    alias: "putApistockOutsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateStockOutRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "delete",
+    path: "/api/stock-outs/:id",
+    alias: "deleteApistockOutsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs/:id/cancel",
+    alias: "postApistockOutsIdcancel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs/:id/complete",
+    alias: "postApistockOutsIdcomplete",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
   },
   {
     method: "post",
@@ -3607,7 +6434,19 @@ const endpoints = makeApi([
     path: "/api/users/designers",
     alias: "getApiusersdesigners",
     requestFormat: "json",
-    response: z.array(UserResponse),
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+    ],
+    response: UserResponsePaginate,
   },
   {
     method: "get",
@@ -3653,6 +6492,103 @@ const endpoints = makeApi([
         schema: ErrorResponse,
       },
     ],
+  },
+  {
+    method: "post",
+    path: "/api/vendors",
+    alias: "postApivendors",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateVendorRequest,
+      },
+    ],
+    response: VendorResponse,
+  },
+  {
+    method: "get",
+    path: "/api/vendors",
+    alias: "getApivendors",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "isActive",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+    ],
+    response: VendorResponsePaginate,
+  },
+  {
+    method: "put",
+    path: "/api/vendors/:id",
+    alias: "putApivendorsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateVendorRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: VendorResponse,
+  },
+  {
+    method: "get",
+    path: "/api/vendors/:id",
+    alias: "getApivendorsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: VendorResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/vendors/:id",
+    alias: "deleteApivendorsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/vendors/plate-count-options",
+    alias: "getApivendorsplateCountOptions",
+    requestFormat: "json",
+    response: VendorCountOptionResponseIPaginate,
   },
 ]);
 

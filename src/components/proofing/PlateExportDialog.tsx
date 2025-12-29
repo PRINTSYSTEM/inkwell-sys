@@ -1,6 +1,4 @@
-"use client";
-
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -37,10 +35,7 @@ import { Check, ChevronsUpDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRecordPlateExport } from "@/hooks/use-proofing-order";
-import {
-  useActivePlateVendors,
-  useCreatePlateVendor,
-} from "@/hooks/use-plate-vendor";
+import { useActivePlateVendors, useCreateVendor } from "@/hooks/use-vendor";
 import type { RecordPlateExportRequest } from "@/Schema";
 
 interface PlateExportDialogProps {
@@ -79,8 +74,7 @@ export function PlateExportDialog({
   const [notes, setNotes] = useState<string>("");
 
   const { data: vendors, isLoading: loadingVendors } = useActivePlateVendors();
-  const { mutate: createVendor, isPending: creatingVendor } =
-    useCreatePlateVendor();
+  const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordPlate, isPending: recordingPlate } =
     useRecordPlateExport();
 
@@ -100,19 +94,50 @@ export function PlateExportDialog({
     }
   }, [open]);
 
+  // Helper function to format local datetime with timezone offset
+  // Returns format: "YYYY-MM-DDTHH:mm:ss+HH:mm" (e.g., "2025-01-01T10:00:00+07:00")
+  const formatLocalDateTimeWithOffset = useCallback((date: Date): string => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+
+    // Get timezone offset in minutes and convert to hours and minutes
+    const offsetMinutes = date.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetMins = Math.abs(offsetMinutes) % 60;
+    const offsetSign = offsetMinutes <= 0 ? "+" : "-"; // Note: getTimezoneOffset() returns negative for positive offsets
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${pad(offsetHours)}:${pad(offsetMins)}`;
+  }, []);
+
+  // Helper function to convert datetime-local string to local datetime with offset
+  const convertLocalDateTimeToISO = useCallback((localDateTime: string): string => {
+    // datetime-local format: "YYYY-MM-DDTHH:mm" (no timezone)
+    // Parse as local time
+    const date = new Date(localDateTime);
+    // Format with local timezone offset
+    return formatLocalDateTimeWithOffset(date);
+  }, [formatLocalDateTimeWithOffset]);
+
   // Calculate receivedAt based on type
   const receivedAt = useMemo(() => {
     if (receivedAtType === "manual") {
       return receivedAtManual
-        ? new Date(receivedAtManual).toISOString()
+        ? convertLocalDateTimeToISO(receivedAtManual)
         : null;
     } else {
       // duration: sentAt + durationHours
+      // sentAt is current local time
       const sentAt = new Date();
       const received = new Date(sentAt.getTime() + durationHours * 60 * 1000);
-      return received.toISOString();
+      // Format with local timezone offset
+      return formatLocalDateTimeWithOffset(received);
     }
-  }, [receivedAtType, receivedAtManual, durationHours]);
+  }, [receivedAtType, receivedAtManual, durationHours, convertLocalDateTimeToISO, formatLocalDateTimeWithOffset]);
 
   const handleCreateVendor = async () => {
     if (!vendorName.trim()) {
@@ -127,6 +152,7 @@ export function PlateExportDialog({
         email: null,
         address: null,
         note: null,
+        vendorType: "plate", // Specify vendor type as plate
       },
       {
         onSuccess: (newVendor) => {
@@ -150,13 +176,17 @@ export function PlateExportDialog({
       return;
     }
 
-    const sentAt = new Date().toISOString();
+    // sentAt is current local time, format with timezone offset
+    const sentAt = formatLocalDateTimeWithOffset(new Date());
+    // estimatedReceiveAt is same as receivedAt for now
+    const estimatedReceiveAt = receivedAt;
 
     const request: RecordPlateExportRequest = {
       plateCount,
       plateVendorId: vendorId,
       vendorName: vendorId ? undefined : vendorName.trim() || undefined,
       sentAt,
+      estimatedReceiveAt: estimatedReceiveAt || undefined,
       receivedAt: receivedAt || undefined,
       notes: notes.trim() || undefined,
     };
@@ -217,7 +247,10 @@ export function PlateExportDialog({
             </Label>
             {!isCreatingVendor ? (
               <div className="flex gap-2">
-                <Popover open={vendorSearchOpen} onOpenChange={setVendorSearchOpen}>
+                <Popover
+                  open={vendorSearchOpen}
+                  onOpenChange={setVendorSearchOpen}
+                >
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -225,7 +258,9 @@ export function PlateExportDialog({
                       className="flex-1 justify-between"
                       disabled={loadingVendors}
                     >
-                      {selectedVendor ? selectedVendor.name : "Chọn nhà cung cấp..."}
+                      {selectedVendor
+                        ? selectedVendor.name
+                        : "Chọn nhà cung cấp..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -360,7 +395,10 @@ export function PlateExportDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {TIME_DURATION_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value.toString()}>
+                    <SelectItem
+                      key={option.value}
+                      value={option.value.toString()}
+                    >
                       {option.label}
                     </SelectItem>
                   ))}
@@ -419,4 +457,3 @@ export function PlateExportDialog({
     </Dialog>
   );
 }
-

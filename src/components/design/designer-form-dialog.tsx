@@ -1,5 +1,3 @@
-"use client";
-
 import type React from "react";
 
 import { useState, useEffect } from "react";
@@ -272,8 +270,8 @@ export function DesignerFormDialog({
               {isSubmitting
                 ? "Đang lưu..."
                 : designer
-                ? "Cập nhật"
-                : "Thêm mới"}
+                  ? "Cập nhật"
+                  : "Thêm mới"}
             </Button>
           </DialogFooter>
         </form>

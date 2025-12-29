@@ -6,6 +6,7 @@ import {
   InvoiceItemResponseSchema as GenInvoiceItemResponseSchema,
   InvoiceOrderResponseSchema as GenInvoiceOrderResponseSchema,
   InvoiceResponseSchema as GenInvoiceResponseSchema,
+  InvoiceResponsePaginateSchema as GenInvoiceResponsePaginateSchema,
   CreateInvoiceRequestSchema as GenCreateInvoiceRequestSchema,
   CreateInvoiceItemRequestSchema as GenCreateInvoiceItemRequestSchema,
   UpdateInvoiceRequestSchema as GenUpdateInvoiceRequestSchema,
@@ -31,6 +32,14 @@ export const InvoiceResponsePagedResponseSchema = createPagedResponseSchema(
 );
 export type InvoiceResponsePagedResponse = z.infer<
   typeof InvoiceResponsePagedResponseSchema
+>;
+
+// Re-export generated paginate schema for compatibility
+export {
+  GenInvoiceResponsePaginateSchema as InvoiceResponsePaginateSchema,
+};
+export type InvoiceResponsePaginate = z.infer<
+  typeof GenInvoiceResponsePaginateSchema
 >;
 
 // ===== CreateInvoiceRequest =====

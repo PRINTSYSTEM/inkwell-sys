@@ -1,4 +1,4 @@
-import { DesignItem } from "@/types/proofing";
+import type { DesignItem } from "@/types/proofing";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { Building2, User, FileText } from "lucide-react";
+import { processClassificationLabels } from "@/lib/status-utils";
 
 interface DesignTableProps {
   designs: DesignItem[];
@@ -150,7 +151,7 @@ export function DesignTable({
                 <TableCell>
                   {design.processClassificationOptionName ? (
                     <Badge variant="outline" className="text-xs">
-                      {design.processClassificationOptionName}
+                      {processClassificationLabels[design.processClassificationOptionName] || design.processClassificationOptionName}
                     </Badge>
                   ) : (
                     <span className="text-muted-foreground text-xs">—</span>

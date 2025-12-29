@@ -97,6 +97,15 @@ const departments: SidebarDepartment[] = [
     ],
   },
   {
+    title: "Kho",
+    icon: Package,
+    items: [
+      { title: "Phiếu nhập kho", href: "/stock/stock-ins" },
+      { title: "Phiếu xuất kho", href: "/stock/stock-outs" },
+      { title: "Nhà cung cấp", href: "/vendors" },
+    ],
+  },
+  {
     title: "Khách hàng",
     icon: Users,
     items: [

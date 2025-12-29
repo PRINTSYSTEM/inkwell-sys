@@ -7,6 +7,7 @@ import type {
   DesignListParams,
   MyDesignListParams,
   DesignTimelineEntryResponse,
+  DesignTimelineEntryResponsePaginate,
   UpdateDesignRequest,
   DesignByCustomerListParams,
 } from "@/Schema";
@@ -97,7 +98,8 @@ export const useDesignTimeline = (id: number | null, enabled = true) => {
     queryKey: [designKeys.detail(id as number), "timeline"],
     enabled: enabled && !!id,
     queryFn: async () => {
-      const res = await apiRequest.get<DesignTimelineEntryResponse[]>(
+      // API returns DesignTimelineEntryResponsePaginate
+      const res = await apiRequest.get<DesignTimelineEntryResponsePaginate>(
         API_SUFFIX.DESIGN_TIMELINE(id as number)
       );
       return res.data;

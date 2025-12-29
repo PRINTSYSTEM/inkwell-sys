@@ -761,49 +761,6 @@ export default function AccountingOrderDetail() {
                   )}
                 </CardContent>
               </Card>
-
-              {/* Staff Info */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    Nhân viên phụ trách
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Người tạo đơn
-                      </p>
-                      <p className="font-medium">
-                        {order.creator?.fullName || "—"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-medium">
-                        {order.creator?.email || "—"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Cập nhật lần cuối
-                      </p>
-                      <p className="font-medium">
-                        {formatDateTime(order.updatedAt)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>

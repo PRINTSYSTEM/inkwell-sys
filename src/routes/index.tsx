@@ -63,6 +63,15 @@ const ProductTemplates = lazy(
   () => import("@/pages/inventory/ProductTemplatesPage")
 );
 
+// Stock Management
+const StockInList = lazy(() => import("@/pages/stock/StockInList"));
+const StockInCreate = lazy(() => import("@/pages/stock/StockInCreate"));
+const StockOutList = lazy(() => import("@/pages/stock/StockOutList"));
+const StockOutCreate = lazy(() => import("@/pages/stock/StockOutCreate"));
+
+// Vendors
+const VendorList = lazy(() => import("@/pages/vendors/VendorList"));
+
 const PaymentPage = lazy(() => import("@/pages/accounting/PaymentPage"));
 const InvoicePage = lazy(() => import("@/pages/accounting/InvoicePage"));
 const DeliveryPage = lazy(() => import("@/pages/accounting/DeliveryPage"));
@@ -79,6 +88,79 @@ const AccountingExpenses = lazy(
   () => import("@/pages/accounting/AccountingExpenses")
 );
 
+// Cash Management
+const CashPaymentList = lazy(
+  () => import("@/pages/accounting/cash/CashPaymentListPage")
+);
+const CashFundList = lazy(
+  () => import("@/pages/accounting/cash/CashFundListPage")
+);
+const CashReceiptList = lazy(
+  () => import("@/pages/accounting/cash/CashReceiptListPage")
+);
+const CashBook = lazy(() => import("@/pages/accounting/cash/CashBookPage"));
+
+// Bank Management
+const BankAccountList = lazy(
+  () => import("@/pages/accounting/bank/BankAccountListPage")
+);
+const BankLedger = lazy(() => import("@/pages/accounting/bank/BankLedgerPage"));
+
+// AR/AP
+const ARSummary = lazy(() => import("@/pages/accounting/ar/ARSummaryPage"));
+const ARDetail = lazy(() => import("@/pages/accounting/ar/ARDetailPage"));
+const ARAging = lazy(() => import("@/pages/accounting/ar/ARAgingPage"));
+const APSummary = lazy(() => import("@/pages/accounting/ap/APSummaryPage"));
+const APDetail = lazy(() => import("@/pages/accounting/ap/APDetailPage"));
+const APAging = lazy(() => import("@/pages/accounting/ap/APAgingPage"));
+const CollectionSchedule = lazy(
+  () => import("@/pages/accounting/CollectionSchedulePage")
+);
+
+// Expense & Payment Method
+const ExpenseCategoryList = lazy(
+  () => import("@/pages/accounting/expense/ExpenseCategoryListPage")
+);
+const PaymentMethodList = lazy(
+  () => import("@/pages/accounting/payment-method/PaymentMethodListPage")
+);
+
+// Inventory Reports
+const CurrentStock = lazy(
+  () => import("@/pages/reports/inventory/CurrentStockPage")
+);
+const InventorySummary = lazy(
+  () => import("@/pages/reports/inventory/InventorySummaryPage")
+);
+const LowStock = lazy(() => import("@/pages/reports/inventory/LowStockPage"));
+const SlowMoving = lazy(
+  () => import("@/pages/reports/inventory/SlowMovingPage")
+);
+const StockCard = lazy(() => import("@/pages/reports/inventory/StockCardPage"));
+
+// Sales Reports
+const SalesByPeriod = lazy(
+  () => import("@/pages/reports/sales/SalesByPeriodPage")
+);
+const SalesByCustomer = lazy(
+  () => import("@/pages/reports/sales/SalesByCustomerPage")
+);
+const SalesByDimension = lazy(
+  () => import("@/pages/reports/sales/SalesByDimensionPage")
+);
+const TopProducts = lazy(() => import("@/pages/reports/sales/TopProductsPage"));
+const ReturnsDiscounts = lazy(
+  () => import("@/pages/reports/sales/ReturnsDiscountsPage")
+);
+const OrderDrillDown = lazy(
+  () => import("@/pages/reports/sales/OrderDrillDownPage")
+);
+
+// Report Exports
+const ReportExportList = lazy(
+  () => import("@/pages/reports/ReportExportListPage")
+);
+
 // Delivery Notes
 const DeliveryNoteList = lazy(
   () => import("@/pages/delivery-notes/DeliveryNoteList")
@@ -88,6 +170,7 @@ const DeliveryNoteDetail = lazy(
 );
 
 // Invoices
+const InvoiceList = lazy(() => import("@/pages/invoices/InvoiceList"));
 const InvoiceDetail = lazy(() => import("@/pages/invoices/InvoiceDetail"));
 
 // Attendance
@@ -390,6 +473,70 @@ export const router = createBrowserRouter([
         ],
       },
 
+      // ===== STOCK MANAGEMENT =====
+      {
+        path: "stock",
+        children: [
+          {
+            path: "stock-ins",
+            children: [
+              {
+                index: true,
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <StockInList />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "create",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <StockInCreate />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
+          {
+            path: "stock-outs",
+            children: [
+              {
+                index: true,
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <StockOutList />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "create",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <StockOutCreate />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
+        ],
+      },
+
+      // ===== VENDORS =====
+      {
+        path: "vendors",
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <VendorList />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
       // ===== ACCOUNTING =====
       {
         path: lastSegment(ROUTE_PATHS.ACCOUNTING.ROOT), // "accounting"
@@ -450,6 +597,141 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
+          // Cash Management
+          {
+            path: "cash-payments",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CashPaymentList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "cash-funds",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CashFundList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "cash-receipts",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CashReceiptList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "cash-book",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CashBook />
+              </Suspense>
+            ),
+          },
+          // Bank Management
+          {
+            path: "bank-accounts",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <BankAccountList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "bank-ledger",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <BankLedger />
+              </Suspense>
+            ),
+          },
+          // AR
+          {
+            path: "ar",
+            children: [
+              {
+                path: "summary",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <ARSummary />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "detail",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <ARDetail />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "aging",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <ARAging />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
+          // AP
+          {
+            path: "ap",
+            children: [
+              {
+                path: "summary",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <APSummary />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "detail",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <APDetail />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "aging",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <APAging />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
+          {
+            path: "collection-schedule",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CollectionSchedule />
+              </Suspense>
+            ),
+          },
+          // Expense & Payment Method
+          {
+            path: "expense-categories",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <ExpenseCategoryList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "payment-methods",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <PaymentMethodList />
+              </Suspense>
+            ),
+          },
         ],
       },
 
@@ -480,6 +762,14 @@ export const router = createBrowserRouter([
       {
         path: lastSegment(ROUTE_PATHS.INVOICES.ROOT), // "invoices"
         children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <InvoiceList />
+              </Suspense>
+            ),
+          },
           {
             path: ":id",
             element: (
@@ -515,6 +805,122 @@ export const router = createBrowserRouter([
       },
 
       // ===== MANAGER =====
+
+      // ===== REPORTS =====
+      {
+        path: lastSegment(ROUTE_PATHS.REPORTS.ROOT), // "reports"
+        children: [
+          // Inventory Reports
+          {
+            path: "inventory",
+            children: [
+              {
+                path: "current-stock",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <CurrentStock />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "summary",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <InventorySummary />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "low-stock",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <LowStock />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "slow-moving",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <SlowMoving />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "stock-card/:itemCode",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <StockCard />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
+          // Sales Reports
+          {
+            path: "sales",
+            children: [
+              {
+                path: "by-period",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <SalesByPeriod />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "by-customer",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <SalesByCustomer />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "by-dimension",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <SalesByDimension />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "top-products",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <TopProducts />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "returns-discounts",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <ReturnsDiscounts />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "order-drill-down",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <OrderDrillDown />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
+          // Report Exports
+          {
+            path: "exports",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <ReportExportList />
+              </Suspense>
+            ),
+          },
+        ],
+      },
 
       // ===== NOTIFICATIONS =====
       {

@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +43,7 @@ import {
   Settings2,
   Trash2,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -61,8 +60,15 @@ import {
 import { PlateExportDialog } from "@/components/proofing/PlateExportDialog";
 import { DieExportDialog } from "@/components/proofing/DieExportDialog";
 import { IdSchema } from "@/Schema";
+import type { PlateExportResponse, DieExportResponse } from "@/Schema";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { designStatusLabels, proofingStatusLabels } from "@/lib/status-utils";
+import {
+  designStatusLabels,
+  proofingStatusLabels,
+  processClassificationLabels,
+  sidesClassificationLabels,
+  laminationTypeLabels,
+} from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { downloadFile } from "@/lib/download-utils";
 
@@ -77,6 +83,11 @@ export default function ProofingOrderDetailPage() {
   const [isDieExportDialogOpen, setIsDieExportDialogOpen] = useState(false);
   const [isConfirmStatusDialogOpen, setIsConfirmStatusDialogOpen] =
     useState(false);
+  const [isConfirmStatusChangeDialogOpen, setIsConfirmStatusChangeDialogOpen] =
+    useState(false);
+  const [isHandToProductionDialogOpen, setIsHandToProductionDialogOpen] =
+    useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadImage, setUploadImage] = useState<File | null>(null);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -142,10 +153,117 @@ export default function ProofingOrderDetailPage() {
     handToProductionMutate(order.id);
   };
 
-  const handleStatusChangeClick = () => {
-    // Chỉ cho phép khi status là waiting_for_file
+  const handleOldStatusChangeClick = () => {
+    // Chỉ cho phép khi status là waiting_for_file (logic cũ)
     if (order?.status === "waiting_for_file") {
       setIsConfirmStatusDialogOpen(true);
+    }
+  };
+
+  // Xác định trạng thái tiếp theo và label nút dựa trên trạng thái hiện tại
+  const getNextStatusInfo = () => {
+    if (!order?.status) return null;
+
+    const currentStatus = order.status;
+
+    // not_completed → completed
+    if (currentStatus === "not_completed") {
+      return {
+        nextStatus: "completed",
+        buttonLabel: "Hoàn thành",
+        confirmMessage:
+          "Bạn có chắc chắn muốn đánh dấu lệnh bình bài là hoàn thành?",
+      };
+    }
+
+    // completed → paused
+    if (currentStatus === "completed") {
+      return {
+        nextStatus: "paused",
+        buttonLabel: "Tạm dừng",
+        confirmMessage: "Bạn có chắc chắn muốn tạm dừng lệnh bình bài này?",
+      };
+    }
+
+    // paused → completed
+    if (currentStatus === "paused") {
+      return {
+        nextStatus: "completed",
+        buttonLabel: "Tiếp tục",
+        confirmMessage: "Bạn có chắc chắn muốn tiếp tục lệnh bình bài này?",
+      };
+    }
+
+    return null;
+  };
+
+  const nextStatusInfo = getNextStatusInfo();
+
+  const handleStatusChangeClick = () => {
+    if (nextStatusInfo) {
+      setPendingStatus(nextStatusInfo.nextStatus);
+      setIsConfirmStatusChangeDialogOpen(true);
+    }
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!order?.id || !pendingStatus) {
+      setIsConfirmStatusChangeDialogOpen(false);
+      setPendingStatus(null);
+      return;
+    }
+
+    // Nếu chuyển sang "completed" từ "not_completed", hiện dialog hand to production
+    if (pendingStatus === "completed" && order.status === "not_completed") {
+      setIsConfirmStatusChangeDialogOpen(false);
+      setIsHandToProductionDialogOpen(true);
+      return;
+    }
+
+    try {
+      await updateProofing({ id: order.id, data: { status: pendingStatus } });
+      setIsConfirmStatusChangeDialogOpen(false);
+      setPendingStatus(null);
+      toast.success("Thành công", {
+        description: `Đã cập nhật trạng thái sang ${proofingStatusLabels[pendingStatus] || pendingStatus}`,
+      });
+    } catch (error) {
+      toast.error("Lỗi", {
+        description: "Không thể cập nhật trạng thái",
+      });
+    }
+  };
+
+  const handleConfirmHandToProduction = async () => {
+    if (!order?.id) {
+      setIsHandToProductionDialogOpen(false);
+      return;
+    }
+
+    // Kiểm tra điều kiện trước khi hand to production
+    if (!order.isPlateExported || !order.isDieExported) {
+      toast.error("Lỗi", {
+        description:
+          "Cần hoàn thành xuất kẽm và khuôn bế trước khi chuyển xuống sản xuất",
+      });
+      return;
+    }
+
+    try {
+      // Cập nhật trạng thái sang completed trước
+      await updateProofing({ id: order.id, data: { status: "completed" } });
+
+      // Sau đó hand to production
+      handToProductionMutate(order.id, {
+        onSuccess: () => {
+          setIsHandToProductionDialogOpen(false);
+          setPendingStatus(null);
+        },
+      });
+    } catch (error) {
+      toast.error("Lỗi", {
+        description: "Không thể cập nhật trạng thái",
+      });
     }
   };
 
@@ -260,12 +378,23 @@ export default function ProofingOrderDetailPage() {
             status={order.status}
             label={proofingStatusLabels[order.status]}
           />
-          {order.status === "waiting_for_file" && (
+          {nextStatusInfo && (
             <Button
               variant="outline"
               size="sm"
               className="gap-1.5 h-8 text-xs"
               onClick={handleStatusChangeClick}
+            >
+              <Edit className="h-3.5 w-3.5" />
+              {nextStatusInfo.buttonLabel}
+            </Button>
+          )}
+          {order.status === "waiting_for_file" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-8 text-xs"
+              onClick={handleOldStatusChangeClick}
               disabled={!order.proofingFileUrl}
               title={
                 !order.proofingFileUrl
@@ -530,7 +659,9 @@ export default function ProofingOrderDetailPage() {
                         <TableCell className="px-2 py-1">
                           <div className="text-xs">
                             <p>
-                              {pod.design.width} × {pod.design.height} cm
+                              {pod.design.length} × {pod.design.width}{" "}
+                              {`${pod.design.height ? `× ${pod.design.height}` : ""}`}{" "}
+                              cm{" "}
                             </p>
                             {pod.design.areaM2 && (
                               <p className="text-[10px] text-muted-foreground">
@@ -546,22 +677,28 @@ export default function ProofingOrderDetailPage() {
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <span className="text-xs">
-                            {pod.design.sidesClassification || "—"}
+                            {pod.design.sidesClassification
+                              ? sidesClassificationLabels[
+                                  pod.design.sidesClassification
+                                ] || pod.design.sidesClassification
+                              : "—"}
                           </span>
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <span className="text-xs">
-                            {pod.design.processClassification || "—"}
+                            {pod.design.processClassification
+                              ? processClassificationLabels[
+                                  pod.design.processClassification
+                                ] || pod.design.processClassification
+                              : "—"}
                           </span>
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <span className="text-xs">
                             {pod.design.laminationType
-                              ? pod.design.laminationType === "bóng"
-                                ? "Bóng"
-                                : pod.design.laminationType === "mờ"
-                                  ? "Mờ"
-                                  : pod.design.laminationType
+                              ? laminationTypeLabels[
+                                  pod.design.laminationType
+                                ] || pod.design.laminationType
                               : "—"}
                           </span>
                         </TableCell>
@@ -643,11 +780,11 @@ export default function ProofingOrderDetailPage() {
                   <div className="bg-muted/30 rounded p-2 text-xs space-y-0.5">
                     <p className="truncate">
                       <span className="text-muted-foreground">Đơn vị:</span>{" "}
-                      {order.plateExport?.vendorName || "—"}
+                      {order.plateExport.vendorName || "—"}
                     </p>
                     <p>
                       <span className="text-muted-foreground">Có kẽm:</span>{" "}
-                      {order.plateExport?.receivedAt
+                      {order.plateExport.receivedAt
                         ? format(
                             new Date(order.plateExport.receivedAt),
                             "dd/MM HH:mm"
@@ -686,11 +823,11 @@ export default function ProofingOrderDetailPage() {
                 </div>
                 {order.dieExport ? (
                   <div className="bg-muted/30 rounded p-2 text-xs space-y-1">
-                    {order.dieExport?.imageUrl && (
+                    {order.dieExport.imageUrl && (
                       <div
                         className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer"
                         onClick={() => {
-                          setViewingImageUrl(order.dieExport?.imageUrl || null);
+                          setViewingImageUrl(order.dieExport.imageUrl || null);
                           setImageViewerOpen(true);
                         }}
                       >
@@ -701,9 +838,9 @@ export default function ProofingOrderDetailPage() {
                         />
                       </div>
                     )}
-                    {order.dieExport?.notes && (
+                    {order.dieExport.notes && (
                       <p className="text-[10px] italic text-muted-foreground line-clamp-2">
-                        "{order.dieExport.notes}"
+                        {order.dieExport.notes}
                       </p>
                     )}
                   </div>
@@ -721,7 +858,6 @@ export default function ProofingOrderDetailPage() {
                     disabled={
                       !order.isPlateExported ||
                       !order.isDieExported ||
-                      !order.approvedById ||
                       isHandingToProduction
                     }
                     onClick={handleHandToProduction}
@@ -732,11 +868,6 @@ export default function ProofingOrderDetailPage() {
                   {(!order.isPlateExported || !order.isDieExported) && (
                     <p className="text-[10px] text-destructive mt-1 text-center">
                       * Cần hoàn thành xuất kẽm và khuôn bế
-                    </p>
-                  )}
-                  {!order.approvedById && (
-                    <p className="text-[10px] text-destructive mt-1 text-center">
-                      * Cần được duyệt
                     </p>
                   )}
                 </div>
@@ -771,72 +902,6 @@ export default function ProofingOrderDetailPage() {
                   </div>
                 </div>
               </div>
-
-              <Separator className="my-2" />
-
-              <div className="space-y-1.5">
-                <Label className="text-muted-foreground text-[10px] font-normal">
-                  Người xử lý
-                </Label>
-                {order.assignedTo ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
-                      <UserIcon className="h-3.5 w-3.5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-xs">
-                        {order.assignedTo.fullName}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {order.assignedTo.email}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Chưa phân công
-                  </p>
-                )}
-              </div>
-
-              {order.approvedBy && (
-                <>
-                  <Separator className="my-2" />
-                  <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-[10px] font-normal">
-                      Người duyệt
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center">
-                        <UserIcon className="h-3.5 w-3.5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-xs text-green-700">
-                          {order.approvedBy?.fullName || "—"}
-                        </p>
-                        {order.approvedAt && (
-                          <p className="text-[10px] text-muted-foreground">
-                            {new Date(order.approvedAt).toLocaleString(
-                              "vi-VN",
-                              {
-                                dateStyle: "short",
-                                timeStyle: "short",
-                              }
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    {order.finalQuantity && (
-                      <div className="mt-1.5 p-1.5 bg-green-50 rounded border border-green-200">
-                        <p className="text-[10px] text-green-800 font-medium">
-                          SL duyệt: {order.finalQuantity.toLocaleString()}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
 
               <Separator className="my-2" />
 
@@ -896,19 +961,36 @@ export default function ProofingOrderDetailPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Xác nhận chuyển trạng thái</DialogTitle>
-            <DialogDescription className="space-y-2">
-              <p>
-                Bạn có chắc chắn muốn chuyển trạng thái từ{" "}
-                <strong>
-                  {proofingStatusLabels[order?.status || ""] || order?.status}
-                </strong>{" "}
-                sang{" "}
-                <strong>
-                  {proofingStatusLabels["waiting_for_production"] ||
-                    "Chờ sản xuất"}
-                </strong>{" "}
-                không?
-              </p>
+            <DialogDescription className="space-y-3">
+              <p>Bạn có chắc chắn muốn chuyển trạng thái không?</p>
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="flex-1">
+                  <Label className="text-xs text-muted-foreground mb-1 block">
+                    Từ
+                  </Label>
+                  <StatusBadge
+                    status={order?.status || ""}
+                    label={
+                      proofingStatusLabels[order?.status || ""] ||
+                      order?.status ||
+                      "—"
+                    }
+                  />
+                </div>
+                <div className="text-muted-foreground">→</div>
+                <div className="flex-1">
+                  <Label className="text-xs text-muted-foreground mb-1 block">
+                    Sang
+                  </Label>
+                  <StatusBadge
+                    status="waiting_for_production"
+                    label={
+                      proofingStatusLabels["waiting_for_production"] ||
+                      "Chờ sản xuất"
+                    }
+                  />
+                </div>
+              </div>
               {!order?.proofingFileUrl && (
                 <p className="text-destructive text-sm font-medium mt-2">
                   ⚠️ Lưu ý: Bạn chưa upload file bình bài. Vui lòng upload file
@@ -1068,6 +1150,161 @@ export default function ProofingOrderDetailPage() {
           onSuccess={handleDieExportSuccess}
         />
       )}
+
+      {/* Confirm Status Change Dialog */}
+      <Dialog
+        open={isConfirmStatusChangeDialogOpen}
+        onOpenChange={setIsConfirmStatusChangeDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận thay đổi trạng thái</DialogTitle>
+            <DialogDescription>
+              {nextStatusInfo?.confirmMessage ||
+                "Bạn có chắc chắn muốn thay đổi trạng thái?"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Trạng thái hiện tại</Label>
+              <StatusBadge
+                status={order?.status || ""}
+                label={
+                  proofingStatusLabels[order?.status || ""] ||
+                  order?.status ||
+                  "—"
+                }
+              />
+            </div>
+            {pendingStatus && (
+              <div className="space-y-2">
+                <Label>Trạng thái mới</Label>
+                <StatusBadge
+                  status={pendingStatus}
+                  label={proofingStatusLabels[pendingStatus] || pendingStatus}
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsConfirmStatusChangeDialogOpen(false);
+                setPendingStatus(null);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button onClick={handleConfirmStatusChange}>Xác nhận</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hand to Production Dialog */}
+      <Dialog
+        open={isHandToProductionDialogOpen}
+        onOpenChange={setIsHandToProductionDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hoàn thành và chuyển xuống sản xuất</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn đánh dấu lệnh bình bài là hoàn thành và
+              chuyển xuống sản xuất?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Trạng thái hiện tại</Label>
+              <StatusBadge
+                status={order?.status || ""}
+                label={
+                  proofingStatusLabels[order?.status || ""] ||
+                  order?.status ||
+                  "—"
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Trạng thái mới</Label>
+              <StatusBadge
+                status="completed"
+                label={proofingStatusLabels["completed"] || "Hoàn thành"}
+              />
+            </div>
+
+            {/* Kiểm tra điều kiện */}
+            <div className="space-y-2 pt-2 border-t">
+              <Label className="text-sm font-semibold">
+                Điều kiện chuyển xuống sản xuất:
+              </Label>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  {order?.isPlateExported ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  )}
+                  <span className="text-sm">
+                    {order?.isPlateExported ? "Đã xuất kẽm" : "Chưa xuất kẽm"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {order?.isDieExported ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  )}
+                  <span className="text-sm">
+                    {order?.isDieExported
+                      ? "Đã xuất khuôn bế"
+                      : "Chưa xuất khuôn bế"}
+                  </span>
+                </div>
+              </div>
+              {(!order?.isPlateExported || !order?.isDieExported) && (
+                <p className="text-xs text-destructive mt-2">
+                  * Cần hoàn thành tất cả các điều kiện trên để chuyển xuống sản
+                  xuất
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsHandToProductionDialogOpen(false);
+                setPendingStatus(null);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleConfirmHandToProduction}
+              disabled={
+                isHandingToProduction ||
+                !order?.isPlateExported ||
+                !order?.isDieExported
+              }
+            >
+              {isHandingToProduction ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Xác nhận và chuyển xuống sản xuất"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

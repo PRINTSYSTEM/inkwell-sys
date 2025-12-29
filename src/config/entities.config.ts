@@ -152,4 +152,12 @@ export const ENTITY_CONFIG = {
       die_cut: "Bế",
     },
   },
+  vendorTypes: {
+    entityType: "Vendor",
+    description: "Loại nhà cung cấp",
+    values: {
+      plate: "Nhà cung cấp kẽm",
+      die: "Nhà cung cấp khuôn bế",
+    },
+  },
 };

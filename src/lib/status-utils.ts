@@ -40,6 +40,15 @@ export const proofingStatusLabels: Record<string, string> =
 export const productionStatusLabels: Record<string, string> =
   ENTITY_CONFIG.productionStatuses.values;
 
+// Mô tả chi tiết cho từng trạng thái sản xuất (đồng bộ với ENTITY_CONFIG)
+export const productionStatusDescription: Record<string, string> = {
+  waiting_for_production:
+    "Lệnh sản xuất đã được tạo, đang chờ bắt đầu sản xuất.",
+  in_production: "Lệnh sản xuất đang được xử lý tại xưởng.",
+  completed: "Lệnh sản xuất đã hoàn thành.",
+  paused: "Lệnh sản xuất đang tạm dừng.",
+};
+
 // Trạng thái mục chi tiết đơn hàng (OrderDetail)
 export const orderDetailItemStatusLabels: Record<string, string> =
   ENTITY_CONFIG.orderDetailItemStatuses.values;
@@ -66,6 +75,21 @@ export const paymentMethodLabels: Record<string, string> =
 // Loại cán màng (LaminationType)
 export const laminationTypeLabels: Record<string, string> =
   ENTITY_CONFIG.laminationTypes.values;
+
+// Loại mặt (SidesClassification)
+export const sidesClassificationLabels: Record<string, string> =
+  ENTITY_CONFIG.sidesClassification.values;
+
+// Loại quy trình (ProcessClassification)
+export const processClassificationLabels: Record<string, string> =
+  ENTITY_CONFIG.processClassification.values;
+
+// Loại nhà cung cấp (VendorType)
+export const vendorTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.vendorTypes.values;
+
+// Vai trò người dùng (Role)
+export const roleLabels: Record<string, string> = ENTITY_CONFIG.roles.values;
 
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
@@ -179,16 +203,18 @@ export const statusColorMap: Record<string, string> = {
   received_info: "bg-slate-100 text-slate-800 border-slate-200",
 
   // ===== PROOFING ORDER STATUSES =====
-  waiting_for_file: "bg-slate-100 text-slate-800 border-slate-200",
   not_completed: "bg-slate-100 text-slate-800 border-slate-200",
+  // completed đã được định nghĩa ở ORDER STATUSES ở trên
   paused: "bg-yellow-50 text-yellow-700 border-yellow-200",
 
   // ===== ORDER DETAIL ITEM STATUSES (dùng chung với Order) =====
-  // waiting_for_proofing, waiting_for_production, in_production, 
+  // waiting_for_proofing, waiting_for_production, in_production,
   // production_completed, delivering, completed đã được định nghĩa ở trên
 
-  // ===== PRODUCTION STATUSES (dùng chung với Order) =====
+  // ===== PRODUCTION STATUSES =====
   // waiting_for_production, in_production, completed đã được định nghĩa ở trên
+  // paused cho production (khác với paused của proofing)
+  // paused: "bg-yellow-50 text-yellow-700 border-yellow-200", // đã được định nghĩa ở PROOFING ORDER STATUSES
 
   // ===== PAYMENT =====
   not_paid: "bg-rose-50 text-rose-700 border-rose-200",
@@ -210,8 +236,18 @@ export const statusColorMap: Record<string, string> = {
   // ===== LAMINATION TYPES =====
   glossy: "bg-blue-50 text-blue-700 border-blue-200",
   matte: "bg-slate-50 text-slate-700 border-slate-200",
-  soft_touch: "bg-purple-50 text-purple-700 border-purple-200",
-  none: "bg-gray-50 text-gray-600 border-gray-200",
+
+  // ===== SIDES CLASSIFICATION =====
+  one_side: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  two_side: "bg-purple-50 text-purple-700 border-purple-200",
+
+  // ===== PROCESS CLASSIFICATION =====
+  cut: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  die_cut: "bg-teal-50 text-teal-700 border-teal-200",
+
+  // ===== VENDOR TYPES =====
+  plate: "bg-blue-50 text-blue-700 border-blue-200",
+  die: "bg-violet-50 text-violet-700 border-violet-200",
 };
 
 // Hàm helper: trả về class tailwind cho badge

@@ -72,6 +72,9 @@ import {
   customerTypeLabels,
   proofingStatusLabels,
   productionStatusLabels,
+  laminationTypeLabels,
+  sidesClassificationLabels,
+  processClassificationLabels,
   formatCurrency,
   formatDate,
   formatDateTime,
@@ -81,6 +84,9 @@ import type {
   ProductionResponse,
   UserRole,
   ProofingOrderResponse,
+  OrderDetailResponse,
+  UpdateOrderForAccountingRequest,
+  UpdateOrderDetailForAccountingRequest,
 } from "@/Schema";
 import {
   useAuth,
@@ -108,13 +114,13 @@ export default function OrderDetailPage() {
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
-  const [cardEditValues, setCardEditValues] = useState<Record<string, any>>({});
+  const [cardEditValues, setCardEditValues] = useState<Record<string, string | number | null>>({});
   // OrderDetail item-level editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
   >(null);
   const [orderDetailEditValues, setOrderDetailEditValues] = useState<
-    Record<string, any>
+    Record<string, string | number | null>
   >({});
 
   // ===== FETCH ORDER =====
@@ -164,7 +170,7 @@ export default function OrderDetailPage() {
   // Helper to start editing a card
   const startEditingCard = (
     cardName: string,
-    initialValues: Record<string, any>
+    initialValues: Record<string, string | number | null>
   ) => {
     setEditingCard(cardName);
     setCardEditValues(initialValues);
@@ -177,7 +183,7 @@ export default function OrderDetailPage() {
   };
 
   // Helper to start editing an orderDetail item
-  const startEditingOrderDetail = (orderDetailId: number, orderDetail: any) => {
+  const startEditingOrderDetail = (orderDetailId: number, orderDetail: OrderDetailResponse) => {
     setEditingOrderDetailId(orderDetailId);
     setOrderDetailEditValues({
       quantity: orderDetail.quantity?.toString() || "",
@@ -202,7 +208,7 @@ export default function OrderDetailPage() {
     );
     if (!orderDetail) return;
 
-    const orderDetailsUpdates: any[] = [
+    const orderDetailsUpdates: UpdateOrderDetailForAccountingRequest[] = [
       {
         orderDetailId: orderDetail.id,
         quantity:
@@ -231,7 +237,7 @@ export default function OrderDetailPage() {
     try {
       await updateOrderForAccounting(order.id, {
         orderDetails: orderDetailsUpdates,
-      } as any);
+      } as UpdateOrderForAccountingRequest);
       setEditingOrderDetailId(null);
       setOrderDetailEditValues({});
     } catch (error) {
@@ -243,7 +249,7 @@ export default function OrderDetailPage() {
   const handleSaveCard = async (cardName: string) => {
     if (!order) return;
 
-    const payload: Record<string, any> = {};
+    const payload: Partial<UpdateOrderForAccountingRequest> = {};
 
     // Convert values based on card type
     if (cardName === "customerInfo") {
@@ -332,7 +338,7 @@ export default function OrderDetailPage() {
           : String(cardEditValues.recipientAddress).trim();
     } else if (cardName === "orderDetails") {
       // Handle orderDetails updates
-      const orderDetailsUpdates: any[] = [];
+      const orderDetailsUpdates: UpdateOrderDetailForAccountingRequest[] = [];
       for (const key in cardEditValues) {
         if (key.startsWith("orderDetail_")) {
           const [_, detailId, detailField] = key.split("_");
@@ -366,7 +372,7 @@ export default function OrderDetailPage() {
     }
 
     try {
-      await updateOrderForAccounting(order.id, payload as any);
+      await updateOrderForAccounting(order.id, payload as UpdateOrderForAccountingRequest);
       setEditingCard(null);
       setCardEditValues({});
     } catch (error) {
@@ -832,14 +838,9 @@ export default function OrderDetailPage() {
                                     Cán màn
                                   </p>
                                   <p className="font-medium">
-                                    {design.laminationType === "bóng"
-                                      ? "Bóng"
-                                      : design.laminationType === "mờ"
-                                        ? "Mờ"
-                                        : typeof design.laminationType ===
-                                            "string"
-                                          ? design.laminationType
-                                          : "—"}
+                                    {laminationTypeLabels[design.laminationType] ||
+                                      design.laminationType ||
+                                      "—"}
                                   </p>
                                 </div>
                               )}
@@ -849,7 +850,11 @@ export default function OrderDetailPage() {
                                     Mặt cắt
                                   </p>
                                   <p className="font-medium">
-                                    {design.sidesClassification || "—"}
+                                    {sidesClassificationLabels[
+                                      design.sidesClassification
+                                    ] ||
+                                      design.sidesClassification ||
+                                      "—"}
                                   </p>
                                 </div>
                               )}
@@ -859,7 +864,11 @@ export default function OrderDetailPage() {
                                     Quy trình SX
                                   </p>
                                   <p className="font-medium">
-                                    {design.processClassification || "—"}
+                                    {processClassificationLabels[
+                                      design.processClassification
+                                    ] ||
+                                      design.processClassification ||
+                                      "—"}
                                   </p>
                                 </div>
                               )}
@@ -1480,13 +1489,13 @@ export default function OrderDetailPage() {
                       <Label>Phụ trách</Label>
                       <Select
                         value={
-                          cardEditValues.assignedToUserId?.toString() || ""
+                          cardEditValues.assignedToUserId?.toString() || "none"
                         }
                         onValueChange={(value) =>
                           setCardEditValues({
                             ...cardEditValues,
                             assignedToUserId:
-                              value === "" ? null : Number(value),
+                              value === "none" ? null : Number(value),
                           })
                         }
                       >
@@ -1494,7 +1503,7 @@ export default function OrderDetailPage() {
                           <SelectValue placeholder="Chọn người phụ trách" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Không có</SelectItem>
+                          <SelectItem value="none">Không có</SelectItem>
                           {users.map((user) => (
                             <SelectItem
                               key={user.id}

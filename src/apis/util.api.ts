@@ -155,10 +155,20 @@ export const API_SUFFIX = {
   PROOFING_AVAILABLE_QUANTITY: (designId: number) =>
     `/proofing-orders/available-quantity/${designId}`,
 
-  // ========== PLATE VENDORS ==========
-  PLATE_VENDORS: "/plate-vendors",
-  PLATE_VENDOR_BY_ID: (id: number) => `/plate-vendors/${id}`,
-  PLATE_VENDORS_ACTIVE: "/plate-vendors/active",
+  // ========== VENDORS ==========
+  VENDORS: "/vendors",
+  VENDOR_BY_ID: (id: number) => `/vendors/${id}`,
+  VENDORS_ACTIVE: "/vendors/active",
+
+  // ========== STOCK ==========
+  STOCK_INS: "/stock-ins",
+  STOCK_IN_BY_ID: (id: number) => `/stock-ins/${id}`,
+  STOCK_IN_CANCEL: (id: number) => `/stock-ins/${id}/cancel`,
+  STOCK_IN_COMPLETE: (id: number) => `/stock-ins/${id}/complete`,
+  STOCK_OUTS: "/stock-outs",
+  STOCK_OUT_BY_ID: (id: number) => `/stock-outs/${id}`,
+  STOCK_OUT_CANCEL: (id: number) => `/stock-outs/${id}/cancel`,
+  STOCK_OUT_COMPLETE: (id: number) => `/stock-outs/${id}/complete`,
 
   // ========== PRODUCTIONS ==========
   PRODUCTIONS: "/productions",
@@ -174,4 +184,66 @@ export const API_SUFFIX = {
   DELIVERY_NOTE_STATUS: (id: number) => `/delivery-notes/${id}/status`,
   DELIVERY_NOTE_EXPORT_PDF: (id: number) => `/delivery-notes/${id}/export-pdf`,
   DELIVERY_NOTE_RECREATE: "/delivery-notes/recreate",
+
+  // ========== CASH MANAGEMENT ==========
+  CASH_FUNDS: "/categories/cash-funds",
+  CASH_FUND_BY_ID: (id: number) => `/categories/cash-funds/${id}`,
+  CASH_PAYMENTS: "/cash-payments",
+  CASH_PAYMENT_BY_ID: (id: number) => `/cash-payments/${id}`,
+  CASH_PAYMENT_APPROVE: (id: number) => `/cash-payments/${id}/approve`,
+  CASH_PAYMENT_CANCEL: (id: number) => `/cash-payments/${id}/cancel`,
+  CASH_PAYMENT_POST: (id: number) => `/cash-payments/${id}/post`,
+  CASH_RECEIPTS: "/cash-receipts",
+  CASH_RECEIPT_BY_ID: (id: number) => `/cash-receipts/${id}`,
+  CASH_RECEIPT_APPROVE: (id: number) => `/cash-receipts/${id}/approve`,
+  CASH_RECEIPT_CANCEL: (id: number) => `/cash-receipts/${id}/cancel`,
+  CASH_RECEIPT_POST: (id: number) => `/cash-receipts/${id}/post`,
+  CASH_BOOK: "/cash-book",
+
+  // ========== BANK MANAGEMENT ==========
+  BANK_ACCOUNTS: "/categories/bank-accounts",
+  BANK_ACCOUNT_BY_ID: (id: number) => `/categories/bank-accounts/${id}`,
+  BANK_LEDGER: "/bank-ledger",
+
+  // ========== EXPENSE & PAYMENT METHOD ==========
+  EXPENSE_CATEGORIES: "/categories/expense-categories",
+  EXPENSE_CATEGORY_BY_ID: (id: number) =>
+    `/categories/expense-categories/${id}`,
+  PAYMENT_METHODS: "/categories/payment-methods",
+  PAYMENT_METHOD_BY_ID: (id: number) => `/categories/payment-methods/${id}`,
+
+  // ========== AR/AP REPORTS ==========
+  AR_SUMMARY: "/debt-reports/ar-summary",
+  AR_SUMMARY_EXPORT: "/debt-reports/ar-summary/export",
+  AR_DETAIL: "/debt-reports/ar-detail",
+  AR_AGING: "/debt-reports/ar-aging",
+  AR_AGING_EXPORT: "/debt-reports/ar-aging/export",
+  AP_SUMMARY: "/debt-reports/ap-summary",
+  AP_SUMMARY_EXPORT: "/debt-reports/ap-summary/export",
+  AP_DETAIL: "/debt-reports/ap-detail",
+  AP_AGING: "/debt-reports/ap-aging",
+  AP_AGING_EXPORT: "/debt-reports/ap-aging/export",
+  COLLECTION_SCHEDULE: "/debt-reports/collection-schedule",
+
+  // ========== INVENTORY REPORTS ==========
+  CURRENT_STOCK: "/inventory-reports/current-stock",
+  INVENTORY_SUMMARY: "/inventory-reports/inventory-summary",
+  LOW_STOCK: "/inventory-reports/low-stock",
+  SLOW_MOVING: "/inventory-reports/slow-moving",
+  STOCK_CARD: (itemCode: string) => `/inventory-reports/stock-card/${itemCode}`,
+
+  // ========== SALES REPORTS ==========
+  SALES_BY_PERIOD: "/sales-reports/by-period",
+  SALES_BY_PERIOD_EXPORT: "/sales-reports/by-period/export",
+  SALES_BY_CUSTOMER: "/sales-reports/by-customer",
+  SALES_BY_DIMENSION: "/sales-reports/by-dimension",
+  TOP_PRODUCTS: "/sales-reports/top-products",
+  RETURNS_DISCOUNTS: "/sales-reports/returns-discounts",
+  ORDER_DRILL_DOWN: "/sales-reports/orders-by-customer",
+  ORDER_DRILL_DOWN_BY_PERIOD: "/sales-reports/orders-by-period",
+
+  // ========== REPORT EXPORTS ==========
+  REPORT_EXPORTS: "/report-exports",
+  REPORT_EXPORT_BY_ID: (id: number) => `/report-exports/${id}`,
+  REPORT_EXPORT_DOWNLOAD: (id: number) => `/report-exports/${id}/download`,
 };

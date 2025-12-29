@@ -13,6 +13,7 @@ import {
   OrderResponseSchema as GenOrderResponseSchema,
   OrderResponsePaginateSchema as GenOrderResponsePaginateSchema,
   OrderDetailResponseSchema as GenOrderDetailResponseSchema,
+  OrderDetailResponsePaginateSchema as GenOrderDetailResponsePaginateSchema,
   OrderDetailResponseForDesignerSchema as GenOrderDetailResponseForDesignerSchema,
   OrderResponseForDesignerSchema as GenOrderResponseForDesignerSchema,
   OrderResponseForDesignerPaginateSchema as GenOrderResponseForDesignerPaginateSchema,
@@ -33,6 +34,14 @@ import {
 export const OrderDetailResponseSchema =
   GenOrderDetailResponseSchema.passthrough();
 export type OrderDetailResponse = z.infer<typeof OrderDetailResponseSchema>;
+
+// Re-export generated paginate schema for compatibility
+export {
+  GenOrderDetailResponsePaginateSchema as OrderDetailResponsePaginateSchema,
+};
+export type OrderDetailResponsePaginate = z.infer<
+  typeof GenOrderDetailResponsePaginateSchema
+>;
 
 // ===== OrderDetailResponseForDesigner =====
 export const OrderDetailResponseForDesignerSchema =

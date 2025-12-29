@@ -1,25 +1,31 @@
+import type { OrderDetailResponse } from "@/Schema/order.schema";
+
+/**
+ * DesignItem - Transformed from OrderDetailResponse for proofing UI
+ * Based on OrderDetailResponse schema with additional flattened fields
+ */
 export interface DesignItem {
-  id: number;
-  code: string;
-  name: string;
-  designTypeId: number;
-  designTypeName: string;
-  materialTypeId: number;
-  materialTypeName: string;
-  width: number;
-  height: number;
-  unit: string;
-  quantity: number;
-  availableQuantity?: number; // Số lượng tối đa có thể tạo bình bài
-  unitPrice: number;
-  orderId: string;
-  orderCode: string;
-  customerName: string;
-  customerCompanyName?: string;
-  processClassificationOptionName?: string; // Quy trình sản xuất
-  thumbnailUrl: string;
-  createdAt: string;
-  designId?: number; // Design ID for fetching available quantity
+  id: number; // orderDetailId from OrderDetailResponse
+  code: string; // from design.code
+  name: string; // from design.designName
+  designTypeId: number; // from design.designTypeId
+  designTypeName: string; // from design.designType?.name
+  materialTypeId: number; // from design.materialTypeId
+  materialTypeName: string; // from design.materialType?.name
+  width: number; // from design.width
+  height: number; // from design.height
+  unit: string; // "cm" (constant)
+  quantity: number; // from OrderDetailResponse.quantity
+  availableQuantity?: number; // Số lượng tối đa có thể tạo bình bài (from design.availableQuantityForProofing in response, or fetched separately if missing)
+  unitPrice: number; // from OrderDetailResponse.unitPrice
+  orderId: string; // from OrderDetailResponse.orderId (converted to string)
+  orderCode: string; // from design.latestOrderCode
+  customerName: string; // from design.customer?.name
+  customerCompanyName?: string; // from design.customer?.companyName
+  processClassificationOptionName?: string; // from design.processClassification
+  thumbnailUrl: string; // from design.designImageUrl
+  createdAt: string; // from design.createdAt
+  designId?: number; // from design.id (for fetching available quantity)
 }
 
 export interface FilterOption {

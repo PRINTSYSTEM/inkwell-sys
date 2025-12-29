@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,15 +60,12 @@ export default function ProofingOrdersPage() {
   // Use raw response items directly instead of strict schema parsing
   // Schema validation is too strict for API responses with nullable fields
   // For display-only list view, we can safely use raw data
-  const proofingOrders = useMemo<ProofingOrder[]>(
-    () => {
-      const items = ordersResp?.items;
-      if (!items || !Array.isArray(items)) return [];
-      // Type cast to ProofingOrder for type safety, but accept raw data structure
-      return items as unknown as ProofingOrder[];
-    },
-    [ordersResp?.items]
-  );
+  const proofingOrders = useMemo<ProofingOrder[]>(() => {
+    const items = ordersResp?.items;
+    if (!items || !Array.isArray(items)) return [];
+    // Type cast to ProofingOrder for type safety, but accept raw data structure
+    return items as unknown as ProofingOrder[];
+  }, [ordersResp?.items]);
 
   const filteredProofingOrders = useMemo(
     () =>
