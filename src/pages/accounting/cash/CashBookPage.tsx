@@ -2,12 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import {
-  RefreshCw,
-  Download,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
+import { RefreshCw, Download, Loader2, AlertCircle } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { addDays } from "date-fns";
@@ -61,9 +56,7 @@ export default function CashBookPage() {
     error,
     refetch,
   } = useCashBook({
-    fromDate: dateRange?.from
-      ? dateRange.from.toISOString()
-      : undefined,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     cashFundId: cashFundId,
   });
@@ -75,7 +68,10 @@ export default function CashBookPage() {
     if (!voucherId) return;
 
     const voucherTypeLower = voucherType?.toLowerCase() || "";
-    if (voucherTypeLower.includes("receipt") || voucherTypeLower === "receipt") {
+    if (
+      voucherTypeLower.includes("receipt") ||
+      voucherTypeLower === "receipt"
+    ) {
       navigate(`/accounting/cash-receipts/${voucherId}`);
     } else if (
       voucherTypeLower.includes("payment") ||
@@ -129,10 +125,7 @@ export default function CashBookPage() {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <DateRangePicker
-              dateRange={dateRange}
-              onDateRangeChange={setDateRange}
-            />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
           <Select
             value={cashFundId?.toString() || "all"}
@@ -148,10 +141,7 @@ export default function CashBookPage() {
               {fundsData?.items
                 ?.filter((fund) => fund.id !== undefined && fund.id !== null)
                 .map((fund) => (
-                  <SelectItem
-                    key={fund.id}
-                    value={fund.id!.toString()}
-                  >
+                  <SelectItem key={fund.id} value={fund.id!.toString()}>
                     {fund.name} ({fund.code})
                   </SelectItem>
                 ))}
@@ -170,7 +160,7 @@ export default function CashBookPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {cashBookData.cashFundName || "—"}
+                  {String(cashBookData.cashFundName || "—")}
                 </div>
               </CardContent>
             </Card>
@@ -261,7 +251,8 @@ export default function CashBookPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : !cashBookData?.entries || cashBookData.entries.length === 0 ? (
+              ) : !cashBookData?.entries ||
+                cashBookData.entries.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={8}
@@ -317,4 +308,3 @@ export default function CashBookPage() {
     </>
   );
 }
-

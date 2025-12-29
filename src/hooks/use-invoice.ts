@@ -28,9 +28,12 @@ export const useInvoices = (params?: InvoicesParams) => {
         (params ?? {}) as Record<string, unknown>
       );
       // API returns InvoiceResponsePaginate
-      const res = await apiRequest.get<InvoiceResponsePaginate>(API_SUFFIX.INVOICES, {
-        params: normalizedParams,
-      });
+      const res = await apiRequest.get<InvoiceResponsePaginate>(
+        API_SUFFIX.INVOICES,
+        {
+          params: normalizedParams,
+        }
+      );
       return res.data;
     },
   });

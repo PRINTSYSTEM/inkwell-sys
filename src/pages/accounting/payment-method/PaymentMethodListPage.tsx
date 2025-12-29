@@ -33,10 +33,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  usePaymentMethods,
-  useDeletePaymentMethod,
-} from "@/hooks/use-expense";
+import { usePaymentMethods, useDeletePaymentMethod } from "@/hooks/use-expense";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 
@@ -69,7 +66,9 @@ export default function PaymentMethodListPage() {
 
   const handleDelete = async (id: number | undefined) => {
     if (!id) return;
-    if (window.confirm("Bạn có chắc chắn muốn xóa phương thức thanh toán này?")) {
+    if (
+      window.confirm("Bạn có chắc chắn muốn xóa phương thức thanh toán này?")
+    ) {
       try {
         await deleteMethodMutation.mutateAsync(id);
       } catch (error) {
@@ -292,4 +291,3 @@ export default function PaymentMethodListPage() {
     </>
   );
 }
-

@@ -74,7 +74,7 @@ const formatDateTime = (dateStr: string | null | undefined) => {
 
 const getStatusBadge = (status: string | null | undefined) => {
   if (!status) return <StatusBadge status="unknown" label="—" />;
-  
+
   const statusLower = status.toLowerCase();
   if (statusLower.includes("draft") || statusLower === "draft") {
     return <StatusBadge status="draft" label="Nháp" />;
@@ -101,7 +101,8 @@ export default function CashPaymentListPage() {
   });
   const [vendorFilter, setVendorFilter] = useState<string>("");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
-  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState<string>("all");
+  const [expenseCategoryFilter, setExpenseCategoryFilter] =
+    useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -128,12 +129,8 @@ export default function CashPaymentListPage() {
     pageSize: itemsPerPage,
     status: statusFilter === "all" ? undefined : statusFilter,
     search: searchQuery || undefined,
-    fromDate: dateRange?.from
-      ? dateRange.from.toISOString()
-      : undefined,
-    toDate: dateRange?.to
-      ? dateRange.to.toISOString()
-      : undefined,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     vendorId: vendorFilter ? Number.parseInt(vendorFilter, 10) : undefined,
     paymentMethodId:
       paymentMethodFilter && paymentMethodFilter !== "all"
@@ -227,10 +224,7 @@ export default function CashPaymentListPage() {
     <>
       <Helmet>
         <title>Phiếu chi | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Quản lý phiếu chi trong hệ thống"
-        />
+        <meta name="description" content="Quản lý phiếu chi trong hệ thống" />
       </Helmet>
 
       <div className="space-y-6">
@@ -273,10 +267,7 @@ export default function CashPaymentListPage() {
                 className="pl-9"
               />
             </div>
-            <DateRangePicker
-              dateRange={dateRange}
-              onDateRangeChange={setDateRange}
-            />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
@@ -434,7 +425,9 @@ export default function CashPaymentListPage() {
                         {payment.orderCode && (
                           <div className="text-xs">
                             <span className="text-muted-foreground">Đơn:</span>{" "}
-                            <span className="font-mono">{payment.orderCode}</span>
+                            <span className="font-mono">
+                              {payment.orderCode}
+                            </span>
                           </div>
                         )}
                         {payment.vendorName && (
@@ -571,7 +564,9 @@ export default function CashPaymentListPage() {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setCurrentPage((p) => Math.min(paymentsData.totalPages, p + 1))
+                  setCurrentPage((p) =>
+                    Math.min(paymentsData.totalPages, p + 1)
+                  )
                 }
                 disabled={currentPage === paymentsData.totalPages || isLoading}
               >
@@ -584,4 +579,3 @@ export default function CashPaymentListPage() {
     </>
   );
 }
-

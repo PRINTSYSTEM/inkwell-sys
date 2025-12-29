@@ -12,34 +12,46 @@ export { api, createApiClient, schemas };
 export const APAgingResponseSchema = schemas.APAgingResponse;
 export const APAgingResponseIPaginateSchema = schemas.APAgingResponseIPaginate;
 export const APDetailResponseSchema = schemas.APDetailResponse;
-export const APDetailResponseIPaginateSchema = schemas.APDetailResponseIPaginate;
+export const APDetailResponseIPaginateSchema =
+  schemas.APDetailResponseIPaginate;
 export const APSummaryResponseSchema = schemas.APSummaryResponse;
-export const APSummaryResponseIPaginateSchema = schemas.APSummaryResponseIPaginate;
+export const APSummaryResponseIPaginateSchema =
+  schemas.APSummaryResponseIPaginate;
 export const ARAgingResponseSchema = schemas.ARAgingResponse;
 export const ARAgingResponseIPaginateSchema = schemas.ARAgingResponseIPaginate;
 export const ARDetailResponseSchema = schemas.ARDetailResponse;
-export const ARDetailResponseIPaginateSchema = schemas.ARDetailResponseIPaginate;
+export const ARDetailResponseIPaginateSchema =
+  schemas.ARDetailResponseIPaginate;
 export const ARSummaryResponseSchema = schemas.ARSummaryResponse;
-export const ARSummaryResponseIPaginateSchema = schemas.ARSummaryResponseIPaginate;
+export const ARSummaryResponseIPaginateSchema =
+  schemas.ARSummaryResponseIPaginate;
 export const AccountingResponseSchema = schemas.AccountingResponse;
 export const AddDesignToOrderRequestSchema = schemas.AddDesignToOrderRequest;
 export const BankAccountResponseSchema = schemas.BankAccountResponse;
-export const BankAccountResponseIPaginateSchema = schemas.BankAccountResponseIPaginate;
+export const BankAccountResponseIPaginateSchema =
+  schemas.BankAccountResponseIPaginate;
 export const BankLedgerEntryResponseSchema = schemas.BankLedgerEntryResponse;
 export const BankLedgerResponseSchema = schemas.BankLedgerResponse;
-export const BulkCreateMaterialTypeRequestSchema = schemas.BulkCreateMaterialTypeRequest;
+export const BulkCreateMaterialTypeRequestSchema =
+  schemas.BulkCreateMaterialTypeRequest;
 export const CashBookEntryResponseSchema = schemas.CashBookEntryResponse;
 export const CashBookResponseSchema = schemas.CashBookResponse;
 export const CashFundResponseSchema = schemas.CashFundResponse;
-export const CashFundResponseIPaginateSchema = schemas.CashFundResponseIPaginate;
+export const CashFundResponseIPaginateSchema =
+  schemas.CashFundResponseIPaginate;
 export const CashPaymentResponseSchema = schemas.CashPaymentResponse;
-export const CashPaymentResponseIPaginateSchema = schemas.CashPaymentResponseIPaginate;
+export const CashPaymentResponseIPaginateSchema =
+  schemas.CashPaymentResponseIPaginate;
 export const CashReceiptResponseSchema = schemas.CashReceiptResponse;
-export const CashReceiptResponseIPaginateSchema = schemas.CashReceiptResponseIPaginate;
+export const CashReceiptResponseIPaginateSchema =
+  schemas.CashReceiptResponseIPaginate;
 export const ChangePasswordRequestSchema = schemas.ChangePasswordRequest;
-export const CollectionScheduleResponseSchema = schemas.CollectionScheduleResponse;
-export const CollectionScheduleResponseIPaginateSchema = schemas.CollectionScheduleResponseIPaginate;
-export const CompleteProductionRequestSchema = schemas.CompleteProductionRequest;
+export const CollectionScheduleResponseSchema =
+  schemas.CollectionScheduleResponse;
+export const CollectionScheduleResponseIPaginateSchema =
+  schemas.CollectionScheduleResponseIPaginate;
+export const CompleteProductionRequestSchema =
+  schemas.CompleteProductionRequest;
 export const ConfirmPaymentRequestSchema = schemas.ConfirmPaymentRequest;
 export const ConstantGroupSchema = schemas.ConstantGroup;
 export const ConstantsResponseSchema = schemas.ConstantsResponse;
@@ -47,144 +59,211 @@ export const CreateBankAccountRequestSchema = schemas.CreateBankAccountRequest;
 export const CreateCashFundRequestSchema = schemas.CreateCashFundRequest;
 export const CreateCashPaymentRequestSchema = schemas.CreateCashPaymentRequest;
 export const CreateCashReceiptRequestSchema = schemas.CreateCashReceiptRequest;
+export const CreateBankAccountRequestSchema = schemas.CreateBankAccountRequest;
+export const CreateCashFundRequestSchema = schemas.CreateCashFundRequest;
+export const CreateCashPaymentRequestSchema = schemas.CreateCashPaymentRequest;
+export const CreateCashReceiptRequestSchema = schemas.CreateCashReceiptRequest;
 export const CreateCustomerRequestSchema = schemas.CreateCustomerRequest;
-export const CreateDeliveryNoteRequestSchema = schemas.CreateDeliveryNoteRequest;
+export const CreateDeliveryNoteRequestSchema =
+  schemas.CreateDeliveryNoteRequest;
 export const CreateDesignRequestSchema = schemas.CreateDesignRequest;
 export const CreateDesignTypeRequestSchema = schemas.CreateDesignTypeRequest;
-export const CreateExpenseCategoryRequestSchema = schemas.CreateExpenseCategoryRequest;
+export const CreateExpenseCategoryRequestSchema =
+  schemas.CreateExpenseCategoryRequest;
 export const CreateInvoiceItemRequestSchema = schemas.CreateInvoiceItemRequest;
 export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
-export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
+export const CreateMaterialTypeRequestSchema =
+  schemas.CreateMaterialTypeRequest;
 export const CreateOrderRequestSchema = schemas.CreateOrderRequest;
-export const CreatePaymentMethodRequestSchema = schemas.CreatePaymentMethodRequest;
+export const CreatePaymentMethodRequestSchema =
+  schemas.CreatePaymentMethodRequest;
 export const CreatePaymentRequestSchema = schemas.CreatePaymentRequest;
 export const CreateProductionRequestSchema = schemas.CreateProductionRequest;
-export const CreateProofingOrderDetailItemSchema = schemas.CreateProofingOrderDetailItem;
-export const CreateProofingOrderFromDesignsRequestSchema = schemas.CreateProofingOrderFromDesignsRequest;
-export const CreateProofingOrderRequestSchema = schemas.CreateProofingOrderRequest;
+export const CreateProofingOrderDetailItemSchema =
+  schemas.CreateProofingOrderDetailItem;
+export const CreateProofingOrderFromDesignsRequestSchema =
+  schemas.CreateProofingOrderFromDesignsRequest;
+export const CreateProofingOrderRequestSchema =
+  schemas.CreateProofingOrderRequest;
 export const CreateStockInRequestSchema = schemas.CreateStockInRequest;
 export const CreateStockOutRequestSchema = schemas.CreateStockOutRequest;
 export const CreateUserRequestSchema = schemas.CreateUserRequest;
 export const CreateVendorRequestSchema = schemas.CreateVendorRequest;
 export const CurrentStockResponseSchema = schemas.CurrentStockResponse;
-export const CurrentStockResponseIPaginateSchema = schemas.CurrentStockResponseIPaginate;
-export const CustomerDebtHistoryResponseSchema = schemas.CustomerDebtHistoryResponse;
-export const CustomerDebtHistoryResponsePaginateSchema = schemas.CustomerDebtHistoryResponsePaginate;
-export const CustomerDebtSummaryResponseSchema = schemas.CustomerDebtSummaryResponse;
-export const CustomerMonthlyDebtResponseSchema = schemas.CustomerMonthlyDebtResponse;
-export const CustomerOrderHistoryResponseSchema = schemas.CustomerOrderHistoryResponse;
-export const CustomerOrderHistoryResponsePaginateSchema = schemas.CustomerOrderHistoryResponsePaginate;
+export const CurrentStockResponseIPaginateSchema =
+  schemas.CurrentStockResponseIPaginate;
+export const CustomerDebtHistoryResponseSchema =
+  schemas.CustomerDebtHistoryResponse;
+export const CustomerDebtHistoryResponsePaginateSchema =
+  schemas.CustomerDebtHistoryResponsePaginate;
+export const CustomerDebtSummaryResponseSchema =
+  schemas.CustomerDebtSummaryResponse;
+export const CustomerMonthlyDebtResponseSchema =
+  schemas.CustomerMonthlyDebtResponse;
+export const CustomerOrderHistoryResponseSchema =
+  schemas.CustomerOrderHistoryResponse;
+export const CustomerOrderHistoryResponsePaginateSchema =
+  schemas.CustomerOrderHistoryResponsePaginate;
 export const CustomerResponseSchema = schemas.CustomerResponse;
-export const CustomerStatisticsResponseSchema = schemas.CustomerStatisticsResponse;
+export const CustomerStatisticsResponseSchema =
+  schemas.CustomerStatisticsResponse;
 export const CustomerSummaryResponseSchema = schemas.CustomerSummaryResponse;
-export const CustomerSummaryResponsePaginateSchema = schemas.CustomerSummaryResponsePaginate;
-export const DeliveryNoteOrderResponseSchema = schemas.DeliveryNoteOrderResponse;
+export const CustomerSummaryResponsePaginateSchema =
+  schemas.CustomerSummaryResponsePaginate;
+export const DeliveryNoteOrderResponseSchema =
+  schemas.DeliveryNoteOrderResponse;
 export const DeliveryNoteResponseSchema = schemas.DeliveryNoteResponse;
-export const DeliveryNoteResponsePaginateSchema = schemas.DeliveryNoteResponsePaginate;
+export const DeliveryNoteResponsePaginateSchema =
+  schemas.DeliveryNoteResponsePaginate;
 export const DesignResponseSchema = schemas.DesignResponse;
 export const DesignResponsePaginateSchema = schemas.DesignResponsePaginate;
-export const DesignTimelineEntryResponseSchema = schemas.DesignTimelineEntryResponse;
-export const DesignTimelineEntryResponsePaginateSchema = schemas.DesignTimelineEntryResponsePaginate;
+export const DesignTimelineEntryResponseSchema =
+  schemas.DesignTimelineEntryResponse;
+export const DesignTimelineEntryResponsePaginateSchema =
+  schemas.DesignTimelineEntryResponsePaginate;
 export const DesignTypeResponseSchema = schemas.DesignTypeResponse;
-export const DesignTypeResponsePaginateSchema = schemas.DesignTypeResponsePaginate;
+export const DesignTypeResponsePaginateSchema =
+  schemas.DesignTypeResponsePaginate;
 export const DieExportResponseSchema = schemas.DieExportResponse;
 export const ErrorResponseSchema = schemas.ErrorResponse;
 export const ExpenseCategoryResponseSchema = schemas.ExpenseCategoryResponse;
-export const ExpenseCategoryResponseIPaginateSchema = schemas.ExpenseCategoryResponseIPaginate;
+export const ExpenseCategoryResponseIPaginateSchema =
+  schemas.ExpenseCategoryResponseIPaginate;
 export const ExportDebtRequestSchema = schemas.ExportDebtRequest;
 export const FrequentProductResponseSchema = schemas.FrequentProductResponse;
-export const InventorySummaryItemResponseSchema = schemas.InventorySummaryItemResponse;
-export const InventorySummaryItemResponseIPaginateSchema = schemas.InventorySummaryItemResponseIPaginate;
+export const InventorySummaryItemResponseSchema =
+  schemas.InventorySummaryItemResponse;
+export const InventorySummaryItemResponseIPaginateSchema =
+  schemas.InventorySummaryItemResponseIPaginate;
 export const InvoiceItemResponseSchema = schemas.InvoiceItemResponse;
 export const InvoiceOrderResponseSchema = schemas.InvoiceOrderResponse;
 export const InvoiceResponseSchema = schemas.InvoiceResponse;
 export const InvoiceResponsePaginateSchema = schemas.InvoiceResponsePaginate;
+export const InvoiceResponsePaginateSchema = schemas.InvoiceResponsePaginate;
 export const LoginRequestSchema = schemas.LoginRequest;
 export const LoginResponseSchema = schemas.LoginResponse;
 export const LowStockResponseSchema = schemas.LowStockResponse;
-export const LowStockResponseIPaginateSchema = schemas.LowStockResponseIPaginate;
+export const LowStockResponseIPaginateSchema =
+  schemas.LowStockResponseIPaginate;
 export const MaterialTypeItemSchema = schemas.MaterialTypeItem;
 export const MaterialTypeResponseSchema = schemas.MaterialTypeResponse;
-export const MaterialTypeResponsePaginateSchema = schemas.MaterialTypeResponsePaginate;
-export const OrderDetailExportResponseSchema = schemas.OrderDetailExportResponse;
+export const MaterialTypeResponsePaginateSchema =
+  schemas.MaterialTypeResponsePaginate;
+export const OrderDetailExportResponseSchema =
+  schemas.OrderDetailExportResponse;
 export const OrderDetailResponseSchema = schemas.OrderDetailResponse;
-export const OrderDetailResponseForDesignerSchema = schemas.OrderDetailResponseForDesigner;
-export const OrderDetailResponsePaginateSchema = schemas.OrderDetailResponsePaginate;
+export const OrderDetailResponseForDesignerSchema =
+  schemas.OrderDetailResponseForDesigner;
+export const OrderDetailResponsePaginateSchema =
+  schemas.OrderDetailResponsePaginate;
 export const OrderDrillDownResponseSchema = schemas.OrderDrillDownResponse;
-export const OrderDrillDownResponseIPaginateSchema = schemas.OrderDrillDownResponseIPaginate;
+export const OrderDrillDownResponseIPaginateSchema =
+  schemas.OrderDrillDownResponseIPaginate;
 export const OrderExportResponseSchema = schemas.OrderExportResponse;
-export const OrderHistoryDetailResponseSchema = schemas.OrderHistoryDetailResponse;
+export const OrderHistoryDetailResponseSchema =
+  schemas.OrderHistoryDetailResponse;
 export const OrderResponseSchema = schemas.OrderResponse;
 export const OrderResponseForDesignerSchema = schemas.OrderResponseForDesigner;
-export const OrderResponseForDesignerPaginateSchema = schemas.OrderResponseForDesignerPaginate;
+export const OrderResponseForDesignerPaginateSchema =
+  schemas.OrderResponseForDesignerPaginate;
 export const OrderResponsePaginateSchema = schemas.OrderResponsePaginate;
 export const PaperSizeResponseSchema = schemas.PaperSizeResponse;
 export const PaymentMethodResponseSchema = schemas.PaymentMethodResponse;
-export const PaymentMethodResponseIPaginateSchema = schemas.PaymentMethodResponseIPaginate;
+export const PaymentMethodResponseIPaginateSchema =
+  schemas.PaymentMethodResponseIPaginate;
 export const PaymentResponseSchema = schemas.PaymentResponse;
 export const PaymentResponsePaginateSchema = schemas.PaymentResponsePaginate;
 export const PaymentSummaryResponseSchema = schemas.PaymentSummaryResponse;
 export const PlateExportResponseSchema = schemas.PlateExportResponse;
-export const PlateExportResponsePaginateSchema = schemas.PlateExportResponsePaginate;
+export const PlateExportResponsePaginateSchema =
+  schemas.PlateExportResponsePaginate;
 export const ProblemDetailsSchema = schemas.ProblemDetails;
 export const ProductionResponseSchema = schemas.ProductionResponse;
-export const ProductionResponsePaginateSchema = schemas.ProductionResponsePaginate;
-export const ProofingAllocationResponseSchema = schemas.ProofingAllocationResponse;
-export const ProofingOrderDesignResponseSchema = schemas.ProofingOrderDesignResponse;
+export const ProductionResponsePaginateSchema =
+  schemas.ProductionResponsePaginate;
+export const ProofingAllocationResponseSchema =
+  schemas.ProofingAllocationResponse;
+export const ProofingOrderDesignResponseSchema =
+  schemas.ProofingOrderDesignResponse;
 export const ProofingOrderResponseSchema = schemas.ProofingOrderResponse;
-export const ProofingOrderResponsePaginateSchema = schemas.ProofingOrderResponsePaginate;
+export const ProofingOrderResponsePaginateSchema =
+  schemas.ProofingOrderResponsePaginate;
 export const RecordPlateExportRequestSchema = schemas.RecordPlateExportRequest;
-export const RecreateDeliveryNoteRequestSchema = schemas.RecreateDeliveryNoteRequest;
+export const RecreateDeliveryNoteRequestSchema =
+  schemas.RecreateDeliveryNoteRequest;
 export const ReportExportResponseSchema = schemas.ReportExportResponse;
-export const ReportExportResponseIPaginateSchema = schemas.ReportExportResponseIPaginate;
+export const ReportExportResponseIPaginateSchema =
+  schemas.ReportExportResponseIPaginate;
 export const ReturnsDiscountsResponseSchema = schemas.ReturnsDiscountsResponse;
-export const ReturnsDiscountsResponseIPaginateSchema = schemas.ReturnsDiscountsResponseIPaginate;
+export const ReturnsDiscountsResponseIPaginateSchema =
+  schemas.ReturnsDiscountsResponseIPaginate;
 export const RoleDefinitionSchema = schemas.RoleDefinition;
 export const RolesResponseSchema = schemas.RolesResponse;
 export const SalesByCustomerResponseSchema = schemas.SalesByCustomerResponse;
-export const SalesByCustomerResponseIPaginateSchema = schemas.SalesByCustomerResponseIPaginate;
+export const SalesByCustomerResponseIPaginateSchema =
+  schemas.SalesByCustomerResponseIPaginate;
 export const SalesByDimensionResponseSchema = schemas.SalesByDimensionResponse;
-export const SalesByDimensionResponseIPaginateSchema = schemas.SalesByDimensionResponseIPaginate;
+export const SalesByDimensionResponseIPaginateSchema =
+  schemas.SalesByDimensionResponseIPaginate;
 export const SalesByPeriodResponseSchema = schemas.SalesByPeriodResponse;
-export const SalesByPeriodResponseIPaginateSchema = schemas.SalesByPeriodResponseIPaginate;
+export const SalesByPeriodResponseIPaginateSchema =
+  schemas.SalesByPeriodResponseIPaginate;
 export const SlowMovingResponseSchema = schemas.SlowMovingResponse;
-export const SlowMovingResponseIPaginateSchema = schemas.SlowMovingResponseIPaginate;
+export const SlowMovingResponseIPaginateSchema =
+  schemas.SlowMovingResponseIPaginate;
 export const StartProductionRequestSchema = schemas.StartProductionRequest;
+export const StockCardEntryResponseSchema = schemas.StockCardEntryResponse;
+export const StockCardResponseSchema = schemas.StockCardResponse;
+export const StockInItemRequestSchema = schemas.StockInItemRequest;
+export const StockOutItemRequestSchema = schemas.StockOutItemRequest;
 export const StockCardEntryResponseSchema = schemas.StockCardEntryResponse;
 export const StockCardResponseSchema = schemas.StockCardResponse;
 export const StockInItemRequestSchema = schemas.StockInItemRequest;
 export const StockOutItemRequestSchema = schemas.StockOutItemRequest;
 export const TeamKpiSummaryResponseSchema = schemas.TeamKpiSummaryResponse;
 export const TopProductResponseSchema = schemas.TopProductResponse;
-export const TopProductResponseIPaginateSchema = schemas.TopProductResponseIPaginate;
+export const TopProductResponseIPaginateSchema =
+  schemas.TopProductResponseIPaginate;
 export const UpdateBankAccountRequestSchema = schemas.UpdateBankAccountRequest;
 export const UpdateCashFundRequestSchema = schemas.UpdateCashFundRequest;
 export const UpdateCashPaymentRequestSchema = schemas.UpdateCashPaymentRequest;
 export const UpdateCashReceiptRequestSchema = schemas.UpdateCashReceiptRequest;
 export const UpdateCustomerRequestSchema = schemas.UpdateCustomerRequest;
-export const UpdateDeliveryStatusRequestSchema = schemas.UpdateDeliveryStatusRequest;
+export const UpdateDeliveryStatusRequestSchema =
+  schemas.UpdateDeliveryStatusRequest;
 export const UpdateDesignRequestSchema = schemas.UpdateDesignRequest;
 export const UpdateDesignTypeRequestSchema = schemas.UpdateDesignTypeRequest;
-export const UpdateExpenseCategoryRequestSchema = schemas.UpdateExpenseCategoryRequest;
+export const UpdateExpenseCategoryRequestSchema =
+  schemas.UpdateExpenseCategoryRequest;
 export const UpdateInvoiceRequestSchema = schemas.UpdateInvoiceRequest;
-export const UpdateMaterialTypeRequestSchema = schemas.UpdateMaterialTypeRequest;
-export const UpdateOrderDetailForAccountingRequestSchema = schemas.UpdateOrderDetailForAccountingRequest;
-export const UpdateOrderForAccountingRequestSchema = schemas.UpdateOrderForAccountingRequest;
+export const UpdateMaterialTypeRequestSchema =
+  schemas.UpdateMaterialTypeRequest;
+export const UpdateOrderDetailForAccountingRequestSchema =
+  schemas.UpdateOrderDetailForAccountingRequest;
+export const UpdateOrderForAccountingRequestSchema =
+  schemas.UpdateOrderForAccountingRequest;
 export const UpdateOrderRequestSchema = schemas.UpdateOrderRequest;
-export const UpdatePaymentMethodRequestSchema = schemas.UpdatePaymentMethodRequest;
+export const UpdatePaymentMethodRequestSchema =
+  schemas.UpdatePaymentMethodRequest;
 export const UpdateProductionRequestSchema = schemas.UpdateProductionRequest;
-export const UpdateProofingOrderRequestSchema = schemas.UpdateProofingOrderRequest;
+export const UpdateProofingOrderRequestSchema =
+  schemas.UpdateProofingOrderRequest;
 export const UpdateStockInRequestSchema = schemas.UpdateStockInRequest;
 export const UpdateStockOutRequestSchema = schemas.UpdateStockOutRequest;
 export const UpdateUserRequestSchema = schemas.UpdateUserRequest;
+export const UpdateVendorRequestSchema = schemas.UpdateVendorRequest;
 export const UpdateVendorRequestSchema = schemas.UpdateVendorRequest;
 export const UserInfoSchema = schemas.UserInfo;
 export const UserKpiResponseSchema = schemas.UserKpiResponse;
 export const UserResponseSchema = schemas.UserResponse;
 export const UserResponsePaginateSchema = schemas.UserResponsePaginate;
-export const VendorCountOptionResponseSchema = schemas.VendorCountOptionResponse;
-export const VendorCountOptionResponseIPaginateSchema = schemas.VendorCountOptionResponseIPaginate;
+export const VendorCountOptionResponseSchema =
+  schemas.VendorCountOptionResponse;
+export const VendorCountOptionResponseIPaginateSchema =
+  schemas.VendorCountOptionResponseIPaginate;
 export const VendorResponseSchema = schemas.VendorResponse;
 export const VendorResponsePaginateSchema = schemas.VendorResponsePaginate;
-export const postApidesignsIdtimeline_BodySchema = schemas.postApidesignsIdtimeline_Body;
-export const postApiproofingOrdersIddieExport_BodySchema = schemas.postApiproofingOrdersIddieExport_Body;
+export const postApidesignsIdtimeline_BodySchema =
+  schemas.postApidesignsIdtimeline_Body;
+export const postApiproofingOrdersIddieExport_BodySchema =
+  schemas.postApiproofingOrdersIddieExport_Body;

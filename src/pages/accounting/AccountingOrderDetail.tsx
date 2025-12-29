@@ -47,6 +47,7 @@ import {
   PaymentStatusBadge,
   InvoiceStatusBadge,
   CustomerTypeBadge,
+  OrderAccountingUpdateDialog,
 } from "@/components/accounting";
 import {
   useOrder,
@@ -121,6 +122,8 @@ export default function AccountingOrderDetail() {
   const [cardEditValues, setCardEditValues] = useState<
     Record<string, string | number | null>
   >({});
+  // Modal state
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
 
   // Mutations
   const exportInvoiceMutation = useExportOrderInvoice();
@@ -442,6 +445,14 @@ export default function AccountingOrderDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsUpdateDialogOpen(true)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Cập nhật thông tin
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1479,6 +1490,16 @@ export default function AccountingOrderDetail() {
           </div>
         </div>
       </div>
+
+      {/* Update Order Dialog */}
+      <OrderAccountingUpdateDialog
+        open={isUpdateDialogOpen}
+        onOpenChange={setIsUpdateDialogOpen}
+        order={order}
+        onSuccess={() => {
+          // Order detail will be refetched automatically via query invalidation
+        }}
+      />
     </>
   );
 }
