@@ -59,6 +59,7 @@ export default function ProductionDetailPage() {
   const [startNotes, setStartNotes] = useState("");
   const [progressPercent, setProgressPercent] = useState("0");
   const [wastage, setWastage] = useState("0");
+  const [producedQty, setProducedQty] = useState("1");
   const [defectNotes, setDefectNotes] = useState("");
   const [completeNotes, setCompleteNotes] = useState("");
 
@@ -93,8 +94,12 @@ export default function ProductionDetailPage() {
           ? production.wastage.toString()
           : "0"
       );
+      // Set default producedQty from proofingOrder if available
+      if (proofingOrder?.totalQuantity) {
+        setProducedQty(proofingOrder.totalQuantity.toString());
+      }
     }
-  }, [production]);
+  }, [production, proofingOrder]);
 
   // Determine which buttons to show
   const showStartButton = useMemo(() => {
@@ -159,6 +164,11 @@ export default function ProductionDetailPage() {
     if (!production?.id) return;
 
     const wastageValue = wastage.trim() === "" ? 0 : Number(wastage);
+    const producedQtyValue = producedQty.trim() === "" ? 1 : Number(producedQty);
+
+    if (producedQtyValue < 1) {
+      return;
+    }
 
     try {
       await completeProduction({
@@ -167,6 +177,7 @@ export default function ProductionDetailPage() {
           notes: completeNotes || undefined,
           defectNotes: defectNotes || undefined,
           wastage: wastageValue,
+          producedQty: producedQtyValue,
         },
       });
       setIsCompleteDialogOpen(false);
@@ -792,6 +803,24 @@ export default function ProductionDetailPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="produced-qty">
+                Số lượng sản xuất <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="produced-qty"
+                type="number"
+                min="1"
+                value={producedQty}
+                onChange={(e) => setProducedQty(e.target.value)}
+                placeholder="1"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Số lượng sản phẩm đã sản xuất thành công
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="final-wastage">Hao hụt cuối cùng</Label>
               <Input

@@ -39,12 +39,19 @@ export const ConstantsResponseSchema = z
     orderStatuses: ConstantGroupSchema.optional(),
     designStatuses: ConstantGroupSchema.optional(),
     proofingOrderStatuses: ConstantGroupSchema.optional(),
+    orderDetailDerivedStatuses: ConstantGroupSchema.optional(),
     orderDetailItemStatuses: ConstantGroupSchema.optional(),
     productionStatuses: ConstantGroupSchema.optional(),
     paymentStatuses: ConstantGroupSchema.optional(),
     customerTypes: ConstantGroupSchema.optional(),
     paymentMethods: ConstantGroupSchema.optional(),
     commonStatuses: ConstantGroupSchema.optional(),
+    laminationTypes: ConstantGroupSchema.optional(),
+    sidesClassification: ConstantGroupSchema.optional(),
+    processClassification: ConstantGroupSchema.optional(),
+    vendorTypes: ConstantGroupSchema.optional(),
+    deliveryNoteStatuses: ConstantGroupSchema.optional(),
+    deliveryLineStatuses: ConstantGroupSchema.optional(),
   })
   .passthrough();
 

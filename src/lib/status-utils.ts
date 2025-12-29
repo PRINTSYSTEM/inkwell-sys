@@ -91,6 +91,14 @@ export const vendorTypeLabels: Record<string, string> =
 // Vai trò người dùng (Role)
 export const roleLabels: Record<string, string> = ENTITY_CONFIG.roles.values;
 
+// Trạng thái phiếu giao hàng (DeliveryNote)
+export const deliveryNoteStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.deliveryNoteStatuses.values;
+
+// Trạng thái dòng giao hàng (DeliveryNoteLine)
+export const deliveryLineStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.deliveryLineStatuses.values;
+
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
 
@@ -145,6 +153,8 @@ export function getStatusVariant(
     "waiting_for_deposit",
     "not_paid",
     "not_completed",
+    "draft",
+    "failed_reschedule",
   ];
 
   const successStatuses = [
@@ -154,6 +164,7 @@ export function getStatusVariant(
     "completed",
     "fully_paid",
     "invoice_issued",
+    "delivered",
   ];
 
   const inProgressStatuses = [
@@ -162,6 +173,11 @@ export function getStatusVariant(
     "in_production",
     "deposit_received",
     "delivering",
+    "confirmed",
+    "ready_to_ship",
+    "handed_over",
+    "in_transit",
+    "partially_completed",
   ];
 
   if (successStatuses.includes(status)) return "success";
@@ -248,6 +264,23 @@ export const statusColorMap: Record<string, string> = {
   // ===== VENDOR TYPES =====
   plate: "bg-blue-50 text-blue-700 border-blue-200",
   die: "bg-violet-50 text-violet-700 border-violet-200",
+
+  // ===== DELIVERY NOTE STATUSES =====
+  draft: "bg-slate-100 text-slate-800 border-slate-200",
+  confirmed: "bg-blue-50 text-blue-700 border-blue-200",
+  ready_to_ship: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  handed_over: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  in_transit: "bg-blue-50 text-blue-700 border-blue-200",
+  partially_completed: "bg-amber-50 text-amber-700 border-amber-200",
+  // completed đã được định nghĩa ở ORDER STATUSES ở trên
+  // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
+
+  // ===== DELIVERY LINE STATUSES =====
+  // pending đã được định nghĩa ở ORDER STATUSES ở trên
+  // delivered: sử dụng màu xanh lá cho thành công (tương tự completed)
+  failed_reschedule: "bg-orange-50 text-orange-700 border-orange-200",
+  returned: "bg-rose-50 text-rose-700 border-rose-200",
+  // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
 };
 
 // Hàm helper: trả về class tailwind cho badge

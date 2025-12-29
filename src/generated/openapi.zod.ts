@@ -443,6 +443,8 @@ const ConstantsResponse = z
     sidesClassification: ConstantGroup,
     processClassification: ConstantGroup,
     vendorTypes: ConstantGroup,
+    deliveryNoteStatuses: ConstantGroup,
+    deliveryLineStatuses: ConstantGroup,
   })
   .partial();
 const CreateCustomerRequest = z.object({
@@ -800,13 +802,20 @@ const APAgingResponseIPaginate = z
     items: z.array(APAgingResponse).nullable(),
   })
   .partial();
-const CreateDeliveryNoteRequest = z.object({
-  orderIds: z.array(z.number().int()).min(1),
-  recipientName: z.string().min(0).max(255).nullish(),
-  recipientPhone: z.string().min(0).max(20).nullish(),
-  deliveryAddress: z.string().min(0).max(500).nullish(),
-  notes: z.string().nullish(),
+const DeliveryLineRequest = z.object({
+  orderDetailId: z.number().int(),
+  deliveryQty: z.number().int().gte(1).lte(2147483647),
 });
+const CreateDeliveryNoteRequest = z
+  .object({
+    orderIds: z.array(z.number().int()).nullable(),
+    lines: z.array(DeliveryLineRequest).nullable(),
+    recipientName: z.string().min(0).max(255).nullable(),
+    recipientPhone: z.string().min(0).max(20).nullable(),
+    deliveryAddress: z.string().min(0).max(500).nullable(),
+    notes: z.string().nullable(),
+  })
+  .partial();
 const DeliveryNoteOrderResponse = z
   .object({
     orderId: z.number().int(),
@@ -816,25 +825,66 @@ const DeliveryNoteOrderResponse = z
     deliveryAddress: z.string().nullable(),
   })
   .partial();
+const DeliveryNoteLineResponse = z
+  .object({
+    id: z.number().int(),
+    orderDetailId: z.number().int(),
+    designId: z.number().int(),
+    designName: z.string().nullable(),
+    designCode: z.string().nullable(),
+    orderedQty: z.number().int(),
+    netQtyTotal: z.number().int(),
+    deliveredQtyBefore: z.number().int(),
+    deliveryQty: z.number().int(),
+    actualDeliveredQty: z.number().int().nullable(),
+    remainingAfter: z.number().int(),
+    unitPriceSnapshot: z.number(),
+    lineAmount: z.number(),
+    status: z.string().nullable(),
+    statusName: z.string().nullable(),
+    failureReasonId: z.number().int().nullable(),
+    failureReasonCode: z.string().nullable(),
+    failureReasonName: z.string().nullable(),
+    failureNotes: z.string().nullable(),
+    failedAt: z.string().datetime({ offset: true }).nullable(),
+    deliveredAt: z.string().datetime({ offset: true }).nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
 const DeliveryNoteResponse = z
   .object({
     id: z.number().int(),
     code: z.string().nullable(),
     status: z.string().nullable(),
     statusName: z.string().nullable(),
-    failureReason: z.string().nullable(),
-    failureType: z.string().nullable(),
-    failureTypeName: z.string().nullable(),
-    affectsDebt: z.boolean(),
     recipientName: z.string().nullable(),
     recipientPhone: z.string().nullable(),
     deliveryAddress: z.string().nullable(),
-    deliveredAt: z.string().datetime({ offset: true }).nullable(),
     notes: z.string().nullable(),
     pdfUrl: z.string().nullable(),
+    failureReason: z.string().nullable(),
+    failureType: z.string().nullable(),
+    affectsDebt: z.boolean(),
+    cancelReason: z.string().nullable(),
     createdBy: UserInfo,
     createdAt: z.string().datetime({ offset: true }),
+    confirmedAt: z.string().datetime({ offset: true }).nullable(),
+    confirmedBy: UserInfo,
+    readyToShipAt: z.string().datetime({ offset: true }).nullable(),
+    handedOverAt: z.string().datetime({ offset: true }).nullable(),
+    handedOverBy: UserInfo,
+    inTransitAt: z.string().datetime({ offset: true }).nullable(),
+    deliveredAt: z.string().datetime({ offset: true }).nullable(),
+    completedAt: z.string().datetime({ offset: true }).nullable(),
+    cancelledAt: z.string().datetime({ offset: true }).nullable(),
+    cancelledBy: UserInfo,
     orders: z.array(DeliveryNoteOrderResponse).nullable(),
+    lines: z.array(DeliveryNoteLineResponse).nullable(),
+    totalDeliveryQty: z.number().int(),
+    totalLineAmount: z.number(),
+    totalPendingLines: z.number().int(),
+    totalDeliveredLines: z.number().int(),
+    totalFailedLines: z.number().int(),
   })
   .partial();
 const DeliveryNoteResponsePaginate = z
@@ -847,7 +897,8 @@ const DeliveryNoteResponsePaginate = z
   })
   .partial();
 const UpdateDeliveryStatusRequest = z.object({
-  status: z.string().min(0).max(20),
+  status: z.string().min(0).max(30),
+  cancelReason: z.string().min(0).max(500).nullish(),
   failureReason: z.string().nullish(),
   failureType: z.string().min(0).max(50).nullish(),
   affectsDebt: z.boolean().nullish(),
@@ -861,6 +912,50 @@ const RecreateDeliveryNoteRequest = z.object({
   deliveryAddress: z.string().min(0).max(500).nullish(),
   notes: z.string().nullish(),
 });
+const OrderDetailForDeliveryResponse = z
+  .object({
+    orderDetailId: z.number().int(),
+    designId: z.number().int(),
+    designCode: z.string().nullable(),
+    designName: z.string().nullable(),
+    orderedQty: z.number().int(),
+    netQtyTotal: z.number().int(),
+    deliveredQtyTotal: z.number().int(),
+    remainingToDeliver: z.number().int(),
+    unitPrice: z.number(),
+  })
+  .partial();
+const OrderForDeliveryResponse = z
+  .object({
+    orderId: z.number().int(),
+    orderCode: z.string().nullable(),
+    status: z.string().nullable(),
+    statusName: z.string().nullable(),
+    customerId: z.number().int(),
+    customerName: z.string().nullable(),
+    customerPhone: z.string().nullable(),
+    deliveryAddress: z.string().nullable(),
+    totalAmount: z.number(),
+    createdAt: z.string().datetime({ offset: true }),
+    details: z.array(OrderDetailForDeliveryResponse).nullable(),
+  })
+  .partial();
+const UpdateDeliveryLineResultRequest = z.object({
+  status: z.string().min(0).max(30),
+  failureReasonId: z.number().int().nullish(),
+  failureNotes: z.string().min(0).max(500).nullish(),
+  actualDeliveredQty: z.number().int().gte(0).lte(2147483647).nullish(),
+});
+const FailureReasonResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    description: z.string().nullable(),
+    allowRedelivery: z.boolean(),
+    category: z.string().nullable(),
+  })
+  .partial();
 const DesignTypeResponse = z
   .object({
     id: z.number().int(),
@@ -1670,13 +1765,12 @@ const UpdateProductionRequest = z
 const StartProductionRequest = z
   .object({ notes: z.string().nullable() })
   .partial();
-const CompleteProductionRequest = z
-  .object({
-    progressPercent: z.number().int().gte(0).lte(100),
-    defectNotes: z.string().nullable(),
-    wastage: z.number().gte(0),
-  })
-  .partial();
+const CompleteProductionRequest = z.object({
+  progressPercent: z.number().int().gte(0).lte(100).optional(),
+  defectNotes: z.string().nullish(),
+  wastage: z.number().gte(0).optional(),
+  producedQty: z.number().int().gte(1).lte(2147483647),
+});
 const CreateProofingOrderRequest = z.object({
   materialTypeId: z.number().int(),
   designIds: z.array(z.number().int()),
@@ -2208,12 +2302,18 @@ export const schemas = {
   APDetailResponseIPaginate,
   APAgingResponse,
   APAgingResponseIPaginate,
+  DeliveryLineRequest,
   CreateDeliveryNoteRequest,
   DeliveryNoteOrderResponse,
+  DeliveryNoteLineResponse,
   DeliveryNoteResponse,
   DeliveryNoteResponsePaginate,
   UpdateDeliveryStatusRequest,
   RecreateDeliveryNoteRequest,
+  OrderDetailForDeliveryResponse,
+  OrderForDeliveryResponse,
+  UpdateDeliveryLineResultRequest,
+  FailureReasonResponse,
   DesignTypeResponse,
   MaterialTypeResponse,
   DesignTimelineEntryResponse,
@@ -3812,6 +3912,53 @@ const endpoints = makeApi([
       },
     ],
     response: DeliveryNoteResponse,
+  },
+  {
+    method: "get",
+    path: "/api/delivery-notes/available-orders",
+    alias: "getApideliveryNotesavailableOrders",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.array(OrderForDeliveryResponse),
+  },
+  {
+    method: "get",
+    path: "/api/delivery-notes/failure-reasons",
+    alias: "getApideliveryNotesfailureReasons",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "allowRedeliveryOnly",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+    ],
+    response: z.array(FailureReasonResponse),
+  },
+  {
+    method: "put",
+    path: "/api/delivery-notes/lines/:lineId/result",
+    alias: "putApideliveryNoteslinesLineIdresult",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateDeliveryLineResultRequest,
+      },
+      {
+        name: "lineId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DeliveryNoteLineResponse,
   },
   {
     method: "post",

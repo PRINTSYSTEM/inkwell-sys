@@ -28,12 +28,17 @@ import {
   Building2,
 } from "lucide-react";
 import type { DesignResponse } from "@/Schema/design.schema";
+import { ENTITY_CONFIG } from "@/config/entities.config";
 
 type ExistingDesignModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   design: DesignResponse | null;
-  onConfirm: (design: DesignResponse, quantity: number, laminationType: string) => void;
+  onConfirm: (
+    design: DesignResponse,
+    quantity: number,
+    laminationType: string
+  ) => void;
 };
 
 export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
@@ -207,7 +212,7 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                         Người thiết kế
                       </p>
                       <p className="text-sm font-medium">
-                        {(design.designer.name as string) ||
+                        {(design.designer.fullName as string) ||
                           (design.designer.username as string) ||
                           "—"}
                       </p>
@@ -273,7 +278,9 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                 placeholder="VD: 1000"
                 value={quantity || ""}
                 onChange={(e) =>
-                  setQuantity(e.target.value === "" ? 0 : Number(e.target.value))
+                  setQuantity(
+                    e.target.value === "" ? 0 : Number(e.target.value)
+                  )
                 }
                 className="h-11 w-full"
                 min={minQuantity && minQuantity > 0 ? minQuantity : 1}
@@ -305,15 +312,15 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                 <SelectTrigger className="h-11 w-full">
                   <SelectValue placeholder="Chọn loại cán màn" />
                 </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(
-                      ENTITY_CONFIG.laminationTypes.values
-                    ).map(([key, label]) => (
+                <SelectContent>
+                  {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(
+                    ([key, label]) => (
                       <SelectItem key={key} value={key}>
                         {label}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
+                    )
+                  )}
+                </SelectContent>
               </Select>
             </div>
           </div>

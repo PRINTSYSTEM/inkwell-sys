@@ -9,6 +9,12 @@ import {
   CreateDeliveryNoteRequestSchema as GenCreateDeliveryNoteRequestSchema,
   UpdateDeliveryStatusRequestSchema as GenUpdateDeliveryStatusRequestSchema,
   RecreateDeliveryNoteRequestSchema as GenRecreateDeliveryNoteRequestSchema,
+  DeliveryLineRequestSchema as GenDeliveryLineRequestSchema,
+  DeliveryNoteLineResponseSchema as GenDeliveryNoteLineResponseSchema,
+  FailureReasonResponseSchema as GenFailureReasonResponseSchema,
+  OrderDetailForDeliveryResponseSchema as GenOrderDetailForDeliveryResponseSchema,
+  OrderForDeliveryResponseSchema as GenOrderForDeliveryResponseSchema,
+  UpdateDeliveryLineResultRequestSchema as GenUpdateDeliveryLineResultRequestSchema,
 } from "./generated";
 
 // ===== DeliveryNoteOrderResponse =====
@@ -67,4 +73,46 @@ export const RecreateDeliveryNoteRequestSchema =
   GenRecreateDeliveryNoteRequestSchema.passthrough();
 export type RecreateDeliveryNoteRequest = z.infer<
   typeof RecreateDeliveryNoteRequestSchema
+>;
+
+// ===== DeliveryLineRequest =====
+export const DeliveryLineRequestSchema =
+  GenDeliveryLineRequestSchema.passthrough();
+export type DeliveryLineRequest = z.infer<
+  typeof DeliveryLineRequestSchema
+>;
+
+// ===== DeliveryNoteLineResponse =====
+export const DeliveryNoteLineResponseSchema =
+  GenDeliveryNoteLineResponseSchema.passthrough();
+export type DeliveryNoteLineResponse = z.infer<
+  typeof DeliveryNoteLineResponseSchema
+>;
+
+// ===== FailureReasonResponse =====
+export const FailureReasonResponseSchema =
+  GenFailureReasonResponseSchema.passthrough();
+export type FailureReasonResponse = z.infer<
+  typeof FailureReasonResponseSchema
+>;
+
+// ===== OrderDetailForDeliveryResponse =====
+export const OrderDetailForDeliveryResponseSchema =
+  GenOrderDetailForDeliveryResponseSchema.passthrough();
+export type OrderDetailForDeliveryResponse = z.infer<
+  typeof OrderDetailForDeliveryResponseSchema
+>;
+
+// ===== OrderForDeliveryResponse =====
+export const OrderForDeliveryResponseSchema =
+  GenOrderForDeliveryResponseSchema.passthrough();
+export type OrderForDeliveryResponse = z.infer<
+  typeof OrderForDeliveryResponseSchema
+>;
+
+// ===== UpdateDeliveryLineResultRequest =====
+export const UpdateDeliveryLineResultRequestSchema =
+  GenUpdateDeliveryLineResultRequestSchema.passthrough();
+export type UpdateDeliveryLineResultRequest = z.infer<
+  typeof UpdateDeliveryLineResultRequestSchema
 >;
