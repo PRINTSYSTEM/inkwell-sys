@@ -88,12 +88,16 @@ const formatDateTime = (dateStr: string | null | undefined) => {
 
 export default function DeliveryNoteListPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"orders" | "delivery-notes">("orders");
-  
+  const [activeTab, setActiveTab] = useState<"orders" | "delivery-notes">(
+    "orders"
+  );
+
   // Orders tab state
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(new Set());
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(
+    new Set()
+  );
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
@@ -101,7 +105,8 @@ export default function DeliveryNoteListPage() {
   const [notes, setNotes] = useState("");
 
   // Delivery notes tab state
-  const [deliveryNoteStatusFilter, setDeliveryNoteStatusFilter] = useState<string>("all");
+  const [deliveryNoteStatusFilter, setDeliveryNoteStatusFilter] =
+    useState<string>("all");
   const [deliveryNotePage, setDeliveryNotePage] = useState(1);
 
   const itemsPerPage = 10;
@@ -116,7 +121,7 @@ export default function DeliveryNoteListPage() {
   } = useOrdersForAccounting({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    filterType: "invoice",
+    filterType: "delivery",
   });
 
   // Fetch delivery notes
@@ -129,7 +134,8 @@ export default function DeliveryNoteListPage() {
   } = useDeliveryNotes({
     pageNumber: deliveryNotePage,
     pageSize: itemsPerPage,
-    status: deliveryNoteStatusFilter === "all" ? undefined : deliveryNoteStatusFilter,
+    status:
+      deliveryNoteStatusFilter === "all" ? undefined : deliveryNoteStatusFilter,
   });
 
   const createDeliveryNoteMutation = useCreateDeliveryNote();
@@ -170,7 +176,9 @@ export default function DeliveryNoteListPage() {
       setSelectedOrderIds(new Set());
     } else {
       setSelectedOrderIds(
-        new Set(filteredOrders.map((o) => o.id).filter((id): id is number => !!id))
+        new Set(
+          filteredOrders.map((o) => o.id).filter((id): id is number => !!id)
+        )
       );
     }
   };
@@ -180,18 +188,69 @@ export default function DeliveryNoteListPage() {
       toast.error("Vui lòng chọn ít nhất một đơn hàng");
       return;
     }
+
+    // Lấy thông tin người nhận từ đơn hàng đã chọn
+    // Ưu tiên lấy từ order đầu tiên có đầy đủ thông tin
+    const firstOrderWithRecipient = selectedOrders.find(
+      (order) =>
+        order.recipientName ||
+        order.recipientPhone ||
+        order.recipientAddress ||
+        order.deliveryAddress
+    );
+
+    if (firstOrderWithRecipient) {
+      // Chỉ điền vào form nếu form đang trống
+      if (!recipientName && firstOrderWithRecipient.recipientName) {
+        setRecipientName(firstOrderWithRecipient.recipientName);
+      }
+      if (!recipientPhone && firstOrderWithRecipient.recipientPhone) {
+        setRecipientPhone(firstOrderWithRecipient.recipientPhone);
+      }
+      // Ưu tiên recipientAddress, nếu không có thì dùng deliveryAddress
+      if (!deliveryAddress) {
+        const address =
+          firstOrderWithRecipient.recipientAddress ||
+          firstOrderWithRecipient.deliveryAddress;
+        if (address) {
+          setDeliveryAddress(address);
+        }
+      }
+    }
+
     setIsCreateDialogOpen(true);
   };
 
   const handleConfirmCreate = async () => {
     if (selectedOrderIds.size === 0) return;
 
+    // Lấy thông tin người nhận từ đơn hàng nếu form trống
+    const firstOrderWithRecipient = selectedOrders.find(
+      (order) =>
+        order.recipientName ||
+        order.recipientPhone ||
+        order.recipientAddress ||
+        order.deliveryAddress
+    );
+
+    // Ưu tiên giá trị từ form, nếu không có thì lấy từ order
+    const finalRecipientName =
+      recipientName || firstOrderWithRecipient?.recipientName || undefined;
+    const finalRecipientPhone =
+      recipientPhone || firstOrderWithRecipient?.recipientPhone || undefined;
+    // Ưu tiên recipientAddress, nếu không có thì dùng deliveryAddress
+    const finalDeliveryAddress =
+      deliveryAddress ||
+      firstOrderWithRecipient?.recipientAddress ||
+      firstOrderWithRecipient?.deliveryAddress ||
+      undefined;
+
     try {
       await createDeliveryNoteMutation.mutateAsync({
         orderIds: Array.from(selectedOrderIds),
-        recipientName: recipientName || undefined,
-        recipientPhone: recipientPhone || undefined,
-        deliveryAddress: deliveryAddress || undefined,
+        recipientName: finalRecipientName || undefined,
+        recipientPhone: finalRecipientPhone || undefined,
+        deliveryAddress: finalDeliveryAddress || undefined,
         notes: notes || undefined,
       });
       setSelectedOrderIds(new Set());
@@ -229,12 +288,15 @@ export default function DeliveryNoteListPage() {
   }, [filteredOrders, selectedOrderIds]);
 
   const totalSelectedAmount = useMemo(() => {
-    return selectedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    return selectedOrders.reduce(
+      (sum, order) => sum + (order.totalAmount || 0),
+      0
+    );
   }, [selectedOrders]);
 
   const getStatusBadge = (status: string | null | undefined) => {
     if (!status) return <Badge variant="secondary">—</Badge>;
-    
+
     const statusLower = status.toLowerCase();
     if (statusLower.includes("success") || statusLower.includes("completed")) {
       return (
@@ -261,7 +323,10 @@ export default function DeliveryNoteListPage() {
         <h1 className="text-2xl font-bold">Phiếu giao hàng</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+      >
         <TabsList>
           <TabsTrigger value="orders">Đơn hàng</TabsTrigger>
           <TabsTrigger value="delivery-notes">Phiếu giao hàng</TabsTrigger>
@@ -296,7 +361,7 @@ export default function DeliveryNoteListPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={refetchOrders}
+                  onClick={() => refetchOrders()}
                   disabled={ordersLoading}
                 >
                   <RefreshCw
@@ -324,7 +389,11 @@ export default function DeliveryNoteListPage() {
                   >
                     Bỏ chọn
                   </Button>
-                  <Button size="sm" onClick={handleCreateDeliveryNote} className="gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleCreateDeliveryNote}
+                    className="gap-2"
+                  >
                     <Truck className="h-4 w-4" />
                     Tạo phiếu giao hàng ({selectedOrderIds.size})
                   </Button>
@@ -375,7 +444,9 @@ export default function DeliveryNoteListPage() {
                   </TableRow>
                 ) : (
                   filteredOrders.map((order) => {
-                    const isSelected = order.id ? selectedOrderIds.has(order.id) : false;
+                    const isSelected = order.id
+                      ? selectedOrderIds.has(order.id)
+                      : false;
                     return (
                       <TableRow
                         key={order.id}
@@ -442,7 +513,8 @@ export default function DeliveryNoteListPage() {
           {ordersData && ordersData.totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Trang {currentPage} / {ordersData.totalPages} ({ordersData.total} đơn hàng)
+                Trang {currentPage} / {ordersData.totalPages} (
+                {ordersData.total} đơn hàng)
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -460,9 +532,13 @@ export default function DeliveryNoteListPage() {
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    setCurrentPage((p) => Math.min(ordersData.totalPages, p + 1))
+                    setCurrentPage((p) =>
+                      Math.min(ordersData.totalPages, p + 1)
+                    )
                   }
-                  disabled={currentPage === ordersData.totalPages || ordersLoading}
+                  disabled={
+                    currentPage === ordersData.totalPages || ordersLoading
+                  }
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -505,7 +581,7 @@ export default function DeliveryNoteListPage() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={refetchDeliveryNotes}
+                onClick={() => refetchDeliveryNotes()}
                 disabled={deliveryNotesLoading}
               >
                 <RefreshCw
@@ -538,7 +614,8 @@ export default function DeliveryNoteListPage() {
                       ))}
                     </TableRow>
                   ))
-                ) : !deliveryNotesData?.items || deliveryNotesData.items.length === 0 ? (
+                ) : !deliveryNotesData?.items ||
+                  deliveryNotesData.items.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={6}
@@ -560,11 +637,12 @@ export default function DeliveryNoteListPage() {
                               {order.orderCode}
                             </div>
                           ))}
-                          {deliveryNote.orders && deliveryNote.orders.length > 2 && (
-                            <div className="text-xs text-muted-foreground">
-                              +{deliveryNote.orders.length - 2} đơn hàng khác
-                            </div>
-                          )}
+                          {deliveryNote.orders &&
+                            deliveryNote.orders.length > 2 && (
+                              <div className="text-xs text-muted-foreground">
+                                +{deliveryNote.orders.length - 2} đơn hàng khác
+                              </div>
+                            )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -596,7 +674,9 @@ export default function DeliveryNoteListPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => handleViewDeliveryNote(deliveryNote.id)}
+                              onClick={() =>
+                                handleViewDeliveryNote(deliveryNote.id)
+                              }
                             >
                               <Eye className="h-4 w-4 mr-2" />
                               Xem chi tiết
@@ -661,7 +741,9 @@ export default function DeliveryNoteListPage() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Tạo phiếu giao hàng cho {selectedOrderIds.size} đơn hàng</DialogTitle>
+            <DialogTitle>
+              Tạo phiếu giao hàng cho {selectedOrderIds.size} đơn hàng
+            </DialogTitle>
             <DialogDescription>
               Nhập thông tin giao hàng cho các đơn hàng đã chọn.
             </DialogDescription>
@@ -677,7 +759,9 @@ export default function DeliveryNoteListPage() {
                   <div className="flex-1">
                     <div className="font-medium text-sm">{order.code}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {order.customer?.companyName || order.customer?.name || "—"}
+                      {order.customer?.companyName ||
+                        order.customer?.name ||
+                        "—"}
                     </div>
                   </div>
                   <div className="text-right">
@@ -756,4 +840,3 @@ export default function DeliveryNoteListPage() {
     </div>
   );
 }
-

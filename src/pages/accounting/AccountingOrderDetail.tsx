@@ -304,7 +304,7 @@ export default function AccountingOrderDetail() {
                   ) : (
                     <Download className="h-4 w-4 mr-2" />
                   )}
-                  Xuất Excel
+                  Xuất Excel Báo Giá
                 </Button>
                 <Button
                   variant="outline"
@@ -317,7 +317,7 @@ export default function AccountingOrderDetail() {
                   ) : (
                     <Download className="h-4 w-4 mr-2" />
                   )}
-                  Xuất PDF
+                  Xuất PDF Đơn Hàng
                 </Button>
                 {/* {remainingAmount > 0 && ( */}
                 <Button
