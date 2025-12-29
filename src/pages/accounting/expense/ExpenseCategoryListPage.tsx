@@ -11,6 +11,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { ExpenseCategoryModal } from "@/components/accounting/expense/ExpenseCategoryModal";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,8 @@ export default function ExpenseCategoryListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
 
   const {
     data: categoriesData,
@@ -96,7 +99,12 @@ export default function ExpenseCategoryListPage() {
               Quản lý và theo dõi các danh mục chi phí
             </p>
           </div>
-          <Button onClick={() => navigate("/accounting/expense-categories/new")}>
+          <Button
+            onClick={() => {
+              setEditingCategoryId(null);
+              setModalOpen(true);
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Tạo danh mục mới
           </Button>
@@ -208,22 +216,10 @@ export default function ExpenseCategoryListPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() =>
-                              navigate(
-                                `/accounting/expense-categories/${category.id}`
-                              )
-                            }
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Xem chi tiết
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              navigate(
-                                `/accounting/expense-categories/${category.id}/edit`
-                              )
-                            }
+                            onClick={() => {
+                              setEditingCategoryId(category.id || null);
+                              setModalOpen(true);
+                            }}
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Chỉnh sửa
@@ -277,6 +273,21 @@ export default function ExpenseCategoryListPage() {
             </div>
           </div>
         )}
+
+        {/* Expense Category Modal */}
+        <ExpenseCategoryModal
+          open={modalOpen}
+          onOpenChange={(open) => {
+            setModalOpen(open);
+            if (!open) {
+              setEditingCategoryId(null);
+            }
+          }}
+          categoryId={editingCategoryId}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
       </div>
     </>
   );

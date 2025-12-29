@@ -92,11 +92,17 @@ const AccountingExpenses = lazy(
 const CashPaymentList = lazy(
   () => import("@/pages/accounting/cash/CashPaymentListPage")
 );
+const CashPaymentDetail = lazy(
+  () => import("@/pages/accounting/cash/CashPaymentDetailPage")
+);
 const CashFundList = lazy(
   () => import("@/pages/accounting/cash/CashFundListPage")
 );
 const CashReceiptList = lazy(
   () => import("@/pages/accounting/cash/CashReceiptListPage")
+);
+const CashReceiptDetail = lazy(
+  () => import("@/pages/accounting/cash/CashReceiptDetailPage")
 );
 const CashBook = lazy(() => import("@/pages/accounting/cash/CashBookPage"));
 
@@ -607,6 +613,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "cash-payments/:id",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CashPaymentDetail />
+              </Suspense>
+            ),
+          },
+          {
             path: "cash-funds",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
@@ -619,6 +633,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CashReceiptList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "cash-receipts/:id",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CashReceiptDetail />
               </Suspense>
             ),
           },

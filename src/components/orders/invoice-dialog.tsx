@@ -31,7 +31,8 @@ export function InvoiceDialog({
 }: InvoiceDialogProps) {
   const { data: invoices, isLoading, refetch } = useInvoicesByOrder(
     orderId,
-    open
+    undefined, // params (optional)
+    open // enabled
   );
   const createInvoice = useCreateInvoice();
 

@@ -9,7 +9,6 @@ import type {
   InvoiceResponsePaginate,
   CreateInvoiceRequest,
   UpdateInvoiceRequest,
-  InvoiceFileResponse,
 } from "@/Schema/invoice.schema";
 
 // ================== GET INVOICES ==================
@@ -54,17 +53,29 @@ export const useInvoice = (id: number | null, enabled: boolean = true) => {
 
 // ================== GET INVOICES BY ORDER ==================
 // GET /invoices/by-order/{orderId}
+export interface InvoicesByOrderParams {
+  pageNumber?: number;
+  pageSize?: number;
+}
+
 export const useInvoicesByOrder = (
   orderId: number | null,
+  params?: InvoicesByOrderParams,
   enabled: boolean = true
 ) => {
   return useQuery({
-    queryKey: ["invoices", "by-order", orderId],
+    queryKey: ["invoices", "by-order", orderId, params],
     enabled: enabled && !!orderId,
     queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
       // API returns InvoiceResponsePaginate
       const res = await apiRequest.get<InvoiceResponsePaginate>(
-        API_SUFFIX.INVOICES_BY_ORDER(orderId as number)
+        API_SUFFIX.INVOICES_BY_ORDER(orderId as number),
+        {
+          params: normalizedParams,
+        }
       );
       return res.data;
     },
@@ -163,6 +174,7 @@ export const useExportInvoice = () => {
 
 // ================== GET INVOICE BY ORDER (Legacy) ==================
 // GET /invoices/order/{orderId}
+// Returns: string (invoice file URL)
 export const useInvoiceByOrder = (
   orderId: number | null,
   enabled: boolean = true
@@ -171,7 +183,7 @@ export const useInvoiceByOrder = (
     queryKey: ["invoice", "by-order", orderId],
     enabled: enabled && !!orderId,
     queryFn: async () => {
-      const res = await apiRequest.get<InvoiceFileResponse>(
+      const res = await apiRequest.get<string>(
         API_SUFFIX.INVOICE_BY_ORDER(orderId as number)
       );
       return res.data;
@@ -181,12 +193,13 @@ export const useInvoiceByOrder = (
 
 // ================== CREATE INVOICE FROM ORDER (Legacy) ==================
 // POST /invoices/order/{orderId}
+// Returns: string (invoice file URL)
 export const useCreateInvoiceFromOrder = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (orderId: number) => {
-      const res = await apiRequest.post<InvoiceFileResponse>(
+      const res = await apiRequest.post<string>(
         API_SUFFIX.INVOICE_BY_ORDER(orderId)
       );
       return res.data;
@@ -196,6 +209,9 @@ export const useCreateInvoiceFromOrder = () => {
         queryKey: ["invoice", "by-order", orderId],
       });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({
+        queryKey: ["invoices", "by-order", orderId],
+      });
       toast.success("Tạo hóa đơn từ đơn hàng thành công");
     },
     onError: (error: Error) => {

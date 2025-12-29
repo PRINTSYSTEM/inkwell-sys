@@ -11,6 +11,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { CashFundModal } from "@/components/accounting/cash/CashFundModal";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,8 @@ export default function CashFundListPage() {
   const [isActiveFilter, setIsActiveFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingFundId, setEditingFundId] = useState<number | null>(null);
 
   const {
     data: fundsData,
@@ -104,7 +107,12 @@ export default function CashFundListPage() {
               Quản lý và theo dõi các quỹ tiền mặt
             </p>
           </div>
-          <Button onClick={() => navigate("/accounting/cash-funds/new")}>
+          <Button
+            onClick={() => {
+              setEditingFundId(null);
+              setModalOpen(true);
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Tạo quỹ mới
           </Button>
@@ -234,18 +242,10 @@ export default function CashFundListPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() =>
-                              navigate(`/accounting/cash-funds/${fund.id}`)
-                            }
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Xem chi tiết
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              navigate(`/accounting/cash-funds/${fund.id}/edit`)
-                            }
+                            onClick={() => {
+                              setEditingFundId(fund.id || null);
+                              setModalOpen(true);
+                            }}
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Chỉnh sửa
@@ -299,6 +299,21 @@ export default function CashFundListPage() {
             </div>
           </div>
         )}
+
+        {/* Cash Fund Modal */}
+        <CashFundModal
+          open={modalOpen}
+          onOpenChange={(open) => {
+            setModalOpen(open);
+            if (!open) {
+              setEditingFundId(null);
+            }
+          }}
+          fundId={editingFundId}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
       </div>
     </>
   );

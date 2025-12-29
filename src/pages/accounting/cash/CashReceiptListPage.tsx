@@ -17,8 +17,13 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Download,
+  Calendar,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import { addDays } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +52,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Badge } from "@/components/ui/badge";
 import {
   useCashReceipts,
   useDeleteCashReceipt,
@@ -54,6 +60,7 @@ import {
   useCancelCashReceipt,
   usePostCashReceipt,
 } from "@/hooks/use-cash";
+import { usePaymentMethods } from "@/hooks/use-expense";
 import { formatCurrency } from "@/lib/status-utils";
 
 const formatDate = (dateStr: string | null | undefined) => {
@@ -84,8 +91,20 @@ export default function CashReceiptListPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: addDays(new Date(), -30),
+    to: new Date(),
+  });
+  const [customerFilter, setCustomerFilter] = useState<string>("");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const { data: paymentMethodsData } = usePaymentMethods({
+    pageNumber: 1,
+    pageSize: 100,
+    isActive: true,
+  });
 
   const {
     data: receiptsData,
@@ -98,6 +117,17 @@ export default function CashReceiptListPage() {
     pageSize: itemsPerPage,
     status: statusFilter === "all" ? undefined : statusFilter,
     search: searchQuery || undefined,
+    fromDate: dateRange?.from
+      ? dateRange.from.toISOString()
+      : undefined,
+    toDate: dateRange?.to
+      ? dateRange.to.toISOString()
+      : undefined,
+    customerId: customerFilter ? Number.parseInt(customerFilter, 10) : undefined,
+    paymentMethodId:
+      paymentMethodFilter && paymentMethodFilter !== "all"
+        ? Number.parseInt(paymentMethodFilter, 10)
+        : undefined,
   });
 
   const deleteReceiptMutation = useDeleteCashReceipt();
@@ -217,17 +247,21 @@ export default function CashReceiptListPage() {
         )}
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Tìm kiếm theo mã phiếu, người nộp, lý do..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm kiếm theo mã phiếu, người nộp, lý do..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
             />
-          </div>
-          <div className="flex gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
@@ -241,6 +275,22 @@ export default function CashReceiptListPage() {
                 <SelectItem value="cancelled">Đã hủy</SelectItem>
               </SelectContent>
             </Select>
+            <Select
+              value={paymentMethodFilter}
+              onValueChange={setPaymentMethodFilter}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Phương thức" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                {paymentMethodsData?.items?.map((method) => (
+                  <SelectItem key={method.id} value={String(method.id)}>
+                    {method.name || method.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="icon"
@@ -251,6 +301,9 @@ export default function CashReceiptListPage() {
                 className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
               />
             </Button>
+            <Button variant="outline" size="icon" title="Xuất Excel">
+              <Download className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -259,11 +312,14 @@ export default function CashReceiptListPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã phiếu</TableHead>
+                <TableHead className="w-[140px]">Số phiếu</TableHead>
+                <TableHead className="w-[120px]">Ngày chứng từ</TableHead>
+                <TableHead className="w-[120px]">Ngày hạch toán</TableHead>
                 <TableHead>Người nộp</TableHead>
-                <TableHead>Lý do</TableHead>
+                <TableHead>Lý do thu</TableHead>
                 <TableHead className="text-right">Số tiền</TableHead>
-                <TableHead className="text-center">Ngày chứng từ</TableHead>
+                <TableHead>Phương thức</TableHead>
+                <TableHead>Tham chiếu</TableHead>
                 <TableHead className="text-center">Trạng thái</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
               </TableRow>
@@ -272,7 +328,7 @@ export default function CashReceiptListPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 10 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -282,7 +338,7 @@ export default function CashReceiptListPage() {
               ) : !receiptsData?.items || receiptsData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={10}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy phiếu thu nào.
@@ -290,9 +346,23 @@ export default function CashReceiptListPage() {
                 </TableRow>
               ) : (
                 receiptsData.items.map((receipt) => (
-                  <TableRow key={receipt.id} className="group">
+                  <TableRow
+                    key={receipt.id}
+                    className="group cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleViewDetails(receipt.id)}
+                  >
                     <TableCell className="font-medium font-mono text-sm">
                       {receipt.code || `#${receipt.id}`}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {receipt.voucherDate
+                        ? formatDate(receipt.voucherDate)
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {receipt.postingDate
+                        ? formatDate(receipt.postingDate)
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -317,10 +387,33 @@ export default function CashReceiptListPage() {
                     <TableCell className="text-right font-medium tabular-nums">
                       {receipt.amount ? formatCurrency(receipt.amount) : "—"}
                     </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {receipt.voucherDate
-                        ? formatDate(receipt.voucherDate)
-                        : "—"}
+                    <TableCell>
+                      {receipt.paymentMethodName ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {receipt.paymentMethodName}
+                        </Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {receipt.orderCode && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">Đơn:</span>{" "}
+                            <span className="font-mono">{receipt.orderCode}</span>
+                          </div>
+                        )}
+                        {receipt.invoiceNumber && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">HĐ:</span>{" "}
+                            <span className="font-mono">
+                              {receipt.invoiceNumber}
+                            </span>
+                          </div>
+                        )}
+                        {!receipt.orderCode && !receipt.invoiceNumber && "—"}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       {getStatusBadge(receipt.status)}

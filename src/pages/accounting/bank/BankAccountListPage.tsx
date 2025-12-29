@@ -11,6 +11,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { BankAccountModal } from "@/components/accounting/bank/BankAccountModal";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,8 @@ export default function BankAccountListPage() {
   const [isActiveFilter, setIsActiveFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingAccountId, setEditingAccountId] = useState<number | null>(null);
 
   const {
     data: accountsData,
@@ -106,7 +109,12 @@ export default function BankAccountListPage() {
               Quản lý và theo dõi các tài khoản ngân hàng
             </p>
           </div>
-          <Button onClick={() => navigate("/accounting/bank-accounts/new")}>
+          <Button
+            onClick={() => {
+              setEditingAccountId(null);
+              setModalOpen(true);
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Tạo tài khoản mới
           </Button>
@@ -234,20 +242,10 @@ export default function BankAccountListPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() =>
-                              navigate(`/accounting/bank-accounts/${account.id}`)
-                            }
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Xem chi tiết
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              navigate(
-                                `/accounting/bank-accounts/${account.id}/edit`
-                              )
-                            }
+                            onClick={() => {
+                              setEditingAccountId(account.id || null);
+                              setModalOpen(true);
+                            }}
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Chỉnh sửa
@@ -301,6 +299,21 @@ export default function BankAccountListPage() {
             </div>
           </div>
         )}
+
+        {/* Bank Account Modal */}
+        <BankAccountModal
+          open={modalOpen}
+          onOpenChange={(open) => {
+            setModalOpen(open);
+            if (!open) {
+              setEditingAccountId(null);
+            }
+          }}
+          accountId={editingAccountId}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
       </div>
     </>
   );

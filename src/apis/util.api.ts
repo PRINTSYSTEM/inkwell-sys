@@ -65,12 +65,13 @@ export const API_SUFFIX = {
   ORDERS_MY: "/orders/my",
 
   // ========== INVOICE ==========
+  // Note: GET /invoices (list) may not be defined in OpenAPI schema yet
   INVOICES: "/invoices",
   INVOICE_BY_ID: (id: number) => `/invoices/${id}`,
-  INVOICE_BY_ORDER: (orderId: number) => `/invoices/order/${orderId}`,
-  INVOICES_BY_ORDER: (orderId: number) => `/invoices/by-order/${orderId}`,
+  INVOICE_BY_ORDER: (orderId: number) => `/invoices/order/${orderId}`, // Legacy: GET returns string (URL)
+  INVOICES_BY_ORDER: (orderId: number) => `/invoices/by-order/${orderId}`, // GET with pagination
   INVOICE_EXPORT: (id: number) => `/invoices/${id}/export-sinvoice`,
-  ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`, // Legacy, use INVOICE_BY_ORDER
+  ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`, // Legacy alias, use INVOICE_BY_ORDER
   CUSTOMER_EXPORT_DEBT_COMPARISON: (id: number) =>
     `/customers/${id}/export-debt-comparison`,
 
@@ -227,7 +228,7 @@ export const API_SUFFIX = {
 
   // ========== INVENTORY REPORTS ==========
   CURRENT_STOCK: "/inventory-reports/current-stock",
-  INVENTORY_SUMMARY: "/inventory-reports/inventory-summary",
+  INVENTORY_SUMMARY: "/inventory-reports/summary", // Fixed: was "/inventory-reports/inventory-summary"
   LOW_STOCK: "/inventory-reports/low-stock",
   SLOW_MOVING: "/inventory-reports/slow-moving",
   STOCK_CARD: (itemCode: string) => `/inventory-reports/stock-card/${itemCode}`,

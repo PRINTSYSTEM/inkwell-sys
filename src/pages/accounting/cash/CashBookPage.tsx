@@ -1,11 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
-  Search,
   RefreshCw,
   Download,
-  Calendar,
   Loader2,
   AlertCircle,
 } from "lucide-react";
@@ -47,6 +46,7 @@ const formatDateTime = (dateStr: string | null | undefined) => {
 };
 
 export default function CashBookPage() {
+  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
@@ -67,6 +67,23 @@ export default function CashBookPage() {
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     cashFundId: cashFundId,
   });
+
+  const handleVoucherClick = (
+    voucherType: string | null | undefined,
+    voucherId: number | undefined
+  ) => {
+    if (!voucherId) return;
+
+    const voucherTypeLower = voucherType?.toLowerCase() || "";
+    if (voucherTypeLower.includes("receipt") || voucherTypeLower === "receipt") {
+      navigate(`/accounting/cash-receipts/${voucherId}`);
+    } else if (
+      voucherTypeLower.includes("payment") ||
+      voucherTypeLower === "payment"
+    ) {
+      navigate(`/accounting/cash-payments/${voucherId}`);
+    }
+  };
 
   return (
     <>
@@ -113,8 +130,8 @@ export default function CashBookPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
             <DateRangePicker
-              value={dateRange}
-              onChange={setDateRange}
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
             />
           </div>
           <Select
@@ -128,11 +145,16 @@ export default function CashBookPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả quỹ</SelectItem>
-              {fundsData?.items?.map((fund) => (
-                <SelectItem key={fund.id} value={fund.id?.toString() || ""}>
-                  {fund.name} ({fund.code})
-                </SelectItem>
-              ))}
+              {fundsData?.items
+                ?.filter((fund) => fund.id !== undefined && fund.id !== null)
+                .map((fund) => (
+                  <SelectItem
+                    key={fund.id}
+                    value={fund.id!.toString()}
+                  >
+                    {fund.name} ({fund.code})
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -174,8 +196,8 @@ export default function CashBookPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {cashBookData.totalCredit !== undefined
-                    ? formatCurrency(cashBookData.totalCredit)
+                  {cashBookData.totalReceipt !== undefined
+                    ? formatCurrency(cashBookData.totalReceipt)
                     : "—"}
                 </div>
               </CardContent>
@@ -188,8 +210,8 @@ export default function CashBookPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">
-                  {cashBookData.totalDebit !== undefined
-                    ? formatCurrency(cashBookData.totalDebit)
+                  {cashBookData.totalPayment !== undefined
+                    ? formatCurrency(cashBookData.totalPayment)
                     : "—"}
                 </div>
               </CardContent>
@@ -250,23 +272,31 @@ export default function CashBookPage() {
                 </TableRow>
               ) : (
                 cashBookData.entries.map((entry, index) => (
-                  <TableRow key={index}>
+                  <TableRow
+                    key={index}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() =>
+                      handleVoucherClick(entry.voucherType, entry.voucherId)
+                    }
+                  >
                     <TableCell className="text-sm">
                       {entry.date ? formatDate(entry.date) : "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
+                    <TableCell className="font-mono text-sm font-medium">
                       {entry.voucherCode || "—"}
                     </TableCell>
                     <TableCell>{entry.description || "—"}</TableCell>
                     <TableCell>{entry.objectName || "—"}</TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {entry.creditAmount !== undefined && entry.creditAmount > 0
-                        ? formatCurrency(entry.creditAmount)
+                      {entry.receiptAmount !== undefined &&
+                      entry.receiptAmount > 0
+                        ? formatCurrency(entry.receiptAmount)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-red-600">
-                      {entry.debitAmount !== undefined && entry.debitAmount > 0
-                        ? formatCurrency(entry.debitAmount)
+                      {entry.paymentAmount !== undefined &&
+                      entry.paymentAmount > 0
+                        ? formatCurrency(entry.paymentAmount)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
