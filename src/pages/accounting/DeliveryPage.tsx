@@ -1,9 +1,10 @@
 import { Helmet } from "react-helmet-async";
-import { useMemo } from "react";
+import { useState } from "react";
 import { Truck, Package, Clock } from "lucide-react";
 import { DeliveryList } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
 import type { OrderResponse } from "@/Schema/order.schema";
+import { useMemo } from "react";
 
 // Helper to calculate summary stats from orders
 const calculateDeliveryStats = (orders: OrderResponse[]) => {
@@ -28,10 +29,11 @@ const calculateDeliveryStats = (orders: OrderResponse[]) => {
 };
 
 export default function DeliveryPage() {
-  // Fetch all orders for accounting to calculate summary stats
+  // Fetch orders with reasonable page size for stats calculation
+  // We only need enough data to get accurate stats, not all orders
   const { data: allOrdersData } = useOrdersForAccounting({
     pageNumber: 1,
-    pageSize: 1000, // Get all orders for stats calculation
+    pageSize: 100, // Reduced from 1000 - enough for stats calculation
     filterType: "delivery",
   });
 

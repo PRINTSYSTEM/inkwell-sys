@@ -829,7 +829,6 @@ const DeliveryNoteResponse = z
     recipientName: z.string().nullable(),
     recipientPhone: z.string().nullable(),
     deliveryAddress: z.string().nullable(),
-    deliveredBy: UserInfo,
     deliveredAt: z.string().datetime({ offset: true }).nullable(),
     notes: z.string().nullable(),
     pdfUrl: z.string().nullable(),
@@ -852,8 +851,6 @@ const UpdateDeliveryStatusRequest = z.object({
   failureReason: z.string().nullish(),
   failureType: z.string().min(0).max(50).nullish(),
   affectsDebt: z.boolean().nullish(),
-  deliveredAt: z.string().datetime({ offset: true }).nullish(),
-  deliveredById: z.number().int().nullish(),
   notes: z.string().nullish(),
 });
 const RecreateDeliveryNoteRequest = z.object({
