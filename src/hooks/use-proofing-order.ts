@@ -453,6 +453,60 @@ export const useUpdateProofingFile = () => {
   return { data, loading, error, mutate, reset };
 };
 
+// PUT /proofing-orders/{id}/update-image
+export const useUpdateProofingImage = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProofingOrderResponse,
+    [{ proofingOrderId: number; file: File }]
+  >(async ({ proofingOrderId, file }) => {
+    const form = new FormData();
+    form.append("imageFile", file);
+
+    const res = await apiRequest.put<ProofingOrderResponse>(
+      API_SUFFIX.PROOFING_UPDATE_IMAGE(proofingOrderId),
+      form,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return res.data;
+  });
+
+  const mutate = async (args: { proofingOrderId: number; file: File }) => {
+    try {
+      const result = await execute(args);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: proofingKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật ảnh bình bài",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật ảnh bình bài",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
 export const useDownloadProofingFile = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     void,

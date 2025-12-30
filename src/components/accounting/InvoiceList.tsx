@@ -87,16 +87,16 @@ function deriveCustomerType(
   return customer?.companyName ? "company" : "retail";
 }
 
-// For invoice list, we check if order is complete (fully paid) to determine if invoice can be issued
-// In a real app, this would come from backend accounting data
+// For invoice list, we check if order can have invoice issued
+// Allow invoice even if not fully paid - only require delivery
 function canIssueInvoice(order: OrderResponse): boolean {
-  // Must be fully paid
-  if (order.depositAmount < order.totalAmount || order.totalAmount <= 0) {
-    return false;
-  }
-  // Must have delivery note (status is delivering or completed)
+  // Must have delivery note (status is delivering, completed, or delivered)
   // Giao hàng xong mới được xuất hóa đơn
-  return order.status === "delivering" || order.status === "completed";
+  return (
+    order.status === "delivering" ||
+    order.status === "completed" ||
+    order.status === "delivered"
+  );
 }
 
 // Check if customer information is complete for invoice issuance
@@ -146,30 +146,21 @@ function getInvoiceDisableReason(
   customerInfoComplete: boolean,
   invoiceStatus: string
 ): string | null {
+  // Check if invoice already issued
   if (invoiceStatus === "issued") {
     return "Đã xuất hóa đơn";
   }
 
   // Check if order has been delivered (must deliver before issuing invoice)
   const hasDelivery =
-    order.status === "delivering" || order.status === "completed";
+    order.status === "delivering" ||
+    order.status === "completed" ||
+    order.status === "delivered";
   if (!hasDelivery) {
     return "Phải giao hàng trước khi xuất hóa đơn";
   }
 
-  if (!canInvoice) {
-    const totalAmount = order.totalAmount || 0;
-    const depositAmount = order.depositAmount || 0;
-    const remaining = totalAmount - depositAmount;
-    return `Đơn hàng chưa thanh toán đủ. Còn thiếu ${new Intl.NumberFormat(
-      "vi-VN",
-      {
-        style: "currency",
-        currency: "VND",
-      }
-    ).format(remaining)}`;
-  }
-
+  // Check if customer information is complete
   if (!customerInfoComplete) {
     const customer = order.customer;
     const missingFields: string[] = [];
@@ -191,7 +182,30 @@ function getInvoiceDisableReason(
     return `Thiếu thông tin khách hàng: ${missingFields.join(", ")}`;
   }
 
+  // All conditions met - invoice can be issued
   return null;
+}
+
+// Generate invoice number from order code(s)
+// Format: "INV{orderCode}" - uses first order's code if multiple orders
+function generateInvoiceNumber(
+  selectedOrderIds: Set<number>,
+  orders: OrderResponse[]
+): string {
+  if (selectedOrderIds.size === 0) {
+    return "INV000";
+  }
+
+  // Find first selected order
+  const firstOrderId = Array.from(selectedOrderIds)[0];
+  const firstOrder = orders.find((o) => o.id === firstOrderId);
+
+  if (!firstOrder || !firstOrder.code) {
+    return "INV000";
+  }
+
+  // Format: INV{orderCode}
+  return `INV${firstOrder.code}`;
 }
 
 export function InvoiceList() {
@@ -430,12 +444,30 @@ export function InvoiceList() {
     if (selectedOrderIds.size === 0) return;
 
     try {
-      await createInvoiceMutation.mutateAsync({
+      // Generate invoice number from first order's code
+      const invoiceNumber = generateInvoiceNumber(
+        selectedOrderIds,
+        filteredOrders
+      );
+
+      const result = await createInvoiceMutation.mutateAsync({
         orderIds: Array.from(selectedOrderIds),
+        invoiceNumber: invoiceNumber,
+        taxRate: 0.08,
+        notes: "",
       });
+
+      // Clear selection and close dialog
       setSelectedOrderIds(new Set());
       setIsCreateInvoiceDialogOpen(false);
-      refetch();
+
+      // Navigate to invoice detail page
+      if (result?.id) {
+        navigate(`/invoices/${result.id}`);
+      } else {
+        // If no ID returned, just refetch
+        refetch();
+      }
     } catch (error) {
       // Error is handled by the hook
     }
@@ -621,11 +653,10 @@ export function InvoiceList() {
                   const customerType = deriveCustomerType(order.customer);
                   const canInvoice = canIssueInvoice(order);
                   const customerInfoComplete = isCustomerInfoComplete(order);
-                  // For demo: consider invoice issued if order is fully paid and completed
+                  // Invoice status: check if invoice has been issued
+                  // Use order.invoiceStatus if available, otherwise default to "not_issued"
                   const invoiceStatus =
-                    canInvoice && order.status === "completed"
-                      ? "issued"
-                      : "not_issued";
+                    (order as any).invoiceStatus || "not_issued";
                   const isSelected = order.id
                     ? selectedOrderIds.has(order.id)
                     : false;
@@ -767,17 +798,21 @@ export function InvoiceList() {
                                   onClick={() => handleExportInvoice(order)}
                                 >
                                   <Printer className="h-4 w-4 mr-2" />
-                                  In / Xuất PDF
+                                  In / Xuất Excel
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleExportDeliveryNote(order)
-                                  }
-                                >
-                                  <Truck className="h-4 w-4 mr-2" />
-                                  Xuất phiếu giao hàng
-                                </DropdownMenuItem>
+                                {order.status === "completed" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        handleExportDeliveryNote(order)
+                                      }
+                                    >
+                                      <Truck className="h-4 w-4 mr-2" />
+                                      Xuất phiếu giao hàng
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </>
                             )}
                           </DropdownMenuContent>
