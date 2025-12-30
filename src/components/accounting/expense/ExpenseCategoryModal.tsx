@@ -21,6 +21,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import {
   useCreateExpenseCategory,
@@ -67,6 +74,7 @@ export function ExpenseCategoryModal({
     defaultValues: {
       code: "",
       name: "",
+      type: "expense",
       description: null,
       isActive: true,
     },
@@ -77,6 +85,7 @@ export function ExpenseCategoryModal({
       form.reset({
         code: category.code || "",
         name: category.name || "",
+        type: category.type || "expense",
         description: category.description || null,
         isActive: category.isActive ?? true,
       });
@@ -84,6 +93,7 @@ export function ExpenseCategoryModal({
       form.reset({
         code: "",
         name: "",
+        type: "expense",
         description: null,
         isActive: true,
       });
@@ -160,6 +170,31 @@ export function ExpenseCategoryModal({
                       maxLength={200}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Loại *</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn loại" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="expense">Chi phí</SelectItem>
+                      <SelectItem value="income">Thu nhập</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
