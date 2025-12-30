@@ -10,6 +10,11 @@ import {
   CreateInvoiceRequestSchema as GenCreateInvoiceRequestSchema,
   CreateInvoiceItemRequestSchema as GenCreateInvoiceItemRequestSchema,
   UpdateInvoiceRequestSchema as GenUpdateInvoiceRequestSchema,
+  BillableItemResponseSchema as GenBillableItemResponseSchema,
+  CreateInvoiceFromLinesRequestSchema as GenCreateInvoiceFromLinesRequestSchema,
+  InvoiceLineInputSchema as GenInvoiceLineInputSchema,
+  IssueInvoiceRequestSchema as GenIssueInvoiceRequestSchema,
+  UpdateEInvoiceInfoRequestSchema as GenUpdateEInvoiceInfoRequestSchema,
 } from "./generated";
 
 // ===== InvoiceItemResponse =====
@@ -66,6 +71,35 @@ export type CreateInvoiceItemRequest = z.infer<
 export const UpdateInvoiceRequestSchema =
   GenUpdateInvoiceRequestSchema.passthrough();
 export type UpdateInvoiceRequest = z.infer<typeof UpdateInvoiceRequestSchema>;
+
+// ===== BillableItemResponse =====
+export const BillableItemResponseSchema =
+  GenBillableItemResponseSchema.passthrough();
+export type BillableItemResponse = z.infer<typeof BillableItemResponseSchema>;
+
+// ===== InvoiceLineInput =====
+export const InvoiceLineInputSchema =
+  GenInvoiceLineInputSchema.passthrough();
+export type InvoiceLineInput = z.infer<typeof InvoiceLineInputSchema>;
+
+// ===== CreateInvoiceFromLinesRequest =====
+export const CreateInvoiceFromLinesRequestSchema =
+  GenCreateInvoiceFromLinesRequestSchema.passthrough();
+export type CreateInvoiceFromLinesRequest = z.infer<
+  typeof CreateInvoiceFromLinesRequestSchema
+>;
+
+// ===== IssueInvoiceRequest =====
+export const IssueInvoiceRequestSchema =
+  GenIssueInvoiceRequestSchema.passthrough();
+export type IssueInvoiceRequest = z.infer<typeof IssueInvoiceRequestSchema>;
+
+// ===== UpdateEInvoiceInfoRequest =====
+export const UpdateEInvoiceInfoRequestSchema =
+  GenUpdateEInvoiceInfoRequestSchema.passthrough();
+export type UpdateEInvoiceInfoRequest = z.infer<
+  typeof UpdateEInvoiceInfoRequestSchema
+>;
 
 // ===== InvoiceFileResponse (for export) =====
 // Custom schema - not in generated

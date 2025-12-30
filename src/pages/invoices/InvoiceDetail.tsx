@@ -15,12 +15,23 @@ import {
   Phone,
   MapPin,
   Hash,
+  FileCheck,
+  Edit,
+  X,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -30,9 +41,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { useInvoice, useExportInvoice } from "@/hooks/use-invoice";
+import {
+  useInvoice,
+  useExportInvoice,
+  useVoidInvoice,
+} from "@/hooks/use-invoice";
 import { formatCurrency } from "@/lib/status-utils";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  IssueInvoiceDialog,
+  UpdateEInvoiceDialog,
+} from "@/components/accounting";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -56,6 +75,12 @@ export default function InvoiceDetailPage() {
   } = useInvoice(invoiceId || null, !!invoiceId);
 
   const exportInvoiceMutation = useExportInvoice();
+  const voidInvoiceMutation = useVoidInvoice();
+
+  const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
+  const [isUpdateEInvoiceDialogOpen, setIsUpdateEInvoiceDialogOpen] =
+    useState(false);
+  const [isVoidDialogOpen, setIsVoidDialogOpen] = useState(false);
 
   const handleExportPDF = async () => {
     if (!invoice?.id) return;
@@ -140,8 +165,44 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {invoice.status !== "issued" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsIssueDialogOpen(true)}
+                className="gap-2"
+              >
+                <FileCheck className="w-4 h-4" />
+                Phát hành
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsUpdateEInvoiceDialogOpen(true)}
+              className="gap-2"
+            >
+              <Edit className="w-4 h-4" />
+              Cập nhật E-Invoice
+            </Button>
+            {invoice.status !== "void" && invoice.status !== "cancelled" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsVoidDialogOpen(true)}
+                className="gap-2 text-destructive hover:text-destructive"
+              >
+                <X className="w-4 h-4" />
+                Hủy HĐ
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              className="gap-2"
+            >
               <Download className="w-4 h-4" />
               Xuất PDF
             </Button>
@@ -387,6 +448,71 @@ export default function InvoiceDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Dialogs */}
+      <IssueInvoiceDialog
+        open={isIssueDialogOpen}
+        onOpenChange={setIsIssueDialogOpen}
+        invoiceId={invoiceId}
+        currentInvoiceNumber={invoice.invoiceNumber}
+      />
+
+      <UpdateEInvoiceDialog
+        open={isUpdateEInvoiceDialogOpen}
+        onOpenChange={setIsUpdateEInvoiceDialogOpen}
+        invoiceId={invoiceId}
+        invoice={invoice}
+      />
+
+      {/* Void Invoice Dialog */}
+      {isVoidDialogOpen && (
+        <Dialog open={isVoidDialogOpen} onOpenChange={setIsVoidDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <X className="w-5 h-5" />
+                Hủy hóa đơn
+              </DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn hủy hóa đơn này? Hành động này không thể
+                hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsVoidDialogOpen(false)}
+                disabled={voidInvoiceMutation.isPending}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  try {
+                    await voidInvoiceMutation.mutateAsync({
+                      id: invoiceId,
+                    });
+                    setIsVoidDialogOpen(false);
+                  } catch (error) {
+                    // Error is handled by the hook
+                  }
+                }}
+                disabled={voidInvoiceMutation.isPending}
+              >
+                {voidInvoiceMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Đang hủy...
+                  </>
+                ) : (
+                  "Xác nhận hủy"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

@@ -50,6 +50,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   useCashPayment,
+  useCreateCashPayment,
   useUpdateCashPayment,
   useDeleteCashPayment,
   useApproveCashPayment,
@@ -58,9 +59,16 @@ import {
 } from "@/hooks/use-cash";
 import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
 import { useCashFunds } from "@/hooks/use-cash";
-import { formatCurrency } from "@/lib/status-utils";
+import {
+  formatCurrency,
+  getPaymentMethodLabel,
+  getCashTransactionStatusLabel,
+} from "@/lib/status-utils";
 import { toast } from "sonner";
-import type { UpdateCashPaymentRequest } from "@/Schema/accounting.schema";
+import type {
+  CreateCashPaymentRequest,
+  UpdateCashPaymentRequest,
+} from "@/Schema/accounting.schema";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -103,7 +111,14 @@ const getStatusBadge = (status: string | null | undefined) => {
 export default function CashPaymentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const paymentId = id ? Number.parseInt(id, 10) : null;
+
+  // Handle "new" case - redirect to create modal or show create form
+  const isNew = id === "new";
+  const paymentId = isNew ? null : id ? Number.parseInt(id, 10) : null;
+
+  // If paymentId is NaN (invalid), treat as null
+  const validPaymentId =
+    paymentId && !Number.isNaN(paymentId) ? paymentId : null;
 
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [cardEditValues, setCardEditValues] = useState<
@@ -111,10 +126,28 @@ export default function CashPaymentDetailPage() {
   >({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const { data: payment, isLoading, isError, error, refetch } = useCashPayment(
-    paymentId,
-    !!paymentId
-  );
+  // Form state for creating new payment
+  const [createFormValues, setCreateFormValues] =
+    useState<CreateCashPaymentRequest>({
+      voucherDate: new Date().toISOString().split("T")[0],
+      postingDate: new Date().toISOString().split("T")[0],
+      receiverName: "",
+      reason: "",
+      amount: 0,
+      notes: null,
+      paymentMethodId: null,
+      expenseCategoryId: null,
+      cashFundId: null,
+      vendorId: null,
+    });
+
+  const {
+    data: payment,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useCashPayment(validPaymentId, !!validPaymentId && !isNew);
 
   const { data: paymentMethodsData } = usePaymentMethods({
     pageNumber: 1,
@@ -134,6 +167,7 @@ export default function CashPaymentDetailPage() {
     isActive: true,
   });
 
+  const createMutation = useCreateCashPayment();
   const updateMutation = useUpdateCashPayment();
   const deleteMutation = useDeleteCashPayment();
   const approveMutation = useApproveCashPayment();
@@ -234,6 +268,262 @@ export default function CashPaymentDetailPage() {
     });
   };
 
+  const handleCreate = () => {
+    createMutation.mutate(createFormValues, {
+      onSuccess: (data) => {
+        if (data?.id) {
+          navigate(`/accounting/cash-payments/${data.id}`);
+        }
+      },
+    });
+  };
+
+  // Handle "new" case - show create form
+  if (isNew) {
+    return (
+      <>
+        <Helmet>
+          <title>Tạo phiếu chi mới | Print Production ERP</title>
+        </Helmet>
+
+        <div className="container mx-auto py-6 space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/accounting/cash-payments")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  Tạo phiếu chi mới
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Nhập thông tin phiếu chi
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate("/accounting/cash-payments")}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleCreate}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
+                Tạo phiếu chi
+              </Button>
+            </div>
+          </div>
+
+          {/* Create Form */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Thông tin cơ bản</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="voucherDate">Ngày chứng từ *</Label>
+                  <Input
+                    id="voucherDate"
+                    type="date"
+                    value={createFormValues.voucherDate || ""}
+                    onChange={(e) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        voucherDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="postingDate">Ngày hạch toán *</Label>
+                  <Input
+                    id="postingDate"
+                    type="date"
+                    value={createFormValues.postingDate || ""}
+                    onChange={(e) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        postingDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="receiverName">Người nhận *</Label>
+                  <Input
+                    id="receiverName"
+                    value={createFormValues.receiverName || ""}
+                    onChange={(e) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        receiverName: e.target.value,
+                      })
+                    }
+                    placeholder="Nhập tên người nhận"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Lý do chi *</Label>
+                  <Input
+                    id="reason"
+                    value={createFormValues.reason || ""}
+                    onChange={(e) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        reason: e.target.value,
+                      })
+                    }
+                    placeholder="Nhập lý do chi"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Số tiền *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={createFormValues.amount || 0}
+                    onChange={(e) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        amount: Number.parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="0"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Thông tin bổ sung</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="paymentMethodId">
+                    Phương thức thanh toán
+                  </Label>
+                  <Select
+                    value={
+                      createFormValues.paymentMethodId?.toString() || "all"
+                    }
+                    onValueChange={(value) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        paymentMethodId:
+                          value === "all" ? null : Number.parseInt(value, 10),
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn phương thức" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Không chọn</SelectItem>
+                      {paymentMethodsData?.items?.map((method) => (
+                        <SelectItem
+                          key={method.id}
+                          value={method.id?.toString() || ""}
+                        >
+                          {method.description}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expenseCategoryId">Khoản mục chi</Label>
+                  <Select
+                    value={
+                      createFormValues.expenseCategoryId?.toString() || "all"
+                    }
+                    onValueChange={(value) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        expenseCategoryId:
+                          value === "all" ? null : Number.parseInt(value, 10),
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn khoản mục" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Không chọn</SelectItem>
+                      {expenseCategoriesData?.items?.map((category) => (
+                        <SelectItem
+                          key={category.id}
+                          value={category.id?.toString() || ""}
+                        >
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cashFundId">Quỹ tiền mặt</Label>
+                  <Select
+                    value={createFormValues.cashFundId?.toString() || "all"}
+                    onValueChange={(value) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        cashFundId:
+                          value === "all" ? null : Number.parseInt(value, 10),
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn quỹ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Không chọn</SelectItem>
+                      {cashFundsData?.items?.map((fund) => (
+                        <SelectItem
+                          key={fund.id}
+                          value={fund.id?.toString() || ""}
+                        >
+                          {fund.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Ghi chú</Label>
+                  <Textarea
+                    id="notes"
+                    value={createFormValues.notes || ""}
+                    onChange={(e) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        notes: e.target.value || null,
+                      })
+                    }
+                    placeholder="Nhập ghi chú (nếu có)"
+                    rows={4}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-6 space-y-6">
@@ -258,6 +548,11 @@ export default function CashPaymentDetailPage() {
               : "Không thể tải thông tin phiếu chi"}
           </AlertDescription>
         </Alert>
+        <div className="mt-4">
+          <Button onClick={() => navigate("/accounting/cash-payments")}>
+            Quay lại danh sách
+          </Button>
+        </div>
       </div>
     );
   }
@@ -265,9 +560,7 @@ export default function CashPaymentDetailPage() {
   return (
     <>
       <Helmet>
-        <title>
-          Phiếu chi {payment.code} | Print Production ERP
-        </title>
+        <title>Phiếu chi {payment.code} | Print Production ERP</title>
       </Helmet>
 
       <div className="container mx-auto py-6 space-y-6">
@@ -382,7 +675,11 @@ export default function CashPaymentDetailPage() {
                     )}
                     Lưu
                   </Button>
-                  <Button size="sm" variant="outline" onClick={cancelEditingCard}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={cancelEditingCard}
+                  >
                     <X className="h-4 w-4 mr-2" />
                     Hủy
                   </Button>
@@ -401,7 +698,9 @@ export default function CashPaymentDetailPage() {
                 {editingCard === "main" ? (
                   <Input
                     type="date"
-                    value={formatDateForInput(cardEditValues.voucherDate as string)}
+                    value={formatDateForInput(
+                      cardEditValues.voucherDate as string
+                    )}
                     onChange={(e) =>
                       setCardEditValues({
                         ...cardEditValues,
@@ -412,7 +711,9 @@ export default function CashPaymentDetailPage() {
                     }
                   />
                 ) : (
-                  <div className="text-sm">{formatDate(payment.voucherDate)}</div>
+                  <div className="text-sm">
+                    {formatDate(payment.voucherDate)}
+                  </div>
                 )}
               </div>
               <div className="space-y-2">
@@ -420,7 +721,9 @@ export default function CashPaymentDetailPage() {
                 {editingCard === "main" ? (
                   <Input
                     type="date"
-                    value={formatDateForInput(cardEditValues.postingDate as string)}
+                    value={formatDateForInput(
+                      cardEditValues.postingDate as string
+                    )}
                     onChange={(e) =>
                       setCardEditValues({
                         ...cardEditValues,
@@ -431,7 +734,9 @@ export default function CashPaymentDetailPage() {
                     }
                   />
                 ) : (
-                  <div className="text-sm">{formatDate(payment.postingDate)}</div>
+                  <div className="text-sm">
+                    {formatDate(payment.postingDate)}
+                  </div>
                 )}
               </div>
               <div className="space-y-2">
@@ -454,11 +759,17 @@ export default function CashPaymentDetailPage() {
                 <Label>Khoản mục chi</Label>
                 {editingCard === "main" ? (
                   <Select
-                    value={(cardEditValues.expenseCategoryId as number)?.toString() || ""}
+                    value={
+                      (
+                        cardEditValues.expenseCategoryId as number
+                      )?.toString() || ""
+                    }
                     onValueChange={(value) =>
                       setCardEditValues({
                         ...cardEditValues,
-                        expenseCategoryId: value ? Number.parseInt(value, 10) : null,
+                        expenseCategoryId: value
+                          ? Number.parseInt(value, 10)
+                          : null,
                       })
                     }
                   >
@@ -505,11 +816,16 @@ export default function CashPaymentDetailPage() {
                 <Label>Phương thức thanh toán</Label>
                 {editingCard === "main" ? (
                   <Select
-                    value={(cardEditValues.paymentMethodId as number)?.toString() || ""}
+                    value={
+                      (cardEditValues.paymentMethodId as number)?.toString() ||
+                      ""
+                    }
                     onValueChange={(value) =>
                       setCardEditValues({
                         ...cardEditValues,
-                        paymentMethodId: value ? Number.parseInt(value, 10) : null,
+                        paymentMethodId: value
+                          ? Number.parseInt(value, 10)
+                          : null,
                       })
                     }
                   >
@@ -522,14 +838,20 @@ export default function CashPaymentDetailPage() {
                           key={method.id}
                           value={method.id?.toString() || ""}
                         >
-                          {method.name}
+                          {getPaymentMethodLabel(
+                            method.code || method.name,
+                            method.name
+                          )}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 ) : (
                   <div className="text-sm">
-                    {payment.paymentMethodName || "—"}
+                    {getPaymentMethodLabel(
+                      payment.paymentMethodName,
+                      payment.paymentMethodName
+                    )}
                   </div>
                 )}
               </div>
@@ -537,7 +859,9 @@ export default function CashPaymentDetailPage() {
                 <Label>Quỹ tiền mặt</Label>
                 {editingCard === "main" ? (
                   <Select
-                    value={(cardEditValues.cashFundId as number)?.toString() || ""}
+                    value={
+                      (cardEditValues.cashFundId as number)?.toString() || ""
+                    }
                     onValueChange={(value) =>
                       setCardEditValues({
                         ...cardEditValues,
@@ -692,4 +1016,3 @@ export default function CashPaymentDetailPage() {
     </>
   );
 }
-

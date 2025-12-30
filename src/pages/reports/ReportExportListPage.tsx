@@ -26,6 +26,18 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useReportExports, useDownloadReportExport } from "@/hooks/use-report-export";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import type { ReportExportResponse } from "@/Schema/report.schema";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Eye } from "lucide-react";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -37,39 +49,65 @@ const formatDateTime = (dateStr: string | null | undefined) => {
   return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
 };
 
-// TODO: Create hook when API is available
-// For now, using mock data structure
-interface ReportExport {
-  id: number;
-  reportType: string;
-  reportName: string;
-  exportDate: string;
-  exportedBy: string;
-  fileUrl: string;
-  status: string;
-}
-
 export default function ReportExportListPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
   });
+  const [reportCodeFilter, setReportCodeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // TODO: Replace with actual hook when API is available
-  const isLoading = false;
-  const isError = false;
-  const error = null;
-  const reportsData = {
-    items: [] as ReportExport[],
-    total: 0,
-    totalPages: 1,
+  const {
+    data: reportsData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useReportExports({
+    pageNumber: currentPage,
+    pageSize: itemsPerPage,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    reportCode: reportCodeFilter !== "all" ? reportCodeFilter : undefined,
+    search: searchQuery || undefined,
+  });
+
+  const { download, loading: isDownloading } = useDownloadReportExport();
+
+  const handleDownload = async (id: number, fileName?: string | null) => {
+    try {
+      await download(id, fileName || undefined);
+    } catch (error) {
+      // Error handled by hook
+    }
   };
 
-  const refetch = () => {
-    // TODO: Implement when hook is available
+  const handleViewReport = (report: ReportExportResponse) => {
+    // Navigate to the report page with saved filters
+    if (report.filterJson) {
+      try {
+        const filters = JSON.parse(report.filterJson);
+        // Navigate based on reportCode
+        const reportCode = report.reportCode || "";
+        if (reportCode.includes("sales")) {
+          // Navigate to sales report with filters
+          const params = new URLSearchParams();
+          if (filters.fromDate) params.append("fromDate", filters.fromDate);
+          if (filters.toDate) params.append("toDate", filters.toDate);
+          // Add more filters as needed
+          navigate(`/reports/sales/by-period?${params.toString()}`);
+        } else if (reportCode.includes("ar")) {
+          navigate(`/accounting/ar/summary?${new URLSearchParams(filters).toString()}`);
+        } else if (reportCode.includes("ap")) {
+          navigate(`/accounting/ap/summary?${new URLSearchParams(filters).toString()}`);
+        }
+      } catch (error) {
+        toast.error("Không thể xem lại báo cáo với filter đã lưu");
+      }
+    }
   };
 
   return (
@@ -126,8 +164,24 @@ export default function ReportExportListPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
+          <Select
+            value={reportCodeFilter}
+            onValueChange={setReportCodeFilter}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Loại báo cáo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="sales">Báo cáo bán hàng</SelectItem>
+              <SelectItem value="ar">Công nợ phải thu</SelectItem>
+              <SelectItem value="ap">Công nợ phải trả</SelectItem>
+              <SelectItem value="inventory">Báo cáo tồn kho</SelectItem>
+              <SelectItem value="expense">Báo cáo chi phí</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Table */}
@@ -141,24 +195,25 @@ export default function ReportExportListPage() {
                 <TableHead className="text-center">Ngày xuất</TableHead>
                 <TableHead>Người xuất</TableHead>
                 <TableHead className="text-center">Trạng thái</TableHead>
-                <TableHead className="w-[100px]"></TableHead>
+                <TableHead className="text-right">Kích thước</TableHead>
+                <TableHead className="w-[150px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
-              ) : !reportsData.items || reportsData.items.length === 0 ? (
+              ) : !reportsData?.items || reportsData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy báo cáo nào.
@@ -166,34 +221,87 @@ export default function ReportExportListPage() {
                 </TableRow>
               ) : (
                 reportsData.items.map((report) => (
-                  <TableRow key={report.id}>
+                  <TableRow key={report.id} className="group">
                     <TableCell className="font-medium font-mono text-sm">
-                      #{report.id}
-                    </TableCell>
-                    <TableCell>{report.reportType || "—"}</TableCell>
-                    <TableCell className="font-medium">
-                      {report.reportName || "—"}
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {report.exportDate
-                        ? formatDateTime(report.exportDate)
-                        : "—"}
-                    </TableCell>
-                    <TableCell>{report.exportedBy || "—"}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="default">Đã xuất</Badge>
+                      {report.reportCode || `#${report.id}`}
                     </TableCell>
                     <TableCell>
-                      {report.fileUrl && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(report.fileUrl, "_blank")}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Tải
-                        </Button>
-                      )}
+                      {report.reportCode
+                        ? report.reportCode
+                            .split("-")
+                            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                            .join(" ")
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {report.reportName || report.fileName || "—"}
+                    </TableCell>
+                    <TableCell className="text-center text-sm text-muted-foreground">
+                      {report.exportedAt
+                        ? formatDateTime(report.exportedAt)
+                        : "—"}
+                    </TableCell>
+                    <TableCell>{report.exportedByName || "—"}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        variant={
+                          report.status === "completed" ||
+                          report.status === "success"
+                            ? "default"
+                            : report.status === "failed" ||
+                              report.status === "error"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
+                        {report.status === "completed" ||
+                        report.status === "success"
+                          ? "Hoàn thành"
+                          : report.status === "failed" ||
+                            report.status === "error"
+                            ? "Lỗi"
+                            : report.status === "processing"
+                              ? "Đang xử lý"
+                              : report.status || "—"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      {report.fileSize
+                        ? `${(report.fileSize / 1024).toFixed(2)} KB`
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-2">
+                        {report.filterJson && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewReport(report)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Xem lại báo cáo với filter đã lưu"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {(report.status === "completed" ||
+                          report.status === "success") && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleDownload(report.id, report.fileName)
+                            }
+                            disabled={isDownloading}
+                          >
+                            {isDownloading ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4 mr-2" />
+                            )}
+                            Tải
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

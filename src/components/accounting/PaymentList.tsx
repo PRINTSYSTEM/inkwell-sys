@@ -43,7 +43,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import {
-  OrderStatusBadge,
   PaymentStatusBadge,
   CustomerTypeBadge,
   PaymentUpdateModal,
@@ -51,6 +50,8 @@ import {
 import { useOrdersForAccounting } from "@/hooks/use-order";
 import { useConfirmDeposit } from "@/hooks/use-accounting";
 import type { OrderResponse } from "@/Schema";
+import { StatusBadge } from "../ui/status-badge";
+import { ENTITY_CONFIG } from "@/config/entities.config";
 
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
@@ -328,9 +329,15 @@ export function PaymentList() {
                       {formatCurrency(remainingAmount)}
                     </TableCell>
                     <TableCell className="text-center">
-                      <OrderStatusBadge
-                        status={order.status || ""}
-                        statusType={order.statusType || ""}
+                      <StatusBadge
+                        status={
+                          order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                        }
+                        label={
+                          ENTITY_CONFIG.orderStatuses.values[
+                            order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                          ]
+                        }
                       />
                     </TableCell>
                     <TableCell className="text-center">

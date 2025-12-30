@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2025-12-29T19:15:38.167Z */
+/* Generated at: 2025-12-29T23:58:47.182Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -27,6 +27,7 @@ export const BankAccountResponseSchema = schemas.BankAccountResponse;
 export const BankAccountResponseIPaginateSchema = schemas.BankAccountResponseIPaginate;
 export const BankLedgerEntryResponseSchema = schemas.BankLedgerEntryResponse;
 export const BankLedgerResponseSchema = schemas.BankLedgerResponse;
+export const BillableItemResponseSchema = schemas.BillableItemResponse;
 export const BulkCreateMaterialTypeRequestSchema = schemas.BulkCreateMaterialTypeRequest;
 export const CashBookEntryResponseSchema = schemas.CashBookEntryResponse;
 export const CashBookResponseSchema = schemas.CashBookResponse;
@@ -52,6 +53,7 @@ export const CreateDeliveryNoteRequestSchema = schemas.CreateDeliveryNoteRequest
 export const CreateDesignRequestSchema = schemas.CreateDesignRequest;
 export const CreateDesignTypeRequestSchema = schemas.CreateDesignTypeRequest;
 export const CreateExpenseCategoryRequestSchema = schemas.CreateExpenseCategoryRequest;
+export const CreateInvoiceFromLinesRequestSchema = schemas.CreateInvoiceFromLinesRequest;
 export const CreateInvoiceItemRequestSchema = schemas.CreateInvoiceItemRequest;
 export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
 export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
@@ -99,9 +101,11 @@ export const FrequentProductResponseSchema = schemas.FrequentProductResponse;
 export const InventorySummaryItemResponseSchema = schemas.InventorySummaryItemResponse;
 export const InventorySummaryItemResponseIPaginateSchema = schemas.InventorySummaryItemResponseIPaginate;
 export const InvoiceItemResponseSchema = schemas.InvoiceItemResponse;
+export const InvoiceLineInputSchema = schemas.InvoiceLineInput;
 export const InvoiceOrderResponseSchema = schemas.InvoiceOrderResponse;
 export const InvoiceResponseSchema = schemas.InvoiceResponse;
 export const InvoiceResponsePaginateSchema = schemas.InvoiceResponsePaginate;
+export const IssueInvoiceRequestSchema = schemas.IssueInvoiceRequest;
 export const LoginRequestSchema = schemas.LoginRequest;
 export const LoginResponseSchema = schemas.LoginResponse;
 export const LowStockResponseSchema = schemas.LowStockResponse;
@@ -171,6 +175,7 @@ export const UpdateDeliveryLineResultRequestSchema = schemas.UpdateDeliveryLineR
 export const UpdateDeliveryStatusRequestSchema = schemas.UpdateDeliveryStatusRequest;
 export const UpdateDesignRequestSchema = schemas.UpdateDesignRequest;
 export const UpdateDesignTypeRequestSchema = schemas.UpdateDesignTypeRequest;
+export const UpdateEInvoiceInfoRequestSchema = schemas.UpdateEInvoiceInfoRequest;
 export const UpdateExpenseCategoryRequestSchema = schemas.UpdateExpenseCategoryRequest;
 export const UpdateInvoiceRequestSchema = schemas.UpdateInvoiceRequest;
 export const UpdateMaterialTypeRequestSchema = schemas.UpdateMaterialTypeRequest;

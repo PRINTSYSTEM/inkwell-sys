@@ -9,6 +9,10 @@ import type {
   InvoiceResponsePaginate,
   CreateInvoiceRequest,
   UpdateInvoiceRequest,
+  BillableItemResponse,
+  CreateInvoiceFromLinesRequest,
+  IssueInvoiceRequest,
+  UpdateEInvoiceInfoRequest,
 } from "@/Schema/invoice.schema";
 
 // ================== GET INVOICES ==================
@@ -216,6 +220,140 @@ export const useCreateInvoiceFromOrder = () => {
         queryKey: ["invoices", "by-order", orderId],
       });
       toast.success("Tạo hóa đơn từ đơn hàng thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// ================== GET BILLABLE ITEMS ==================
+// GET /invoices/billable-items
+export interface BillableItemsParams {
+  customerId?: number;
+}
+
+export const useBillableItems = (params?: BillableItemsParams) => {
+  return useQuery({
+    queryKey: ["billable-items", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<BillableItemResponse[]>(
+        API_SUFFIX.INVOICES_BILLABLE_ITEMS,
+        {
+          params: normalizedParams,
+        }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ================== CREATE INVOICE FROM LINES ==================
+// POST /invoices/from-lines
+export const useCreateInvoiceFromLines = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateInvoiceFromLinesRequest) => {
+      const res = await apiRequest.post<InvoiceResponse>(
+        API_SUFFIX.INVOICES_FROM_LINES,
+        data
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["billable-items"] });
+      toast.success("Tạo hóa đơn từ dòng hàng thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// ================== ISSUE INVOICE ==================
+// PUT /invoices/{id}/issue
+export const useIssueInvoice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: IssueInvoiceRequest;
+    }) => {
+      const res = await apiRequest.put<InvoiceResponse>(
+        API_SUFFIX.INVOICE_ISSUE(id),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Phát hành hóa đơn thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// ================== UPDATE E-INVOICE INFO ==================
+// PUT /invoices/{id}/e-invoice
+export const useUpdateEInvoiceInfo = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: UpdateEInvoiceInfoRequest;
+    }) => {
+      const res = await apiRequest.put<InvoiceResponse>(
+        API_SUFFIX.INVOICE_E_INVOICE(id),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Cập nhật thông tin hóa đơn điện tử thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// ================== VOID INVOICE ==================
+// PUT /invoices/{id}/void
+export const useVoidInvoice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason?: string }) => {
+      const params = reason ? { params: { reason } } : {};
+      const res = await apiRequest.put<InvoiceResponse>(
+        API_SUFFIX.INVOICE_VOID(id),
+        {},
+        params
+      );
+      return res.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Hủy hóa đơn thành công");
     },
     onError: (error: Error) => {
       toast.error(`Lỗi: ${error.message}`);

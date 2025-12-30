@@ -29,6 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStockCard } from "@/hooks/use-inventory-report";
 import { formatCurrency } from "@/lib/status-utils";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -64,6 +65,33 @@ export default function StockCardPage() {
     }
   );
 
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
+
+  const handleVoucherClick = (
+    voucherType: string | null | undefined,
+    voucherId: number | undefined
+  ) => {
+    if (!voucherId) return;
+
+    const voucherTypeLower = voucherType?.toLowerCase() || "";
+    if (
+      voucherTypeLower.includes("stockin") ||
+      voucherTypeLower === "stockin" ||
+      voucherTypeLower.includes("nhap")
+    ) {
+      navigate(`/stock/stock-ins/${voucherId}`);
+    } else if (
+      voucherTypeLower.includes("stockout") ||
+      voucherTypeLower === "stockout" ||
+      voucherTypeLower.includes("xuat")
+    ) {
+      navigate(`/stock/stock-outs/${voucherId}`);
+    }
+  };
+
   return (
     <>
       <Helmet>
@@ -96,7 +124,7 @@ export default function StockCardPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Làm mới
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-2" />
               Xuất Excel
             </Button>
@@ -144,7 +172,7 @@ export default function StockCardPage() {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -248,14 +276,33 @@ export default function StockCardPage() {
                 </TableRow>
               ) : (
                 stockCardData.entries.map((entry, index) => (
-                  <TableRow key={index}>
+                  <TableRow
+                    key={index}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() =>
+                      handleVoucherClick(entry.voucherType, entry.voucherId)
+                    }
+                  >
                     <TableCell className="text-sm">
                       {entry.date ? formatDate(entry.date) : "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
+                    <TableCell className="font-mono text-sm font-medium">
                       {entry.voucherCode || "—"}
                     </TableCell>
-                    <TableCell>{entry.description || "—"}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div>{entry.description || "—"}</div>
+                        {entry.voucherType && (
+                          <div className="text-xs text-muted-foreground">
+                            {entry.voucherType === "StockIn"
+                              ? "Phiếu nhập"
+                              : entry.voucherType === "StockOut"
+                                ? "Phiếu xuất"
+                                : entry.voucherType}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-green-600">
                       {entry.quantity !== undefined && entry.quantity > 0 && entry.transactionType === "in"
                         ? entry.quantity.toLocaleString()

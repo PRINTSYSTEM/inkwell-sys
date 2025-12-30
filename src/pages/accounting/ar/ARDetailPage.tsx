@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { useARDetail } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -70,47 +71,30 @@ export default function ARDetailPage() {
     search: searchQuery || undefined,
   });
 
-  return (
-    <>
-      <Helmet>
-        <title>Công nợ phải thu - Chi tiết | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Chi tiết công nợ phải thu"
-        />
-      </Helmet>
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
 
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/accounting/ar/summary")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Công nợ phải thu - Chi tiết
-              </h1>
-              <p className="text-muted-foreground">
-                Chi tiết công nợ phải thu theo từng giao dịch
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Làm mới
-            </Button>
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Xuất Excel
-            </Button>
-          </div>
-        </div>
+  const handleOrderClick = (documentId: number | null | undefined) => {
+    if (documentId) {
+      navigate(`/accounting/orders/${documentId}`);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Làm mới
+        </Button>
+        <Button variant="outline" onClick={handleExportExcel}>
+          <Download className="h-4 w-4 mr-2" />
+          Xuất Excel
+        </Button>
+      </div>
 
         {/* Error Alert */}
         {isError && (
@@ -137,7 +121,7 @@ export default function ARDetailPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -146,16 +130,15 @@ export default function ARDetailPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã KH</TableHead>
                 <TableHead>Tên khách hàng</TableHead>
-                <TableHead className="w-[140px]">Mã đơn</TableHead>
-                <TableHead className="w-[140px]">Mã HĐ</TableHead>
-                <TableHead className="text-center">Ngày HĐ</TableHead>
+                <TableHead className="w-[140px]">Số chứng từ</TableHead>
+                <TableHead className="w-[100px]">Loại</TableHead>
+                <TableHead className="text-center">Ngày chứng từ</TableHead>
                 <TableHead className="text-center">Hạn thanh toán</TableHead>
-                <TableHead className="text-right">Số tiền HĐ</TableHead>
+                <TableHead className="text-right">Số tiền phải thu</TableHead>
                 <TableHead className="text-right">Đã thanh toán</TableHead>
                 <TableHead className="text-right">Còn lại</TableHead>
-                <TableHead className="text-center">Trạng thái</TableHead>
+                <TableHead className="text-center">Số ngày quá hạn</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -172,55 +155,58 @@ export default function ARDetailPage() {
               ) : !arData?.items || arData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={9}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu công nợ nào.
                   </TableCell>
                 </TableRow>
               ) : (
-                arData.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-mono text-sm">
-                      {item.customerCode || "—"}
-                    </TableCell>
+                arData.items.map((item, index) => (
+                  <TableRow
+                    key={item.documentId || index}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleOrderClick(item.documentId)}
+                  >
                     <TableCell className="font-medium">
                       {item.customerName || "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {item.orderCode || "—"}
+                    <TableCell className="font-mono text-sm font-medium">
+                      {item.documentNumber || "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {item.invoiceNumber || "—"}
+                    <TableCell>
+                      <Badge variant="outline">
+                        {item.documentType || "—"}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
-                      {item.invoiceDate ? formatDate(item.invoiceDate) : "—"}
+                      {item.documentDate ? formatDate(item.documentDate) : "—"}
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
                       {item.dueDate ? formatDate(item.dueDate) : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.invoiceAmount !== undefined
-                        ? formatCurrency(item.invoiceAmount)
+                      {item.amountDue !== undefined
+                        ? formatCurrency(item.amountDue)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {item.paidAmount !== undefined
-                        ? formatCurrency(item.paidAmount)
+                      {item.amountPaid !== undefined
+                        ? formatCurrency(item.amountPaid)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.remainingAmount !== undefined
-                        ? formatCurrency(item.remainingAmount)
+                      {item.outstanding !== undefined
+                        ? formatCurrency(item.outstanding)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-center">
-                      {item.isOverdue ? (
+                      {item.overdueDays !== undefined && item.overdueDays > 0 ? (
                         <Badge variant="destructive">
-                          Quá hạn {item.daysOverdue} ngày
+                          {item.overdueDays} ngày
                         </Badge>
                       ) : (
-                        <Badge variant="default">Bình thường</Badge>
+                        <Badge variant="default">0 ngày</Badge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -262,8 +248,7 @@ export default function ARDetailPage() {
             </div>
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }
 

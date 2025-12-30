@@ -43,11 +43,9 @@ import {
 } from "@/components/ui/table";
 
 import {
-  OrderStatusBadge,
   PaymentStatusBadge,
   InvoiceStatusBadge,
   CustomerTypeBadge,
-  OrderAccountingUpdateDialog,
 } from "@/components/accounting";
 import {
   useOrder,
@@ -58,11 +56,16 @@ import {
   useUpdateOrderForAccounting,
 } from "@/hooks/use-order";
 import { useConfirmDeposit, useApproveDebt } from "@/hooks/use-accounting";
-import type { UpdateOrderForAccountingRequest } from "@/Schema";
+import type {
+  UpdateOrderForAccountingRequest,
+  UpdateOrderDetailForAccountingRequest,
+} from "@/Schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle } from "lucide-react";
+import { ENTITY_CONFIG } from "@/config/entities.config";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
@@ -122,8 +125,13 @@ export default function AccountingOrderDetail() {
   const [cardEditValues, setCardEditValues] = useState<
     Record<string, string | number | null>
   >({});
-  // Modal state
-  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  // Order detail editing states
+  const [editingOrderDetailId, setEditingOrderDetailId] = useState<
+    number | null
+  >(null);
+  const [orderDetailEditValues, setOrderDetailEditValues] = useState<
+    Record<string, string | number | null>
+  >({});
 
   // Mutations
   const exportInvoiceMutation = useExportOrderInvoice();
@@ -175,6 +183,61 @@ export default function AccountingOrderDetail() {
   const cancelEditingCard = () => {
     setEditingCard(null);
     setCardEditValues({});
+  };
+
+  // Helper to start editing an orderDetail item
+  const startEditingOrderDetail = (orderDetail: {
+    id: number;
+    quantity: number;
+    unitPrice?: number | null;
+  }) => {
+    setEditingOrderDetailId(orderDetail.id);
+    setOrderDetailEditValues({
+      quantity: orderDetail.quantity.toString(),
+      unitPrice: orderDetail.unitPrice?.toString() || "",
+    });
+  };
+
+  // Helper to cancel editing an orderDetail item
+  const cancelEditingOrderDetail = () => {
+    setEditingOrderDetailId(null);
+    setOrderDetailEditValues({});
+  };
+
+  // Helper to save individual orderDetail item
+  const handleSaveOrderDetail = async (orderDetailId: number) => {
+    if (!order) return;
+
+    const orderDetail = order.orderDetails?.find(
+      (od) => od.id === orderDetailId
+    );
+    if (!orderDetail) return;
+
+    const orderDetailsUpdates: UpdateOrderDetailForAccountingRequest[] = [
+      {
+        orderDetailId: orderDetail.id,
+        quantity:
+          orderDetailEditValues.quantity === "" ||
+          orderDetailEditValues.quantity === null
+            ? null
+            : Number(orderDetailEditValues.quantity),
+        unitPrice:
+          orderDetailEditValues.unitPrice === "" ||
+          orderDetailEditValues.unitPrice === null
+            ? null
+            : Number(orderDetailEditValues.unitPrice),
+      },
+    ];
+
+    try {
+      await updateOrderForAccounting(order.id, {
+        orderDetails: orderDetailsUpdates,
+      } as UpdateOrderForAccountingRequest);
+      setEditingOrderDetailId(null);
+      setOrderDetailEditValues({});
+    } catch (error) {
+      // Keep editing mode on error
+    }
   };
 
   // Helper to save card changes
@@ -434,9 +497,15 @@ export default function AccountingOrderDetail() {
                     <h1 className="text-xl font-semibold font-mono">
                       {order.code}
                     </h1>
-                    <OrderStatusBadge
-                      status={order.status || ""}
-                      statusType={order.statusType || ""}
+                    <StatusBadge
+                      status={
+                        order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                      }
+                      label={
+                        ENTITY_CONFIG.orderStatuses.values[
+                          order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                        ]
+                      }
                     />
                   </div>
                   <p className="text-sm text-muted-foreground mt-0.5">
@@ -445,14 +514,6 @@ export default function AccountingOrderDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsUpdateDialogOpen(true)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Cập nhật thông tin
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -480,24 +541,43 @@ export default function AccountingOrderDetail() {
                   Xuất PDF Đơn Hàng
                 </Button>
                 {/* {remainingAmount > 0 && ( */}
-                <Button
-                  size="sm"
-                  onClick={handleUpdatePayment}
-                  disabled={
-                    confirmDepositMutation.loading ||
-                    approveDebtMutation.loading
-                  }
-                >
-                  {confirmDepositMutation.loading ||
-                  approveDebtMutation.loading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-4 w-4 mr-2" />
-                  )}
-                  {order.customer?.companyName
-                    ? "Duyệt công nợ"
-                    : "Cập nhật thanh toán"}
-                </Button>
+                {order.customer?.companyName && (
+                  <Button
+                    size="sm"
+                    onClick={handleUpdatePayment}
+                    disabled={
+                      confirmDepositMutation.loading ||
+                      approveDebtMutation.loading ||
+                      order.status === "debt_approved"
+                    }
+                  >
+                    {confirmDepositMutation.loading ||
+                    approveDebtMutation.loading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4 mr-2" />
+                    )}
+                    Duyệt công nợ
+                  </Button>
+                )}
+                {!order.customer?.companyName && (
+                  <Button
+                    size="sm"
+                    onClick={handleUpdatePayment}
+                    disabled={
+                      confirmDepositMutation.loading ||
+                      approveDebtMutation.loading
+                    }
+                  >
+                    {confirmDepositMutation.loading ||
+                    approveDebtMutation.loading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4 mr-2" />
+                    )}
+                    Cập nhật thanh toán
+                  </Button>
+                )}
                 {/* )} */}
                 {invoiceStatus === "not_issued" &&
                   hasBeenDelivered(order.status) && (
@@ -767,6 +847,7 @@ export default function AccountingOrderDetail() {
                         <TableHead className="text-center">SL</TableHead>
                         <TableHead className="text-right">Đơn giá</TableHead>
                         <TableHead className="text-right">Thành tiền</TableHead>
+                        <TableHead className="w-[100px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -822,20 +903,104 @@ export default function AccountingOrderDetail() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-center font-medium tabular-nums">
-                            {item.quantity.toLocaleString("vi-VN")}
+                          <TableCell className="text-center">
+                            {editingOrderDetailId === item.id ? (
+                              <Input
+                                type="number"
+                                min="1"
+                                value={orderDetailEditValues.quantity || ""}
+                                onChange={(e) =>
+                                  setOrderDetailEditValues({
+                                    ...orderDetailEditValues,
+                                    quantity: e.target.value,
+                                  })
+                                }
+                                className="w-20 text-center font-medium tabular-nums"
+                              />
+                            ) : (
+                              <span className="font-medium tabular-nums">
+                                {item.quantity.toLocaleString("vi-VN")}
+                              </span>
+                            )}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatCurrency(item.unitPrice || 0)}
+                          <TableCell className="text-right">
+                            {editingOrderDetailId === item.id ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                step="1000"
+                                value={orderDetailEditValues.unitPrice || ""}
+                                onChange={(e) =>
+                                  setOrderDetailEditValues({
+                                    ...orderDetailEditValues,
+                                    unitPrice: e.target.value,
+                                  })
+                                }
+                                className="w-32 text-right tabular-nums"
+                              />
+                            ) : (
+                              <span className="tabular-nums">
+                                {formatCurrency(item.unitPrice || 0)}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right font-medium tabular-nums">
-                            {formatCurrency(item.totalPrice || 0)}
+                            {editingOrderDetailId === item.id
+                              ? formatCurrency(
+                                  (Number(orderDetailEditValues.quantity) ||
+                                    0) *
+                                    (Number(orderDetailEditValues.unitPrice) ||
+                                      0)
+                                )
+                              : formatCurrency(item.totalPrice || 0)}
+                          </TableCell>
+                          <TableCell>
+                            {editingOrderDetailId === item.id ? (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleSaveOrderDetail(item.id)}
+                                  disabled={isUpdatingForAccounting}
+                                >
+                                  {isUpdatingForAccounting ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    "Lưu"
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={cancelEditingOrderDetail}
+                                  disabled={isUpdatingForAccounting}
+                                >
+                                  Hủy
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  if (item.id && item.quantity) {
+                                    startEditingOrderDetail({
+                                      id: item.id,
+                                      quantity: item.quantity,
+                                      unitPrice: item.unitPrice,
+                                    });
+                                  }
+                                }}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       )) || (
                         <TableRow>
                           <TableCell
-                            colSpan={5}
+                            colSpan={6}
                             className="text-center text-muted-foreground py-8"
                           >
                             Không có sản phẩm nào
@@ -1490,16 +1655,6 @@ export default function AccountingOrderDetail() {
           </div>
         </div>
       </div>
-
-      {/* Update Order Dialog */}
-      <OrderAccountingUpdateDialog
-        open={isUpdateDialogOpen}
-        onOpenChange={setIsUpdateDialogOpen}
-        order={order}
-        onSuccess={() => {
-          // Order detail will be refetched automatically via query invalidation
-        }}
-      />
     </>
   );
 }
