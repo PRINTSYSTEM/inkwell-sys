@@ -18,6 +18,10 @@ import {
   FileCheck,
   Edit,
   X,
+  ExternalLink,
+  Package,
+  Receipt,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -127,7 +131,7 @@ export default function InvoiceDetailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <Link to="/accounting" className="w-fit">
+        <Link to="/invoices" className="w-fit">
           <Button
             variant="ghost"
             size="sm"
@@ -154,7 +158,9 @@ export default function InvoiceDetailPage() {
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4" />
-                {invoice.issuedAt ? formatDate(invoice.issuedAt) : formatDateTime(invoice.createdAt)}
+                {invoice.issuedAt
+                  ? formatDate(invoice.issuedAt)
+                  : formatDateTime(invoice.createdAt)}
               </span>
               {invoice.createdBy && (
                 <span className="flex items-center gap-1.5">
@@ -203,8 +209,8 @@ export default function InvoiceDetailPage() {
               onClick={handleExportPDF}
               className="gap-2"
             >
-              <Download className="w-4 h-4" />
-              Xuất PDF
+              <FileSpreadsheet className="w-4 h-4" />
+              Xuất Excel
             </Button>
           </div>
         </div>
@@ -217,37 +223,89 @@ export default function InvoiceDetailPage() {
           {invoice.items && invoice.items.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Chi tiết hóa đơn</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="w-5 h-5" />
+                  Chi tiết sản phẩm ({invoice.items.length})
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>STT</TableHead>
-                      <TableHead>Mô tả</TableHead>
-                      <TableHead className="text-center">ĐVT</TableHead>
-                      <TableHead className="text-right">SL</TableHead>
-                      <TableHead className="text-right">Đơn giá</TableHead>
-                      <TableHead className="text-right">Thành tiền</TableHead>
+                      <TableHead className="w-12">STT</TableHead>
+                      <TableHead>Mô tả sản phẩm</TableHead>
+                      <TableHead className="text-center w-20">ĐVT</TableHead>
+                      <TableHead className="text-right w-24">SL</TableHead>
+                      <TableHead className="text-right w-32">Đơn giá</TableHead>
+                      {(invoice.items.some(
+                        (item) =>
+                          item.discountPercent && item.discountPercent > 0
+                      ) ||
+                        invoice.items.some(
+                          (item) =>
+                            item.discountAmount && item.discountAmount > 0
+                        )) && (
+                        <TableHead className="text-right w-28">
+                          Giảm giá
+                        </TableHead>
+                      )}
+                      <TableHead className="text-right w-32">
+                        Thành tiền
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoice.items.map((item, index) => (
-                      <TableRow key={item.id || index}>
-                        <TableCell>{item.sortOrder || index + 1}</TableCell>
-                        <TableCell>{item.description || "—"}</TableCell>
-                        <TableCell className="text-center">{item.unit || "—"}</TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {item.quantity || "—"}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {item.unitPrice ? formatCurrency(item.unitPrice) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
-                          {item.amount ? formatCurrency(item.amount) : "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {invoice.items.map((item, index) => {
+                      const hasDiscount =
+                        (item.discountPercent && item.discountPercent > 0) ||
+                        (item.discountAmount && item.discountAmount > 0);
+                      return (
+                        <TableRow key={item.id || index}>
+                          <TableCell className="font-medium">
+                            {item.sortOrder || index + 1}
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">
+                              {item.description || "—"}
+                            </div>
+                            {item.orderDetailId && (
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                Mã chi tiết: #{item.orderDetailId}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.unit || "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {item.quantity
+                              ? item.quantity.toLocaleString("vi-VN")
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {item.unitPrice
+                              ? formatCurrency(item.unitPrice)
+                              : "—"}
+                          </TableCell>
+                          {hasDiscount && (
+                            <TableCell className="text-right tabular-nums text-orange-600">
+                              {item.discountPercent && item.discountPercent > 0
+                                ? `-${item.discountPercent}%`
+                                : item.discountAmount && item.discountAmount > 0
+                                  ? formatCurrency(item.discountAmount)
+                                  : "—"}
+                            </TableCell>
+                          )}
+                          <TableCell className="text-right font-medium tabular-nums">
+                            {item.amountAfterDiscount
+                              ? formatCurrency(item.amountAfterDiscount)
+                              : item.amount
+                                ? formatCurrency(item.amount)
+                                : "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -258,29 +316,43 @@ export default function InvoiceDetailPage() {
           {invoice.orders && invoice.orders.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Danh sách đơn hàng</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  Danh sách đơn hàng ({invoice.orders.length})
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mã đơn</TableHead>
-                      <TableHead className="text-right">Tổng tiền</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoice.orders.map((order) => (
-                      <TableRow key={order.orderId}>
-                        <TableCell className="font-medium font-mono">
-                          {order.orderCode || `#${order.orderId}`}
-                        </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
+                <div className="space-y-2">
+                  {invoice.orders.map((order) => (
+                    <div
+                      key={order.orderId}
+                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Package className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <div className="font-medium font-mono">
+                            {order.orderCode || `Đơn #${order.orderId}`}
+                          </div>
+                          {order.orderId && (
+                            <Link
+                              to={`/accounting/orders/${order.orderId}`}
+                              className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                            >
+                              Xem chi tiết
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium tabular-nums">
                           {order.amount ? formatCurrency(order.amount) : "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -316,7 +388,9 @@ export default function InvoiceDetailPage() {
               <CardContent className="space-y-3">
                 {invoice.sellerName && (
                   <div>
-                    <div className="text-sm font-medium">{invoice.sellerName}</div>
+                    <div className="text-sm font-medium">
+                      {invoice.sellerName}
+                    </div>
                   </div>
                 )}
                 {invoice.sellerTaxCode && (
@@ -340,7 +414,9 @@ export default function InvoiceDetailPage() {
                 {invoice.sellerBankAccount && (
                   <div className="text-sm">
                     <div className="text-muted-foreground">Tài khoản:</div>
-                    <div className="font-medium">{invoice.sellerBankAccount}</div>
+                    <div className="font-medium">
+                      {invoice.sellerBankAccount}
+                    </div>
                     {invoice.sellerBankName && (
                       <div className="text-xs text-muted-foreground">
                         {invoice.sellerBankName}
@@ -369,7 +445,9 @@ export default function InvoiceDetailPage() {
               <CardContent className="space-y-3">
                 {invoice.buyerCompanyName && (
                   <div>
-                    <div className="text-sm font-medium">{invoice.buyerCompanyName}</div>
+                    <div className="text-sm font-medium">
+                      {invoice.buyerCompanyName}
+                    </div>
                   </div>
                 )}
                 {invoice.buyerName && (
@@ -398,7 +476,9 @@ export default function InvoiceDetailPage() {
                 {invoice.buyerBankAccount && (
                   <div className="text-sm">
                     <div className="text-muted-foreground">Tài khoản:</div>
-                    <div className="font-medium">{invoice.buyerBankAccount}</div>
+                    <div className="font-medium">
+                      {invoice.buyerBankAccount}
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -414,9 +494,41 @@ export default function InvoiceDetailPage() {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Tổng tiền hàng:</span>
                 <span className="font-medium tabular-nums">
-                  {formatCurrency(totalAmount)}
+                  {formatCurrency(invoice.subTotal || totalAmount)}
                 </span>
               </div>
+              {(invoice.discountPercent && invoice.discountPercent > 0) ||
+              (invoice.discountAmount && invoice.discountAmount > 0) ? (
+                <>
+                  <Separator />
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Giảm giá
+                      {invoice.discountPercent && invoice.discountPercent > 0
+                        ? ` (${(invoice.discountPercent * 100).toFixed(0)}%)`
+                        : ""}
+                      :
+                    </span>
+                    <span className="font-medium tabular-nums text-orange-600">
+                      -{formatCurrency(invoice.discountAmount || 0)}
+                    </span>
+                  </div>
+                  {invoice.discountReason && (
+                    <div className="text-xs text-muted-foreground pl-2">
+                      Lý do: {invoice.discountReason}
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Sau giảm giá:</span>
+                    <span className="font-medium tabular-nums">
+                      {formatCurrency(
+                        invoice.totalAfterDiscount || totalAmount
+                      )}
+                    </span>
+                  </div>
+                </>
+              ) : null}
               {invoice.taxRate && invoice.taxRate > 0 && (
                 <>
                   <Separator />
@@ -425,7 +537,7 @@ export default function InvoiceDetailPage() {
                       VAT ({((invoice.taxRate || 0) * 100).toFixed(0)}%):
                     </span>
                     <span className="font-medium tabular-nums">
-                      {formatCurrency(taxAmount)}
+                      {formatCurrency(invoice.vatAmount || taxAmount)}
                     </span>
                   </div>
                 </>
@@ -433,14 +545,36 @@ export default function InvoiceDetailPage() {
               <Separator />
               <div className="flex items-center justify-between text-base font-bold">
                 <span>Tổng thanh toán:</span>
-                <span className="tabular-nums">{formatCurrency(grandTotal)}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(grandTotal)}
+                </span>
               </div>
               {invoice.paymentMethod && (
                 <>
                   <Separator />
                   <div className="text-sm">
-                    <div className="text-muted-foreground">Phương thức thanh toán:</div>
+                    <div className="text-muted-foreground">
+                      Phương thức thanh toán:
+                    </div>
                     <div className="font-medium">{invoice.paymentMethod}</div>
+                  </div>
+                </>
+              )}
+              {invoice.eInvoiceNumber && (
+                <>
+                  <Separator />
+                  <div className="text-sm">
+                    <div className="text-muted-foreground">
+                      Số hóa đơn điện tử:
+                    </div>
+                    <div className="font-medium font-mono">
+                      {invoice.eInvoiceNumber}
+                    </div>
+                    {invoice.eInvoiceSerial && (
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Số seri: {invoice.eInvoiceSerial}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -516,4 +650,3 @@ export default function InvoiceDetailPage() {
     </div>
   );
 }
-

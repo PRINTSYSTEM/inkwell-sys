@@ -1905,6 +1905,10 @@ const CreateProofingOrderFromDesignsRequest = z.object({
   paperSizeId: z.number().int().nullish(),
   customPaperSize: z.string().nullish(),
 });
+const UpdateProofingDesignItem = z.object({
+  proofingOrderDesignId: z.number().int(),
+  quantity: z.number().int().gte(1).lte(2147483647),
+});
 const UpdateProofingOrderRequest = z
   .object({
     status: z.string().min(0).max(50).nullable(),
@@ -1912,6 +1916,8 @@ const UpdateProofingOrderRequest = z
     notes: z.string().nullable(),
     paperSizeId: z.number().int().nullable(),
     customPaperSize: z.string().nullable(),
+    totalQuantity: z.number().int().gte(1).lte(2147483647).nullable(),
+    designUpdates: z.array(UpdateProofingDesignItem).nullable(),
   })
   .partial();
 const OrderDetailResponsePaginate = z
@@ -2439,6 +2445,7 @@ export const schemas = {
   ProofingOrderResponsePaginate,
   CreateProofingOrderDetailItem,
   CreateProofingOrderFromDesignsRequest,
+  UpdateProofingDesignItem,
   UpdateProofingOrderRequest,
   OrderDetailResponsePaginate,
   RecordPlateExportRequest,

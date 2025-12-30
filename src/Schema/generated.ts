@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2025-12-30T07:36:55.522Z */
+/* Generated at: 2025-12-30T08:51:10.510Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -183,6 +183,7 @@ export const UpdateOrderForAccountingRequestSchema = schemas.UpdateOrderForAccou
 export const UpdateOrderRequestSchema = schemas.UpdateOrderRequest;
 export const UpdatePaymentMethodRequestSchema = schemas.UpdatePaymentMethodRequest;
 export const UpdateProductionRequestSchema = schemas.UpdateProductionRequest;
+export const UpdateProofingDesignItemSchema = schemas.UpdateProofingDesignItem;
 export const UpdateProofingOrderRequestSchema = schemas.UpdateProofingOrderRequest;
 export const UpdateStockInRequestSchema = schemas.UpdateStockInRequest;
 export const UpdateStockOutRequestSchema = schemas.UpdateStockOutRequest;
