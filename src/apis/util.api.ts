@@ -150,6 +150,7 @@ export const API_SUFFIX = {
   PROOFING_RECORD_PLATE: (id: number) => `/proofing-orders/${id}/plate-export`,
   PROOFING_RECORD_DIE: (id: number) => `/proofing-orders/${id}/die-export`,
   PROOFING_UPDATE_FILE: (id: number) => `/proofing-orders/${id}/update-file`,
+  PROOFING_UPDATE_IMAGE: (id: number) => `/proofing-orders/${id}/update-image`,
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
   PROOFING_COMPLETE: (id: number) => `/proofing-orders/${id}/complete`,

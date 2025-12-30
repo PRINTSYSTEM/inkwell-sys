@@ -55,6 +55,7 @@ import {
   useUploadProofingImage,
   useUpdateProofingOrder,
   useUpdateProofingFile,
+  useUpdateProofingImage,
   useHandToProduction,
   usePaperSizes,
 } from "@/hooks/use-proofing-order";
@@ -109,6 +110,10 @@ export default function ProofingOrderDetailPage() {
   const [updateDesignQuantities, setUpdateDesignQuantities] = useState<
     Record<number, string>
   >({});
+  const [updateImageFile, setUpdateImageFile] = useState<File | null>(null);
+  const [updateProofingFile, setUpdateProofingFile] = useState<File | null>(
+    null
+  );
 
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
@@ -134,6 +139,8 @@ export default function ProofingOrderDetailPage() {
     useUpdateProofingFile();
   const { mutate: uploadImageMutate, loading: isUploadingImage } =
     useUploadProofingImage();
+  const { mutate: updateImageMutate, loading: isUpdatingImage } =
+    useUpdateProofingImage();
   const { mutate: handToProductionMutate, isPending: isHandingToProduction } =
     useHandToProduction();
   const { mutate: updateProofingOrder, isPending: isUpdatingInfo } =
@@ -184,6 +191,8 @@ export default function ProofingOrderDetailPage() {
     setUpdateCustomPaperSize(order.customPaperSize || "");
     setUpdateProofingFileUrl(order.proofingFileUrl || "");
     setUpdateTotalQuantity(order.totalQuantity?.toString() || "");
+    setUpdateImageFile(null); // Reset image file
+    setUpdateProofingFile(null); // Reset proofing file
 
     // Initialize design quantities from current order designs
     const initialQuantities: Record<number, string> = {};
@@ -200,11 +209,40 @@ export default function ProofingOrderDetailPage() {
   const handleUpdateInfo = async () => {
     if (!order?.id) return;
 
+    // If there's a proofing file, update it first
+    if (updateProofingFile) {
+      try {
+        await updateFileMutate({
+          proofingOrderId: order.id,
+          file: updateProofingFile,
+        });
+        setUpdateProofingFile(null);
+      } catch (error) {
+        // Error is handled by the hook
+        return; // Don't proceed with other updates if file update fails
+      }
+    }
+
+    // If there's an image file, update it
+    if (updateImageFile) {
+      try {
+        await updateImageMutate({
+          proofingOrderId: order.id,
+          file: updateImageFile,
+        });
+        setUpdateImageFile(null);
+      } catch (error) {
+        // Error is handled by the hook
+        return; // Don't proceed with other updates if image update fails
+      }
+    }
+
     const updateData: UpdateProofingOrderRequest = {};
 
-    if (updateStatus && updateStatus !== order.status) {
-      updateData.status = updateStatus;
-    }
+    // Status update is hidden from dialog, so skip it
+    // if (updateStatus && updateStatus !== order.status) {
+    //   updateData.status = updateStatus;
+    // }
     if (updateNotes !== order.notes) {
       updateData.notes = updateNotes || null;
     }
@@ -221,7 +259,11 @@ export default function ProofingOrderDetailPage() {
       updateData.paperSizeId = null;
       updateData.customPaperSize = null;
     }
-    if (updateProofingFileUrl !== order.proofingFileUrl) {
+    // Don't update proofingFileUrl if a file is being uploaded (file upload will handle it)
+    if (
+      !updateProofingFile &&
+      updateProofingFileUrl !== order.proofingFileUrl
+    ) {
       updateData.proofingFileUrl = updateProofingFileUrl || null;
     }
 
@@ -261,18 +303,24 @@ export default function ProofingOrderDetailPage() {
       updateData.designUpdates = designUpdates;
     }
 
-    try {
-      await updateProofingOrder({
-        id: order.id,
-        data: updateData,
-      });
-      setIsUpdateInfoDialogOpen(false);
-      toast.success("Thành công", {
-        description: "Đã cập nhật thông tin bình bài",
-      });
-    } catch (error) {
-      // Error is handled by the hook
+    // Only call update API if there are changes (excluding image which was already uploaded)
+    const hasChanges = Object.keys(updateData).length > 0;
+    if (hasChanges) {
+      try {
+        await updateProofingOrder({
+          id: order.id,
+          data: updateData,
+        });
+      } catch (error) {
+        // Error is handled by the hook
+        return;
+      }
     }
+
+    setIsUpdateInfoDialogOpen(false);
+    toast.success("Thành công", {
+      description: "Đã cập nhật thông tin bình bài",
+    });
   };
 
   const handleOldStatusChangeClick = () => {
@@ -691,17 +739,6 @@ export default function ProofingOrderDetailPage() {
                     <Download className="h-3 w-3" />
                     Tải xuống
                   </Button>
-                  {!order.isPlateExported && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 h-7 text-xs"
-                      onClick={() => setIsUpdateFileDialogOpen(true)}
-                    >
-                      <Edit className="h-3 w-3" />
-                      Cập nhật
-                    </Button>
-                  )}
                 </div>
               )}
 
@@ -1456,23 +1493,6 @@ export default function ProofingOrderDetailPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Status */}
-            <div className="space-y-2">
-              <Label htmlFor="update-status">Trạng thái</Label>
-              <Select value={updateStatus} onValueChange={setUpdateStatus}>
-                <SelectTrigger id="update-status">
-                  <SelectValue placeholder="Chọn trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(proofingStatusLabels).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Notes */}
             <div className="space-y-2">
               <Label htmlFor="update-notes">Ghi chú</Label>
@@ -1525,19 +1545,95 @@ export default function ProofingOrderDetailPage() {
               </div>
             )}
 
-            {/* Proofing File URL */}
+            {/* Proofing File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="update-proofing-file-url">
-                URL file bình bài
-              </Label>
+              <Label htmlFor="update-proofing-file">File bình bài</Label>
               <Input
-                id="update-proofing-file-url"
-                value={updateProofingFileUrl}
-                onChange={(e) => setUpdateProofingFileUrl(e.target.value)}
-                placeholder="Nhập URL file bình bài..."
+                id="update-proofing-file"
+                type="file"
+                accept=".pdf,.ai,.psd,.jpg,.png"
+                onChange={(e) =>
+                  setUpdateProofingFile(e.target.files?.[0] || null)
+                }
               />
+              {updateProofingFile && (
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground">
+                    Đã chọn: {updateProofingFile.name} (
+                    {(updateProofingFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                </div>
+              )}
+              {order.proofingFileUrl && !updateProofingFile && (
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    File hiện tại:
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-xs"
+                    onClick={() => {
+                      if (order.proofingFileUrl) {
+                        downloadFile(
+                          order.proofingFileUrl,
+                          order.code || `BB-${order.id}`
+                        );
+                      }
+                    }}
+                  >
+                    <Download className="h-3 w-3" />
+                    Tải xuống file hiện tại
+                  </Button>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                Hoặc sử dụng nút "Upload file" để tải file lên
+                Chọn file mới để thay thế file hiện tại
+              </p>
+            </div>
+
+            {/* Proofing Image Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="update-image-file">Ảnh bình bài</Label>
+              <Input
+                id="update-image-file"
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setUpdateImageFile(e.target.files?.[0] || null)
+                }
+              />
+              {updateImageFile && (
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Đã chọn: {updateImageFile.name} (
+                    {(updateImageFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                  <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
+                    <img
+                      src={URL.createObjectURL(updateImageFile)}
+                      alt="Preview"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+              {order.imageUrl && !updateImageFile && (
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Ảnh hiện tại:
+                  </p>
+                  <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
+                    <img
+                      src={order.imageUrl}
+                      alt="Current preview"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Chọn ảnh mới để thay thế ảnh hiện tại
               </p>
             </div>
 
@@ -1612,15 +1708,42 @@ export default function ProofingOrderDetailPage() {
             <Button
               variant="outline"
               onClick={() => setIsUpdateInfoDialogOpen(false)}
-              disabled={isUpdatingInfo}
+              disabled={
+                isUpdatingInfo ||
+                isUpdatingImage ||
+                isUpdatingFile ||
+                isUploadingImage ||
+                isUploadingFile
+              }
             >
               Hủy
             </Button>
-            <Button onClick={handleUpdateInfo} disabled={isUpdatingInfo}>
-              {isUpdatingInfo ? (
+            <Button
+              onClick={handleUpdateInfo}
+              disabled={
+                isUpdatingInfo ||
+                isUpdatingImage ||
+                isUpdatingFile ||
+                isUploadingImage ||
+                isUploadingFile
+              }
+            >
+              {isUpdatingInfo ||
+              isUpdatingImage ||
+              isUpdatingFile ||
+              isUploadingImage ||
+              isUploadingFile ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Đang cập nhật...
+                  {isUpdatingFile
+                    ? "Đang cập nhật file..."
+                    : isUpdatingImage
+                      ? "Đang cập nhật ảnh..."
+                      : isUploadingFile
+                        ? "Đang upload file..."
+                        : isUploadingImage
+                          ? "Đang upload ảnh..."
+                          : "Đang cập nhật..."}
                 </>
               ) : (
                 "Cập nhật"

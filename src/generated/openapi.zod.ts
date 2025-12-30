@@ -1912,7 +1912,6 @@ const UpdateProofingDesignItem = z.object({
 const UpdateProofingOrderRequest = z
   .object({
     status: z.string().min(0).max(50).nullable(),
-    proofingFileUrl: z.string().nullable(),
     notes: z.string().nullable(),
     paperSizeId: z.number().int().nullable(),
     customPaperSize: z.string().nullable(),
@@ -5729,6 +5728,28 @@ const endpoints = makeApi([
         type: "Body",
         schema: z
           .object({ proofingFile: z.instanceof(File) })
+          .partial()
+          .passthrough(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ProofingOrderResponse,
+  },
+  {
+    method: "put",
+    path: "/api/proofing-orders/:id/update-image",
+    alias: "putApiproofingOrdersIdupdateImage",
+    requestFormat: "form-data",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z
+          .object({ imageFile: z.instanceof(File) })
           .partial()
           .passthrough(),
       },

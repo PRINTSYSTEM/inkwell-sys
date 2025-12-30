@@ -43,10 +43,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
-import {
-  useInvoices,
-  useExportInvoice,
-} from "@/hooks/use-invoice";
+import { useInvoices, useExportInvoice } from "@/hooks/use-invoice";
 import { formatCurrency } from "@/lib/status-utils";
 import { CreateInvoiceFromLinesDialog } from "@/components/accounting";
 import { Plus } from "lucide-react";
@@ -285,7 +282,7 @@ export default function InvoiceListPage() {
                               Đang xuất...
                             </>
                           ) : (
-                            "Xuất PDF"
+                            "Xuất Excel"
                           )}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -339,4 +336,3 @@ export default function InvoiceListPage() {
     </div>
   );
 }
-
