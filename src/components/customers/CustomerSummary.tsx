@@ -84,13 +84,13 @@ export function CustomerSummary({
       tab: 'orders',
     },
     {
-      label: 'Trạng thái',
+      label: 'Trạng thái nợ',
       value: customer.debtStatus === 'good' 
-        ? 'Bình thường' 
+        ? 'Tốt' 
         : customer.debtStatus === 'warning' 
         ? 'Cảnh báo' 
-        : customer.debtStatus === 'overdue'
-        ? 'Quá hạn'
+        : customer.debtStatus === 'blocked'
+        ? 'Bị chặn'
         : 'Chưa xác định',
       icon: Receipt,
       tab: 'debt',
