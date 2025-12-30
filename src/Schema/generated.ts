@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2025-12-29T23:58:47.182Z */
+/* Generated at: 2025-12-30T07:36:55.522Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -54,7 +54,6 @@ export const CreateDesignRequestSchema = schemas.CreateDesignRequest;
 export const CreateDesignTypeRequestSchema = schemas.CreateDesignTypeRequest;
 export const CreateExpenseCategoryRequestSchema = schemas.CreateExpenseCategoryRequest;
 export const CreateInvoiceFromLinesRequestSchema = schemas.CreateInvoiceFromLinesRequest;
-export const CreateInvoiceItemRequestSchema = schemas.CreateInvoiceItemRequest;
 export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
 export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
 export const CreateOrderRequestSchema = schemas.CreateOrderRequest;

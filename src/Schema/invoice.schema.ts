@@ -8,7 +8,6 @@ import {
   InvoiceResponseSchema as GenInvoiceResponseSchema,
   InvoiceResponsePaginateSchema as GenInvoiceResponsePaginateSchema,
   CreateInvoiceRequestSchema as GenCreateInvoiceRequestSchema,
-  CreateInvoiceItemRequestSchema as GenCreateInvoiceItemRequestSchema,
   UpdateInvoiceRequestSchema as GenUpdateInvoiceRequestSchema,
   BillableItemResponseSchema as GenBillableItemResponseSchema,
   CreateInvoiceFromLinesRequestSchema as GenCreateInvoiceFromLinesRequestSchema,
@@ -59,13 +58,6 @@ export const CreateInvoiceRequestSchema = GenCreateInvoiceRequestSchema.refine(
   { message: "Cần ít nhất 1 đơn hàng", path: ["orderIds"] }
 );
 export type CreateInvoiceRequest = z.infer<typeof CreateInvoiceRequestSchema>;
-
-// ===== CreateInvoiceItemRequest =====
-export const CreateInvoiceItemRequestSchema =
-  GenCreateInvoiceItemRequestSchema.passthrough();
-export type CreateInvoiceItemRequest = z.infer<
-  typeof CreateInvoiceItemRequestSchema
->;
 
 // ===== UpdateInvoiceRequest =====
 export const UpdateInvoiceRequestSchema =
