@@ -13,6 +13,7 @@ type ApiError = {
 import type {
   ProofingOrderResponse,
   ProofingOrderResponsePagedResponse,
+  ProofingOrderResponsePaginate,
 } from "@/Schema/proofing-order.schema";
 import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
 import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
@@ -254,10 +255,17 @@ export const useProofingOrdersByOrder = (
     queryKey: [proofingKeys.all[0], "by-order", orderId],
     enabled: enabled && !!orderId,
     queryFn: async () => {
-      const res = await apiRequest.get<ProofingOrderResponse[]>(
-        API_SUFFIX.PROOFING_BY_ORDER(orderId as number)
-      );
-      return res.data;
+      const res = await apiRequest.get<
+        ProofingOrderResponsePaginate | ProofingOrderResponse[]
+      >(API_SUFFIX.PROOFING_BY_ORDER(orderId as number));
+      
+      // Handle both paginated response and array response
+      if (Array.isArray(res.data)) {
+        return res.data;
+      }
+      
+      // If paginated response, extract items
+      return res.data.items ?? [];
     },
   });
 };

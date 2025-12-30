@@ -1210,26 +1210,11 @@ const SlowMovingResponseIPaginate = z
     items: z.array(SlowMovingResponse).nullable(),
   })
   .partial();
-const CreateInvoiceItemRequest = z.object({
-  orderDetailId: z.number().int().nullish(),
-  description: z.string().min(0).max(500),
-  unit: z.string().min(0).max(20).nullish(),
-  quantity: z.number().gte(0.01).optional(),
-  unitPrice: z.number().gte(0).optional(),
-});
 const CreateInvoiceRequest = z.object({
   orderIds: z.array(z.number().int()).min(1),
   invoiceNumber: z.string().nullish(),
   taxRate: z.number().gte(0).lte(1).optional(),
   notes: z.string().nullish(),
-  buyerName: z.string().nullish(),
-  buyerCompanyName: z.string().nullish(),
-  buyerTaxCode: z.string().nullish(),
-  buyerAddress: z.string().nullish(),
-  buyerEmail: z.string().nullish(),
-  paymentMethod: z.string().nullish(),
-  buyerBankAccount: z.string().nullish(),
-  customItems: z.array(CreateInvoiceItemRequest).nullish(),
 });
 const InvoiceOrderResponse = z
   .object({
@@ -1298,6 +1283,15 @@ const InvoiceResponse = z
     items: z.array(InvoiceItemResponse).nullable(),
   })
   .partial();
+const InvoiceResponsePaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(InvoiceResponse).nullable(),
+  })
+  .partial();
 const UpdateInvoiceRequest = z
   .object({
     invoiceNumber: z.string().nullable(),
@@ -1308,15 +1302,6 @@ const UpdateInvoiceRequest = z
     buyerTaxCode: z.string().nullable(),
     buyerAddress: z.string().nullable(),
     buyerEmail: z.string().nullable(),
-  })
-  .partial();
-const InvoiceResponsePaginate = z
-  .object({
-    size: z.number().int(),
-    page: z.number().int(),
-    total: z.number().int(),
-    totalPages: z.number().int(),
-    items: z.array(InvoiceResponse).nullable(),
   })
   .partial();
 const BillableItemResponse = z
@@ -2402,13 +2387,12 @@ export const schemas = {
   LowStockResponseIPaginate,
   SlowMovingResponse,
   SlowMovingResponseIPaginate,
-  CreateInvoiceItemRequest,
   CreateInvoiceRequest,
   InvoiceOrderResponse,
   InvoiceItemResponse,
   InvoiceResponse,
-  UpdateInvoiceRequest,
   InvoiceResponsePaginate,
+  UpdateInvoiceRequest,
   BillableItemResponse,
   InvoiceLineInput,
   CreateInvoiceFromLinesRequest,
@@ -4726,6 +4710,50 @@ const endpoints = makeApi([
       },
     ],
     response: InvoiceResponse,
+  },
+  {
+    method: "get",
+    path: "/api/invoices",
+    alias: "getApiinvoices",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "CustomerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "Status",
+        type: "Query",
+        schema: z.string().min(0).max(20).optional(),
+      },
+      {
+        name: "FromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "ToDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "Search",
+        type: "Query",
+        schema: z.string().min(0).max(100).optional(),
+      },
+      {
+        name: "PageNumber",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "PageSize",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: InvoiceResponsePaginate,
   },
   {
     method: "get",

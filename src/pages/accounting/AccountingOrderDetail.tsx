@@ -56,9 +56,11 @@ import {
   useUpdateOrderForAccounting,
 } from "@/hooks/use-order";
 import { useConfirmDeposit, useApproveDebt } from "@/hooks/use-accounting";
+import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
 import type {
   UpdateOrderForAccountingRequest,
   UpdateOrderDetailForAccountingRequest,
+  CreateInvoiceRequest,
 } from "@/Schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,7 +88,9 @@ function deriveCustomerType(
 
 // Helper to check if order has been delivered
 function hasBeenDelivered(status: string | null | undefined): boolean {
-  return status === "delivering" || status === "completed";
+  return (
+    status === "delivering" || status === "completed" || status === "delivered"
+  );
 }
 
 // Helper to derive invoice status (simplified - in real app this would come from backend)
@@ -120,6 +124,13 @@ export default function AccountingOrderDetail() {
     error,
   } = useOrder(Number(id || "0"));
 
+  // Fetch invoices for this order
+  const { data: invoicesData } = useInvoicesByOrder(
+    order?.id || null,
+    undefined,
+    !!order?.id
+  );
+
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [cardEditValues, setCardEditValues] = useState<
@@ -142,6 +153,7 @@ export default function AccountingOrderDetail() {
   const approveDebtMutation = useApproveDebt();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
+  const createInvoiceMutation = useCreateInvoice();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -348,9 +360,29 @@ export default function AccountingOrderDetail() {
     }
   };
 
-  const handleExportInvoice = () => {
-    if (order) {
-      exportInvoiceMutation.mutate(order.id);
+  const handleExportInvoice = async () => {
+    if (!order) return;
+
+    try {
+      // Check if invoice already exists for this order
+      const hasInvoice = invoicesData?.items && invoicesData.items.length > 0;
+
+      // If no invoice exists, create one first
+      if (!hasInvoice) {
+        const invoiceData: CreateInvoiceRequest = {
+          orderIds: [order.id],
+          invoiceNumber: "1",
+          taxRate: 0.08,
+          notes: order.note || null,
+        };
+
+        await createInvoiceMutation.mutateAsync(invoiceData);
+      }
+
+      // Then export the invoice
+      await exportInvoiceMutation.mutate(order.id);
+    } catch (error) {
+      // Error is handled by the mutation hooks
     }
   };
 
@@ -621,7 +653,7 @@ export default function AccountingOrderDetail() {
                     ) : (
                       <Truck className="h-4 w-4 mr-2" />
                     )}
-                    Đổi trạng thái thành đang giao hàng
+                    Chuyển sang đang giao hàng
                   </Button>
                 )}
                 {order.status === "delivering" && (
@@ -636,7 +668,7 @@ export default function AccountingOrderDetail() {
                     ) : (
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                     )}
-                    Đổi trạng thái thành đã giao hàng
+                    Chuyển thành đã giao hàng
                   </Button>
                 )}
               </div>
@@ -1566,86 +1598,6 @@ export default function AccountingOrderDetail() {
                             </span>
                           )}
                         </p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Invoice Info */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-primary" />
-                      Thông tin hóa đơn
-                    </CardTitle>
-                    <InvoiceStatusBadge status={invoiceStatus} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {invoiceStatus === "not_issued" ? (
-                    hasBeenDelivered(order.status) ? (
-                      <div className="text-center py-4">
-                        <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Chưa xuất hóa đơn cho đơn hàng này
-                        </p>
-                        <Button
-                          className="mt-4"
-                          size="sm"
-                          onClick={handleExportInvoice}
-                          disabled={exportInvoiceMutation.loading}
-                        >
-                          {exportInvoiceMutation.loading ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <FileText className="h-4 w-4 mr-2" />
-                          )}
-                          Xuất hóa đơn
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4">
-                        <AlertCircle className="h-8 w-8 text-amber-600 dark:text-amber-400 mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Chỉ có thể xuất hóa đơn sau khi đơn hàng đã giao hàng
-                        </p>
-                      </div>
-                    )
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-success">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="text-sm font-medium">
-                          Đã xuất hóa đơn
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={handleExportInvoice}
-                          disabled={exportInvoiceMutation.loading}
-                        >
-                          {exportInvoiceMutation.loading ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : null}
-                          Tải xuống
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={handleExportDeliveryNote}
-                          disabled={exportDeliveryNoteMutation.loading}
-                        >
-                          {exportDeliveryNoteMutation.loading ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : null}
-                          Phiếu giao
-                        </Button>
                       </div>
                     </div>
                   )}

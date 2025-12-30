@@ -248,6 +248,66 @@ export const useAddDesignToOrder = () => {
     reset,
   };
 };
+
+// ================== ORDER: XÓA ORDER DETAIL ==================
+// DELETE /orders/{orderId}/designs/{orderDetailId}
+
+export const useRemoveOrderDetail = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderResponse,
+    [{ orderId: number; orderDetailId: number }]
+  >(async ({ orderId, orderDetailId }) => {
+    const res = await apiRequest.delete<OrderResponse>(
+      API_SUFFIX.ORDER_REMOVE_DESIGN(orderId, orderDetailId)
+    );
+    return res.data;
+  });
+
+  const mutate = async (args: {
+    orderId: number;
+    orderDetailId: number;
+  }) => {
+    try {
+      const result = await execute(args);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: orderKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+
+      toast.success("Thành công", {
+        description: "Đã xóa sản phẩm khỏi đơn hàng",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể xóa sản phẩm khỏi đơn",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
 // ================== ORDER: LIST FOR DESIGNER ==================
 // GET /orders/for-designer
 

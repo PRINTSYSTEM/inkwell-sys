@@ -26,6 +26,12 @@ import {
   DollarSign,
   CreditCard,
   TrendingUp,
+  CheckCircle2,
+  Layers,
+  Box,
+  Palette,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,6 +102,9 @@ import {
   useGenerateDesignExcel,
   useProofingOrdersByOrder,
   useUsers,
+  useAddDesignToOrder,
+  useRemoveOrderDetail,
+  useDesigns,
 } from "@/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE } from "@/constants";
@@ -112,9 +121,12 @@ export default function OrderDetailPage() {
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [addDesignDialogOpen, setAddDesignDialogOpen] = useState(false);
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
-  const [cardEditValues, setCardEditValues] = useState<Record<string, string | number | null>>({});
+  const [cardEditValues, setCardEditValues] = useState<
+    Record<string, string | number | null>
+  >({});
   // OrderDetail item-level editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -156,6 +168,10 @@ export default function OrderDetailPage() {
   const { mutate: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
+  const { mutate: addDesignToOrder, loading: isAddingDesign } =
+    useAddDesignToOrder();
+  const { mutate: removeOrderDetail, loading: isRemovingDetail } =
+    useRemoveOrderDetail();
 
   // Helper to format date for input
   const formatDateTimeForInput = (dateStr: string | null | undefined) => {
@@ -183,7 +199,10 @@ export default function OrderDetailPage() {
   };
 
   // Helper to start editing an orderDetail item
-  const startEditingOrderDetail = (orderDetailId: number, orderDetail: OrderDetailResponse) => {
+  const startEditingOrderDetail = (
+    orderDetailId: number,
+    orderDetail: OrderDetailResponse
+  ) => {
     setEditingOrderDetailId(orderDetailId);
     setOrderDetailEditValues({
       quantity: orderDetail.quantity?.toString() || "",
@@ -372,7 +391,10 @@ export default function OrderDetailPage() {
     }
 
     try {
-      await updateOrderForAccounting(order.id, payload as UpdateOrderForAccountingRequest);
+      await updateOrderForAccounting(
+        order.id,
+        payload as UpdateOrderForAccountingRequest
+      );
       setEditingCard(null);
       setCardEditValues({});
     } catch (error) {
@@ -387,8 +409,15 @@ export default function OrderDetailPage() {
   // Tạm thời để trống, sẽ implement khi có API phù hợp
 
   const { data: relatedProofingOrders } = useProofingOrdersByOrder(orderId);
+
   const relatedProofing: ProofingOrderResponse[] = relatedProofingOrders ?? [];
-  const relatedProductions: ProductionResponse[] = [];
+
+  // Extract productions from proofing orders (they are already included in the response)
+  const relatedProductions: ProductionResponse[] = relatedProofing
+    .flatMap((proof) => proof.productions ?? [])
+    .filter(
+      (prod): prod is ProductionResponse => prod !== null && prod !== undefined
+    );
 
   // Fetch users for assignedToUserId select
   const { data: usersData } = useUsers({ pageSize: 1000 });
@@ -533,27 +562,6 @@ export default function OrderDetailPage() {
                 In đơn
               </Button>
             )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => setDepositDialogOpen(true)}
-            >
-              <CreditCard className="w-4 h-4" />
-              Cập nhật đặt cọc
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() => setInvoiceDialogOpen(true)}
-              disabled={!isCustomerInfoComplete}
-            >
-              <FileText className="w-4 h-4" />
-              Xuất hóa đơn
-            </Button>
           </div>
         </div>
       </div>
@@ -663,15 +671,28 @@ export default function OrderDetailPage() {
           {/* ===== CHI TIẾT SẢN PHẨM ===== */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" />
-                Chi tiết sản phẩm
-                {orderDetailsCount > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {orderDetailsCount}
-                  </Badge>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  Chi tiết sản phẩm
+                  {orderDetailsCount > 0 && (
+                    <Badge variant="secondary" className="ml-1">
+                      {orderDetailsCount}
+                    </Badge>
+                  )}
+                </CardTitle>
+                {canUpdateOrderForAccounting && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setAddDesignDialogOpen(true)}
+                    disabled={isAddingDesign}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Thêm sản phẩm
+                  </Button>
                 )}
-              </CardTitle>
+              </div>
             </CardHeader>
             <CardContent>
               {order.orderDetails && order.orderDetails.length > 0 ? (
@@ -740,9 +761,9 @@ export default function OrderDetailPage() {
                                 </p>
                               </div>
                               {canUpdateOrderForAccounting && (
-                                <div className="flex-shrink-0">
+                                <div className="flex-shrink-0 flex items-center gap-2">
                                   {editingOrderDetailId === orderDetail.id ? (
-                                    <div className="flex items-center gap-2">
+                                    <>
                                       <Button
                                         size="sm"
                                         variant="default"
@@ -768,21 +789,46 @@ export default function OrderDetailPage() {
                                       >
                                         Hủy
                                       </Button>
-                                    </div>
+                                    </>
                                   ) : (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() =>
-                                        startEditingOrderDetail(
-                                          orderDetail.id!,
-                                          orderDetail
-                                        )
-                                      }
-                                    >
-                                      <Edit className="h-3 w-3 mr-1" />
-                                      Sửa
-                                    </Button>
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          startEditingOrderDetail(
+                                            orderDetail.id!,
+                                            orderDetail
+                                          )
+                                        }
+                                      >
+                                        <Edit className="h-3 w-3 mr-1" />
+                                        Sửa
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          if (
+                                            confirm(
+                                              "Bạn có chắc chắn muốn xóa sản phẩm này khỏi đơn hàng?"
+                                            )
+                                          ) {
+                                            removeOrderDetail({
+                                              orderId: order.id,
+                                              orderDetailId: orderDetail.id!,
+                                            });
+                                          }
+                                        }}
+                                        disabled={isRemovingDetail}
+                                      >
+                                        {isRemovingDetail ? (
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                    </>
                                   )}
                                 </div>
                               )}
@@ -838,7 +884,9 @@ export default function OrderDetailPage() {
                                     Cán màn
                                   </p>
                                   <p className="font-medium">
-                                    {laminationTypeLabels[design.laminationType] ||
+                                    {laminationTypeLabels[
+                                      design.laminationType
+                                    ] ||
                                       design.laminationType ||
                                       "—"}
                                   </p>
@@ -1042,44 +1090,189 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent>
               {relatedProofing.length > 0 ? (
-                <div className="space-y-3">
-                  {relatedProofing.map((proof: ProofingOrderResponse) => (
-                    <div
-                      key={proof.id}
-                      className="border rounded-lg p-4 hover:shadow-md transition"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{proof.code}</span>
-                            <StatusBadge
-                              status={proof.status}
-                              label={
-                                proofingStatusLabels[proof.status || ""] ||
-                                "N/A"
-                              }
-                            />
+                <div className="space-y-4">
+                  {relatedProofing.map((proof: ProofingOrderResponse) => {
+                    const isCompleted = proof.status === "completed";
+                    const hasProductions =
+                      proof.productions && proof.productions.length > 0;
+                    const completedProductions =
+                      proof.productions?.filter((p) => p.status === "completed")
+                        .length || 0;
+
+                    return (
+                      <div
+                        key={proof.id}
+                        className="group relative overflow-hidden border rounded-xl bg-gradient-to-br from-background to-muted/30 hover:shadow-lg hover:border-primary/50 transition-all duration-300"
+                      >
+                        {/* Decorative gradient bar */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
+
+                        <div className="p-5 space-y-4">
+                          {/* Header */}
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-3">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <div className="flex items-center gap-2">
+                                  <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                                    <Package className="w-4 h-4 text-primary" />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-bold text-lg text-foreground">
+                                      {proof.code}
+                                    </h3>
+                                    {proof.materialType?.name && (
+                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                        {proof.materialType.name}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <StatusBadge
+                                  status={proof.status}
+                                  label={
+                                    proofingStatusLabels[proof.status || ""] ||
+                                    "N/A"
+                                  }
+                                />
+                              </div>
+
+                              {/* Quick stats */}
+                              <div className="flex flex-wrap items-center gap-4 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <Box className="w-4 h-4 text-muted-foreground" />
+                                  <span className="font-medium">
+                                    {proof.totalQuantity?.toLocaleString()}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    sản phẩm
+                                  </span>
+                                </div>
+                                {proof.proofingOrderDesigns &&
+                                  proof.proofingOrderDesigns.length > 0 && (
+                                    <div className="flex items-center gap-2">
+                                      <Palette className="w-4 h-4 text-muted-foreground" />
+                                      <span className="font-medium">
+                                        {proof.proofingOrderDesigns.length}
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        thiết kế
+                                      </span>
+                                    </div>
+                                  )}
+                                {hasProductions && (
+                                  <div className="flex items-center gap-2">
+                                    <Factory className="w-4 h-4 text-muted-foreground" />
+                                    <span className="font-medium">
+                                      {proof.productions?.length}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      lệnh SX
+                                    </span>
+                                    {completedProductions > 0 && (
+                                      <Badge
+                                        variant="outline"
+                                        className="ml-1 text-xs border-green-500/50 text-green-700 dark:text-green-400"
+                                      >
+                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                        {completedProductions} hoàn thành
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <Link to={`/proofing/${proof.id}`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                              >
+                                <Eye className="w-4 h-4" />
+                                Xem chi tiết
+                              </Button>
+                            </Link>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {proof.materialType?.name} •{" "}
-                            {proof.totalQuantity?.toLocaleString()} sản phẩm
-                          </p>
+
+                          {/* Export status badges */}
+                          {(proof.isPlateExported || proof.isDieExported) && (
+                            <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+                              {proof.isPlateExported && proof.plateExport && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                                  <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                  <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                                    Kẽm: {proof.plateExport.vendorName}
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className="ml-1 text-xs h-5 px-1.5"
+                                  >
+                                    {proof.plateExport.plateCount} tấm
+                                  </Badge>
+                                </div>
+                              )}
+                              {proof.isDieExported && proof.dieExport && (
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+                                  <Box className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                                  <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                                    Khuôn: {proof.dieExport.vendorName}
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className="ml-1 text-xs h-5 px-1.5"
+                                  >
+                                    {proof.dieExport.dieCount} khuôn
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Production progress */}
+                          {hasProductions &&
+                            proof.productions &&
+                            proof.productions.length > 0 && (
+                              <div className="pt-2 border-t space-y-2">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">
+                                    Tiến độ sản xuất
+                                  </span>
+                                  <span className="font-medium">
+                                    {completedProductions}/
+                                    {proof.productions.length} hoàn thành
+                                  </span>
+                                </div>
+                                <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                                  <div
+                                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${
+                                        proof.productions.length > 0
+                                          ? (completedProductions /
+                                              proof.productions.length) *
+                                            100
+                                          : 0
+                                      }%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
                         </div>
-                        <Link to={`/proofing/${proof.id}`}>
-                          <Button variant="outline" size="sm" className="gap-2">
-                            <Eye className="w-4 h-4" />
-                            Xem
-                          </Button>
-                        </Link>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="py-8 text-center">
-                  <Package className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-muted-foreground">
+                <div className="py-12 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                    <Package className="w-8 h-8 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-muted-foreground font-medium">
                     Chưa có lệnh bình bài nào
+                  </p>
+                  <p className="text-sm text-muted-foreground/80 mt-1">
+                    Tạo lệnh bình bài từ các thiết kế trong đơn hàng
                   </p>
                 </div>
               )}
@@ -1990,6 +2183,113 @@ export default function OrderDetailPage() {
         onOpenChange={setPrintDialogOpen}
         orderId={order.id}
       />
+
+      {/* Add Design Dialog */}
+      <Dialog open={addDesignDialogOpen} onOpenChange={setAddDesignDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Thêm sản phẩm vào đơn hàng</DialogTitle>
+            <DialogDescription>
+              Chọn thiết kế và số lượng để thêm vào đơn hàng
+            </DialogDescription>
+          </DialogHeader>
+          <AddDesignToOrderForm
+            orderId={order.id}
+            onSuccess={() => {
+              setAddDesignDialogOpen(false);
+            }}
+            onCancel={() => setAddDesignDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// Component for adding design to order
+function AddDesignToOrderForm({
+  orderId,
+  onSuccess,
+  onCancel,
+}: {
+  orderId: number;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const [selectedDesignId, setSelectedDesignId] = useState<number | null>(null);
+  const [quantity, setQuantity] = useState<string>("1");
+  const { mutate: addDesignToOrder, loading: isAdding } = useAddDesignToOrder();
+  const { data: designsData } = useDesigns({ pageNumber: 1, pageSize: 1000 });
+
+  const designs = designsData?.items || [];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDesignId || !quantity || Number(quantity) < 1) {
+      return;
+    }
+
+    try {
+      await addDesignToOrder({
+        id: orderId,
+        payload: {
+          designId: selectedDesignId,
+          quantity: Number(quantity),
+        },
+      });
+      onSuccess();
+    } catch (error) {
+      // Error is handled by the hook
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label>Chọn thiết kế</Label>
+        <Select
+          value={selectedDesignId?.toString() || ""}
+          onValueChange={(value) => setSelectedDesignId(Number(value))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Chọn thiết kế" />
+          </SelectTrigger>
+          <SelectContent>
+            {designs.map((design) => (
+              <SelectItem key={design.id} value={design.id?.toString() || ""}>
+                {design.code} - {design.designName || "Chưa đặt tên"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Số lượng</Label>
+        <Input
+          type="number"
+          min="1"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          placeholder="Nhập số lượng"
+        />
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Hủy
+        </Button>
+        <Button type="submit" disabled={!selectedDesignId || isAdding}>
+          {isAdding ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Đang thêm...
+            </>
+          ) : (
+            "Thêm"
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }
