@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useBankLedger, useBankAccounts } from "@/hooks/use-bank";
 import { formatCurrency } from "@/lib/status-utils";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -78,6 +79,11 @@ export default function BankLedgerPage() {
     }
   };
 
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
+
   return (
     <>
       <Helmet>
@@ -99,7 +105,7 @@ export default function BankLedgerPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Làm mới
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-2" />
               Xuất Excel
             </Button>

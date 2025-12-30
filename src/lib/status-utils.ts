@@ -72,6 +72,127 @@ export const commonStatusLabels: Record<string, string> =
 export const paymentMethodLabels: Record<string, string> =
   ENTITY_CONFIG.paymentMethods.values;
 
+// Mapping từ code API (TM, CK, TT, etc.) sang key constants
+const paymentMethodCodeToKey: Record<string, string> = {
+  // Vietnamese codes
+  tm: "cash",
+  "tiền mặt": "cash",
+  "tien mat": "cash",
+  cash: "cash",
+  // Bank transfer
+  ck: "bank_transfer",
+  "chuyển khoản": "bank_transfer",
+  "chuyen khoan": "bank_transfer",
+  "chuyển khoản ngân hàng": "bank_transfer",
+  bank_transfer: "bank_transfer",
+  "bank transfer": "bank_transfer",
+  // Card
+  tt: "card",
+  thẻ: "card",
+  the: "card",
+  "thẻ tín dụng": "card",
+  "the tin dung": "card",
+  card: "card",
+  // E-wallet
+  "ví điện tử": "e_wallet",
+  "vi dien tu": "e_wallet",
+  e_wallet: "e_wallet",
+  "e wallet": "e_wallet",
+  wallet: "e_wallet",
+};
+
+// ===== HELPER FUNCTIONS FOR MAPPING RESPONSE FIELDS =====
+
+/**
+ * Map payment method code/name to Vietnamese label from constants
+ * Falls back to provided name if not found in constants
+ */
+export function getPaymentMethodLabel(
+  codeOrName: string | null | undefined,
+  fallbackName?: string | null
+): string {
+  if (!codeOrName && !fallbackName) return "—";
+
+  // Normalize inputs
+  const normalizedCode = codeOrName?.toLowerCase().trim() || "";
+  const normalizedFallback = fallbackName?.toLowerCase().trim() || "";
+
+  // If fallbackName is already Vietnamese label from constants, use it directly
+  if (normalizedFallback) {
+    for (const label of Object.values(paymentMethodLabels)) {
+      if (label.toLowerCase() === normalizedFallback) {
+        return fallbackName!;
+      }
+    }
+  }
+
+  // Try to find in constants by code/name
+  if (normalizedCode) {
+    // First, try to map code to constant key (e.g., "tm" -> "cash", "ck" -> "bank_transfer")
+    const constantKey = paymentMethodCodeToKey[normalizedCode];
+    if (constantKey && paymentMethodLabels[constantKey]) {
+      return paymentMethodLabels[constantKey];
+    }
+
+    // Direct match with keys in paymentMethodLabels (e.g., "cash", "bank_transfer")
+    if (paymentMethodLabels[normalizedCode]) {
+      return paymentMethodLabels[normalizedCode];
+    }
+
+    // Try partial match without underscores
+    const normalizedNoUnderscore = normalizedCode.replace(/_/g, "");
+    for (const [key, label] of Object.entries(paymentMethodLabels)) {
+      const keyNoUnderscore = key.replace(/_/g, "");
+      if (normalizedNoUnderscore === keyNoUnderscore) {
+        return label;
+      }
+    }
+
+    // Try to match with label values (in case name is already Vietnamese)
+    for (const label of Object.values(paymentMethodLabels)) {
+      if (label.toLowerCase() === normalizedCode) {
+        return label;
+      }
+    }
+  }
+
+  // Fallback: if fallbackName exists and is not empty, use it
+  if (fallbackName && fallbackName.trim()) {
+    return fallbackName;
+  }
+
+  // Last resort: return codeOrName or "—"
+  return codeOrName || "—";
+}
+
+/**
+ * Get Vietnamese label for cash payment/receipt status
+ */
+export function getCashTransactionStatusLabel(
+  status: string | null | undefined
+): string {
+  if (!status) return "—";
+
+  const statusLower = status.toLowerCase();
+
+  // Map common statuses
+  if (statusLower.includes("draft") || statusLower === "draft") {
+    return "Nháp";
+  }
+  if (statusLower.includes("approved") || statusLower === "approved") {
+    return "Đã duyệt";
+  }
+  if (statusLower.includes("posted") || statusLower === "posted") {
+    return "Đã hạch toán";
+  }
+  if (statusLower.includes("cancelled") || statusLower === "cancelled") {
+    return "Đã hủy";
+  }
+
+  // Return as-is if not mapped
+  return status;
+}
+
 // Loại cán màng (LaminationType)
 export const laminationTypeLabels: Record<string, string> =
   ENTITY_CONFIG.laminationTypes.values;

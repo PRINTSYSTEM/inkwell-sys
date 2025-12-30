@@ -87,12 +87,8 @@ export const ROUTE_PATHS = {
     BANK_ACCOUNTS: "/accounting/bank-accounts" as const,
     BANK_LEDGER: "/accounting/bank-ledger" as const,
     // AR/AP
-    AR_SUMMARY: "/accounting/ar/summary" as const,
-    AR_DETAIL: "/accounting/ar/detail" as const,
-    AR_AGING: "/accounting/ar/aging" as const,
-    AP_SUMMARY: "/accounting/ap/summary" as const,
-    AP_DETAIL: "/accounting/ap/detail" as const,
-    AP_AGING: "/accounting/ap/aging" as const,
+    AR: "/accounting/ar" as const,
+    AP: "/accounting/ap" as const,
     COLLECTION_SCHEDULE: "/accounting/collection-schedule" as const,
     // Expense & Payment Method
     EXPENSE_CATEGORIES: "/accounting/expense-categories" as const,

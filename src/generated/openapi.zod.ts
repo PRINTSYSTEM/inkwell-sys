@@ -1241,6 +1241,7 @@ const InvoiceOrderResponse = z
 const InvoiceItemResponse = z
   .object({
     id: z.number().int(),
+    deliveryLineId: z.number().int().nullable(),
     orderDetailId: z.number().int().nullable(),
     sortOrder: z.number().int(),
     description: z.string().nullable(),
@@ -1248,6 +1249,9 @@ const InvoiceItemResponse = z
     quantity: z.number(),
     unitPrice: z.number(),
     amount: z.number(),
+    discountPercent: z.number(),
+    discountAmount: z.number(),
+    amountAfterDiscount: z.number(),
   })
   .partial();
 const InvoiceResponse = z
@@ -1255,12 +1259,22 @@ const InvoiceResponse = z
     id: z.number().int(),
     invoiceNumber: z.string().nullable(),
     invoiceType: z.string().nullable(),
-    totalAmount: z.number(),
-    taxRate: z.number(),
-    taxAmount: z.number(),
-    grandTotal: z.number(),
     status: z.string().nullable(),
     statusName: z.string().nullable(),
+    subTotal: z.number(),
+    discountPercent: z.number(),
+    discountAmount: z.number(),
+    discountReason: z.string().nullable(),
+    totalAfterDiscount: z.number(),
+    taxRate: z.number(),
+    vatAmount: z.number(),
+    grandTotal: z.number(),
+    totalAmount: z.number(),
+    taxAmount: z.number(),
+    eInvoiceNumber: z.string().nullable(),
+    eInvoiceSerial: z.string().nullable(),
+    taxAuthorityCode: z.string().nullable(),
+    eInvoiceIssuedAt: z.string().datetime({ offset: true }).nullable(),
     pdfUrl: z.string().nullable(),
     notes: z.string().nullable(),
     sellerName: z.string().nullable(),
@@ -1269,6 +1283,7 @@ const InvoiceResponse = z
     sellerPhone: z.string().nullable(),
     sellerBankAccount: z.string().nullable(),
     sellerBankName: z.string().nullable(),
+    customerId: z.number().int().nullable(),
     buyerName: z.string().nullable(),
     buyerCompanyName: z.string().nullable(),
     buyerTaxCode: z.string().nullable(),
@@ -1302,6 +1317,58 @@ const InvoiceResponsePaginate = z
     total: z.number().int(),
     totalPages: z.number().int(),
     items: z.array(InvoiceResponse).nullable(),
+  })
+  .partial();
+const BillableItemResponse = z
+  .object({
+    deliveryLineId: z.number().int(),
+    deliveryNoteId: z.number().int(),
+    deliveryNoteCode: z.string().nullable(),
+    orderDetailId: z.number().int(),
+    orderId: z.number().int(),
+    orderCode: z.string().nullable(),
+    customerId: z.number().int(),
+    customerName: z.string().nullable(),
+    customerTaxCode: z.string().nullable(),
+    customerCompanyName: z.string().nullable(),
+    designId: z.number().int(),
+    designCode: z.string().nullable(),
+    designName: z.string().nullable(),
+    deliveredQty: z.number().int(),
+    invoicedQty: z.number().int(),
+    remainingToInvoice: z.number().int(),
+    unitPrice: z.number(),
+    deliveredAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const InvoiceLineInput = z.object({
+  deliveryLineId: z.number().int(),
+  invoiceQty: z.number().int().gte(1).lte(2147483647),
+  discountPercent: z.number().gte(0).lte(100).nullish(),
+});
+const CreateInvoiceFromLinesRequest = z.object({
+  lines: z.array(InvoiceLineInput).min(1),
+  discountPercent: z.number().gte(0).lte(100).nullish(),
+  discountAmount: z.number().gte(0).nullish(),
+  discountReason: z.string().min(0).max(500).nullish(),
+  taxRate: z.number().gte(0).lte(1).optional(),
+  notes: z.string().nullish(),
+  buyerName: z.string().nullish(),
+  buyerCompanyName: z.string().nullish(),
+  buyerTaxCode: z.string().nullish(),
+  buyerAddress: z.string().nullish(),
+  buyerEmail: z.string().nullish(),
+});
+const IssueInvoiceRequest = z.object({
+  invoiceNumber: z.string().min(0).max(50),
+  issuedAt: z.string().datetime({ offset: true }).nullish(),
+});
+const UpdateEInvoiceInfoRequest = z
+  .object({
+    eInvoiceNumber: z.string().min(0).max(50).nullable(),
+    eInvoiceSerial: z.string().min(0).max(50).nullable(),
+    taxAuthorityCode: z.string().min(0).max(100).nullable(),
+    eInvoiceIssuedAt: z.string().datetime({ offset: true }).nullable(),
   })
   .partial();
 const CreateMaterialTypeRequest = z.object({
@@ -2342,6 +2409,11 @@ export const schemas = {
   InvoiceResponse,
   UpdateInvoiceRequest,
   InvoiceResponsePaginate,
+  BillableItemResponse,
+  InvoiceLineInput,
+  CreateInvoiceFromLinesRequest,
+  IssueInvoiceRequest,
+  UpdateEInvoiceInfoRequest,
   CreateMaterialTypeRequest,
   MaterialTypeResponsePaginate,
   MaterialTypeItem,
@@ -4689,6 +4761,25 @@ const endpoints = makeApi([
     response: InvoiceResponse,
   },
   {
+    method: "put",
+    path: "/api/invoices/:id/e-invoice",
+    alias: "putApiinvoicesIdeInvoice",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateEInvoiceInfoRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: InvoiceResponse,
+  },
+  {
     method: "get",
     path: "/api/invoices/:id/export-sinvoice",
     alias: "getApiinvoicesIdexportSinvoice",
@@ -4701,6 +4792,58 @@ const endpoints = makeApi([
       },
     ],
     response: z.instanceof(File),
+  },
+  {
+    method: "put",
+    path: "/api/invoices/:id/issue",
+    alias: "putApiinvoicesIdissue",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: IssueInvoiceRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: InvoiceResponse,
+  },
+  {
+    method: "put",
+    path: "/api/invoices/:id/void",
+    alias: "putApiinvoicesIdvoid",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "reason",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: InvoiceResponse,
+  },
+  {
+    method: "get",
+    path: "/api/invoices/billable-items",
+    alias: "getApiinvoicesbillableItems",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.array(BillableItemResponse),
   },
   {
     method: "get",
@@ -4725,6 +4868,20 @@ const endpoints = makeApi([
       },
     ],
     response: InvoiceResponsePaginate,
+  },
+  {
+    method: "post",
+    path: "/api/invoices/from-lines",
+    alias: "postApiinvoicesfromLines",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateInvoiceFromLinesRequest,
+      },
+    ],
+    response: InvoiceResponse,
   },
   {
     method: "post",

@@ -72,6 +72,11 @@ export const API_SUFFIX = {
   INVOICES_BY_ORDER: (orderId: number) => `/invoices/by-order/${orderId}`, // GET with pagination
   INVOICE_EXPORT: (id: number) => `/invoices/${id}/export-sinvoice`,
   ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`, // Legacy alias, use INVOICE_BY_ORDER
+  INVOICES_BILLABLE_ITEMS: "/invoices/billable-items",
+  INVOICES_FROM_LINES: "/invoices/from-lines",
+  INVOICE_ISSUE: (id: number) => `/invoices/${id}/issue`,
+  INVOICE_E_INVOICE: (id: number) => `/invoices/${id}/e-invoice`,
+  INVOICE_VOID: (id: number) => `/invoices/${id}/void`,
   CUSTOMER_EXPORT_DEBT_COMPARISON: (id: number) =>
     `/customers/${id}/export-debt-comparison`,
 

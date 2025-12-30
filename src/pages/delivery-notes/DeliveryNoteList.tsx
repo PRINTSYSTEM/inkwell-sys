@@ -58,7 +58,6 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { StatusBadge } from "@/components/ui/status-badge";
-import { OrderStatusBadge } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
 import {
   useDeliveryNotes,

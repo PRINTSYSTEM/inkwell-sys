@@ -27,8 +27,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSalesByPeriod } from "@/hooks/use-sales-report";
 import { formatCurrency } from "@/lib/status-utils";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export default function SalesByPeriodPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
@@ -57,6 +60,18 @@ export default function SalesByPeriodPage() {
   const totalCost = salesData?.items?.reduce((sum, item) => sum + (item.totalCost || 0), 0) || 0;
   const totalProfit = salesData?.items?.reduce((sum, item) => sum + (item.totalProfit || 0), 0) || (totalRevenue - totalCost);
 
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
+
+  const handlePeriodClick = (period: string | null | undefined) => {
+    if (period) {
+      // Navigate to order drill-down page with period filter
+      navigate(`/reports/sales/orders-by-period?period=${encodeURIComponent(period)}`);
+    }
+  };
+
   return (
     <>
       <Helmet>
@@ -83,7 +98,7 @@ export default function SalesByPeriodPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Làm mới
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-2" />
               Xuất Excel
             </Button>
@@ -115,7 +130,7 @@ export default function SalesByPeriodPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -199,7 +214,11 @@ export default function SalesByPeriodPage() {
                     ? (profit / item.totalRevenue * 100)
                     : (item.profitMargin || 0);
                   return (
-                    <TableRow key={item.period}>
+                    <TableRow
+                      key={item.period}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handlePeriodClick(item.period)}
+                    >
                       <TableCell className="font-medium">
                         {item.period || "—"}
                       </TableCell>

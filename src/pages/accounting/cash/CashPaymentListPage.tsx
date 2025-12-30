@@ -60,7 +60,13 @@ import {
   usePostCashPayment,
 } from "@/hooks/use-cash";
 import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
-import { formatCurrency } from "@/lib/status-utils";
+import { useActiveVendors } from "@/hooks/use-vendor";
+import {
+  formatCurrency,
+  getPaymentMethodLabel,
+  getCashTransactionStatusLabel,
+} from "@/lib/status-utils";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -118,6 +124,8 @@ export default function CashPaymentListPage() {
     isActive: true,
   });
 
+  const { data: vendorsData } = useActiveVendors();
+
   const {
     data: paymentsData,
     isLoading,
@@ -146,6 +154,11 @@ export default function CashPaymentListPage() {
   const approvePaymentMutation = useApproveCashPayment();
   const cancelPaymentMutation = useCancelCashPayment();
   const postPaymentMutation = usePostCashPayment();
+
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
 
   const handleViewDetails = (id: number | undefined) => {
     if (id) {
@@ -227,9 +240,9 @@ export default function CashPaymentListPage() {
         <meta name="description" content="Quản lý phiếu chi trong hệ thống" />
       </Helmet>
 
-      <div className="space-y-6">
+      <div className="container mx-auto py-6 space-y-6 max-w-full">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Phiếu chi</h1>
             <p className="text-muted-foreground">
@@ -257,81 +270,120 @@ export default function CashPaymentListPage() {
 
         {/* Filters */}
         <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Tìm kiếm theo mã phiếu, người nhận, lý do..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+          <div className="flex flex-col gap-3">
+            {/* First row: Search and Date Range */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Tìm kiếm theo mã phiếu, người nhận, lý do..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex-shrink-0">
+                <DateRangePicker
+                  value={dateRange}
+                  onValueChange={setDateRange}
+                />
+              </div>
             </div>
-            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="draft">Nháp</SelectItem>
-                <SelectItem value="approved">Đã duyệt</SelectItem>
-                <SelectItem value="posted">Đã hạch toán</SelectItem>
-                <SelectItem value="cancelled">Đã hủy</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={paymentMethodFilter}
-              onValueChange={setPaymentMethodFilter}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Phương thức" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                {paymentMethodsData?.items?.map((method) => (
-                  <SelectItem key={method.id} value={String(method.id)}>
-                    {method.name || method.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={expenseCategoryFilter}
-              onValueChange={setExpenseCategoryFilter}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Khoản mục" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                {expenseCategoriesData?.items?.map((category) => (
-                  <SelectItem key={category.id} value={String(category.id)}>
-                    {category.name || category.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-              />
-            </Button>
-            <Button variant="outline" size="icon" title="Xuất Excel">
-              <Download className="h-4 w-4" />
-            </Button>
+            {/* Second row: Filters */}
+            <div className="flex flex-wrap gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="draft">Nháp</SelectItem>
+                  <SelectItem value="approved">Đã duyệt</SelectItem>
+                  <SelectItem value="posted">Đã hạch toán</SelectItem>
+                  <SelectItem value="cancelled">Đã hủy</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={paymentMethodFilter}
+                onValueChange={setPaymentMethodFilter}
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Phương thức" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {paymentMethodsData?.items?.map((method) => (
+                    <SelectItem key={method.id} value={String(method.id)}>
+                      {getPaymentMethodLabel(
+                        method.code || method.name,
+                        method.name
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={vendorFilter || "all"}
+                onValueChange={(value) =>
+                  setVendorFilter(value === "all" ? "" : value)
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Nhà cung cấp" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả NCC</SelectItem>
+                  {vendorsData?.map((vendor) => (
+                    <SelectItem key={vendor.id} value={String(vendor.id)}>
+                      {vendor.name || vendor.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={expenseCategoryFilter}
+                onValueChange={setExpenseCategoryFilter}
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Khoản mục" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {expenseCategoriesData?.items?.map((category) => (
+                    <SelectItem key={category.id} value={String(category.id)}>
+                      {category.name || category.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => refetch()}
+                  disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title="Xuất Excel"
+                  onClick={handleExportExcel}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border">
-          <Table>
+        <div className="rounded-lg border overflow-x-auto">
+          <Table className="min-w-[1000px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="w-[140px]">Số phiếu</TableHead>
@@ -412,9 +464,12 @@ export default function CashPaymentListPage() {
                       {payment.amount ? formatCurrency(payment.amount) : "—"}
                     </TableCell>
                     <TableCell>
-                      {payment.paymentMethodName ? (
+                      {payment.paymentMethodName || payment.paymentMethodId ? (
                         <Badge variant="secondary" className="text-xs">
-                          {payment.paymentMethodName}
+                          {getPaymentMethodLabel(
+                            payment.paymentMethodName,
+                            payment.paymentMethodName
+                          )}
                         </Badge>
                       ) : (
                         "—"

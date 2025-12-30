@@ -32,6 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAPSummary } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -68,38 +69,30 @@ export default function APSummaryPage() {
   const totalCurrentDebt = apData?.items?.reduce((sum, item) => sum + (item.currentDebt || 0), 0) || 0;
   const totalOverdueDebt = apData?.items?.reduce((sum, item) => sum + (item.overdueDebt || 0), 0) || 0;
 
-  return (
-    <>
-      <Helmet>
-        <title>Công nợ phải trả - Tổng hợp | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Tổng hợp công nợ phải trả theo nhà cung cấp"
-        />
-      </Helmet>
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
 
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Công nợ phải trả - Tổng hợp
-            </h1>
-            <p className="text-muted-foreground">
-              Tổng hợp công nợ phải trả theo nhà cung cấp
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Làm mới
-            </Button>
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Xuất Excel
-            </Button>
-          </div>
-        </div>
+  const handleVendorClick = (vendorId: number | null | undefined) => {
+    if (vendorId) {
+      navigate(`/accounting/ap?tab=detail&vendorId=${vendorId}`);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Làm mới
+        </Button>
+        <Button variant="outline" onClick={handleExportExcel}>
+          <Download className="h-4 w-4 mr-2" />
+          Xuất Excel
+        </Button>
+      </div>
 
         {/* Error Alert */}
         {isError && (
@@ -126,7 +119,7 @@ export default function APSummaryPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -207,7 +200,11 @@ export default function APSummaryPage() {
                 </TableRow>
               ) : (
                 apData.items.map((item) => (
-                  <TableRow key={item.vendorId} className="group">
+                  <TableRow
+                    key={item.vendorId}
+                    className="group cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleVendorClick(item.vendorId)}
+                  >
                     <TableCell className="font-medium font-mono text-sm">
                       {item.vendorCode || "—"}
                     </TableCell>
@@ -247,9 +244,10 @@ export default function APSummaryPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() =>
-                          navigate(`/accounting/ap/detail?vendorId=${item.vendorId}`)
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleVendorClick(item.vendorId);
+                        }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Eye className="h-4 w-4" />
@@ -294,8 +292,7 @@ export default function APSummaryPage() {
             </div>
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }
 

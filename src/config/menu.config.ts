@@ -458,34 +458,10 @@ export const MENU_ITEMS: MenuItem[] = [
       },
       // AR
       {
-        id: "ar-summary",
-        title: "Công nợ phải thu - Tổng hợp",
+        id: "ar",
+        title: "Công nợ phải thu",
         icon: TrendingUp,
-        path: ROUTE_PATHS.ACCOUNTING.AR_SUMMARY,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "ar-detail",
-        title: "Công nợ phải thu - Chi tiết",
-        icon: FileText,
-        path: ROUTE_PATHS.ACCOUNTING.AR_DETAIL,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "ar-aging",
-        title: "Công nợ phải thu - Phân tích tuổi nợ",
-        icon: BarChart3,
-        path: ROUTE_PATHS.ACCOUNTING.AR_AGING,
+        path: ROUTE_PATHS.ACCOUNTING.AR,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,
@@ -495,34 +471,10 @@ export const MENU_ITEMS: MenuItem[] = [
       },
       // AP
       {
-        id: "ap-summary",
-        title: "Công nợ phải trả - Tổng hợp",
+        id: "ap",
+        title: "Công nợ phải trả",
         icon: TrendingDown,
-        path: ROUTE_PATHS.ACCOUNTING.AP_SUMMARY,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "ap-detail",
-        title: "Công nợ phải trả - Chi tiết",
-        icon: FileText,
-        path: ROUTE_PATHS.ACCOUNTING.AP_DETAIL,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "ap-aging",
-        title: "Công nợ phải trả - Phân tích tuổi nợ",
-        icon: BarChart3,
-        path: ROUTE_PATHS.ACCOUNTING.AP_AGING,
+        path: ROUTE_PATHS.ACCOUNTING.AP,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,
