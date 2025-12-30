@@ -164,7 +164,8 @@ export default function ProductionDetailPage() {
     if (!production?.id) return;
 
     const wastageValue = wastage.trim() === "" ? 0 : Number(wastage);
-    const producedQtyValue = producedQty.trim() === "" ? 1 : Number(producedQty);
+    const producedQtyValue =
+      producedQty.trim() === "" ? 1 : Number(producedQty);
 
     if (producedQtyValue < 1) {
       return;
@@ -174,8 +175,8 @@ export default function ProductionDetailPage() {
       await completeProduction({
         id: production.id,
         data: {
-          notes: completeNotes || undefined,
-          defectNotes: defectNotes || undefined,
+          progressPercent: 100,
+          defectNotes: defectNotes || null,
           wastage: wastageValue,
           producedQty: producedQtyValue,
         },

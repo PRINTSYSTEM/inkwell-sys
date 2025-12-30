@@ -36,8 +36,8 @@ export function ProductionDialog({
   const [wastage, setWastage] = useState<number>(0);
   const [producedQty, setProducedQty] = useState<number>(1);
   const [defectNotes, setDefectNotes] = useState("");
-  const { mutate: startProduction, loading: starting } = useStartProduction();
-  const { mutate: completeProduction, loading: completing } =
+  const { mutate: startProduction, isPending: starting } = useStartProduction();
+  const { mutate: completeProduction, isPending: completing } =
     useCompleteProduction();
 
   const loading = starting || completing;
@@ -53,9 +53,10 @@ export function ProductionDialog({
       await startProduction({ id: productionId, data: payload });
     } else {
       const payload: CompleteProductionRequest = {
+        progressPercent: 100,
         wastage: wastage || 0,
         producedQty: producedQty || 1,
-        defectNotes: defectNotes || undefined,
+        defectNotes: defectNotes || null,
       };
       await completeProduction({ id: productionId, data: payload });
     }
@@ -120,8 +121,8 @@ export function ProductionDialog({
             {loading
               ? "Đang xử lý..."
               : mode === "start"
-              ? "Bắt đầu"
-              : "Xác nhận hoàn thành"}
+                ? "Bắt đầu"
+                : "Xác nhận hoàn thành"}
           </Button>
         </DialogFooter>
       </DialogContent>
