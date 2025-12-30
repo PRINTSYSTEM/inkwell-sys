@@ -56,6 +56,7 @@ import {
   useUpdateProofingOrder,
   useUpdateProofingFile,
   useHandToProduction,
+  usePaperSizes,
 } from "@/hooks/use-proofing-order";
 import { PlateExportDialog } from "@/components/proofing/PlateExportDialog";
 import { DieExportDialog } from "@/components/proofing/DieExportDialog";
@@ -71,6 +72,8 @@ import {
 } from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { downloadFile } from "@/lib/download-utils";
+import { Textarea } from "@/components/ui/textarea";
+import type { UpdateProofingOrderRequest } from "@/Schema";
 
 export default function ProofingOrderDetailPage() {
   const params = useParams();
@@ -87,11 +90,25 @@ export default function ProofingOrderDetailPage() {
     useState(false);
   const [isHandToProductionDialogOpen, setIsHandToProductionDialogOpen] =
     useState(false);
+  const [isUpdateInfoDialogOpen, setIsUpdateInfoDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadImage, setUploadImage] = useState<File | null>(null);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+
+  // Form state for update info
+  const [updateStatus, setUpdateStatus] = useState<string>("");
+  const [updateNotes, setUpdateNotes] = useState<string>("");
+  const [updatePaperSizeId, setUpdatePaperSizeId] = useState<string>("none");
+  const [updateCustomPaperSize, setUpdateCustomPaperSize] =
+    useState<string>("");
+  const [updateProofingFileUrl, setUpdateProofingFileUrl] =
+    useState<string>("");
+  const [updateTotalQuantity, setUpdateTotalQuantity] = useState<string>("");
+  const [updateDesignQuantities, setUpdateDesignQuantities] = useState<
+    Record<number, string>
+  >({});
 
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
@@ -119,6 +136,10 @@ export default function ProofingOrderDetailPage() {
     useUploadProofingImage();
   const { mutate: handToProductionMutate, isPending: isHandingToProduction } =
     useHandToProduction();
+  const { mutate: updateProofingOrder, isPending: isUpdatingInfo } =
+    useUpdateProofingOrder();
+  const { data: paperSizesData } = usePaperSizes();
+  const paperSizes = paperSizesData || [];
 
   const handleUpdateStatus = async () => {
     if (!order?.id) return;
@@ -151,6 +172,107 @@ export default function ProofingOrderDetailPage() {
   const handleHandToProduction = async () => {
     if (!order?.id) return;
     handToProductionMutate(order.id);
+  };
+
+  const handleOpenUpdateInfoDialog = () => {
+    if (!order) return;
+    setUpdateStatus(order.status || "");
+    setUpdateNotes(order.notes || "");
+    setUpdatePaperSizeId(
+      order.paperSizeId ? order.paperSizeId.toString() : "none"
+    );
+    setUpdateCustomPaperSize(order.customPaperSize || "");
+    setUpdateProofingFileUrl(order.proofingFileUrl || "");
+    setUpdateTotalQuantity(order.totalQuantity?.toString() || "");
+
+    // Initialize design quantities from current order designs
+    const initialQuantities: Record<number, string> = {};
+    order.proofingOrderDesigns?.forEach((pod) => {
+      if (pod.id) {
+        initialQuantities[pod.id] = pod.quantity?.toString() || "";
+      }
+    });
+    setUpdateDesignQuantities(initialQuantities);
+
+    setIsUpdateInfoDialogOpen(true);
+  };
+
+  const handleUpdateInfo = async () => {
+    if (!order?.id) return;
+
+    const updateData: UpdateProofingOrderRequest = {};
+
+    if (updateStatus && updateStatus !== order.status) {
+      updateData.status = updateStatus;
+    }
+    if (updateNotes !== order.notes) {
+      updateData.notes = updateNotes || null;
+    }
+    if (updatePaperSizeId === "custom") {
+      updateData.paperSizeId = null;
+      updateData.customPaperSize = updateCustomPaperSize || null;
+    } else if (updatePaperSizeId !== "none") {
+      const paperSizeIdNum = parseInt(updatePaperSizeId, 10);
+      if (!isNaN(paperSizeIdNum)) {
+        updateData.paperSizeId = paperSizeIdNum;
+        updateData.customPaperSize = null;
+      }
+    } else {
+      updateData.paperSizeId = null;
+      updateData.customPaperSize = null;
+    }
+    if (updateProofingFileUrl !== order.proofingFileUrl) {
+      updateData.proofingFileUrl = updateProofingFileUrl || null;
+    }
+
+    // Handle totalQuantity
+    if (updateTotalQuantity) {
+      const totalQtyNum = parseInt(updateTotalQuantity, 10);
+      if (
+        !isNaN(totalQtyNum) &&
+        totalQtyNum >= 1 &&
+        totalQtyNum !== order.totalQuantity
+      ) {
+        updateData.totalQuantity = totalQtyNum;
+      }
+    }
+
+    // Handle designUpdates
+    const designUpdates: Array<{
+      proofingOrderDesignId: number;
+      quantity: number;
+    }> = [];
+    Object.entries(updateDesignQuantities).forEach(([designIdStr, qtyStr]) => {
+      const designId = parseInt(designIdStr, 10);
+      const qty = parseInt(String(qtyStr), 10);
+      if (!isNaN(designId) && !isNaN(qty) && qty >= 1) {
+        const originalDesign = order.proofingOrderDesigns?.find(
+          (pod) => pod.id === designId
+        );
+        if (originalDesign && originalDesign.quantity !== qty) {
+          designUpdates.push({
+            proofingOrderDesignId: designId,
+            quantity: qty,
+          });
+        }
+      }
+    });
+    if (designUpdates.length > 0) {
+      updateData.designUpdates = designUpdates;
+    }
+
+    try {
+      await updateProofingOrder({
+        id: order.id,
+        data: updateData,
+      });
+      setIsUpdateInfoDialogOpen(false);
+      toast.success("Thành công", {
+        description: "Đã cập nhật thông tin bình bài",
+      });
+    } catch (error) {
+      // Error is handled by the hook
+    }
   };
 
   const handleOldStatusChangeClick = () => {
@@ -580,6 +702,20 @@ export default function ProofingOrderDetailPage() {
                       Cập nhật
                     </Button>
                   )}
+                </div>
+              )}
+
+              {order.status !== "completed" && (
+                <div className="pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs w-full"
+                    onClick={handleOpenUpdateInfoDialog}
+                  >
+                    <Edit className="h-3 w-3" />
+                    Cập nhật thông tin bình bài
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -1300,6 +1436,194 @@ export default function ProofingOrderDetailPage() {
                 </>
               ) : (
                 "Xác nhận và chuyển xuống sản xuất"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Update Info Dialog */}
+      <Dialog
+        open={isUpdateInfoDialogOpen}
+        onOpenChange={setIsUpdateInfoDialogOpen}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Cập nhật thông tin bình bài</DialogTitle>
+            <DialogDescription>
+              Cập nhật các thông tin của lệnh bình bài
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="update-status">Trạng thái</Label>
+              <Select value={updateStatus} onValueChange={setUpdateStatus}>
+                <SelectTrigger id="update-status">
+                  <SelectValue placeholder="Chọn trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(proofingStatusLabels).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="update-notes">Ghi chú</Label>
+              <Textarea
+                id="update-notes"
+                value={updateNotes}
+                onChange={(e) => setUpdateNotes(e.target.value)}
+                placeholder="Nhập ghi chú..."
+                rows={4}
+              />
+            </div>
+
+            {/* Paper Size */}
+            <div className="space-y-2">
+              <Label htmlFor="update-paper-size">Khổ giấy</Label>
+              <Select
+                value={updatePaperSizeId}
+                onValueChange={setUpdatePaperSizeId}
+              >
+                <SelectTrigger id="update-paper-size">
+                  <SelectValue placeholder="Chọn khổ giấy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Chưa xác định</SelectItem>
+                  {paperSizes.map((ps) => (
+                    <SelectItem key={ps.id} value={ps.id.toString()}>
+                      {ps.name}
+                      {ps.width && ps.height
+                        ? ` (${ps.width}×${ps.height})`
+                        : ""}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">-- Nhập thủ công --</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Custom Paper Size */}
+            {updatePaperSizeId === "custom" && (
+              <div className="space-y-2">
+                <Label htmlFor="update-custom-paper-size">
+                  Khổ giấy tùy chỉnh
+                </Label>
+                <Input
+                  id="update-custom-paper-size"
+                  value={updateCustomPaperSize}
+                  onChange={(e) => setUpdateCustomPaperSize(e.target.value)}
+                  placeholder="Ví dụ: 60x60"
+                />
+              </div>
+            )}
+
+            {/* Proofing File URL */}
+            <div className="space-y-2">
+              <Label htmlFor="update-proofing-file-url">
+                URL file bình bài
+              </Label>
+              <Input
+                id="update-proofing-file-url"
+                value={updateProofingFileUrl}
+                onChange={(e) => setUpdateProofingFileUrl(e.target.value)}
+                placeholder="Nhập URL file bình bài..."
+              />
+              <p className="text-xs text-muted-foreground">
+                Hoặc sử dụng nút "Upload file" để tải file lên
+              </p>
+            </div>
+
+            <Separator />
+
+            {/* Total Quantity */}
+            <div className="space-y-2">
+              <Label htmlFor="update-total-quantity">Tổng số lượng</Label>
+              <Input
+                id="update-total-quantity"
+                type="number"
+                min="1"
+                value={updateTotalQuantity}
+                onChange={(e) => setUpdateTotalQuantity(e.target.value)}
+                placeholder="Nhập tổng số lượng..."
+              />
+            </div>
+
+            {/* Design Updates */}
+            {orderDesigns.length > 0 && (
+              <div className="space-y-2">
+                <Label>Cập nhật số lượng theo design</Label>
+                <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3">
+                  {orderDesigns.map((pod) => {
+                    const designId = pod.id;
+                    if (!designId) return null;
+
+                    return (
+                      <div
+                        key={designId}
+                        className="flex items-center gap-3 p-2 rounded border bg-muted/30"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">
+                            {pod.design?.code || `Design #${designId}`}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {pod.design?.designName || "—"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Hiện tại: {pod.quantity?.toLocaleString() || 0}
+                          </div>
+                        </div>
+                        <div className="w-24">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={updateDesignQuantities[designId] || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setUpdateDesignQuantities((prev) => ({
+                                ...prev,
+                                [designId]: value,
+                              }));
+                            }}
+                            placeholder="Số lượng"
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Chỉ cập nhật các design có thay đổi số lượng
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsUpdateInfoDialogOpen(false)}
+              disabled={isUpdatingInfo}
+            >
+              Hủy
+            </Button>
+            <Button onClick={handleUpdateInfo} disabled={isUpdatingInfo}>
+              {isUpdatingInfo ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang cập nhật...
+                </>
+              ) : (
+                "Cập nhật"
               )}
             </Button>
           </DialogFooter>

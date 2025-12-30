@@ -15,6 +15,7 @@ import {
   CreateProofingOrderRequestSchema as GenCreateProofingOrderRequestSchema,
   CreateProofingOrderFromDesignsRequestSchema as GenCreateProofingOrderFromDesignsRequestSchema,
   CreateProofingOrderDetailItemSchema as GenCreateProofingOrderDetailItemSchema,
+  UpdateProofingDesignItemSchema as GenUpdateProofingDesignItemSchema,
   UpdateProofingOrderRequestSchema as GenUpdateProofingOrderRequestSchema,
 } from "./generated";
 
@@ -38,9 +39,7 @@ export type ProofingOrderResponsePagedResponse = z.infer<
 >;
 
 // Re-export generated paginate schema for compatibility
-export {
-  GenProofingOrderResponsePaginateSchema as ProofingOrderResponsePaginateSchema,
-};
+export { GenProofingOrderResponsePaginateSchema as ProofingOrderResponsePaginateSchema };
 export type ProofingOrderResponsePaginate = z.infer<
   typeof GenProofingOrderResponsePaginateSchema
 >;
@@ -82,6 +81,13 @@ export const CreateProofingOrderFromDesignsRequestSchema =
   );
 export type CreateProofingOrderFromDesignsRequest = z.infer<
   typeof CreateProofingOrderFromDesignsRequestSchema
+>;
+
+// ===== UpdateProofingDesignItem =====
+export const UpdateProofingDesignItemSchema =
+  GenUpdateProofingDesignItemSchema.passthrough();
+export type UpdateProofingDesignItem = z.infer<
+  typeof UpdateProofingDesignItemSchema
 >;
 
 // ===== UpdateProofingOrderRequest =====

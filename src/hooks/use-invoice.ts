@@ -166,7 +166,7 @@ export const useExportInvoice = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `invoice-${id}.pdf`;
+      link.download = `invoice-${id}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
