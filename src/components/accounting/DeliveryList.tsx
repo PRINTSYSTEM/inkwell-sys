@@ -41,7 +41,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-import { OrderStatusBadge, CustomerTypeBadge } from "@/components/accounting";
+import { CustomerTypeBadge } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
 import { useCreateDeliveryNote } from "@/hooks/use-delivery-note";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -63,6 +63,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ENTITY_CONFIG } from "@/config/entities.config";
+import { StatusBadge } from "../ui/status-badge";
 
 // Helper to derive customer type
 function deriveCustomerType(
@@ -526,9 +528,15 @@ export function DeliveryList() {
                         {formatCurrency(order.totalAmount || 0)}
                       </TableCell>
                       <TableCell className="text-center">
-                        <OrderStatusBadge
-                          status={order.status || ""}
-                          statusType={order.statusType || ""}
+                        <StatusBadge
+                          status={
+                            order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                          }
+                          label={
+                            ENTITY_CONFIG.orderStatuses.values[
+                              order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                            ]
+                          }
                         />
                       </TableCell>
                       <TableCell className="text-center">

@@ -43,11 +43,9 @@ import {
 } from "@/components/ui/table";
 
 import {
-  OrderStatusBadge,
   PaymentStatusBadge,
   InvoiceStatusBadge,
   CustomerTypeBadge,
-  OrderAccountingUpdateDialog,
 } from "@/components/accounting";
 import {
   useOrder,
@@ -55,8 +53,19 @@ import {
   useExportOrderDeliveryNote,
   useGenerateOrderExcel,
   useExportOrderPDF,
+  useUpdateOrderForAccounting,
 } from "@/hooks/use-order";
 import { useConfirmDeposit, useApproveDebt } from "@/hooks/use-accounting";
+import type {
+  UpdateOrderForAccountingRequest,
+  UpdateOrderDetailForAccountingRequest,
+} from "@/Schema";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertTriangle } from "lucide-react";
+import { ENTITY_CONFIG } from "@/config/entities.config";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
@@ -111,8 +120,18 @@ export default function AccountingOrderDetail() {
     error,
   } = useOrder(Number(id || "0"));
 
-  // Modal state
-  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  // Card-level editing states
+  const [editingCard, setEditingCard] = useState<string | null>(null);
+  const [cardEditValues, setCardEditValues] = useState<
+    Record<string, string | number | null>
+  >({});
+  // Order detail editing states
+  const [editingOrderDetailId, setEditingOrderDetailId] = useState<
+    number | null
+  >(null);
+  const [orderDetailEditValues, setOrderDetailEditValues] = useState<
+    Record<string, string | number | null>
+  >({});
 
   // Mutations
   const exportInvoiceMutation = useExportOrderInvoice();
@@ -121,6 +140,8 @@ export default function AccountingOrderDetail() {
   const exportPDFMutation = useExportOrderPDF();
   const confirmDepositMutation = useConfirmDeposit();
   const approveDebtMutation = useApproveDebt();
+  const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
+    useUpdateOrderForAccounting();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -137,6 +158,184 @@ export default function AccountingOrderDetail() {
   const formatDateTime = (dateStr: string | null | undefined) => {
     if (!dateStr) return "—";
     return format(new Date(dateStr), "dd/MM/yyyy 'lúc' HH:mm", { locale: vi });
+  };
+
+  // Helper to format date for input
+  const formatDateTimeForInput = (dateStr: string | null | undefined) => {
+    if (!dateStr) return "";
+    try {
+      return format(new Date(dateStr), "yyyy-MM-dd'T'HH:mm");
+    } catch {
+      return "";
+    }
+  };
+
+  // Helper to start editing a card
+  const startEditingCard = (
+    cardName: string,
+    initialValues: Record<string, string | number | null>
+  ) => {
+    setEditingCard(cardName);
+    setCardEditValues(initialValues);
+  };
+
+  // Helper to cancel editing a card
+  const cancelEditingCard = () => {
+    setEditingCard(null);
+    setCardEditValues({});
+  };
+
+  // Helper to start editing an orderDetail item
+  const startEditingOrderDetail = (orderDetail: {
+    id: number;
+    quantity: number;
+    unitPrice?: number | null;
+  }) => {
+    setEditingOrderDetailId(orderDetail.id);
+    setOrderDetailEditValues({
+      quantity: orderDetail.quantity.toString(),
+      unitPrice: orderDetail.unitPrice?.toString() || "",
+    });
+  };
+
+  // Helper to cancel editing an orderDetail item
+  const cancelEditingOrderDetail = () => {
+    setEditingOrderDetailId(null);
+    setOrderDetailEditValues({});
+  };
+
+  // Helper to save individual orderDetail item
+  const handleSaveOrderDetail = async (orderDetailId: number) => {
+    if (!order) return;
+
+    const orderDetail = order.orderDetails?.find(
+      (od) => od.id === orderDetailId
+    );
+    if (!orderDetail) return;
+
+    const orderDetailsUpdates: UpdateOrderDetailForAccountingRequest[] = [
+      {
+        orderDetailId: orderDetail.id,
+        quantity:
+          orderDetailEditValues.quantity === "" ||
+          orderDetailEditValues.quantity === null
+            ? null
+            : Number(orderDetailEditValues.quantity),
+        unitPrice:
+          orderDetailEditValues.unitPrice === "" ||
+          orderDetailEditValues.unitPrice === null
+            ? null
+            : Number(orderDetailEditValues.unitPrice),
+      },
+    ];
+
+    try {
+      await updateOrderForAccounting(order.id, {
+        orderDetails: orderDetailsUpdates,
+      } as UpdateOrderForAccountingRequest);
+      setEditingOrderDetailId(null);
+      setOrderDetailEditValues({});
+    } catch (error) {
+      // Keep editing mode on error
+    }
+  };
+
+  // Helper to save card changes
+  const handleSaveCard = async (cardName: string) => {
+    if (!order) return;
+
+    const payload: Partial<UpdateOrderForAccountingRequest> = {};
+
+    // Convert values based on card type
+    if (cardName === "customerInfo") {
+      payload.customerName =
+        cardEditValues.customerName === "" ||
+        cardEditValues.customerName === null
+          ? null
+          : String(cardEditValues.customerName).trim();
+      payload.customerCompanyName =
+        cardEditValues.customerCompanyName === "" ||
+        cardEditValues.customerCompanyName === null
+          ? null
+          : String(cardEditValues.customerCompanyName).trim();
+      payload.customerPhone =
+        cardEditValues.customerPhone === "" ||
+        cardEditValues.customerPhone === null
+          ? null
+          : String(cardEditValues.customerPhone).trim();
+      payload.customerEmail =
+        cardEditValues.customerEmail === "" ||
+        cardEditValues.customerEmail === null
+          ? null
+          : String(cardEditValues.customerEmail).trim();
+      payload.customerTaxCode =
+        cardEditValues.customerTaxCode === "" ||
+        cardEditValues.customerTaxCode === null
+          ? null
+          : String(cardEditValues.customerTaxCode).trim();
+      payload.customerAddress =
+        cardEditValues.customerAddress === "" ||
+        cardEditValues.customerAddress === null
+          ? null
+          : String(cardEditValues.customerAddress).trim();
+    } else if (cardName === "orderInfo") {
+      payload.deliveryDate =
+        cardEditValues.deliveryDate === "" ||
+        cardEditValues.deliveryDate === null
+          ? null
+          : new Date(cardEditValues.deliveryDate).toISOString();
+      payload.deliveryAddress =
+        cardEditValues.deliveryAddress === "" ||
+        cardEditValues.deliveryAddress === null
+          ? null
+          : String(cardEditValues.deliveryAddress).trim();
+      payload.note =
+        cardEditValues.note === "" || cardEditValues.note === null
+          ? null
+          : String(cardEditValues.note).trim();
+    } else if (cardName === "paymentInfo") {
+      payload.totalAmount =
+        cardEditValues.totalAmount === "" || cardEditValues.totalAmount === null
+          ? null
+          : Number(cardEditValues.totalAmount);
+      payload.depositAmount =
+        cardEditValues.depositAmount === "" ||
+        cardEditValues.depositAmount === null
+          ? null
+          : Number(cardEditValues.depositAmount);
+      payload.paymentDueDate =
+        cardEditValues.paymentDueDate === "" ||
+        cardEditValues.paymentDueDate === null
+          ? null
+          : new Date(cardEditValues.paymentDueDate).toISOString();
+    } else if (cardName === "recipientInfo") {
+      payload.recipientName =
+        cardEditValues.recipientName === "" ||
+        cardEditValues.recipientName === null
+          ? null
+          : String(cardEditValues.recipientName).trim();
+      payload.recipientPhone =
+        cardEditValues.recipientPhone === "" ||
+        cardEditValues.recipientPhone === null
+          ? null
+          : String(cardEditValues.recipientPhone).trim();
+      payload.recipientAddress =
+        cardEditValues.recipientAddress === "" ||
+        cardEditValues.recipientAddress === null
+          ? null
+          : String(cardEditValues.recipientAddress).trim();
+    }
+
+    try {
+      await updateOrderForAccounting(
+        order.id,
+        payload as UpdateOrderForAccountingRequest
+      );
+      setEditingCard(null);
+      setCardEditValues({});
+    } catch (error) {
+      // Keep editing mode on error
+    }
   };
 
   const handleBack = () => {
@@ -179,6 +378,30 @@ export default function AccountingOrderDetail() {
       // Khách lẻ: cập nhật thanh toán (confirm deposit)
       // Cần có dialog để nhập số tiền cọc, tạm thời gọi với depositAmount = totalAmount
       confirmDepositMutation.mutate(order.id, order.totalAmount);
+    }
+  };
+
+  const handleUpdateStatusToDelivering = async () => {
+    if (!order) return;
+
+    try {
+      await updateOrderForAccounting(order.id, {
+        status: "delivering",
+      } as UpdateOrderForAccountingRequest);
+    } catch (error) {
+      // Error is already handled by the mutation hook
+    }
+  };
+
+  const handleUpdateStatusToCompleted = async () => {
+    if (!order) return;
+
+    try {
+      await updateOrderForAccounting(order.id, {
+        status: "delivered",
+      } as UpdateOrderForAccountingRequest);
+    } catch (error) {
+      // Error is already handled by the mutation hook
     }
   };
 
@@ -274,9 +497,15 @@ export default function AccountingOrderDetail() {
                     <h1 className="text-xl font-semibold font-mono">
                       {order.code}
                     </h1>
-                    <OrderStatusBadge
-                      status={order.status || ""}
-                      statusType={order.statusType || ""}
+                    <StatusBadge
+                      status={
+                        order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                      }
+                      label={
+                        ENTITY_CONFIG.orderStatuses.values[
+                          order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                        ]
+                      }
                     />
                   </div>
                   <p className="text-sm text-muted-foreground mt-0.5">
@@ -285,14 +514,6 @@ export default function AccountingOrderDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsUpdateDialogOpen(true)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Cập nhật thông tin
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -320,24 +541,43 @@ export default function AccountingOrderDetail() {
                   Xuất PDF Đơn Hàng
                 </Button>
                 {/* {remainingAmount > 0 && ( */}
-                <Button
-                  size="sm"
-                  onClick={handleUpdatePayment}
-                  disabled={
-                    confirmDepositMutation.loading ||
-                    approveDebtMutation.loading
-                  }
-                >
-                  {confirmDepositMutation.loading ||
-                  approveDebtMutation.loading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-4 w-4 mr-2" />
-                  )}
-                  {order.customer?.companyName
-                    ? "Duyệt công nợ"
-                    : "Cập nhật thanh toán"}
-                </Button>
+                {order.customer?.companyName && (
+                  <Button
+                    size="sm"
+                    onClick={handleUpdatePayment}
+                    disabled={
+                      confirmDepositMutation.loading ||
+                      approveDebtMutation.loading ||
+                      order.status === "debt_approved"
+                    }
+                  >
+                    {confirmDepositMutation.loading ||
+                    approveDebtMutation.loading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4 mr-2" />
+                    )}
+                    Duyệt công nợ
+                  </Button>
+                )}
+                {!order.customer?.companyName && (
+                  <Button
+                    size="sm"
+                    onClick={handleUpdatePayment}
+                    disabled={
+                      confirmDepositMutation.loading ||
+                      approveDebtMutation.loading
+                    }
+                  >
+                    {confirmDepositMutation.loading ||
+                    approveDebtMutation.loading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4 mr-2" />
+                    )}
+                    Cập nhật thanh toán
+                  </Button>
+                )}
                 {/* )} */}
                 {invoiceStatus === "not_issued" &&
                   hasBeenDelivered(order.status) && (
@@ -369,6 +609,36 @@ export default function AccountingOrderDetail() {
                     Xuất phiếu giao hàng
                   </Button>
                 )}
+                {order.status === "production_completed" && (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={handleUpdateStatusToDelivering}
+                    disabled={isUpdatingForAccounting}
+                  >
+                    {isUpdatingForAccounting ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Truck className="h-4 w-4 mr-2" />
+                    )}
+                    Đổi trạng thái thành đang giao hàng
+                  </Button>
+                )}
+                {order.status === "delivering" && (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={handleUpdateStatusToCompleted}
+                    disabled={isUpdatingForAccounting}
+                  >
+                    {isUpdatingForAccounting ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Đổi trạng thái thành đã giao hàng
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -387,54 +657,173 @@ export default function AccountingOrderDetail() {
                       <Receipt className="h-4 w-4 text-primary" />
                       Tổng quan thanh toán
                     </CardTitle>
-                    <PaymentStatusBadge status={paymentStatus} />
+                    <div className="flex items-center gap-2">
+                      <PaymentStatusBadge status={paymentStatus} />
+                      {editingCard === "paymentInfo" ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleSaveCard("paymentInfo")}
+                            disabled={isUpdatingForAccounting}
+                          >
+                            {isUpdatingForAccounting ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Đang lưu...
+                              </>
+                            ) : (
+                              "Lưu"
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEditingCard}
+                            disabled={isUpdatingForAccounting}
+                          >
+                            Hủy
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            startEditingCard("paymentInfo", {
+                              totalAmount: order.totalAmount?.toString() || "",
+                              depositAmount:
+                                order.depositAmount?.toString() || "",
+                              paymentDueDate: formatDateTimeForInput(
+                                order.paymentDueDate
+                              ),
+                            })
+                          }
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Sửa
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 rounded-lg bg-muted/50">
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Tổng giá trị
-                      </p>
-                      <p className="text-xl font-bold tabular-nums">
-                        {formatCurrency(order.totalAmount)}
-                      </p>
+                  {editingCard === "paymentInfo" ? (
+                    /* Edit Mode */
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Tổng tiền</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          value={cardEditValues.totalAmount || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              totalAmount: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập tổng tiền"
+                          className="text-lg font-medium"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Đã cọc</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          value={cardEditValues.depositAmount || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              depositAmount: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập số tiền đã cọc"
+                          className="text-lg font-medium"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Hạn thanh toán</Label>
+                        <Input
+                          type="datetime-local"
+                          value={cardEditValues.paymentDueDate || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              paymentDueDate: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
                     </div>
-                    <div className="text-center p-4 rounded-lg bg-success/10">
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Đã thanh toán
-                      </p>
-                      <p className="text-xl font-bold tabular-nums text-success">
-                        {formatCurrency(order.depositAmount)}
-                      </p>
-                    </div>
-                    <div className="text-center p-4 rounded-lg bg-destructive/10">
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Còn lại
-                      </p>
-                      <p
-                        className={`text-xl font-bold tabular-nums ${
-                          remainingAmount > 0
-                            ? "text-destructive"
-                            : "text-success"
-                        }`}
-                      >
-                        {formatCurrency(remainingAmount)}
-                      </p>
-                    </div>
-                  </div>
+                  ) : (
+                    /* View Mode */
+                    <>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-4 rounded-lg bg-muted/50">
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Tổng giá trị
+                          </p>
+                          <p className="text-xl font-bold tabular-nums">
+                            {formatCurrency(order.totalAmount)}
+                          </p>
+                        </div>
+                        <div className="text-center p-4 rounded-lg bg-success/10">
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Đã thanh toán
+                          </p>
+                          <p className="text-xl font-bold tabular-nums text-success">
+                            {formatCurrency(order.depositAmount)}
+                          </p>
+                        </div>
+                        <div className="text-center p-4 rounded-lg bg-destructive/10">
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Còn lại
+                          </p>
+                          <p
+                            className={`text-xl font-bold tabular-nums ${
+                              remainingAmount > 0
+                                ? "text-destructive"
+                                : "text-success"
+                            }`}
+                          >
+                            {formatCurrency(remainingAmount)}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Tiến độ thanh toán
-                      </span>
-                      <span className="font-medium">
-                        {paymentProgress.toFixed(0)}%
-                      </span>
-                    </div>
-                    <Progress value={paymentProgress} className="h-2" />
-                  </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Tiến độ thanh toán
+                          </span>
+                          <span className="font-medium">
+                            {paymentProgress.toFixed(0)}%
+                          </span>
+                        </div>
+                        <Progress value={paymentProgress} className="h-2" />
+                      </div>
+
+                      {order.paymentDueDate && (
+                        <div className="pt-2 border-t">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <div className="flex-1">
+                              <span className="text-xs text-muted-foreground">
+                                Hạn thanh toán:{" "}
+                              </span>
+                              <span className="text-sm font-medium">
+                                {formatDateTime(order.paymentDueDate)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -458,6 +847,7 @@ export default function AccountingOrderDetail() {
                         <TableHead className="text-center">SL</TableHead>
                         <TableHead className="text-right">Đơn giá</TableHead>
                         <TableHead className="text-right">Thành tiền</TableHead>
+                        <TableHead className="w-[100px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -513,20 +903,104 @@ export default function AccountingOrderDetail() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-center font-medium tabular-nums">
-                            {item.quantity.toLocaleString("vi-VN")}
+                          <TableCell className="text-center">
+                            {editingOrderDetailId === item.id ? (
+                              <Input
+                                type="number"
+                                min="1"
+                                value={orderDetailEditValues.quantity || ""}
+                                onChange={(e) =>
+                                  setOrderDetailEditValues({
+                                    ...orderDetailEditValues,
+                                    quantity: e.target.value,
+                                  })
+                                }
+                                className="w-20 text-center font-medium tabular-nums"
+                              />
+                            ) : (
+                              <span className="font-medium tabular-nums">
+                                {item.quantity.toLocaleString("vi-VN")}
+                              </span>
+                            )}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatCurrency(item.unitPrice || 0)}
+                          <TableCell className="text-right">
+                            {editingOrderDetailId === item.id ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                step="1000"
+                                value={orderDetailEditValues.unitPrice || ""}
+                                onChange={(e) =>
+                                  setOrderDetailEditValues({
+                                    ...orderDetailEditValues,
+                                    unitPrice: e.target.value,
+                                  })
+                                }
+                                className="w-32 text-right tabular-nums"
+                              />
+                            ) : (
+                              <span className="tabular-nums">
+                                {formatCurrency(item.unitPrice || 0)}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right font-medium tabular-nums">
-                            {formatCurrency(item.totalPrice || 0)}
+                            {editingOrderDetailId === item.id
+                              ? formatCurrency(
+                                  (Number(orderDetailEditValues.quantity) ||
+                                    0) *
+                                    (Number(orderDetailEditValues.unitPrice) ||
+                                      0)
+                                )
+                              : formatCurrency(item.totalPrice || 0)}
+                          </TableCell>
+                          <TableCell>
+                            {editingOrderDetailId === item.id ? (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleSaveOrderDetail(item.id)}
+                                  disabled={isUpdatingForAccounting}
+                                >
+                                  {isUpdatingForAccounting ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    "Lưu"
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={cancelEditingOrderDetail}
+                                  disabled={isUpdatingForAccounting}
+                                >
+                                  Hủy
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  if (item.id && item.quantity) {
+                                    startEditingOrderDetail({
+                                      id: item.id,
+                                      quantity: item.quantity,
+                                      unitPrice: item.unitPrice,
+                                    });
+                                  }
+                                }}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       )) || (
                         <TableRow>
                           <TableCell
-                            colSpan={5}
+                            colSpan={6}
                             className="text-center text-muted-foreground py-8"
                           >
                             Không có sản phẩm nào
@@ -566,119 +1040,535 @@ export default function AccountingOrderDetail() {
                       <User className="h-4 w-4 text-primary" />
                       Thông tin khách hàng
                     </CardTitle>
-                    <CustomerTypeBadge type={customerType} />
+                    <div className="flex items-center gap-2">
+                      <CustomerTypeBadge type={customerType} />
+                      {editingCard === "customerInfo" ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleSaveCard("customerInfo")}
+                            disabled={isUpdatingForAccounting}
+                          >
+                            {isUpdatingForAccounting ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Đang lưu...
+                              </>
+                            ) : (
+                              "Lưu"
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEditingCard}
+                            disabled={isUpdatingForAccounting}
+                          >
+                            Hủy
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            startEditingCard("customerInfo", {
+                              customerName: order.customer?.name || "",
+                              customerCompanyName:
+                                order.customer?.companyName || "",
+                              customerPhone: order.customer?.phone || "",
+                              customerEmail: order.customer?.email || "",
+                              customerTaxCode:
+                                (order.customer as { taxCode?: string })
+                                  ?.taxCode || "",
+                              customerAddress: order.customer?.address || "",
+                            })
+                          }
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Sửa
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {order.customer?.companyName && (
-                    <div className="flex items-start gap-3">
-                      <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Công ty</p>
-                        <p className="font-medium">
-                          {order.customer.companyName}
-                        </p>
+                  {editingCard === "customerInfo" ? (
+                    /* Edit Mode */
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Tên khách hàng *</Label>
+                        <Input
+                          value={cardEditValues.customerName || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerName: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập tên khách hàng"
+                        />
+                      </div>
+                      {customerType === "company" && (
+                        <div className="space-y-2">
+                          <Label>Tên công ty</Label>
+                          <Input
+                            value={cardEditValues.customerCompanyName || ""}
+                            onChange={(e) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                customerCompanyName: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập tên công ty"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label>Số điện thoại *</Label>
+                        <Input
+                          value={cardEditValues.customerPhone || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerPhone: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập số điện thoại"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email {customerType === "company" && "*"}</Label>
+                        <Input
+                          type="email"
+                          value={cardEditValues.customerEmail || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerEmail: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập email"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Địa chỉ *</Label>
+                        <Textarea
+                          value={cardEditValues.customerAddress || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerAddress: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập địa chỉ"
+                          rows={3}
+                        />
                       </div>
                     </div>
+                  ) : (
+                    /* View Mode */
+                    <>
+                      {order.customer?.companyName && (
+                        <div className="flex items-start gap-3">
+                          <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Công ty
+                            </p>
+                            <p className="font-medium">
+                              {order.customer.companyName}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-start gap-3">
+                        <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Liên hệ
+                          </p>
+                          <p className="font-medium">
+                            {order.customer?.name || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Điện thoại
+                          </p>
+                          <p className="font-medium font-mono">
+                            {order.customer?.phone || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Mã khách hàng
+                          </p>
+                          <p className="font-medium font-mono">
+                            {order.customer?.code || "—"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Tình trạng nợ
+                          </span>
+                          <Badge
+                            variant={
+                              order.customer?.debtStatus === "good"
+                                ? "default"
+                                : "destructive"
+                            }
+                          >
+                            {order.customer?.debtStatus === "good"
+                              ? "Tốt"
+                              : "Có nợ"}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Nợ hiện tại
+                          </span>
+                          <span className="font-medium tabular-nums">
+                            {formatCurrency(order.customer?.currentDebt || 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Hạn mức nợ
+                          </span>
+                          <span className="font-medium tabular-nums">
+                            {formatCurrency(order.customer?.maxDebt || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </>
                   )}
-                  <div className="flex items-start gap-3">
-                    <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Liên hệ</p>
-                      <p className="font-medium">
-                        {order.customer?.name || "—"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Điện thoại
-                      </p>
-                      <p className="font-medium font-mono">
-                        {order.customer?.phone || "—"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Mã khách hàng
-                      </p>
-                      <p className="font-medium font-mono">
-                        {order.customer?.code || "—"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Tình trạng nợ
-                      </span>
-                      <Badge
-                        variant={
-                          order.customer?.debtStatus === "good"
-                            ? "default"
-                            : "destructive"
-                        }
-                      >
-                        {order.customer?.debtStatus === "good"
-                          ? "Tốt"
-                          : "Có nợ"}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Nợ hiện tại</span>
-                      <span className="font-medium tabular-nums">
-                        {formatCurrency(order.customer?.currentDebt || 0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Hạn mức nợ</span>
-                      <span className="font-medium tabular-nums">
-                        {formatCurrency(order.customer?.maxDebt || 0)}
-                      </span>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
 
               {/* Delivery Info */}
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-primary" />
-                    Thông tin giao hàng
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-primary" />
+                      Thông tin giao hàng
+                    </CardTitle>
+                    {editingCard === "orderInfo" ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleSaveCard("orderInfo")}
+                          disabled={isUpdatingForAccounting}
+                        >
+                          {isUpdatingForAccounting ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Đang lưu...
+                            </>
+                          ) : (
+                            "Lưu"
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={cancelEditingCard}
+                          disabled={isUpdatingForAccounting}
+                        >
+                          Hủy
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          startEditingCard("orderInfo", {
+                            deliveryDate: formatDateTimeForInput(
+                              order.deliveryDate
+                            ),
+                            deliveryAddress: order.deliveryAddress || "",
+                            note: order.note || "",
+                          })
+                        }
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Sửa
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Ngày giao dự kiến
-                      </p>
-                      <p className="font-medium">
-                        {formatDateTime(order.deliveryDate)}
-                      </p>
+                  {editingCard === "orderInfo" ? (
+                    /* Edit Mode */
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Ngày giao</Label>
+                        <Input
+                          type="datetime-local"
+                          value={cardEditValues.deliveryDate || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              deliveryDate: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Địa chỉ giao hàng</Label>
+                        <Textarea
+                          value={cardEditValues.deliveryAddress || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              deliveryAddress: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập địa chỉ giao hàng"
+                          rows={3}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Ghi chú</Label>
+                        <Textarea
+                          value={cardEditValues.note || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              note: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập ghi chú"
+                          rows={3}
+                        />
+                      </div>
                     </div>
+                  ) : (
+                    /* View Mode */
+                    <>
+                      <div className="flex items-start gap-3">
+                        <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Ngày giao dự kiến
+                          </p>
+                          <p className="font-medium">
+                            {formatDateTime(order.deliveryDate)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Địa chỉ giao hàng
+                          </p>
+                          <p className="font-medium">
+                            {order.deliveryAddress || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      {order.note && (
+                        <div className="pt-2">
+                          <p className="text-muted-foreground text-xs mb-1">
+                            Ghi chú:
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap">
+                            {order.note}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Recipient Info Card - Only visible to accounting */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <User className="h-4 w-4 text-primary" />
+                      Thông tin nhận hàng
+                    </CardTitle>
+                    {editingCard === "recipientInfo" ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleSaveCard("recipientInfo")}
+                          disabled={isUpdatingForAccounting}
+                        >
+                          {isUpdatingForAccounting ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Đang lưu...
+                            </>
+                          ) : (
+                            "Lưu"
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={cancelEditingCard}
+                          disabled={isUpdatingForAccounting}
+                        >
+                          Hủy
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          startEditingCard("recipientInfo", {
+                            recipientName: order.recipientName || "",
+                            recipientPhone: order.recipientPhone || "",
+                            recipientAddress: order.recipientAddress || "",
+                          })
+                        }
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Sửa
+                      </Button>
+                    )}
                   </div>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Địa chỉ giao hàng
-                      </p>
-                      <p className="font-medium">
-                        {order.deliveryAddress || "—"}
-                      </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Warning if missing info */}
+                  {(!order.recipientName ||
+                    !order.recipientPhone ||
+                    !order.recipientAddress) &&
+                    editingCard !== "recipientInfo" && (
+                      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+                              Thiếu thông tin người nhận
+                            </p>
+                            <ul className="text-xs text-amber-700 dark:text-amber-300 mt-1 list-disc list-inside space-y-0.5">
+                              {!order.recipientName && <li>Tên người nhận</li>}
+                              {!order.recipientPhone && <li>Số điện thoại</li>}
+                              {!order.recipientAddress && <li>Địa chỉ</li>}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                  {editingCard === "recipientInfo" ? (
+                    /* Edit Mode */
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Tên người nhận</Label>
+                        <Input
+                          value={cardEditValues.recipientName || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              recipientName: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập tên người nhận"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Số điện thoại</Label>
+                        <Input
+                          value={cardEditValues.recipientPhone || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              recipientPhone: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập số điện thoại"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Địa chỉ</Label>
+                        <Textarea
+                          value={cardEditValues.recipientAddress || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              recipientAddress: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập địa chỉ người nhận"
+                          rows={3}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    /* View Mode */
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">
+                          Tên người nhận
+                          {!order.recipientName && (
+                            <span className="text-destructive ml-1">*</span>
+                          )}
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {order.recipientName || (
+                            <span className="text-muted-foreground italic">
+                              Chưa có thông tin
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">
+                          Số điện thoại
+                          {!order.recipientPhone && (
+                            <span className="text-destructive ml-1">*</span>
+                          )}
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {order.recipientPhone || (
+                            <span className="text-muted-foreground italic">
+                              Chưa có thông tin
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">
+                          Địa chỉ
+                          {!order.recipientAddress && (
+                            <span className="text-destructive ml-1">*</span>
+                          )}
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {order.recipientAddress || (
+                            <span className="text-muted-foreground italic">
+                              Chưa có thông tin
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -765,16 +1655,6 @@ export default function AccountingOrderDetail() {
           </div>
         </div>
       </div>
-
-      {/* Update Order Dialog */}
-      <OrderAccountingUpdateDialog
-        open={isUpdateDialogOpen}
-        onOpenChange={setIsUpdateDialogOpen}
-        order={order}
-        onSuccess={() => {
-          // Order detail will be refetched automatically via query invalidation
-        }}
-      />
     </>
   );
 }

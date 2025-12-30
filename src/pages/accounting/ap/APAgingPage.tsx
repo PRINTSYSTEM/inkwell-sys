@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useAPAging } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
+import { toast } from "sonner";
 
 export default function APAgingPage() {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export default function APAgingPage() {
   } = useAPAging({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    asOfDate: asOfDate ? `${asOfDate}T00:00:00+07:00` : undefined,
+    asOfDate: asOfDate ? new Date(asOfDate).toISOString() : undefined,
     search: searchQuery || undefined,
   });
 
@@ -54,38 +55,30 @@ export default function APAgingPage() {
   const totalOver90 = apData?.items?.reduce((sum, item) => sum + (item.over90 || 0), 0) || 0;
   const grandTotal = apData?.items?.reduce((sum, item) => sum + (item.total || 0), 0) || 0;
 
-  return (
-    <>
-      <Helmet>
-        <title>Công nợ phải trả - Phân tích tuổi nợ | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Phân tích tuổi nợ phải trả"
-        />
-      </Helmet>
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
 
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Công nợ phải trả - Phân tích tuổi nợ
-            </h1>
-            <p className="text-muted-foreground">
-              Phân tích công nợ phải trả theo tuổi nợ
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Làm mới
-            </Button>
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Xuất Excel
-            </Button>
-          </div>
-        </div>
+  const handleVendorClick = (vendorId: number | null | undefined) => {
+    if (vendorId) {
+      navigate(`/accounting/ap?tab=detail&vendorId=${vendorId}`);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Làm mới
+        </Button>
+        <Button variant="outline" onClick={handleExportExcel}>
+          <Download className="h-4 w-4 mr-2" />
+          Xuất Excel
+        </Button>
+      </div>
 
         {/* Error Alert */}
         {isError && (
@@ -238,7 +231,11 @@ export default function APAgingPage() {
                 </TableRow>
               ) : (
                 apData.items.map((item) => (
-                  <TableRow key={item.vendorId}>
+                  <TableRow
+                    key={item.vendorId}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleVendorClick(item.vendorId)}
+                  >
                     <TableCell className="font-mono text-sm">
                       {item.vendorCode || "—"}
                     </TableCell>
@@ -314,8 +311,7 @@ export default function APAgingPage() {
             </div>
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }
 

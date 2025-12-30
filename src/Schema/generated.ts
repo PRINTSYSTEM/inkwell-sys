@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2025-12-29T03:13:40.273Z */
+/* Generated at: 2025-12-29T23:58:47.182Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -27,6 +27,7 @@ export const BankAccountResponseSchema = schemas.BankAccountResponse;
 export const BankAccountResponseIPaginateSchema = schemas.BankAccountResponseIPaginate;
 export const BankLedgerEntryResponseSchema = schemas.BankLedgerEntryResponse;
 export const BankLedgerResponseSchema = schemas.BankLedgerResponse;
+export const BillableItemResponseSchema = schemas.BillableItemResponse;
 export const BulkCreateMaterialTypeRequestSchema = schemas.BulkCreateMaterialTypeRequest;
 export const CashBookEntryResponseSchema = schemas.CashBookEntryResponse;
 export const CashBookResponseSchema = schemas.CashBookResponse;
@@ -52,6 +53,7 @@ export const CreateDeliveryNoteRequestSchema = schemas.CreateDeliveryNoteRequest
 export const CreateDesignRequestSchema = schemas.CreateDesignRequest;
 export const CreateDesignTypeRequestSchema = schemas.CreateDesignTypeRequest;
 export const CreateExpenseCategoryRequestSchema = schemas.CreateExpenseCategoryRequest;
+export const CreateInvoiceFromLinesRequestSchema = schemas.CreateInvoiceFromLinesRequest;
 export const CreateInvoiceItemRequestSchema = schemas.CreateInvoiceItemRequest;
 export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
 export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
@@ -78,6 +80,8 @@ export const CustomerResponseSchema = schemas.CustomerResponse;
 export const CustomerStatisticsResponseSchema = schemas.CustomerStatisticsResponse;
 export const CustomerSummaryResponseSchema = schemas.CustomerSummaryResponse;
 export const CustomerSummaryResponsePaginateSchema = schemas.CustomerSummaryResponsePaginate;
+export const DeliveryLineRequestSchema = schemas.DeliveryLineRequest;
+export const DeliveryNoteLineResponseSchema = schemas.DeliveryNoteLineResponse;
 export const DeliveryNoteOrderResponseSchema = schemas.DeliveryNoteOrderResponse;
 export const DeliveryNoteResponseSchema = schemas.DeliveryNoteResponse;
 export const DeliveryNoteResponsePaginateSchema = schemas.DeliveryNoteResponsePaginate;
@@ -92,13 +96,16 @@ export const ErrorResponseSchema = schemas.ErrorResponse;
 export const ExpenseCategoryResponseSchema = schemas.ExpenseCategoryResponse;
 export const ExpenseCategoryResponseIPaginateSchema = schemas.ExpenseCategoryResponseIPaginate;
 export const ExportDebtRequestSchema = schemas.ExportDebtRequest;
+export const FailureReasonResponseSchema = schemas.FailureReasonResponse;
 export const FrequentProductResponseSchema = schemas.FrequentProductResponse;
 export const InventorySummaryItemResponseSchema = schemas.InventorySummaryItemResponse;
 export const InventorySummaryItemResponseIPaginateSchema = schemas.InventorySummaryItemResponseIPaginate;
 export const InvoiceItemResponseSchema = schemas.InvoiceItemResponse;
+export const InvoiceLineInputSchema = schemas.InvoiceLineInput;
 export const InvoiceOrderResponseSchema = schemas.InvoiceOrderResponse;
 export const InvoiceResponseSchema = schemas.InvoiceResponse;
 export const InvoiceResponsePaginateSchema = schemas.InvoiceResponsePaginate;
+export const IssueInvoiceRequestSchema = schemas.IssueInvoiceRequest;
 export const LoginRequestSchema = schemas.LoginRequest;
 export const LoginResponseSchema = schemas.LoginResponse;
 export const LowStockResponseSchema = schemas.LowStockResponse;
@@ -107,12 +114,14 @@ export const MaterialTypeItemSchema = schemas.MaterialTypeItem;
 export const MaterialTypeResponseSchema = schemas.MaterialTypeResponse;
 export const MaterialTypeResponsePaginateSchema = schemas.MaterialTypeResponsePaginate;
 export const OrderDetailExportResponseSchema = schemas.OrderDetailExportResponse;
+export const OrderDetailForDeliveryResponseSchema = schemas.OrderDetailForDeliveryResponse;
 export const OrderDetailResponseSchema = schemas.OrderDetailResponse;
 export const OrderDetailResponseForDesignerSchema = schemas.OrderDetailResponseForDesigner;
 export const OrderDetailResponsePaginateSchema = schemas.OrderDetailResponsePaginate;
 export const OrderDrillDownResponseSchema = schemas.OrderDrillDownResponse;
 export const OrderDrillDownResponseIPaginateSchema = schemas.OrderDrillDownResponseIPaginate;
 export const OrderExportResponseSchema = schemas.OrderExportResponse;
+export const OrderForDeliveryResponseSchema = schemas.OrderForDeliveryResponse;
 export const OrderHistoryDetailResponseSchema = schemas.OrderHistoryDetailResponse;
 export const OrderResponseSchema = schemas.OrderResponse;
 export const OrderResponseForDesignerSchema = schemas.OrderResponseForDesigner;
@@ -162,9 +171,11 @@ export const UpdateCashFundRequestSchema = schemas.UpdateCashFundRequest;
 export const UpdateCashPaymentRequestSchema = schemas.UpdateCashPaymentRequest;
 export const UpdateCashReceiptRequestSchema = schemas.UpdateCashReceiptRequest;
 export const UpdateCustomerRequestSchema = schemas.UpdateCustomerRequest;
+export const UpdateDeliveryLineResultRequestSchema = schemas.UpdateDeliveryLineResultRequest;
 export const UpdateDeliveryStatusRequestSchema = schemas.UpdateDeliveryStatusRequest;
 export const UpdateDesignRequestSchema = schemas.UpdateDesignRequest;
 export const UpdateDesignTypeRequestSchema = schemas.UpdateDesignTypeRequest;
+export const UpdateEInvoiceInfoRequestSchema = schemas.UpdateEInvoiceInfoRequest;
 export const UpdateExpenseCategoryRequestSchema = schemas.UpdateExpenseCategoryRequest;
 export const UpdateInvoiceRequestSchema = schemas.UpdateInvoiceRequest;
 export const UpdateMaterialTypeRequestSchema = schemas.UpdateMaterialTypeRequest;

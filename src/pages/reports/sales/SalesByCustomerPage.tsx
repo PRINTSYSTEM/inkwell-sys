@@ -28,6 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSalesByCustomer } from "@/hooks/use-sales-report";
 import { formatCurrency } from "@/lib/status-utils";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function SalesByCustomerPage() {
   const navigate = useNavigate();
@@ -58,6 +59,18 @@ export default function SalesByCustomerPage() {
   const totalRevenue = salesData?.items?.reduce((sum, item) => sum + (item.totalRevenue || 0), 0) || 0;
   const totalOrders = salesData?.items?.reduce((sum, item) => sum + (item.orderCount || 0), 0) || 0;
 
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
+
+  const handleCustomerClick = (customerId: number | null | undefined) => {
+    if (customerId) {
+      // Navigate to order drill-down page with customer filter
+      navigate(`/reports/sales/orders-by-customer?customerId=${customerId}`);
+    }
+  };
+
   return (
     <>
       <Helmet>
@@ -84,7 +97,7 @@ export default function SalesByCustomerPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Làm mới
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-2" />
               Xuất Excel
             </Button>
@@ -181,7 +194,11 @@ export default function SalesByCustomerPage() {
                 </TableRow>
               ) : (
                 salesData.items.map((item) => (
-                  <TableRow key={item.customerId} className="group">
+                  <TableRow
+                    key={item.customerId}
+                    className="group cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleCustomerClick(item.customerId)}
+                  >
                     <TableCell className="font-medium font-mono text-sm">
                       {item.customerCode || "—"}
                     </TableCell>
@@ -207,9 +224,10 @@ export default function SalesByCustomerPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() =>
-                          navigate(`/customers/${item.customerId}`)
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCustomerClick(item.customerId);
+                        }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Eye className="h-4 w-4" />

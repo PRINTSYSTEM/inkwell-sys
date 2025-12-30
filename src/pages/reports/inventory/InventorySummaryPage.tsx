@@ -23,11 +23,21 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInventorySummary } from "@/hooks/use-inventory-report";
 import { formatCurrency } from "@/lib/status-utils";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import { addDays } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
 export default function InventorySummaryPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: addDays(new Date(), -30),
+    to: new Date(),
+  });
 
   const {
     data: summaryData,
@@ -39,9 +49,22 @@ export default function InventorySummaryPage() {
     pageNumber: currentPage,
     pageSize: itemsPerPage,
     search: searchQuery || undefined,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
   });
 
   const totalValue = summaryData?.items?.reduce((sum, item) => sum + (item.totalValue || 0), 0) || 0;
+
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
+
+  const handleItemClick = (itemCode: string | null | undefined) => {
+    if (itemCode) {
+      navigate(`/reports/inventory/stock-card/${itemCode}`);
+    }
+  };
 
   return (
     <>
@@ -69,7 +92,7 @@ export default function InventorySummaryPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Làm mới
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-2" />
               Xuất Excel
             </Button>
@@ -106,12 +129,13 @@ export default function InventorySummaryPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Tìm kiếm theo nhóm vật tư..."
+              placeholder="Tìm kiếm theo mã hàng, tên hàng..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
             />
           </div>
+          <DateRangePicker value={dateRange} onValueChange={setDateRange} />
         </div>
 
         {/* Table */}
@@ -119,18 +143,20 @@ export default function InventorySummaryPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead>Nhóm vật tư</TableHead>
-                <TableHead className="text-right">Số lượng mặt hàng</TableHead>
-                <TableHead className="text-right">Tổng số lượng</TableHead>
-                <TableHead className="text-right">Tổng giá trị</TableHead>
-                <TableHead className="text-right">Giá trị trung bình</TableHead>
+                <TableHead className="w-[140px]">Mã hàng</TableHead>
+                <TableHead>Tên hàng</TableHead>
+                <TableHead className="text-right">Đầu kỳ</TableHead>
+                <TableHead className="text-right">Nhập</TableHead>
+                <TableHead className="text-right">Xuất</TableHead>
+                <TableHead className="text-right">Cuối kỳ</TableHead>
+                <TableHead className="text-right">Giá trị</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 5 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -140,7 +166,7 @@ export default function InventorySummaryPage() {
               ) : !summaryData?.items || summaryData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={7}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu tổng hợp nào.
@@ -148,29 +174,52 @@ export default function InventorySummaryPage() {
                 </TableRow>
               ) : (
                 summaryData.items.map((item) => (
-                  <TableRow key={item.categoryId || item.categoryName}>
-                    <TableCell className="font-medium">
-                      {item.categoryName || "—"}
+                  <TableRow
+                    key={item.itemCode || item.categoryId}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleItemClick(item.itemCode)}
+                  >
+                    <TableCell className="font-medium font-mono text-sm">
+                      {item.itemCode || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="font-medium text-sm">
+                          {item.itemName || "—"}
+                        </div>
+                        {item.unit && (
+                          <div className="text-xs text-muted-foreground">
+                            ĐVT: {item.unit}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.itemCount !== undefined
-                        ? item.itemCount.toLocaleString()
+                      {item.openingQuantity !== undefined
+                        ? item.openingQuantity.toLocaleString("vi-VN")
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.totalQuantity !== undefined
-                        ? item.totalQuantity.toLocaleString()
+                    <TableCell className="text-right font-medium tabular-nums text-green-600">
+                      {item.inQuantity !== undefined
+                        ? item.inQuantity.toLocaleString("vi-VN")
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums text-red-600">
+                      {item.outQuantity !== undefined
+                        ? item.outQuantity.toLocaleString("vi-VN")
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">
-                      {item.totalValue !== undefined
-                        ? formatCurrency(item.totalValue)
+                      {item.closingQuantity !== undefined
+                        ? item.closingQuantity.toLocaleString("vi-VN")
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.averageValue !== undefined
-                        ? formatCurrency(item.averageValue)
-                        : "—"}
+                    <TableCell className="text-right font-bold tabular-nums">
+                      {item.closingValue !== undefined
+                        ? formatCurrency(item.closingValue)
+                        : item.openingValue !== undefined
+                          ? formatCurrency(item.openingValue)
+                          : "—"}
                     </TableCell>
                   </TableRow>
                 ))

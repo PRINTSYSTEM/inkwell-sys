@@ -92,11 +92,17 @@ const AccountingExpenses = lazy(
 const CashPaymentList = lazy(
   () => import("@/pages/accounting/cash/CashPaymentListPage")
 );
+const CashPaymentDetail = lazy(
+  () => import("@/pages/accounting/cash/CashPaymentDetailPage")
+);
 const CashFundList = lazy(
   () => import("@/pages/accounting/cash/CashFundListPage")
 );
 const CashReceiptList = lazy(
   () => import("@/pages/accounting/cash/CashReceiptListPage")
+);
+const CashReceiptDetail = lazy(
+  () => import("@/pages/accounting/cash/CashReceiptDetailPage")
 );
 const CashBook = lazy(() => import("@/pages/accounting/cash/CashBookPage"));
 
@@ -107,12 +113,8 @@ const BankAccountList = lazy(
 const BankLedger = lazy(() => import("@/pages/accounting/bank/BankLedgerPage"));
 
 // AR/AP
-const ARSummary = lazy(() => import("@/pages/accounting/ar/ARSummaryPage"));
-const ARDetail = lazy(() => import("@/pages/accounting/ar/ARDetailPage"));
-const ARAging = lazy(() => import("@/pages/accounting/ar/ARAgingPage"));
-const APSummary = lazy(() => import("@/pages/accounting/ap/APSummaryPage"));
-const APDetail = lazy(() => import("@/pages/accounting/ap/APDetailPage"));
-const APAging = lazy(() => import("@/pages/accounting/ap/APAgingPage"));
+const AR = lazy(() => import("@/pages/accounting/ar/ARPage"));
+const AP = lazy(() => import("@/pages/accounting/ap/APPage"));
 const CollectionSchedule = lazy(
   () => import("@/pages/accounting/CollectionSchedulePage")
 );
@@ -159,6 +161,17 @@ const OrderDrillDown = lazy(
 // Report Exports
 const ReportExportList = lazy(
   () => import("@/pages/reports/ReportExportListPage")
+);
+
+// Expense Reports
+const ExpenseByTime = lazy(
+  () => import("@/pages/reports/expense/ExpenseByTimePage")
+);
+const ExpenseByCategory = lazy(
+  () => import("@/pages/reports/expense/ExpenseByCategoryPage")
+);
+const ExpenseByVendor = lazy(
+  () => import("@/pages/reports/expense/ExpenseByVendorPage")
 );
 
 // Delivery Notes
@@ -607,6 +620,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "cash-payments/:id",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CashPaymentDetail />
+              </Suspense>
+            ),
+          },
+          {
             path: "cash-funds",
             element: (
               <Suspense fallback={<div>Loading...</div>}>
@@ -619,6 +640,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<div>Loading...</div>}>
                 <CashReceiptList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "cash-receipts/:id",
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <CashReceiptDetail />
               </Suspense>
             ),
           },
@@ -650,62 +679,20 @@ export const router = createBrowserRouter([
           // AR
           {
             path: "ar",
-            children: [
-              {
-                path: "summary",
-                element: (
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <ARSummary />
-                  </Suspense>
-                ),
-              },
-              {
-                path: "detail",
-                element: (
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <ARDetail />
-                  </Suspense>
-                ),
-              },
-              {
-                path: "aging",
-                element: (
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <ARAging />
-                  </Suspense>
-                ),
-              },
-            ],
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <AR />
+              </Suspense>
+            ),
           },
           // AP
           {
             path: "ap",
-            children: [
-              {
-                path: "summary",
-                element: (
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <APSummary />
-                  </Suspense>
-                ),
-              },
-              {
-                path: "detail",
-                element: (
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <APDetail />
-                  </Suspense>
-                ),
-              },
-              {
-                path: "aging",
-                element: (
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <APAging />
-                  </Suspense>
-                ),
-              },
-            ],
+            element: (
+              <Suspense fallback={<div>Loading...</div>}>
+                <AP />
+              </Suspense>
+            ),
           },
           {
             path: "collection-schedule",
@@ -905,6 +892,36 @@ export const router = createBrowserRouter([
                 element: (
                   <Suspense fallback={<div>Loading...</div>}>
                     <OrderDrillDown />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
+          // Expense Reports
+          {
+            path: "expense",
+            children: [
+              {
+                path: "by-time",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <ExpenseByTime />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "by-category",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <ExpenseByCategory />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "by-vendor",
+                element: (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <ExpenseByVendor />
                   </Suspense>
                 ),
               },

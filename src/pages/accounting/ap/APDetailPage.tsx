@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAPDetail } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -69,47 +70,30 @@ export default function APDetailPage() {
     search: searchQuery || undefined,
   });
 
-  return (
-    <>
-      <Helmet>
-        <title>Công nợ phải trả - Chi tiết | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Chi tiết công nợ phải trả"
-        />
-      </Helmet>
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
 
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/accounting/ap/summary")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Công nợ phải trả - Chi tiết
-              </h1>
-              <p className="text-muted-foreground">
-                Chi tiết công nợ phải trả theo từng giao dịch
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Làm mới
-            </Button>
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Xuất Excel
-            </Button>
-          </div>
-        </div>
+  const handleOrderClick = (orderId: number | null | undefined) => {
+    if (orderId) {
+      navigate(`/accounting/orders/${orderId}`);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Làm mới
+        </Button>
+        <Button variant="outline" onClick={handleExportExcel}>
+          <Download className="h-4 w-4 mr-2" />
+          Xuất Excel
+        </Button>
+      </div>
 
         {/* Error Alert */}
         {isError && (
@@ -136,7 +120,7 @@ export default function APDetailPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -179,14 +163,18 @@ export default function APDetailPage() {
                 </TableRow>
               ) : (
                 apData.items.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow
+                    key={item.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleOrderClick(item.orderId)}
+                  >
                     <TableCell className="font-mono text-sm">
                       {item.vendorCode || "—"}
                     </TableCell>
                     <TableCell className="font-medium">
                       {item.vendorName || "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
+                    <TableCell className="font-mono text-sm font-medium">
                       {item.orderCode || "—"}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
@@ -261,8 +249,7 @@ export default function APDetailPage() {
             </div>
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }
 

@@ -76,6 +76,12 @@ export default function CreateCustomer() {
   ) => {
     setForm((p) => ({ ...p, [field]: value }));
     clearFieldError(field as string);
+    
+    // Clear companyName error when switching from company to retail
+    if (field === "type" && value === "retail") {
+      clearFieldError("companyName");
+    }
+    
     if (field === "companyName")
       setGeneratedCode(generatePreviewCode(String(value ?? "")));
   };
@@ -250,11 +256,18 @@ export default function CreateCustomer() {
                   >
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
                     Tên công ty
+                    {form.type === "company" && (
+                      <span className="text-destructive">*</span>
+                    )}
                   </Label>
                   <div className="relative">
                     <Input
                       id="companyName"
-                      placeholder="Nhập tên công ty (nếu có)"
+                      placeholder={
+                        form.type === "company"
+                          ? "Nhập tên công ty (bắt buộc)"
+                          : "Nhập tên công ty (nếu có)"
+                      }
                       value={form.companyName || ""}
                       onChange={(e) =>
                         handleInput("companyName", e.target.value)
@@ -264,6 +277,8 @@ export default function CreateCustomer() {
                         duplicateCompany === form.companyName?.trim() &&
                         duplicateCompany !== null
                           ? "border-amber-500 bg-amber-50/50"
+                          : getError("companyName")
+                          ? "border-destructive"
                           : ""
                       }
                     />
@@ -282,6 +297,7 @@ export default function CreateCustomer() {
                         </span>
                       </div>
                     )}
+                  <FormFieldError error={getError("companyName")} />
                 </div>
 
                 <div className="space-y-2">

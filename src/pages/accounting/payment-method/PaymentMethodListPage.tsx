@@ -11,6 +11,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { PaymentMethodModal } from "@/components/accounting/payment-method/PaymentMethodModal";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,10 +33,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  usePaymentMethods,
-  useDeletePaymentMethod,
-} from "@/hooks/use-expense";
+import { usePaymentMethods, useDeletePaymentMethod } from "@/hooks/use-expense";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 
@@ -49,6 +47,8 @@ export default function PaymentMethodListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingMethodId, setEditingMethodId] = useState<number | null>(null);
 
   const {
     data: methodsData,
@@ -66,7 +66,9 @@ export default function PaymentMethodListPage() {
 
   const handleDelete = async (id: number | undefined) => {
     if (!id) return;
-    if (window.confirm("Bạn có chắc chắn muốn xóa phương thức thanh toán này?")) {
+    if (
+      window.confirm("Bạn có chắc chắn muốn xóa phương thức thanh toán này?")
+    ) {
       try {
         await deleteMethodMutation.mutateAsync(id);
       } catch (error) {
@@ -96,7 +98,12 @@ export default function PaymentMethodListPage() {
               Quản lý và theo dõi các phương thức thanh toán
             </p>
           </div>
-          <Button onClick={() => navigate("/accounting/payment-methods/new")}>
+          <Button
+            onClick={() => {
+              setEditingMethodId(null);
+              setModalOpen(true);
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Tạo phương thức mới
           </Button>
@@ -208,22 +215,10 @@ export default function PaymentMethodListPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() =>
-                              navigate(
-                                `/accounting/payment-methods/${method.id}`
-                              )
-                            }
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Xem chi tiết
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              navigate(
-                                `/accounting/payment-methods/${method.id}/edit`
-                              )
-                            }
+                            onClick={() => {
+                              setEditingMethodId(method.id || null);
+                              setModalOpen(true);
+                            }}
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Chỉnh sửa
@@ -277,8 +272,22 @@ export default function PaymentMethodListPage() {
             </div>
           </div>
         )}
+
+        {/* Payment Method Modal */}
+        <PaymentMethodModal
+          open={modalOpen}
+          onOpenChange={(open) => {
+            setModalOpen(open);
+            if (!open) {
+              setEditingMethodId(null);
+            }
+          }}
+          methodId={editingMethodId}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
       </div>
     </>
   );
 }
-

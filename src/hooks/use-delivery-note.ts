@@ -10,6 +10,10 @@ import type {
   UpdateDeliveryStatusRequest,
   RecreateDeliveryNoteRequest,
   CreateDeliveryNoteRequest,
+  OrderForDeliveryResponse,
+  FailureReasonResponse,
+  DeliveryNoteLineResponse,
+  UpdateDeliveryLineResultRequest,
 } from "@/Schema/delivery-note.schema";
 
 // ================== GET DELIVERY NOTES ==================
@@ -150,6 +154,82 @@ export const useRecreateDeliveryNote = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
       toast.success("Tạo lại phiếu giao hàng thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// ================== GET AVAILABLE ORDERS FOR DELIVERY ==================
+// GET /delivery-notes/available-orders
+export interface AvailableOrdersForDeliveryParams {
+  customerId?: number;
+}
+
+export const useAvailableOrdersForDelivery = (
+  params?: AvailableOrdersForDeliveryParams
+) => {
+  return useQuery({
+    queryKey: ["availableOrdersForDelivery", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<OrderForDeliveryResponse[]>(
+        API_SUFFIX.DELIVERY_NOTE_AVAILABLE_ORDERS,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ================== GET FAILURE REASONS ==================
+// GET /delivery-notes/failure-reasons
+export interface FailureReasonsParams {
+  allowRedeliveryOnly?: boolean;
+}
+
+export const useFailureReasons = (params?: FailureReasonsParams) => {
+  return useQuery({
+    queryKey: ["failureReasons", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<FailureReasonResponse[]>(
+        API_SUFFIX.DELIVERY_NOTE_FAILURE_REASONS,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ================== UPDATE DELIVERY LINE RESULT ==================
+// PUT /delivery-notes/lines/{lineId}/result
+export const useUpdateDeliveryLineResult = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      lineId,
+      data,
+    }: {
+      lineId: number;
+      data: UpdateDeliveryLineResultRequest;
+    }) => {
+      const res = await apiRequest.put<DeliveryNoteLineResponse>(
+        API_SUFFIX.DELIVERY_NOTE_LINE_RESULT(lineId),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote"] });
+      toast.success("Cập nhật kết quả giao hàng thành công");
     },
     onError: (error: Error) => {
       toast.error(`Lỗi: ${error.message}`);

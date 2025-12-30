@@ -57,8 +57,15 @@ import {
   useExportDeliveryNotePDF,
   useRecreateDeliveryNote,
 } from "@/hooks/use-delivery-note";
+import { useOrder } from "@/hooks/use-order";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/status-utils";
+import { ChevronDown, ChevronRight, Package } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -69,6 +76,165 @@ const formatDateTime = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
   return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
 };
+
+// Component for expandable order row
+function OrderDetailRow({
+  order,
+  isExpanded,
+  onToggle,
+}: {
+  order: {
+    orderId?: number;
+    orderCode?: string | null;
+    customerName?: string | null;
+    totalAmount?: number;
+    deliveryAddress?: string | null;
+  };
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const { data: orderDetail, isLoading: isLoadingOrder } = useOrder(
+    order.orderId ?? null,
+    isExpanded && !!order.orderId // Only fetch when expanded and orderId exists
+  );
+
+  return (
+    <>
+      <TableRow className="cursor-pointer hover:bg-muted/50" onClick={onToggle}>
+        <TableCell className="font-medium font-mono">
+          <div className="flex items-center gap-2">
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+            {order.orderCode || `#${order.orderId}`}
+          </div>
+        </TableCell>
+        <TableCell>{order.customerName || "—"}</TableCell>
+        <TableCell className="text-right font-medium tabular-nums">
+          {order.totalAmount ? formatCurrency(order.totalAmount) : "—"}
+        </TableCell>
+        <TableCell className="text-sm text-muted-foreground">
+          {order.deliveryAddress || "—"}
+        </TableCell>
+      </TableRow>
+      {isExpanded && (
+        <TableRow>
+          <TableCell colSpan={4} className="p-0">
+            <div className="bg-muted/30 p-4">
+              {isLoadingOrder ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : orderDetail?.orderDetails &&
+                orderDetail.orderDetails.length > 0 ? (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Chi tiết sản phẩm ({orderDetail.orderDetails.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {orderDetail.orderDetails.map((detail) => (
+                      <div
+                        key={detail.id}
+                        className="bg-background border rounded-lg p-3 space-y-2"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 space-y-1">
+                            <div className="font-medium text-sm">
+                              {detail.design?.designName || "—"}
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {detail.design?.code || "—"}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              Số lượng
+                            </Label>
+                            <p className="font-medium">
+                              {detail.quantity?.toLocaleString("vi-VN") || "—"}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              Phụ hao
+                            </Label>
+                            <p className="font-medium">
+                              {/* Phụ hao = quantity - proofedQuantity */}
+                              {detail.proofedQuantity != null &&
+                              detail.quantity != null
+                                ? (
+                                    detail.quantity - detail.proofedQuantity
+                                  ).toLocaleString("vi-VN")
+                                : "—"}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              Số lượng thực
+                            </Label>
+                            <p className="font-medium">
+                              {detail.proofedQuantity?.toLocaleString(
+                                "vi-VN"
+                              ) ||
+                                detail.quantity?.toLocaleString("vi-VN") ||
+                                "—"}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              Đơn giá
+                            </Label>
+                            <p className="font-medium tabular-nums">
+                              {detail.unitPrice
+                                ? formatCurrency(detail.unitPrice)
+                                : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        {(detail.requirements || detail.additionalNotes) && (
+                          <div className="pt-2 border-t">
+                            <Label className="text-xs text-muted-foreground">
+                              Ghi chú
+                            </Label>
+                            <div className="text-sm mt-1 space-y-1">
+                              {detail.requirements && (
+                                <p>
+                                  <span className="font-medium">Yêu cầu:</span>{" "}
+                                  {detail.requirements}
+                                </p>
+                              )}
+                              {detail.additionalNotes && (
+                                <p>
+                                  <span className="font-medium">
+                                    Ghi chú thêm:
+                                  </span>{" "}
+                                  {detail.additionalNotes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Không có chi tiết sản phẩm
+                </p>
+              )}
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+}
 
 export default function DeliveryNoteDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -83,6 +249,9 @@ export default function DeliveryNoteDetailPage() {
   const [affectsDebt, setAffectsDebt] = useState(false);
   const [notes, setNotes] = useState("");
   const [isRecreateDialogOpen, setIsRecreateDialogOpen] = useState(false);
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<number>>(
+    new Set()
+  );
 
   const {
     data: deliveryNote,
@@ -139,7 +308,10 @@ export default function DeliveryNoteDetailPage() {
     try {
       await recreateMutation.mutateAsync({
         originalDeliveryNoteId: deliveryNote.id,
-        orderIds: deliveryNote.orders?.map((o) => o.orderId).filter((id): id is number => !!id) || undefined,
+        orderIds:
+          deliveryNote.orders
+            ?.map((o) => o.orderId)
+            .filter((id): id is number => !!id) || undefined,
       });
       setIsRecreateDialogOpen(false);
       navigate("/delivery-notes");
@@ -152,7 +324,11 @@ export default function DeliveryNoteDetailPage() {
     if (!status) return <Badge variant="secondary">—</Badge>;
 
     const statusLower = status.toLowerCase();
-    if (statusLower.includes("success") || statusLower.includes("completed") || statusLower === "delivered") {
+    if (
+      statusLower.includes("success") ||
+      statusLower.includes("completed") ||
+      statusLower === "delivered"
+    ) {
       return (
         <Badge variant="default" className="bg-green-500">
           <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -176,7 +352,9 @@ export default function DeliveryNoteDetailPage() {
         </Badge>
       );
     }
-    return <Badge variant="secondary">{deliveryNote?.statusName || status}</Badge>;
+    return (
+      <Badge variant="secondary">{deliveryNote?.statusName || status}</Badge>
+    );
   };
 
   if (isLoading) {
@@ -195,7 +373,9 @@ export default function DeliveryNoteDetailPage() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center space-y-4">
           <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
-          <h1 className="text-xl font-semibold">Không tìm thấy phiếu giao hàng</h1>
+          <h1 className="text-xl font-semibold">
+            Không tìm thấy phiếu giao hàng
+          </h1>
           <p className="text-muted-foreground">
             Phiếu giao hàng không tồn tại hoặc đã bị xóa
           </p>
@@ -207,8 +387,22 @@ export default function DeliveryNoteDetailPage() {
     );
   }
 
-  const isFailed = deliveryNote.status?.toLowerCase().includes("fail") || deliveryNote.status?.toLowerCase() === "failed";
+  const isFailed =
+    deliveryNote.status?.toLowerCase().includes("fail") ||
+    deliveryNote.status?.toLowerCase() === "failed";
   const canRecreate = isFailed;
+
+  const toggleOrderExpand = (orderId: number) => {
+    setExpandedOrderIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -248,11 +442,21 @@ export default function DeliveryNoteDetailPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              className="gap-2"
+            >
               <Download className="w-4 h-4" />
               Xuất PDF
             </Button>
-            <Button variant="default" size="sm" onClick={handleOpenUpdateDialog} className="gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleOpenUpdateDialog}
+              className="gap-2"
+            >
               <Edit className="w-4 h-4" />
               Cập nhật trạng thái
             </Button>
@@ -282,7 +486,10 @@ export default function DeliveryNoteDetailPage() {
                 <strong>Lý do:</strong> {deliveryNote.failureReason || "—"}
               </div>
               <div>
-                <strong>Loại:</strong> {deliveryNote.failureTypeName || deliveryNote.failureType || "—"}
+                <strong>Loại:</strong>{" "}
+                {deliveryNote.failureTypeName ||
+                  deliveryNote.failureType ||
+                  "—"}
               </div>
               <div>
                 <strong>Ảnh hưởng công nợ:</strong>{" "}
@@ -324,20 +531,19 @@ export default function DeliveryNoteDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {deliveryNote.orders.map((order) => (
-                      <TableRow key={order.orderId}>
-                        <TableCell className="font-medium font-mono">
-                          {order.orderCode || `#${order.orderId}`}
-                        </TableCell>
-                        <TableCell>{order.customerName || "—"}</TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
-                          {order.totalAmount ? formatCurrency(order.totalAmount) : "—"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {order.deliveryAddress || "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {deliveryNote.orders.map((order) => {
+                      const orderId = order.orderId;
+                      if (!orderId) return null;
+                      const isExpanded = expandedOrderIds.has(orderId);
+                      return (
+                        <OrderDetailRow
+                          key={orderId}
+                          order={order}
+                          isExpanded={isExpanded}
+                          onToggle={() => toggleOrderExpand(orderId)}
+                        />
+                      );
+                    })}
                   </TableBody>
                 </Table>
               ) : (
@@ -355,7 +561,9 @@ export default function DeliveryNoteDetailPage() {
                 <CardTitle>Ghi chú</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{deliveryNote.notes}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {deliveryNote.notes}
+                </p>
               </CardContent>
             </Card>
           )}
@@ -395,10 +603,14 @@ export default function DeliveryNoteDetailPage() {
               <Separator />
 
               <div>
-                <Label className="text-muted-foreground">Địa chỉ giao hàng</Label>
+                <Label className="text-muted-foreground">
+                  Địa chỉ giao hàng
+                </Label>
                 <div className="flex items-start gap-2 mt-1">
                   <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  <span className="text-sm">{deliveryNote.deliveryAddress || "—"}</span>
+                  <span className="text-sm">
+                    {deliveryNote.deliveryAddress || "—"}
+                  </span>
                 </div>
               </div>
 
@@ -422,7 +634,10 @@ export default function DeliveryNoteDetailPage() {
                     <Label className="text-muted-foreground">Người giao</Label>
                     <div className="flex items-center gap-2 mt-1">
                       <User className="w-4 h-4 text-muted-foreground" />
-                      <span>{deliveryNote.deliveredBy.fullName || "—"}</span>
+                      <span>
+                        {(deliveryNote.deliveredBy as { fullName?: string })
+                          ?.fullName || "—"}
+                      </span>
                     </div>
                   </div>
                 </>
@@ -487,7 +702,9 @@ export default function DeliveryNoteDetailPage() {
                   <Checkbox
                     id="affectsDebt"
                     checked={affectsDebt}
-                    onCheckedChange={(checked) => setAffectsDebt(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setAffectsDebt(checked === true)
+                    }
                   />
                   <Label
                     htmlFor="affectsDebt"
@@ -552,12 +769,16 @@ export default function DeliveryNoteDetailPage() {
       </Dialog>
 
       {/* Recreate Dialog */}
-      <Dialog open={isRecreateDialogOpen} onOpenChange={setIsRecreateDialogOpen}>
+      <Dialog
+        open={isRecreateDialogOpen}
+        onOpenChange={setIsRecreateDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Tạo lại phiếu giao hàng</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn tạo lại phiếu giao hàng cho các đơn hàng này?
+              Bạn có chắc chắn muốn tạo lại phiếu giao hàng cho các đơn hàng
+              này?
             </DialogDescription>
           </DialogHeader>
 
@@ -582,4 +803,3 @@ export default function DeliveryNoteDetailPage() {
     </div>
   );
 }
-

@@ -72,6 +72,127 @@ export const commonStatusLabels: Record<string, string> =
 export const paymentMethodLabels: Record<string, string> =
   ENTITY_CONFIG.paymentMethods.values;
 
+// Mapping từ code API (TM, CK, TT, etc.) sang key constants
+const paymentMethodCodeToKey: Record<string, string> = {
+  // Vietnamese codes
+  tm: "cash",
+  "tiền mặt": "cash",
+  "tien mat": "cash",
+  cash: "cash",
+  // Bank transfer
+  ck: "bank_transfer",
+  "chuyển khoản": "bank_transfer",
+  "chuyen khoan": "bank_transfer",
+  "chuyển khoản ngân hàng": "bank_transfer",
+  bank_transfer: "bank_transfer",
+  "bank transfer": "bank_transfer",
+  // Card
+  tt: "card",
+  thẻ: "card",
+  the: "card",
+  "thẻ tín dụng": "card",
+  "the tin dung": "card",
+  card: "card",
+  // E-wallet
+  "ví điện tử": "e_wallet",
+  "vi dien tu": "e_wallet",
+  e_wallet: "e_wallet",
+  "e wallet": "e_wallet",
+  wallet: "e_wallet",
+};
+
+// ===== HELPER FUNCTIONS FOR MAPPING RESPONSE FIELDS =====
+
+/**
+ * Map payment method code/name to Vietnamese label from constants
+ * Falls back to provided name if not found in constants
+ */
+export function getPaymentMethodLabel(
+  codeOrName: string | null | undefined,
+  fallbackName?: string | null
+): string {
+  if (!codeOrName && !fallbackName) return "—";
+
+  // Normalize inputs
+  const normalizedCode = codeOrName?.toLowerCase().trim() || "";
+  const normalizedFallback = fallbackName?.toLowerCase().trim() || "";
+
+  // If fallbackName is already Vietnamese label from constants, use it directly
+  if (normalizedFallback) {
+    for (const label of Object.values(paymentMethodLabels)) {
+      if (label.toLowerCase() === normalizedFallback) {
+        return fallbackName!;
+      }
+    }
+  }
+
+  // Try to find in constants by code/name
+  if (normalizedCode) {
+    // First, try to map code to constant key (e.g., "tm" -> "cash", "ck" -> "bank_transfer")
+    const constantKey = paymentMethodCodeToKey[normalizedCode];
+    if (constantKey && paymentMethodLabels[constantKey]) {
+      return paymentMethodLabels[constantKey];
+    }
+
+    // Direct match with keys in paymentMethodLabels (e.g., "cash", "bank_transfer")
+    if (paymentMethodLabels[normalizedCode]) {
+      return paymentMethodLabels[normalizedCode];
+    }
+
+    // Try partial match without underscores
+    const normalizedNoUnderscore = normalizedCode.replace(/_/g, "");
+    for (const [key, label] of Object.entries(paymentMethodLabels)) {
+      const keyNoUnderscore = key.replace(/_/g, "");
+      if (normalizedNoUnderscore === keyNoUnderscore) {
+        return label;
+      }
+    }
+
+    // Try to match with label values (in case name is already Vietnamese)
+    for (const label of Object.values(paymentMethodLabels)) {
+      if (label.toLowerCase() === normalizedCode) {
+        return label;
+      }
+    }
+  }
+
+  // Fallback: if fallbackName exists and is not empty, use it
+  if (fallbackName && fallbackName.trim()) {
+    return fallbackName;
+  }
+
+  // Last resort: return codeOrName or "—"
+  return codeOrName || "—";
+}
+
+/**
+ * Get Vietnamese label for cash payment/receipt status
+ */
+export function getCashTransactionStatusLabel(
+  status: string | null | undefined
+): string {
+  if (!status) return "—";
+
+  const statusLower = status.toLowerCase();
+
+  // Map common statuses
+  if (statusLower.includes("draft") || statusLower === "draft") {
+    return "Nháp";
+  }
+  if (statusLower.includes("approved") || statusLower === "approved") {
+    return "Đã duyệt";
+  }
+  if (statusLower.includes("posted") || statusLower === "posted") {
+    return "Đã hạch toán";
+  }
+  if (statusLower.includes("cancelled") || statusLower === "cancelled") {
+    return "Đã hủy";
+  }
+
+  // Return as-is if not mapped
+  return status;
+}
+
 // Loại cán màng (LaminationType)
 export const laminationTypeLabels: Record<string, string> =
   ENTITY_CONFIG.laminationTypes.values;
@@ -90,6 +211,14 @@ export const vendorTypeLabels: Record<string, string> =
 
 // Vai trò người dùng (Role)
 export const roleLabels: Record<string, string> = ENTITY_CONFIG.roles.values;
+
+// Trạng thái phiếu giao hàng (DeliveryNote)
+export const deliveryNoteStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.deliveryNoteStatuses.values;
+
+// Trạng thái dòng giao hàng (DeliveryNoteLine)
+export const deliveryLineStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.deliveryLineStatuses.values;
 
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
@@ -145,6 +274,8 @@ export function getStatusVariant(
     "waiting_for_deposit",
     "not_paid",
     "not_completed",
+    "draft",
+    "failed_reschedule",
   ];
 
   const successStatuses = [
@@ -154,6 +285,7 @@ export function getStatusVariant(
     "completed",
     "fully_paid",
     "invoice_issued",
+    "delivered",
   ];
 
   const inProgressStatuses = [
@@ -162,6 +294,11 @@ export function getStatusVariant(
     "in_production",
     "deposit_received",
     "delivering",
+    "confirmed",
+    "ready_to_ship",
+    "handed_over",
+    "in_transit",
+    "partially_completed",
   ];
 
   if (successStatuses.includes(status)) return "success";
@@ -248,6 +385,23 @@ export const statusColorMap: Record<string, string> = {
   // ===== VENDOR TYPES =====
   plate: "bg-blue-50 text-blue-700 border-blue-200",
   die: "bg-violet-50 text-violet-700 border-violet-200",
+
+  // ===== DELIVERY NOTE STATUSES =====
+  draft: "bg-slate-100 text-slate-800 border-slate-200",
+  confirmed: "bg-blue-50 text-blue-700 border-blue-200",
+  ready_to_ship: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  handed_over: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  in_transit: "bg-blue-50 text-blue-700 border-blue-200",
+  partially_completed: "bg-amber-50 text-amber-700 border-amber-200",
+  // completed đã được định nghĩa ở ORDER STATUSES ở trên
+  // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
+
+  // ===== DELIVERY LINE STATUSES =====
+  // pending đã được định nghĩa ở ORDER STATUSES ở trên
+  // delivered: sử dụng màu xanh lá cho thành công (tương tự completed)
+  failed_reschedule: "bg-orange-50 text-orange-700 border-orange-200",
+  returned: "bg-rose-50 text-rose-700 border-rose-200",
+  // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
 };
 
 // Hàm helper: trả về class tailwind cho badge

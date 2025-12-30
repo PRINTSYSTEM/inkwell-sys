@@ -60,8 +60,20 @@ export type CustomerSummaryResponsePaginate = z.infer<
 >;
 
 // ===== CreateCustomerRequest =====
-export const CreateCustomerRequestSchema =
-  GenCreateCustomerRequestSchema.passthrough();
+// Add validation: companyName is required when type is "company"
+export const CreateCustomerRequestSchema = GenCreateCustomerRequestSchema.refine(
+  (data) => {
+    // If type is "company", companyName must be provided and not empty
+    if (data.type === "company") {
+      return !!data.companyName && data.companyName.trim().length > 0;
+    }
+    return true;
+  },
+  {
+    message: "Tên công ty là bắt buộc khi chọn loại khách công ty",
+    path: ["companyName"],
+  }
+);
 export type CreateCustomerRequest = z.infer<typeof CreateCustomerRequestSchema>;
 
 // ===== UpdateCustomerRequest =====

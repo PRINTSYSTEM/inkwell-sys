@@ -32,6 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useARSummary } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -64,42 +65,36 @@ export default function ARSummaryPage() {
     search: searchQuery || undefined,
   });
 
-  const totalDebt = arData?.items?.reduce((sum, item) => sum + (item.totalDebt || 0), 0) || 0;
-  const totalCurrentDebt = arData?.items?.reduce((sum, item) => sum + (item.currentDebt || 0), 0) || 0;
-  const totalOverdueDebt = arData?.items?.reduce((sum, item) => sum + (item.overdueDebt || 0), 0) || 0;
+  const totalClosingBalance = arData?.items?.reduce((sum, item) => sum + (item.closingBalance || 0), 0) || 0;
+  const totalIncrease = arData?.items?.reduce((sum, item) => sum + (item.increase || 0), 0) || 0;
+  const totalOverdue = arData?.items?.reduce((sum, item) => sum + (item.overdue || 0), 0) || 0;
+
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
+
+  const handleCustomerClick = (customerId: number | null | undefined) => {
+    if (customerId) {
+      navigate(`/accounting/ar?tab=detail&customerId=${customerId}`);
+    }
+  };
 
   return (
-    <>
-      <Helmet>
-        <title>Công nợ phải thu - Tổng hợp | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Tổng hợp công nợ phải thu theo khách hàng"
-        />
-      </Helmet>
-
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Công nợ phải thu - Tổng hợp
-            </h1>
-            <p className="text-muted-foreground">
-              Tổng hợp công nợ phải thu theo khách hàng
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Làm mới
-            </Button>
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Xuất Excel
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Làm mới
+          </Button>
+          <Button variant="outline" onClick={handleExportExcel}>
+            <Download className="h-4 w-4 mr-2" />
+            Xuất Excel
+          </Button>
         </div>
+      </div>
 
         {/* Error Alert */}
         {isError && (
@@ -126,33 +121,47 @@ export default function ARSummaryPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Tổng công nợ
+                Số dư cuối kỳ
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatCurrency(totalDebt)}
+                {formatCurrency(totalClosingBalance)}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Công nợ hiện tại
+                Tăng trong kỳ
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(totalCurrentDebt)}
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(totalIncrease)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Giảm trong kỳ
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {formatCurrency(
+                  arData?.items?.reduce((sum, item) => sum + (item.decrease || 0), 0) || 0
+                )}
               </div>
             </CardContent>
           </Card>
@@ -164,7 +173,7 @@ export default function ARSummaryPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">
-                {formatCurrency(totalOverdueDebt)}
+                {formatCurrency(totalOverdue)}
               </div>
             </CardContent>
           </Card>
@@ -177,11 +186,11 @@ export default function ARSummaryPage() {
               <TableRow className="bg-muted/50">
                 <TableHead className="w-[140px]">Mã KH</TableHead>
                 <TableHead>Tên khách hàng</TableHead>
-                <TableHead className="text-right">Tổng công nợ</TableHead>
-                <TableHead className="text-right">Công nợ hiện tại</TableHead>
-                <TableHead className="text-right">Công nợ quá hạn</TableHead>
-                <TableHead className="text-center">Thanh toán gần nhất</TableHead>
-                <TableHead className="text-right">Số tiền</TableHead>
+                <TableHead className="text-right">Số dư đầu kỳ</TableHead>
+                <TableHead className="text-right">Tăng</TableHead>
+                <TableHead className="text-right">Giảm</TableHead>
+                <TableHead className="text-right">Số dư cuối kỳ</TableHead>
+                <TableHead className="text-right">Quá hạn</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -207,49 +216,54 @@ export default function ARSummaryPage() {
                 </TableRow>
               ) : (
                 arData.items.map((item) => (
-                  <TableRow key={item.customerId} className="group">
+                  <TableRow
+                    key={item.customerId}
+                    className="group cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleCustomerClick(item.customerId)}
+                  >
                     <TableCell className="font-medium font-mono text-sm">
                       {item.customerCode || "—"}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {item.customerName || "—"}
+                      {item.customerName || item.companyName || "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.totalDebt !== undefined
-                        ? formatCurrency(item.totalDebt)
+                      {item.openingBalance !== undefined
+                        ? formatCurrency(item.openingBalance)
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums text-green-600">
+                      {item.increase !== undefined
+                        ? formatCurrency(item.increase)
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums text-blue-600">
+                      {item.decrease !== undefined
+                        ? formatCurrency(item.decrease)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.currentDebt !== undefined
-                        ? formatCurrency(item.currentDebt)
+                      {item.closingBalance !== undefined
+                        ? formatCurrency(item.closingBalance)
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-destructive">
-                      {item.overdueDebt !== undefined && item.overdueDebt > 0 ? (
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {item.overdue !== undefined && item.overdue > 0 ? (
                         <Badge variant="destructive">
-                          {formatCurrency(item.overdueDebt)}
+                          {formatCurrency(item.overdue)}
                         </Badge>
                       ) : (
                         "—"
                       )}
                     </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {item.lastPaymentDate
-                        ? formatDate(item.lastPaymentDate)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.lastPaymentAmount !== undefined
-                        ? formatCurrency(item.lastPaymentAmount)
-                        : "—"}
-                    </TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() =>
-                          navigate(`/accounting/ar/detail?customerId=${item.customerId}`)
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCustomerClick(item.customerId);
+                        }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Eye className="h-4 w-4" />
@@ -294,8 +308,7 @@ export default function ARSummaryPage() {
             </div>
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }
 

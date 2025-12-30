@@ -17,8 +17,13 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Download,
+  Calendar,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import { addDays } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +52,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Badge } from "@/components/ui/badge";
 import {
   useCashReceipts,
   useDeleteCashReceipt,
@@ -54,7 +60,14 @@ import {
   useCancelCashReceipt,
   usePostCashReceipt,
 } from "@/hooks/use-cash";
-import { formatCurrency } from "@/lib/status-utils";
+import { usePaymentMethods } from "@/hooks/use-expense";
+import { useCustomers } from "@/hooks/use-customer";
+import {
+  formatCurrency,
+  getPaymentMethodLabel,
+  getCashTransactionStatusLabel,
+} from "@/lib/status-utils";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -63,7 +76,7 @@ const formatDate = (dateStr: string | null | undefined) => {
 
 const getStatusBadge = (status: string | null | undefined) => {
   if (!status) return <StatusBadge status="unknown" label="—" />;
-  
+
   const statusLower = status.toLowerCase();
   if (statusLower.includes("draft") || statusLower === "draft") {
     return <StatusBadge status="draft" label="Nháp" />;
@@ -84,8 +97,25 @@ export default function CashReceiptListPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: addDays(new Date(), -30),
+    to: new Date(),
+  });
+  const [customerFilter, setCustomerFilter] = useState<string>("");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const { data: paymentMethodsData } = usePaymentMethods({
+    pageNumber: 1,
+    pageSize: 100,
+    isActive: true,
+  });
+
+  const { data: customersData } = useCustomers({
+    page: 1,
+    size: 1000,
+  });
 
   const {
     data: receiptsData,
@@ -98,12 +128,27 @@ export default function CashReceiptListPage() {
     pageSize: itemsPerPage,
     status: statusFilter === "all" ? undefined : statusFilter,
     search: searchQuery || undefined,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    customerId: customerFilter
+      ? Number.parseInt(customerFilter, 10)
+      : undefined,
+    paymentMethodId:
+      paymentMethodFilter && paymentMethodFilter !== "all"
+        ? Number.parseInt(paymentMethodFilter, 10)
+        : undefined,
   });
 
   const deleteReceiptMutation = useDeleteCashReceipt();
   const approveReceiptMutation = useApproveCashReceipt();
   const cancelReceiptMutation = useCancelCashReceipt();
   const postReceiptMutation = usePostCashReceipt();
+
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    // For now, show a message
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
 
   const handleViewDetails = (id: number | undefined) => {
     if (id) {
@@ -182,15 +227,12 @@ export default function CashReceiptListPage() {
     <>
       <Helmet>
         <title>Phiếu thu | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Quản lý phiếu thu trong hệ thống"
-        />
+        <meta name="description" content="Quản lý phiếu thu trong hệ thống" />
       </Helmet>
 
-      <div className="space-y-6">
+      <div className="container mx-auto py-6 space-y-6 max-w-full">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Phiếu thu</h1>
             <p className="text-muted-foreground">
@@ -217,53 +259,109 @@ export default function CashReceiptListPage() {
         )}
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Tìm kiếm theo mã phiếu, người nộp, lý do..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="draft">Nháp</SelectItem>
-                <SelectItem value="approved">Đã duyệt</SelectItem>
-                <SelectItem value="posted">Đã hạch toán</SelectItem>
-                <SelectItem value="cancelled">Đã hủy</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-              />
-            </Button>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3">
+            {/* First row: Search and Date Range */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Tìm kiếm theo mã phiếu, người nộp, lý do..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex-shrink-0">
+                <DateRangePicker value={dateRange} onValueChange={setDateRange} />
+              </div>
+            </div>
+            {/* Second row: Filters */}
+            <div className="flex flex-wrap gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="draft">Nháp</SelectItem>
+                  <SelectItem value="approved">Đã duyệt</SelectItem>
+                  <SelectItem value="posted">Đã hạch toán</SelectItem>
+                  <SelectItem value="cancelled">Đã hủy</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={customerFilter || "all"}
+                onValueChange={(value) =>
+                  setCustomerFilter(value === "all" ? "" : value)
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Khách hàng" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả khách hàng</SelectItem>
+                  {customersData?.items?.map((customer) => (
+                    <SelectItem key={customer.id} value={String(customer.id)}>
+                      {customer.name || customer.companyName || customer.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={paymentMethodFilter}
+                onValueChange={setPaymentMethodFilter}
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Phương thức" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {paymentMethodsData?.items?.map((method) => (
+                    <SelectItem key={method.id} value={String(method.id)}>
+                      {getPaymentMethodLabel(method.code || method.name, method.name)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => refetch()}
+                  disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title="Xuất Excel"
+                  onClick={handleExportExcel}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border">
-          <Table>
+        <div className="rounded-lg border overflow-x-auto">
+          <Table className="min-w-[1000px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã phiếu</TableHead>
+                <TableHead className="w-[140px]">Số phiếu</TableHead>
+                <TableHead className="w-[120px]">Ngày chứng từ</TableHead>
+                <TableHead className="w-[120px]">Ngày hạch toán</TableHead>
                 <TableHead>Người nộp</TableHead>
-                <TableHead>Lý do</TableHead>
+                <TableHead>Lý do thu</TableHead>
                 <TableHead className="text-right">Số tiền</TableHead>
-                <TableHead className="text-center">Ngày chứng từ</TableHead>
+                <TableHead>Phương thức</TableHead>
+                <TableHead>Tham chiếu</TableHead>
                 <TableHead className="text-center">Trạng thái</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
               </TableRow>
@@ -272,7 +370,7 @@ export default function CashReceiptListPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 10 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -282,7 +380,7 @@ export default function CashReceiptListPage() {
               ) : !receiptsData?.items || receiptsData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={10}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy phiếu thu nào.
@@ -290,9 +388,23 @@ export default function CashReceiptListPage() {
                 </TableRow>
               ) : (
                 receiptsData.items.map((receipt) => (
-                  <TableRow key={receipt.id} className="group">
+                  <TableRow
+                    key={receipt.id}
+                    className="group cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleViewDetails(receipt.id)}
+                  >
                     <TableCell className="font-medium font-mono text-sm">
                       {receipt.code || `#${receipt.id}`}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {receipt.voucherDate
+                        ? formatDate(receipt.voucherDate)
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {receipt.postingDate
+                        ? formatDate(receipt.postingDate)
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -317,10 +429,38 @@ export default function CashReceiptListPage() {
                     <TableCell className="text-right font-medium tabular-nums">
                       {receipt.amount ? formatCurrency(receipt.amount) : "—"}
                     </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {receipt.voucherDate
-                        ? formatDate(receipt.voucherDate)
-                        : "—"}
+                    <TableCell>
+                      {receipt.paymentMethodName || receipt.paymentMethodId ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {getPaymentMethodLabel(
+                            receipt.paymentMethodName,
+                            receipt.paymentMethodName
+                          )}
+                        </Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {receipt.orderCode && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">Đơn:</span>{" "}
+                            <span className="font-mono">
+                              {receipt.orderCode}
+                            </span>
+                          </div>
+                        )}
+                        {receipt.invoiceNumber && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">HĐ:</span>{" "}
+                            <span className="font-mono">
+                              {receipt.invoiceNumber}
+                            </span>
+                          </div>
+                        )}
+                        {!receipt.orderCode && !receipt.invoiceNumber && "—"}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       {getStatusBadge(receipt.status)}
@@ -447,7 +587,9 @@ export default function CashReceiptListPage() {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setCurrentPage((p) => Math.min(receiptsData.totalPages, p + 1))
+                  setCurrentPage((p) =>
+                    Math.min(receiptsData.totalPages, p + 1)
+                  )
                 }
                 disabled={currentPage === receiptsData.totalPages || isLoading}
               >
@@ -460,4 +602,3 @@ export default function CashReceiptListPage() {
     </>
   );
 }
-

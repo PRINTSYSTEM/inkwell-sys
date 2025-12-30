@@ -101,7 +101,7 @@ export default function OrderCreatePage() {
       selectedCustomer?.id
         ? {
             customerId: selectedCustomer.id,
-            search: debouncedSearchQuery.trim() || undefined,
+            search: debouncedSearchQuery.trim() || "",
           }
         : undefined
     );

@@ -43,8 +43,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { useInvoices, useExportInvoice } from "@/hooks/use-invoice";
+import {
+  useInvoices,
+  useExportInvoice,
+} from "@/hooks/use-invoice";
 import { formatCurrency } from "@/lib/status-utils";
+import { CreateInvoiceFromLinesDialog } from "@/components/accounting";
+import { Plus } from "lucide-react";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -61,6 +66,8 @@ export default function InvoiceListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isCreateFromLinesDialogOpen, setIsCreateFromLinesDialogOpen] =
+    useState(false);
   const itemsPerPage = 10;
 
   const {
@@ -145,6 +152,13 @@ export default function InvoiceListPage() {
           />
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={() => setIsCreateFromLinesDialogOpen(true)}
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Tạo từ dòng hàng
+          </Button>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
               <Filter className="h-4 w-4 mr-2" />
@@ -316,6 +330,12 @@ export default function InvoiceListPage() {
           </div>
         </div>
       )}
+
+      {/* Create Invoice From Lines Dialog */}
+      <CreateInvoiceFromLinesDialog
+        open={isCreateFromLinesDialogOpen}
+        onOpenChange={setIsCreateFromLinesDialogOpen}
+      />
     </div>
   );
 }

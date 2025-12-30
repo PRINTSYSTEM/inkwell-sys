@@ -13,8 +13,6 @@ import {
   RefreshCw,
   Plus,
   AlertCircle,
-  CheckCircle2,
-  XCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -68,6 +66,36 @@ import {
 } from "@/hooks/use-delivery-note";
 import type { OrderResponse } from "@/Schema";
 import type { DeliveryNoteResponse } from "@/Schema/delivery-note.schema";
+import { orderStatusLabels } from "@/lib/status-utils";
+
+// Mapping delivery note status to Vietnamese labels
+const getDeliveryNoteStatusLabel = (
+  status: string | null | undefined
+): string => {
+  if (!status) return "—";
+
+  const statusLower = status.toLowerCase();
+
+  if (
+    statusLower.includes("success") ||
+    statusLower.includes("completed") ||
+    statusLower === "delivered"
+  ) {
+    return "Đã giao";
+  }
+  if (statusLower.includes("fail") || statusLower.includes("failed")) {
+    return "Thất bại";
+  }
+  if (statusLower === "pending" || statusLower.includes("pending")) {
+    return "Chờ giao";
+  }
+  if (statusLower === "delivering" || statusLower.includes("delivering")) {
+    return "Đang giao";
+  }
+
+  // Return original status if no match
+  return status;
+};
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("vi-VN", {
@@ -294,29 +322,6 @@ export default function DeliveryNoteListPage() {
     );
   }, [selectedOrders]);
 
-  const getStatusBadge = (status: string | null | undefined) => {
-    if (!status) return <Badge variant="secondary">—</Badge>;
-
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes("success") || statusLower.includes("completed")) {
-      return (
-        <Badge variant="default" className="bg-green-500">
-          <CheckCircle2 className="h-3 w-3 mr-1" />
-          Thành công
-        </Badge>
-      );
-    }
-    if (statusLower.includes("fail") || statusLower.includes("failed")) {
-      return (
-        <Badge variant="destructive">
-          <XCircle className="h-3 w-3 mr-1" />
-          Thất bại
-        </Badge>
-      );
-    }
-    return <Badge variant="secondary">{status}</Badge>;
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -417,7 +422,9 @@ export default function DeliveryNoteListPage() {
                   </TableHead>
                   <TableHead className="w-[140px]">Mã đơn</TableHead>
                   <TableHead>Khách hàng</TableHead>
-                  <TableHead className="text-right">Tổng tiền</TableHead>
+                  <TableHead className="text-center">Trạng thái</TableHead>
+                  <TableHead className="text-center">Số SP</TableHead>
+                  <TableHead>Địa chỉ giao</TableHead>
                   <TableHead className="text-center">Ngày giao</TableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
@@ -426,7 +433,7 @@ export default function DeliveryNoteListPage() {
                 {ordersLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 8 }).map((_, j) => (
                         <TableCell key={j}>
                           <Skeleton className="h-5 w-full" />
                         </TableCell>
@@ -436,7 +443,7 @@ export default function DeliveryNoteListPage() {
                 ) : filteredOrders.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={8}
                       className="h-24 text-center text-muted-foreground"
                     >
                       Không tìm thấy đơn hàng nào.
@@ -447,6 +454,7 @@ export default function DeliveryNoteListPage() {
                     const isSelected = order.id
                       ? selectedOrderIds.has(order.id)
                       : false;
+                    const itemCount = order.orderDetails?.length || 0;
                     return (
                       <TableRow
                         key={order.id}
@@ -475,8 +483,19 @@ export default function DeliveryNoteListPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
-                          {formatCurrency(order.totalAmount || 0)}
+                        <TableCell className="text-center">
+                          <StatusBadge
+                            status={order.status || ""}
+                            label={orderStatusLabels[order.status || ""]}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center text-sm">
+                          <Badge variant="secondary">{itemCount}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                          {order.deliveryAddress ||
+                            order.recipientAddress ||
+                            "—"}
                         </TableCell>
                         <TableCell className="text-center text-sm text-muted-foreground">
                           {formatDate(order.deliveryDate)}
@@ -494,7 +513,9 @@ export default function DeliveryNoteListPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => navigate(`/orders/${order.id}`)}
+                                onClick={() =>
+                                  navigate(`/accounting/orders/${order.id}`)
+                                }
                               >
                                 <Eye className="h-4 w-4 mr-2" />
                                 Xem chi tiết
@@ -597,6 +618,8 @@ export default function DeliveryNoteListPage() {
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-[140px]">Mã phiếu</TableHead>
                   <TableHead>Đơn hàng</TableHead>
+                  <TableHead>Khách hàng</TableHead>
+                  <TableHead className="text-right">Tổng tiền</TableHead>
                   <TableHead>Người nhận</TableHead>
                   <TableHead className="text-center">Trạng thái</TableHead>
                   <TableHead className="text-center">Ngày tạo</TableHead>
@@ -607,7 +630,7 @@ export default function DeliveryNoteListPage() {
                 {deliveryNotesLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 8 }).map((_, j) => (
                         <TableCell key={j}>
                           <Skeleton className="h-5 w-full" />
                         </TableCell>
@@ -618,81 +641,135 @@ export default function DeliveryNoteListPage() {
                   deliveryNotesData.items.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={8}
                       className="h-24 text-center text-muted-foreground"
                     >
                       Không tìm thấy phiếu giao hàng nào.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  deliveryNotesData.items.map((deliveryNote) => (
-                    <TableRow key={deliveryNote.id} className="group">
-                      <TableCell className="font-medium font-mono text-sm">
-                        {deliveryNote.code || `#${deliveryNote.id}`}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {deliveryNote.orders?.slice(0, 2).map((order) => (
-                            <div key={order.orderId} className="text-sm">
-                              {order.orderCode}
+                  deliveryNotesData.items.map((deliveryNote) => {
+                    // Tính tổng tiền từ các đơn hàng
+                    const totalAmount =
+                      deliveryNote.orders?.reduce(
+                        (sum, order) => sum + (order.totalAmount || 0),
+                        0
+                      ) || 0;
+
+                    // Lấy danh sách khách hàng (unique)
+                    const customers =
+                      deliveryNote.orders
+                        ?.map((order) => order.customerName)
+                        .filter((name): name is string => !!name) || [];
+                    const uniqueCustomers = Array.from(new Set(customers));
+
+                    return (
+                      <TableRow key={deliveryNote.id} className="group">
+                        <TableCell className="font-medium font-mono text-sm">
+                          {deliveryNote.code || `#${deliveryNote.id}`}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">
+                              {deliveryNote.orders?.length || 0} đơn hàng
                             </div>
-                          ))}
-                          {deliveryNote.orders &&
-                            deliveryNote.orders.length > 2 && (
-                              <div className="text-xs text-muted-foreground">
-                                +{deliveryNote.orders.length - 2} đơn hàng khác
+                            <div className="space-y-0.5">
+                              {deliveryNote.orders?.slice(0, 2).map((order) => (
+                                <div
+                                  key={order.orderId}
+                                  className="text-xs text-muted-foreground font-mono"
+                                >
+                                  {order.orderCode}
+                                </div>
+                              ))}
+                              {deliveryNote.orders &&
+                                deliveryNote.orders.length > 2 && (
+                                  <div className="text-xs text-muted-foreground">
+                                    +{deliveryNote.orders.length - 2} đơn hàng
+                                    khác
+                                  </div>
+                                )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {uniqueCustomers.length > 0 ? (
+                              <>
+                                <div className="text-sm font-medium">
+                                  {uniqueCustomers[0]}
+                                </div>
+                                {uniqueCustomers.length > 1 && (
+                                  <div className="text-xs text-muted-foreground">
+                                    +{uniqueCustomers.length - 1} khách hàng
+                                    khác
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">
+                                —
                               </div>
                             )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium">
-                            {deliveryNote.recipientName || "—"}
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {deliveryNote.recipientPhone || "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {formatCurrency(totalAmount)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">
+                              {deliveryNote.recipientName || "—"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {deliveryNote.recipientPhone || "—"}
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getStatusBadge(deliveryNote.status)}
-                      </TableCell>
-                      <TableCell className="text-center text-sm text-muted-foreground">
-                        {formatDate(deliveryNote.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleViewDeliveryNote(deliveryNote.id)
-                              }
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleExportPDF(deliveryNote.id)}
-                            >
-                              <Truck className="h-4 w-4 mr-2" />
-                              Xuất PDF
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <StatusBadge
+                            status={deliveryNote.status || null}
+                            label={getDeliveryNoteStatusLabel(
+                              deliveryNote.status
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center text-sm text-muted-foreground">
+                          {formatDate(deliveryNote.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleViewDeliveryNote(deliveryNote.id)
+                                }
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Xem chi tiết
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleExportPDF(deliveryNote.id)}
+                              >
+                                <Truck className="h-4 w-4 mr-2" />
+                                Xuất PDF
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

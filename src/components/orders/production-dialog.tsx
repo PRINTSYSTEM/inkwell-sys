@@ -34,6 +34,7 @@ export function ProductionDialog({
   mode,
 }: ProductionDialogProps) {
   const [wastage, setWastage] = useState<number>(0);
+  const [producedQty, setProducedQty] = useState<number>(1);
   const [defectNotes, setDefectNotes] = useState("");
   const { mutate: startProduction, loading: starting } = useStartProduction();
   const { mutate: completeProduction, loading: completing } =
@@ -53,6 +54,7 @@ export function ProductionDialog({
     } else {
       const payload: CompleteProductionRequest = {
         wastage: wastage || 0,
+        producedQty: producedQty || 1,
         defectNotes: defectNotes || undefined,
       };
       await completeProduction({ id: productionId, data: payload });
@@ -77,6 +79,18 @@ export function ProductionDialog({
 
         {mode === "complete" && (
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>
+                Số lượng sản xuất <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                value={producedQty}
+                onChange={(e) => setProducedQty(Number(e.target.value) || 1)}
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label>Số lượng hao hụt (nếu có)</Label>
               <Input

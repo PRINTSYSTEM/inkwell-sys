@@ -1,12 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import {
-  RefreshCw,
-  Download,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
+import { RefreshCw, Download, Loader2, AlertCircle } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { addDays } from "date-fns";
@@ -33,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useBankLedger, useBankAccounts } from "@/hooks/use-bank";
 import { formatCurrency } from "@/lib/status-utils";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -40,6 +37,7 @@ const formatDate = (dateStr: string | null | undefined) => {
 };
 
 export default function BankLedgerPage() {
+  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
@@ -56,12 +54,35 @@ export default function BankLedgerPage() {
     error,
     refetch,
   } = useBankLedger({
-    fromDate: dateRange?.from
-      ? dateRange.from.toISOString()
-      : undefined,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     bankAccountId: bankAccountId,
   });
+
+  const handleVoucherClick = (
+    voucherType: string | null | undefined,
+    voucherId: number | undefined
+  ) => {
+    if (!voucherId) return;
+
+    const voucherTypeLower = voucherType?.toLowerCase() || "";
+    if (
+      voucherTypeLower.includes("receipt") ||
+      voucherTypeLower === "receipt"
+    ) {
+      navigate(`/accounting/cash-receipts/${voucherId}`);
+    } else if (
+      voucherTypeLower.includes("payment") ||
+      voucherTypeLower === "payment"
+    ) {
+      navigate(`/accounting/cash-payments/${voucherId}`);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
 
   return (
     <>
@@ -84,7 +105,7 @@ export default function BankLedgerPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Làm mới
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-2" />
               Xuất Excel
             </Button>
@@ -107,7 +128,7 @@ export default function BankLedgerPage() {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
           <Select
             value={bankAccountId?.toString() || "all"}
@@ -248,11 +269,17 @@ export default function BankLedgerPage() {
                 </TableRow>
               ) : (
                 ledgerData.entries.map((entry, index) => (
-                  <TableRow key={index}>
+                  <TableRow
+                    key={index}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() =>
+                      handleVoucherClick(entry.voucherType, entry.voucherId)
+                    }
+                  >
                     <TableCell className="text-sm">
                       {entry.date ? formatDate(entry.date) : "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
+                    <TableCell className="font-mono text-sm font-medium">
                       {entry.voucherCode || "—"}
                     </TableCell>
                     <TableCell>{entry.description || "—"}</TableCell>
@@ -263,7 +290,8 @@ export default function BankLedgerPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {entry.creditAmount !== undefined && entry.creditAmount > 0
+                      {entry.creditAmount !== undefined &&
+                      entry.creditAmount > 0
                         ? formatCurrency(entry.creditAmount)
                         : "—"}
                     </TableCell>
@@ -285,4 +313,3 @@ export default function BankLedgerPage() {
     </>
   );
 }
-

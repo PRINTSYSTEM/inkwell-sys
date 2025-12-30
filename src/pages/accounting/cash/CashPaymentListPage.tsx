@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -20,6 +20,9 @@ import {
   Clock,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import { addDays } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +51,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Badge } from "@/components/ui/badge";
 import {
   useCashPayments,
   useDeleteCashPayment,
@@ -55,7 +59,14 @@ import {
   useCancelCashPayment,
   usePostCashPayment,
 } from "@/hooks/use-cash";
-import { formatCurrency } from "@/lib/status-utils";
+import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
+import { useActiveVendors } from "@/hooks/use-vendor";
+import {
+  formatCurrency,
+  getPaymentMethodLabel,
+  getCashTransactionStatusLabel,
+} from "@/lib/status-utils";
+import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -69,7 +80,7 @@ const formatDateTime = (dateStr: string | null | undefined) => {
 
 const getStatusBadge = (status: string | null | undefined) => {
   if (!status) return <StatusBadge status="unknown" label="—" />;
-  
+
   const statusLower = status.toLowerCase();
   if (statusLower.includes("draft") || statusLower === "draft") {
     return <StatusBadge status="draft" label="Nháp" />;
@@ -90,8 +101,30 @@ export default function CashPaymentListPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: addDays(new Date(), -30),
+    to: new Date(),
+  });
+  const [vendorFilter, setVendorFilter] = useState<string>("");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
+  const [expenseCategoryFilter, setExpenseCategoryFilter] =
+    useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const { data: paymentMethodsData } = usePaymentMethods({
+    pageNumber: 1,
+    pageSize: 100,
+    isActive: true,
+  });
+
+  const { data: expenseCategoriesData } = useExpenseCategories({
+    pageNumber: 1,
+    pageSize: 100,
+    isActive: true,
+  });
+
+  const { data: vendorsData } = useActiveVendors();
 
   const {
     data: paymentsData,
@@ -104,12 +137,28 @@ export default function CashPaymentListPage() {
     pageSize: itemsPerPage,
     status: statusFilter === "all" ? undefined : statusFilter,
     search: searchQuery || undefined,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    vendorId: vendorFilter ? Number.parseInt(vendorFilter, 10) : undefined,
+    paymentMethodId:
+      paymentMethodFilter && paymentMethodFilter !== "all"
+        ? Number.parseInt(paymentMethodFilter, 10)
+        : undefined,
+    expenseCategoryId:
+      expenseCategoryFilter && expenseCategoryFilter !== "all"
+        ? Number.parseInt(expenseCategoryFilter, 10)
+        : undefined,
   });
 
   const deletePaymentMutation = useDeleteCashPayment();
   const approvePaymentMutation = useApproveCashPayment();
   const cancelPaymentMutation = useCancelCashPayment();
   const postPaymentMutation = usePostCashPayment();
+
+  const handleExportExcel = async () => {
+    // TODO: Implement export Excel when API endpoint is available
+    toast.info("Chức năng xuất Excel đang được phát triển");
+  };
 
   const handleViewDetails = (id: number | undefined) => {
     if (id) {
@@ -188,15 +237,12 @@ export default function CashPaymentListPage() {
     <>
       <Helmet>
         <title>Phiếu chi | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Quản lý phiếu chi trong hệ thống"
-        />
+        <meta name="description" content="Quản lý phiếu chi trong hệ thống" />
       </Helmet>
 
-      <div className="space-y-6">
+      <div className="container mx-auto py-6 space-y-6 max-w-full">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Phiếu chi</h1>
             <p className="text-muted-foreground">
@@ -223,53 +269,131 @@ export default function CashPaymentListPage() {
         )}
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Tìm kiếm theo mã phiếu, người nhận, lý do..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="draft">Nháp</SelectItem>
-                <SelectItem value="approved">Đã duyệt</SelectItem>
-                <SelectItem value="posted">Đã hạch toán</SelectItem>
-                <SelectItem value="cancelled">Đã hủy</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-              />
-            </Button>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3">
+            {/* First row: Search and Date Range */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Tìm kiếm theo mã phiếu, người nhận, lý do..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex-shrink-0">
+                <DateRangePicker
+                  value={dateRange}
+                  onValueChange={setDateRange}
+                />
+              </div>
+            </div>
+            {/* Second row: Filters */}
+            <div className="flex flex-wrap gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="draft">Nháp</SelectItem>
+                  <SelectItem value="approved">Đã duyệt</SelectItem>
+                  <SelectItem value="posted">Đã hạch toán</SelectItem>
+                  <SelectItem value="cancelled">Đã hủy</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={paymentMethodFilter}
+                onValueChange={setPaymentMethodFilter}
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Phương thức" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {paymentMethodsData?.items?.map((method) => (
+                    <SelectItem key={method.id} value={String(method.id)}>
+                      {getPaymentMethodLabel(
+                        method.code || method.name,
+                        method.name
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={vendorFilter || "all"}
+                onValueChange={(value) =>
+                  setVendorFilter(value === "all" ? "" : value)
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Nhà cung cấp" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả NCC</SelectItem>
+                  {vendorsData?.map((vendor) => (
+                    <SelectItem key={vendor.id} value={String(vendor.id)}>
+                      {vendor.name || vendor.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={expenseCategoryFilter}
+                onValueChange={setExpenseCategoryFilter}
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Khoản mục" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {expenseCategoriesData?.items?.map((category) => (
+                    <SelectItem key={category.id} value={String(category.id)}>
+                      {category.name || category.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => refetch()}
+                  disabled={isLoading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title="Xuất Excel"
+                  onClick={handleExportExcel}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border">
-          <Table>
+        <div className="rounded-lg border overflow-x-auto">
+          <Table className="min-w-[1000px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã phiếu</TableHead>
+                <TableHead className="w-[140px]">Số phiếu</TableHead>
+                <TableHead className="w-[120px]">Ngày chứng từ</TableHead>
+                <TableHead className="w-[120px]">Ngày hạch toán</TableHead>
                 <TableHead>Người nhận</TableHead>
-                <TableHead>Lý do</TableHead>
+                <TableHead>Khoản mục chi</TableHead>
                 <TableHead className="text-right">Số tiền</TableHead>
-                <TableHead className="text-center">Ngày chứng từ</TableHead>
+                <TableHead>Phương thức</TableHead>
+                <TableHead>Tham chiếu</TableHead>
                 <TableHead className="text-center">Trạng thái</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
               </TableRow>
@@ -278,7 +402,7 @@ export default function CashPaymentListPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 10 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -288,7 +412,7 @@ export default function CashPaymentListPage() {
               ) : !paymentsData?.items || paymentsData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={10}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy phiếu chi nào.
@@ -296,9 +420,23 @@ export default function CashPaymentListPage() {
                 </TableRow>
               ) : (
                 paymentsData.items.map((payment) => (
-                  <TableRow key={payment.id} className="group">
+                  <TableRow
+                    key={payment.id}
+                    className="group cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleViewDetails(payment.id)}
+                  >
                     <TableCell className="font-medium font-mono text-sm">
                       {payment.code || `#${payment.id}`}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {payment.voucherDate
+                        ? formatDate(payment.voucherDate)
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {payment.postingDate
+                        ? formatDate(payment.postingDate)
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -313,20 +451,48 @@ export default function CashPaymentListPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{payment.reason || "—"}</div>
-                      {payment.expenseCategoryName && (
+                      <div className="text-sm">
+                        {payment.expenseCategoryName || "—"}
+                      </div>
+                      {payment.reason && (
                         <div className="text-xs text-muted-foreground">
-                          {payment.expenseCategoryName}
+                          {payment.reason}
                         </div>
                       )}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {payment.amount ? formatCurrency(payment.amount) : "—"}
                     </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {payment.voucherDate
-                        ? formatDate(payment.voucherDate)
-                        : "—"}
+                    <TableCell>
+                      {payment.paymentMethodName || payment.paymentMethodId ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {getPaymentMethodLabel(
+                            payment.paymentMethodName,
+                            payment.paymentMethodName
+                          )}
+                        </Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {payment.orderCode && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">Đơn:</span>{" "}
+                            <span className="font-mono">
+                              {payment.orderCode}
+                            </span>
+                          </div>
+                        )}
+                        {payment.vendorName && (
+                          <div className="text-xs">
+                            <span className="text-muted-foreground">NCC:</span>{" "}
+                            {payment.vendorName}
+                          </div>
+                        )}
+                        {!payment.orderCode && !payment.vendorName && "—"}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       {getStatusBadge(payment.status)}
@@ -453,7 +619,9 @@ export default function CashPaymentListPage() {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setCurrentPage((p) => Math.min(paymentsData.totalPages, p + 1))
+                  setCurrentPage((p) =>
+                    Math.min(paymentsData.totalPages, p + 1)
+                  )
                 }
                 disabled={currentPage === paymentsData.totalPages || isLoading}
               >
@@ -466,4 +634,3 @@ export default function CashPaymentListPage() {
     </>
   );
 }
-

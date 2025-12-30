@@ -65,12 +65,18 @@ export const API_SUFFIX = {
   ORDERS_MY: "/orders/my",
 
   // ========== INVOICE ==========
+  // Note: GET /invoices (list) may not be defined in OpenAPI schema yet
   INVOICES: "/invoices",
   INVOICE_BY_ID: (id: number) => `/invoices/${id}`,
-  INVOICE_BY_ORDER: (orderId: number) => `/invoices/order/${orderId}`,
-  INVOICES_BY_ORDER: (orderId: number) => `/invoices/by-order/${orderId}`,
+  INVOICE_BY_ORDER: (orderId: number) => `/invoices/order/${orderId}`, // Legacy: GET returns string (URL)
+  INVOICES_BY_ORDER: (orderId: number) => `/invoices/by-order/${orderId}`, // GET with pagination
   INVOICE_EXPORT: (id: number) => `/invoices/${id}/export-sinvoice`,
-  ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`, // Legacy, use INVOICE_BY_ORDER
+  ORDER_INVOICE: (orderId: number) => `/invoices/order/${orderId}`, // Legacy alias, use INVOICE_BY_ORDER
+  INVOICES_BILLABLE_ITEMS: "/invoices/billable-items",
+  INVOICES_FROM_LINES: "/invoices/from-lines",
+  INVOICE_ISSUE: (id: number) => `/invoices/${id}/issue`,
+  INVOICE_E_INVOICE: (id: number) => `/invoices/${id}/e-invoice`,
+  INVOICE_VOID: (id: number) => `/invoices/${id}/void`,
   CUSTOMER_EXPORT_DEBT_COMPARISON: (id: number) =>
     `/customers/${id}/export-debt-comparison`,
 
@@ -184,6 +190,10 @@ export const API_SUFFIX = {
   DELIVERY_NOTE_STATUS: (id: number) => `/delivery-notes/${id}/status`,
   DELIVERY_NOTE_EXPORT_PDF: (id: number) => `/delivery-notes/${id}/export-pdf`,
   DELIVERY_NOTE_RECREATE: "/delivery-notes/recreate",
+  DELIVERY_NOTE_AVAILABLE_ORDERS: "/delivery-notes/available-orders",
+  DELIVERY_NOTE_FAILURE_REASONS: "/delivery-notes/failure-reasons",
+  DELIVERY_NOTE_LINE_RESULT: (lineId: number) =>
+    `/delivery-notes/lines/${lineId}/result`,
 
   // ========== CASH MANAGEMENT ==========
   CASH_FUNDS: "/categories/cash-funds",
@@ -227,7 +237,7 @@ export const API_SUFFIX = {
 
   // ========== INVENTORY REPORTS ==========
   CURRENT_STOCK: "/inventory-reports/current-stock",
-  INVENTORY_SUMMARY: "/inventory-reports/inventory-summary",
+  INVENTORY_SUMMARY: "/inventory-reports/summary", // Fixed: was "/inventory-reports/inventory-summary"
   LOW_STOCK: "/inventory-reports/low-stock",
   SLOW_MOVING: "/inventory-reports/slow-moving",
   STOCK_CARD: (itemCode: string) => `/inventory-reports/stock-card/${itemCode}`,
