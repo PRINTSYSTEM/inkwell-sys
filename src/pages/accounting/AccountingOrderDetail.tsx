@@ -46,6 +46,7 @@ import {
   PaymentStatusBadge,
   InvoiceStatusBadge,
   CustomerTypeBadge,
+  DebtStatusBadge,
 } from "@/components/accounting";
 import {
   useOrder,
@@ -1252,21 +1253,14 @@ export default function AccountingOrderDetail() {
                       <Separator />
 
                       <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">
-                            Tình trạng nợ
+                            Trạng thái nợ
                           </span>
-                          <Badge
-                            variant={
-                              order.customer?.debtStatus === "good"
-                                ? "default"
-                                : "destructive"
-                            }
-                          >
-                            {order.customer?.debtStatus === "good"
-                              ? "Tốt"
-                              : "Có nợ"}
-                          </Badge>
+                          <DebtStatusBadge
+                            status={order.customer?.debtStatus || null}
+                            className="text-xs"
+                          />
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">

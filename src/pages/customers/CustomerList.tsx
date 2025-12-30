@@ -20,7 +20,6 @@ import {
 import { toast } from "sonner";
 import { useCustomers, useExportDebtComparison } from "@/hooks/use-customer";
 import { Badge } from "@/components/ui/badge";
-import { DebtStatusBadge } from "@/components/accounting/StatusBadges";
 import {
   Table,
   TableBody,
@@ -255,7 +254,6 @@ export default function Customers() {
                   <TableHead>Mã KH</TableHead>
                   <TableHead>Tên khách hàng</TableHead>
                   <TableHead>Tên công ty</TableHead>
-                  <TableHead>Trạng thái nợ</TableHead>
                   <TableHead>Công nợ hiện tại</TableHead>
                   <TableHead>Hạn mức nợ</TableHead>
                   <TableHead className="text-right">Thao tác</TableHead>
@@ -264,7 +262,7 @@ export default function Customers() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                         Đang tải...
@@ -273,7 +271,7 @@ export default function Customers() {
                   </TableRow>
                 ) : customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       Không tìm thấy khách hàng nào
                     </TableCell>
                   </TableRow>
@@ -307,12 +305,6 @@ export default function Customers() {
                               Cá nhân
                             </span>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <DebtStatusBadge
-                            status={customer.debtStatus}
-                            className="text-xs"
-                          />
                         </TableCell>
                         <TableCell>
                           <span
@@ -392,9 +384,10 @@ export default function Customers() {
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    Trước
+                    Trang trước
                   </Button>
                   <div className="flex items-center space-x-1">
+                    <span className="text-sm text-muted-foreground">Trang</span>
                     <Input
                       type="number"
                       min="1"
@@ -420,7 +413,7 @@ export default function Customers() {
                     }
                     disabled={currentPage === totalPages}
                   >
-                    Sau
+                    Trang sau
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
