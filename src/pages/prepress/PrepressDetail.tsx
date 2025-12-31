@@ -884,7 +884,7 @@ export default function ProofingOrderDetailPage() {
                     onClick={() => setIsAddDesignDialogOpen(true)}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    Thêm design
+                    Thêm thiết kế
                   </Button>
                 )}
               </div>

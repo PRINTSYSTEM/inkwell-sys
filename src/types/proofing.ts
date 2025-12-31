@@ -12,9 +12,10 @@ export interface DesignItem {
   designTypeName: string; // from design.designType?.name
   materialTypeId: number; // from design.materialTypeId
   materialTypeName: string; // from design.materialType?.name
-  width: number; // from design.width
+  length: number; // from design.length
+  width?: number; // from design.width
   height: number; // from design.height
-  unit: string; // "cm" (constant)
+  unit: string; // "mm" (constant)
   quantity: number; // from OrderDetailResponse.quantity
   availableQuantity?: number; // Số lượng tối đa có thể tạo bình bài (from design.availableQuantityForProofing in response, or fetched separately if missing)
   unitPrice: number; // from OrderDetailResponse.unitPrice

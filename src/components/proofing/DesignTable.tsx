@@ -54,7 +54,7 @@ export function DesignTable({
               <TableHead>Vật liệu</TableHead>
               <TableHead>Cắt - Bế</TableHead>
               <TableHead>1 - 2 mặt</TableHead>
-              <TableHead>Cán bóng/Cán mờ</TableHead>
+              <TableHead>Cán</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -95,7 +95,8 @@ export function DesignTable({
                     <div>
                       <span className="text-muted-foreground">Kích thước:</span>
                       <span className="ml-2">
-                        {design.width}x{design.height} {design.unit}
+                        {design.length} × {design.height}
+                        {design.width ? ` × ${design.width}` : ""} mm
                       </span>
                     </div>
 

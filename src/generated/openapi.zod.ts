@@ -1703,6 +1703,41 @@ const PaperSizeResponse = z
     isCustom: z.boolean(),
   })
   .partial();
+const PaperSizeResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(PaperSizeResponse).nullable(),
+  })
+  .partial();
+const CreatePaperSizeRequest = z
+  .object({
+    name: z.string().nullable(),
+    width: z.number().nullable(),
+    height: z.number().nullable(),
+    isCustom: z.boolean(),
+  })
+  .partial();
+const ProblemDetails = z
+  .object({
+    type: z.string().nullable(),
+    title: z.string().nullable(),
+    status: z.number().int().nullable(),
+    detail: z.string().nullable(),
+    instance: z.string().nullable(),
+  })
+  .partial()
+  .passthrough();
+const UpdatePaperSizeRequest = z
+  .object({
+    name: z.string().nullable(),
+    width: z.number().nullable(),
+    height: z.number().nullable(),
+    isCustom: z.boolean().nullable(),
+  })
+  .partial();
 const CreatePaymentRequest = z.object({
   orderId: z.number().int(),
   paymentType: z.string().min(0).max(20),
@@ -1988,16 +2023,6 @@ const ReportExportResponseIPaginate = z
     items: z.array(ReportExportResponse).nullable(),
   })
   .partial();
-const ProblemDetails = z
-  .object({
-    type: z.string().nullable(),
-    title: z.string().nullable(),
-    status: z.number().int().nullable(),
-    detail: z.string().nullable(),
-    instance: z.string().nullable(),
-  })
-  .partial()
-  .passthrough();
 const SalesByPeriodResponse = z
   .object({
     period: z.string().nullable(),
@@ -2448,6 +2473,10 @@ export const schemas = {
   OrderDetailExportResponse,
   OrderExportResponse,
   PaperSizeResponse,
+  PaperSizeResponseIPaginate,
+  CreatePaperSizeRequest,
+  ProblemDetails,
+  UpdatePaperSizeRequest,
   CreatePaymentRequest,
   PaymentResponse,
   PaymentResponsePaginate,
@@ -2474,7 +2503,6 @@ export const schemas = {
   postApiproofingOrdersIddieExport_Body,
   ReportExportResponse,
   ReportExportResponseIPaginate,
-  ProblemDetails,
   SalesByPeriodResponse,
   SalesByPeriodResponseIPaginate,
   SalesByCustomerResponse,
@@ -5303,7 +5331,196 @@ const endpoints = makeApi([
     path: "/api/paper-sizes",
     alias: "getApipaperSizes",
     requestFormat: "json",
-    response: z.array(PaperSizeResponse),
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "isCustom",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+    ],
+    response: PaperSizeResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/paper-sizes",
+    alias: "postApipaperSizes",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreatePaperSizeRequest,
+      },
+    ],
+    response: PaperSizeResponse,
+    errors: [
+      {
+        status: 400,
+        description: `Bad Request`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 409,
+        description: `Conflict`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/paper-sizes/:id",
+    alias: "getApipaperSizesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: PaperSizeResponse,
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/paper-sizes/:id",
+    alias: "putApipaperSizesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdatePaperSizeRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: PaperSizeResponse,
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 409,
+        description: `Conflict`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/paper-sizes/:id",
+    alias: "deleteApipaperSizesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 400,
+        description: `Bad Request`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
   },
   {
     method: "post",

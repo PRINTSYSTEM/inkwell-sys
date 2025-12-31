@@ -16,8 +16,14 @@ import type {
   ProofingOrderResponsePaginate,
 } from "@/Schema/proofing-order.schema";
 import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
-import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
-import { PaperSizeResponseSchema } from "@/Schema/paper-size.schema";
+import type {
+  PaperSizeResponse,
+  CreatePaperSizeRequest,
+} from "@/Schema/paper-size.schema";
+import {
+  PaperSizeResponseSchema,
+  PaperSizeResponseIPaginateSchema,
+} from "@/Schema/paper-size.schema";
 import type {
   ProofingOrderListParams,
   CreateProofingOrderRequest,
@@ -165,9 +171,10 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             designTypeName: design.designType?.name || "",
             materialTypeId: design.materialTypeId ?? 0,
             materialTypeName: design.materialType?.name || "",
-            width: design.width ?? 0,
+            length: design.length ?? 0,
+            width: design.width ?? undefined,
             height: design.height ?? 0,
-            unit: "cm",
+            unit: "mm",
             quantity: od.quantity ?? 0,
             // Map availableQuantityForProofing from design to availableQuantity
             availableQuantity:
@@ -740,9 +747,54 @@ export const usePaperSizes = () => {
     queryKey: ["paper-sizes"],
     queryFn: async () => {
       const response = await apiRequest.get(API_SUFFIX.PAPER_SIZES);
-      return z.array(PaperSizeResponseSchema).parse(response.data);
+      const paginated = PaperSizeResponseIPaginateSchema.parse(response.data);
+      // Return items array, or empty array if items is null/undefined
+      return paginated.items || [];
     },
   });
+};
+
+export const useCreatePaperSize = () => {
+  const queryClient = useQueryClient();
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    PaperSizeResponse,
+    [CreatePaperSizeRequest]
+  >(async (payload) => {
+    const res = await apiRequest.post<PaperSizeResponse>(
+      API_SUFFIX.PAPER_SIZES,
+      payload
+    );
+    return PaperSizeResponseSchema.parse(res.data);
+  });
+
+  const mutate = async (payload: CreatePaperSizeRequest) => {
+    try {
+      const newPaperSize = await execute(payload);
+      // Invalidate and refetch paper sizes list
+      await queryClient.invalidateQueries({ queryKey: ["paper-sizes"] });
+      toast.success("Thành công", {
+        description: "Đã tạo khổ giấy mới thành công",
+      });
+      return newPaperSize;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể tạo khổ giấy mới",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
 
 export const useRecordPlateExport = () => {

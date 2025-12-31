@@ -134,7 +134,8 @@ export function DesignCard({
             </Tooltip>
           </TooltipProvider>
           <p className="text-xs text-muted-foreground">
-            {design.width}x{design.height} {design.unit}
+            {design.length} × {design.height}
+            {design.width ? ` × ${design.width}` : ""} mm
           </p>
         </div>
 

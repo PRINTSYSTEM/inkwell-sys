@@ -34,11 +34,13 @@ import {
   Maximize2,
   MessageSquare,
   CheckCircle2,
+  Plus,
 } from "lucide-react";
 import {
   useAvailableOrderDetailsForProofing,
   usePaperSizes,
   useCreateProofingOrderFromDesigns,
+  useCreatePaperSize,
 } from "@/hooks/use-proofing-order";
 import { ROUTE_PATHS } from "@/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -103,6 +105,8 @@ export default function ProofingOrderPage() {
   const { data: paperSizes } = usePaperSizes();
   const { mutate: createProofingOrder, loading: isCreating } =
     useCreateProofingOrderFromDesigns();
+  const { mutate: createPaperSize, loading: isCreatingPaperSize } =
+    useCreatePaperSize();
 
   // Debug: Log when materialTypeId changes
   useEffect(() => {
@@ -302,6 +306,59 @@ export default function ProofingOrderPage() {
   const selectedCount = useMemo(() => {
     return Object.values(designQuantities).filter((qty) => qty > 0).length;
   }, [designQuantities]);
+
+  // Parse custom paper size input (format: "31×43" or "31x43" or "31 × 43")
+  const parsedCustomPaperSize = useMemo(() => {
+    if (!customPaperSize || paperSizeId !== "custom") return null;
+    const trimmed = customPaperSize.trim();
+    // Match patterns like "31×43", "31x43", "31 × 43", "31 x 43"
+    const match = trimmed.match(/^(\d+)\s*[×xX]\s*(\d+)$/);
+    if (match) {
+      const width = parseInt(match[1], 10);
+      const height = parseInt(match[2], 10);
+      if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
+        return { width, height };
+      }
+    }
+    return null;
+  }, [customPaperSize, paperSizeId]);
+
+  // Check if custom paper size already exists in list
+  const existingPaperSize = useMemo(() => {
+    if (!parsedCustomPaperSize || !paperSizes) return null;
+    return paperSizes.find(
+      (ps) =>
+        ps.width === parsedCustomPaperSize.width &&
+        ps.height === parsedCustomPaperSize.height
+    );
+  }, [parsedCustomPaperSize, paperSizes]);
+
+  // Show create button if custom input is valid and doesn't exist
+  const showCreateButton =
+    paperSizeId === "custom" &&
+    parsedCustomPaperSize !== null &&
+    existingPaperSize === null;
+
+  // Handle create new paper size
+  const handleCreatePaperSize = async () => {
+    if (!parsedCustomPaperSize) return;
+    try {
+      const newPaperSize = await createPaperSize({
+        name: `${parsedCustomPaperSize.width}×${parsedCustomPaperSize.height}`,
+        width: parsedCustomPaperSize.width,
+        height: parsedCustomPaperSize.height,
+        isCustom: true,
+      });
+      // Select the newly created paper size
+      if (newPaperSize?.id) {
+        setPaperSizeId(newPaperSize.id.toString());
+        setCustomPaperSize("");
+      }
+    } catch (error) {
+      // Error is handled by the hook
+      console.error("Failed to create paper size:", error);
+    }
+  };
 
   const handleSubmitProofingOrder = async () => {
     try {
@@ -668,9 +725,9 @@ export default function ProofingOrderPage() {
               vào bảng bên phải.
             </div>
           ) : (
-            <div className="flex-1 flex min-h-0">
-              {/* Left: Designs table with quantities */}
-              <div className="flex-1 overflow-hidden border-r">
+            <div className="flex-1 flex flex-col min-h-0">
+              {/* Top: Designs table with quantities */}
+              <div className="flex-[7] overflow-hidden border-b">
                 <ScrollArea className="h-full">
                   <Table>
                     <TableHeader className="sticky top-0 bg-muted/50 z-10">
@@ -681,20 +738,14 @@ export default function ProofingOrderPage() {
                         <TableHead className="min-w-[200px] text-xs">
                           Thiết kế
                         </TableHead>
-                        <TableHead className="w-20 text-right text-xs">
-                          Đặt hàng
+                        <TableHead className="w-32 text-xs">
+                          Kích thước
                         </TableHead>
                         <TableHead className="w-24 text-right text-xs">
                           Còn lại
                         </TableHead>
                         <TableHead className="w-40 text-xs">
                           Số lượng lấy
-                        </TableHead>
-                        <TableHead className="w-24 text-right text-xs">
-                          Sau khi lấy
-                        </TableHead>
-                        <TableHead className="w-12 text-center text-xs">
-                          Trạng thái
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -741,9 +792,10 @@ export default function ProofingOrderPage() {
                                 </code>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right">
-                              <span className="text-sm font-medium">
-                                {design.quantity.toLocaleString()}
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground">
+                                {design.length} × {design.height}
+                                {design.width ? ` × ${design.width}` : ""} mm
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
@@ -793,35 +845,6 @@ export default function ProofingOrderPage() {
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right">
-                              <span
-                                className={cn(
-                                  "text-sm font-medium",
-                                  remainingQty > 0
-                                    ? "text-blue-600"
-                                    : remainingQty === 0 && currentQty > 0
-                                      ? "text-amber-600"
-                                      : "text-muted-foreground"
-                                )}
-                              >
-                                {remainingQty.toLocaleString()}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {isExceeded ? (
-                                <span className="text-[11px] text-destructive font-medium">
-                                  Quá
-                                </span>
-                              ) : isValid ? (
-                                <span className="text-[11px] text-emerald-600 font-medium">
-                                  OK
-                                </span>
-                              ) : (
-                                <span className="text-[11px] text-muted-foreground">
-                                  -
-                                </span>
-                              )}
-                            </TableCell>
                           </TableRow>
                         );
                       })}
@@ -830,157 +853,179 @@ export default function ProofingOrderPage() {
                 </ScrollArea>
               </div>
 
-              {/* Right: Config panel */}
-              <div className="w-[360px] flex flex-col border-l bg-muted/20 shrink-0">
-                <div className="flex-1 overflow-auto p-4">
-                  <div className="space-y-4">
-                    <div className="space-y-3">
-                      {/* Proofing Sheet Quantity */}
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="proofingSheetQuantity"
-                          className="text-sm font-medium"
-                        >
-                          Số lượng giấy in
-                          <span className="text-destructive"> *</span>
-                        </Label>
-                        <div className="relative">
-                          <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="proofingSheetQuantity"
-                            type="number"
-                            min="1"
-                            max="2147483647"
-                            step="1"
-                            className="pl-9 h-10 font-semibold"
-                            placeholder="Nhập Số lượng giấy in"
-                            value={proofingSheetQuantity || ""}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === "") {
-                                setProofingSheetQuantity(0);
-                              } else {
-                                const numValue = parseInt(value, 10);
-                                if (
-                                  !isNaN(numValue) &&
-                                  numValue > 0 &&
-                                  numValue <= 2147483647
-                                ) {
-                                  setProofingSheetQuantity(numValue);
-                                } else if (numValue > 2147483647) {
-                                  setProofingSheetQuantity(2147483647);
-                                }
+              {/* Bottom: Config panel (fixed at bottom) */}
+              <div className="flex-[3] border-t bg-muted/20 flex flex-col min-h-0">
+                <div className="p-3 space-y-3 overflow-y-auto flex-1">
+                  {/* Row 1: Config items in one row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* Proofing Sheet Quantity */}
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="proofingSheetQuantity"
+                        className="text-xs font-medium"
+                      >
+                        Số lượng giấy in
+                        <span className="text-destructive"> *</span>
+                      </Label>
+                      <div className="relative">
+                        <Hash className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          id="proofingSheetQuantity"
+                          type="number"
+                          min="1"
+                          max="2147483647"
+                          step="1"
+                          className="pl-8 h-8 text-sm font-semibold"
+                          placeholder="Nhập số lượng"
+                          value={proofingSheetQuantity || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "") {
+                              setProofingSheetQuantity(0);
+                            } else {
+                              const numValue = parseInt(value, 10);
+                              if (
+                                !isNaN(numValue) &&
+                                numValue > 0 &&
+                                numValue <= 2147483647
+                              ) {
+                                setProofingSheetQuantity(numValue);
+                              } else if (numValue > 2147483647) {
+                                setProofingSheetQuantity(2147483647);
                               }
-                            }}
-                            required
-                          />
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Số lượng giấy in được in ra (không phải tổng số lượng
-                          thiết kế).
-                        </p>
+                            }
+                          }}
+                          required
+                        />
                       </div>
+                    </div>
 
-                      {/* Paper Size */}
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="paperSizeId"
-                          className="text-sm font-medium"
-                        >
-                          Khổ giấy in
-                        </Label>
-                        <Select
-                          value={paperSizeId}
-                          onValueChange={setPaperSizeId}
-                        >
-                          <SelectTrigger id="paperSizeId" className="h-10">
-                            <Maximize2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <SelectValue placeholder="Chọn khổ giấy" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Chưa xác định</SelectItem>
-                            {paperSizes?.map((ps) => (
-                              <SelectItem key={ps.id} value={ps.id.toString()}>
-                                {ps.name}
-                                {ps.width && ps.height
-                                  ? ` (${ps.width}×${ps.height})`
-                                  : ""}
-                              </SelectItem>
-                            ))}
-                            <SelectItem value="custom">
-                              -- Nhập thủ công --
+                    {/* Paper Size */}
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="paperSizeId"
+                        className="text-xs font-medium"
+                      >
+                        Khổ giấy in
+                      </Label>
+                      <Select
+                        value={paperSizeId}
+                        onValueChange={setPaperSizeId}
+                      >
+                        <SelectTrigger id="paperSizeId" className="h-8 text-sm">
+                          <Maximize2 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                          <SelectValue placeholder="Chọn khổ giấy" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Chưa xác định</SelectItem>
+                          {paperSizes?.map((ps) => (
+                            <SelectItem key={ps.id} value={ps.id.toString()}>
+                              {ps.name}
+                              {ps.width && ps.height
+                                ? ` (${ps.width}×${ps.height})`
+                                : ""}
                             </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                          ))}
+                          <SelectItem value="custom">
+                            -- Nhập thủ công --
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                      {/* Custom Paper Size */}
-                      {paperSizeId === "custom" ? (
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="customPaperSize"
-                            className="text-sm font-medium"
-                          >
-                            Khổ giấy tùy chỉnh
-                          </Label>
+                    {/* Custom Paper Size or Size Display */}
+                    {paperSizeId === "custom" ? (
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="customPaperSize"
+                          className="text-xs font-medium"
+                        >
+                          Khổ giấy tùy chỉnh
+                        </Label>
+                        <div className="flex gap-2">
                           <Input
                             id="customPaperSize"
-                            className="h-10"
-                            placeholder="Ví dụ: 31×43, 65×86..."
+                            className="h-8 text-sm flex-1"
+                            placeholder="31×43, 65×86..."
                             value={customPaperSize}
                             onChange={(e) => setCustomPaperSize(e.target.value)}
+                            disabled={isCreatingPaperSize}
                           />
+                          {showCreateButton && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-3 shrink-0"
+                              onClick={handleCreatePaperSize}
+                              disabled={isCreatingPaperSize}
+                            >
+                              {isCreatingPaperSize ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Plus className="h-3.5 w-3.5" />
+                              )}
+                              <span className="ml-1.5 text-xs">Tạo mới</span>
+                            </Button>
+                          )}
                         </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-muted-foreground">
-                            Kích thước
-                          </Label>
-                          <div className="h-10 flex items-center px-3 rounded-md border bg-background text-sm text-muted-foreground">
-                            {paperSizeId !== "none" &&
-                            paperSizes?.find(
-                              (ps) => ps.id.toString() === paperSizeId
-                            ) ? (
-                              <span>
-                                {
-                                  paperSizes.find(
-                                    (ps) => ps.id.toString() === paperSizeId
-                                  )?.width
-                                }{" "}
-                                ×{" "}
-                                {
-                                  paperSizes.find(
-                                    (ps) => ps.id.toString() === paperSizeId
-                                  )?.height
-                                }
-                              </span>
-                            ) : (
-                              <span className="italic">Chưa chọn</span>
-                            )}
-                          </div>
+                        {existingPaperSize && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Đã tồn tại:{" "}
+                            {existingPaperSize.name ||
+                              `${existingPaperSize.width}×${existingPaperSize.height}`}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium text-muted-foreground">
+                          Kích thước
+                        </Label>
+                        <div className="h-8 flex items-center px-2 rounded-md border bg-background text-xs text-muted-foreground">
+                          {paperSizeId !== "none" &&
+                          paperSizes?.find(
+                            (ps) => ps.id.toString() === paperSizeId
+                          ) ? (
+                            <span>
+                              {
+                                paperSizes.find(
+                                  (ps) => ps.id.toString() === paperSizeId
+                                )?.width
+                              }{" "}
+                              ×{" "}
+                              {
+                                paperSizes.find(
+                                  (ps) => ps.id.toString() === paperSizeId
+                                )?.height
+                              }
+                            </span>
+                          ) : (
+                            <span className="italic">Chưa chọn</span>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                  </div>
 
-                    {/* Notes */}
-                    <div>
-                      <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                        <MessageSquare className="h-4 w-4 text-primary" />
-                        Ghi chú
-                      </h3>
-                      <Textarea
-                        id="notes"
-                        className="min-h-[100px] resize-none"
-                        placeholder="Nhập ghi chú cho lệnh bình bài này (tùy chọn)..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                      />
-                    </div>
+                  {/* Row 2: Notes */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                      Ghi chú
+                    </Label>
+                    <Textarea
+                      id="notes"
+                      className="min-h-[60px] text-sm resize-none"
+                      placeholder="Nhập ghi chú cho lệnh bình bài này (tùy chọn)..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
                   </div>
                 </div>
 
                 {/* Footer summary */}
-                <div className="shrink-0 border-t px-4 py-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                <div className="shrink-0 border-t px-4 py-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground bg-background">
                   <div>
                     {selectedCount > 0 && (
                       <span>
