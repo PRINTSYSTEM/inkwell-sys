@@ -41,14 +41,20 @@ export function DesignTable({
 
   return (
     <>
-      <div className="rounded-md border overflow-x-auto">
-        <Table className="min-w-full text-sm">
+      <div className="rounded-md border">
+        <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10"></TableHead>
+              <TableHead className="w-12"></TableHead>
               <TableHead className="w-16">Ảnh</TableHead>
-              <TableHead className="min-w-[220px]">Thiết kế</TableHead>
-              <TableHead className="min-w-[260px]">Thông số in ấn</TableHead>
+              <TableHead>Đơn hàng</TableHead>
+              <TableHead>Mã hàng</TableHead>
+              <TableHead>Tên</TableHead>
+              <TableHead>Loại</TableHead>
+              <TableHead>Vật liệu</TableHead>
+              <TableHead>Cắt - Bế</TableHead>
+              <TableHead>1 - 2 mặt</TableHead>
+              <TableHead>Cán bóng/Cán mờ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -170,7 +176,7 @@ export function DesignTable({
                 >
                   <TableRow
                     className={cn(
-                      "cursor-pointer align-top",
+                      "cursor-pointer",
                       isSelected && "bg-primary/5",
                       !selectable &&
                         !isSelected &&
@@ -182,7 +188,7 @@ export function DesignTable({
                       }
                     }}
                   >
-                    <TableCell className="pt-4">
+                    <TableCell>
                       <Checkbox
                         checked={isSelected}
                         disabled={!selectable && !isSelected}
@@ -194,7 +200,7 @@ export function DesignTable({
                         onClick={(e) => e.stopPropagation()}
                       />
                     </TableCell>
-                    <TableCell className="pt-3">
+                    <TableCell>
                       {design.thumbnailUrl ? (
                         <button
                           onClick={(e) => {
@@ -204,7 +210,7 @@ export function DesignTable({
                               title: design.name,
                             });
                           }}
-                          className="w-10 h-10 rounded bg-muted overflow-hidden hover:opacity-80 transition-opacity"
+                          className="w-10 h-10 rounded object-cover bg-muted overflow-hidden hover:opacity-80 transition-opacity"
                         >
                           <img
                             src={design.thumbnailUrl}
@@ -216,82 +222,70 @@ export function DesignTable({
                         <div className="w-10 h-10 rounded bg-muted" />
                       )}
                     </TableCell>
-                    <TableCell className="py-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          {design.orderCode && (
-                            <>
-                              <FileText className="h-3 w-3" />
-                              <span className="font-semibold text-primary">
-                                {design.orderCode}
-                              </span>
-                            </>
-                          )}
-                          {!design.orderCode && <span>{design.orderId}</span>}
-                        </div>
-                        <div className="text-xs font-mono text-muted-foreground">
-                          {design.code}
-                        </div>
-                        <div className="text-sm font-medium leading-snug">
-                          <TruncatedText text={design.name} />
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                          <span>
-                            SL đặt:{" "}
-                            <span className="font-semibold">
-                              {design.quantity.toLocaleString()}
-                            </span>
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <span>SL còn:</span>
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                design.availableQuantity &&
-                                  design.availableQuantity > 0
-                                  ? "text-emerald-600"
-                                  : "text-destructive"
-                              )}
-                            >
-                              {design.availableQuantity?.toLocaleString() ||
-                                "—"}
-                            </span>
+                    <TableCell>
+                      {design.orderCode ? (
+                        <div className="flex items-center gap-1.5">
+                          <FileText className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-semibold text-xs text-primary">
+                            {design.orderCode}
                           </span>
                         </div>
-                      </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          {design.orderId}
+                        </span>
+                      )}
                     </TableCell>
-                    <TableCell className="py-3">
-                      <div className="flex flex-wrap gap-1.5">
-                        <Badge variant="secondary" className="text-[11px]">
-                          {design.designTypeName}
+                    <TableCell className="font-mono text-xs">
+                      {design.code}
+                    </TableCell>
+                    <TableCell>
+                      <TruncatedText
+                        text={design.name}
+                        className="font-medium"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-xs">
+                        {design.designTypeName}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {design.materialTypeName}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {design.processClassificationOptionName ? (
+                        <Badge variant="outline" className="text-xs">
+                          {processClassificationLabels[
+                            design.processClassificationOptionName
+                          ] || design.processClassificationOptionName}
                         </Badge>
-                        <Badge variant="outline" className="text-[11px]">
-                          {design.materialTypeName}
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {design.sidesClassification ? (
+                        <Badge variant="outline" className="text-xs">
+                          {sidesClassificationLabels[
+                            design.sidesClassification
+                          ] || design.sidesClassification}
                         </Badge>
-                        {design.processClassificationOptionName ? (
-                          <Badge variant="outline" className="text-[11px]">
-                            {processClassificationLabels[
-                              design.processClassificationOptionName
-                            ] || design.processClassificationOptionName}
-                          </Badge>
-                        ) : null}
-                        {design.sidesClassification ? (
-                          <Badge variant="outline" className="text-[11px]">
-                            {sidesClassificationLabels[
-                              design.sidesClassification
-                            ] || design.sidesClassification}
-                          </Badge>
-                        ) : null}
-                        {design.laminationType ? (
-                          <Badge variant="outline" className="text-[11px]">
-                            {laminationTypeLabels[design.laminationType] ||
-                              design.laminationType}
-                          </Badge>
-                        ) : null}
-                        <div className="text-[11px] text-muted-foreground ml-0.5">
-                          {design.width}x{design.height} {design.unit}
-                        </div>
-                      </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {design.laminationType ? (
+                        <Badge variant="outline" className="text-xs">
+                          {laminationTypeLabels[design.laminationType] ||
+                            design.laminationType}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 </CursorTooltip>
