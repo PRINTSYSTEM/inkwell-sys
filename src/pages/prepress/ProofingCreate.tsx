@@ -55,7 +55,6 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { TruncatedText } from "@/components/ui/truncated-text";
 
 const ITEMS_PER_PAGE_OPTIONS = [12, 24, 48];
 
@@ -385,13 +384,8 @@ export default function ProofingOrderPage() {
       setPaperSizeId("none");
       setCustomPaperSize("");
 
-      if (
-        result &&
-        typeof result === "object" &&
-        "id" in result &&
-        typeof result.id === "number"
-      ) {
-        navigate(`${ROUTE_PATHS.PROOFING.ROOT}/${result.id}`);
+      if (result && (result as any).id) {
+        navigate(`${ROUTE_PATHS.PROOFING.ROOT}/${(result as any).id}`);
       } else {
         navigate(ROUTE_PATHS.PROOFING.ROOT);
       }
@@ -464,9 +458,9 @@ export default function ProofingOrderPage() {
       </header>
 
       {/* BODY: 2 COLUMNS */}
-      <div className="flex-1 flex min-h-0 w-full max-w-6xl mx-auto overflow-hidden">
+      <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden">
         {/* LEFT: DESIGN LIST + FILTERS */}
-        <div className="basis-3/5 min-w-0 border-r flex flex-col min-h-0 bg-card/30">
+        <div className="basis-1/2 min-w-0 border-r flex flex-col min-h-0 bg-card/30">
           <div className="p-4 border-b">
             <FilterSection
               designTypeOptions={data?.designTypeOptions || []}
@@ -674,9 +668,9 @@ export default function ProofingOrderPage() {
               vào bảng bên phải.
             </div>
           ) : (
-            <div className="flex-1 flex flex-col min-h-0 w-full max-w-full">
-              {/* Bảng thiết kế đã chọn */}
-              <div className="flex-1 min-h-0 border-b">
+            <div className="flex-1 flex min-h-0">
+              {/* Left: Designs table with quantities */}
+              <div className="flex-1 overflow-hidden border-r">
                 <ScrollArea className="h-full">
                   <Table>
                     <TableHeader className="sticky top-0 bg-muted/50 z-10">
@@ -684,7 +678,7 @@ export default function ProofingOrderPage() {
                         <TableHead className="w-10 text-center text-xs">
                           #
                         </TableHead>
-                        <TableHead className="max-w-[200px] text-xs">
+                        <TableHead className="min-w-[200px] text-xs">
                           Thiết kế
                         </TableHead>
                         <TableHead className="w-20 text-right text-xs">
@@ -695,6 +689,12 @@ export default function ProofingOrderPage() {
                         </TableHead>
                         <TableHead className="w-40 text-xs">
                           Số lượng lấy
+                        </TableHead>
+                        <TableHead className="w-24 text-right text-xs">
+                          Sau khi lấy
+                        </TableHead>
+                        <TableHead className="w-12 text-center text-xs">
+                          Trạng thái
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -731,18 +731,14 @@ export default function ProofingOrderPage() {
                             <TableCell className="text-center text-xs text-muted-foreground font-medium">
                               {index + 1}
                             </TableCell>
-                            <TableCell className="max-w-[200px]">
-                              <div className="space-y-1">
-                                <TruncatedText
-                                  text={design.name}
-                                  className="font-medium text-sm block"
-                                  maxWidth="200px"
-                                />
-                                <TruncatedText
-                                  text={design.code}
-                                  className="text-[11px] text-muted-foreground font-mono block"
-                                  maxWidth="200px"
-                                />
+                            <TableCell>
+                              <div>
+                                <div className="font-medium text-sm">
+                                  {design.name}
+                                </div>
+                                <code className="text-[11px] text-muted-foreground font-mono">
+                                  {design.code}
+                                </code>
                               </div>
                             </TableCell>
                             <TableCell className="text-right">
@@ -797,6 +793,35 @@ export default function ProofingOrderPage() {
                                 </span>
                               </div>
                             </TableCell>
+                            <TableCell className="text-right">
+                              <span
+                                className={cn(
+                                  "text-sm font-medium",
+                                  remainingQty > 0
+                                    ? "text-blue-600"
+                                    : remainingQty === 0 && currentQty > 0
+                                      ? "text-amber-600"
+                                      : "text-muted-foreground"
+                                )}
+                              >
+                                {remainingQty.toLocaleString()}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {isExceeded ? (
+                                <span className="text-[11px] text-destructive font-medium">
+                                  Quá
+                                </span>
+                              ) : isValid ? (
+                                <span className="text-[11px] text-emerald-600 font-medium">
+                                  OK
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground">
+                                  -
+                                </span>
+                              )}
+                            </TableCell>
                           </TableRow>
                         );
                       })}
@@ -805,12 +830,12 @@ export default function ProofingOrderPage() {
                 </ScrollArea>
               </div>
 
-              {/* Panel cấu hình & tóm tắt, full width dưới bảng */}
-              <div className="shrink-0 border-t bg-muted/20 w-full max-w-full">
-                <div className="px-4 py-3 space-y-4">
-                  <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start">
-                    {/* Số lượng giấy in + khổ giấy */}
-                    <div className="space-y-4">
+              {/* Right: Config panel */}
+              <div className="w-[360px] flex flex-col border-l bg-muted/20 shrink-0">
+                <div className="flex-1 overflow-auto p-4">
+                  <div className="space-y-4">
+                    <div className="space-y-3">
+                      {/* Proofing Sheet Quantity */}
                       <div className="space-y-2">
                         <Label
                           htmlFor="proofingSheetQuantity"
@@ -828,7 +853,7 @@ export default function ProofingOrderPage() {
                             max="2147483647"
                             step="1"
                             className="pl-9 h-10 font-semibold"
-                            placeholder="Nhập số lượng tờ bình bài"
+                            placeholder="Nhập Số lượng giấy in"
                             value={proofingSheetQuantity || ""}
                             onChange={(e) => {
                               const value = e.target.value;
@@ -851,10 +876,12 @@ export default function ProofingOrderPage() {
                           />
                         </div>
                         <p className="text-[11px] text-muted-foreground">
-                          Số lượng giấy in được sử dụng cho lệnh bình bài này.
+                          Số lượng giấy in được in ra (không phải tổng số lượng
+                          thiết kế).
                         </p>
                       </div>
 
+                      {/* Paper Size */}
                       <div className="space-y-2">
                         <Label
                           htmlFor="paperSizeId"
@@ -885,58 +912,57 @@ export default function ProofingOrderPage() {
                             </SelectItem>
                           </SelectContent>
                         </Select>
-
-                        {paperSizeId === "custom" ? (
-                          <div className="space-y-2">
-                            <Label
-                              htmlFor="customPaperSize"
-                              className="text-sm font-medium"
-                            >
-                              Khổ giấy tùy chỉnh
-                            </Label>
-                            <Input
-                              id="customPaperSize"
-                              className="h-10"
-                              placeholder="Ví dụ: 31×43, 65×86..."
-                              value={customPaperSize}
-                              onChange={(e) =>
-                                setCustomPaperSize(e.target.value)
-                              }
-                            />
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium text-muted-foreground">
-                              Kích thước
-                            </Label>
-                            <div className="h-10 flex items-center px-3 rounded-md border bg-background text-sm text-muted-foreground">
-                              {paperSizeId !== "none" &&
-                              paperSizes?.find(
-                                (ps) => ps.id.toString() === paperSizeId
-                              ) ? (
-                                <span>
-                                  {
-                                    paperSizes.find(
-                                      (ps) => ps.id.toString() === paperSizeId
-                                    )?.width
-                                  }{" "}
-                                  ×{" "}
-                                  {
-                                    paperSizes.find(
-                                      (ps) => ps.id.toString() === paperSizeId
-                                    )?.height
-                                  }
-                                </span>
-                              ) : (
-                                <span className="italic">Chưa chọn</span>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </div>
+
+                      {/* Custom Paper Size */}
+                      {paperSizeId === "custom" ? (
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="customPaperSize"
+                            className="text-sm font-medium"
+                          >
+                            Khổ giấy tùy chỉnh
+                          </Label>
+                          <Input
+                            id="customPaperSize"
+                            className="h-10"
+                            placeholder="Ví dụ: 31×43, 65×86..."
+                            value={customPaperSize}
+                            onChange={(e) => setCustomPaperSize(e.target.value)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-muted-foreground">
+                            Kích thước
+                          </Label>
+                          <div className="h-10 flex items-center px-3 rounded-md border bg-background text-sm text-muted-foreground">
+                            {paperSizeId !== "none" &&
+                            paperSizes?.find(
+                              (ps) => ps.id.toString() === paperSizeId
+                            ) ? (
+                              <span>
+                                {
+                                  paperSizes.find(
+                                    (ps) => ps.id.toString() === paperSizeId
+                                  )?.width
+                                }{" "}
+                                ×{" "}
+                                {
+                                  paperSizes.find(
+                                    (ps) => ps.id.toString() === paperSizeId
+                                  )?.height
+                                }
+                              </span>
+                            ) : (
+                              <span className="italic">Chưa chọn</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Ghi chú */}
+                    {/* Notes */}
                     <div>
                       <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
                         <MessageSquare className="h-4 w-4 text-primary" />
@@ -951,28 +977,28 @@ export default function ProofingOrderPage() {
                       />
                     </div>
                   </div>
+                </div>
 
-                  {/* Tóm tắt */}
-                  <div className="border-t pt-2 mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                    <div>
-                      {selectedCount > 0 && (
-                        <span>
-                          {selectedCount}/{selectedDesigns.length} thiết kế đã
-                          nhập số lượng • Tổng lấy{" "}
-                          {totalSelectedQuantity.toLocaleString()} sp
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-right space-y-0.5">
-                      {!hasValidQuantities && (
-                        <div>
-                          Vui lòng nhập số lượng &gt; 0 cho ít nhất 1 thiết kế.
-                        </div>
-                      )}
-                      {proofingSheetQuantity < 1 && (
-                        <div>Số lượng giấy in phải &gt;= 1.</div>
-                      )}
-                    </div>
+                {/* Footer summary */}
+                <div className="shrink-0 border-t px-4 py-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                  <div>
+                    {selectedCount > 0 && (
+                      <span>
+                        {selectedCount}/{selectedDesigns.length} thiết kế đã
+                        nhập số lượng • Tổng lấy{" "}
+                        {totalSelectedQuantity.toLocaleString()} sp
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {!hasValidQuantities && (
+                      <div>
+                        Vui lòng nhập số lượng &gt; 0 cho ít nhất 1 thiết kế.
+                      </div>
+                    )}
+                    {proofingSheetQuantity < 1 && (
+                      <div>Số lượng giấy in phải &gt;= 1.</div>
+                    )}
                   </div>
                 </div>
               </div>
