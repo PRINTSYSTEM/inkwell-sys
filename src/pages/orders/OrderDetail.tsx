@@ -338,7 +338,7 @@ export default function OrderDetailPage() {
         });
       }
     },
-    [order?.id, updateOrder]
+    [order, updateOrder]
   );
 
   // Helper to save card changes
