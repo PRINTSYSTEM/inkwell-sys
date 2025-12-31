@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2025-12-31T02:49:22.075Z */
+/* Generated at: 2025-12-31T04:01:48.823Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -57,6 +57,7 @@ export const CreateInvoiceFromLinesRequestSchema = schemas.CreateInvoiceFromLine
 export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
 export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
 export const CreateOrderRequestSchema = schemas.CreateOrderRequest;
+export const CreatePaperSizeRequestSchema = schemas.CreatePaperSizeRequest;
 export const CreatePaymentMethodRequestSchema = schemas.CreatePaymentMethodRequest;
 export const CreatePaymentRequestSchema = schemas.CreatePaymentRequest;
 export const CreateProductionRequestSchema = schemas.CreateProductionRequest;
@@ -127,6 +128,7 @@ export const OrderResponseForDesignerSchema = schemas.OrderResponseForDesigner;
 export const OrderResponseForDesignerPaginateSchema = schemas.OrderResponseForDesignerPaginate;
 export const OrderResponsePaginateSchema = schemas.OrderResponsePaginate;
 export const PaperSizeResponseSchema = schemas.PaperSizeResponse;
+export const PaperSizeResponseIPaginateSchema = schemas.PaperSizeResponseIPaginate;
 export const PaymentMethodResponseSchema = schemas.PaymentMethodResponse;
 export const PaymentMethodResponseIPaginateSchema = schemas.PaymentMethodResponseIPaginate;
 export const PaymentResponseSchema = schemas.PaymentResponse;
@@ -183,6 +185,7 @@ export const UpdateMyProfileRequestSchema = schemas.UpdateMyProfileRequest;
 export const UpdateOrderDetailForAccountingRequestSchema = schemas.UpdateOrderDetailForAccountingRequest;
 export const UpdateOrderForAccountingRequestSchema = schemas.UpdateOrderForAccountingRequest;
 export const UpdateOrderRequestSchema = schemas.UpdateOrderRequest;
+export const UpdatePaperSizeRequestSchema = schemas.UpdatePaperSizeRequest;
 export const UpdatePaymentMethodRequestSchema = schemas.UpdatePaymentMethodRequest;
 export const UpdateProductionRequestSchema = schemas.UpdateProductionRequest;
 export const UpdateProofingDesignItemSchema = schemas.UpdateProofingDesignItem;
