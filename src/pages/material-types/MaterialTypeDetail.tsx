@@ -1,17 +1,17 @@
-﻿import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, MoreHorizontal, Copy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+﻿import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Edit, Trash2, MoreHorizontal, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,73 +21,87 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import { MaterialTypeResponse } from '@/Schema/material-type.schema';
-import { useMaterialType, useUpdateMaterialType, useDeleteMaterialType } from '@/hooks/use-material-type';
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { MaterialTypeResponse } from "@/Schema/material-type.schema";
+import {
+  useMaterialTypeDetail,
+  useUpdateMaterialType,
+  useDeleteMaterialType,
+} from "@/hooks/use-material-type";
 
 export default function MaterialTypeDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
 
   const [loading, setLoading] = useState(true);
-  const [materialType, setMaterialType] = useState<MaterialTypeResponse | null>(null);
+  const [materialType, setMaterialType] = useState<MaterialTypeResponse | null>(
+    null
+  );
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const { data: materialTypeData, isLoading: loadingMaterialType } =
+    useMaterialTypeDetail(Number(id));
+  const { mutateAsync: deleteMaterialType, isPending: deletingMaterialType } =
+    useDeleteMaterialType();
+  const { mutateAsync: updateMaterialType, isPending: updatingMaterialType } =
+    useUpdateMaterialType();
   useEffect(() => {
     const loadMaterialType = async () => {
       if (!id) {
         toast.error("Lỗi", {
           description: "ID loại vật liệu không hợp lệ",
         });
-        navigate('/material-types');
+        navigate("/material-types");
         return;
       }
 
       try {
         setLoading(true);
-        const data = await materialTypeService.getMaterialTypeById(Number(id));
-        if (data) {
-          setMaterialType(data);
-        } else {
-          toast.error("Lỗi", {
-            description: "Không tìm thấy loại vật liệu",
-          });
-          navigate('/material-types');
-        }
+        setMaterialType(materialTypeData);
       } catch (error) {
         toast.error("Lỗi", {
           description: "Không thể tải thông tin loại vật liệu",
         });
-        navigate('/material-types');
+        navigate("/material-types");
       } finally {
         setLoading(false);
       }
     };
 
-    loadMaterialType();
-  }, [id, navigate]);
+    if (id) {
+      loadMaterialType();
+    }
+  }, [id, materialTypeData, navigate]);
 
   const handleDelete = async () => {
     if (!materialType?.id) return;
 
     try {
       setDeleting(true);
-      await materialTypeService.deleteMaterialType(materialType.id);
-      toast.success("Thành công", {
-        description: "Đã xóa loại vật liệu",
-      });
-      navigate('/material-types');
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Không thể xóa loại vật liệu";
+      await deleteMaterialType(materialType.id);
+      navigate("/material-types");
+    } catch (error) {
       toast.error("Lỗi", {
-        description: message,
+        description: "Không thể xóa loại vật liệu",
       });
     } finally {
       setDeleting(false);
       setShowDeleteDialog(false);
     }
+  };
+
+  const handleUpdate = async () => {
+    if (!materialType?.id) return;
+    await updateMaterialType({
+      id: materialType.id,
+      data: materialType,
+    });
+    toast.success("Thành công", {
+      description: "Đã cập nhật loại vật liệu",
+    });
+    navigate("/material-types");
   };
 
   const handleCopyCode = () => {
@@ -100,8 +114,8 @@ export default function MaterialTypeDetail() {
   };
 
   const formatDate = (date?: Date | string) => {
-    if (!date) return 'Chưa có thông tin';
-    return new Date(date).toLocaleString('vi-VN');
+    if (!date) return "Chưa có thông tin";
+    return new Date(date).toLocaleString("vi-VN");
   };
 
   if (loading) {
@@ -128,14 +142,12 @@ export default function MaterialTypeDetail() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/material-types')}
+            onClick={() => navigate("/material-types")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Quay lại
           </Button>
-          <h1 className="text-2xl font-bold">
-            Chi tiết loại vật liệu
-          </h1>
+          <h1 className="text-2xl font-bold">Chi tiết loại vật liệu</h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -145,7 +157,7 @@ export default function MaterialTypeDetail() {
             <Edit className="h-4 w-4 mr-2" />
             Sửa
           </Button>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon">
@@ -158,7 +170,7 @@ export default function MaterialTypeDetail() {
                 Sao chép mã
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => setShowDeleteDialog(true)}
                 className="text-red-600"
               >
@@ -179,7 +191,9 @@ export default function MaterialTypeDetail() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Mã loại vật liệu</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    Mã loại vật liệu
+                  </p>
                   <div className="flex items-center gap-2 mt-1">
                     <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">
                       {materialType.code}
@@ -194,16 +208,24 @@ export default function MaterialTypeDetail() {
                     </Button>
                   </div>
                 </div>
-                
+
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Thứ tự hiển thị</p>
-                  <p className="text-lg font-semibold mt-1">{materialType.displayOrder}</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    Thứ tự hiển thị
+                  </p>
+                  <p className="text-lg font-semibold mt-1">
+                    {materialType.displayOrder}
+                  </p>
                 </div>
               </div>
 
               <div>
-                <p className="text-sm font-medium text-gray-500">Tên loại vật liệu</p>
-                <p className="text-lg font-semibold mt-1">{materialType.name}</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Tên loại vật liệu
+                </p>
+                <p className="text-lg font-semibold mt-1">
+                  {materialType.name}
+                </p>
               </div>
 
               {materialType.description && (
@@ -224,11 +246,13 @@ export default function MaterialTypeDetail() {
               <CardTitle>Trạng thái</CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge 
-                variant={materialType.status === 'active' ? "default" : "secondary"}
+              <Badge
+                variant={
+                  materialType.status === "active" ? "default" : "secondary"
+                }
                 className="text-sm"
               >
-                {materialType.status === 'active' ? "Đang sử dụng" : "Tạm dừng"}
+                {materialType.status === "active" ? "Đang sử dụng" : "Tạm dừng"}
               </Badge>
             </CardContent>
           </Card>
@@ -242,21 +266,28 @@ export default function MaterialTypeDetail() {
                 <div>
                   <p className="text-sm font-medium text-gray-500">Người tạo</p>
                   <p className="text-sm mt-1">
-                    {materialType.createdBy.fullName || materialType.createdBy.username}
+                    {materialType.createdBy.fullName ||
+                      materialType.createdBy.username}
                   </p>
                 </div>
               )}
-              
+
               <div>
                 <p className="text-sm font-medium text-gray-500">Ngày tạo</p>
-                <p className="text-sm mt-1">{formatDate(materialType.createdAt)}</p>
+                <p className="text-sm mt-1">
+                  {formatDate(materialType.createdAt)}
+                </p>
               </div>
-              
+
               <Separator />
-              
+
               <div>
-                <p className="text-sm font-medium text-gray-500">Cập nhật lần cuối</p>
-                <p className="text-sm mt-1">{formatDate(materialType.updatedAt)}</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Cập nhật lần cuối
+                </p>
+                <p className="text-sm mt-1">
+                  {formatDate(materialType.updatedAt)}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -268,7 +299,8 @@ export default function MaterialTypeDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa loại vật liệu "{materialType.name}" (mã: {materialType.code})?
+              Bạn có chắc chắn muốn xóa loại vật liệu "{materialType.name}" (mã:{" "}
+              {materialType.code})?
               <br />
               <span className="font-medium text-red-600">
                 Hành động này không thể hoàn tác.

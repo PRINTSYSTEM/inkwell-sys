@@ -19,12 +19,14 @@ interface CustomerHeaderProps {
   customer: CustomerResponse;
   onEdit: () => void;
   onExportDebt: () => void;
+  canViewFinancialInfo?: boolean;
 }
 
 export function CustomerHeader({
   customer,
   onEdit,
   onExportDebt,
+  canViewFinancialInfo = true,
 }: CustomerHeaderProps) {
   const navigate = useNavigate();
 
@@ -67,10 +69,12 @@ export function CustomerHeader({
               <Pencil className="h-4 w-4 mr-1.5" />
               Sửa
             </Button>
-            <Button variant="outline" size="sm" onClick={onExportDebt}>
-              <Download className="h-4 w-4 mr-1.5" />
-              Xuất công nợ
-            </Button>
+            {canViewFinancialInfo && (
+              <Button variant="outline" size="sm" onClick={onExportDebt}>
+                <Download className="h-4 w-4 mr-1.5" />
+                Xuất công nợ
+              </Button>
+            )}
             <Button
               size="sm"
               onClick={() => navigate("/orders/new?customerId=" + customer.id)}

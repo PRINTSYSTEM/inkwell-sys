@@ -23,6 +23,8 @@ export interface DesignItem {
   customerName: string; // from design.customer?.name
   customerCompanyName?: string; // from design.customer?.companyName
   processClassificationOptionName?: string; // from design.processClassification
+  sidesClassification?: string; // from design.sidesClassification
+  laminationType?: string; // from design.laminationType
   thumbnailUrl: string; // from design.designImageUrl
   createdAt: string; // from design.createdAt
   designId?: number; // from design.id (for fetching available quantity)

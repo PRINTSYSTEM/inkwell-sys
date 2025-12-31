@@ -1,4 +1,10 @@
-import { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { format } from "date-fns";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -108,7 +114,8 @@ import {
 } from "@/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE } from "@/constants";
-
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { toast } from "sonner";
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const orderId = Number.parseInt(id || "0", 10);
@@ -122,6 +129,8 @@ export default function OrderDetailPage() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [addDesignDialogOpen, setAddDesignDialogOpen] = useState(false);
+  const [assignDesignerDialogOpen, setAssignDesignerDialogOpen] =
+    useState(false);
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [cardEditValues, setCardEditValues] = useState<
@@ -134,6 +143,11 @@ export default function OrderDetailPage() {
   const [orderDetailEditValues, setOrderDetailEditValues] = useState<
     Record<string, string | number | null>
   >({});
+
+  const [viewingImage, setViewingImage] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
 
   // ===== FETCH ORDER =====
   const {
@@ -161,9 +175,35 @@ export default function OrderDetailPage() {
     role === ROLE.ACCOUNTING_LEAD ||
     role === ROLE.ADMIN;
 
+  // Can change designer: DESIGN_LEAD or ADMIN
+  const canChangeDesigner = role === ROLE.DESIGN_LEAD || role === ROLE.ADMIN;
+
   // Check if user is accounting role (not admin)
   const isAccountingRole =
     role === ROLE.ACCOUNTING || role === ROLE.ACCOUNTING_LEAD;
+
+  // Check if order status is from "waiting_for_proofing" onwards
+  // These statuses: waiting_for_proofing, waiting_for_production, in_production,
+  // production_completed, invoice_issued, delivering, completed
+  const restrictedStatuses = [
+    "waiting_for_proofing",
+    "waiting_for_production",
+    "in_production",
+    "production_completed",
+    "invoice_issued",
+    "delivering",
+    "completed",
+  ];
+  const isOrderRestricted = order?.status
+    ? restrictedStatuses.includes(order.status)
+    : false;
+
+  // Can add/remove products only if order is NOT in restricted status
+  const canAddRemoveProducts =
+    canUpdateOrderForAccounting && !isOrderRestricted;
+
+  // Can edit order detail - only unitPrice if restricted, all fields if not
+  const canEditOrderDetail = canUpdateOrderForAccounting;
 
   const { mutate: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
@@ -204,12 +244,19 @@ export default function OrderDetailPage() {
     orderDetail: OrderDetailResponse
   ) => {
     setEditingOrderDetailId(orderDetailId);
-    setOrderDetailEditValues({
-      quantity: orderDetail.quantity?.toString() || "",
-      unitPrice: orderDetail.unitPrice?.toString() || "",
-      requirements: orderDetail.requirements || "",
-      additionalNotes: orderDetail.additionalNotes || "",
-    });
+    // If order is restricted (from waiting_for_proofing onwards), only allow editing unitPrice
+    if (isOrderRestricted) {
+      setOrderDetailEditValues({
+        unitPrice: orderDetail.unitPrice?.toString() || "",
+      });
+    } else {
+      setOrderDetailEditValues({
+        quantity: orderDetail.quantity?.toString() || "",
+        unitPrice: orderDetail.unitPrice?.toString() || "",
+        requirements: orderDetail.requirements || "",
+        additionalNotes: orderDetail.additionalNotes || "",
+      });
+    }
   };
 
   // Helper to cancel editing an orderDetail item
@@ -227,30 +274,37 @@ export default function OrderDetailPage() {
     );
     if (!orderDetail) return;
 
+    // If order is restricted (from waiting_for_proofing onwards), only update unitPrice
+    const updateData: UpdateOrderDetailForAccountingRequest = {
+      orderDetailId: orderDetail.id,
+      unitPrice:
+        orderDetailEditValues.unitPrice === "" ||
+        orderDetailEditValues.unitPrice === null
+          ? null
+          : Number(orderDetailEditValues.unitPrice),
+    };
+
+    // Only include other fields if order is NOT restricted
+    if (!isOrderRestricted) {
+      updateData.quantity =
+        orderDetailEditValues.quantity === "" ||
+        orderDetailEditValues.quantity === null
+          ? null
+          : Number(orderDetailEditValues.quantity);
+      updateData.requirements =
+        orderDetailEditValues.requirements === "" ||
+        orderDetailEditValues.requirements === null
+          ? null
+          : String(orderDetailEditValues.requirements).trim();
+      updateData.additionalNotes =
+        orderDetailEditValues.additionalNotes === "" ||
+        orderDetailEditValues.additionalNotes === null
+          ? null
+          : String(orderDetailEditValues.additionalNotes).trim();
+    }
+
     const orderDetailsUpdates: UpdateOrderDetailForAccountingRequest[] = [
-      {
-        orderDetailId: orderDetail.id,
-        quantity:
-          orderDetailEditValues.quantity === "" ||
-          orderDetailEditValues.quantity === null
-            ? null
-            : Number(orderDetailEditValues.quantity),
-        unitPrice:
-          orderDetailEditValues.unitPrice === "" ||
-          orderDetailEditValues.unitPrice === null
-            ? null
-            : Number(orderDetailEditValues.unitPrice),
-        requirements:
-          orderDetailEditValues.requirements === "" ||
-          orderDetailEditValues.requirements === null
-            ? null
-            : String(orderDetailEditValues.requirements).trim(),
-        additionalNotes:
-          orderDetailEditValues.additionalNotes === "" ||
-          orderDetailEditValues.additionalNotes === null
-            ? null
-            : String(orderDetailEditValues.additionalNotes).trim(),
-      },
+      updateData,
     ];
 
     try {
@@ -263,6 +317,29 @@ export default function OrderDetailPage() {
       // Keep editing mode on error
     }
   };
+
+  // Helper to change designer
+  const handleChangeDesigner = useCallback(
+    async (designerId: number | null) => {
+      if (!order) return;
+
+      try {
+        await updateOrder({
+          id: order.id,
+          data: { assignedToUserId: designerId },
+        });
+        toast.success("Thành công", {
+          description: "Đã cập nhật designer cho đơn hàng",
+        });
+        setAssignDesignerDialogOpen(false);
+      } catch (error) {
+        toast.error("Lỗi", {
+          description: "Không thể cập nhật designer",
+        });
+      }
+    },
+    [order?.id, updateOrder]
+  );
 
   // Helper to save card changes
   const handleSaveCard = async (cardName: string) => {
@@ -422,6 +499,35 @@ export default function OrderDetailPage() {
   // Fetch users for assignedToUserId select
   const { data: usersData } = useUsers({ pageSize: 1000 });
   const users = usersData?.items || [];
+
+  // Fetch designers for designer assignment
+  const {
+    data: designersData,
+    isLoading: isLoadingDesigners,
+    isFetching: isFetchingDesigners,
+  } = useUsers({ role: "design", pageSize: 1000 });
+  // Memoize designers array to prevent unnecessary re-renders
+  const designers = useMemo(
+    () => designersData?.items || [],
+    [designersData?.items]
+  );
+
+  // Check if any design in order is confirmed for printing (locked)
+  const hasDesignConfirmedForPrinting = useMemo(() => {
+    return (
+      order?.orderDetails?.some(
+        (od) =>
+          od.design?.status === "confirmed_for_printing" ||
+          od.derivedStatus === "confirmed_for_printing"
+      ) || false
+    );
+  }, [order?.orderDetails]);
+
+  // Can change designer only if no design is confirmed for printing - MEMOIZED
+  const canChangeDesignerForOrder = useMemo(
+    () => canChangeDesigner && !hasDesignConfirmedForPrinting,
+    [canChangeDesigner, hasDesignConfirmedForPrinting]
+  );
 
   // ===== LOADING =====
   if (orderLoading) {
@@ -681,7 +787,7 @@ export default function OrderDetailPage() {
                     </Badge>
                   )}
                 </CardTitle>
-                {canUpdateOrderForAccounting && (
+                {canAddRemoveProducts && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -727,7 +833,15 @@ export default function OrderDetailPage() {
                               <img
                                 src={design.designImageUrl}
                                 alt={design.designName || "Design"}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover cursor-pointer"
+                                onClick={() => {
+                                  if (design.designImageUrl) {
+                                    setViewingImage({
+                                      url: design.designImageUrl,
+                                      title: design.designName || "Design",
+                                    });
+                                  }
+                                }}
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
@@ -760,7 +874,7 @@ export default function OrderDetailPage() {
                                   {design?.materialType?.name}
                                 </p>
                               </div>
-                              {canUpdateOrderForAccounting && (
+                              {canEditOrderDetail && (
                                 <div className="flex-shrink-0 flex items-center gap-2">
                                   {editingOrderDetailId === orderDetail.id ? (
                                     <>
@@ -805,29 +919,31 @@ export default function OrderDetailPage() {
                                         <Edit className="h-3 w-3 mr-1" />
                                         Sửa
                                       </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          if (
-                                            confirm(
-                                              "Bạn có chắc chắn muốn xóa sản phẩm này khỏi đơn hàng?"
-                                            )
-                                          ) {
-                                            removeOrderDetail({
-                                              orderId: order.id,
-                                              orderDetailId: orderDetail.id!,
-                                            });
-                                          }
-                                        }}
-                                        disabled={isRemovingDetail}
-                                      >
-                                        {isRemovingDetail ? (
-                                          <Loader2 className="h-3 w-3 animate-spin" />
-                                        ) : (
-                                          <Trash2 className="h-3 w-3" />
-                                        )}
-                                      </Button>
+                                      {canAddRemoveProducts && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            if (
+                                              confirm(
+                                                "Bạn có chắc chắn muốn xóa sản phẩm này khỏi đơn hàng?"
+                                              )
+                                            ) {
+                                              removeOrderDetail({
+                                                orderId: order.id,
+                                                orderDetailId: orderDetail.id!,
+                                              });
+                                            }
+                                          }}
+                                          disabled={isRemovingDetail}
+                                        >
+                                          {isRemovingDetail ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                          ) : (
+                                            <Trash2 className="h-3 w-3" />
+                                          )}
+                                        </Button>
+                                      )}
                                     </>
                                   )}
                                 </div>
@@ -854,7 +970,8 @@ export default function OrderDetailPage() {
                                 <p className="text-muted-foreground text-xs">
                                   Số lượng
                                 </p>
-                                {editingOrderDetailId === orderDetail.id ? (
+                                {editingOrderDetailId === orderDetail.id &&
+                                !isOrderRestricted ? (
                                   <Input
                                     type="number"
                                     min="1"
@@ -970,7 +1087,7 @@ export default function OrderDetailPage() {
                               {canViewDesigner && (
                                 <div className="col-span-2">
                                   <p className="text-muted-foreground text-xs">
-                                    Designer
+                                    Nhân viên thiết kế
                                   </p>
                                   <div className="flex items-center gap-2 mt-1">
                                     <Avatar className="h-6 w-6">
@@ -993,7 +1110,8 @@ export default function OrderDetailPage() {
                               orderDetail.requirements ||
                               orderDetail.additionalNotes) && (
                               <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm space-y-2">
-                                {editingOrderDetailId === orderDetail.id ? (
+                                {editingOrderDetailId === orderDetail.id &&
+                                !isOrderRestricted ? (
                                   <>
                                     <div className="space-y-2">
                                       <Label className="text-xs">Yêu cầu</Label>
@@ -1592,7 +1710,7 @@ export default function OrderDetailPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <FileText className="w-4 h-4 text-primary" />
-                  Thông tin đơn hàng
+                  ĐƠN ĐẶT HÀNG
                 </CardTitle>
                 {canUpdateOrderForAccounting &&
                   (editingCard === "orderInfo" ? (
@@ -1647,6 +1765,46 @@ export default function OrderDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Designer Assignment - Only for DESIGN_LEAD and ADMIN */}
+              {canChangeDesignerForOrder && (
+                <div className="space-y-2 pb-4 border-b">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                      Designer phụ trách
+                    </Label>
+                    {hasDesignConfirmedForPrinting && (
+                      <span className="text-xs text-muted-foreground">
+                        (Đã chốt in - không thể thay đổi)
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      {order.assignedUser ? (
+                        <p className="text-sm font-medium">
+                          {order.assignedUser.fullName}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Chưa phân công
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setAssignDesignerDialogOpen(true)}
+                      disabled={
+                        isUpdatingOrder || hasDesignConfirmedForPrinting
+                      }
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Phân công
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {editingCard === "orderInfo" ? (
                 /* Edit Mode */
                 <div className="space-y-4">
@@ -2162,6 +2320,14 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
+      <ImageViewerDialog
+        open={!!viewingImage}
+        onOpenChange={(open) => {
+          if (!open) setViewingImage(null);
+        }}
+        imageUrl={viewingImage?.url || ""}
+        title={viewingImage?.title || ""}
+      />
       {/* ===== DIALOGS ===== */}
       <DepositDialog
         open={depositDialogOpen}
@@ -2200,6 +2366,64 @@ export default function OrderDetailPage() {
             }}
             onCancel={() => setAddDesignDialogOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Designer Dialog */}
+      <Dialog
+        open={assignDesignerDialogOpen}
+        onOpenChange={setAssignDesignerDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Phân công Designer</DialogTitle>
+            <DialogDescription>
+              Chọn designer phụ trách cho đơn hàng này
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Designer phụ trách</Label>
+              <Select
+                value={order.assignedToUserId?.toString() || "none"}
+                onValueChange={(value) => {
+                  const designerId = value === "none" ? null : Number(value);
+                  handleChangeDesigner(designerId);
+                }}
+                disabled={isUpdatingOrder || hasDesignConfirmedForPrinting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn designer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Chưa phân công</SelectItem>
+                  {designers.map((designer) => (
+                    <SelectItem
+                      key={designer.id}
+                      value={designer.id?.toString() || ""}
+                    >
+                      {designer.fullName ||
+                        designer.username ||
+                        `Designer ${designer.id}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {hasDesignConfirmedForPrinting && (
+              <p className="text-sm text-muted-foreground">
+                Đã chốt in - không thể thay đổi designer
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAssignDesignerDialogOpen(false)}
+            >
+              Đóng
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

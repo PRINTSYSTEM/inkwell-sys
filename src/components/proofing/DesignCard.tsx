@@ -1,10 +1,18 @@
+import { useState } from "react";
 import type { DesignItem } from "@/types/proofing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Building2, User, FileText } from "lucide-react";
 import { processClassificationLabels } from "@/lib/status-utils";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
 interface DesignCardProps {
   design: DesignItem;
@@ -19,9 +27,18 @@ export function DesignCard({
   canSelect,
   onToggle,
 }: DesignCardProps) {
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+
   const handleClick = () => {
     if (canSelect || isSelected) {
       onToggle(design);
+    }
+  };
+
+  const handleImageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (design.thumbnailUrl) {
+      setImageViewerOpen(true);
     }
   };
 
@@ -45,7 +62,10 @@ export function DesignCard({
       </div>
 
       {/* Thumbnail */}
-      <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden rounded-t-lg">
+      <div
+        className="aspect-square bg-muted flex items-center justify-center overflow-hidden rounded-t-lg cursor-pointer hover:opacity-90 transition-opacity"
+        onClick={handleImageClick}
+      >
         <img
           src={design.thumbnailUrl}
           alt={design.name}
@@ -70,22 +90,49 @@ export function DesignCard({
                 ) : (
                   <User className="h-3 w-3 text-muted-foreground" />
                 )}
-                <p className="text-xs text-muted-foreground truncate">
-                  {design.customerCompanyName || design.customerName}
-                </p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {design.customerCompanyName || design.customerName}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{design.customerCompanyName || design.customerName}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             )}
           </div>
         )}
 
         {/* Design Code */}
-        <p className="text-xs text-muted-foreground font-mono truncate">
-          {design.code}
-        </p>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className="text-xs text-muted-foreground font-mono truncate">
+                {design.code}
+              </p>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{design.code}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Name & Size */}
         <div>
-          <h3 className="font-medium text-sm truncate">{design.name}</h3>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <h3 className="font-medium text-sm truncate">{design.name}</h3>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{design.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <p className="text-xs text-muted-foreground">
             {design.width}x{design.height} {design.unit}
           </p>
@@ -138,6 +185,16 @@ export function DesignCard({
           </div>
         )}
       </CardContent>
+
+      {/* Image Viewer Dialog */}
+      {design.thumbnailUrl && (
+        <ImageViewerDialog
+          open={imageViewerOpen}
+          onOpenChange={setImageViewerOpen}
+          imageUrl={design.thumbnailUrl}
+          title={design.name}
+        />
+      )}
     </Card>
   );
 }

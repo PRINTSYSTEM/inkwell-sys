@@ -13,16 +13,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
   useDesign,
@@ -150,8 +140,6 @@ export default function DesignDetailPage() {
     processClassificationOptionId: undefined as number | undefined,
   });
 
-  const [pendingStatus, setPendingStatus] = useState<DesignStatus | null>(null);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     specs: true,
@@ -261,44 +249,30 @@ export default function DesignDetailPage() {
   };
 
   // ==== HANDLERS - STATUS ====
-  const handleStatusTransition = (targetStatus: DesignStatus) => {
-    if (!targetStatus) return;
-    setPendingStatus(targetStatus);
-    setShowConfirmDialog(true);
-  };
+  const handleStatusTransition = async (targetStatus: DesignStatus) => {
+    if (!targetStatus || !design) return;
 
-  const handleConfirmStatus = async () => {
-    if (!design || !pendingStatus) {
-      return;
-    }
-
-    if (!isValidStatusTransition(currentStatus, pendingStatus)) {
+    if (!isValidStatusTransition(currentStatus, targetStatus)) {
       const errorMessage = getTransitionErrorMessage(
         currentStatus,
-        pendingStatus
+        targetStatus
       );
 
       toast.error("Không thể thay đổi trạng thái", {
         description: errorMessage,
       });
-
-      setShowConfirmDialog(false);
-      setPendingStatus(null);
       return;
     }
 
     if (
       currentStatus === "designing" &&
-      pendingStatus === "waiting_for_customer_approval"
+      targetStatus === "waiting_for_customer_approval"
     ) {
       if (!design.designFileUrl) {
         toast.error("Không thể chuyển trạng thái", {
           description:
             "Vui lòng upload file thiết kế trước khi chuyển sang trạng thái 'Chờ khách duyệt'",
         });
-
-        setShowConfirmDialog(false);
-        setPendingStatus(null);
         return;
       }
     }
@@ -308,15 +282,13 @@ export default function DesignDetailPage() {
     try {
       await updateDesign.mutateAsync({
         id: designId,
-        data: { designStatus: pendingStatus },
+        data: { designStatus: targetStatus },
       });
 
       toast.success("Thành công", {
-        description: `Trạng thái đã được cập nhật thành ${designStatusLabels[pendingStatus]}`,
+        description: `Trạng thái đã được cập nhật thành ${designStatusLabels[targetStatus]}`,
       });
 
-      setShowConfirmDialog(false);
-      setPendingStatus(null);
       refetchDesign();
     } catch {
       toast.error("Lỗi", {
@@ -328,19 +300,67 @@ export default function DesignDetailPage() {
   };
 
   // ==== HANDLERS - FILE & TIMELINE ====
-  const handleDesignFileUpload = async (file: File, image: File) => {
+  // Helper function to check if file is an image
+  const isImageFile = (file: File): boolean => {
+    return file.type.startsWith("image/");
+  };
+
+  // Helper function to check if file is a design file (.ai)
+  const isDesignFile = (file: File): boolean => {
+    const fileName = file.name.toLowerCase();
+    return fileName.endsWith(".ai") || file.type === "application/postscript";
+  };
+
+  const handleDesignFileUpload = async (files: File[]) => {
     if (!enabled) return;
-    try {
-      await uploadFile({ id: designId, file });
-      await uploadImage({ id: designId, file: image });
-      setShowFileUpload(false);
+
+    // Phân loại files
+    const designFiles = files.filter((f) => isDesignFile(f));
+    const imageFiles = files.filter((f) => isImageFile(f));
+
+    const errors: string[] = [];
+    const successes: string[] = [];
+
+    // Upload file thiết kế
+    if (designFiles.length > 0) {
+      try {
+        await uploadFile({ id: designId, file: designFiles[0] });
+        successes.push(`File thiết kế: ${designFiles[0].name}`);
+      } catch (error) {
+        errors.push(`File thiết kế "${designFiles[0].name}" lỗi`);
+      }
+    } else {
+      errors.push("Thiếu file thiết kế (.ai)");
+    }
+
+    // Upload ảnh
+    if (imageFiles.length > 0) {
+      try {
+        await uploadImage({ id: designId, file: imageFiles[0] });
+        successes.push(`Ảnh: ${imageFiles[0].name}`);
+      } catch (error) {
+        errors.push(`Ảnh "${imageFiles[0].name}" lỗi`);
+      }
+    } else {
+      errors.push("Thiếu file ảnh");
+    }
+
+    setShowFileUpload(false);
+
+    // Hiển thị thông báo kết quả
+    if (errors.length === 0) {
       toast.success("Thành công", {
-        description: "Đã upload file thiết kế",
+        description: "Đã upload tất cả files",
       });
       refetchDesign();
-    } catch {
+    } else if (successes.length > 0) {
+      toast.warning("Một phần thành công", {
+        description: `${successes.join(", ")}. Lỗi: ${errors.join(", ")}`,
+      });
+      refetchDesign();
+    } else {
       toast.error("Lỗi", {
-        description: "Không thể upload file",
+        description: errors.join(", "),
       });
     }
   };
@@ -348,12 +368,31 @@ export default function DesignDetailPage() {
   const handleTimelineAdd = async (image: File, description: string) => {
     if (!enabled) return;
     try {
-      await addTimeline({ id: designId, file: image, description });
+      // Call mutate and wait for it to complete
+      const result = await addTimeline({
+        id: designId,
+        file: image,
+        description,
+      });
       setShowTimelineDialog(false);
+
+      // Refetch timeline to update the list
+      const { data: updatedTimelineData } = await refetchTimeline();
+
+      // Open image viewer dialog to show the uploaded image
+      // Use result.imageUrl if available, otherwise get from the first entry in updated timeline
+      const imageUrl =
+        result?.fileUrl || updatedTimelineData?.items?.[0]?.fileUrl;
+      if (imageUrl) {
+        setViewingImage({
+          url: imageUrl as string,
+          title: description || "Timeline mới",
+        });
+      }
+
       toast.success("Thành công", {
         description: "Đã thêm timeline mới",
       });
-      refetchTimeline();
     } catch {
       toast.error("Lỗi", {
         description: "Không thể thêm timeline",
@@ -1242,30 +1281,34 @@ export default function DesignDetailPage() {
                             </div>
 
                             {/* Card */}
-                            <Card className="flex-1 group-hover:border-purple-400/70 transition-colors">
-                              <CardContent className="p-4 flex gap-3">
-                                {entry.imageUrl && (
-                                  <button
-                                    type="button"
-                                    className="relative w-20 h-20 rounded-md overflow-hidden border bg-muted shrink-0 group/image"
-                                    onClick={() =>
-                                      setViewingImage({
-                                        url: entry.imageUrl as string,
-                                        title: `Timeline #${index + 1}`,
-                                      })
-                                    }
-                                  >
-                                    <img
-                                      src={entry.imageUrl as string}
-                                      alt={`Timeline ${index + 1}`}
-                                      className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center">
-                                      <Eye className="h-4 w-4 text-white" />
-                                    </div>
-                                  </button>
-                                )}
-
+                            <Card
+                              className={`flex-1 group-hover:border-purple-400/70 transition-colors ${
+                                entry.imageUrl ? "cursor-pointer" : ""
+                              }`}
+                              onClick={() => {
+                                if (entry.imageUrl) {
+                                  setViewingImage({
+                                    url: entry.imageUrl as string,
+                                    title:
+                                      (entry.title as string) ||
+                                      `Timeline #${index + 1}`,
+                                  });
+                                }
+                              }}
+                            >
+                              <CardContent
+                                className="p-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                                onClick={() => {
+                                  if (entry.fileUrl) {
+                                    setViewingImage({
+                                      url: entry.fileUrl as string,
+                                      title:
+                                        (entry.title as string) ||
+                                        `Timeline #${index + 1}`,
+                                    });
+                                  }
+                                }}
+                              >
                                 <div className="flex-1 min-w-0 space-y-1">
                                   <div className="flex items-center justify-between gap-2">
                                     <p className="font-medium text-sm truncate">
@@ -1335,41 +1378,6 @@ export default function DesignDetailPage() {
           onOpenChange={setShowTimelineDialog}
           onAdd={handleTimelineAdd}
         />
-
-        <AlertDialog
-          open={showConfirmDialog}
-          onOpenChange={setShowConfirmDialog}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Xác nhận đổi trạng thái</AlertDialogTitle>
-              <AlertDialogDescription>
-                Bạn có chắc chắn muốn chuyển trạng thái thiết kế từ{" "}
-                <span className="font-medium">
-                  {designStatusLabels[currentStatus]}
-                </span>{" "}
-                sang{" "}
-                <span className="font-medium">
-                  {pendingStatus
-                    ? designStatusLabels[pendingStatus]
-                    : "trạng thái mới"}
-                </span>
-                ?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={updatingStatus}>
-                Hủy
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleConfirmStatus}
-                disabled={updatingStatus}
-              >
-                {updatingStatus ? "Đang cập nhật..." : "Xác nhận"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </ErrorBoundary>
   );

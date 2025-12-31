@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search,
   Plus,
@@ -41,6 +42,7 @@ export default function ProofingOrdersPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("incomplete");
   const [debouncedSearch] = useDebounce(searchTerm, 300);
 
   const queryParams = useMemo(() => {
@@ -82,6 +84,19 @@ export default function ProofingOrdersPage() {
         return matchSearch && matchStatus;
       }),
     [proofingOrders, debouncedSearch, selectedStatus]
+  );
+
+  // Split orders by completion status
+  const incompleteOrders = useMemo(
+    () =>
+      filteredProofingOrders.filter((order) => order.status !== "completed"),
+    [filteredProofingOrders]
+  );
+
+  const completedOrders = useMemo(
+    () =>
+      filteredProofingOrders.filter((order) => order.status === "completed"),
+    [filteredProofingOrders]
   );
 
   const stats = useMemo(
@@ -196,107 +211,269 @@ export default function ProofingOrdersPage() {
             </Select>
           </div>
 
-          {/* Table */}
-          {loadingOrders ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                Đang tải lệnh bình bài...
-              </p>
-            </div>
-          ) : ordersError ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-red-500 mx-auto mb-3" />
-              <p className="text-sm text-red-600">
-                Không thể tải lệnh bình bài
-              </p>
-            </div>
-          ) : filteredProofingOrders.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                Không tìm thấy lệnh bình bài nào
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Mã lệnh</TableHead>
-                    <TableHead>Chất liệu</TableHead>
-                    <TableHead>Số design</TableHead>
-                    <TableHead>Tổng số lượng</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Người tạo</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
-                    <TableHead className="text-right">Thao tác</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProofingOrders.map((order) => (
-                    <TableRow
-                      key={order.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/proofing/${order.id}`)}
-                    >
-                      <TableCell className="font-medium">
-                        {order.code}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {order.materialType?.name || "—"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {order.materialType?.code || "—"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {order.proofingOrderDesigns?.length ?? 0}
-                      </TableCell>
-                      <TableCell>
-                        {order.totalQuantity?.toLocaleString() ?? 0}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge
-                          status={order.status || ""}
-                          label={
-                            proofingStatusLabels[order.status || ""] ||
-                            order.status ||
-                            "Không xác định"
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>{order.createdBy?.fullName || "—"}</TableCell>
-                      <TableCell>
-                        {order.createdAt
-                          ? new Date(order.createdAt).toLocaleDateString(
-                              "vi-VN"
-                            )
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/proofing/${order.id}`);
-                          }}
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="incomplete">Chưa hoàn thành</TabsTrigger>
+              <TabsTrigger value="completed">Hoàn thành</TabsTrigger>
+            </TabsList>
+
+            {/* Incomplete Tab */}
+            <TabsContent value="incomplete">
+              {loadingOrders ? (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    Đang tải lệnh bình bài...
+                  </p>
+                </div>
+              ) : ordersError ? (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-red-500 mx-auto mb-3" />
+                  <p className="text-sm text-red-600">
+                    Không thể tải lệnh bình bài
+                  </p>
+                </div>
+              ) : incompleteOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    Không có lệnh bình bài chưa hoàn thành
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Mã bài</TableHead>
+                        <TableHead>SL Mã hàng</TableHead>
+                        <TableHead>Trạng thái</TableHead>
+                        <TableHead>Trạng thái xuất kẽm</TableHead>
+                        <TableHead>Trạng thái xuất khuôn</TableHead>
+                        <TableHead>Người tạo</TableHead>
+                        <TableHead>Ngày tạo</TableHead>
+                        <TableHead className="text-right">Thao tác</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {incompleteOrders.map((order) => (
+                        <TableRow
+                          key={order.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/proofing/${order.id}`)}
                         >
-                          <Eye className="h-4 w-4" />
-                          Xem
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                          <TableCell className="font-medium">
+                            {order.code}
+                          </TableCell>
+                          <TableCell>
+                            {order.proofingOrderDesigns?.length ?? 0}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={order.status || ""}
+                              label={
+                                proofingStatusLabels[order.status || ""] ||
+                                order.status ||
+                                "Không xác định"
+                              }
+                              className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={
+                                order.isPlateExported
+                                  ? "exported"
+                                  : "not_exported"
+                              }
+                              label={
+                                order.isPlateExported ? "Đã xuất" : "Chưa xuất"
+                              }
+                              className={
+                                order.isPlateExported
+                                  ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
+                                  : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800"
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={
+                                order.isDieExported
+                                  ? "exported"
+                                  : "not_exported"
+                              }
+                              label={
+                                order.isDieExported ? "Đã xuất" : "Chưa xuất"
+                              }
+                              className={
+                                order.isDieExported
+                                  ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
+                                  : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800"
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {order.createdBy?.fullName || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {order.createdAt
+                              ? new Date(order.createdAt).toLocaleDateString(
+                                  "vi-VN"
+                                )
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/proofing/${order.id}`);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                              Xem
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Completed Tab */}
+            <TabsContent value="completed">
+              {loadingOrders ? (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    Đang tải lệnh bình bài...
+                  </p>
+                </div>
+              ) : ordersError ? (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-red-500 mx-auto mb-3" />
+                  <p className="text-sm text-red-600">
+                    Không thể tải lệnh bình bài
+                  </p>
+                </div>
+              ) : completedOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    Không có lệnh bình bài đã hoàn thành
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Mã bài</TableHead>
+                        <TableHead>SL Mã hàng</TableHead>
+                        <TableHead>Trạng thái</TableHead>
+                        <TableHead>Trạng thái xuất kẽm</TableHead>
+                        <TableHead>Trạng thái xuất khuôn</TableHead>
+                        <TableHead>Người tạo</TableHead>
+                        <TableHead>Ngày tạo</TableHead>
+                        <TableHead className="text-right">Thao tác</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {completedOrders.map((order) => (
+                        <TableRow
+                          key={order.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/proofing/${order.id}`)}
+                        >
+                          <TableCell className="font-medium">
+                            {order.code}
+                          </TableCell>
+                          <TableCell>
+                            {order.proofingOrderDesigns?.length ?? 0}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={order.status || ""}
+                              label={
+                                proofingStatusLabels[order.status || ""] ||
+                                order.status ||
+                                "Không xác định"
+                              }
+                              className="bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={
+                                order.isPlateExported
+                                  ? "exported"
+                                  : "not_exported"
+                              }
+                              label={
+                                order.isPlateExported ? "Đã xuất" : "Chưa xuất"
+                              }
+                              className={
+                                order.isPlateExported
+                                  ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
+                                  : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800"
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge
+                              status={
+                                order.isDieExported
+                                  ? "exported"
+                                  : "not_exported"
+                              }
+                              label={
+                                order.isDieExported ? "Đã xuất" : "Chưa xuất"
+                              }
+                              className={
+                                order.isDieExported
+                                  ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
+                                  : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800"
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {order.createdBy?.fullName || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {order.createdAt
+                              ? new Date(order.createdAt).toLocaleDateString(
+                                  "vi-VN"
+                                )
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/proofing/${order.id}`);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                              Xem
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

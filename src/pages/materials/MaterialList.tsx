@@ -14,6 +14,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { TruncatedText } from '@/components/ui/truncated-text';
 import {
   Dialog,
   DialogContent,
@@ -580,14 +581,16 @@ export default function MaterialManagement() {
                   return (
                     <TableRow key={material.id}>
                       <TableCell className="font-medium">{material.code}</TableCell>
-                      <TableCell>{material.name}</TableCell>
+                      <TableCell>
+                        <TruncatedText text={material.name} />
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">
                           {MATERIAL_TYPE_OPTIONS.find(opt => opt.value === material.type)?.label || material.type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {material.specification}
+                      <TableCell>
+                        <TruncatedText text={material.specification} maxWidth="20rem" />
                       </TableCell>
                       <TableCell>
                         {material.unitPrice.toLocaleString('vi-VN')} VNĐ/{material.unit}
@@ -608,8 +611,8 @@ export default function MaterialManagement() {
                           ) : null}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {material.supplier}
+                      <TableCell>
+                        <TruncatedText text={material.supplier} maxWidth="20rem" />
                       </TableCell>
                       <TableCell>{material.location}</TableCell>
                       <TableCell className="text-right">

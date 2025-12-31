@@ -77,6 +77,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 import { StatusBadge } from "../ui/status-badge";
 
@@ -702,11 +703,14 @@ export function InvoiceList() {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-sm">
-                              {order.customer?.companyName ||
+                            <TruncatedText
+                              text={
+                                order.customer?.companyName ||
                                 order.customer?.name ||
-                                "—"}
-                            </div>
+                                "—"
+                              }
+                              className="font-medium text-sm"
+                            />
                             {!customerInfoComplete &&
                               invoiceStatus === "not_issued" && (
                                 <Tooltip>

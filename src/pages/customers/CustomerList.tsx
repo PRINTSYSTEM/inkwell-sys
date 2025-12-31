@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import {
   Plus,
   Search,
@@ -36,9 +37,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks";
+import { ROLE } from "@/constants";
 import { CustomerResponse } from "@/Schema";
 
 export default function Customers() {
+  const { user } = useAuth();
+  const userRole = user?.role;
+
+  // Chỉ role accounting và admin mới thấy thông tin công nợ
+  const canViewFinancialInfo =
+    userRole === ROLE.ACCOUNTING ||
+    userRole === ROLE.ACCOUNTING_LEAD ||
+    userRole === ROLE.ADMIN;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -179,7 +191,9 @@ export default function Customers() {
         </Button>
       </div>
       {/* Statistics */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div
+        className={`grid gap-4 ${canViewFinancialInfo ? "md:grid-cols-3" : "md:grid-cols-1"}`}
+      >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -195,39 +209,43 @@ export default function Customers() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Tổng công nợ
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {stats.totalDebt.toLocaleString("vi-VN")} ₫
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Tổng công nợ hiện tại
-            </p>
-          </CardContent>
-        </Card>
+        {canViewFinancialInfo && (
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Tổng công nợ
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {stats.totalDebt.toLocaleString("vi-VN")} ₫
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Tổng công nợ hiện tại
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Công nợ trung bình
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {Math.round(stats.averageDebt).toLocaleString("vi-VN")} ₫
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Trung bình mỗi khách hàng
-            </p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Công nợ trung bình
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-success" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {Math.round(stats.averageDebt).toLocaleString("vi-VN")} ₫
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Trung bình mỗi khách hàng
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Search and Filter */}
@@ -254,7 +272,9 @@ export default function Customers() {
                   <TableHead>Mã KH</TableHead>
                   <TableHead>Tên khách hàng</TableHead>
                   <TableHead>Tên công ty</TableHead>
-                  <TableHead>Công nợ hiện tại</TableHead>
+                  {canViewFinancialInfo && (
+                    <TableHead>Công nợ hiện tại</TableHead>
+                  )}
                   <TableHead>Hạn mức nợ</TableHead>
                   <TableHead className="text-right">Thao tác</TableHead>
                 </TableRow>
@@ -262,7 +282,10 @@ export default function Customers() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell
+                      colSpan={canViewFinancialInfo ? 6 : 5}
+                      className="text-center py-8"
+                    >
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                         Đang tải...
@@ -271,7 +294,10 @@ export default function Customers() {
                   </TableRow>
                 ) : customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell
+                      colSpan={canViewFinancialInfo ? 6 : 5}
+                      className="text-center py-8"
+                    >
                       Không tìm thấy khách hàng nào
                     </TableCell>
                   </TableRow>
@@ -293,34 +319,40 @@ export default function Customers() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <p className="font-medium">{customer.name}</p>
+                          <TruncatedText
+                            text={customer.name}
+                            className="font-medium"
+                          />
                         </TableCell>
                         <TableCell>
                           {customer.companyName ? (
-                            <p className="font-medium">
-                              {customer.companyName}
-                            </p>
+                            <TruncatedText
+                              text={customer.companyName}
+                              className="font-medium"
+                            />
                           ) : (
                             <span className="text-muted-foreground text-sm italic">
                               Cá nhân
                             </span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <span
-                            className={`font-medium ${
-                              (customer.currentDebt || 0) >
-                              (customer.maxDebt || 0)
-                                ? "text-red-600"
-                                : "text-green-600"
-                            }`}
-                          >
-                            {(customer.currentDebt || 0).toLocaleString(
-                              "vi-VN"
-                            )}{" "}
-                            ₫
-                          </span>
-                        </TableCell>
+                        {canViewFinancialInfo && (
+                          <TableCell>
+                            <span
+                              className={`font-medium ${
+                                (customer.currentDebt || 0) >
+                                (customer.maxDebt || 0)
+                                  ? "text-red-600"
+                                  : "text-green-600"
+                              }`}
+                            >
+                              {(customer.currentDebt || 0).toLocaleString(
+                                "vi-VN"
+                              )}{" "}
+                              ₫
+                            </span>
+                          </TableCell>
+                        )}
                         <TableCell>
                           <span className="font-medium">
                             {(customer.maxDebt || 0).toLocaleString("vi-VN")} ₫
@@ -341,14 +373,16 @@ export default function Customers() {
                                 Xem chi tiết
                               </DropdownMenuItem>
 
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  handleExportDebtComparison(customer.id)
-                                }
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Xuất báo cáo công nợ
-                              </DropdownMenuItem>
+                              {canViewFinancialInfo && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleExportDebtComparison(customer.id)
+                                  }
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Xuất báo cáo công nợ
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 onClick={() =>
                                   handleDeleteCustomer(customer.id)

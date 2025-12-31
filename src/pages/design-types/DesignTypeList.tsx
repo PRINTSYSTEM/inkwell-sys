@@ -58,6 +58,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 // Kiểu generic cho response phân trang từ backend (updated to match swagger)
 type PagedResponse<T> = {
@@ -67,37 +68,6 @@ type PagedResponse<T> = {
   total: number;
   totalPages: number;
 };
-
-// Component to display average price per m² for a design type
-function DesignTypeAvgPrice({ designTypeId }: { designTypeId?: number }) {
-  const { data: materialsData } = useMaterialsByDesignType(
-    designTypeId,
-    undefined
-  );
-
-  const materials = Array.isArray(materialsData) ? materialsData : [];
-
-  if (materials.length === 0) {
-    return <span className="text-sm text-slate-400">—</span>;
-  }
-
-  const activeMaterials = materials.filter((m) => m.status === "active");
-  if (activeMaterials.length === 0) {
-    return <span className="text-sm text-slate-400">—</span>;
-  }
-
-  const avgPricePerCm2 =
-    activeMaterials.reduce((sum, m) => sum + (m.pricePerCm2 || 0), 0) /
-    activeMaterials.length;
-  const avgPricePerM2 = avgPricePerCm2 * 10000;
-
-  return (
-    <span className="font-semibold text-primary">
-      {avgPricePerM2.toLocaleString("vi-VN")}
-      <span className="text-xs text-muted-foreground ml-1">đ</span>
-    </span>
-  );
-}
 
 export default function DesignTypesPage() {
   const queryClient = useQueryClient();
@@ -260,7 +230,9 @@ export default function DesignTypesPage() {
     } = updates as Record<string, unknown>;
 
     // Get designTypeId from selectedDesignType or from updates
-    const designTypeId = selectedDesignType?.id || (updates as { designTypeId?: number })?.designTypeId;
+    const designTypeId =
+      selectedDesignType?.id ||
+      (updates as { designTypeId?: number })?.designTypeId;
 
     updateMaterialTypeMutation(
       {
@@ -505,13 +477,15 @@ export default function DesignTypesPage() {
                               {designType.code}
                             </Badge>
                           </div>
-                          <div className="font-medium text-slate-900">
-                            {designType.name}
-                          </div>
+                          <TruncatedText
+                            text={designType.name}
+                            className="font-medium text-slate-900"
+                          />
                           {designType.description && (
-                            <div className="text-xs text-slate-500 line-clamp-1">
-                              {designType.description}
-                            </div>
+                            <TruncatedText
+                              text={designType.description}
+                              className="text-xs text-slate-500"
+                            />
                           )}
                         </div>
                       </TableCell>
