@@ -74,7 +74,7 @@ export function EditCustomerModal({
   const formSchema = canEditDebt ? fullFormSchema : basicFormSchema;
   type FormValues = z.infer<typeof formSchema>;
 
-  const defaultValues: any = {
+  const defaultValues: Partial<FormValues> = {
     name: customer.name || "",
     companyName: customer.companyName || "",
     representativeName: customer.representativeName || "",
@@ -85,13 +85,11 @@ export function EditCustomerModal({
     type: (customer.type === "retail" || customer.type === "company"
       ? customer.type
       : "retail") as "retail" | "company",
+    ...(canEditDebt && {
+      currentDebt: customer.currentDebt,
+      maxDebt: customer.maxDebt,
+    }),
   };
-
-  // Chỉ thêm công nợ nếu có quyền
-  if (canEditDebt) {
-    defaultValues.currentDebt = customer.currentDebt;
-    defaultValues.maxDebt = customer.maxDebt;
-  }
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -102,7 +100,10 @@ export function EditCustomerModal({
 
   const onSubmit = async (values: FormValues) => {
     // Nếu không có quyền edit công nợ, giữ nguyên giá trị công nợ hiện tại
-    const updateData: any = { ...values };
+    const updateData: Partial<FormValues> & {
+      currentDebt?: number;
+      maxDebt?: number;
+    } = { ...values };
     if (!canEditDebt) {
       updateData.currentDebt = customer.currentDebt;
       updateData.maxDebt = customer.maxDebt;
@@ -272,15 +273,19 @@ export function EditCustomerModal({
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="currentDebt"
+                  name={"currentDebt" as keyof FormValues}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Công nợ hiện tại</FormLabel>
+                      <FormLabel className="text-xs">
+                        Công nợ hiện tại
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
                           className="h-9"
                         />
                       </FormControl>
@@ -291,7 +296,7 @@ export function EditCustomerModal({
 
                 <FormField
                   control={form.control}
-                  name="maxDebt"
+                  name={"maxDebt" as keyof FormValues}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs">Hạn mức công nợ</FormLabel>
@@ -299,7 +304,9 @@ export function EditCustomerModal({
                         <Input
                           type="number"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
                           className="h-9"
                         />
                       </FormControl>

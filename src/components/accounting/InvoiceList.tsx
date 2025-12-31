@@ -50,6 +50,7 @@ import {
   InvoiceStatusBadge,
   CustomerTypeBadge,
   InvoiceConfirmDialog,
+  type InvoiceStatus,
 } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
 import {
@@ -71,6 +72,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import type { OrderResponse } from "@/Schema";
+
+type OrderWithInvoiceStatus = OrderResponse & {
+  invoiceStatus?: "not_issued" | "issued";
+};
 import {
   Tooltip,
   TooltipContent,
@@ -656,8 +661,10 @@ export function InvoiceList() {
                   const customerInfoComplete = isCustomerInfoComplete(order);
                   // Invoice status: check if invoice has been issued
                   // Use order.invoiceStatus if available, otherwise default to "not_issued"
-                  const invoiceStatus =
-                    (order as any).invoiceStatus || "not_issued";
+                  const orderWithInvoice = order as OrderWithInvoiceStatus;
+                  const invoiceStatus: InvoiceStatus =
+                    (orderWithInvoice.invoiceStatus as InvoiceStatus) ||
+                    "not_issued";
                   const isSelected = order.id
                     ? selectedOrderIds.has(order.id)
                     : false;

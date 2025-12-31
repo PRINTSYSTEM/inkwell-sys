@@ -581,8 +581,7 @@ export default function AccountingOrderDetail() {
                       onClick={handleUpdatePayment}
                       disabled={
                         confirmDepositMutation.loading ||
-                        approveDebtMutation.loading ||
-                        order.status === "debt_approved"
+                        approveDebtMutation.loading
                       }
                     >
                       {confirmDepositMutation.loading ||
@@ -878,7 +877,9 @@ export default function AccountingOrderDetail() {
                       <TableRow className="bg-muted/30">
                         <TableHead className="w-[60px]">Ảnh</TableHead>
                         <TableHead>Sản phẩm</TableHead>
-                        <TableHead className="text-center">Người thiết kế</TableHead>
+                        <TableHead className="text-center">
+                          Người thiết kế
+                        </TableHead>
                         <TableHead className="text-center">SL</TableHead>
                         <TableHead className="text-right">Đơn giá</TableHead>
                         <TableHead className="text-right">Thành tiền</TableHead>

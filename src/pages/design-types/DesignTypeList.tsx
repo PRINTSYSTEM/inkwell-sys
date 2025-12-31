@@ -130,7 +130,8 @@ export default function DesignTypesPage() {
   const { mutate: updateDesignTypeMutation } = useUpdateDesignType();
   const { mutate: deleteDesignTypeMutation } = useDeleteDesignType();
 
-  const { mutate: createMaterialTypeMutation } = useCreateMaterialType();
+  const { mutate: createMaterialTypeMutation, isPending: isCreatingMaterial } =
+    useCreateMaterialType();
   const { mutate: updateMaterialTypeMutation } = useUpdateMaterialType();
   const { mutate: deleteMaterialTypeMutation } = useDeleteMaterialType();
 
@@ -181,20 +182,38 @@ export default function DesignTypesPage() {
     });
   };
 
-  // ====== MATERIAL HANDLERS (GIỮ API CŨ) ======
+  // ====== MATERIAL HANDLERS ======
 
   const handleCreateMaterial = (material: CreateMaterialTypeRequest) => {
-    // Prioritize: material.designTypeId -> selectedDesignType.id
-    const designTypeId = material.designTypeId || selectedDesignType?.id || 0;
+    // Ensure designTypeId is set from selectedDesignType
+    if (!selectedDesignType?.id) {
+      toast.error("Lỗi", {
+        description: "Vui lòng chọn loại thiết kế trước khi tạo chất liệu",
+      });
+      return;
+    }
 
+    // Use designTypeId from selectedDesignType (prioritize this over material.designTypeId)
+    const designTypeId = Number(selectedDesignType.id);
+
+    // Build payload with required fields
     const payload: CreateMaterialTypeRequest = {
       ...material,
-      designTypeId: Number(designTypeId),
+      designTypeId: designTypeId,
     };
 
-    if (!payload.designTypeId) {
+    // Validate required fields
+    if (!payload.code || !payload.name) {
       toast.error("Lỗi", {
-        description: "Thiếu designTypeId khi tạo chất liệu",
+        description:
+          "Vui lòng điền đầy đủ thông tin bắt buộc (Mã và Tên chất liệu)",
+      });
+      return;
+    }
+
+    if (payload.pricePerM2 === undefined || payload.pricePerM2 < 0) {
+      toast.error("Lỗi", {
+        description: "Giá trên m² phải lớn hơn hoặc bằng 0",
       });
       return;
     }
@@ -205,13 +224,25 @@ export default function DesignTypesPage() {
         queryClient.invalidateQueries({
           queryKey: ["materials-by-design-type", designTypeId],
         });
+        // Also invalidate all material type queries
+        queryClient.invalidateQueries({
+          queryKey: ["material-types"],
+        });
         toast.success("Thành công", {
-          description: "Đã thêm chất liệu mới",
+          description: `Đã thêm chất liệu "${payload.name}" thành công`,
         });
       },
-      onError: (error: Error) => {
+      onError: (error: unknown) => {
+        const apiError = error as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
+        const errorMessage =
+          apiError?.response?.data?.message ||
+          apiError?.message ||
+          "Không thể thêm chất liệu. Vui lòng thử lại.";
         toast.error("Lỗi", {
-          description: error.message || "Không thể thêm chất liệu",
+          description: errorMessage,
         });
       },
     });
@@ -529,10 +560,13 @@ export default function DesignTypesPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setSelectedDesignType(designType)}
-                            className="flex items-center gap-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
+                            className="flex items-center gap-1.5 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
+                            disabled={isCreatingMaterial}
                           >
                             <Package className="h-4 w-4" />
-                            <span className="text-xs">Chất liệu</span>
+                            <span className="text-xs font-medium">
+                              Chất liệu
+                            </span>
                           </Button>
                           <Button
                             variant="outline"
@@ -541,6 +575,7 @@ export default function DesignTypesPage() {
                               setEditingDesignType(designType);
                               setIsDesignTypeDialogOpen(true);
                             }}
+                            className="hover:bg-slate-50 transition-colors"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -551,7 +586,7 @@ export default function DesignTypesPage() {
                               setDesignTypeToDelete(designType);
                               setDeleteConfirmOpen(true);
                             }}
-                            className="text-red-600 hover:text-red-700 bg-transparent"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 transition-colors"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

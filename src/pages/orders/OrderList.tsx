@@ -56,6 +56,11 @@ import {
   formatDate,
 } from "@/lib/status-utils";
 import type { OrderListParams, UserRole, OrderResponse } from "@/Schema";
+
+type OrderWithCustomerFields = OrderResponse & {
+  customerName?: string;
+  customerCompanyName?: string;
+};
 import { useAuth } from "@/hooks";
 import { useOrdersByRole } from "@/hooks/use-order";
 import { ROLE } from "@/constants";
@@ -115,15 +120,24 @@ export default function OrderList() {
     if (!searchTerm.trim()) return orders;
     const searchLower = searchTerm.toLowerCase();
     return orders.filter((order) => {
-      const customer = order.customer;
+      // Priority: order.customerName/customerCompanyName > order.customer.name/companyName
+      const orderWithCustomer = order as OrderWithCustomerFields;
       const customerName =
-        customer && typeof customer === "object" && "name" in customer
-          ? (customer.name as string)
-          : "";
+        orderWithCustomer.customerName ||
+        (order.customer &&
+          typeof order.customer === "object" &&
+          "name" in order.customer
+          ? (order.customer.name as string)
+          : "") ||
+        "";
       const customerCompanyName =
-        customer && typeof customer === "object" && "companyName" in customer
-          ? (customer.companyName as string)
-          : "";
+        orderWithCustomer.customerCompanyName ||
+        (order.customer &&
+          typeof order.customer === "object" &&
+          "companyName" in order.customer
+          ? (order.customer.companyName as string)
+          : "") ||
+        "";
       return (
         order.code?.toLowerCase().includes(searchLower) ||
         customerName.toLowerCase().includes(searchLower) ||
@@ -288,13 +302,24 @@ export default function OrderList() {
               {!isLoading &&
                 !isError &&
                 filteredOrders.map((order) => {
-                  const customer = order.customer;
+                  // Priority: order.customerName/customerCompanyName > order.customer.name/companyName
+                  const orderWithCustomer = order as OrderWithCustomerFields;
+                  const customerName =
+                    orderWithCustomer.customerName ||
+                    (order.customer &&
+                      typeof order.customer === "object" &&
+                      "name" in order.customer
+                      ? (order.customer.name as string)
+                      : null) ||
+                    null;
                   const customerCompanyName =
-                    customer &&
-                    typeof customer === "object" &&
-                    "companyName" in customer
-                      ? (customer.companyName as string)
-                      : null;
+                    orderWithCustomer.customerCompanyName ||
+                    (order.customer &&
+                      typeof order.customer === "object" &&
+                      "companyName" in order.customer
+                      ? (order.customer.companyName as string)
+                      : null) ||
+                    null;
                   const isCompany = !!customerCompanyName;
                   const totalAmount =
                     typeof order.totalAmount === "number"
@@ -332,13 +357,7 @@ export default function OrderList() {
                           </div>
                           <div>
                             <TruncatedText
-                              text={
-                                customer &&
-                                typeof customer === "object" &&
-                                "name" in customer
-                                  ? (customer.name as string)
-                                  : "-"
-                              }
+                              text={customerName || "-"}
                               className="font-medium text-sm"
                             />
                             {customerCompanyName && (
