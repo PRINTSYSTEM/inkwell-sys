@@ -16,6 +16,7 @@ import {
   Shield,
   CheckCircle2,
   XCircle,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -23,6 +24,7 @@ import {
   useCreateUser,
   useUpdateUser,
   useDeleteUser,
+  useResetPassword,
 } from "@/hooks/use-user";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,6 +46,15 @@ import { useNavigate } from "react-router-dom";
 import { UserResponse } from "@/Schema";
 import { ROLE_LABELS as RoleLabels } from "@/constants/role.constant";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export default function EmployeeList() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,6 +63,10 @@ export default function EmployeeList() {
   const itemsPerPage = 10;
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
 
   // Use React Query hook for data fetching
   const {
@@ -69,6 +84,8 @@ export default function EmployeeList() {
 
   const { mutateAsync: updateUser } = useUpdateUser();
   const { mutateAsync: deleteUser } = useDeleteUser();
+  const { mutate: adminResetPassword, loading: resettingPassword } =
+    useResetPassword();
 
   // Calculate stats from current data
   const stats = {
@@ -78,6 +95,29 @@ export default function EmployeeList() {
   };
 
   const navigate = useNavigate();
+
+  const handleConfirmResetPassword = async () => {
+    if (!selectedUser) return;
+
+    if (!resetPasswordValue || resetPasswordValue.length < 6) {
+      toast.error("Lỗi", {
+        description: "Mật khẩu mới phải có ít nhất 6 ký tự",
+      });
+      return;
+    }
+
+    try {
+      await adminResetPassword({
+        id: selectedUser.id!,
+        data: { newPassword: resetPasswordValue },
+      } as any);
+      setResetDialogOpen(false);
+      setSelectedUser(null);
+      setResetPasswordValue("");
+    } catch {
+      // Toast lỗi đã được hook xử lý trong useResetPassword
+    }
+  };
 
   // Reset to page 1 when search changes
   const handleSearchChange = (value: string) => {
@@ -93,15 +133,15 @@ export default function EmployeeList() {
   };
 
   const handleCreateEmployee = () => {
-    navigate("/manager/employees/create");
+    navigate("/admin/users/create");
   };
 
   const handleViewEmployee = (userId: number) => {
-    navigate(`/manager/employees/${userId}`);
+    navigate(`/admin/users/${userId}`);
   };
 
   const handleEditEmployee = (userId: number) => {
-    navigate(`/manager/employees/${userId}`);
+    navigate(`/admin/users/${userId}`);
   };
 
   const handleDeleteEmployee = async (userId: number) => {
@@ -141,7 +181,9 @@ export default function EmployeeList() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Đang tải danh sách nhân viên...</div>
+        <div className="text-muted-foreground">
+          Đang tải danh sách nhân viên...
+        </div>
       </div>
     );
   }
@@ -337,7 +379,10 @@ export default function EmployeeList() {
                             )}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <TableCell
+                          className="text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm">
@@ -373,6 +418,16 @@ export default function EmployeeList() {
                                 )}
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setResetPasswordValue("");
+                                  setResetDialogOpen(true);
+                                }}
+                              >
+                                <Lock className="h-4 w-4 mr-2" />
+                                Reset mật khẩu (Admin)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 onClick={() => handleDeleteEmployee(user.id!)}
                                 className="text-red-600 focus:text-red-600"
                               >
@@ -388,6 +443,60 @@ export default function EmployeeList() {
                 )}
               </TableBody>
             </Table>
+
+            {/* Dialog reset mật khẩu (Admin) */}
+            <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Reset mật khẩu nhân viên</DialogTitle>
+                  <DialogDescription>
+                    Thiết lập mật khẩu mới cho nhân viên. Mật khẩu phải có ít
+                    nhất 6 ký tự.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {selectedUser && (
+                  <div className="space-y-4 mt-2">
+                    <div className="text-sm text-muted-foreground">
+                      Đang reset cho: <strong>{selectedUser.fullName}</strong> (
+                      {selectedUser.username})
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">Mật khẩu mới *</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={resetPasswordValue}
+                        onChange={(e) => setResetPasswordValue(e.target.value)}
+                        placeholder="Nhập mật khẩu mới"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Hãy chia sẻ mật khẩu này trực tiếp cho nhân viên sau khi
+                        reset.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setResetDialogOpen(false)}
+                    disabled={resettingPassword}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    onClick={handleConfirmResetPassword}
+                    disabled={resettingPassword}
+                  >
+                    {resettingPassword
+                      ? "Đang reset mật khẩu..."
+                      : "Xác nhận reset"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Pagination Controls */}
             {totalCount > 0 && (
@@ -456,4 +565,3 @@ export default function EmployeeList() {
     </div>
   );
 }
-

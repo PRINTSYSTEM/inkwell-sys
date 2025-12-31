@@ -9,6 +9,10 @@ import DashboardLayout, {
 import { ROUTE_PATHS } from "@/constants";
 import CreateCustomer from "@/pages/customers/CreateCustomer";
 import ProductionDetailPage from "@/pages/production/ProductionDetail";
+import Profile from "@/pages/Profile";
+import EmployeeList from "@/pages/manager/EmployeeList";
+import EmployeeCreate from "@/pages/manager/EmployeeCreate";
+import EmployeeDetail from "@/pages/manager/EmployeeDetail";
 
 // ================== Lazy imports ==================
 const Login = lazy(() => import("@/pages/Login"));
@@ -793,7 +797,36 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // ===== MANAGER =====
+      // ===== ADMIN =====
+      {
+        path: lastSegment(ROUTE_PATHS.ADMIN.ROOT), // "admin"
+        children: [
+          {
+            path: lastSegment(ROUTE_PATHS.ADMIN.USERS), // "users"
+            element: (
+              <Suspense fallback={<RouteLoadingOverlay />}>
+                <EmployeeList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "users/create", // /admin/users/create (must be before users/:id)
+            element: (
+              <Suspense fallback={<RouteLoadingOverlay />}>
+                <EmployeeCreate />
+              </Suspense>
+            ),
+          },
+          {
+            path: "users/:id", // /admin/users/:id
+            element: (
+              <Suspense fallback={<RouteLoadingOverlay />}>
+                <EmployeeDetail />
+              </Suspense>
+            ),
+          },
+        ],
+      },
 
       // ===== REPORTS =====
       {
@@ -947,6 +980,16 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<RouteLoadingOverlay />}>
             <NotificationCenter />
+          </Suspense>
+        ),
+      },
+
+      // ===== PROFILE =====
+      {
+        path: lastSegment(ROUTE_PATHS.PROFILE), // "profile"
+        element: (
+          <Suspense fallback={<RouteLoadingOverlay />}>
+            <Profile />
           </Suspense>
         ),
       },

@@ -192,29 +192,29 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
-  // ==== Kho vật tư ====
-  {
-    id: "inventory",
-    title: "Kho vật tư",
-    icon: Package,
-    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION_LEAD],
-    children: [
-      {
-        id: "inventory-main",
-        title: "Quản lý kho",
-        icon: Package,
-        path: ROUTE_PATHS.INVENTORY.ROOT,
-        allowedRoles: [ROLE.ADMIN],
-      },
-      {
-        id: "materials",
-        title: "Quản lý chất liệu",
-        icon: Package,
-        path: ROUTE_PATHS.MATERIALS.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.PRODUCTION_LEAD, ROLE.DESIGN_LEAD],
-      },
-    ],
-  },
+  // // ==== Kho vật tư ====
+  // {
+  //   id: "inventory",
+  //   title: "Kho vật tư",
+  //   icon: Package,
+  //   allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION_LEAD],
+  //   children: [
+  //     {
+  //       id: "inventory-main",
+  //       title: "Quản lý kho",
+  //       icon: Package,
+  //       path: ROUTE_PATHS.INVENTORY.ROOT,
+  //       allowedRoles: [ROLE.ADMIN],
+  //     },
+  //     {
+  //       id: "materials",
+  //       title: "Quản lý chất liệu",
+  //       icon: Package,
+  //       path: ROUTE_PATHS.MATERIALS.ROOT,
+  //       allowedRoles: [ROLE.ADMIN, ROLE.PRODUCTION_LEAD, ROLE.DESIGN_LEAD],
+  //     },
+  //   ],
+  // },
 
   // ==== Quản lý kho ====
   {
@@ -281,13 +281,13 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ADMIN.USERS,
         allowedRoles: [ROLE.ADMIN],
       },
-      {
-        id: "admin-roles",
-        title: "Quản lý vai trò",
-        icon: Shield,
-        path: ROUTE_PATHS.ADMIN.ROLES,
-        allowedRoles: [ROLE.ADMIN],
-      },
+      // {
+      //   id: "admin-roles",
+      //   title: "Quản lý vai trò",
+      //   icon: Shield,
+      //   path: ROUTE_PATHS.ADMIN.ROLES,
+      //   allowedRoles: [ROLE.ADMIN],
+      // },
       {
         id: "design-types",
         title: "Loại thiết kế",
@@ -523,52 +523,52 @@ export const MENU_ITEMS: MenuItem[] = [
   },
 
   // ==== Quản lý nhân viên ====
-  {
-    id: "employee-management",
-    title: "Quản lý nhân viên",
-    icon: UserPlus,
-    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-    children: [
-      {
-        id: "manager-dashboard",
-        title: "Tổng quan",
-        icon: LayoutDashboard,
-        path: ROUTE_PATHS.MANAGER.DASHBOARD,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-      },
-      {
-        id: "employee-assignments",
-        title: "Phân công công việc",
-        icon: Briefcase,
-        path: ROUTE_PATHS.MANAGER.ASSIGNMENTS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-      },
-      {
-        id: "employee-performance",
-        title: "Hiệu suất nhân viên",
-        icon: BarChart3,
-        path: ROUTE_PATHS.MANAGER.PERFORMANCE,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-      },
-    ],
-  },
+  // {
+  //   id: "employee-management",
+  //   title: "Quản lý nhân viên",
+  //   icon: UserPlus,
+  //   allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+  //   children: [
+  //     {
+  //       id: "manager-dashboard",
+  //       title: "Tổng quan",
+  //       icon: LayoutDashboard,
+  //       path: ROUTE_PATHS.MANAGER.DASHBOARD,
+  //       allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+  //     },
+  //     {
+  //       id: "employee-assignments",
+  //       title: "Phân công công việc",
+  //       icon: Briefcase,
+  //       path: ROUTE_PATHS.MANAGER.ASSIGNMENTS,
+  //       allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+  //     },
+  //     {
+  //       id: "employee-performance",
+  //       title: "Hiệu suất nhân viên",
+  //       icon: BarChart3,
+  //       path: ROUTE_PATHS.MANAGER.PERFORMANCE,
+  //       allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+  //     },
+  //   ],
+  // },
 
   // ==== Hành chính ====
-  {
-    id: "hr",
-    title: "Hành chính",
-    icon: Clock,
-    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-    children: [
-      {
-        id: "attendance",
-        title: "Chấm công",
-        icon: Clock,
-        path: ROUTE_PATHS.ATTENDANCE.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-      },
-    ],
-  },
+  // {
+  //   id: "hr",
+  //   title: "Hành chính",
+  //   icon: Clock,
+  //   allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+  //   children: [
+  //     {
+  //       id: "attendance",
+  //       title: "Chấm công",
+  //       icon: Clock,
+  //       path: ROUTE_PATHS.ATTENDANCE.ROOT,
+  //       allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+  //     },
+  //   ],
+  // },
 
   // ==== Báo cáo ====
   {
