@@ -13,6 +13,8 @@ import {
   UserResponsePaginateSchema as GenUserResponsePaginateSchema,
   CreateUserRequestSchema as GenCreateUserRequestSchema,
   UpdateUserRequestSchema as GenUpdateUserRequestSchema,
+  UpdateMyProfileRequestSchema as GenUpdateMyProfileRequestSchema,
+  ResetPasswordRequestSchema as GenResetPasswordRequestSchema,
   UserKpiResponseSchema as GenUserKpiResponseSchema,
   TeamKpiSummaryResponseSchema as GenTeamKpiSummaryResponseSchema,
 } from "./generated";
@@ -51,6 +53,14 @@ export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 // ===== UpdateUserRequest =====
 export const UpdateUserRequestSchema = GenUpdateUserRequestSchema.passthrough();
 export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;
+
+// ===== UpdateMyProfileRequest =====
+export const UpdateMyProfileRequestSchema = GenUpdateMyProfileRequestSchema.passthrough();
+export type UpdateMyProfileRequest = z.infer<typeof UpdateMyProfileRequestSchema>;
+
+// ===== ResetPasswordRequest =====
+export const ResetPasswordRequestSchema = GenResetPasswordRequestSchema.passthrough();
+export type ResetPasswordRequest = z.infer<typeof ResetPasswordRequestSchema>;
 
 // ===== UserKpiResponse =====
 export const UserKpiResponseSchema = GenUserKpiResponseSchema.passthrough();

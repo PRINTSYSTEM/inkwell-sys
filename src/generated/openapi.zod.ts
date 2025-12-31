@@ -2209,6 +2209,16 @@ const UserResponsePaginate = z
     items: z.array(UserResponse).nullable(),
   })
   .partial();
+const UpdateMyProfileRequest = z
+  .object({
+    fullName: z.string().min(0).max(255).nullable(),
+    email: z.string().min(0).max(255).email().nullable(),
+    phone: z.string().min(0).max(20).nullable(),
+  })
+  .partial();
+const ResetPasswordRequest = z.object({
+  newPassword: z.string().min(6).max(100),
+});
 const UpdateUserRequest = z
   .object({
     fullName: z.string().min(0).max(255).nullable(),
@@ -2486,6 +2496,8 @@ export const schemas = {
   CreateUserRequest,
   UserResponse,
   UserResponsePaginate,
+  UpdateMyProfileRequest,
+  ResetPasswordRequest,
   UpdateUserRequest,
   ChangePasswordRequest,
   UserKpiResponse,
@@ -6769,6 +6781,42 @@ const endpoints = makeApi([
     ],
   },
   {
+    method: "post",
+    path: "/api/users/:id/department-reset-password",
+    alias: "postApiusersIddepartmentResetPassword",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ newPassword: z.string().min(6).max(100) }),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 400,
+        description: `Bad Request`,
+        schema: ErrorResponse,
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: ErrorResponse,
+      },
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: ErrorResponse,
+      },
+    ],
+  },
+  {
     method: "get",
     path: "/api/users/:id/kpi",
     alias: "getApiusersIdkpi",
@@ -6792,6 +6840,42 @@ const endpoints = makeApi([
     ],
     response: UserKpiResponse,
     errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: ErrorResponse,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/users/:id/reset-password",
+    alias: "postApiusersIdresetPassword",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ newPassword: z.string().min(6).max(100) }),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 400,
+        description: `Bad Request`,
+        schema: ErrorResponse,
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: ErrorResponse,
+      },
       {
         status: 404,
         description: `Not Found`,
@@ -6841,6 +6925,46 @@ const endpoints = makeApi([
       },
     ],
     response: TeamKpiSummaryResponse,
+  },
+  {
+    method: "get",
+    path: "/api/users/me",
+    alias: "getApiusersme",
+    requestFormat: "json",
+    response: UserResponse,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: ErrorResponse,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/users/me",
+    alias: "putApiusersme",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateMyProfileRequest,
+      },
+    ],
+    response: UserResponse,
+    errors: [
+      {
+        status: 400,
+        description: `Bad Request`,
+        schema: ErrorResponse,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: ErrorResponse,
+      },
+    ],
   },
   {
     method: "get",

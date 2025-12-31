@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2025-12-30T23:13:59.052Z */
+/* Generated at: 2025-12-31T02:49:22.075Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -145,6 +145,7 @@ export const RecordPlateExportRequestSchema = schemas.RecordPlateExportRequest;
 export const RecreateDeliveryNoteRequestSchema = schemas.RecreateDeliveryNoteRequest;
 export const ReportExportResponseSchema = schemas.ReportExportResponse;
 export const ReportExportResponseIPaginateSchema = schemas.ReportExportResponseIPaginate;
+export const ResetPasswordRequestSchema = schemas.ResetPasswordRequest;
 export const ReturnsDiscountsResponseSchema = schemas.ReturnsDiscountsResponse;
 export const ReturnsDiscountsResponseIPaginateSchema = schemas.ReturnsDiscountsResponseIPaginate;
 export const RoleDefinitionSchema = schemas.RoleDefinition;
@@ -178,6 +179,7 @@ export const UpdateEInvoiceInfoRequestSchema = schemas.UpdateEInvoiceInfoRequest
 export const UpdateExpenseCategoryRequestSchema = schemas.UpdateExpenseCategoryRequest;
 export const UpdateInvoiceRequestSchema = schemas.UpdateInvoiceRequest;
 export const UpdateMaterialTypeRequestSchema = schemas.UpdateMaterialTypeRequest;
+export const UpdateMyProfileRequestSchema = schemas.UpdateMyProfileRequest;
 export const UpdateOrderDetailForAccountingRequestSchema = schemas.UpdateOrderDetailForAccountingRequest;
 export const UpdateOrderForAccountingRequestSchema = schemas.UpdateOrderForAccountingRequest;
 export const UpdateOrderRequestSchema = schemas.UpdateOrderRequest;
