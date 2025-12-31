@@ -30,14 +30,13 @@ interface MaterialTypeFormDialogProps {
   onSubmit: (material: CreateMaterialTypeRequest) => void;
 }
 
-// State nội bộ: price & pricePerCm2 giữ dạng string cho dễ nhập
+// State nội bộ: pricePerM2 giữ dạng string cho dễ nhập
 type MaterialFormState = {
   code: string;
   name: string;
   displayOrder: number;
   description: string;
-  price: string;
-  pricePerCm2: string;
+  pricePerM2: string;
   minimumQuantity: string;
   status: "active" | "inactive";
 };
@@ -54,8 +53,7 @@ export function MaterialTypeFormDialog({
     name: "",
     displayOrder: 1,
     description: "",
-    price: "",
-    pricePerCm2: "",
+    pricePerM2: "",
     minimumQuantity: "",
     status: "active",
   });
@@ -67,11 +65,9 @@ export function MaterialTypeFormDialog({
         name: editingMaterial.name,
         displayOrder: editingMaterial.displayOrder,
         description: editingMaterial.description ?? "",
-        price:
-          editingMaterial.price != null ? String(editingMaterial.price) : "",
-        pricePerCm2:
-          editingMaterial.pricePerCm2 != null
-            ? String(editingMaterial.pricePerCm2)
+        pricePerM2:
+          editingMaterial.pricePerM2 != null
+            ? String(editingMaterial.pricePerM2)
             : "",
         minimumQuantity:
           editingMaterial.minimumQuantity != null
@@ -85,8 +81,7 @@ export function MaterialTypeFormDialog({
         name: "",
         displayOrder: 1,
         description: "",
-        price: "",
-        pricePerCm2: "",
+        pricePerM2: "",
         minimumQuantity: "",
         status: "active",
       });
@@ -97,25 +92,22 @@ export function MaterialTypeFormDialog({
     e.preventDefault();
 
     // Convert string -> number an toàn
-    const priceNumber =
-      formData.price.trim() === "" ? 0 : Number(formData.price);
-    const pricePerCm2Number =
-      formData.pricePerCm2.trim() === "" ? 0 : Number(formData.pricePerCm2);
+    const pricePerM2Number =
+      formData.pricePerM2.trim() === "" ? 0 : Number(formData.pricePerM2);
     const minimumQuantityNumber =
       formData.minimumQuantity.trim() === ""
         ? undefined
         : Number(formData.minimumQuantity);
 
     // Nếu muốn bắt buộc > 0 thì check kỹ:
-    // if (!priceNumber || !pricePerCm2Number) { ... } // chú ý: 0 là falsy
+    // if (!pricePerM2Number) { ... } // chú ý: 0 là falsy
 
     const payload: CreateMaterialTypeRequest = {
       code: formData.code,
       name: formData.name,
       displayOrder: formData.displayOrder,
       description: formData.description,
-      price: priceNumber,
-      pricePerCm2: pricePerCm2Number,
+      pricePerM2: pricePerM2Number,
       minimumQuantity: minimumQuantityNumber,
       designTypeId, // luôn gắn từ props
       status: formData.status,
@@ -208,65 +200,34 @@ export function MaterialTypeFormDialog({
             <h4 className="text-sm font-semibold text-muted-foreground">
               Thông tin giá
             </h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="price">
-                  Giá cố định <span className="text-red-500">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    // step="1000"
-                    value={formData.price}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        price: e.target.value,
-                      }))
-                    }
-                    placeholder="0"
-                    required
-                    className="pr-12"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    đ
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Giá cố định áp dụng cho đơn vị sản phẩm
-                </p>
+            <div className="space-y-2">
+              <Label htmlFor="pricePerM2">
+                Giá theo diện tích <span className="text-red-500">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="pricePerM2"
+                  type="number"
+                  min="0"
+                  // step="10"
+                  value={formData.pricePerM2}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      pricePerM2: e.target.value,
+                    }))
+                  }
+                  placeholder="0"
+                  required
+                  className="pr-16"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  đ/m²
+                </span>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="pricePerCm2">
-                  Giá theo diện tích <span className="text-red-500">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="pricePerCm2"
-                    type="number"
-                    min="0"
-                    // step="10"
-                    value={formData.pricePerCm2}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        pricePerCm2: e.target.value,
-                      }))
-                    }
-                    placeholder="0"
-                    required
-                    className="pr-16"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    đ/cm²
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Giá tính theo diện tích cm²
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Giá tính theo diện tích m²
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="minimumQuantity">Số lượng tối thiểu</Label>
