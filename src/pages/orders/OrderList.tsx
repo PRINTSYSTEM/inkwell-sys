@@ -49,6 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import {
   orderStatusLabels,
   formatCurrency,
@@ -330,17 +331,21 @@ export default function OrderList() {
                             )}
                           </div>
                           <div>
-                            <p className="font-medium text-sm">
-                              {customer &&
-                              typeof customer === "object" &&
-                              "name" in customer
-                                ? (customer.name as string)
-                                : "-"}
-                            </p>
+                            <TruncatedText
+                              text={
+                                customer &&
+                                typeof customer === "object" &&
+                                "name" in customer
+                                  ? (customer.name as string)
+                                  : "-"
+                              }
+                              className="font-medium text-sm"
+                            />
                             {customerCompanyName && (
-                              <p className="text-xs text-muted-foreground">
-                                {customerCompanyName}
-                              </p>
+                              <TruncatedText
+                                text={customerCompanyName}
+                                className="text-xs text-muted-foreground"
+                              />
                             )}
                           </div>
                         </div>

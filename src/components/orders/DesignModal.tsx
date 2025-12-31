@@ -252,16 +252,32 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     }
   }, [isTui, formData.sidesClassification]);
 
+  // Reset width to 0 when design type is not Túi or Hộp
+  useEffect(() => {
+    if (!isTui && !isHop && formData.width && formData.width > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        width: 0,
+      }));
+    }
+  }, [isTui, isHop, formData.width]);
+
   const canGoNext = () => {
     switch (currentStep) {
       case 1:
-        // Step 1: Tên thiết kế, loại thiết kế, chất liệu, kích thước (dài, rộng bắt buộc, cao không bắt buộc), số lượng
+        // Step 1: Tên thiết kế, loại thiết kế, chất liệu, kích thước (dài và cao bắt buộc, rộng bắt buộc cho túi và hộp), số lượng
+        const hasLength = (formData.length ?? 0) > 0;
+        const hasHeight = (formData.height ?? 0) > 0;
+        const hasWidth = (formData.width ?? 0) > 0;
+        const needsWidth = isTui || isHop; // Túi xếp hông và hộp cần rộng
+        
         return (
           formData.designName?.trim() &&
           formData.designTypeId > 0 &&
           formData.materialTypeId > 0 &&
-          (formData.length ?? 0) > 0 &&
-          (formData.width ?? 0) > 0 &&
+          hasLength &&
+          hasHeight &&
+          (needsWidth ? hasWidth : true) &&
           formData.quantity !== undefined &&
           formData.quantity > 0
         );
@@ -534,24 +550,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">
-                      Rộng <span className="text-destructive">*</span>
+                      Cao <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={formData.width || ""}
-                      onChange={(e) =>
-                        updateField(
-                          "width",
-                          e.target.value === "" ? 0 : Number(e.target.value)
-                        )
-                      }
-                      className="h-11"
-                      disabled={!!isExistingDesign}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Cao</Label>
                     <Input
                       type="number"
                       placeholder="0"
@@ -564,6 +564,24 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       }
                       className="h-11"
                       disabled={!!isExistingDesign}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Rộng {isTui || isHop ? <span className="text-destructive">*</span> : ""}
+                    </Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={formData.width || ""}
+                      onChange={(e) =>
+                        updateField(
+                          "width",
+                          e.target.value === "" ? 0 : Number(e.target.value)
+                        )
+                      }
+                      className="h-11"
+                      disabled={!!isExistingDesign || (!isTui && !isHop)}
                     />
                   </div>
                 </div>

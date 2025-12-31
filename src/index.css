@@ -126,6 +126,13 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
     overscroll-behavior-y: none;
     overflow-x: hidden;
+    /* Prevent layout shift when Select/Dialog opens by reserving space for scrollbar */
+    scrollbar-gutter: stable;
+  }
+
+  /* Alternative: Always reserve space for scrollbar on html */
+  html {
+    scrollbar-gutter: stable;
   }
 }
 

@@ -180,6 +180,8 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             customerName: design.customer?.name || "",
             customerCompanyName: design.customer?.companyName || "",
             processClassificationOptionName: design.processClassification || undefined,
+            sidesClassification: design.sidesClassification || undefined,
+            laminationType: design.laminationType || undefined,
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
             designId: design.id, // Store designId for fallback fetching if needed
@@ -786,14 +788,14 @@ export const useRecordPlateExport = () => {
 };
 
 // Upload file trực tiếp vào endpoint die-export
-// API expects: DieVendorId, DieCount, SentAt, EstimatedReceiveAt, ReceivedAt, ImageFile, Notes
+// API expects: DieVendorId, DieCount, SentAt, EstimatedReceiveAt, ReceivedAt, ImageFiles (array), Notes
 export const useRecordDieExportWithFile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
       id,
-      file,
+      files,
       notes,
       dieVendorId,
       dieCount,
@@ -802,7 +804,7 @@ export const useRecordDieExportWithFile = () => {
       receivedAt,
     }: {
       id: number;
-      file?: File | null;
+      files?: File[] | null;
       notes?: string | null;
       dieVendorId?: number | null;
       dieCount?: number | null;
@@ -828,8 +830,11 @@ export const useRecordDieExportWithFile = () => {
       if (receivedAt) {
         formData.append("ReceivedAt", receivedAt);
       }
-      if (file) {
-        formData.append("ImageFile", file);
+      if (files && files.length > 0) {
+        // Append each file to ImageFiles array
+        files.forEach((file) => {
+          formData.append("ImageFiles", file);
+        });
       }
       if (notes) {
         formData.append("Notes", notes);
@@ -923,5 +928,85 @@ export const useAvailableQuantity = (
       return typeof res.data === "number" ? res.data : res.data;
     },
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+// ================== ADD/REMOVE DESIGNS ==================
+// POST /proofing-orders/{id}/add-designs
+export const useAddDesignsToProofingOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      orderDetailItems,
+    }: {
+      id: number;
+      orderDetailItems: Array<{ orderDetailId: number; quantity: number }>;
+    }) => {
+      const response = await apiRequest.post<ProofingOrderResponse>(
+        API_SUFFIX.PROOFING_ADD_DESIGNS(id),
+        { orderDetailItems }
+      );
+      
+      const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
+      if (parseResult.success) {
+        return parseResult.data;
+      } else {
+        console.warn("Schema validation failed for add designs response:", parseResult.error);
+        return response.data as ProofingOrderResponse;
+      }
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
+      toast.success("Thành công", {
+        description: "Đã thêm design vào bình bài",
+      });
+    },
+    onError: (error: ApiError) => {
+      toast.error("Lỗi", {
+        description: error.response?.data?.message || error.message || "Không thể thêm design",
+      });
+    },
+  });
+};
+
+// DELETE /proofing-orders/{id}/designs/{designId}
+export const useRemoveDesignFromProofingOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      proofingOrderId,
+      proofingOrderDesignId,
+    }: {
+      proofingOrderId: number;
+      proofingOrderDesignId: number;
+    }) => {
+      const response = await apiRequest.delete<ProofingOrderResponse>(
+        API_SUFFIX.PROOFING_REMOVE_DESIGN(proofingOrderId, proofingOrderDesignId)
+      );
+      
+      const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
+      if (parseResult.success) {
+        return parseResult.data;
+      } else {
+        console.warn("Schema validation failed for remove design response:", parseResult.error);
+        return response.data as ProofingOrderResponse;
+      }
+    },
+    onSuccess: (_, { proofingOrderId }) => {
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(proofingOrderId) });
+      toast.success("Thành công", {
+        description: "Đã xóa design khỏi bình bài",
+      });
+    },
+    onError: (error: ApiError) => {
+      toast.error("Lỗi", {
+        description: error.response?.data?.message || error.message || "Không thể xóa design",
+      });
+    },
   });
 };

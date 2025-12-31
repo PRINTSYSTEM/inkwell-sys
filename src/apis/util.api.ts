@@ -163,6 +163,9 @@ export const API_SUFFIX = {
     `/proofing-orders/${id}/hand-to-production`,
   PROOFING_AVAILABLE_QUANTITY: (designId: number) =>
     `/proofing-orders/available-quantity/${designId}`,
+  PROOFING_ADD_DESIGNS: (id: number) => `/proofing-orders/${id}/add-designs`,
+  PROOFING_REMOVE_DESIGN: (id: number, designId: number) =>
+    `/proofing-orders/${id}/designs/${designId}`,
 
   // ========== VENDORS ==========
   VENDORS: "/vendors",

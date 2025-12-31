@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { useRecordDieExportWithFile } from "@/hooks/use-proofing-order";
 import { useActiveDieVendors, useCreateVendor } from "@/hooks/use-vendor";
 import type { ProofingOrderResponse } from "@/Schema/proofing-order.schema";
+import { getErrorMessage } from "@/services/BaseService";
 
 interface DieExportDialogProps {
   open: boolean;
@@ -76,8 +77,8 @@ export function DieExportDialog({
   const [vendorName, setVendorName] = useState<string>("");
   const [isCreatingVendor, setIsCreatingVendor] = useState(false);
   const [vendorSearchOpen, setVendorSearchOpen] = useState(false);
-  const [dieFile, setDieFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dieFiles, setDieFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [receivedAtType, setReceivedAtType] = useState<"manual" | "duration">(
     "duration"
   );
@@ -98,8 +99,8 @@ export function DieExportDialog({
       setVendorName("");
       setIsCreatingVendor(false);
       setVendorSearchOpen(false);
-      setDieFile(null);
-      setImagePreview(null);
+      setDieFiles([]);
+      setImagePreviews([]);
       setReceivedAtType("duration");
       setDurationHours(60);
       setReceivedAtManual("");
@@ -107,14 +108,14 @@ export function DieExportDialog({
     }
   }, [open]);
 
-  // Cleanup image preview URL when component unmounts or file changes
+  // Cleanup image preview URLs when component unmounts or files change
   useEffect(() => {
     return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
+      imagePreviews.forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
     };
-  }, [imagePreview]);
+  }, [imagePreviews]);
 
   // Helper function to format local datetime with timezone offset
   // Returns format: "YYYY-MM-DDTHH:mm:ss+HH:mm" (e.g., "2025-01-01T10:00:00+07:00")
@@ -137,13 +138,16 @@ export function DieExportDialog({
   }, []);
 
   // Helper function to convert datetime-local string to local datetime with offset
-  const convertLocalDateTimeToISO = useCallback((localDateTime: string): string => {
-    // datetime-local format: "YYYY-MM-DDTHH:mm" (no timezone)
-    // Parse as local time
-    const date = new Date(localDateTime);
-    // Format with local timezone offset
-    return formatLocalDateTimeWithOffset(date);
-  }, [formatLocalDateTimeWithOffset]);
+  const convertLocalDateTimeToISO = useCallback(
+    (localDateTime: string): string => {
+      // datetime-local format: "YYYY-MM-DDTHH:mm" (no timezone)
+      // Parse as local time
+      const date = new Date(localDateTime);
+      // Format with local timezone offset
+      return formatLocalDateTimeWithOffset(date);
+    },
+    [formatLocalDateTimeWithOffset]
+  );
 
   // Calculate receivedAt based on type
   const receivedAt = useMemo(() => {
@@ -159,7 +163,13 @@ export function DieExportDialog({
       // Format with local timezone offset
       return formatLocalDateTimeWithOffset(received);
     }
-  }, [receivedAtType, receivedAtManual, durationHours, convertLocalDateTimeToISO, formatLocalDateTimeWithOffset]);
+  }, [
+    receivedAtType,
+    receivedAtManual,
+    durationHours,
+    convertLocalDateTimeToISO,
+    formatLocalDateTimeWithOffset,
+  ]);
 
   const handleCreateVendor = async () => {
     if (!vendorName.trim()) {
@@ -185,7 +195,7 @@ export function DieExportDialog({
         },
         onError: (error) => {
           toast.error("Không thể tạo nhà cung cấp", {
-            description: error?.response?.data?.message || error.message,
+            description: getErrorMessage(error, "Không thể tạo nhà cung cấp"),
           });
         },
       }
@@ -193,30 +203,48 @@ export function DieExportDialog({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Validate all files
+    const validFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    files.forEach((file) => {
       // Kiểm tra file ảnh
       if (!file.type.startsWith("image/")) {
-        toast.error("Vui lòng chọn file ảnh");
+        toast.error(`File "${file.name}" không phải là ảnh`);
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("Kích thước file không được vượt quá 10MB");
+        toast.error(`File "${file.name}" vượt quá 10MB`);
         return;
       }
-      setDieFile(file);
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
+      validFiles.push(file);
+      newPreviews.push(URL.createObjectURL(file));
+    });
+
+    if (validFiles.length > 0) {
+      setDieFiles((prev) => [...prev, ...validFiles]);
+      setImagePreviews((prev) => [...prev, ...newPreviews]);
     }
+
+    // Reset input
+    e.target.value = "";
   };
 
-  const handleRemoveFile = () => {
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-    }
-    setDieFile(null);
-    setImagePreview(null);
+  const handleRemoveFile = (index: number) => {
+    setDieFiles((prev) => {
+      const newFiles = prev.filter((_, i) => i !== index);
+      return newFiles;
+    });
+    setImagePreviews((prev) => {
+      const urlToRevoke = prev[index];
+      if (urlToRevoke) {
+        URL.revokeObjectURL(urlToRevoke);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmit = () => {
@@ -225,9 +253,14 @@ export function DieExportDialog({
       return;
     }
 
-    // Nếu không có file mới và không có file cũ, yêu cầu upload file
-    if (!dieFile && !proofingOrder?.dieExport?.imageUrl) {
-      toast.error("Vui lòng chọn ảnh khuôn bế");
+    // Nếu không có file mới và không có ảnh cũ, yêu cầu upload file
+    if (
+      dieFiles.length === 0 &&
+      !proofingOrder?.dieExport?.imageUrl &&
+      (!proofingOrder?.dieExport?.images ||
+        proofingOrder.dieExport.images.length === 0)
+    ) {
+      toast.error("Vui lòng chọn ít nhất một ảnh khuôn bế");
       return;
     }
 
@@ -236,11 +269,11 @@ export function DieExportDialog({
     // estimatedReceiveAt is same as receivedAt for now
     const estimatedReceiveAt = receivedAt;
 
-    // Record die export với file (nếu có)
+    // Record die export với files (nếu có)
     recordDie(
       {
         id: proofingOrderId,
-        file: dieFile || undefined,
+        files: dieFiles.length > 0 ? dieFiles : undefined,
         notes: notes.trim() || undefined,
         dieVendorId: vendorId || undefined,
         dieCount: dieCount,
@@ -259,7 +292,8 @@ export function DieExportDialog({
 
   const selectedVendor = vendors?.find((v) => v.id === vendorId);
 
-  const existingFileUrl = proofingOrder?.dieExport?.imageUrl;
+  const existingImages = proofingOrder?.dieExport?.images || [];
+  const existingImageUrl = proofingOrder?.dieExport?.imageUrl; // Fallback for old data
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -423,104 +457,126 @@ export function DieExportDialog({
 
           {/* Ảnh khuôn bế */}
           <div className="space-y-2">
-            <Label htmlFor="dieFile">
+            <Label htmlFor="dieFiles">
               Ảnh khuôn bế <span className="text-destructive">*</span>
             </Label>
-            {!dieFile && !existingFileUrl && (
-              <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                <Input
-                  id="dieFile"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <label
-                  htmlFor="dieFile"
-                  className="cursor-pointer flex flex-col items-center gap-2"
-                >
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Click để chọn ảnh hoặc kéo thả vào đây
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    File ảnh (JPG, PNG, ...) - tối đa 10MB
-                  </span>
-                </label>
-              </div>
-            )}
-            {(dieFile || existingFileUrl || imagePreview) && (
-              <div className="space-y-2">
-                {/* Preview ảnh */}
-                <div className="border rounded-lg p-4 bg-muted/50">
-                  {(imagePreview || existingFileUrl) && (
-                    <div className="mb-3">
-                      <img
-                        src={imagePreview || existingFileUrl || ""}
-                        alt="Preview ảnh khuôn bế"
-                        className="w-full max-h-64 object-contain rounded-lg border bg-background"
-                      />
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3">
-                    {dieFile && (
-                      <>
-                        <div className="w-12 h-12 rounded-lg bg-background border flex items-center justify-center">
-                          <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {dieFile.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {(dieFile.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={handleRemoveFile}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                    {existingFileUrl && !dieFile && (
-                      <div className="w-full">
-                        <p className="text-xs text-muted-foreground">
-                          Ảnh đã được lưu
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2">
+            {dieFiles.length === 0 &&
+              existingImages.length === 0 &&
+              !existingImageUrl && (
+                <div className="border-2 border-dashed rounded-lg p-6 text-center">
                   <Input
-                    id="dieFile"
+                    id="dieFiles"
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleFileChange}
                     className="hidden"
                   />
-                  <label htmlFor="dieFile">
+                  <label
+                    htmlFor="dieFiles"
+                    className="cursor-pointer flex flex-col items-center gap-2"
+                  >
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Click để chọn ảnh hoặc kéo thả vào đây
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      File ảnh (JPG, PNG, ...) - tối đa 10MB mỗi file
+                    </span>
+                  </label>
+                </div>
+              )}
+            {(dieFiles.length > 0 ||
+              existingImages.length > 0 ||
+              existingImageUrl) && (
+              <div className="space-y-3">
+                {/* Preview existing images */}
+                {existingImages.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Ảnh đã lưu:
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {existingImages.map((imageUrl, index) => (
+                        <div
+                          key={index}
+                          className="relative group border rounded-lg overflow-hidden bg-muted/30"
+                        >
+                          <img
+                            src={imageUrl}
+                            alt={`Ảnh khuôn bế ${index + 1}`}
+                            className="w-full h-32 object-contain"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Fallback for old single imageUrl */}
+                {existingImageUrl && existingImages.length === 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Ảnh đã lưu:
+                    </Label>
+                    <div className="border rounded-lg overflow-hidden bg-muted/30">
+                      <img
+                        src={existingImageUrl}
+                        alt="Ảnh khuôn bế"
+                        className="w-full h-32 object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview new images */}
+                {dieFiles.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Ảnh mới:
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {dieFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="relative group border rounded-lg overflow-hidden bg-muted/30"
+                        >
+                          <img
+                            src={imagePreviews[index]}
+                            alt={`Preview ${file.name}`}
+                            className="w-full h-32 object-contain"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleRemoveFile(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate">
+                            {file.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add more images button */}
+                <div className="flex gap-2">
+                  <Input
+                    id="dieFiles"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <label htmlFor="dieFiles">
                     <Button variant="outline" size="sm" asChild>
-                      <span>
-                        {existingFileUrl && !dieFile
-                          ? "Thay đổi ảnh"
-                          : "Chọn ảnh khác"}
-                      </span>
+                      <span>Thêm ảnh</span>
                     </Button>
                   </label>
-                  {dieFile && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRemoveFile}
-                    >
-                      Xóa
-                    </Button>
-                  )}
                 </div>
               </div>
             )}
@@ -606,7 +662,9 @@ export function DieExportDialog({
             onClick={handleSubmit}
             disabled={
               recordingDie ||
-              (!dieFile && !existingFileUrl) ||
+              (dieFiles.length === 0 &&
+                existingImages.length === 0 &&
+                !existingImageUrl) ||
               (!vendorId && !vendorName.trim())
             }
           >

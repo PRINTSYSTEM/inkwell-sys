@@ -78,7 +78,6 @@ const isDesignValid = (design: CreateDesignRequestUI): boolean => {
       design.quantity > 0 &&
       (minQty === 0 || design.quantity >= minQty) &&
       (design.length ?? 0) > 0 &&
-      (design.width ?? 0) > 0 &&
       (design.height ?? 0) > 0
     );
   }
@@ -213,7 +212,7 @@ export const DesignCard: React.FC<DesignCardProps> = ({
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground mb-0.5">Kích thước</p>
                   <p className="font-medium">
-                    {design.length || 0} × {design.width || 0} × {design.height || 0} mm
+                    {design.length || 0} × {design.height || 0} {design.width ? `× ${design.width}` : ""} mm
                   </p>
                 </div>
               </div>

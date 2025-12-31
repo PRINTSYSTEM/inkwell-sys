@@ -4,6 +4,8 @@ import { Helmet } from "react-helmet-async";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCustomer, useCustomerOrders } from "@/hooks/use-customer";
+import { useAuth } from "@/hooks";
+import { ROLE } from "@/constants";
 import {
   CustomerHeader,
   CustomerSummary,
@@ -17,6 +19,8 @@ import {
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const userRole = user?.role;
 
   // Validate and parse customer ID
   const customerId =
@@ -25,6 +29,13 @@ export default function CustomerDetail() {
   const [activeTab, setActiveTab] = useState("debt");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+
+  // Chỉ role accounting và admin mới thấy các section khác
+  // Role design và proofer (bình bài) chỉ thấy thông tin khách hàng, công ty, hệ thống
+  const canViewFinancialInfo =
+    userRole === ROLE.ACCOUNTING ||
+    userRole === ROLE.ACCOUNTING_LEAD ||
+    userRole === ROLE.ADMIN;
 
   // Only fetch when customerId is valid
   const {
@@ -136,66 +147,83 @@ export default function CustomerDetail() {
           customer={customer}
           onEdit={() => setEditModalOpen(true)}
           onExportDebt={() => setExportModalOpen(true)}
+          canViewFinancialInfo={canViewFinancialInfo}
         />
 
-        {/* Summary Strip */}
-        <CustomerSummary
-          customer={customer}
-          totalOrders={summaryStats.totalOrders}
-          ordersThisMonth={summaryStats.ordersThisMonth}
-          totalRevenue={summaryStats.totalRevenue}
-          lastOrderDate={summaryStats.lastOrderDate}
-          onTabChange={setActiveTab}
-        />
+        {/* Summary Strip - chỉ hiển thị cho accounting và admin */}
+        {canViewFinancialInfo && (
+          <CustomerSummary
+            customer={customer}
+            totalOrders={summaryStats.totalOrders}
+            ordersThisMonth={summaryStats.ordersThisMonth}
+            totalRevenue={summaryStats.totalRevenue}
+            lastOrderDate={summaryStats.lastOrderDate}
+            onTabChange={setActiveTab}
+          />
+        )}
 
-        {/* Body: 2 columns */}
+        {/* Body */}
         <div className="flex-1 p-6 overflow-hidden">
-          <div className="grid grid-cols-[380px_1fr] gap-6 h-full">
-            {/* Left Column: Profile */}
-            <CustomerProfile customer={customer} />
+          {canViewFinancialInfo ? (
+            /* Layout 2 cột cho accounting và admin */
+            <div className="grid grid-cols-[380px_1fr] gap-6 h-full">
+              {/* Left Column: Profile */}
+              <CustomerProfile customer={customer} />
 
-            {/* Right Column: Tabs */}
-            <div className="flex flex-col min-w-0 overflow-hidden">
-              <Tabs
-                value={activeTab}
-                onValueChange={setActiveTab}
-                className="flex-1 flex flex-col min-w-0 overflow-hidden"
-              >
-                <TabsList className="w-fit mb-3 flex-shrink-0">
-                  <TabsTrigger value="debt" className="text-sm">
-                    Công nợ
-                  </TabsTrigger>
-                  <TabsTrigger value="orders" className="text-sm">
-                    Đơn hàng
-                  </TabsTrigger>
-                  <TabsTrigger value="favorites" className="text-sm">
-                    Ưa thích
-                  </TabsTrigger>
-                </TabsList>
+              {/* Right Column: Tabs */}
+              <div className="flex flex-col min-w-0 overflow-hidden">
+                <Tabs
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="flex-1 flex flex-col min-w-0 overflow-hidden"
+                >
+                  <TabsList className="w-fit mb-3 flex-shrink-0">
+                    <TabsTrigger value="debt" className="text-sm">
+                      Công nợ
+                    </TabsTrigger>
+                    <TabsTrigger value="orders" className="text-sm">
+                      Đơn hàng
+                    </TabsTrigger>
+                    <TabsTrigger value="favorites" className="text-sm">
+                      Ưa thích
+                    </TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="debt" className="flex-1 mt-0 overflow-hidden">
-                  <DebtTab
-                    customerId={customerId}
-                    isActive={activeTab === "debt"}
-                  />
-                </TabsContent>
+                  <TabsContent
+                    value="debt"
+                    className="flex-1 mt-0 overflow-hidden"
+                  >
+                    <DebtTab
+                      customerId={customerId}
+                      isActive={activeTab === "debt"}
+                    />
+                  </TabsContent>
 
-                <TabsContent value="orders" className="flex-1 mt-0 min-w-0 overflow-hidden">
-                  <OrdersTab
-                    customerId={customerId}
-                    isActive={activeTab === "orders"}
-                  />
-                </TabsContent>
+                  <TabsContent
+                    value="orders"
+                    className="flex-1 mt-0 min-w-0 overflow-hidden"
+                  >
+                    <OrdersTab customerId={customerId} />
+                  </TabsContent>
 
-                <TabsContent value="favorites" className="flex-1 mt-0 overflow-hidden">
-                  <FavoritesTab
-                    customerId={customerId}
-                    isActive={activeTab === "favorites"}
-                  />
-                </TabsContent>
-              </Tabs>
+                  <TabsContent
+                    value="favorites"
+                    className="flex-1 mt-0 overflow-hidden"
+                  >
+                    <FavoritesTab
+                      customerId={customerId}
+                      isActive={activeTab === "favorites"}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Layout 1 cột cho design và prepress - chỉ hiển thị profile */
+            <div className="max-w-2xl mx-auto">
+              <CustomerProfile customer={customer} />
+            </div>
+          )}
         </div>
       </div>
 

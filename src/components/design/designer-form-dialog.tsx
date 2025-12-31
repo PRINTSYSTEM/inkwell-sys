@@ -56,7 +56,7 @@ export function DesignerFormDialog({
         username: designer.username,
         password: "",
         fullName: designer.fullName,
-        role: designer.role,
+        role: "design", // Luôn là design trong màn hình này
         email: designer.email,
         phone: designer.phone,
         isActive: designer.isActive,
@@ -215,27 +215,6 @@ export function DesignerFormDialog({
                 required
               />
             </div>
-
-            {designer && (
-              <div className="space-y-2">
-                <Label htmlFor="role">Vai trò</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, role: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="design">Nhân viên thiết kế</SelectItem>
-                    <SelectItem value="manager">Quản lý</SelectItem>
-                    <SelectItem value="admin">Quản trị viên</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
 
             {designer && (
               <div className="space-y-2">

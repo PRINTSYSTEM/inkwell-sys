@@ -27,9 +27,12 @@ import {
 } from "@/components/ui/select";
 import { Mail } from "lucide-react";
 import { useUpdateCustomer } from "@/hooks/use-customer";
+import { useAuth } from "@/hooks";
+import { ROLE } from "@/constants";
 import type { CustomerResponse } from "@/Schema";
 
-const formSchema = z.object({
+// Schema cơ bản (không có công nợ)
+const basicFormSchema = z.object({
   name: z.string().min(1, "Tên không được để trống"),
   companyName: z.string().optional(),
   representativeName: z.string().optional(),
@@ -38,11 +41,13 @@ const formSchema = z.object({
   taxCode: z.string().optional(),
   address: z.string().optional(),
   type: z.enum(["retail", "company"]),
+});
+
+// Schema đầy đủ (có công nợ)
+const fullFormSchema = basicFormSchema.extend({
   currentDebt: z.number().min(0, "Công nợ không được âm"),
   maxDebt: z.number().min(0, "Hạn mức không được âm"),
 });
-
-type FormValues = z.infer<typeof formSchema>;
 
 interface EditCustomerModalProps {
   open: boolean;
@@ -56,31 +61,56 @@ export function EditCustomerModal({
   customer,
 }: EditCustomerModalProps) {
   const updateCustomer = useUpdateCustomer();
+  const { user } = useAuth();
+  const userRole = user?.role;
+
+  // Chỉ role accounting và admin mới edit được công nợ
+  const canEditDebt =
+    userRole === ROLE.ACCOUNTING ||
+    userRole === ROLE.ACCOUNTING_LEAD ||
+    userRole === ROLE.ADMIN;
+
+  // Sử dụng schema phù hợp
+  const formSchema = canEditDebt ? fullFormSchema : basicFormSchema;
+  type FormValues = z.infer<typeof formSchema>;
+
+  const defaultValues: any = {
+    name: customer.name || "",
+    companyName: customer.companyName || "",
+    representativeName: customer.representativeName || "",
+    phone: customer.phone || "",
+    email: customer.email || "",
+    taxCode: customer.taxCode || "",
+    address: customer.address || "",
+    type: (customer.type === "retail" || customer.type === "company"
+      ? customer.type
+      : "retail") as "retail" | "company",
+  };
+
+  // Chỉ thêm công nợ nếu có quyền
+  if (canEditDebt) {
+    defaultValues.currentDebt = customer.currentDebt;
+    defaultValues.maxDebt = customer.maxDebt;
+  }
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: customer.name || "",
-      companyName: customer.companyName || "",
-      representativeName: customer.representativeName || "",
-      phone: customer.phone || "",
-      email: customer.email || "",
-      taxCode: customer.taxCode || "",
-      address: customer.address || "",
-      type: (customer.type === "retail" || customer.type === "company"
-        ? customer.type
-        : "retail") as "retail" | "company",
-      currentDebt: customer.currentDebt,
-      maxDebt: customer.maxDebt,
-    },
+    defaultValues,
   });
 
   const customerType = form.watch("type");
 
   const onSubmit = async (values: FormValues) => {
+    // Nếu không có quyền edit công nợ, giữ nguyên giá trị công nợ hiện tại
+    const updateData: any = { ...values };
+    if (!canEditDebt) {
+      updateData.currentDebt = customer.currentDebt;
+      updateData.maxDebt = customer.maxDebt;
+    }
+
     await updateCustomer.mutateAsync({
       id: customer.id,
-      data: values,
+      data: updateData,
     });
     onOpenChange(false);
   };
@@ -237,45 +267,48 @@ export function EditCustomerModal({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="currentDebt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Công nợ hiện tại</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                        className="h-9"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Chỉ hiển thị trường công nợ nếu có quyền */}
+            {canEditDebt && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="currentDebt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Công nợ hiện tại</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          className="h-9"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="maxDebt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Hạn mức công nợ</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                        className="h-9"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="maxDebt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Hạn mức công nợ</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          className="h-9"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-4">
               <Button

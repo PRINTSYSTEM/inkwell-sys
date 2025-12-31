@@ -44,7 +44,15 @@ import {
   Trash2,
   CheckCircle2,
   Loader2,
+  Plus,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -58,7 +66,11 @@ import {
   useUpdateProofingImage,
   useHandToProduction,
   usePaperSizes,
+  useAddDesignsToProofingOrder,
+  useRemoveDesignFromProofingOrder,
 } from "@/hooks/use-proofing-order";
+import { useAvailableOrderDetailsForProofing } from "@/hooks";
+import { AddDesignToProofingDialog } from "@/components/proofing/AddDesignToProofingDialog";
 import { PlateExportDialog } from "@/components/proofing/PlateExportDialog";
 import { DieExportDialog } from "@/components/proofing/DieExportDialog";
 import { IdSchema } from "@/Schema";
@@ -83,6 +95,22 @@ export default function ProofingOrderDetailPage() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUpdateFileDialogOpen, setIsUpdateFileDialogOpen] = useState(false);
   const [isImageUploadDialogOpen, setIsImageUploadDialogOpen] = useState(false);
+
+  // Helper functions for file classification
+  const isImageFile = (file: File): boolean => {
+    return file.type.startsWith("image/");
+  };
+
+  const isProofingFile = (file: File): boolean => {
+    const fileName = file.name.toLowerCase();
+    return (
+      fileName.endsWith(".pdf") ||
+      fileName.endsWith(".ai") ||
+      fileName.endsWith(".psd") ||
+      file.type === "application/pdf" ||
+      file.type === "application/postscript"
+    );
+  };
   const [isPlateExportDialogOpen, setIsPlateExportDialogOpen] = useState(false);
   const [isDieExportDialogOpen, setIsDieExportDialogOpen] = useState(false);
   const [isConfirmStatusDialogOpen, setIsConfirmStatusDialogOpen] =
@@ -95,8 +123,10 @@ export default function ProofingOrderDetailPage() {
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadImage, setUploadImage] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+  const [isAddDesignDialogOpen, setIsAddDesignDialogOpen] = useState(false);
 
   // Form state for update info
   const [updateStatus, setUpdateStatus] = useState<string>("");
@@ -147,6 +177,27 @@ export default function ProofingOrderDetailPage() {
     useUpdateProofingOrder();
   const { data: paperSizesData } = usePaperSizes();
   const paperSizes = paperSizesData || [];
+  const { mutate: addDesignsMutate, isPending: isAddingDesigns } =
+    useAddDesignsToProofingOrder();
+  const { mutate: removeDesignMutate, isPending: isRemovingDesign } =
+    useRemoveDesignFromProofingOrder();
+
+  // Get available designs for adding (same material type, exclude already added designs)
+  const { data: availableDesignsData } = useAvailableOrderDetailsForProofing({
+    materialTypeId: order?.materialTypeId ?? null,
+  });
+
+  const availableDesignsForAdding = useMemo(() => {
+    if (!availableDesignsData?.designs || !order) return [];
+    const existingDesignIds = new Set(
+      order.proofingOrderDesigns
+        ?.map((pod) => pod.design?.id)
+        .filter(Boolean) ?? []
+    );
+    return availableDesignsData.designs.filter(
+      (design) => !existingDesignIds.has(design.designId)
+    );
+  }, [availableDesignsData?.designs, order]);
 
   const handleUpdateStatus = async () => {
     if (!order?.id) return;
@@ -460,6 +511,65 @@ export default function ProofingOrderDetailPage() {
     // Dialog will handle refetch automatically via query invalidation
   };
 
+  const handleUploadFiles = async (files: File[]) => {
+    if (!order?.id) return;
+
+    // Phân loại files
+    const proofingFiles = files.filter((f) => isProofingFile(f));
+    const imageFiles = files.filter((f) => isImageFile(f));
+
+    const errors: string[] = [];
+    const successes: string[] = [];
+
+    // Upload file bình bài
+    if (proofingFiles.length > 0) {
+      try {
+        await uploadProofing({
+          proofingOrderId: order.id,
+          file: proofingFiles[0],
+        });
+        successes.push(`File bình bài: ${proofingFiles[0].name}`);
+      } catch (error) {
+        errors.push(`File bình bài "${proofingFiles[0].name}" lỗi`);
+      }
+    } else {
+      errors.push("Thiếu file bình bài (.pdf, .ai, .psd)");
+    }
+
+    // Upload ảnh
+    if (imageFiles.length > 0) {
+      try {
+        await uploadImageMutate({
+          proofingOrderId: order.id,
+          file: imageFiles[0],
+        });
+        successes.push(`Ảnh: ${imageFiles[0].name}`);
+      } catch (error) {
+        errors.push(`Ảnh "${imageFiles[0].name}" lỗi`);
+      }
+    } else {
+      errors.push("Thiếu file ảnh");
+    }
+
+    setIsUploadDialogOpen(false);
+    setUploadFiles([]);
+
+    // Hiển thị thông báo kết quả
+    if (errors.length === 0) {
+      toast.success("Thành công", {
+        description: "Đã upload tất cả files",
+      });
+    } else if (successes.length > 0) {
+      toast.warning("Một phần thành công", {
+        description: `${successes.join(", ")}. Lỗi: ${errors.join(", ")}`,
+      });
+    } else {
+      toast.error("Lỗi", {
+        description: errors.join(", "),
+      });
+    }
+  };
+
   const handleUploadFile = async () => {
     if (!uploadFile || !order?.id) return;
     try {
@@ -635,7 +745,7 @@ export default function ProofingOrderDetailPage() {
                 </div>
                 <div className="space-y-0.5">
                   <Label className="text-muted-foreground text-[10px] font-normal">
-                    Số design
+                    Số lượng hàng
                   </Label>
                   <p className="font-semibold text-sm">
                     {order.proofingOrderDesigns.length}
@@ -761,20 +871,38 @@ export default function ProofingOrderDetailPage() {
           {/* Compact Designs List */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Layers className="h-4 w-4" />
-                Danh sách Design ({orderDesigns.length})
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  Danh sách thiết kế ({orderDesigns.length})
+                </CardTitle>
+                {order && order.status !== "completed" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => setIsAddDesignDialogOpen(true)}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Thêm design
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="h-9">
+                      <TableHead className="h-9 px-2 text-[10px] w-12">
+                        STT
+                      </TableHead>
                       <TableHead className="h-9 px-2 text-[10px]">
                         Ảnh
                       </TableHead>
-                      <TableHead className="h-9 px-2 text-[10px]">Mã</TableHead>
+                      <TableHead className="h-9 px-2 text-[10px]">
+                        Mã hàng
+                      </TableHead>
                       <TableHead className="h-9 px-2 text-[10px]">
                         Tên
                       </TableHead>
@@ -797,120 +925,278 @@ export default function ProofingOrderDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {orderDesigns.map((pod) => (
-                      <TableRow key={pod.id} className="h-14">
-                        <TableCell className="px-2 py-1">
-                          {pod.design.designImageUrl ? (
-                            <img
-                              src={
-                                pod.design.designImageUrl || "/placeholder.svg"
-                              }
-                              alt={pod.design.designName}
-                              className="w-10 h-10 object-cover rounded border"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
-                              <FileImage className="h-4 w-4 text-muted-foreground" />
+                    {orderDesigns.map((pod, index) => {
+                      // Build full info for tooltip
+                      const fullInfo = (
+                        <div className="space-y-2 text-sm max-w-md">
+                          <div className="font-semibold text-base border-b pb-2">
+                            {pod.design.designName}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                            <div>
+                              <span className="text-muted-foreground">
+                                Mã hàng:
+                              </span>
+                              <span className="ml-2 font-mono">
+                                {pod.design.code}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-muted-foreground">
+                                Loại:
+                              </span>
+                              <span className="ml-2">
+                                {pod.design.designType?.name || "—"}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-muted-foreground">
+                                Vật liệu:
+                              </span>
+                              <span className="ml-2">
+                                {pod.design.materialType?.name || "—"}
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-muted-foreground">
+                                Kích thước:
+                              </span>
+                              <span className="ml-2">
+                                {pod.design.length * 10}×{pod.design.width * 10}
+                                {pod.design.height
+                                  ? `×${pod.design.height * 10}`
+                                  : ""}{" "}
+                                mm
+                              </span>
+                            </div>
+
+                            <div>
+                              <span className="text-muted-foreground">SL:</span>
+                              <span className="ml-2 font-semibold">
+                                {pod.quantity.toLocaleString()}
+                              </span>
+                            </div>
+
+                            {pod.design.areaM2 && (
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Diện tích:
+                                </span>
+                                <span className="ml-2">
+                                  {(pod.design.areaM2 * 10000).toFixed(0)} cm²
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {(pod.design.processClassification ||
+                            pod.design.sidesClassification ||
+                            pod.design.laminationType) && (
+                            <div className="pt-2 border-t space-y-1">
+                              {pod.design.processClassification && (
+                                <div>
+                                  <span className="text-muted-foreground">
+                                    Cắt - Bế:
+                                  </span>
+                                  <span className="ml-2">
+                                    {processClassificationLabels[
+                                      pod.design.processClassification
+                                    ] || pod.design.processClassification}
+                                  </span>
+                                </div>
+                              )}
+                              {pod.design.sidesClassification && (
+                                <div>
+                                  <span className="text-muted-foreground">
+                                    1 - 2 mặt:
+                                  </span>
+                                  <span className="ml-2">
+                                    {sidesClassificationLabels[
+                                      pod.design.sidesClassification
+                                    ] || pod.design.sidesClassification}
+                                  </span>
+                                </div>
+                              )}
+                              {pod.design.laminationType && (
+                                <div>
+                                  <span className="text-muted-foreground">
+                                    Cán màng:
+                                  </span>
+                                  <span className="ml-2">
+                                    {laminationTypeLabels[
+                                      pod.design.laminationType
+                                    ] || pod.design.laminationType}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           )}
-                        </TableCell>
-                        <TableCell className="px-2 py-1">
-                          <p className="font-medium text-xs">
-                            {pod.design.code}
-                          </p>
-                        </TableCell>
-                        <TableCell className="px-2 py-1">
-                          <div>
-                            <p className="font-medium text-xs line-clamp-1">
-                              {pod.design.designName}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {pod.design.designType.name}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-2 py-1">
-                          <div className="text-xs">
-                            <p>
-                              {pod.design.length} × {pod.design.width}{" "}
-                              {`${pod.design.height ? `× ${pod.design.height}` : ""}`}{" "}
-                              cm{" "}
-                            </p>
-                            {pod.design.areaM2 && (
-                              <p className="text-[10px] text-muted-foreground">
-                                {(pod.design.areaM2 * 10000).toFixed(0)} cm²
+                        </div>
+                      );
+
+                      return (
+                        <CursorTooltip
+                          key={pod.id}
+                          content={fullInfo}
+                          delayDuration={300}
+                          className="p-4 max-w-md"
+                        >
+                          <TableRow className="h-14">
+                            <TableCell className="px-2 py-1">
+                              <p className="text-xs text-muted-foreground">
+                                {index + 1}
                               </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-2 py-1">
-                          <p className="text-xs">
-                            {pod.quantity.toLocaleString()}
-                          </p>
-                        </TableCell>
-                        <TableCell className="px-2 py-1">
-                          <span className="text-xs">
-                            {pod.design.sidesClassification
-                              ? sidesClassificationLabels[
-                                  pod.design.sidesClassification
-                                ] || pod.design.sidesClassification
-                              : "—"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-2 py-1">
-                          <span className="text-xs">
-                            {pod.design.processClassification
-                              ? processClassificationLabels[
-                                  pod.design.processClassification
-                                ] || pod.design.processClassification
-                              : "—"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-2 py-1">
-                          <span className="text-xs">
-                            {pod.design.laminationType
-                              ? laminationTypeLabels[
-                                  pod.design.laminationType
-                                ] || pod.design.laminationType
-                              : "—"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-2 py-1 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {pod.design.designImageUrl && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => {
-                                  setViewingImageUrl(pod.design.designImageUrl);
-                                  setImageViewerOpen(true);
-                                }}
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                            {pod.design.designFileUrl && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => {
-                                  if (pod.design.designFileUrl) {
-                                    downloadFile(
-                                      pod.design.designFileUrl,
-                                      pod.design.code || `DES-${pod.design.id}`
-                                    );
+                            </TableCell>
+                            <TableCell className="px-2 py-1">
+                              {pod.design.designImageUrl ? (
+                                <img
+                                  src={
+                                    pod.design.designImageUrl ||
+                                    "/placeholder.svg"
                                   }
-                                }}
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                                  alt={pod.design.designName}
+                                  className="w-10 h-10 object-cover rounded border"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
+                                  <FileImage className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-2 py-1">
+                              <p className="font-medium text-xs">
+                                {pod.design.code}
+                              </p>
+                            </TableCell>
+                            <TableCell className="px-2 py-1">
+                              <div>
+                                <p className="font-medium text-xs line-clamp-1">
+                                  {pod.design.designName}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {pod.design.designType.name}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-2 py-1">
+                              <div className="text-xs">
+                                <p>
+                                  {pod.design.length * 10} ×{" "}
+                                  {pod.design.width * 10}
+                                  {`${pod.design.height ? ` × ${pod.design.height * 10}` : ""}`}{" "}
+                                  mm
+                                </p>
+                                {pod.design.areaM2 && (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {(pod.design.areaM2 * 10000).toFixed(0)} cm²
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-2 py-1">
+                              <p className="text-xs">
+                                {pod.quantity.toLocaleString()}
+                              </p>
+                            </TableCell>
+                            <TableCell className="px-2 py-1">
+                              <span className="text-xs">
+                                {pod.design.sidesClassification
+                                  ? sidesClassificationLabels[
+                                      pod.design.sidesClassification
+                                    ] || pod.design.sidesClassification
+                                  : "—"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-2 py-1">
+                              <span className="text-xs">
+                                {pod.design.processClassification
+                                  ? processClassificationLabels[
+                                      pod.design.processClassification
+                                    ] || pod.design.processClassification
+                                  : "—"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-2 py-1">
+                              <span className="text-xs">
+                                {pod.design.laminationType
+                                  ? laminationTypeLabels[
+                                      pod.design.laminationType
+                                    ] || pod.design.laminationType
+                                  : "—"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-2 py-1 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                {pod.design.designImageUrl && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setViewingImageUrl(
+                                        pod.design.designImageUrl
+                                      );
+                                      setImageViewerOpen(true);
+                                    }}
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                                {pod.design.designFileUrl && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (pod.design.designFileUrl) {
+                                        downloadFile(
+                                          pod.design.designFileUrl,
+                                          pod.design.code ||
+                                            `DES-${pod.design.id}`
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                                {order &&
+                                  order.status !== "completed" &&
+                                  pod.id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (
+                                          confirm(
+                                            "Bạn có chắc chắn muốn xóa design này khỏi bình bài?"
+                                          )
+                                        ) {
+                                          removeDesignMutate({
+                                            proofingOrderId: order.id,
+                                            proofingOrderDesignId: pod.id!,
+                                          });
+                                        }
+                                      }}
+                                      disabled={isRemovingDesign}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </CursorTooltip>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -996,9 +1282,31 @@ export default function ProofingOrderDetailPage() {
                 </div>
                 {order.dieExport ? (
                   <div className="bg-muted/30 rounded p-2 text-xs space-y-1">
-                    {order.dieExport.imageUrl && (
+                    {/* Display multiple images if available */}
+                    {order.dieExport.images &&
+                    order.dieExport.images.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {order.dieExport.images.map((imageUrl, index) => (
+                          <div
+                            key={index}
+                            className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => {
+                              setViewingImageUrl(imageUrl);
+                              setImageViewerOpen(true);
+                            }}
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`Khuôn bế ${index + 1}`}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : order.dieExport.imageUrl ? (
+                      // Fallback for old single imageUrl
                       <div
-                        className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer"
+                        className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => {
                           setViewingImageUrl(order.dieExport.imageUrl || null);
                           setImageViewerOpen(true);
@@ -1010,9 +1318,9 @@ export default function ProofingOrderDetailPage() {
                           className="w-full h-full object-contain"
                         />
                       </div>
-                    )}
+                    ) : null}
                     {order.dieExport.notes && (
-                      <p className="text-[10px] italic text-muted-foreground line-clamp-2">
+                      <p className="text-[10px] italic text-muted-foreground line-clamp-2 mt-1">
                         {order.dieExport.notes}
                       </p>
                     )}
@@ -1072,6 +1380,44 @@ export default function ProofingOrderDetailPage() {
                     <p className="text-[10px] text-muted-foreground">
                       {order.createdBy?.email || "—"}
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="my-2" />
+
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-[10px] font-normal">
+                  Người thiết kế
+                </Label>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <UserIcon className="h-3.5 w-3.5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-xs">
+                      {orderDesigns[0]?.design?.designer?.fullName || "—"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {orderDesigns[0]?.design?.designer?.email || "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="my-2" />
+
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground text-[10px] font-normal">
+                  Người duyệt công nợ
+                </Label>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <UserIcon className="h-3.5 w-3.5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-xs">—</p>
+                    <p className="text-[10px] text-muted-foreground">—</p>
                   </div>
                 </div>
               </div>
@@ -1190,41 +1536,196 @@ export default function ProofingOrderDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Upload File Dialog */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent>
+      {/* Upload File Dialog - Combined */}
+      <Dialog
+        open={isUploadDialogOpen}
+        onOpenChange={(open) => {
+          setIsUploadDialogOpen(open);
+          if (!open) {
+            setUploadFiles([]);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Upload file bình bài</DialogTitle>
+            <DialogTitle>Upload file bình bài và ảnh</DialogTitle>
             <DialogDescription>
-              Tải lên file bình bài đã xử lý
+              Chọn 1 file bình bài (.pdf, .ai, .psd) và 1 file ảnh cùng lúc
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Chọn file</Label>
-              <Input
-                type="file"
-                accept=".pdf,.ai,.psd,.jpg,.png"
-                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-              />
-              {uploadFile && (
-                <p className="text-sm text-muted-foreground">
-                  Đã chọn: {uploadFile.name} (
-                  {(uploadFile.size / 1024 / 1024).toFixed(2)} MB)
+          <div className="space-y-4 py-4 flex-1 min-h-0 flex flex-col">
+            {/* Chọn nhiều file cùng lúc */}
+            <div className="space-y-2 flex-shrink-0">
+              <Label htmlFor="upload-files" className="text-sm font-medium">
+                Chọn file bình bài và ảnh{" "}
+                <span className="text-red-500">*</span>
+              </Label>
+              <div className="border-2 border-dashed rounded-lg p-4 hover:border-primary/50 transition-colors">
+                <Input
+                  id="upload-files"
+                  type="file"
+                  accept=".pdf,.ai,.psd,image/*"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+
+                    // Phân loại files mới
+                    const newProofingFiles = files.filter((f) =>
+                      isProofingFile(f)
+                    );
+                    const newImageFiles = files.filter((f) => isImageFile(f));
+
+                    // Kiểm tra số lượng
+                    if (newProofingFiles.length > 1) {
+                      toast.error("Lỗi", {
+                        description: "Chỉ được chọn 1 file bình bài",
+                      });
+                      e.target.value = "";
+                      return;
+                    }
+
+                    if (newImageFiles.length > 1) {
+                      toast.error("Lỗi", {
+                        description: "Chỉ được chọn 1 file ảnh",
+                      });
+                      e.target.value = "";
+                      return;
+                    }
+
+                    // Kiểm tra tổng số file
+                    if (files.length > 2) {
+                      toast.error("Lỗi", {
+                        description:
+                          "Chỉ được chọn tối đa 1 file bình bài và 1 file ảnh",
+                      });
+                      e.target.value = "";
+                      return;
+                    }
+
+                    // Kiểm tra nếu đã có file cùng loại thì thay thế
+                    setUploadFiles((prev) => {
+                      let updated = [...prev];
+
+                      // Thay thế file proofing nếu có
+                      if (newProofingFiles.length > 0) {
+                        updated = updated.filter((f) => !isProofingFile(f));
+                        updated.push(newProofingFiles[0]);
+                      }
+
+                      // Thay thế file ảnh nếu có
+                      if (newImageFiles.length > 0) {
+                        updated = updated.filter((f) => !isImageFile(f));
+                        updated.push(newImageFiles[0]);
+                      }
+
+                      return updated;
+                    });
+
+                    // Reset input để có thể chọn lại cùng file
+                    e.target.value = "";
+                  }}
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Chọn 1 file bình bài (.pdf, .ai, .psd) và 1 file ảnh (JPG,
+                  PNG, ...)
                 </p>
-              )}
+              </div>
             </div>
+
+            {/* Hiển thị danh sách file đã chọn */}
+            {uploadFiles.length > 0 && (
+              <div className="space-y-2 flex-1 min-h-0 flex flex-col">
+                <Label className="text-sm font-medium flex-shrink-0">
+                  Files đã chọn:
+                </Label>
+                <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-2">
+                  {uploadFiles.map((file, index) => {
+                    const isImage = isImageFile(file);
+                    const isProofing = isProofingFile(file);
+                    const fileType = isProofing
+                      ? "File bình bài"
+                      : isImage
+                        ? "Ảnh"
+                        : "File khác";
+
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 min-w-0"
+                      >
+                        {isImage ? (
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt="Preview"
+                            className="w-16 h-16 object-cover rounded border shrink-0"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded border bg-background flex items-center justify-center shrink-0">
+                            <FileText className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {fileType} • {(file.size / 1024).toFixed(2)} KB
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => {
+                            setUploadFiles((prev) => {
+                              const newFiles = prev.filter(
+                                (_, i) => i !== index
+                              );
+                              // Cleanup object URL if it's an image
+                              if (isImageFile(prev[index])) {
+                                const url = URL.createObjectURL(prev[index]);
+                                URL.revokeObjectURL(url);
+                              }
+                              return newFiles;
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(!uploadFiles.find((f) => isProofingFile(f)) ||
+                  !uploadFiles.find((f) => isImageFile(f))) && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1 flex-shrink-0 mt-2">
+                    <AlertCircle className="h-3 w-3" />
+                    Cần có ít nhất 1 file bình bài và 1 file ảnh
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
             <Button
               variant="outline"
-              onClick={() => setIsUploadDialogOpen(false)}
+              onClick={() => {
+                setIsUploadDialogOpen(false);
+                setUploadFiles([]);
+              }}
             >
               Hủy
             </Button>
-            <Button onClick={handleUploadFile} disabled={!uploadFile}>
+            <Button
+              onClick={() => handleUploadFiles(uploadFiles)}
+              disabled={
+                !uploadFiles.find((f) => isProofingFile(f)) ||
+                !uploadFiles.find((f) => isImageFile(f))
+              }
+            >
               <Upload className="h-4 w-4 mr-2" />
               Upload
             </Button>
@@ -1752,6 +2253,23 @@ export default function ProofingOrderDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Design Dialog */}
+      {order && (
+        <AddDesignToProofingDialog
+          open={isAddDesignDialogOpen}
+          onOpenChange={setIsAddDesignDialogOpen}
+          availableDesigns={availableDesignsForAdding}
+          materialTypeName={order.materialType?.name}
+          onSubmit={async (orderDetailItems) => {
+            await addDesignsMutate({
+              id: order.id,
+              orderDetailItems,
+            });
+          }}
+          isSubmitting={isAddingDesigns}
+        />
+      )}
     </div>
   );
 }

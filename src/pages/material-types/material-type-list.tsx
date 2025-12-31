@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { MaterialTypeResponse } from "@/Schema";
 import { Edit, Trash2, DollarSign } from "lucide-react";
 
@@ -45,9 +46,7 @@ export function MaterialTypeList({
             <TableHead className="w-[140px]">Mã chất liệu</TableHead>
             <TableHead className="min-w-[200px]">Tên chất liệu</TableHead>
             <TableHead className="w-[150px] text-right">Giá/m²</TableHead>
-            <TableHead className="w-[130px] text-right">
-              SL tối thiểu
-            </TableHead>
+            <TableHead className="w-[130px] text-right">SL tối thiểu</TableHead>
             <TableHead className="w-[110px] text-center">Trạng thái</TableHead>
             <TableHead className="w-[100px] text-center">Thao tác</TableHead>
           </TableRow>
@@ -67,19 +66,20 @@ export function MaterialTypeList({
               </TableCell>
               <TableCell>
                 <div className="min-w-0">
-                  <p className="font-medium truncate">{material.name}</p>
+                  <TruncatedText text={material.name} className="font-medium" />
                   {material.description && (
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                      {material.description}
-                    </p>
+                    <TruncatedText
+                      text={material.description}
+                      className="text-xs text-muted-foreground mt-0.5"
+                    />
                   )}
                 </div>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-1">
                   <span className="font-semibold text-sm">
-                    {material.pricePerCm2
-                      ? (material.pricePerCm2 * 10000).toLocaleString("vi-VN")
+                    {material.pricePerM2
+                      ? material.pricePerM2.toLocaleString("vi-VN")
                       : "0"}
                   </span>
                   <span className="text-xs text-muted-foreground">đ/m²</span>

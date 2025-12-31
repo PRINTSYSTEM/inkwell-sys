@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Save,
@@ -51,19 +52,33 @@ import {
   useDesignsByCustomer,
   getDesignTypeItems,
   useCreateOrder,
+  useCreateCustomer,
 } from "@/hooks";
 import type { CreateOrderRequest } from "@/Schema/order.schema";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { ENTITY_CONFIG } from "@/config/entities.config";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui";
 
 // ===== Main Component =====
 export default function OrderCreatePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { mutateAsync: createOrder, isPending: isCreatingOrder } =
     useCreateOrder();
 
   // API Hooks
-  const { data: customersData, isLoading: loadingCustomers } = useCustomers({
+  const {
+    data: customersData,
+    isLoading: loadingCustomers,
+    refetch: refetchCustomers,
+  } = useCustomers({
     page: 1,
     size: 1000, // Get all customers
   });
@@ -132,12 +147,70 @@ export default function OrderCreatePage() {
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string>("");
 
+  // Quick create customer dialog state
+  const [isCreateCustomerDialogOpen, setIsCreateCustomerDialogOpen] =
+    useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState({
+    name: "",
+    representativeName: "",
+    companyName: "",
+    address: "",
+  });
+  const { mutateAsync: createCustomer, isPending: isCreatingCustomer } =
+    useCreateCustomer();
+
   // Handlers
   const handleCustomerSelect = (customer: CustomerSummaryResponse) => {
     setSelectedCustomer(customer);
     setDesigns([]);
     setDesignSearchQuery(""); // Reset search when customer changes
     setCustomerComboOpen(false);
+  };
+
+  const handleCreateCustomer = async () => {
+    if (
+      !newCustomerForm.name.trim() ||
+      !newCustomerForm.representativeName.trim()
+    ) {
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+      return;
+    }
+
+    try {
+      const result = await createCustomer({
+        name: newCustomerForm.name.trim(),
+        representativeName: newCustomerForm.representativeName.trim(),
+        companyName: newCustomerForm.companyName.trim() || null,
+        address: newCustomerForm.address.trim() || null,
+        type: newCustomerForm.companyName.trim() ? "company" : "individual",
+        maxDebt: 50000000, // Set 50tr, không hiển thị
+      });
+
+      if (result?.id) {
+        // Invalidate and refetch customers list
+        await queryClient.invalidateQueries({ queryKey: ["customers"] });
+        const { data: updatedCustomersData } = await refetchCustomers();
+
+        // Find and select the new customer
+        const updatedCustomers = updatedCustomersData?.items || customers;
+        const newCustomer = updatedCustomers.find(
+          (c: CustomerSummaryResponse) => c.id === result.id
+        );
+        if (newCustomer) {
+          handleCustomerSelect(newCustomer);
+        }
+
+        setIsCreateCustomerDialogOpen(false);
+        setNewCustomerForm({
+          name: "",
+          representativeName: "",
+          companyName: "",
+          address: "",
+        });
+      }
+    } catch (error) {
+      // Error handled by hook
+    }
   };
 
   const handleAddNewDesign = () => {
@@ -496,6 +569,16 @@ export default function OrderCreatePage() {
                         </Command>
                       </PopoverContent>
                     </Popover>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => setIsCreateCustomerDialogOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Tạo khách hàng mới
+                    </Button>
                   </div>
 
                   <div className="space-y-2">
@@ -910,6 +993,103 @@ export default function OrderCreatePage() {
         imageUrl={viewingImageUrl}
         title="Ảnh thiết kế"
       />
+
+      {/* Quick Create Customer Dialog */}
+      <Dialog
+        open={isCreateCustomerDialogOpen}
+        onOpenChange={setIsCreateCustomerDialogOpen}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tạo khách hàng mới</DialogTitle>
+            <DialogDescription>
+              Điền thông tin cơ bản để tạo khách hàng mới
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>
+                Tên khách hàng <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                placeholder="Nhập tên khách hàng"
+                value={newCustomerForm.name}
+                onChange={(e) =>
+                  setNewCustomerForm((prev) => ({
+                    ...prev,
+                    name: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>
+                Người đại diện <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                placeholder="Nhập tên người đại diện"
+                value={newCustomerForm.representativeName}
+                onChange={(e) =>
+                  setNewCustomerForm((prev) => ({
+                    ...prev,
+                    representativeName: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tên công ty</Label>
+              <Input
+                placeholder="Nhập tên công ty (nếu có)"
+                value={newCustomerForm.companyName}
+                onChange={(e) =>
+                  setNewCustomerForm((prev) => ({
+                    ...prev,
+                    companyName: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Địa chỉ</Label>
+              <Textarea
+                placeholder="Nhập địa chỉ"
+                value={newCustomerForm.address}
+                onChange={(e) =>
+                  setNewCustomerForm((prev) => ({
+                    ...prev,
+                    address: e.target.value,
+                  }))
+                }
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCreateCustomerDialogOpen(false);
+                setNewCustomerForm({
+                  name: "",
+                  representativeName: "",
+                  companyName: "",
+                  address: "",
+                });
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleCreateCustomer}
+              disabled={isCreatingCustomer}
+            >
+              {isCreatingCustomer ? "Đang tạo..." : "Tạo khách hàng"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

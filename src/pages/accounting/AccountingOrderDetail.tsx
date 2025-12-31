@@ -574,25 +574,26 @@ export default function AccountingOrderDetail() {
                   Xuất PDF Đơn Hàng
                 </Button>
                 {/* {remainingAmount > 0 && ( */}
-                {order.customer?.companyName && (
-                  <Button
-                    size="sm"
-                    onClick={handleUpdatePayment}
-                    disabled={
-                      confirmDepositMutation.loading ||
-                      approveDebtMutation.loading ||
-                      order.status === "debt_approved"
-                    }
-                  >
-                    {confirmDepositMutation.loading ||
-                    approveDebtMutation.loading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CreditCard className="h-4 w-4 mr-2" />
-                    )}
-                    Duyệt công nợ
-                  </Button>
-                )}
+                {order.customer?.companyName &&
+                  order.status === "production_completed" && (
+                    <Button
+                      size="sm"
+                      onClick={handleUpdatePayment}
+                      disabled={
+                        confirmDepositMutation.loading ||
+                        approveDebtMutation.loading ||
+                        order.status === "debt_approved"
+                      }
+                    >
+                      {confirmDepositMutation.loading ||
+                      approveDebtMutation.loading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4 mr-2" />
+                      )}
+                      Duyệt công nợ
+                    </Button>
+                  )}
                 {!order.customer?.companyName && (
                   <Button
                     size="sm"
@@ -877,6 +878,7 @@ export default function AccountingOrderDetail() {
                       <TableRow className="bg-muted/30">
                         <TableHead className="w-[60px]">Ảnh</TableHead>
                         <TableHead>Sản phẩm</TableHead>
+                        <TableHead className="text-center">Người thiết kế</TableHead>
                         <TableHead className="text-center">SL</TableHead>
                         <TableHead className="text-right">Đơn giá</TableHead>
                         <TableHead className="text-right">Thành tiền</TableHead>
@@ -933,6 +935,21 @@ export default function AccountingOrderDetail() {
                                 <p className="text-xs text-amber-600 mt-1">
                                   Yêu cầu: {item.requirements}
                                 </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="text-xs">
+                              {item.design?.designer?.fullName ? (
+                                <p className="font-medium">
+                                  {item.design.designer.fullName}
+                                </p>
+                              ) : order.assignedUser?.fullName ? (
+                                <p className="font-medium">
+                                  {order.assignedUser.fullName}
+                                </p>
+                              ) : (
+                                <p className="text-muted-foreground">—</p>
                               )}
                             </div>
                           </TableCell>
@@ -1033,7 +1050,7 @@ export default function AccountingOrderDetail() {
                       )) || (
                         <TableRow>
                           <TableCell
-                            colSpan={6}
+                            colSpan={7}
                             className="text-center text-muted-foreground py-8"
                           >
                             Không có sản phẩm nào

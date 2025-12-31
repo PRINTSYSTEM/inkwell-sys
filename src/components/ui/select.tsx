@@ -72,6 +72,10 @@ const SelectContent = React.forwardRef<
         className,
       )}
       position={position}
+      onCloseAutoFocus={(e) => {
+        // Prevent body scroll lock from causing layout shift
+        e.preventDefault();
+      }}
       {...props}
     >
       <SelectScrollUpButton />
