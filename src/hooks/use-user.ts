@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 
@@ -14,6 +14,8 @@ import type {
   UserListParams,
   CreateUserRequest,
   UpdateUserRequest,
+  UpdateMyProfileRequest,
+  ResetPasswordRequest,
   ChangePasswordRequest,
   UserKpiResponse,
   TeamKpiSummaryResponse,
@@ -78,6 +80,63 @@ export const useUserByUsername = (username: string | null, enabled = true) => {
   });
 };
 
+// GET /users/me
+export const useMyProfile = (enabled = true) => {
+  return useQuery({
+    queryKey: [rootKey, "me"],
+    enabled,
+    queryFn: async () => {
+      const res = await apiRequest.get<UserResponse>(API_SUFFIX.USER_ME);
+      return res.data;
+    },
+  });
+};
+
+// PUT /users/me
+export const useUpdateMyProfile = () => {
+  const queryClient = useQueryClient();
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    UserResponse,
+    [UpdateMyProfileRequest]
+  >(async (data) => {
+    const res = await apiRequest.put<UserResponse>(API_SUFFIX.USER_ME, data);
+    return res.data;
+  });
+
+  const mutate = async (payload: UpdateMyProfileRequest) => {
+    try {
+      const result = await execute(payload);
+      
+      // Invalidate user queries
+      queryClient.invalidateQueries({ queryKey: [rootKey, "me"] });
+      queryClient.invalidateQueries({ queryKey: [rootKey] });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật thông tin cá nhân thành công",
+      });
+      
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật thông tin",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
 // POST /users/{id}/change-password
 export const useChangeUserPassword = () => {
   const { data, loading, error, execute, reset } = useAsyncCallback<
@@ -104,6 +163,86 @@ export const useChangeUserPassword = () => {
           error?.response?.data?.message ||
           error?.message ||
           "Không thể đổi mật khẩu",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+// POST /users/{id}/reset-password (Admin only)
+export const useResetPassword = () => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    void,
+    [{ id: number; data: ResetPasswordRequest }]
+  >(async ({ id, data }) => {
+    await apiRequest.post(API_SUFFIX.USER_RESET_PASSWORD(id), data);
+  });
+
+  const mutate = async (payload: {
+    id: number;
+    data: ResetPasswordRequest;
+  }) => {
+    try {
+      await execute(payload);
+
+      toast.success("Thành công", {
+        description: "Đã reset mật khẩu thành công",
+      });
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể reset mật khẩu",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+// POST /users/{id}/department-reset-password (Department head)
+export const useDepartmentResetPassword = () => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    void,
+    [{ id: number; data: ResetPasswordRequest }]
+  >(async ({ id, data }) => {
+    await apiRequest.post(API_SUFFIX.USER_DEPARTMENT_RESET_PASSWORD(id), data);
+  });
+
+  const mutate = async (payload: {
+    id: number;
+    data: ResetPasswordRequest;
+  }) => {
+    try {
+      await execute(payload);
+
+      toast.success("Thành công", {
+        description: "Đã reset mật khẩu thành công",
+      });
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể reset mật khẩu",
       });
       throw err;
     }
