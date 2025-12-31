@@ -51,6 +51,21 @@ import {
 
 export default function EmployeeDetail() {
   const { id } = useParams<{ id: string }>();
+  // #region agent log
+  fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      location: "EmployeeDetail.tsx:52",
+      message: "EmployeeDetail component mounted",
+      data: { id, pathname: window.location.pathname },
+      timestamp: Date.now(),
+      sessionId: "debug-session",
+      runId: "run1",
+      hypothesisId: "A",
+    }),
+  }).catch(() => {});
+  // #endregion
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState<UserResponse | null>(null);
@@ -60,24 +75,82 @@ export default function EmployeeDetail() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const userId = parseInt(id || "0");
-  const { data, isLoading, error } = useUser(userId, !!id);
+  // Validate id is a valid number
+  const userId = id ? parseInt(id, 10) : null;
+  const isValidUserId = userId !== null && !isNaN(userId) && userId > 0;
+  // #region agent log
+  fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      location: "EmployeeDetail.tsx:65",
+      message: "EmployeeDetail id validation",
+      data: { id, userId, isValidUserId },
+      timestamp: Date.now(),
+      sessionId: "debug-session",
+      runId: "run1",
+      hypothesisId: "A",
+    }),
+  }).catch(() => {});
+  // #endregion
+  const { data, isLoading, error } = useUser(
+    isValidUserId ? userId : null,
+    isValidUserId
+  );
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
   const { mutate: changePassword, loading: changingPassword } =
     useChangeUserPassword();
 
   useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "EmployeeDetail.tsx:74",
+        message: "EmployeeDetail useEffect triggered",
+        data: { isValidUserId, id },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "run1",
+        hypothesisId: "A",
+      }),
+    }).catch(() => {});
+    // #endregion
+    if (!isValidUserId) {
+      // If id is not valid (e.g., "create"), redirect to users list
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "EmployeeDetail.tsx:77",
+            message: "Redirecting due to invalid id",
+            data: { id, pathname: window.location.pathname },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "A",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
+      navigate("/admin/users");
+      return;
+    }
     if (isLoading) return;
     if (error) {
       toast.error("Lỗi khi tải thông tin nhân viên");
-      navigate("/manager/employees");
+      navigate("/admin/users");
       return;
     }
     if (data) {
       setUser(data);
       setEditForm(data);
     }
-  }, [isLoading, error, data, navigate]);
+  }, [isValidUserId, isLoading, error, data, navigate]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -157,6 +230,11 @@ export default function EmployeeDetail() {
       return;
     }
 
+    if (!isValidUserId || !userId) {
+      toast.error("ID người dùng không hợp lệ");
+      return;
+    }
+
     try {
       await changePassword({
         id: userId,
@@ -181,7 +259,7 @@ export default function EmployeeDetail() {
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            onClick={() => navigate("/manager/employees")}
+            onClick={() => navigate("/admin/users")}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -206,7 +284,7 @@ export default function EmployeeDetail() {
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            onClick={() => navigate("/manager/employees")}
+            onClick={() => navigate("/admin/users")}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -229,7 +307,7 @@ export default function EmployeeDetail() {
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            onClick={() => navigate("/manager/employees")}
+            onClick={() => navigate("/admin/users")}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />

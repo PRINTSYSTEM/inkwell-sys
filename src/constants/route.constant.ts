@@ -111,6 +111,8 @@ export const ROUTE_PATHS = {
   ADMIN: {
     ROOT: "/admin" as const,
     USERS: "/admin/users" as const,
+    USERS_CREATE: "/admin/users/create" as const,
+    USERS_DETAIL: "/admin/users/:id" as const,
     ROLES: "/admin/roles" as const,
     ANALYTICS: "/admin/analytics" as const,
   },
@@ -147,4 +149,5 @@ export const ROUTE_PATHS = {
     EXPORTS: "/reports/exports" as const,
   },
   NOTIFICATIONS: "/notifications" as const,
+  PROFILE: "/profile" as const,
 } as const;

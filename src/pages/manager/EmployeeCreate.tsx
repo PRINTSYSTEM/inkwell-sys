@@ -24,15 +24,27 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ZodError } from "zod";
-import {
-  CreateUserRequest,
-  CreateUserRequestSchema,
-} from "@/Schema";
+import { CreateUserRequest, CreateUserRequestSchema } from "@/Schema";
 import { ROLE_LABELS as RoleLabels } from "@/constants/role.constant";
 import { useCreateUser } from "@/hooks/use-user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function EmployeeCreate() {
+  // #region agent log
+  fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      location: "EmployeeCreate.tsx:32",
+      message: "EmployeeCreate component mounted",
+      data: { pathname: window.location.pathname },
+      timestamp: Date.now(),
+      sessionId: "debug-session",
+      runId: "run1",
+      hypothesisId: "A",
+    }),
+  }).catch(() => {});
+  // #endregion
   const navigate = useNavigate();
   const [form, setForm] = useState<CreateUserRequest>({
     username: "",
@@ -108,7 +120,7 @@ export default function EmployeeCreate() {
       };
 
       await createUser(formData);
-      setTimeout(() => navigate("/manager/employees"), 2000);
+      setTimeout(() => navigate("/admin/users"), 2000);
     } catch (error) {
       // Error is already handled by the mutation hook
       console.error("Error creating user:", error);
@@ -138,7 +150,7 @@ export default function EmployeeCreate() {
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            onClick={() => navigate("/manager/employees")}
+            onClick={() => navigate("/admin/users")}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -311,7 +323,7 @@ export default function EmployeeCreate() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/manager/employees")}
+                onClick={() => navigate("/admin/users")}
                 disabled={isPending}
               >
                 Hủy
@@ -336,4 +348,3 @@ export default function EmployeeCreate() {
     </div>
   );
 }
-
