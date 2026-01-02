@@ -1,10 +1,10 @@
 import type {
   CustomerResponse,
-  CustomerSummaryResponsePagedResponse,
+  CustomerSummaryResponsePaginate,
   CreateCustomerRequest,
   UpdateCustomerRequest,
   CustomerDebtHistoryResponse,
-  CustomerDebtHistoryResponsePagedResponse,
+  CustomerDebtHistoryResponsePaginate,
   CustomerMonthlyDebtResponse,
   CustomerDebtSummaryResponse,
   CustomerStatisticsResponse,
@@ -16,7 +16,7 @@ import {
   CustomerDebtHistoryParams,
   CustomerMonthlyDebtParams,
   CustomerDebtSummaryParams,
-  OrderResponsePagedResponse,
+  OrderResponsePaginate,
   CustomerOrdersParams,
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
@@ -40,7 +40,7 @@ const {
   UpdateCustomerRequest,
   number,
   CustomerListParams,
-  CustomerSummaryResponsePagedResponse
+  CustomerSummaryResponsePaginate
 >({
   rootKey: "customers",
   basePath: API_SUFFIX.CUSTOMERS,

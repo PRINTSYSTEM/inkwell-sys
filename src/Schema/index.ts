@@ -19,6 +19,7 @@ export * from "./params.schema";
 export * from "./paper-size.schema";
 export * from "./plate-export.schema";
 export * from "./die-export.schema";
+export * from "./die.schema";
 export * from "./vendor.schema";
 export * from "./stock.schema";
 export * from "./report.schema";

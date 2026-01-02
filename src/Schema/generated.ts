@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2025-12-31T04:12:41.955Z */
+/* Generated at: 2026-01-02T19:21:46.558Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -23,6 +23,7 @@ export const ARSummaryResponseSchema = schemas.ARSummaryResponse;
 export const ARSummaryResponseIPaginateSchema = schemas.ARSummaryResponseIPaginate;
 export const AccountingResponseSchema = schemas.AccountingResponse;
 export const AddDesignToOrderRequestSchema = schemas.AddDesignToOrderRequest;
+export const AssignDieToProofingOrderRequestSchema = schemas.AssignDieToProofingOrderRequest;
 export const BankAccountResponseSchema = schemas.BankAccountResponse;
 export const BankAccountResponseIPaginateSchema = schemas.BankAccountResponseIPaginate;
 export const BankLedgerEntryResponseSchema = schemas.BankLedgerEntryResponse;
@@ -52,6 +53,7 @@ export const CreateCustomerRequestSchema = schemas.CreateCustomerRequest;
 export const CreateDeliveryNoteRequestSchema = schemas.CreateDeliveryNoteRequest;
 export const CreateDesignRequestSchema = schemas.CreateDesignRequest;
 export const CreateDesignTypeRequestSchema = schemas.CreateDesignTypeRequest;
+export const CreateDieRequestSchema = schemas.CreateDieRequest;
 export const CreateExpenseCategoryRequestSchema = schemas.CreateExpenseCategoryRequest;
 export const CreateInvoiceFromLinesRequestSchema = schemas.CreateInvoiceFromLinesRequest;
 export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
@@ -92,6 +94,9 @@ export const DesignTimelineEntryResponsePaginateSchema = schemas.DesignTimelineE
 export const DesignTypeResponseSchema = schemas.DesignTypeResponse;
 export const DesignTypeResponsePaginateSchema = schemas.DesignTypeResponsePaginate;
 export const DieExportResponseSchema = schemas.DieExportResponse;
+export const DieResponseSchema = schemas.DieResponse;
+export const DieResponseIPaginateSchema = schemas.DieResponseIPaginate;
+export const DieUsageHistoryItemSchema = schemas.DieUsageHistoryItem;
 export const ErrorResponseSchema = schemas.ErrorResponse;
 export const ExpenseCategoryResponseSchema = schemas.ExpenseCategoryResponse;
 export const ExpenseCategoryResponseIPaginateSchema = schemas.ExpenseCategoryResponseIPaginate;
@@ -141,6 +146,7 @@ export const ProductionResponseSchema = schemas.ProductionResponse;
 export const ProductionResponsePaginateSchema = schemas.ProductionResponsePaginate;
 export const ProofingAllocationResponseSchema = schemas.ProofingAllocationResponse;
 export const ProofingOrderDesignResponseSchema = schemas.ProofingOrderDesignResponse;
+export const ProofingOrderDieResponseSchema = schemas.ProofingOrderDieResponse;
 export const ProofingOrderResponseSchema = schemas.ProofingOrderResponse;
 export const ProofingOrderResponsePaginateSchema = schemas.ProofingOrderResponsePaginate;
 export const RecordPlateExportRequestSchema = schemas.RecordPlateExportRequest;
@@ -150,6 +156,7 @@ export const ReportExportResponseIPaginateSchema = schemas.ReportExportResponseI
 export const ResetPasswordRequestSchema = schemas.ResetPasswordRequest;
 export const ReturnsDiscountsResponseSchema = schemas.ReturnsDiscountsResponse;
 export const ReturnsDiscountsResponseIPaginateSchema = schemas.ReturnsDiscountsResponseIPaginate;
+export const RevertDesignRequestSchema = schemas.RevertDesignRequest;
 export const RoleDefinitionSchema = schemas.RoleDefinition;
 export const RolesResponseSchema = schemas.RolesResponse;
 export const SalesByCustomerResponseSchema = schemas.SalesByCustomerResponse;
@@ -177,6 +184,7 @@ export const UpdateDeliveryLineResultRequestSchema = schemas.UpdateDeliveryLineR
 export const UpdateDeliveryStatusRequestSchema = schemas.UpdateDeliveryStatusRequest;
 export const UpdateDesignRequestSchema = schemas.UpdateDesignRequest;
 export const UpdateDesignTypeRequestSchema = schemas.UpdateDesignTypeRequest;
+export const UpdateDieRequestSchema = schemas.UpdateDieRequest;
 export const UpdateEInvoiceInfoRequestSchema = schemas.UpdateEInvoiceInfoRequest;
 export const UpdateExpenseCategoryRequestSchema = schemas.UpdateExpenseCategoryRequest;
 export const UpdateInvoiceRequestSchema = schemas.UpdateInvoiceRequest;
@@ -203,4 +211,5 @@ export const VendorCountOptionResponseIPaginateSchema = schemas.VendorCountOptio
 export const VendorResponseSchema = schemas.VendorResponse;
 export const VendorResponsePaginateSchema = schemas.VendorResponsePaginate;
 export const postApidesignsIdtimeline_BodySchema = schemas.postApidesignsIdtimeline_Body;
+export const postApidies_BodySchema = schemas.postApidies_Body;
 export const postApiproofingOrdersIddieExport_BodySchema = schemas.postApiproofingOrdersIddieExport_Body;

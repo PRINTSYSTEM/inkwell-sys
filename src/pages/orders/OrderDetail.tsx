@@ -1390,7 +1390,7 @@ export default function OrderDetailPage() {
                     Chưa có lệnh bình bài nào
                   </p>
                   <p className="text-sm text-muted-foreground/80 mt-1">
-                    Tạo lệnh bình bài từ các thiết kế trong đơn hàng
+                    Tạo mã bài từ các thiết kế trong đơn hàng
                   </p>
                 </div>
               )}

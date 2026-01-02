@@ -52,11 +52,11 @@ export default function ARAgingPage() {
     search: searchQuery || undefined,
   });
 
-  const totalCurrent = arData?.items?.reduce((sum, item) => sum + (item.current || 0), 0) || 0;
-  const totalDays30 = arData?.items?.reduce((sum, item) => sum + (item.days30 || 0), 0) || 0;
-  const totalDays60 = arData?.items?.reduce((sum, item) => sum + (item.days60 || 0), 0) || 0;
-  const totalDays90 = arData?.items?.reduce((sum, item) => sum + (item.days90 || 0), 0) || 0;
-  const totalOver90 = arData?.items?.reduce((sum, item) => sum + (item.over90 || 0), 0) || 0;
+  const totalCurrent = arData?.items?.reduce((sum, item) => sum + (item.notDue || 0), 0) || 0;
+  const totalDays30 = arData?.items?.reduce((sum, item) => sum + (item.days0_30 || 0), 0) || 0;
+  const totalDays60 = arData?.items?.reduce((sum, item) => sum + (item.days31_60 || 0), 0) || 0;
+  const totalDays90 = arData?.items?.reduce((sum, item) => sum + (item.days61_90 || 0), 0) || 0;
+  const totalOver90 = arData?.items?.reduce((sum, item) => sum + (item.daysOver90 || 0), 0) || 0;
   const grandTotal = arData?.items?.reduce((sum, item) => sum + (item.total || 0), 0) || 0;
 
   const handleExportExcel = async () => {
@@ -247,28 +247,28 @@ export default function ARAgingPage() {
                       {item.customerName || "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.current !== undefined && item.current > 0
-                        ? formatCurrency(item.current)
+                      {item.notDue !== undefined && item.notDue > 0
+                        ? formatCurrency(item.notDue)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.days30 !== undefined && item.days30 > 0
-                        ? formatCurrency(item.days30)
+                      {item.days0_30 !== undefined && item.days0_30 > 0
+                        ? formatCurrency(item.days0_30)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-orange-600">
-                      {item.days60 !== undefined && item.days60 > 0
-                        ? formatCurrency(item.days60)
+                      {item.days31_60 !== undefined && item.days31_60 > 0
+                        ? formatCurrency(item.days31_60)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-red-600">
-                      {item.days90 !== undefined && item.days90 > 0
-                        ? formatCurrency(item.days90)
+                      {item.days61_90 !== undefined && item.days61_90 > 0
+                        ? formatCurrency(item.days61_90)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-destructive">
-                      {item.over90 !== undefined && item.over90 > 0
-                        ? formatCurrency(item.over90)
+                      {item.daysOver90 !== undefined && item.daysOver90 > 0
+                        ? formatCurrency(item.daysOver90)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">

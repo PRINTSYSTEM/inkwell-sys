@@ -230,7 +230,7 @@ export function CreateProofingOrderModal({
               </div>
               <div>
                 <DialogTitle className="text-base font-semibold">
-                  Tạo Lệnh Bình Bài
+                  Tạo Mã Bài
                 </DialogTitle>
                 <DialogDescription className="text-xs mt-0.5">
                   {selectedDesigns.length} thiết kế • {selectedCount} đã nhập số

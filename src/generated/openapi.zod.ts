@@ -445,6 +445,7 @@ const ConstantsResponse = z
     vendorTypes: ConstantGroup,
     deliveryNoteStatuses: ConstantGroup,
     deliveryLineStatuses: ConstantGroup,
+    debtStatuses: ConstantGroup,
   })
   .partial();
 const CreateCustomerRequest = z.object({
@@ -1074,6 +1075,7 @@ const DesignTimelineEntryResponsePaginate = z
     items: z.array(DesignTimelineEntryResponse).nullable(),
   })
   .partial();
+const RevertDesignRequest = z.object({ reason: z.string().min(0).max(500) });
 const CreateDesignTypeRequest = z.object({
   code: z.string().min(0).max(20),
   name: z.string().min(0).max(255),
@@ -1104,6 +1106,105 @@ const UpdateDesignTypeRequest = z
       .nullable(),
   })
   .partial();
+const VendorResponse = z
+  .object({
+    id: z.number().int(),
+    name: z.string().nullable(),
+    phone: z.string().nullable(),
+    email: z.string().nullable(),
+    address: z.string().nullable(),
+    note: z.string().nullable(),
+    vendorType: z.string().nullable(),
+    vendorTypeName: z.string().nullable(),
+    isActive: z.boolean(),
+    createdById: z.number().int(),
+    createdByName: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const DieUsageHistoryItem = z
+  .object({
+    proofingOrderId: z.number().int(),
+    proofingOrderCode: z.string().nullable(),
+    takenOutAt: z.string().datetime({ offset: true }).nullable(),
+    returnedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const DieResponse = z
+  .object({
+    id: z.number().int(),
+    name: z.string().nullable(),
+    size: z.string().nullable(),
+    price: z.number().nullable(),
+    imageUrl: z.string().nullable(),
+    vendorId: z.number().int().nullable(),
+    vendorName: z.string().nullable(),
+    vendor: VendorResponse,
+    location: z.string().nullable(),
+    isUsable: z.boolean(),
+    notes: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    createdBy: UserInfo,
+    usageHistory: z.array(DieUsageHistoryItem).nullable(),
+  })
+  .partial();
+const DieResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(DieResponse).nullable(),
+  })
+  .partial();
+const postApidies_Body = z
+  .object({
+    Name: z.string().min(0).max(255),
+    Size: z.string().min(0).max(100).optional(),
+    Price: z.number().optional(),
+    VendorId: z.number().int().optional(),
+    Notes: z.string().optional(),
+    image: z.instanceof(File).optional(),
+  })
+  .passthrough();
+const UpdateDieRequest = z
+  .object({
+    name: z.string().min(0).max(255).nullable(),
+    size: z.string().min(0).max(100).nullable(),
+    price: z.number().nullable(),
+    location: z.string().min(0).max(50).nullable(),
+    isUsable: z.boolean().nullable(),
+    notes: z.string().nullable(),
+  })
+  .partial();
+const ProofingOrderDieResponse = z
+  .object({
+    id: z.number().int(),
+    dieId: z.number().int(),
+    die: DieResponse,
+    isNewDie: z.boolean(),
+    borrowedFromProofingOrderId: z.number().int().nullable(),
+    borrowedFromProofingOrderCode: z.string().nullable(),
+    takenOutAt: z.string().datetime({ offset: true }).nullable(),
+    returnedAt: z.string().datetime({ offset: true }).nullable(),
+    notes: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const AssignDieToProofingOrderRequest = z.object({
+  dieId: z.number().int(),
+  isNewDie: z.boolean().optional(),
+  borrowedFromProofingOrderId: z.number().int().nullish(),
+  notes: z.string().nullish(),
+});
+const CreateDieRequest = z.object({
+  name: z.string().min(0).max(255),
+  size: z.string().min(0).max(100).nullish(),
+  price: z.number().nullish(),
+  vendorId: z.number().int().nullish(),
+  notes: z.string().nullish(),
+});
 const InventorySummaryItemResponse = z
   .object({
     itemCode: z.string().nullable(),
@@ -1777,23 +1878,6 @@ const PaymentResponsePaginate = z
     items: z.array(PaymentResponse).nullable(),
   })
   .partial();
-const VendorResponse = z
-  .object({
-    id: z.number().int(),
-    name: z.string().nullable(),
-    phone: z.string().nullable(),
-    email: z.string().nullable(),
-    address: z.string().nullable(),
-    note: z.string().nullable(),
-    vendorType: z.string().nullable(),
-    vendorTypeName: z.string().nullable(),
-    isActive: z.boolean(),
-    createdById: z.number().int(),
-    createdByName: z.string().nullable(),
-    createdAt: z.string().datetime({ offset: true }),
-    updatedAt: z.string().datetime({ offset: true }).nullable(),
-  })
-  .partial();
 const PlateExportResponse = z
   .object({
     id: z.number().int(),
@@ -1894,6 +1978,8 @@ const DieExportResponse = z
     notes: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
     createdBy: UserInfo,
+    dieId: z.number().int().nullable(),
+    die: DieResponse,
   })
   .partial();
 const ProofingOrderDesignResponse = z
@@ -1931,6 +2017,7 @@ const ProofingOrderResponse = z
     updatedAt: z.string().datetime({ offset: true }),
     proofingOrderDesigns: z.array(ProofingOrderDesignResponse).nullable(),
     productions: z.array(ProductionResponse).nullable(),
+    proofingOrderDies: z.array(ProofingOrderDieResponse).nullable(),
   })
   .partial();
 const ProofingOrderResponsePaginate = z
@@ -2427,9 +2514,19 @@ export const schemas = {
   DesignResponsePaginate,
   postApidesignsIdtimeline_Body,
   DesignTimelineEntryResponsePaginate,
+  RevertDesignRequest,
   CreateDesignTypeRequest,
   DesignTypeResponsePaginate,
   UpdateDesignTypeRequest,
+  VendorResponse,
+  DieUsageHistoryItem,
+  DieResponse,
+  DieResponseIPaginate,
+  postApidies_Body,
+  UpdateDieRequest,
+  ProofingOrderDieResponse,
+  AssignDieToProofingOrderRequest,
+  CreateDieRequest,
   InventorySummaryItemResponse,
   InventorySummaryItemResponseIPaginate,
   StockCardEntryResponse,
@@ -2480,7 +2577,6 @@ export const schemas = {
   CreatePaymentRequest,
   PaymentResponse,
   PaymentResponsePaginate,
-  VendorResponse,
   PlateExportResponse,
   PlateExportResponsePaginate,
   CreateProductionRequest,
@@ -4187,6 +4283,25 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/designs/:id/revert-to-waiting",
+    alias: "postApidesignsIdrevertToWaiting",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ reason: z.string().min(0).max(500) }),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DesignResponse,
+  },
+  {
+    method: "post",
     path: "/api/designs/:id/timeline",
     alias: "postApidesignsIdtimeline",
     requestFormat: "form-data",
@@ -4590,6 +4705,271 @@ const endpoints = makeApi([
       },
     ],
     response: DesignResponsePaginate,
+  },
+  {
+    method: "get",
+    path: "/api/dies",
+    alias: "getApidies",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "dieName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "isUsable",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+      {
+        name: "location",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+    ],
+    response: DieResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/dies",
+    alias: "postApidies",
+    requestFormat: "form-data",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: postApidies_Body,
+      },
+    ],
+    response: DieResponse,
+  },
+  {
+    method: "get",
+    path: "/api/dies/:id",
+    alias: "getApidiesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DieResponse,
+  },
+  {
+    method: "put",
+    path: "/api/dies/:id",
+    alias: "putApidiesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateDieRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DieResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/dies/:id",
+    alias: "deleteApidiesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.boolean(),
+  },
+  {
+    method: "post",
+    path: "/api/dies/:id/image",
+    alias: "postApidiesIdimage",
+    requestFormat: "form-data",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z
+          .object({ image: z.instanceof(File) })
+          .partial()
+          .passthrough(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DieResponse,
+  },
+  {
+    method: "post",
+    path: "/api/dies/from-die-export/:dieExportId",
+    alias: "postApidiesfromDieExportDieExportId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateDieRequest,
+      },
+      {
+        name: "dieExportId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DieResponse,
+  },
+  {
+    method: "post",
+    path: "/api/dies/proofing-order-die/:proofingOrderDieId/return",
+    alias: "postApidiesproofingOrderDieProofingOrderDieIdreturn",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "proofingOrderDieId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ProofingOrderDieResponse,
+  },
+  {
+    method: "post",
+    path: "/api/dies/proofing-order-die/:proofingOrderDieId/take-out",
+    alias: "postApidiesproofingOrderDieProofingOrderDieIdtakeOut",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "proofingOrderDieId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ProofingOrderDieResponse,
+  },
+  {
+    method: "get",
+    path: "/api/dies/proofing-order/:proofingOrderId",
+    alias: "getApidiesproofingOrderProofingOrderId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "proofingOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.array(ProofingOrderDieResponse),
+  },
+  {
+    method: "post",
+    path: "/api/dies/proofing-order/:proofingOrderId/assign",
+    alias: "postApidiesproofingOrderProofingOrderIdassign",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: AssignDieToProofingOrderRequest,
+      },
+      {
+        name: "proofingOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ProofingOrderDieResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/dies/proofing-order/:proofingOrderId/die/:dieId",
+    alias: "deleteApidiesproofingOrderProofingOrderIddieDieId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "proofingOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "dieId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.unknown(),
+  },
+  {
+    method: "get",
+    path: "/api/dies/search",
+    alias: "getApidiessearch",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "proofingOrderCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customerName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "designName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "dieName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "isUsable",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
+      {
+        name: "location",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+    ],
+    response: DieResponseIPaginate,
   },
   {
     method: "get",

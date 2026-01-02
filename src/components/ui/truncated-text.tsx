@@ -12,6 +12,7 @@ interface TruncatedTextProps {
   className?: string;
   maxWidth?: string;
   children?: React.ReactNode;
+  showCursor?: boolean; // Option to show cursor on hover
 }
 
 /**
@@ -23,6 +24,7 @@ export function TruncatedText({
   className,
   maxWidth,
   children,
+  showCursor = true,
 }: TruncatedTextProps) {
   const displayText = text || "—";
   const content = children || <span>{displayText}</span>;
@@ -34,17 +36,23 @@ export function TruncatedText({
 
   return (
     <TooltipProvider>
-      <Tooltip>
+      <Tooltip delayDuration={300}>
         <TooltipTrigger asChild>
           <div
-            className={cn("truncate", className)}
+            className={cn("truncate", showCursor && "cursor-help", className)}
             style={maxWidth ? { maxWidth } : undefined}
+            title={showCursor ? displayText : undefined}
           >
             {content}
           </div>
         </TooltipTrigger>
-        <TooltipContent>
-          <p className="max-w-xs break-words">{displayText}</p>
+        <TooltipContent
+          side="top"
+          align="start"
+          className="max-w-md z-[100]"
+          sideOffset={4}
+        >
+          <p className="break-words text-sm leading-relaxed">{displayText}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

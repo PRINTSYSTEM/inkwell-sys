@@ -3,7 +3,7 @@ import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
 import type {
   OrderResponse,
-  OrderResponsePagedResponse,
+  OrderResponsePaginate,
   OrderListParams,
   OrdersForDesignerListParams,
   OrdersForAccountingListParams,
@@ -12,7 +12,7 @@ import type {
   UpdateOrderForAccountingRequest,
   CreateOrderWithExistingDesignsRequest,
   AddDesignToOrderRequest,
-  OrderResponseForDesignerPagedResponse,
+  OrderResponseForDesignerPaginate,
   UserRole,
   OrdersMyListParams,
 } from "@/Schema";
@@ -36,7 +36,7 @@ const {
   UpdateOrderRequest,
   number,
   OrderListParams,
-  OrderResponsePagedResponse
+  OrderResponsePaginate
 >({
   rootKey: "orders",
   basePath: API_SUFFIX.ORDERS,
@@ -55,7 +55,7 @@ const useOrderListBaseWithEnabled = (
   params?: OrderListParams,
   enabled = true
 ) => {
-  return useQuery<OrderResponsePagedResponse>({
+  return useQuery<OrderResponsePaginate>({
     queryKey: orderKeys.list(params ?? ({} as OrderListParams)),
     enabled,
     queryFn: async () => {
@@ -315,11 +315,11 @@ const useOrdersForDesigner = (
   params?: OrdersForDesignerListParams,
   enabled = true
 ) => {
-  return useQuery<OrderResponseForDesignerPagedResponse>({
+  return useQuery<OrderResponseForDesignerPaginate>({
     queryKey: [orderKeys.all[0], "for-designer", params],
     enabled,
     queryFn: async () => {
-      const res = await apiRequest.get<OrderResponseForDesignerPagedResponse>(
+      const res = await apiRequest.get<OrderResponseForDesignerPaginate>(
         API_SUFFIX.ORDERS_FOR_DESIGNER,
         { params }
       );
@@ -335,11 +335,11 @@ export const useOrdersForAccounting = (
   params?: OrdersForAccountingListParams,
   enabled = true
 ) => {
-  return useQuery<OrderResponsePagedResponse>({
+  return useQuery<OrderResponsePaginate>({
     queryKey: [orderKeys.all[0], "for-accounting", params],
     enabled,
     queryFn: async () => {
-      const res = await apiRequest.get<OrderResponsePagedResponse>(
+      const res = await apiRequest.get<OrderResponsePaginate>(
         API_SUFFIX.ORDERS_FOR_ACCOUNTING,
         { params }
       );
@@ -567,11 +567,11 @@ export const useMyOrders = (
   params?: OrdersMyListParams,
   enabled: boolean = true
 ) => {
-  return useQuery<OrderResponsePagedResponse>({
+  return useQuery<OrderResponsePaginate>({
     queryKey: [orderKeys.all[0], "my", params ?? {}],
     enabled,
     queryFn: async () => {
-      const res = await apiRequest.get<OrderResponsePagedResponse>(
+      const res = await apiRequest.get<OrderResponsePaginate>(
         API_SUFFIX.ORDERS_MY,
         { params }
       );

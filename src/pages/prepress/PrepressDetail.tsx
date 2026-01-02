@@ -981,16 +981,22 @@ export default function ProofingOrderDetailPage() {
                               </span>
                             </div>
 
-                            {pod.design.areaM2 && (
-                              <div>
-                                <span className="text-muted-foreground">
-                                  Diện tích:
-                                </span>
-                                <span className="ml-2">
-                                  {(pod.design.areaM2 * 10000).toFixed(0)} cm²
-                                </span>
-                              </div>
-                            )}
+                            <div>
+                              <span className="text-muted-foreground">
+                                Nhân viên thiết kế:
+                              </span>
+                              <span className="ml-2">
+                                {pod.design.designer?.fullName || "—"}
+                              </span>
+                            </div>
+                            {/* <div>
+                              <span className="text-muted-foreground">
+                                Nhân viên kế toán:
+                              </span>
+                              <span className="ml-2">
+                                {pod.design.accountantName || "—"}
+                              </span>
+                            </div> */}
                           </div>
 
                           {(pod.design.processClassification ||

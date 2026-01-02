@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { useCustomer, useCustomerOrders } from "@/hooks/use-customer";
 import { useAuth } from "@/hooks";
 import { ROLE } from "@/constants";
@@ -89,7 +90,7 @@ export default function CustomerDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="h-full bg-background">
         <div className="p-6 space-y-4">
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-24 w-full" />
@@ -105,7 +106,7 @@ export default function CustomerDetail() {
   // Show error early if ID is invalid
   if (!customerId) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-full bg-background flex items-center justify-center">
         <div className="text-center space-y-2">
           <p className="text-lg font-medium text-foreground">
             ID khách hàng không hợp lệ
@@ -120,7 +121,7 @@ export default function CustomerDetail() {
 
   if (error || (!isLoading && !customer)) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-full bg-background flex items-center justify-center">
         <div className="text-center space-y-2">
           <p className="text-lg font-medium text-foreground">
             Không tìm thấy khách hàng
@@ -141,7 +142,7 @@ export default function CustomerDetail() {
         </title>
       </Helmet>
 
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="h-full bg-background flex flex-col overflow-hidden">
         {/* Sticky Header */}
         <CustomerHeader
           customer={customer}
@@ -163,7 +164,12 @@ export default function CustomerDetail() {
         )}
 
         {/* Body */}
-        <div className="flex-1 p-6 overflow-hidden">
+        <div
+          className={cn(
+            "flex-1 overflow-hidden",
+            canViewFinancialInfo ? "p-6" : "p-6 overflow-y-auto"
+          )}
+        >
           {canViewFinancialInfo ? (
             /* Layout 2 cột cho accounting và admin */
             <div className="grid grid-cols-[380px_1fr] gap-6 h-full">
@@ -220,8 +226,8 @@ export default function CustomerDetail() {
             </div>
           ) : (
             /* Layout 1 cột cho design và prepress - chỉ hiển thị profile */
-            <div className="max-w-2xl mx-auto">
-              <CustomerProfile customer={customer} />
+            <div className="max-w-4xl mx-auto w-full h-full flex flex-col">
+              <CustomerProfile customer={customer} isDesignRole={true} />
             </div>
           )}
         </div>

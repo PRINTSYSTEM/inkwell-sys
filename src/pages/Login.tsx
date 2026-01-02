@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks";
+import { REDIRECT_ROLE, ROLE } from "@/constants/role.constant";
+import { ROUTE_PATHS } from "@/constants/route.constant";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -38,11 +40,14 @@ export default function Login() {
     }
 
     try {
-      const success = await login(loginCredentials);
+      const loginResponse = await login(loginCredentials);
 
-      if (success) {
+      if (loginResponse && loginResponse.userInfo) {
         toast.success(`Đăng nhập thành công!`);
-        navigate("/dashboard");
+
+        // Get redirect path based on user role from login response
+        const redirectPath = getRedirectPath(loginResponse.userInfo.role);
+        navigate(redirectPath);
       } else {
         toast.error("Tên đăng nhập hoặc mật khẩu không đúng");
       }
@@ -50,6 +55,21 @@ export default function Login() {
       console.error("Login error:", error);
       toast.error("Có lỗi xảy ra khi đăng nhập");
     }
+  };
+
+  const getRedirectPath = (userRole?: string | null): string => {
+    if (!userRole) {
+      // Fallback to dashboard if no role
+      return ROUTE_PATHS.DASHBOARD;
+    }
+
+    // Check if role has specific redirect path in REDIRECT_ROLE
+    if (userRole in REDIRECT_ROLE) {
+      return REDIRECT_ROLE[userRole as keyof typeof REDIRECT_ROLE];
+    }
+
+    // Fallback to dashboard
+    return ROUTE_PATHS.DASHBOARD;
   };
 
   const handleQuickLogin = async (username: string, password: string) => {

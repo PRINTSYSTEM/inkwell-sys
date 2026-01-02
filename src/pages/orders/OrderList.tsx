@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { DateRange } from "react-day-picker";
 import {
   Plus,
@@ -7,18 +7,10 @@ import {
   Filter,
   Building2,
   User,
-  Eye,
   ChevronLeft,
   ChevronRight,
-  Package,
-  Clock,
-  CheckCircle2,
   AlertCircle,
-  TrendingUp,
   Calendar,
-  MoreHorizontal,
-  Download,
-  RefreshCw,
   Loader2,
 } from "lucide-react";
 
@@ -35,12 +27,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Table,
   TableBody,
   TableCell,
@@ -56,11 +42,6 @@ import {
   formatDate,
 } from "@/lib/status-utils";
 import type { OrderListParams, UserRole, OrderResponse } from "@/Schema";
-
-type OrderWithCustomerFields = OrderResponse & {
-  customerName?: string;
-  customerCompanyName?: string;
-};
 import { useAuth } from "@/hooks";
 import { useOrdersByRole } from "@/hooks/use-order";
 import { ROLE } from "@/constants";
@@ -68,16 +49,20 @@ import { ROLE } from "@/constants";
 export default function OrderList() {
   const { user } = useAuth();
   const role = user?.role as UserRole;
+  const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(8);
+  const [pageInput, setPageInput] = useState<string>("");
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Reset to page 1 when filters change
   const handleFilterChange = () => {
     setCurrentPage(1);
+    setPageInput("1");
   };
 
   // Build params for API
@@ -115,28 +100,38 @@ export default function OrderList() {
   const totalOrders = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
+  // Sync pageInput with currentPage
+  useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
+
+  // Scroll to top of table when page changes
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop = 0;
+    }
+  }, [currentPage]);
+
+  // Auto-adjust currentPage if it exceeds totalPages
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+      setPageInput("1");
+    }
+  }, [totalPages, currentPage]);
+
   // Client-side search filter (since API doesn't support search parameter)
   const filteredOrders = useMemo(() => {
     if (!searchTerm.trim()) return orders;
     const searchLower = searchTerm.toLowerCase();
     return orders.filter((order) => {
-      // Priority: order.customerName/customerCompanyName > order.customer.name/companyName
-      const orderWithCustomer = order as OrderWithCustomerFields;
+      // Use nested customer object if available, otherwise fall back to flat fields
+      const orderResponse = order as OrderResponse;
       const customerName =
-        orderWithCustomer.customerName ||
-        (order.customer &&
-          typeof order.customer === "object" &&
-          "name" in order.customer
-          ? (order.customer.name as string)
-          : "") ||
-        "";
+        orderResponse.customer?.name || orderResponse.customerName || "";
       const customerCompanyName =
-        orderWithCustomer.customerCompanyName ||
-        (order.customer &&
-          typeof order.customer === "object" &&
-          "companyName" in order.customer
-          ? (order.customer.companyName as string)
-          : "") ||
+        orderResponse.customer?.companyName ||
+        orderResponse.customerCompanyName ||
         "";
       return (
         order.code?.toLowerCase().includes(searchLower) ||
@@ -156,13 +151,56 @@ export default function OrderList() {
         ["designing", "production", "in_progress"].includes(o.status || "")
       ).length,
       completed: allOrders.filter((o) => o.status === "completed").length,
-      totalRevenue: allOrders.reduce(
-        (sum, o) =>
-          sum + (typeof o.totalAmount === "number" ? o.totalAmount : 0),
-        0
-      ),
+      totalRevenue: allOrders.reduce((sum, o) => {
+        const order = o as OrderResponse;
+        return sum + ((order.totalAmount as number | undefined) ?? 0);
+      }, 0),
     };
   }, [orders, totalOrders]);
+
+  // Pagination handlers
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setPageInput("");
+      return;
+    }
+    const page = parseInt(value, 10);
+    if (!isNaN(page)) {
+      setPageInput(page.toString());
+    }
+  };
+
+  const handlePageInputBlur = () => {
+    const page = parseInt(pageInput, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
+  const handleOrderClick = (orderId: number) => {
+    navigate(`/orders/${orderId}`);
+  };
 
   // Permissions
   const isAccounting = role === ROLE.ACCOUNTING;
@@ -170,10 +208,10 @@ export default function OrderList() {
   const canViewPrice = role !== ROLE.DESIGN && role !== ROLE.DESIGN_LEAD;
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="container mx-auto px-4 py-6 lg:px-8">
+    <div className="h-full flex flex-col overflow-hidden bg-background">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-4 py-4">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 shrink-0">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Đơn hàng</h1>
             <p className="text-sm text-muted-foreground mt-1">
@@ -193,7 +231,7 @@ export default function OrderList() {
         </div>
 
         {/* Filter Bar */}
-        <Card className="border-0 shadow-sm mb-6">
+        <Card className="border-0 shadow-sm mb-4 shrink-0">
           <CardContent className="p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="relative flex-1">
@@ -242,225 +280,211 @@ export default function OrderList() {
         </Card>
 
         {/* Table */}
-        <Card className="border-0 shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="font-semibold">Mã đơn</TableHead>
-                <TableHead className="font-semibold">Khách hàng</TableHead>
-                <TableHead className="font-semibold">Trạng thái</TableHead>
-                <TableHead className="font-semibold text-center">
-                  Thiết kế
-                </TableHead>
-                <TableHead className="font-semibold">Ngày giao</TableHead>
-                {canViewPrice && (
-                  <>
-                    <TableHead className="font-semibold text-right">
-                      Tổng tiền
-                    </TableHead>
-                    <TableHead className="font-semibold text-right">
-                      Còn lại
-                    </TableHead>
-                  </>
+        <Card className="flex-1 flex flex-col min-h-0 overflow-hidden border-0 shadow-sm">
+          <div ref={tableContainerRef} className="flex-1 overflow-auto">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="h-10 font-bold text-sm">
+                    Mã đơn
+                  </TableHead>
+                  <TableHead className="h-10 font-bold text-sm">
+                    Khách hàng
+                  </TableHead>
+                  <TableHead className="h-10 font-bold text-sm">
+                    Trạng thái
+                  </TableHead>
+                  <TableHead className="h-10 font-bold text-sm text-center">
+                    Thiết kế
+                  </TableHead>
+                  <TableHead className="h-10 font-bold text-sm">
+                    Ngày giao
+                  </TableHead>
+                  {canViewPrice && (
+                    <>
+                      <TableHead className="h-10 font-bold text-sm text-right">
+                        Tổng tiền
+                      </TableHead>
+                      <TableHead className="h-10 font-bold text-sm text-right">
+                        Còn lại
+                      </TableHead>
+                    </>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {/* Loading */}
+                {isLoading && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={canViewPrice ? 7 : 5}
+                      className="h-32 text-center"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <p className="text-muted-foreground">
+                          Đang tải danh sách đơn hàng...
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 )}
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {/* Loading */}
-              {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      <p className="text-muted-foreground">
-                        Đang tải danh sách đơn hàng...
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
 
-              {/* Error */}
-              {isError && !isLoading && (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <AlertCircle className="h-6 w-6 text-destructive" />
-                      <p className="text-destructive">
-                        Lỗi khi tải đơn hàng:{" "}
-                        {error instanceof Error
-                          ? error.message
-                          : "Vui lòng thử lại sau."}
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
+                {/* Error */}
+                {isError && !isLoading && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={canViewPrice ? 7 : 5}
+                      className="h-32 text-center"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <AlertCircle className="h-6 w-6 text-destructive" />
+                        <p className="text-destructive">
+                          Lỗi khi tải đơn hàng:{" "}
+                          {error instanceof Error
+                            ? error.message
+                            : "Vui lòng thử lại sau."}
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
 
-              {/* Data */}
-              {!isLoading &&
-                !isError &&
-                filteredOrders.map((order) => {
-                  // Priority: order.customerName/customerCompanyName > order.customer.name/companyName
-                  const orderWithCustomer = order as OrderWithCustomerFields;
-                  const customerName =
-                    orderWithCustomer.customerName ||
-                    (order.customer &&
-                      typeof order.customer === "object" &&
-                      "name" in order.customer
-                      ? (order.customer.name as string)
-                      : null) ||
-                    null;
-                  const customerCompanyName =
-                    orderWithCustomer.customerCompanyName ||
-                    (order.customer &&
-                      typeof order.customer === "object" &&
-                      "companyName" in order.customer
-                      ? (order.customer.companyName as string)
-                      : null) ||
-                    null;
-                  const isCompany = !!customerCompanyName;
-                  const totalAmount =
-                    typeof order.totalAmount === "number"
-                      ? order.totalAmount
-                      : 0;
-                  const depositAmount =
-                    typeof order.depositAmount === "number"
-                      ? order.depositAmount
-                      : 0;
-                  const remaining = totalAmount - depositAmount;
+                {/* Data */}
+                {!isLoading &&
+                  !isError &&
+                  filteredOrders.map((order) => {
+                    // Use OrderResponse type which includes customer object
+                    const orderResponse = order as OrderResponse;
 
-                  return (
-                    <TableRow key={order.id} className="group">
-                      <TableCell>
-                        <Link
-                          to={`/orders/${order.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {order.code || `ORD-${order.id}`}
-                        </Link>
-                        {order.createdAt && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {formatDate(order.createdAt)}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                            {isCompany ? (
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <User className="h-4 w-4 text-muted-foreground" />
-                            )}
+                    // Use nested customer object if available, otherwise fall back to flat fields
+                    const customerName =
+                      orderResponse.customer?.name ||
+                      orderResponse.customerName ||
+                      null;
+                    const customerCompanyName =
+                      orderResponse.customer?.companyName ||
+                      orderResponse.customerCompanyName ||
+                      null;
+                    const isCompany = !!customerCompanyName;
+                    const totalAmount =
+                      (orderResponse.totalAmount as number | undefined) ?? 0;
+                    const depositAmount =
+                      (orderResponse.depositAmount as number | undefined) ?? 0;
+                    const remaining = totalAmount - depositAmount;
+
+                    return (
+                      <TableRow
+                        key={order.id}
+                        className="h-14 cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleOrderClick(order.id)}
+                      >
+                        <TableCell className="py-3">
+                          <div className="font-bold text-sm text-primary">
+                            {order.code || `ORD-${order.id}`}
                           </div>
-                          <div>
-                            <TruncatedText
-                              text={customerName || "-"}
-                              className="font-medium text-sm"
-                            />
-                            {customerCompanyName && (
+                          {order.createdAt && (
+                            <p className="text-xs font-medium text-muted-foreground mt-0.5">
+                              {formatDate(order.createdAt)}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted shrink-0">
+                              {isCompany ? (
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <User className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
                               <TruncatedText
-                                text={customerCompanyName}
-                                className="text-xs text-muted-foreground"
+                                text={customerName || "-"}
+                                className="font-semibold text-sm"
                               />
-                            )}
+                              {customerCompanyName && (
+                                <TruncatedText
+                                  text={customerCompanyName}
+                                  className="text-xs font-medium text-muted-foreground"
+                                />
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge
-                          status={order.status}
-                          label={orderStatusLabels[order.status || ""] || "N/A"}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                          {order.orderDetails?.length || 0}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {order.deliveryDate ? (
-                          <div className="flex items-center gap-1.5 text-sm">
-                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                            {formatDate(order.deliveryDate)}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      {canViewPrice && (
-                        <>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(totalAmount)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span
-                              className={
-                                remaining > 0
-                                  ? "text-amber-600 font-medium"
-                                  : "text-muted-foreground"
-                              }
-                            >
-                              {formatCurrency(remaining)}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <StatusBadge
+                            status={order.status}
+                            label={
+                              orderStatusLabels[order.status || ""] || "N/A"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="text-center py-3">
+                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-bold">
+                            {order.orderDetails?.length || 0}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          {order.deliveryDate ? (
+                            <div className="flex items-center gap-1.5 text-sm font-semibold">
+                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                              {formatDate(order.deliveryDate)}
+                            </div>
+                          ) : (
+                            <span className="text-sm font-medium text-muted-foreground">
+                              -
                             </span>
-                          </TableCell>
-                        </>
-                      )}
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link
-                                to={`/orders/${order.id}`}
-                                className="flex items-center gap-2"
+                          )}
+                        </TableCell>
+                        {canViewPrice && (
+                          <>
+                            <TableCell className="text-right py-3 font-bold text-sm">
+                              {formatCurrency(totalAmount)}
+                            </TableCell>
+                            <TableCell className="text-right py-3">
+                              <span
+                                className={`text-sm font-bold ${
+                                  remaining > 0
+                                    ? "text-amber-600"
+                                    : "text-muted-foreground"
+                                }`}
                               >
-                                <Eye className="h-4 w-4" />
-                                Xem chi tiết
-                              </Link>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                                {formatCurrency(remaining)}
+                              </span>
+                            </TableCell>
+                          </>
+                        )}
+                      </TableRow>
+                    );
+                  })}
 
-              {/* Empty */}
-              {!isLoading && !isError && filteredOrders.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={canViewPrice ? 9 : 7}
-                    className="h-32 text-center"
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <AlertCircle className="h-8 w-8 text-muted-foreground/50" />
-                      <p className="text-muted-foreground">
-                        {searchTerm.trim()
-                          ? "Không tìm thấy đơn hàng phù hợp với từ khóa tìm kiếm"
-                          : "Không có đơn hàng nào"}
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                {/* Empty */}
+                {!isLoading && !isError && filteredOrders.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={canViewPrice ? 7 : 5}
+                      className="h-32 text-center"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <AlertCircle className="h-8 w-8 text-muted-foreground/50" />
+                        <p className="text-muted-foreground">
+                          {searchTerm.trim()
+                            ? "Không tìm thấy đơn hàng phù hợp với từ khóa tìm kiếm"
+                            : "Không có đơn hàng nào"}
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
-          {!isLoading && !isError && (
-            <div className="flex flex-col sm:flex-row items-center justify-between border-t px-4 py-3 gap-4">
-              <div className="text-sm text-muted-foreground">
+          {!isLoading && !isError && totalOrders > 0 && (
+            <div className="flex items-center justify-between border-t px-4 py-3 shrink-0 bg-background">
+              <div className="text-sm font-medium text-muted-foreground">
                 {searchTerm.trim() ? (
                   <>
                     Hiển thị {filteredOrders.length} / {totalOrders} đơn hàng
@@ -469,85 +493,65 @@ export default function OrderList() {
                 ) : (
                   <>
                     Hiển thị{" "}
-                    {orders.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} -{" "}
-                    {Math.min(currentPage * pageSize, totalOrders)} /{" "}
-                    {totalOrders} đơn hàng
+                    <span className="font-bold text-foreground">
+                      {orders.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+                    </span>
+                    {" - "}
+                    <span className="font-bold text-foreground">
+                      {Math.min(currentPage * pageSize, totalOrders)}
+                    </span>{" "}
+                    trong tổng số{" "}
+                    <span className="font-bold text-foreground">
+                      {totalOrders}
+                    </span>{" "}
+                    đơn hàng
                   </>
                 )}
               </div>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(1, prev - 1))
-                    }
-                    disabled={currentPage === 1 || isLoading}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Trước
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum: number;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={
-                            currentPage === pageNum ? "default" : "outline"
-                          }
-                          size="sm"
-                          onClick={() => setCurrentPage(pageNum)}
-                          disabled={isLoading}
-                          className="w-10"
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                    }
-                    disabled={currentPage === totalPages || isLoading}
-                  >
-                    Sau
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Số lượng mỗi trang:</span>
-                <Select
-                  value={pageSize.toString()}
-                  onValueChange={(value) => {
-                    setPageSize(Number(value));
-                    setCurrentPage(1);
-                  }}
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1 || isLoading}
                 >
-                  <SelectTrigger className="w-24 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="15">15</SelectItem>
-                    <SelectItem value="30">30</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Trang trước</span>
+                </Button>
+                <div className="flex items-center space-x-1">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Trang
+                  </span>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={pageInput}
+                    onChange={handlePageInputChange}
+                    onBlur={handlePageInputBlur}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="w-14 h-8 text-center text-sm font-semibold"
+                    disabled={isLoading}
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">
+                    / {totalPages}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages || isLoading}
+                >
+                  <span className="hidden sm:inline">Trang sau</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
           )}

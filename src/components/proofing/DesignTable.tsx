@@ -45,16 +45,14 @@ export function DesignTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12"></TableHead>
-              <TableHead className="w-16">Ảnh</TableHead>
-              <TableHead>Đơn hàng</TableHead>
-              <TableHead>Mã hàng</TableHead>
-              <TableHead>Tên</TableHead>
-              <TableHead>Loại</TableHead>
-              <TableHead>Vật liệu</TableHead>
-              <TableHead>Cắt - Bế</TableHead>
-              <TableHead>1 - 2 mặt</TableHead>
-              <TableHead>Cán</TableHead>
+              <TableHead className="w-12 h-10 text-sm font-bold"></TableHead>
+              <TableHead className="w-16 h-10 text-sm font-bold">Ảnh</TableHead>
+              <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
+              <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
+              <TableHead className="h-10 text-sm font-bold">Tên</TableHead>
+              <TableHead className="h-10 text-sm font-bold">
+                Quy trình sản xuất
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -122,6 +120,18 @@ export function DesignTable({
                         {design.availableQuantity?.toLocaleString() || "—"}
                       </span>
                     </div>
+                    <div>
+                      <span className="text-muted-foreground">
+                        Nhân viên thiết kế:
+                      </span>
+                      <span className="ml-2">{design.designerName}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">
+                        Nhân viên kế toán:
+                      </span>
+                      <span className="ml-2">{design.accountantName}</span>
+                    </div>
                   </div>
 
                   {(design.processClassificationOptionName ||
@@ -177,7 +187,7 @@ export function DesignTable({
                 >
                   <TableRow
                     className={cn(
-                      "cursor-pointer",
+                      "cursor-pointer h-14",
                       isSelected && "bg-primary/5",
                       !selectable &&
                         !isSelected &&
@@ -223,70 +233,59 @@ export function DesignTable({
                         <div className="w-10 h-10 rounded bg-muted" />
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-3">
                       {design.orderCode ? (
                         <div className="flex items-center gap-1.5">
                           <FileText className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-semibold text-xs text-primary">
+                          <span className="font-semibold text-sm text-primary">
                             {design.orderCode}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-muted-foreground text-sm font-semibold">
                           {design.orderId}
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="py-3 font-mono text-sm font-semibold">
                       {design.code}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-3">
                       <TruncatedText
                         text={design.name}
-                        className="font-medium"
+                        className="font-semibold text-sm"
                       />
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="text-xs">
-                        {design.designTypeName}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {design.materialTypeName}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {design.processClassificationOptionName ? (
-                        <Badge variant="outline" className="text-xs">
-                          {processClassificationLabels[
-                            design.processClassificationOptionName
-                          ] || design.processClassificationOptionName}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {design.sidesClassification ? (
-                        <Badge variant="outline" className="text-xs">
-                          {sidesClassificationLabels[
-                            design.sidesClassification
-                          ] || design.sidesClassification}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {design.laminationType ? (
-                        <Badge variant="outline" className="text-xs">
-                          {laminationTypeLabels[design.laminationType] ||
-                            design.laminationType}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        {design.processClassificationOptionName && (
+                          <Badge variant="outline" className="text-xs">
+                            {processClassificationLabels[
+                              design.processClassificationOptionName
+                            ] || design.processClassificationOptionName}
+                          </Badge>
+                        )}
+                        {design.sidesClassification && (
+                          <Badge variant="outline" className="text-xs">
+                            {sidesClassificationLabels[
+                              design.sidesClassification
+                            ] || design.sidesClassification}
+                          </Badge>
+                        )}
+                        {design.laminationType && (
+                          <Badge variant="outline" className="text-xs">
+                            {laminationTypeLabels[design.laminationType] ||
+                              design.laminationType}
+                          </Badge>
+                        )}
+                        {!design.processClassificationOptionName &&
+                          !design.sidesClassification &&
+                          !design.laminationType && (
+                            <span className="text-muted-foreground text-xs">
+                              —
+                            </span>
+                          )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 </CursorTooltip>

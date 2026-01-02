@@ -44,7 +44,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRecordDieExportWithFile } from "@/hooks/use-proofing-order";
 import { useActiveDieVendors, useCreateVendor } from "@/hooks/use-vendor";
+import {
+  useCreateDieFromDieExport,
+  useDies,
+  useDiesByProofingOrder,
+} from "@/hooks/use-die";
 import type { ProofingOrderResponse } from "@/Schema/proofing-order.schema";
+import type { CreateDieRequest } from "@/Schema";
 import { getErrorMessage } from "@/services/BaseService";
 
 interface DieExportDialogProps {
@@ -54,16 +60,6 @@ interface DieExportDialogProps {
   proofingOrder?: ProofingOrderResponse | null;
   onSuccess?: () => void;
 }
-
-// Options for time duration (30 minutes to 3 hours)
-const TIME_DURATION_OPTIONS = [
-  { value: 30, label: "30 phút" },
-  { value: 60, label: "1 giờ" },
-  { value: 90, label: "1.5 giờ" },
-  { value: 120, label: "2 giờ" },
-  { value: 150, label: "2.5 giờ" },
-  { value: 180, label: "3 giờ" },
-];
 
 export function DieExportDialog({
   open,
@@ -79,17 +75,31 @@ export function DieExportDialog({
   const [vendorSearchOpen, setVendorSearchOpen] = useState(false);
   const [dieFiles, setDieFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [receivedAtType, setReceivedAtType] = useState<"manual" | "duration">(
-    "duration"
-  );
-  const [durationHours, setDurationHours] = useState<number>(60);
   const [receivedAtManual, setReceivedAtManual] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [dieAction, setDieAction] = useState<"select" | "create">("create");
+  const [selectedDieId, setSelectedDieId] = useState<number | null>(null);
+  const [dieSearchOpen, setDieSearchOpen] = useState(false);
+  const [dieName, setDieName] = useState<string>("");
+  const [dieSize, setDieSize] = useState<string>("");
+  const [diePrice, setDiePrice] = useState<number | undefined>(undefined);
 
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordDie, isPending: recordingDie } =
     useRecordDieExportWithFile();
+  const { mutate: createDieFromDieExport, isPending: creatingDie } =
+    useCreateDieFromDieExport();
+
+  // Fetch available dies for selection
+  const { data: diesData, isLoading: loadingDies } = useDies({
+    isUsable: true,
+    pageSize: 100,
+  });
+  const availableDies = diesData?.items || [];
+
+  // Fetch dies already assigned to this proofing order
+  const { data: assignedDies } = useDiesByProofingOrder(proofingOrderId, open);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -101,10 +111,14 @@ export function DieExportDialog({
       setVendorSearchOpen(false);
       setDieFiles([]);
       setImagePreviews([]);
-      setReceivedAtType("duration");
-      setDurationHours(60);
       setReceivedAtManual("");
       setNotes("");
+      setDieAction("create");
+      setSelectedDieId(null);
+      setDieSearchOpen(false);
+      setDieName("");
+      setDieSize("");
+      setDiePrice(undefined);
     }
   }, [open]);
 
@@ -149,27 +163,12 @@ export function DieExportDialog({
     [formatLocalDateTimeWithOffset]
   );
 
-  // Calculate receivedAt based on type
+  // Calculate receivedAt from manual input
   const receivedAt = useMemo(() => {
-    if (receivedAtType === "manual") {
-      return receivedAtManual
-        ? convertLocalDateTimeToISO(receivedAtManual)
-        : null;
-    } else {
-      // duration: sentAt + durationHours
-      // sentAt is current local time
-      const sentAt = new Date();
-      const received = new Date(sentAt.getTime() + durationHours * 60 * 1000);
-      // Format with local timezone offset
-      return formatLocalDateTimeWithOffset(received);
-    }
-  }, [
-    receivedAtType,
-    receivedAtManual,
-    durationHours,
-    convertLocalDateTimeToISO,
-    formatLocalDateTimeWithOffset,
-  ]);
+    return receivedAtManual
+      ? convertLocalDateTimeToISO(receivedAtManual)
+      : null;
+  }, [receivedAtManual, convertLocalDateTimeToISO]);
 
   const handleCreateVendor = async () => {
     if (!vendorName.trim()) {
@@ -264,6 +263,17 @@ export function DieExportDialog({
       return;
     }
 
+    // Validate die selection/creation
+    if (dieAction === "select" && !selectedDieId) {
+      toast.error("Vui lòng chọn khuôn bế từ danh sách");
+      return;
+    }
+
+    if (dieAction === "create" && !dieName.trim()) {
+      toast.error("Vui lòng nhập tên khuôn bế");
+      return;
+    }
+
     // sentAt is current local time, format with timezone offset
     const sentAt = formatLocalDateTimeWithOffset(new Date());
     // estimatedReceiveAt is same as receivedAt for now
@@ -282,9 +292,41 @@ export function DieExportDialog({
         receivedAt: receivedAt || undefined,
       },
       {
-        onSuccess: () => {
-          onSuccess?.();
-          onOpenChange(false);
+        onSuccess: (response) => {
+          // If creating die from die export and dieExportId exists
+          if (dieAction === "create" && response?.dieExport?.id) {
+            const dieExportId = response.dieExport.id;
+            const createDieData: CreateDieRequest = {
+              name: dieName.trim(),
+              size: dieSize.trim() || undefined,
+              price: diePrice || undefined,
+              vendorId: vendorId || undefined,
+              notes: notes.trim() || undefined,
+            };
+
+            createDieFromDieExport(
+              {
+                dieExportId,
+                data: createDieData,
+              },
+              {
+                onSuccess: () => {
+                  onSuccess?.();
+                  onOpenChange(false);
+                },
+                onError: () => {
+                  // Die export was recorded but die creation failed
+                  // Still call onSuccess to refresh the page
+                  onSuccess?.();
+                  onOpenChange(false);
+                },
+              }
+            );
+          } else {
+            // Just record die export, no die creation needed
+            onSuccess?.();
+            onOpenChange(false);
+          }
         },
       }
     );
@@ -584,49 +626,13 @@ export function DieExportDialog({
 
           {/* Thời gian có khuôn */}
           <div className="space-y-2">
-            <Label>Thời gian có khuôn</Label>
-            <div className="flex gap-2 mb-2">
-              <Button
-                variant={receivedAtType === "duration" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setReceivedAtType("duration")}
-              >
-                Chọn thời gian
-              </Button>
-              <Button
-                variant={receivedAtType === "manual" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setReceivedAtType("manual")}
-              >
-                Nhập thủ công
-              </Button>
-            </div>
-            {receivedAtType === "duration" ? (
-              <Select
-                value={durationHours.toString()}
-                onValueChange={(value) => setDurationHours(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn thời gian" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIME_DURATION_OPTIONS.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value.toString()}
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                type="datetime-local"
-                value={receivedAtManual}
-                onChange={(e) => setReceivedAtManual(e.target.value)}
-              />
-            )}
+            <Label htmlFor="receivedAt">Thời gian có khuôn</Label>
+            <Input
+              id="receivedAt"
+              type="datetime-local"
+              value={receivedAtManual}
+              onChange={(e) => setReceivedAtManual(e.target.value)}
+            />
             {receivedAt && (
               <p className="text-xs text-muted-foreground">
                 Dự kiến có khuôn:{" "}
@@ -638,6 +644,141 @@ export function DieExportDialog({
                   minute: "2-digit",
                 })}
               </p>
+            )}
+          </div>
+
+          {/* Chọn hoặc tạo khuôn bế */}
+          <div className="space-y-2">
+            <Label>Khuôn bế</Label>
+            <div className="flex gap-2 mb-2">
+              <Button
+                variant={dieAction === "select" ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setDieAction("select");
+                  setSelectedDieId(null);
+                  setDieName("");
+                  setDieSize("");
+                  setDiePrice(undefined);
+                }}
+              >
+                Chọn khuôn có sẵn
+              </Button>
+              <Button
+                variant={dieAction === "create" ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setDieAction("create");
+                  setSelectedDieId(null);
+                }}
+              >
+                Tạo khuôn mới
+              </Button>
+            </div>
+
+            {dieAction === "select" ? (
+              <Popover open={dieSearchOpen} onOpenChange={setDieSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                    disabled={loadingDies}
+                  >
+                    {selectedDieId
+                      ? availableDies.find((d) => d.id === selectedDieId)
+                          ?.name || "Chọn khuôn..."
+                      : "Chọn khuôn bế..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Tìm kiếm khuôn bế..." />
+                    <CommandList>
+                      <CommandEmpty>
+                        <div className="py-4 text-center text-sm">
+                          Không tìm thấy khuôn bế
+                        </div>
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {availableDies.map((die) => (
+                          <CommandItem
+                            key={die.id}
+                            value={die.name || ""}
+                            onSelect={() => {
+                              setSelectedDieId(die.id || null);
+                              setDieSearchOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedDieId === die.id
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{die.name}</span>
+                              {die.size && (
+                                <span className="text-xs text-muted-foreground">
+                                  Kích thước: {die.size}
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="dieName">
+                    Tên khuôn bế <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="dieName"
+                    placeholder="Nhập tên khuôn bế..."
+                    value={dieName}
+                    onChange={(e) => setDieName(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="dieSize">Kích thước</Label>
+                    <Input
+                      id="dieSize"
+                      placeholder="VD: 100x200"
+                      value={dieSize}
+                      onChange={(e) => setDieSize(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="diePrice">Giá (VND)</Label>
+                    <Input
+                      id="diePrice"
+                      type="number"
+                      placeholder="Nhập giá..."
+                      value={diePrice || ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "") {
+                          setDiePrice(undefined);
+                        } else {
+                          const numValue = parseFloat(value);
+                          if (!isNaN(numValue) && numValue >= 0) {
+                            setDiePrice(numValue);
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -662,13 +803,16 @@ export function DieExportDialog({
             onClick={handleSubmit}
             disabled={
               recordingDie ||
+              creatingDie ||
               (dieFiles.length === 0 &&
                 existingImages.length === 0 &&
                 !existingImageUrl) ||
-              (!vendorId && !vendorName.trim())
+              (!vendorId && !vendorName.trim()) ||
+              (dieAction === "select" && !selectedDieId) ||
+              (dieAction === "create" && !dieName.trim())
             }
           >
-            {recordingDie ? (
+            {recordingDie || creatingDie ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Đang lưu...

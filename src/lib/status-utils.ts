@@ -18,7 +18,7 @@ export const orderStatusDescription: Record<string, string> = {
   waiting_for_deposit: "Khách cần đặt cọc trước khi tiếp tục xử lý đơn.",
   deposit_received: "Đã nhận tiền cọc từ khách.",
   debt_approved: "Khách công ty đã được duyệt công nợ.",
-  waiting_for_proofing: "Chờ tạo lệnh bình bài.",
+  waiting_for_proofing: "Chờ tạo mã bài.",
   waiting_for_production: "Chờ tạo lệnh sản xuất.",
   in_production: "Đơn đang được xử lý tại xưởng.",
   production_completed: "Sản xuất xong, chờ giao hàng / tất toán.",
@@ -220,6 +220,10 @@ export const deliveryNoteStatusLabels: Record<string, string> =
 export const deliveryLineStatusLabels: Record<string, string> =
   ENTITY_CONFIG.deliveryLineStatuses.values;
 
+// Trạng thái công nợ khách hàng (Customer Debt)
+export const debtStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.debtStatuses.values;
+
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
 
@@ -402,6 +406,11 @@ export const statusColorMap: Record<string, string> = {
   failed_reschedule: "bg-orange-50 text-orange-700 border-orange-200",
   returned: "bg-rose-50 text-rose-700 border-rose-200",
   // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
+
+  // ===== DEBT STATUSES =====
+  normal: "bg-green-50 text-green-700 border-green-200",
+  warning: "bg-amber-50 text-amber-700 border-amber-200",
+  exceeded: "bg-red-50 text-red-700 border-red-200",
 };
 
 // Hàm helper: trả về class tailwind cho badge

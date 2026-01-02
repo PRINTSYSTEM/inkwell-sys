@@ -2,6 +2,29 @@ import { Outlet, useNavigation } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export function PageLoadingFallback() {
+  return (
+    <div className="h-full flex flex-col bg-muted/30 p-6 animate-in fade-in-50 duration-200">
+      <div className="space-y-6 max-w-7xl mx-auto w-full">
+        {/* Header skeleton */}
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+
+        {/* Content skeleton */}
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function RouteLoadingOverlay() {
   return (
@@ -33,11 +56,11 @@ export default function DashboardLayout() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex h-screen w-full overflow-hidden">
         <AppSidebar />
-        <div className="relative flex flex-1 flex-col">
+        <div className="relative flex flex-1 flex-col overflow-hidden">
           <AppHeader />
-          <main className="relative flex-1 bg-muted/30 p-6">
+          <main className="relative flex-1 bg-muted/30 p-6 mt-20 h-[calc(100vh-5rem)] overflow-y-auto">
             {isLoading && <RouteLoadingOverlay />}
             <Outlet />
           </main>

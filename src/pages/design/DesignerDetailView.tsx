@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
   Search,
@@ -92,8 +92,9 @@ export default function DesignerDetailPage() {
   const [kpiDateRange, setKpiDateRange] = useState<DateRange | undefined>(
     undefined
   );
-  const [showKpi, setShowKpi] = useState(false);
+  const [pageInput, setPageInput] = useState<string>("");
   const pageSize = 20;
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Calculate date range for current month
   const currentMonthDateRange = useMemo(() => {
@@ -107,6 +108,13 @@ export default function DesignerDetailPage() {
       to: lastDay,
     };
   }, [selectedMonth, selectedYear]);
+
+  // Initialize KPI date range to current month if not set
+  useEffect(() => {
+    if (!kpiDateRange) {
+      setKpiDateRange(currentMonthDateRange);
+    }
+  }, [currentMonthDateRange]);
 
   // Fetch designer info
   const {
@@ -124,7 +132,7 @@ export default function DesignerDetailPage() {
     kpiDateRange?.to
       ? format(kpiDateRange.to, "yyyy-MM-dd'T'23:59:59.999'Z'")
       : undefined,
-    showKpi && !!designerId && !!kpiDateRange?.from && !!kpiDateRange?.to
+    !!designerId && !!kpiDateRange?.from && !!kpiDateRange?.to
   );
 
   // Fetch all designs for stats (filtered by month/year)
@@ -161,7 +169,7 @@ export default function DesignerDetailPage() {
   const pagedData = data as PagedData | undefined;
 
   const designs: DesignResponse[] = useMemo(
-    () => (Array.isArray(data) ? data : pagedData?.items ?? []),
+    () => (Array.isArray(data) ? data : (pagedData?.items ?? [])),
     [data, pagedData?.items]
   );
 
@@ -175,6 +183,53 @@ export default function DesignerDetailPage() {
   const currentPageNum = pagedData?.page || currentPage;
   const hasPreviousPage = currentPageNum > 1;
   const hasNextPage = currentPageNum < totalPages;
+
+  // Auto-adjust currentPage if it exceeds totalPages
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  // Sync pageInput with currentPage
+  useEffect(() => {
+    setPageInput(currentPageNum.toString());
+  }, [currentPageNum]);
+
+  // Scroll to top of table when page changes
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop = 0;
+    }
+  }, [currentPage]);
+
+  // Pagination handlers
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setPageInput("");
+      return;
+    }
+    const page = parseInt(value, 10);
+    if (!isNaN(page)) {
+      setPageInput(page.toString());
+    }
+  };
+
+  const handlePageInputBlur = () => {
+    const page = parseInt(pageInput, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    } else {
+      setPageInput(currentPageNum.toString());
+    }
+  };
 
   // Filter by search query (client-side)
   const filteredDesigns = useMemo(() => {
@@ -228,7 +283,7 @@ export default function DesignerDetailPage() {
   // Loading state
   if (designerLoading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">
@@ -242,7 +297,7 @@ export default function DesignerDetailPage() {
   // Error state
   if (designerError || !designer) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center">
             <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -266,30 +321,31 @@ export default function DesignerDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 shrink-0">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
+            className="h-9 w-9"
             onClick={() => navigate("/design/management")}
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarFallback className="bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700 font-semibold">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700 font-semibold text-sm">
                 {designer.username?.charAt(0).toUpperCase() || "?"}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-xl font-bold tracking-tight">
                 {designer.fullName || "Chưa có tên"}
               </h1>
-              <p className="text-muted-foreground">
-                @{designer.username || "unknown"} • Thống kê tháng{" "}
-                {selectedMonth}/{selectedYear}
+              <p className="text-xs text-muted-foreground">
+                @{designer.username || "unknown"} • Tháng {selectedMonth}/
+                {selectedYear}
               </p>
             </div>
           </div>
@@ -297,7 +353,7 @@ export default function DesignerDetailPage() {
 
         {/* Date Selectors */}
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-muted-foreground mr-1" />
+          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
           <Select
             value={selectedMonth}
             onValueChange={(v) => {
@@ -305,7 +361,7 @@ export default function DesignerDetailPage() {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[120px] bg-card">
+            <SelectTrigger className="w-[100px] h-9 text-sm">
               <SelectValue placeholder="Tháng" />
             </SelectTrigger>
             <SelectContent>
@@ -324,7 +380,7 @@ export default function DesignerDetailPage() {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[110px] bg-card">
+            <SelectTrigger className="w-[90px] h-9 text-sm">
               <SelectValue placeholder="Năm" />
             </SelectTrigger>
             <SelectContent>
@@ -332,7 +388,7 @@ export default function DesignerDetailPage() {
                 const year = new Date().getFullYear() - 2 + i;
                 return (
                   <SelectItem key={year} value={year.toString()}>
-                    Năm {year}
+                    {year}
                   </SelectItem>
                 );
               })}
@@ -342,123 +398,109 @@ export default function DesignerDetailPage() {
       </div>
 
       {/* KPI Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Chỉ số KPI
-            </CardTitle>
-            <Button
-              variant={showKpi ? "default" : "outline"}
-              size="sm"
-              onClick={() => {
-                setShowKpi(!showKpi);
-                if (!showKpi && !kpiDateRange) {
-                  setKpiDateRange(currentMonthDateRange);
-                }
-              }}
-            >
-              {showKpi ? "Ẩn KPI" : "Xem KPI"}
-            </Button>
-          </div>
+      <Card className="p-3 mb-3 shrink-0">
+        <CardHeader className="p-0 mb-2">
+          <CardTitle className="flex items-center gap-2 text-xs font-semibold">
+            <TrendingUp className="h-3.5 w-3.5" />
+            Chỉ số KPI
+          </CardTitle>
         </CardHeader>
-        {showKpi && (
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Chọn khoảng thời gian để tính KPI</Label>
-              <DateRangePicker
-                value={kpiDateRange}
-                onValueChange={setKpiDateRange}
-                placeholder="Chọn từ ngày đến ngày"
-              />
+        <CardContent className="p-0 space-y-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Chọn khoảng thời gian để tính KPI</Label>
+            <DateRangePicker
+              value={kpiDateRange}
+              onValueChange={setKpiDateRange}
+              placeholder="Chọn từ ngày đến ngày"
+            />
+          </div>
+          {loadingKpi ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
-            {loadingKpi ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : kpiData && kpiDateRange?.from && kpiDateRange?.to ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Target className="h-4 w-4 text-blue-600" />
-                      <p className="text-sm text-muted-foreground">
-                        Đã chốt in
-                      </p>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {kpiData.designsCompleted ?? 0}
+          ) : kpiData && kpiDateRange?.from && kpiDateRange?.to ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <Card className="p-2">
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Target className="h-3.5 w-3.5 text-blue-600" />
+                    <p className="text-[10px] text-muted-foreground">
+                      Đã chốt in
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      / {kpiData.totalDesignsAssigned ?? 0} được giao
+                  </div>
+                  <p className="text-xl font-bold">
+                    {kpiData.designsCompleted ?? 0}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    / {kpiData.totalDesignsAssigned ?? 0} được giao
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="p-2">
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <TrendingUp className="h-3.5 w-3.5 text-green-600" />
+                    <p className="text-[10px] text-muted-foreground">
+                      Tỷ lệ hoàn thành
                     </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="h-4 w-4 text-green-600" />
-                      <p className="text-sm text-muted-foreground">
-                        Tỷ lệ hoàn thành
-                      </p>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {kpiData.designCompletionRate
-                        ? `${(kpiData.designCompletionRate * 100).toFixed(1)}%`
-                        : "0%"}
+                  </div>
+                  <p className="text-xl font-bold">
+                    {kpiData.designCompletionRate
+                      ? `${(kpiData.designCompletionRate * 100).toFixed(1)}%`
+                      : "0%"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Thiết kế
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="p-2">
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Clock className="h-3.5 w-3.5 text-orange-600" />
+                    <p className="text-[10px] text-muted-foreground">
+                      Thời gian TB
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Thiết kế
+                  </div>
+                  <p className="text-xl font-bold">
+                    {kpiData.averageDesignTimeHours
+                      ? `${kpiData.averageDesignTimeHours.toFixed(1)}h`
+                      : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Giờ/thiết kế
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="p-2">
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <DollarSign className="h-3.5 w-3.5 text-purple-600" />
+                    <p className="text-[10px] text-muted-foreground">
+                      Doanh thu
                     </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-4 w-4 text-orange-600" />
-                      <p className="text-sm text-muted-foreground">
-                        Thời gian TB
-                      </p>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {kpiData.averageDesignTimeHours
-                        ? `${kpiData.averageDesignTimeHours.toFixed(1)}h`
-                        : "—"}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Giờ/thiết kế
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="h-4 w-4 text-purple-600" />
-                      <p className="text-sm text-muted-foreground">Doanh thu</p>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      {formatCurrency(kpiData.totalRevenueGenerated ?? 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Tổng doanh thu
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Vui lòng chọn khoảng thời gian để xem KPI
-              </p>
-            )}
-          </CardContent>
-        )}
+                  </div>
+                  <p className="text-xl font-bold">
+                    {formatCurrency(kpiData.totalRevenueGenerated ?? 0)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Tổng doanh thu
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-2">
+              Vui lòng chọn khoảng thời gian để xem KPI
+            </p>
+          )}
+        </CardContent>
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-3 shrink-0">
         <Card
-          className={`cursor-pointer transition-all ${
+          className={`cursor-pointer transition-all p-2 ${
             statusFilter === "all" ? "ring-2 ring-primary" : "hover:shadow-md"
           }`}
           onClick={() => {
@@ -466,9 +508,9 @@ export default function DesignerDetailPage() {
             setCurrentPage(1);
           }}
         >
-          <CardContent className="p-3">
-            <div className="text-xl font-bold">{stats.total}</div>
-            <div className="text-xs text-muted-foreground">Tổng cộng</div>
+          <CardContent className="p-0">
+            <div className="text-lg font-bold">{stats.total}</div>
+            <div className="text-[10px] text-muted-foreground">Tổng cộng</div>
           </CardContent>
         </Card>
 
@@ -481,7 +523,7 @@ export default function DesignerDetailPage() {
           return (
             <Card
               key={key}
-              className={`cursor-pointer transition-all ${
+              className={`cursor-pointer transition-all p-2 ${
                 isActive ? "ring-2 ring-primary" : "hover:shadow-md"
               } ${config.bgColor}`}
               onClick={() => {
@@ -489,12 +531,12 @@ export default function DesignerDetailPage() {
                 setCurrentPage(1);
               }}
             >
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2">
-                  <Icon className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xl font-bold">{count}</span>
+              <CardContent className="p-0">
+                <div className="flex items-center gap-1.5">
+                  <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-lg font-bold">{count}</span>
                 </div>
-                <div className="text-xs text-muted-foreground line-clamp-1">
+                <div className="text-[10px] text-muted-foreground line-clamp-1">
                   {config.label}
                 </div>
               </CardContent>
@@ -504,20 +546,20 @@ export default function DesignerDetailPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-card border rounded-lg p-4">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between bg-card border rounded-lg p-3 mb-3 shrink-0">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             placeholder="Tìm theo mã, tên, loại thiết kế..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9 text-sm"
           />
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Select
             value={statusFilter}
             onValueChange={(v) => {
@@ -525,8 +567,8 @@ export default function DesignerDetailPage() {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[200px]">
-              <Filter className="w-4 h-4 mr-2" />
+            <SelectTrigger className="w-[180px] h-9 text-sm">
+              <Filter className="w-3.5 h-3.5 mr-2" />
               <SelectValue placeholder="Lọc trạng thái" />
             </SelectTrigger>
             <SelectContent>
@@ -545,13 +587,14 @@ export default function DesignerDetailPage() {
             <Button
               variant="ghost"
               size="sm"
+              className="h-9 text-xs"
               onClick={() => {
                 setSearchQuery("");
                 setStatusFilter("all");
                 setCurrentPage(1);
               }}
             >
-              <SlidersHorizontal className="w-4 h-4 mr-2" />
+              <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
               Xóa lọc
             </Button>
           )}
@@ -559,19 +602,35 @@ export default function DesignerDetailPage() {
       </div>
 
       {/* Table */}
-      <Card>
-        <div className="overflow-x-auto">
+      <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div ref={tableContainerRef} className="overflow-auto flex-1">
           <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="min-w-[120px]">Mã thiết kế</TableHead>
-                <TableHead className="min-w-[200px]">Tên thiết kế</TableHead>
-                <TableHead className="min-w-[120px]">Loại</TableHead>
-                <TableHead className="min-w-[120px]">Chất liệu</TableHead>
-                <TableHead className="min-w-[100px]">Kích thước</TableHead>
-                <TableHead className="min-w-[140px]">Trạng thái</TableHead>
-                <TableHead className="min-w-[100px]">Cập nhật</TableHead>
-                <TableHead className="w-[120px] text-right">Thao tác</TableHead>
+            <TableHeader className="sticky top-0 bg-background z-10">
+              <TableRow>
+                <TableHead className="h-9 text-xs font-semibold min-w-[120px]">
+                  Mã thiết kế
+                </TableHead>
+                <TableHead className="h-9 text-xs font-semibold min-w-[200px]">
+                  Tên thiết kế
+                </TableHead>
+                <TableHead className="h-9 text-xs font-semibold min-w-[120px]">
+                  Loại
+                </TableHead>
+                <TableHead className="h-9 text-xs font-semibold min-w-[120px]">
+                  Chất liệu
+                </TableHead>
+                <TableHead className="h-9 text-xs font-semibold min-w-[100px]">
+                  Kích thước
+                </TableHead>
+                <TableHead className="h-9 text-xs font-semibold min-w-[140px]">
+                  Trạng thái
+                </TableHead>
+                <TableHead className="h-9 text-xs font-semibold min-w-[100px]">
+                  Cập nhật
+                </TableHead>
+                <TableHead className="h-9 text-xs font-semibold w-[120px] text-right">
+                  Thao tác
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -607,62 +666,62 @@ export default function DesignerDetailPage() {
                   return (
                     <TableRow
                       key={design.id}
-                      className="hover:bg-muted/50 cursor-pointer"
+                      className="hover:bg-muted/50 cursor-pointer h-11"
                     >
                       {/* Code */}
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Link
                           to={`/design/detail/${design.id}`}
-                          className="font-semibold text-primary hover:underline"
+                          className="font-semibold text-sm text-primary hover:underline"
                         >
                           {design.code || `DES-${design.id}`}
                         </Link>
                       </TableCell>
 
                       {/* Name */}
-                      <TableCell>
-                        <p className="font-medium line-clamp-1">
+                      <TableCell className="py-2">
+                        <p className="font-medium text-sm line-clamp-1">
                           {design.designName || "Chưa đặt tên"}
                         </p>
                       </TableCell>
 
                       {/* Design Type */}
-                      <TableCell>
-                        <span className="text-sm">
+                      <TableCell className="py-2">
+                        <span className="text-xs">
                           {design.designType?.name || "—"}
                         </span>
                       </TableCell>
 
                       {/* Material Type */}
-                      <TableCell>
-                        <span className="text-sm">
+                      <TableCell className="py-2">
+                        <span className="text-xs">
                           {design.materialType?.name || "—"}
                         </span>
                       </TableCell>
 
                       {/* Dimensions - STT 2: Show L x W x H */}
-                      <TableCell>
+                      <TableCell className="py-2">
                         <div className="flex flex-col">
-                          <span className="text-sm font-mono">
+                          <span className="text-xs font-mono">
                             {design.dimensions || "—"}
                           </span>
                           {(design.sidesClassificationOption ||
                             design.processClassificationOption) && (
-                            <div className="flex gap-1 mt-1">
+                            <div className="flex gap-1 mt-0.5">
                               {design.sidesClassificationOption && (
                                 <Badge
                                   variant="outline"
-                                  className="text-[9px] px-1 py-0 h-4 bg-blue-50/50"
+                                  className="text-[9px] px-1 py-0 h-3.5 bg-blue-50/50"
                                 >
-                                  {design.sidesClassificationOption.value}
+                                  {design.sidesClassificationOption as string}
                                 </Badge>
                               )}
                               {design.processClassificationOption && (
                                 <Badge
                                   variant="outline"
-                                  className="text-[9px] px-1 py-0 h-4 bg-amber-50/50"
+                                  className="text-[9px] px-1 py-0 h-3.5 bg-amber-50/50"
                                 >
-                                  {design.processClassificationOption.value}
+                                  {design.processClassificationOption as string}
                                 </Badge>
                               )}
                             </div>
@@ -671,7 +730,7 @@ export default function DesignerDetailPage() {
                       </TableCell>
 
                       {/* Status */}
-                      <TableCell>
+                      <TableCell className="py-2">
                         <Badge
                           className={`${config.color} border text-xs font-medium`}
                         >
@@ -681,14 +740,14 @@ export default function DesignerDetailPage() {
                       </TableCell>
 
                       {/* Updated At */}
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
+                      <TableCell className="py-2">
+                        <span className="text-xs text-muted-foreground">
                           {formatDate(design.updatedAt)}
                         </span>
                       </TableCell>
 
                       {/* Actions */}
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-2">
                         <div className="flex items-center justify-end gap-1">
                           <TooltipProvider>
                             <Tooltip>
@@ -697,9 +756,9 @@ export default function DesignerDetailPage() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8"
+                                    className="h-7 w-7"
                                   >
-                                    <Eye className="w-4 h-4" />
+                                    <Eye className="w-3.5 h-3.5" />
                                   </Button>
                                 </Link>
                               </TooltipTrigger>
@@ -735,36 +794,62 @@ export default function DesignerDetailPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-4 py-3">
-            <div className="text-sm text-muted-foreground">
-              Hiển thị {(currentPage - 1) * pageSize + 1} -{" "}
-              {Math.min(currentPage * pageSize, totalCount)} / {totalCount}{" "}
+        {totalCount > 0 && (
+          <div className="flex items-center justify-between border-t px-3 py-2 shrink-0 bg-background">
+            <div className="text-xs text-muted-foreground">
+              Hiển thị{" "}
+              <span className="font-medium text-foreground">
+                {(currentPageNum - 1) * pageSize + 1}
+              </span>
+              {" - "}
+              <span className="font-medium text-foreground">
+                {Math.min(currentPageNum * pageSize, totalCount)}
+              </span>{" "}
+              trong tổng số{" "}
+              <span className="font-medium text-foreground">{totalCount}</span>{" "}
               thiết kế
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={!hasPreviousPage}
+                className="h-8"
+                onClick={() => handlePageChange(currentPageNum - 1)}
+                disabled={!hasPreviousPage || isLoading}
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Trước
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                <span className="hidden sm:inline">Trang trước</span>
               </Button>
-              <span className="text-sm text-muted-foreground px-2">
-                {currentPage} / {totalPages}
-              </span>
+              <div className="flex items-center space-x-1">
+                <span className="text-xs text-muted-foreground">Trang</span>
+                <Input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  value={pageInput}
+                  onChange={handlePageInputChange}
+                  onBlur={handlePageInputBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="w-14 h-8 text-center text-xs"
+                  disabled={isLoading}
+                />
+                <span className="text-xs text-muted-foreground">
+                  / {totalPages}
+                </span>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={!hasNextPage}
+                className="h-8"
+                onClick={() => handlePageChange(currentPageNum + 1)}
+                disabled={!hasNextPage || isLoading}
               >
-                Sau
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <span className="hidden sm:inline">Trang sau</span>
+                <ChevronRight className="h-3.5 w-3.5 ml-1" />
               </Button>
             </div>
           </div>

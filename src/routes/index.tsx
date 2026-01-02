@@ -3,8 +3,9 @@ import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { AuthGuard } from "@/guards/AuthGuard";
-import DashboardLayout, {
-  RouteLoadingOverlay,
+import {
+  DashboardLayout,
+  PageLoadingFallback,
 } from "@/components/layout/DashboardLayout";
 import { ROUTE_PATHS } from "@/constants";
 import CreateCustomer from "@/pages/customers/CreateCustomer";
@@ -216,7 +217,7 @@ export const router = createBrowserRouter([
   {
     path: ROUTE_PATHS.AUTH.LOGIN,
     element: (
-      <Suspense fallback={<RouteLoadingOverlay />}>
+      <Suspense fallback={<PageLoadingFallback />}>
         <Login />
       </Suspense>
     ),
@@ -241,7 +242,7 @@ export const router = createBrowserRouter([
       {
         path: lastSegment(ROUTE_PATHS.DASHBOARD), // "dashboard"
         element: (
-          <Suspense fallback={<RouteLoadingOverlay />}>
+          <Suspense fallback={<PageLoadingFallback />}>
             <Dashboard />
           </Suspense>
         ),
@@ -254,7 +255,7 @@ export const router = createBrowserRouter([
           {
             path: lastSegment(ROUTE_PATHS.DESIGN.ALL), // "all"
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <AllDesigns />
               </Suspense>
             ),
@@ -262,7 +263,7 @@ export const router = createBrowserRouter([
           {
             path: lastSegment(ROUTE_PATHS.DESIGN.MY_WORK), // "my-work"
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <MyWorkPage />
               </Suspense>
             ),
@@ -271,7 +272,7 @@ export const router = createBrowserRouter([
             // /design/detail/:id  (dùng ROUTE_BUILDERS khi navigate)
             path: "detail/:id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <DesignDetailPage />
               </Suspense>
             ),
@@ -279,7 +280,7 @@ export const router = createBrowserRouter([
           {
             path: lastSegment(ROUTE_PATHS.DESIGN.MANAGEMENT), // "management"
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <DesignManagement />
               </Suspense>
             ),
@@ -288,7 +289,7 @@ export const router = createBrowserRouter([
             // /design/designer/:id
             path: "designer/:id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <DesignerDetailPage />
               </Suspense>
             ),
@@ -303,7 +304,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <Orders />
               </Suspense>
             ),
@@ -311,7 +312,7 @@ export const router = createBrowserRouter([
           {
             path: lastSegment(ROUTE_PATHS.ORDERS.NEW), // "new"
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CreateOrder />
               </Suspense>
             ),
@@ -320,7 +321,7 @@ export const router = createBrowserRouter([
             // /orders/:id
             path: ":id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <OrderDetail />
               </Suspense>
             ),
@@ -335,7 +336,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <Customers />
               </Suspense>
             ),
@@ -343,7 +344,7 @@ export const router = createBrowserRouter([
           {
             path: lastSegment(ROUTE_PATHS.CUSTOMERS.NEW), // "new"
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CreateCustomer />
               </Suspense>
             ),
@@ -352,7 +353,7 @@ export const router = createBrowserRouter([
             // /customers/:id
             path: ":id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CustomerDetail />
               </Suspense>
             ),
@@ -367,7 +368,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <DesignTypes />
               </Suspense>
             ),
@@ -382,7 +383,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ProofingList />
               </Suspense>
             ),
@@ -390,7 +391,7 @@ export const router = createBrowserRouter([
           {
             path: lastSegment(ROUTE_PATHS.PROOFING.CREATE),
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ProofingCreate />
               </Suspense>
             ),
@@ -398,7 +399,7 @@ export const router = createBrowserRouter([
           {
             path: lastSegment(ROUTE_PATHS.PROOFING.CREATE_PRINT_ORDER), // "create-print-order"
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ProofingCreatePrintOrder />
               </Suspense>
             ),
@@ -406,7 +407,7 @@ export const router = createBrowserRouter([
           {
             path: "check",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ProofingCheck />
               </Suspense>
             ),
@@ -414,7 +415,7 @@ export const router = createBrowserRouter([
           {
             path: "output",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ProofingOutput />
               </Suspense>
             ),
@@ -422,7 +423,7 @@ export const router = createBrowserRouter([
           {
             path: ":id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ProofingDetail />
               </Suspense>
             ),
@@ -437,7 +438,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <Production />
               </Suspense>
             ),
@@ -445,7 +446,7 @@ export const router = createBrowserRouter([
           {
             path: lastSegment(ROUTE_PATHS.PRODUCTION.DETAIL), // "detail"
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ProductionDetailPage />
               </Suspense>
             ),
@@ -460,7 +461,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <Inventory />
               </Suspense>
             ),
@@ -468,7 +469,7 @@ export const router = createBrowserRouter([
           {
             path: "create",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CreateMaterial />
               </Suspense>
             ),
@@ -476,7 +477,7 @@ export const router = createBrowserRouter([
           {
             path: "templates",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ProductTemplates />
               </Suspense>
             ),
@@ -484,7 +485,7 @@ export const router = createBrowserRouter([
           {
             path: ":id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <InventoryDetail />
               </Suspense>
             ),
@@ -502,7 +503,7 @@ export const router = createBrowserRouter([
               {
                 index: true,
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <StockInList />
                   </Suspense>
                 ),
@@ -510,7 +511,7 @@ export const router = createBrowserRouter([
               {
                 path: "create",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <StockInCreate />
                   </Suspense>
                 ),
@@ -523,7 +524,7 @@ export const router = createBrowserRouter([
               {
                 index: true,
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <StockOutList />
                   </Suspense>
                 ),
@@ -531,7 +532,7 @@ export const router = createBrowserRouter([
               {
                 path: "create",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <StockOutCreate />
                   </Suspense>
                 ),
@@ -548,7 +549,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <VendorList />
               </Suspense>
             ),
@@ -563,7 +564,7 @@ export const router = createBrowserRouter([
           {
             path: "payment",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <PaymentPage />
               </Suspense>
             ),
@@ -571,7 +572,7 @@ export const router = createBrowserRouter([
           {
             path: "invoice",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <InvoicePage />
               </Suspense>
             ),
@@ -579,7 +580,7 @@ export const router = createBrowserRouter([
           {
             path: "delivery",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <DeliveryPage />
               </Suspense>
             ),
@@ -587,7 +588,7 @@ export const router = createBrowserRouter([
           {
             path: "orders/:id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <AccountingOrderDetail />
               </Suspense>
             ),
@@ -595,7 +596,7 @@ export const router = createBrowserRouter([
           {
             path: "debt-report",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <AccountingDebtReport />
               </Suspense>
             ),
@@ -603,7 +604,7 @@ export const router = createBrowserRouter([
           {
             path: "revenue",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <AccountingRevenue />
               </Suspense>
             ),
@@ -611,7 +612,7 @@ export const router = createBrowserRouter([
           {
             path: "expenses",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <AccountingExpenses />
               </Suspense>
             ),
@@ -620,7 +621,7 @@ export const router = createBrowserRouter([
           {
             path: "cash-payments",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CashPaymentList />
               </Suspense>
             ),
@@ -628,7 +629,7 @@ export const router = createBrowserRouter([
           {
             path: "cash-payments/:id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CashPaymentDetail />
               </Suspense>
             ),
@@ -636,7 +637,7 @@ export const router = createBrowserRouter([
           {
             path: "cash-funds",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CashFundList />
               </Suspense>
             ),
@@ -644,7 +645,7 @@ export const router = createBrowserRouter([
           {
             path: "cash-receipts",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CashReceiptList />
               </Suspense>
             ),
@@ -652,7 +653,7 @@ export const router = createBrowserRouter([
           {
             path: "cash-receipts/:id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CashReceiptDetail />
               </Suspense>
             ),
@@ -660,7 +661,7 @@ export const router = createBrowserRouter([
           {
             path: "cash-book",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CashBook />
               </Suspense>
             ),
@@ -669,7 +670,7 @@ export const router = createBrowserRouter([
           {
             path: "bank-accounts",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <BankAccountList />
               </Suspense>
             ),
@@ -677,7 +678,7 @@ export const router = createBrowserRouter([
           {
             path: "bank-ledger",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <BankLedger />
               </Suspense>
             ),
@@ -686,7 +687,7 @@ export const router = createBrowserRouter([
           {
             path: "ar",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <AR />
               </Suspense>
             ),
@@ -695,7 +696,7 @@ export const router = createBrowserRouter([
           {
             path: "ap",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <AP />
               </Suspense>
             ),
@@ -703,7 +704,7 @@ export const router = createBrowserRouter([
           {
             path: "collection-schedule",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <CollectionSchedule />
               </Suspense>
             ),
@@ -712,7 +713,7 @@ export const router = createBrowserRouter([
           {
             path: "expense-categories",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ExpenseCategoryList />
               </Suspense>
             ),
@@ -720,7 +721,7 @@ export const router = createBrowserRouter([
           {
             path: "payment-methods",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <PaymentMethodList />
               </Suspense>
             ),
@@ -735,7 +736,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <DeliveryNoteList />
               </Suspense>
             ),
@@ -743,7 +744,7 @@ export const router = createBrowserRouter([
           {
             path: ":id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <DeliveryNoteDetail />
               </Suspense>
             ),
@@ -758,7 +759,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <InvoiceList />
               </Suspense>
             ),
@@ -766,7 +767,7 @@ export const router = createBrowserRouter([
           {
             path: ":id",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <InvoiceDetail />
               </Suspense>
             ),
@@ -781,7 +782,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <Attendance />
               </Suspense>
             ),
@@ -789,7 +790,7 @@ export const router = createBrowserRouter([
           {
             path: "reports",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <AttendanceReports />
               </Suspense>
             ),
@@ -804,7 +805,7 @@ export const router = createBrowserRouter([
           {
             path: lastSegment(ROUTE_PATHS.ADMIN.USERS), // "users"
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <EmployeeList />
               </Suspense>
             ),
@@ -812,7 +813,7 @@ export const router = createBrowserRouter([
           {
             path: "users/create", // /admin/users/create (must be before users/:id)
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <EmployeeCreate />
               </Suspense>
             ),
@@ -820,7 +821,7 @@ export const router = createBrowserRouter([
           {
             path: "users/:id", // /admin/users/:id
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <EmployeeDetail />
               </Suspense>
             ),
@@ -839,7 +840,7 @@ export const router = createBrowserRouter([
               {
                 path: "current-stock",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <CurrentStock />
                   </Suspense>
                 ),
@@ -847,7 +848,7 @@ export const router = createBrowserRouter([
               {
                 path: "summary",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <InventorySummary />
                   </Suspense>
                 ),
@@ -855,7 +856,7 @@ export const router = createBrowserRouter([
               {
                 path: "low-stock",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <LowStock />
                   </Suspense>
                 ),
@@ -863,7 +864,7 @@ export const router = createBrowserRouter([
               {
                 path: "slow-moving",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <SlowMoving />
                   </Suspense>
                 ),
@@ -871,7 +872,7 @@ export const router = createBrowserRouter([
               {
                 path: "stock-card/:itemCode",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <StockCard />
                   </Suspense>
                 ),
@@ -885,7 +886,7 @@ export const router = createBrowserRouter([
               {
                 path: "by-period",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <SalesByPeriod />
                   </Suspense>
                 ),
@@ -893,7 +894,7 @@ export const router = createBrowserRouter([
               {
                 path: "by-customer",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <SalesByCustomer />
                   </Suspense>
                 ),
@@ -901,7 +902,7 @@ export const router = createBrowserRouter([
               {
                 path: "by-dimension",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <SalesByDimension />
                   </Suspense>
                 ),
@@ -909,7 +910,7 @@ export const router = createBrowserRouter([
               {
                 path: "top-products",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <TopProducts />
                   </Suspense>
                 ),
@@ -917,7 +918,7 @@ export const router = createBrowserRouter([
               {
                 path: "returns-discounts",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <ReturnsDiscounts />
                   </Suspense>
                 ),
@@ -925,7 +926,7 @@ export const router = createBrowserRouter([
               {
                 path: "order-drill-down",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <OrderDrillDown />
                   </Suspense>
                 ),
@@ -939,7 +940,7 @@ export const router = createBrowserRouter([
               {
                 path: "by-time",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <ExpenseByTime />
                   </Suspense>
                 ),
@@ -947,7 +948,7 @@ export const router = createBrowserRouter([
               {
                 path: "by-category",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <ExpenseByCategory />
                   </Suspense>
                 ),
@@ -955,7 +956,7 @@ export const router = createBrowserRouter([
               {
                 path: "by-vendor",
                 element: (
-                  <Suspense fallback={<RouteLoadingOverlay />}>
+                  <Suspense fallback={<PageLoadingFallback />}>
                     <ExpenseByVendor />
                   </Suspense>
                 ),
@@ -966,7 +967,7 @@ export const router = createBrowserRouter([
           {
             path: "exports",
             element: (
-              <Suspense fallback={<RouteLoadingOverlay />}>
+              <Suspense fallback={<PageLoadingFallback />}>
                 <ReportExportList />
               </Suspense>
             ),
@@ -978,7 +979,7 @@ export const router = createBrowserRouter([
       {
         path: lastSegment(ROUTE_PATHS.NOTIFICATIONS), // "notifications"
         element: (
-          <Suspense fallback={<RouteLoadingOverlay />}>
+          <Suspense fallback={<PageLoadingFallback />}>
             <NotificationCenter />
           </Suspense>
         ),
@@ -988,7 +989,7 @@ export const router = createBrowserRouter([
       {
         path: lastSegment(ROUTE_PATHS.PROFILE), // "profile"
         element: (
-          <Suspense fallback={<RouteLoadingOverlay />}>
+          <Suspense fallback={<PageLoadingFallback />}>
             <Profile />
           </Suspense>
         ),
@@ -1000,7 +1001,7 @@ export const router = createBrowserRouter([
   {
     path: "*",
     element: (
-      <Suspense fallback={<RouteLoadingOverlay />}>
+      <Suspense fallback={<PageLoadingFallback />}>
         <NotFound />
       </Suspense>
     ),

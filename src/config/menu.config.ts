@@ -159,7 +159,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
       {
         id: "proofing-create-print-order",
-        title: "Tạo lệnh bình bài",
+        title: "Tạo mã bài",
         icon: Layers,
         path: ROUTE_PATHS.PROOFING.CREATE,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
