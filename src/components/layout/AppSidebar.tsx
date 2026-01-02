@@ -1,6 +1,6 @@
 // src/components/layout/AppSidebar.tsx
-import { NavLink } from "react-router-dom";
-import { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 import {
   Sidebar,
@@ -37,16 +37,31 @@ function hasAccess(allowedRoles: "all" | UserRole[], role: UserRole): boolean {
   return allowedRoles.includes(role);
 }
 
-function renderLeaf(item: MenuItemLeaf) {
+function renderLeaf(
+  item: MenuItemLeaf,
+  location: ReturnType<typeof useLocation>
+) {
+  // Enhanced isActive check for nested routes
+  const checkIsActive = (path: string) => {
+    const currentPath = location.pathname;
+    if (currentPath === path) return true;
+    if (path !== "/" && currentPath.startsWith(path + "/")) return true;
+    return false;
+  };
+
+  const isActive = checkIsActive(item.path);
+
   return (
     <SidebarMenuButton key={item.id} asChild>
       <NavLink
         to={item.path}
-        className={({ isActive }) =>
-          isActive
+        className={() => {
+          // Always use our custom check
+          const active = checkIsActive(item.path);
+          return active
             ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-        }
+            : "text-sidebar-foreground hover:bg-sidebar-accent/50";
+        }}
       >
         <item.icon className="h-4 w-4" />
         <span>{item.title}</span>
@@ -59,12 +74,30 @@ function renderGroup(
   item: MenuItemGroup,
   role: UserRole,
   openSubmenus: string[],
-  toggleSubmenu: (id: string) => void
+  toggleSubmenu: (id: string) => void,
+  location: ReturnType<typeof useLocation>
 ) {
   const visibleChildren = item.children.filter((child) =>
     hasAccess(child.allowedRoles, role)
   );
   if (visibleChildren.length === 0) return null;
+
+  // Check if any child is active
+  const hasActiveChild = visibleChildren.some((child) => {
+    const path = child.path;
+    return (
+      location.pathname === path ||
+      (path !== "/" && location.pathname.startsWith(path + "/"))
+    );
+  });
+
+  // Helper function to check if path is active
+  const checkIsActive = (path: string) => {
+    const currentPath = location.pathname;
+    if (currentPath === path) return true;
+    if (path !== "/" && currentPath.startsWith(path + "/")) return true;
+    return false;
+  };
 
   // 🔹 TRƯỜNG HỢP CHỈ CÓ 1 CHILD => HIỆN THẲNG ITEM, KHÔNG CẦN SUBMENU
   if (visibleChildren.length === 1) {
@@ -75,11 +108,13 @@ function renderGroup(
       <SidebarMenuButton asChild>
         <NavLink
           to={child.path}
-          className={({ isActive }) =>
-            isActive
+          className={() => {
+            // Always use our custom check
+            const active = checkIsActive(child.path);
+            return active
               ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-              : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-          }
+              : "text-sidebar-foreground hover:bg-sidebar-accent/50";
+          }}
         >
           <Icon className="h-4 w-4" />
           <span>{child.title}</span>
@@ -94,7 +129,13 @@ function renderGroup(
   return (
     <Collapsible open={isOpen} onOpenChange={() => toggleSubmenu(item.id)}>
       <CollapsibleTrigger asChild>
-        <SidebarMenuButton className="w-full justify-between">
+        <SidebarMenuButton
+          className={`w-full justify-between ${
+            hasActiveChild
+              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
+              : ""
+          }`}
+        >
           <div className="flex items-center gap-2">
             <item.icon className="h-4 w-4" />
             <span>{item.title}</span>
@@ -108,23 +149,27 @@ function renderGroup(
       </CollapsibleTrigger>
       <CollapsibleContent>
         <SidebarMenuSub>
-          {visibleChildren.map((child) => (
-            <SidebarMenuSubItem key={child.id}>
-              <SidebarMenuSubButton asChild>
-                <NavLink
-                  to={child.path}
-                  className={({ isActive }) =>
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                  }
-                >
-                  <child.icon className="h-4 w-4" />
-                  <span>{child.title}</span>
-                </NavLink>
-              </SidebarMenuSubButton>
-            </SidebarMenuSubItem>
-          ))}
+          {visibleChildren.map((child) => {
+            return (
+              <SidebarMenuSubItem key={child.id}>
+                <SidebarMenuSubButton asChild>
+                  <NavLink
+                    to={child.path}
+                    className={() => {
+                      // Always use our custom check
+                      const active = checkIsActive(child.path);
+                      return active
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent/50";
+                    }}
+                  >
+                    <child.icon className="h-4 w-4" />
+                    <span>{child.title}</span>
+                  </NavLink>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            );
+          })}
         </SidebarMenuSub>
       </CollapsibleContent>
     </Collapsible>
@@ -133,11 +178,41 @@ function renderGroup(
 
 export function AppSidebar() {
   const { user } = useAuth();
+  const location = useLocation();
   const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
 
   if (!user) return null;
 
   const role = user.role as UserRole;
+
+  // Auto-expand submenus that have active children
+  useEffect(() => {
+    const activeSubmenuIds: string[] = [];
+
+    MENU_ITEMS.forEach((item) => {
+      if ("children" in item && item.children) {
+        const hasActiveChild = item.children.some((child) => {
+          if (!hasAccess(child.allowedRoles, role)) return false;
+          const path = child.path;
+          return (
+            location.pathname === path ||
+            (path !== "/" && location.pathname.startsWith(path + "/"))
+          );
+        });
+
+        if (hasActiveChild) {
+          activeSubmenuIds.push(item.id);
+        }
+      }
+    });
+
+    if (activeSubmenuIds.length > 0) {
+      setOpenSubmenus((prev) => {
+        const combined = [...new Set([...prev, ...activeSubmenuIds])];
+        return combined;
+      });
+    }
+  }, [location.pathname, role]);
 
   const toggleSubmenu = (id: string) => {
     setOpenSubmenus((prev) =>
@@ -183,9 +258,10 @@ export function AppSidebar() {
                         item as MenuItemGroup,
                         role,
                         openSubmenus,
-                        toggleSubmenu
+                        toggleSubmenu,
+                        location
                       )
-                    : renderLeaf(item as MenuItemLeaf)}
+                    : renderLeaf(item as MenuItemLeaf, location)}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

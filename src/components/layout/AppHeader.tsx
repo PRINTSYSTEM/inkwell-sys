@@ -37,8 +37,8 @@ export function AppHeader() {
   if (!user) return null;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-4">
+    <header className="fixed top-0 z-50 w-[calc(100%-var(--sidebar-width))] border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-20 items-center justify-between px-4">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <SidebarTrigger />
           <h1 className="text-xl font-semibold ml-4 truncate">Dashboard</h1>
@@ -54,7 +54,9 @@ export function AppHeader() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:block text-left min-w-0">
-                  <p className="text-sm font-medium truncate">{user.fullName}</p>
+                  <p className="text-sm font-medium truncate">
+                    {user.fullName}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {ROLE_LABELS[user.role] || user.role}
                   </p>

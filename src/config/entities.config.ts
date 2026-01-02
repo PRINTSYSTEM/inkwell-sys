@@ -189,4 +189,13 @@ export const ENTITY_CONFIG = {
       cancelled: "Hủy món",
     },
   },
+  debtStatuses: {
+    entityType: "Customer",
+    description: "Trạng thái công nợ khách hàng",
+    values: {
+      normal: "Bình thường",
+      warning: "Cảnh báo",
+      exceeded: "Vượt hạn mức",
+    },
+  },
 };

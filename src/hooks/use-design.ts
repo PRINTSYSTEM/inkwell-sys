@@ -3,13 +3,14 @@ import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import type {
   DesignResponse,
-  DesignResponsePagedResponse,
+  DesignResponsePaginate,
   DesignListParams,
   MyDesignListParams,
   DesignTimelineEntryResponse,
   DesignTimelineEntryResponsePaginate,
   UpdateDesignRequest,
   DesignByCustomerListParams,
+  RevertDesignRequest,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -29,7 +30,7 @@ const {
   UpdateDesignRequest,
   number,
   DesignListParams,
-  DesignResponsePagedResponse
+  DesignResponsePaginate
 >({
   rootKey: "designs",
   basePath: API_SUFFIX.DESIGNS,
@@ -56,7 +57,7 @@ export const useMyDesigns = (params?: MyDesignListParams) => {
   return useQuery({
     queryKey: [designKeys.all[0], "my", params ?? {}],
     queryFn: async () => {
-      const res = await apiRequest.get<DesignResponsePagedResponse>(
+      const res = await apiRequest.get<DesignResponsePaginate>(
         API_SUFFIX.MY_DESIGNS,
         { params }
       );
@@ -82,7 +83,7 @@ export const useDesignsByUser = (
     queryKey: [designKeys.all[0], "user", userId, params ?? {}],
     enabled: enabled && !!userId,
     queryFn: async () => {
-      const res = await apiRequest.get<DesignResponsePagedResponse>(
+      const res = await apiRequest.get<DesignResponsePaginate>(
         API_SUFFIX.DESIGN_BY_USER(userId as number),
         { params }
       );
@@ -350,7 +351,7 @@ export const useDesignsByCustomer = (params?: DesignByCustomerListParams) => {
     queryKey: [designKeys.all[0], "by-customer", params ?? {}],
     enabled: !!params?.customerId, // Only query when customerId is provided
     queryFn: async () => {
-      const res = await apiRequest.get<DesignResponsePagedResponse>(
+      const res = await apiRequest.get<DesignResponsePaginate>(
         API_SUFFIX.DESIGN_BY_CUSTOMER(params?.customerId as number),
         { params }
       );
@@ -358,4 +359,63 @@ export const useDesignsByCustomer = (params?: DesignByCustomerListParams) => {
     },
     staleTime: 5 * 60 * 1000,
   });
+};
+
+// POST /api/designs/{id}/revert-to-waiting
+export const useRevertDesign = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    DesignResponse,
+    [{ id: number; reason: string }]
+  >(async ({ id, reason }) => {
+    const res = await apiRequest.post<DesignResponse>(
+      API_SUFFIX.DESIGN_REVERT_TO_WAITING(id),
+      { reason } as RevertDesignRequest
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: { id: number; reason: string }) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate design detail and related queries
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(payload.id),
+      });
+      queryClient.invalidateQueries({
+        queryKey: [designKeys.all[0], "my"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: designKeys.all,
+      });
+
+      toast.success("Thành công", {
+        description: "Đã hoàn nguyên thiết kế về trạng thái chờ",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể hoàn nguyên thiết kế",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };

@@ -51,7 +51,7 @@ import { useProofingOrdersForProduction } from "@/hooks/use-proofing-order";
 import { useAuth } from "@/hooks/use-auth";
 import {
   ProductionResponse,
-  ProductionResponsePagedResponseSchema,
+  ProductionResponsePaginateSchema,
   safeParseSchema,
   type ProductionListParams,
   type ProofingOrderResponse,
@@ -93,7 +93,7 @@ export default function ProductionListPage() {
   // Try to parse with schema, but fallback to raw data if validation fails
   // Similar to plate export issue - API returns 200 but schema validation might fail
   const parseProdResp = safeParseSchema(
-    ProductionResponsePagedResponseSchema,
+    ProductionResponsePaginateSchema,
     productionsResp
   );
 

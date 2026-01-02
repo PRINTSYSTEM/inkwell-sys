@@ -98,12 +98,15 @@ export default function PrepressCreatePrintOrder() {
   });
 
   // Group orders by design type for visual organization
-  const ordersByDesignType = filteredOrders.reduce((acc, order) => {
-    const type = order.designType;
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(order);
-    return acc;
-  }, {} as Record<string, typeof filteredOrders>);
+  const ordersByDesignType = filteredOrders.reduce(
+    (acc, order) => {
+      const type = order.designType;
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(order);
+      return acc;
+    },
+    {} as Record<string, typeof filteredOrders>
+  );
 
   const handleOrderSelect = (orderId: string) => {
     setSelectedOrders((prev) =>
@@ -151,7 +154,7 @@ export default function PrepressCreatePrintOrder() {
       });
 
       toast.success(
-        `Đã tạo lệnh bình bài "${prepressOrderInfo.title}" với ${selectedOrders.length} đơn hàng`
+        `Đã tạo mã bài "${prepressOrderInfo.title}" với ${selectedOrders.length} đơn hàng`
       );
       setIsCreatingOrder(false);
       setShowCreateDialog(false);
@@ -175,9 +178,9 @@ export default function PrepressCreatePrintOrder() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Tạo lệnh bình bài</h1>
+          <h1 className="text-3xl font-bold">Tạo mã bài</h1>
           <p className="text-muted-foreground">
-            Chọn các đơn hàng đã đặt cọc theo loại thiết kế để tạo lệnh bình bài
+            Chọn các đơn hàng đã đặt cọc theo loại thiết kế để tạo mã bài
           </p>
         </div>
         <div className="flex gap-2">
@@ -190,7 +193,7 @@ export default function PrepressCreatePrintOrder() {
             className="gap-2"
           >
             <Plus className="h-4 w-4" />
-            Tạo lệnh bình bài ({selectedOrders.length})
+            Tạo mã bài ({selectedOrders.length})
           </Button>
         </div>
       </div>
@@ -458,9 +461,9 @@ export default function PrepressCreatePrintOrder() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Tạo lệnh bình bài</DialogTitle>
+            <DialogTitle>Tạo mã bài</DialogTitle>
             <DialogDescription>
-              Tạo lệnh bình bài cho {selectedOrders.length} đơn hàng đã chọn
+              Tạo mã bài cho {selectedOrders.length} đơn hàng đã chọn
             </DialogDescription>
           </DialogHeader>
 
@@ -625,7 +628,7 @@ export default function PrepressCreatePrintOrder() {
               onClick={handleCreatePrepressOrder}
               disabled={isCreatingOrder}
             >
-              {isCreatingOrder ? "Đang tạo..." : "Tạo lệnh bình bài"}
+              {isCreatingOrder ? "Đang tạo..." : "Tạo mã bài"}
             </Button>
           </DialogFooter>
         </DialogContent>

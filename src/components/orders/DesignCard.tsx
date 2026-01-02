@@ -1,6 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2, AlertCircle, CheckCircle2, Package, Layers, Ruler, FileText } from "lucide-react";
+import {
+  Edit2,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  Package,
+  Layers,
+  Ruler,
+  FileText,
+} from "lucide-react";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 
 // Type definition for DesignType - matches API response
@@ -170,7 +179,9 @@ export const DesignCard: React.FC<DesignCardProps> = ({
               <div className="flex items-start gap-2">
                 <Package className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground mb-0.5">Loại thiết kế</p>
+                  <p className="text-xs text-muted-foreground mb-0.5">
+                    Loại thiết kế
+                  </p>
                   <p className="font-medium">{designType.name}</p>
                 </div>
               </div>
@@ -181,7 +192,9 @@ export const DesignCard: React.FC<DesignCardProps> = ({
               <div className="flex items-start gap-2">
                 <Layers className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground mb-0.5">Chất liệu</p>
+                  <p className="text-xs text-muted-foreground mb-0.5">
+                    Chất liệu
+                  </p>
                   <p className="font-medium">{material.name}</p>
                 </div>
               </div>
@@ -192,15 +205,10 @@ export const DesignCard: React.FC<DesignCardProps> = ({
               <Package className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground mb-0.5">Số lượng</p>
-                <p className={`font-medium ${design.quantity > 0 ? "text-foreground" : "text-amber-600"}`}>
-                  {design.quantity > 0
-                    ? design.quantity.toLocaleString("vi-VN")
-                    : "Chưa nhập"}
-                  {design.minQuantity && design.minQuantity > 0 && (
-                    <span className="text-xs text-muted-foreground ml-1">
-                      (Min: {design.minQuantity.toLocaleString("vi-VN")})
-                    </span>
-                  )}
+                <p
+                  className={`font-medium ${design.quantity > 0 ? "text-foreground" : "text-amber-600"}`}
+                >
+                  {design.quantity > 0 ? design.quantity : "Chưa nhập"}
                 </p>
               </div>
             </div>
@@ -210,9 +218,18 @@ export const DesignCard: React.FC<DesignCardProps> = ({
               <div className="flex items-start gap-2">
                 <Ruler className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground mb-0.5">Kích thước</p>
+                  <p className="text-xs text-muted-foreground mb-0.5">
+                    Kích thước (
+                    {design.width && design.width > 0
+                      ? "Dài x Rộng x Cao"
+                      : "Dài x Cao"}
+                    )
+                  </p>
                   <p className="font-medium">
-                    {design.length || 0} × {design.height || 0} {design.width ? `× ${design.width}` : ""} mm
+                    {design.width && design.width > 0
+                      ? `${design.length || 0} × ${design.width} × ${design.height || 0}`
+                      : `${design.length || 0} × ${design.height || 0}`}
+                    {" mm"}
                   </p>
                 </div>
               </div>
@@ -223,7 +240,9 @@ export const DesignCard: React.FC<DesignCardProps> = ({
               <div className="flex items-start gap-2">
                 <Layers className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground mb-0.5">Cán màn</p>
+                  <p className="text-xs text-muted-foreground mb-0.5">
+                    Cán màn
+                  </p>
                   <p className="font-medium">
                     {ENTITY_CONFIG.laminationTypes.values[
                       design.laminationType as keyof typeof ENTITY_CONFIG.laminationTypes.values
@@ -239,7 +258,9 @@ export const DesignCard: React.FC<DesignCardProps> = ({
             <div className="flex items-start gap-2 pt-1 border-t">
               <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground mb-1">Yêu cầu thiết kế</p>
+                <p className="text-xs text-muted-foreground mb-1">
+                  Yêu cầu thiết kế
+                </p>
                 <p className="text-sm text-foreground line-clamp-2">
                   {design.requirements}
                 </p>

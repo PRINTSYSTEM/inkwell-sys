@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -10,7 +10,7 @@ import {
   Image as ImageIcon,
   FileText,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 
 import { Button } from "@/components/ui/button";
@@ -70,8 +70,15 @@ import {
 export default function OrderCreatePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const { mutateAsync: createOrder, isPending: isCreatingOrder } =
     useCreateOrder();
+
+  // Get customerId from URL params
+  const customerIdFromUrl = searchParams.get("customerId");
+  const parsedCustomerId = customerIdFromUrl
+    ? parseInt(customerIdFromUrl, 10)
+    : null;
 
   // API Hooks
   const {
@@ -106,6 +113,47 @@ export default function OrderCreatePage() {
 
   const [selectedCustomer, setSelectedCustomer] =
     useState<CustomerSummaryResponse | null>(null);
+
+  // Auto-select customer from URL params
+  useEffect(() => {
+    if (
+      parsedCustomerId &&
+      !loadingCustomers &&
+      customers.length > 0 &&
+      !selectedCustomer
+    ) {
+      const customer = customers.find((c) => c.id === parsedCustomerId);
+      if (customer) {
+        setSelectedCustomer(customer);
+        // Remove customerId from URL after selection
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete("customerId");
+        const newUrl = newSearchParams.toString()
+          ? `${window.location.pathname}?${newSearchParams.toString()}`
+          : window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+      } else if (
+        parsedCustomerId &&
+        !loadingCustomers &&
+        customers.length > 0
+      ) {
+        // Customer not found, show warning and remove from URL
+        toast.warning("Không tìm thấy khách hàng với ID đã cho");
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete("customerId");
+        const newUrl = newSearchParams.toString()
+          ? `${window.location.pathname}?${newSearchParams.toString()}`
+          : window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+      }
+    }
+  }, [
+    parsedCustomerId,
+    loadingCustomers,
+    customers,
+    selectedCustomer,
+    searchParams,
+  ]);
 
   // Search state for existing designs
   const [designSearchQuery, setDesignSearchQuery] = useState<string>("");
@@ -599,65 +647,12 @@ export default function OrderCreatePage() {
                 </CardContent>
               </Card>
 
-              {/* 2. DELIVERY */}
+              {/* 2. DESIGNS */}
               <Card>
                 <CardHeader className="py-4">
                   <CardTitle className="flex items-center gap-2 text-base font-semibold">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs text-primary">
                       2
-                    </span>
-                    Thông tin giao hàng
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-0 pb-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Ngày giao dự kiến
-                    </Label>
-                    <Input
-                      type="datetime-local"
-                      value={formData.deliveryDate}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          deliveryDate: e.target.value,
-                        }))
-                      }
-                      className="bg-background h-10 text-sm max-w-xs"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Địa chỉ giao hàng
-                    </Label>
-                    <Textarea
-                      placeholder="Nhập địa chỉ giao hàng (nếu khác với địa chỉ khách hàng)..."
-                      value={formData.deliveryAddress}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          deliveryAddress: e.target.value,
-                        }))
-                      }
-                      rows={2}
-                      className="resize-none bg-background text-sm"
-                      maxLength={500}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {formData.deliveryAddress.length}/500 ký tự
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* 3. DESIGNS */}
-              <Card>
-                <CardHeader className="py-4">
-                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs text-primary">
-                      3
                     </span>
                     Thiết kế
                   </CardTitle>

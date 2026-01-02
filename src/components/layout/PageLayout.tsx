@@ -1,24 +1,24 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowLeft, 
-  MoreHorizontal, 
+import React from "react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import {
+  ArrowLeft,
+  MoreHorizontal,
   Loader2,
   AlertCircle,
   CheckCircle,
-  Info
-} from 'lucide-react';
+  Info,
+} from "lucide-react";
 
 export interface PageAction {
   id: string;
   label: string;
   icon?: React.ElementType;
   onClick: () => void;
-  variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'destructive';
-  size?: 'default' | 'sm' | 'lg';
+  variant?: "default" | "outline" | "secondary" | "ghost" | "destructive";
+  size?: "default" | "sm" | "lg";
   disabled?: boolean;
   loading?: boolean;
 }
@@ -33,27 +33,38 @@ export interface PageLayoutProps {
   title: string;
   description?: string;
   children: React.ReactNode;
-  
+
   // Header elements
   breadcrumbs?: PageBreadcrumb[];
   actions?: PageAction[];
   badge?: {
     text: string;
-    variant?: 'default' | 'secondary' | 'destructive' | 'outline';
+    variant?: "default" | "secondary" | "destructive" | "outline";
   };
-  
+
   // Navigation
   showBack?: boolean;
   onBack?: () => void;
   backLabel?: string;
-  
+
   // Layout options
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
+  maxWidth?:
+    | "sm"
+    | "md"
+    | "lg"
+    | "xl"
+    | "2xl"
+    | "3xl"
+    | "4xl"
+    | "5xl"
+    | "6xl"
+    | "7xl"
+    | "full";
   padding?: boolean;
   className?: string;
   headerClassName?: string;
   contentClassName?: string;
-  
+
   // Status indicators
   loading?: boolean;
   error?: string;
@@ -65,38 +76,38 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   title,
   description,
   children,
-  
+
   breadcrumbs = [],
   actions = [],
   badge,
-  
+
   showBack = false,
   onBack,
-  backLabel = 'Quay lại',
-  
-  maxWidth = '7xl',
+  backLabel = "Quay lại",
+
+  maxWidth = "7xl",
   padding = true,
   className,
   headerClassName,
   contentClassName,
-  
+
   loading = false,
   error,
   success,
-  info
+  info,
 }) => {
   const maxWidthClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md', 
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-    '3xl': 'max-w-3xl',
-    '4xl': 'max-w-4xl',
-    '5xl': 'max-w-5xl',
-    '6xl': 'max-w-6xl',
-    '7xl': 'max-w-7xl',
-    full: 'max-w-full'
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-lg",
+    xl: "max-w-xl",
+    "2xl": "max-w-2xl",
+    "3xl": "max-w-3xl",
+    "4xl": "max-w-4xl",
+    "5xl": "max-w-5xl",
+    "6xl": "max-w-6xl",
+    "7xl": "max-w-7xl",
+    full: "max-w-full",
   };
 
   const renderStatusMessage = () => {
@@ -167,8 +178,8 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
           return (
             <Button
               key={action.id}
-              variant={action.variant || 'default'}
-              size={action.size || 'default'}
+              variant={action.variant || "default"}
+              size={action.size || "default"}
               onClick={action.onClick}
               disabled={action.disabled || action.loading}
             >
@@ -181,7 +192,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
             </Button>
           );
         })}
-        
+
         {moreActions.length > 0 && (
           <Button variant="ghost" size="sm">
             <MoreHorizontal className="h-4 w-4" />
@@ -192,20 +203,16 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   };
 
   return (
-    <div className={cn(
-      'min-h-screen bg-background',
-      className
-    )}>
-      <div className={cn(
-        'mx-auto',
-        maxWidthClasses[maxWidth],
-        padding && 'px-4 sm:px-6 lg:px-8 py-6'
-      )}>
+    <div className={cn("min-h-[calc(100vh-5rem)] bg-background", className)}>
+      <div
+        className={cn(
+          "mx-auto",
+          maxWidthClasses[maxWidth],
+          padding && "px-4 sm:px-6 lg:px-8 py-6"
+        )}
+      >
         {/* Header */}
-        <div className={cn(
-          'mb-6',
-          headerClassName
-        )}>
+        <div className={cn("mb-6", headerClassName)}>
           {/* Back navigation */}
           {showBack && (
             <div className="mb-4">
@@ -232,7 +239,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
                   {title}
                 </h1>
                 {badge && (
-                  <Badge variant={badge.variant || 'secondary'}>
+                  <Badge variant={badge.variant || "secondary"}>
                     {badge.text}
                   </Badge>
                 )}
@@ -241,9 +248,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
                 )}
               </div>
               {description && (
-                <p className="text-muted-foreground max-w-2xl">
-                  {description}
-                </p>
+                <p className="text-muted-foreground max-w-2xl">{description}</p>
               )}
             </div>
 
@@ -258,12 +263,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
         {renderStatusMessage()}
 
         {/* Content */}
-        <div className={cn(
-          'min-h-[400px]',
-          contentClassName
-        )}>
-          {children}
-        </div>
+        <div className={cn("min-h-[400px]", contentClassName)}>{children}</div>
       </div>
     </div>
   );

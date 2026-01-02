@@ -65,9 +65,9 @@ export default function APSummaryPage() {
     search: searchQuery || undefined,
   });
 
-  const totalDebt = apData?.items?.reduce((sum, item) => sum + (item.totalDebt || 0), 0) || 0;
-  const totalCurrentDebt = apData?.items?.reduce((sum, item) => sum + (item.currentDebt || 0), 0) || 0;
-  const totalOverdueDebt = apData?.items?.reduce((sum, item) => sum + (item.overdueDebt || 0), 0) || 0;
+  const totalDebt = apData?.items?.reduce((sum, item) => sum + (item.closingBalance || 0), 0) || 0;
+  const totalCurrentDebt = apData?.items?.reduce((sum, item) => sum + ((item.closingBalance || 0) - (item.overdue || 0)), 0) || 0;
+  const totalOverdueDebt = apData?.items?.reduce((sum, item) => sum + (item.overdue || 0), 0) || 0;
 
   const handleExportExcel = async () => {
     // TODO: Implement export Excel when API endpoint is available
@@ -173,8 +173,6 @@ export default function APSummaryPage() {
                 <TableHead className="text-right">Tổng công nợ</TableHead>
                 <TableHead className="text-right">Công nợ hiện tại</TableHead>
                 <TableHead className="text-right">Công nợ quá hạn</TableHead>
-                <TableHead className="text-center">Thanh toán gần nhất</TableHead>
-                <TableHead className="text-right">Số tiền</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -182,7 +180,7 @@ export default function APSummaryPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -192,7 +190,7 @@ export default function APSummaryPage() {
               ) : !apData?.items || apData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={6}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu công nợ nào.
@@ -212,33 +210,29 @@ export default function APSummaryPage() {
                       {item.vendorName || "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.totalDebt !== undefined
-                        ? formatCurrency(item.totalDebt)
+                      {item.closingBalance !== undefined
+                        ? formatCurrency(item.closingBalance)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.currentDebt !== undefined
-                        ? formatCurrency(item.currentDebt)
+                      {item.closingBalance !== undefined && item.overdue !== undefined
+                        ? formatCurrency(item.closingBalance - item.overdue)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-destructive">
-                      {item.overdueDebt !== undefined && item.overdueDebt > 0 ? (
+                      {item.overdue !== undefined && item.overdue > 0 ? (
                         <Badge variant="destructive">
-                          {formatCurrency(item.overdueDebt)}
+                          {formatCurrency(item.overdue)}
                         </Badge>
                       ) : (
                         "—"
                       )}
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
-                      {item.lastPaymentDate
-                        ? formatDate(item.lastPaymentDate)
-                        : "—"}
+                      —
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.lastPaymentAmount !== undefined
-                        ? formatCurrency(item.lastPaymentAmount)
-                        : "—"}
+                      —
                     </TableCell>
                     <TableCell>
                       <Button

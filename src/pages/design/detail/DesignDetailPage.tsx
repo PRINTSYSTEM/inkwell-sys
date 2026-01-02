@@ -472,7 +472,7 @@ export default function DesignDetailPage() {
   // ==== LOADING / ERROR ====
   if (designLoading) {
     return (
-      <div className="h-[calc(100vh-var(--header-height,64px))] flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary mx-auto" />
           <p className="text-sm text-muted-foreground">Đang tải...</p>
@@ -483,7 +483,7 @@ export default function DesignDetailPage() {
 
   if (designError || !design) {
     return (
-      <div className="h-[calc(100vh-var(--header-height,64px))] flex items-center justify-center p-6">
+      <div className="h-full flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           {designError ? (
             (() => {
@@ -528,7 +528,7 @@ export default function DesignDetailPage() {
   // ==== MAIN LAYOUT ====
   return (
     <ErrorBoundary>
-      <div className="h-[calc(100vh-var(--header-height,64px))] flex flex-col bg-background overflow-hidden">
+      <div className="h-full flex flex-col bg-background overflow-hidden">
         {/* ===== HEADER ===== */}
         <header className="shrink-0 border-b bg-card/50 backdrop-blur-sm">
           <div className="px-4 py-2 flex items-center gap-3">
@@ -1263,89 +1263,94 @@ export default function DesignDetailPage() {
                     </div>
                   ) : (
                     <div className="relative">
-                      <div className="absolute left-4 top-0 bottom-0 w-px bg-gradient-to-b from-purple-300 via-purple-400 to-purple-300 dark:from-purple-800 dark:via-purple-600 dark:to-purple-800" />
+                      {/* Line - dừng ở giữa dot cuối cùng (dot cũ nhất) */}
+                      <div
+                        className="absolute left-4 top-0 w-px bg-gradient-to-b from-purple-300 via-purple-400 to-purple-300 dark:from-purple-800 dark:via-purple-600 dark:to-purple-800"
+                        style={{
+                          height: `calc(100% - 2rem)`,
+                        }}
+                      />
 
                       <div className="space-y-4 pl-2">
-                        {timelineEntries.map((entry, index) => (
-                          <div
-                            key={entry.id}
-                            className="relative flex gap-4 group"
-                          >
-                            {/* Dot */}
-                            <div className="relative z-10 shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-background shadow-md flex items-center justify-center">
-                                <span className="text-[10px] font-bold text-white">
-                                  {index + 1}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Card */}
-                            <Card
-                              className={`flex-1 group-hover:border-purple-400/70 transition-colors ${
-                                entry.imageUrl ? "cursor-pointer" : ""
-                              }`}
-                              onClick={() => {
-                                if (entry.imageUrl) {
-                                  setViewingImage({
-                                    url: entry.imageUrl as string,
-                                    title:
-                                      (entry.title as string) ||
-                                      `Timeline #${index + 1}`,
-                                  });
-                                }
-                              }}
+                        {timelineEntries.map((entry, index) => {
+                          const timelineNumber = timelineEntries.length - index;
+                          const isLast = index === timelineEntries.length - 1;
+                          return (
+                            <div
+                              key={entry.id}
+                              className="relative flex gap-4 group"
                             >
-                              <CardContent
-                                className="p-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                              {/* Dot */}
+                              <div className="relative z-10 shrink-0 flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-background shadow-md flex items-center justify-center">
+                                  <span className="text-[10px] font-bold text-white">
+                                    {timelineNumber}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Card */}
+                              <Card
+                                className={`flex-1 group-hover:border-purple-400/70 transition-colors ${
+                                  entry.imageUrl ? "cursor-pointer" : ""
+                                }`}
                                 onClick={() => {
-                                  if (entry.fileUrl) {
+                                  if (entry.imageUrl) {
                                     setViewingImage({
-                                      url: entry.fileUrl as string,
+                                      url: entry.imageUrl as string,
                                       title:
                                         (entry.title as string) ||
-                                        `Timeline #${index + 1}`,
+                                        `Timeline #${timelineNumber}`,
                                     });
                                   }
                                 }}
                               >
-                                <div className="flex-1 min-w-0 space-y-1">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <p className="font-medium text-sm truncate">
-                                      {(entry.title as string) ||
-                                        `Bước ${index + 1}`}
-                                    </p>
-                                    <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                                      {entry.createdAt
-                                        ? new Date(
-                                            entry.createdAt
-                                          ).toLocaleString("vi-VN", {
-                                            day: "2-digit",
-                                            month: "2-digit",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                          })
-                                        : ""}
-                                    </span>
-                                  </div>
-                                  {entry.description && (
-                                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-                                      {entry.description}
-                                    </p>
-                                  )}
-                                  {entry.createdByName && (
-                                    <p className="text-[11px] text-muted-foreground">
-                                      Người tạo:{" "}
-                                      <span className="font-medium">
-                                        {entry.createdByName as string}
+                                <CardContent
+                                  className="p-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                                  onClick={() => {
+                                    if (entry.fileUrl) {
+                                      setViewingImage({
+                                        url: entry.fileUrl as string,
+                                        title:
+                                          (entry.title as string) ||
+                                          `Timeline #${timelineNumber}`,
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <div className="flex-1 min-w-0 space-y-1">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="font-medium text-sm truncate">
+                                        {entry.description}
+                                      </p>
+                                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                        {entry.createdAt
+                                          ? new Date(
+                                              entry.createdAt
+                                            ).toLocaleString("vi-VN", {
+                                              day: "2-digit",
+                                              month: "2-digit",
+                                              hour: "2-digit",
+                                              minute: "2-digit",
+                                            })
+                                          : ""}
                                       </span>
-                                    </p>
-                                  )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        ))}
+                                    </div>
+
+                                    {entry.createdByName && (
+                                      <p className="text-[11px] text-muted-foreground">
+                                        Người tạo:{" "}
+                                        <span className="font-medium">
+                                          {entry.createdByName as string}
+                                        </span>
+                                      </p>
+                                    )}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

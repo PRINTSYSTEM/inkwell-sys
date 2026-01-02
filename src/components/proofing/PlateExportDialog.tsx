@@ -45,16 +45,6 @@ interface PlateExportDialogProps {
   onSuccess?: () => void;
 }
 
-// Options for time duration (30 minutes to 3 hours)
-const TIME_DURATION_OPTIONS = [
-  { value: 30, label: "30 phút" },
-  { value: 60, label: "1 giờ" },
-  { value: 90, label: "1.5 giờ" },
-  { value: 120, label: "2 giờ" },
-  { value: 150, label: "2.5 giờ" },
-  { value: 180, label: "3 giờ" },
-];
-
 export function PlateExportDialog({
   open,
   onOpenChange,
@@ -66,10 +56,6 @@ export function PlateExportDialog({
   const [vendorName, setVendorName] = useState<string>("");
   const [isCreatingVendor, setIsCreatingVendor] = useState(false);
   const [vendorSearchOpen, setVendorSearchOpen] = useState(false);
-  const [receivedAtType, setReceivedAtType] = useState<"manual" | "duration">(
-    "duration"
-  );
-  const [durationHours, setDurationHours] = useState<number>(60);
   const [receivedAtManual, setReceivedAtManual] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
 
@@ -81,14 +67,11 @@ export function PlateExportDialog({
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      const now = new Date();
       setPlateCount(1);
       setVendorId(null);
       setVendorName("");
       setIsCreatingVendor(false);
       setVendorSearchOpen(false);
-      setReceivedAtType("duration");
-      setDurationHours(60);
       setReceivedAtManual("");
       setNotes("");
     }
@@ -115,29 +98,23 @@ export function PlateExportDialog({
   }, []);
 
   // Helper function to convert datetime-local string to local datetime with offset
-  const convertLocalDateTimeToISO = useCallback((localDateTime: string): string => {
-    // datetime-local format: "YYYY-MM-DDTHH:mm" (no timezone)
-    // Parse as local time
-    const date = new Date(localDateTime);
-    // Format with local timezone offset
-    return formatLocalDateTimeWithOffset(date);
-  }, [formatLocalDateTimeWithOffset]);
-
-  // Calculate receivedAt based on type
-  const receivedAt = useMemo(() => {
-    if (receivedAtType === "manual") {
-      return receivedAtManual
-        ? convertLocalDateTimeToISO(receivedAtManual)
-        : null;
-    } else {
-      // duration: sentAt + durationHours
-      // sentAt is current local time
-      const sentAt = new Date();
-      const received = new Date(sentAt.getTime() + durationHours * 60 * 1000);
+  const convertLocalDateTimeToISO = useCallback(
+    (localDateTime: string): string => {
+      // datetime-local format: "YYYY-MM-DDTHH:mm" (no timezone)
+      // Parse as local time
+      const date = new Date(localDateTime);
       // Format with local timezone offset
-      return formatLocalDateTimeWithOffset(received);
-    }
-  }, [receivedAtType, receivedAtManual, durationHours, convertLocalDateTimeToISO, formatLocalDateTimeWithOffset]);
+      return formatLocalDateTimeWithOffset(date);
+    },
+    [formatLocalDateTimeWithOffset]
+  );
+
+  // Calculate receivedAt from manual input
+  const receivedAt = useMemo(() => {
+    return receivedAtManual
+      ? convertLocalDateTimeToISO(receivedAtManual)
+      : null;
+  }, [receivedAtManual, convertLocalDateTimeToISO]);
 
   const handleCreateVendor = async () => {
     if (!vendorName.trim()) {
@@ -161,9 +138,12 @@ export function PlateExportDialog({
           setVendorName("");
           toast.success("Đã tạo nhà cung cấp mới");
         },
-        onError: (error) => {
+        onError: (error: any) => {
           toast.error("Không thể tạo nhà cung cấp", {
-            description: error?.response?.data?.message || error.message,
+            description:
+              error?.response?.data?.message ||
+              error?.message ||
+              "Có lỗi xảy ra",
           });
         },
       }
@@ -368,49 +348,13 @@ export function PlateExportDialog({
 
           {/* Thời gian có kẽm */}
           <div className="space-y-2">
-            <Label>Thời gian có kẽm</Label>
-            <div className="flex gap-2 mb-2">
-              <Button
-                variant={receivedAtType === "duration" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setReceivedAtType("duration")}
-              >
-                Chọn thời gian
-              </Button>
-              <Button
-                variant={receivedAtType === "manual" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setReceivedAtType("manual")}
-              >
-                Nhập thủ công
-              </Button>
-            </div>
-            {receivedAtType === "duration" ? (
-              <Select
-                value={durationHours.toString()}
-                onValueChange={(value) => setDurationHours(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn thời gian" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIME_DURATION_OPTIONS.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value.toString()}
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                type="datetime-local"
-                value={receivedAtManual}
-                onChange={(e) => setReceivedAtManual(e.target.value)}
-              />
-            )}
+            <Label htmlFor="receivedAt">Thời gian có kẽm</Label>
+            <Input
+              id="receivedAt"
+              type="datetime-local"
+              value={receivedAtManual}
+              onChange={(e) => setReceivedAtManual(e.target.value)}
+            />
             {receivedAt && (
               <p className="text-xs text-muted-foreground">
                 Dự kiến có kẽm:{" "}

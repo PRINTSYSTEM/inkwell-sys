@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
-import { DesignItem, ViewFilter, SortOption } from "@/types/proofing";
+import { DesignItem } from "@/types/proofing";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
 import { DesignTable } from "@/components/proofing/DesignTable";
 import { DesignCardSkeleton } from "@/components/proofing/DesignCardSkeleton";
@@ -11,14 +11,6 @@ import { FilterNoticeBanner } from "@/components/proofing/FilterNoticeBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -26,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  List,
   FolderTree,
   FileText,
   Loader2,
@@ -35,6 +26,8 @@ import {
   MessageSquare,
   CheckCircle2,
   Plus,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   useAvailableOrderDetailsForProofing,
@@ -42,6 +35,7 @@ import {
   useCreateProofingOrderFromDesigns,
   useCreatePaperSize,
 } from "@/hooks/use-proofing-order";
+import { useDesignTypeList } from "@/hooks/use-design-type";
 import { ROUTE_PATHS } from "@/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -57,8 +51,12 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-
-const ITEMS_PER_PAGE_OPTIONS = [12, 24, 48];
+import { CursorTooltip } from "@/components/ui/cursor-tooltip";
+import {
+  processClassificationLabels,
+  sidesClassificationLabels,
+  laminationTypeLabels,
+} from "@/lib/status-utils";
 
 export default function ProofingOrderPage() {
   const navigate = useNavigate();
@@ -79,13 +77,14 @@ export default function ProofingOrderPage() {
   const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<number[]>(
     []
   );
-  const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
-  const [sortOption, setSortOption] = useState<SortOption>("date-desc");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   // View states
   const [groupByOrder, setGroupByOrder] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [pageInput, setPageInput] = useState<string>("");
+  const itemsPerPage = 10;
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Inline proofing order configuration state (right panel)
   const [notes, setNotes] = useState("");
@@ -99,6 +98,11 @@ export default function ProofingOrderPage() {
   // API call with smart filtering
   const { data, isLoading } = useAvailableOrderDetailsForProofing({
     materialTypeId: currentMaterialTypeId,
+  });
+
+  // Fetch design types
+  const { data: designTypesData } = useDesignTypeList({
+    status: "active",
   });
 
   // Paper sizes + create hook
@@ -119,12 +123,25 @@ export default function ProofingOrderPage() {
   // Reset pagination when filter changes
   useEffect(() => {
     setCurrentPage(1);
+    setPageInput("1");
   }, [
     currentMaterialTypeId,
     selectedDesignTypes,
     selectedMaterialTypes,
-    viewFilter,
+    searchTerm,
   ]);
+
+  // Sync pageInput with currentPage
+  useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
+
+  // Scroll to top of table when page changes
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop = 0;
+    }
+  }, [currentPage]);
 
   // Sync default quantities when selection changes (default = lấy hết)
   useEffect(() => {
@@ -161,7 +178,29 @@ export default function ProofingOrderPage() {
   const materialTypeName =
     selectedDesigns.length > 0 ? selectedDesigns[0].materialTypeName : "";
 
-  // Apply client-side filters and sorting (left list)
+  // Transform design types to FilterOption format with count
+  const designTypeOptions = useMemo(() => {
+    if (!designTypesData || !data?.designs) return [];
+
+    const designTypeItems = Array.isArray(designTypesData)
+      ? designTypesData
+      : (designTypesData.items ?? []);
+
+    // Count designs by designTypeId
+    const countMap = new Map<number, number>();
+    data.designs.forEach((design) => {
+      const count = countMap.get(design.designTypeId) || 0;
+      countMap.set(design.designTypeId, count + 1);
+    });
+
+    return designTypeItems.map((dt) => ({
+      id: dt.id,
+      name: dt.name || "",
+      count: countMap.get(dt.id) || 0,
+    }));
+  }, [designTypesData, data?.designs]);
+
+  // Apply client-side filters (left list)
   const filteredAndSortedDesigns = useMemo(() => {
     if (!data) {
       console.log("⚠️ ProofingCreate - No data available");
@@ -189,40 +228,11 @@ export default function ProofingOrderPage() {
       );
     }
 
-    // Filter by view (selected/unselected)
-    if (viewFilter === "selected") {
-      result = result.filter((d) => selectedIds.has(d.id));
-    } else if (viewFilter === "unselected") {
-      result = result.filter((d) => !selectedIds.has(d.id));
+    // Filter by search term (code)
+    if (searchTerm.trim().length > 0) {
+      const searchLower = searchTerm.trim().toLowerCase();
+      result = result.filter((d) => d.code.toLowerCase().includes(searchLower));
     }
-
-    // Sort
-    result.sort((a, b) => {
-      switch (sortOption) {
-        case "code-asc":
-          return a.code.localeCompare(b.code);
-        case "code-desc":
-          return b.code.localeCompare(a.code);
-        case "name-asc":
-          return a.name.localeCompare(b.name);
-        case "name-desc":
-          return b.name.localeCompare(a.name);
-        case "quantity-desc":
-          return b.quantity - a.quantity;
-        case "quantity-asc":
-          return a.quantity - b.quantity;
-        case "date-desc":
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        case "date-asc":
-          return (
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          );
-        default:
-          return 0;
-      }
-    });
 
     return result;
   }, [
@@ -230,9 +240,7 @@ export default function ProofingOrderPage() {
     selectedDesignTypes,
     selectedMaterialTypes,
     currentMaterialTypeId,
-    viewFilter,
-    sortOption,
-    selectedIds,
+    searchTerm,
   ]);
 
   // Group by order if enabled
@@ -257,15 +265,65 @@ export default function ProofingOrderPage() {
   }, [filteredAndSortedDesigns, groupByOrder]);
 
   // Pagination for left list
-  const totalPages = Math.ceil(filteredAndSortedDesigns.length / itemsPerPage);
+  const totalCount = filteredAndSortedDesigns.length;
+  const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
   const paginatedDesigns = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredAndSortedDesigns.slice(start, start + itemsPerPage);
   }, [filteredAndSortedDesigns, currentPage, itemsPerPage]);
 
+  // Auto-adjust currentPage if it exceeds totalPages
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+      setPageInput("1");
+    }
+  }, [totalPages, currentPage]);
+
+  // Pagination handlers
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setPageInput("");
+      return;
+    }
+    const page = parseInt(value, 10);
+    if (!isNaN(page)) {
+      setPageInput(page.toString());
+    }
+  };
+
+  const handlePageInputBlur = () => {
+    const page = parseInt(pageInput, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
   const handleClearFilters = () => {
     setSelectedDesignTypes([]);
     setSelectedMaterialTypes([]);
+    setSearchTerm("");
   };
 
   const handleClearSelection = () => {
@@ -451,14 +509,25 @@ export default function ProofingOrderPage() {
     }
   };
 
+  const remainingQuantity = useMemo(() => {
+    return selectedDesigns.reduce((total, design) => {
+      const currentQty = designQuantities[design.id] || 0;
+      const baseAvailableQty =
+        design.availableQuantity !== undefined && design.availableQuantity >= 0
+          ? design.availableQuantity
+          : design.quantity;
+      return total + (baseAvailableQty - currentQty);
+    }, 0);
+  }, [selectedDesigns, designQuantities]);
+
   return (
-    <div className="h-[calc(100vh-var(--header-height,64px))] w-full max-w-full flex flex-col bg-background overflow-hidden">
+    <div className="h-full w-full max-w-full flex flex-col bg-background overflow-hidden">
       {/* Header */}
       <header className="shrink-0 border-b bg-card/50 backdrop-blur-sm">
         <div className="px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold">Thiết kế chờ bình bài</h1>
-            <p className="text-xs text-muted-foreground">
+            <h1 className="text-xl font-bold">Thiết kế chờ bình bài</h1>
+            <p className="text-sm font-medium text-muted-foreground">
               Tổng cộng {data?.totalCount || 0} thiết kế •{" "}
               {selectedDesigns.length} đã chọn
             </p>
@@ -466,7 +535,10 @@ export default function ProofingOrderPage() {
 
           <div className="flex items-center gap-3">
             {selectedDesigns.length > 0 && (
-              <Badge variant="secondary" className="px-3 py-1 text-xs">
+              <Badge
+                variant="secondary"
+                className="px-3 py-1 text-sm font-semibold"
+              >
                 {selectedDesigns.length} thiết kế đã chọn
               </Badge>
             )}
@@ -506,7 +578,7 @@ export default function ProofingOrderPage() {
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4" />
-                  Tạo lệnh bình bài
+                  Tạo mã bài
                 </>
               )}
             </Button>
@@ -520,17 +592,15 @@ export default function ProofingOrderPage() {
         <div className="basis-1/2 min-w-0 border-r flex flex-col min-h-0 bg-card/30">
           <div className="p-4 border-b">
             <FilterSection
-              designTypeOptions={data?.designTypeOptions || []}
+              designTypeOptions={designTypeOptions}
               materialTypeOptions={data?.materialTypeOptions || []}
               selectedDesignTypes={selectedDesignTypes}
               selectedMaterialTypes={selectedMaterialTypes}
               currentMaterialTypeId={currentMaterialTypeId}
-              viewFilter={viewFilter}
-              sortOption={sortOption}
+              searchTerm={searchTerm}
               onDesignTypeChange={setSelectedDesignTypes}
               onMaterialTypeChange={setSelectedMaterialTypes}
-              onViewFilterChange={setViewFilter}
-              onSortChange={setSortOption}
+              onSearchChange={setSearchTerm}
               onClearFilters={handleClearFilters}
             />
 
@@ -544,10 +614,10 @@ export default function ProofingOrderPage() {
             )}
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="p-4 space-y-4">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div ref={tableContainerRef} className="flex-1 overflow-auto p-4">
               {isLoading ? (
-                <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+                <div className="flex flex-col gap-2 text-sm font-medium text-muted-foreground">
                   <span>Đang tải danh sách thiết kế...</span>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                     {Array.from({ length: 6 }).map((_, i) => (
@@ -556,7 +626,7 @@ export default function ProofingOrderPage() {
                   </div>
                 </div>
               ) : paginatedDesigns.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-sm text-muted-foreground">
+                <div className="flex flex-col items-center justify-center py-12 text-center text-base font-semibold text-muted-foreground">
                   Không có thiết kế nào phù hợp.
                 </div>
               ) : groupByOrder && groupedByOrder ? (
@@ -566,17 +636,20 @@ export default function ProofingOrderPage() {
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
                         <FileText className="h-5 w-5 text-primary" />
                         <div>
-                          <p className="font-semibold text-sm">
+                          <p className="font-bold text-base">
                             {group.orderCode}
                           </p>
                           {(group.customerName ||
                             group.customerCompanyName) && (
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-sm font-medium text-muted-foreground">
                               {group.customerCompanyName || group.customerName}
                             </p>
                           )}
                         </div>
-                        <Badge variant="secondary" className="ml-auto text-xs">
+                        <Badge
+                          variant="secondary"
+                          className="ml-auto text-sm font-semibold"
+                        >
                           {group.designs.length} thiết kế
                         </Badge>
                       </div>
@@ -598,102 +671,69 @@ export default function ProofingOrderPage() {
                 />
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Pagination (left list) */}
-          {filteredAndSortedDesigns.length > 0 && (
-            <div className="shrink-0 border-t px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span>
-                  Hiển thị {(currentPage - 1) * itemsPerPage + 1}-
-                  {Math.min(
-                    currentPage * itemsPerPage,
-                    filteredAndSortedDesigns.length
-                  )}{" "}
-                  của {filteredAndSortedDesigns.length} thiết kế
+          {totalCount > 0 && (
+            <div className="shrink-0 border-t px-4 py-2 flex items-center justify-between gap-3 text-sm text-muted-foreground bg-background">
+              <div className="text-sm font-medium text-muted-foreground">
+                Hiển thị{" "}
+                <span className="font-bold text-foreground">
+                  {(currentPage - 1) * itemsPerPage + 1}
                 </span>
-                <Select
-                  value={itemsPerPage.toString()}
-                  onValueChange={(v) => {
-                    setItemsPerPage(Number(v));
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="w-20 h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {ITEMS_PER_PAGE_OPTIONS.map((n) => (
-                      <SelectItem key={n} value={n.toString()}>
-                        {n}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {" - "}
+                <span className="font-bold text-foreground">
+                  {Math.min(currentPage * itemsPerPage, totalCount)}
+                </span>{" "}
+                trong tổng số{" "}
+                <span className="font-bold text-foreground">{totalCount}</span>{" "}
+                thiết kế
               </div>
-
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (currentPage > 1) setCurrentPage(currentPage - 1);
-                      }}
-                      className={
-                        currentPage === 1
-                          ? "pointer-events-none opacity-50"
-                          : ""
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1 || isLoading}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Trang trước</span>
+                </Button>
+                <div className="flex items-center space-x-1">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Trang
+                  </span>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={pageInput}
+                    onChange={handlePageInputChange}
+                    onBlur={handlePageInputBlur}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.currentTarget.blur();
                       }
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: Math.min(5, totalPages) }).map(
-                    (_, i) => {
-                      let pageNum: number;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-
-                      return (
-                        <PaginationItem key={pageNum}>
-                          <PaginationLink
-                            href="#"
-                            isActive={currentPage === pageNum}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setCurrentPage(pageNum);
-                            }}
-                          >
-                            {pageNum}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    }
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (currentPage < totalPages)
-                          setCurrentPage(currentPage + 1);
-                      }}
-                      className={
-                        currentPage === totalPages
-                          ? "pointer-events-none opacity-50"
-                          : ""
-                      }
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                    }}
+                    className="w-14 h-8 text-center text-sm font-semibold"
+                    disabled={isLoading}
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">
+                    / {totalPages}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages || isLoading}
+                >
+                  <span className="hidden sm:inline">Trang sau</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -703,22 +743,22 @@ export default function ProofingOrderPage() {
           {/* Right header */}
           <div className="shrink-0 border-b bg-card/50 px-4 py-2 flex items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold">Lệnh bình bài mới</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-base font-bold">Lệnh bình bài mới</p>
+              <p className="text-sm font-medium text-muted-foreground">
                 {selectedDesigns.length > 0
                   ? `${selectedDesigns.length} thiết kế • ${selectedCount} đã nhập số lượng`
                   : "Chọn thiết kế ở cột bên trái để thêm vào lệnh"}
               </p>
             </div>
             {materialTypeName && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-sm font-semibold">
                 {materialTypeName}
               </Badge>
             )}
           </div>
 
           {selectedDesigns.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-6 text-sm text-muted-foreground">
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-6 text-base font-semibold text-muted-foreground">
               Chưa có thiết kế nào được chọn.
               <br />
               Hãy click chọn thiết kế ở cột bên trái, hệ thống sẽ tự động thêm
@@ -732,19 +772,19 @@ export default function ProofingOrderPage() {
                   <Table>
                     <TableHeader className="sticky top-0 bg-muted/50 z-10">
                       <TableRow>
-                        <TableHead className="w-10 text-center text-xs">
+                        <TableHead className="w-10 text-center text-sm font-bold">
                           #
                         </TableHead>
-                        <TableHead className="min-w-[200px] text-xs">
+                        <TableHead className="min-w-[200px] text-sm font-bold">
                           Thiết kế
                         </TableHead>
-                        <TableHead className="w-32 text-xs">
-                          Kích thước
+                        <TableHead className="w-32 text-sm font-bold">
+                          Kích thước (mm)
                         </TableHead>
-                        <TableHead className="w-24 text-right text-xs">
+                        <TableHead className="w-24 text-right text-sm font-bold">
                           Còn lại
                         </TableHead>
-                        <TableHead className="w-40 text-xs">
+                        <TableHead className="w-40 text-sm font-bold">
                           Số lượng lấy
                         </TableHead>
                       </TableRow>
@@ -770,82 +810,240 @@ export default function ProofingOrderPage() {
                         const hasAvailableQuantity =
                           design.availableQuantity !== undefined;
 
-                        return (
-                          <TableRow
-                            key={design.id}
-                            className={cn(
-                              "hover:bg-muted/30",
-                              isValid && "bg-emerald-50/40",
-                              isExceeded && "bg-destructive/5"
-                            )}
-                          >
-                            <TableCell className="text-center text-xs text-muted-foreground font-medium">
-                              {index + 1}
-                            </TableCell>
-                            <TableCell>
+                        // Build full info for tooltip
+                        const fullInfo = (
+                          <div className="space-y-2 text-sm max-w-md">
+                            <div className="font-semibold text-base border-b pb-2">
+                              {design.name}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                               <div>
-                                <div className="font-medium text-sm">
-                                  {design.name}
-                                </div>
-                                <code className="text-[11px] text-muted-foreground font-mono">
+                                <span className="text-muted-foreground">
+                                  Mã hàng:
+                                </span>
+                                <span className="ml-2 font-mono">
                                   {design.code}
-                                </code>
+                                </span>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-xs text-muted-foreground">
-                                {design.length} × {design.height}
-                                {design.width ? ` × ${design.width}` : ""} mm
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {hasAvailableQuantity ? (
+
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Đơn hàng:
+                                </span>
+                                <span className="ml-2 font-semibold">
+                                  {design.orderCode || design.orderId}
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Loại:
+                                </span>
+                                <span className="ml-2">
+                                  {design.designTypeName}
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Vật liệu:
+                                </span>
+                                <span className="ml-2">
+                                  {design.materialTypeName}
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Kích thước:
+                                </span>
+                                <span className="ml-2">
+                                  {design.length} × {design.height}
+                                  {design.width ? ` × ${design.width}` : ""} mm
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className="text-muted-foreground">
+                                  SL đặt:
+                                </span>
+                                <span className="ml-2 font-semibold">
+                                  {design.quantity.toLocaleString()}
+                                </span>
+                              </div>
+
+                              <div>
+                                <span className="text-muted-foreground">
+                                  SL có thể bình bài:
+                                </span>
                                 <span
-                                  className={cn(
-                                    "text-sm font-medium",
-                                    design.availableQuantity! > 0
-                                      ? "text-emerald-600"
-                                      : design.availableQuantity! === 0
-                                        ? "text-amber-600"
-                                        : "text-destructive"
-                                  )}
+                                  className={`ml-2 font-semibold ${
+                                    design.availableQuantity &&
+                                    design.availableQuantity > 0
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }`}
                                 >
-                                  {design.availableQuantity!.toLocaleString()}
-                                </span>
-                              ) : (
-                                <span className="text-sm text-muted-foreground">
-                                  -
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={maxQty}
-                                  className={cn(
-                                    "h-9 flex-1 text-right font-mono text-base font-semibold",
-                                    isExceeded &&
-                                      "border-destructive focus-visible:ring-destructive"
-                                  )}
-                                  value={currentQty || ""}
-                                  onChange={(e) =>
-                                    handleQuantityChange(
-                                      design.id,
-                                      e.target.value,
-                                      design.quantity,
-                                      design.availableQuantity
-                                    )
-                                  }
-                                  placeholder="0"
-                                />
-                                <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
-                                  /{maxQty.toLocaleString()}
+                                  {design.availableQuantity?.toLocaleString() ||
+                                    "—"}
                                 </span>
                               </div>
-                            </TableCell>
-                          </TableRow>
+
+                              <div>
+                                <span className="text-muted-foreground">
+                                  SL đang lấy:
+                                </span>
+                                <span className="ml-2 font-semibold text-primary">
+                                  {currentQty.toLocaleString()}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Nhân viên thiết kế:
+                                </span>
+                                <span className="ml-2">
+                                  {design.designerName || "—"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Nhân viên kế toán:
+                                </span>
+                                <span className="ml-2">
+                                  {design.accountantName || "—"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {(design.processClassificationOptionName ||
+                              design.sidesClassification ||
+                              design.laminationType) && (
+                              <div className="pt-2 border-t space-y-1">
+                                {design.processClassificationOptionName && (
+                                  <div>
+                                    <span className="text-muted-foreground">
+                                      Cắt - Bế:
+                                    </span>
+                                    <span className="ml-2">
+                                      {processClassificationLabels[
+                                        design.processClassificationOptionName
+                                      ] ||
+                                        design.processClassificationOptionName}
+                                    </span>
+                                  </div>
+                                )}
+                                {design.sidesClassification && (
+                                  <div>
+                                    <span className="text-muted-foreground">
+                                      1 - 2 mặt:
+                                    </span>
+                                    <span className="ml-2">
+                                      {sidesClassificationLabels[
+                                        design.sidesClassification
+                                      ] || design.sidesClassification}
+                                    </span>
+                                  </div>
+                                )}
+                                {design.laminationType && (
+                                  <div>
+                                    <span className="text-muted-foreground">
+                                      Cán màng:
+                                    </span>
+                                    <span className="ml-2">
+                                      {laminationTypeLabels[
+                                        design.laminationType
+                                      ] || design.laminationType}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+
+                        return (
+                          <CursorTooltip
+                            key={design.id}
+                            content={fullInfo}
+                            delayDuration={300}
+                            className="p-4 max-w-md"
+                          >
+                            <TableRow
+                              className={cn(
+                                "hover:bg-muted/30",
+                                isValid && "bg-emerald-50/40",
+                                isExceeded && "bg-destructive/5"
+                              )}
+                            >
+                              <TableCell className="text-center text-sm font-bold text-muted-foreground">
+                                {index + 1}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <div className="font-bold text-base">
+                                    {design.code}
+                                  </div>
+                                  <code className="text-sm font-semibold text-muted-foreground font-mono">
+                                    {design.name}
+                                  </code>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm font-semibold text-muted-foreground">
+                                  {design.length} × {design.height}
+                                  {design.width ? ` × ${design.width}` : ""}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {hasAvailableQuantity ? (
+                                  <span
+                                    className={cn(
+                                      "text-base font-bold",
+                                      design.availableQuantity! > 0
+                                        ? "text-emerald-600"
+                                        : design.availableQuantity! === 0
+                                          ? "text-amber-600"
+                                          : "text-destructive"
+                                    )}
+                                  >
+                                    {remainingQty.toLocaleString()}
+                                  </span>
+                                ) : (
+                                  <span className="text-base font-semibold text-muted-foreground">
+                                    -
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    max={maxQty}
+                                    className={cn(
+                                      "h-9 flex-1 text-right font-mono text-base font-semibold",
+                                      isExceeded &&
+                                        "border-destructive focus-visible:ring-destructive"
+                                    )}
+                                    value={currentQty || ""}
+                                    onChange={(e) =>
+                                      handleQuantityChange(
+                                        design.id,
+                                        e.target.value,
+                                        design.quantity,
+                                        design.availableQuantity
+                                      )
+                                    }
+                                    placeholder="0"
+                                  />
+                                  <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap shrink-0">
+                                    /{maxQty.toLocaleString()}
+                                  </span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          </CursorTooltip>
                         );
                       })}
                     </TableBody>
@@ -862,7 +1060,7 @@ export default function ProofingOrderPage() {
                     <div className="space-y-1.5">
                       <Label
                         htmlFor="proofingSheetQuantity"
-                        className="text-xs font-medium"
+                        className="text-sm font-bold"
                       >
                         Số lượng giấy in
                         <span className="text-destructive"> *</span>
@@ -904,7 +1102,7 @@ export default function ProofingOrderPage() {
                     <div className="space-y-1.5">
                       <Label
                         htmlFor="paperSizeId"
-                        className="text-xs font-medium"
+                        className="text-sm font-bold"
                       >
                         Khổ giấy in
                       </Label>
@@ -938,7 +1136,7 @@ export default function ProofingOrderPage() {
                       <div className="space-y-1.5">
                         <Label
                           htmlFor="customPaperSize"
-                          className="text-xs font-medium"
+                          className="text-sm font-bold"
                         >
                           Khổ giấy tùy chỉnh
                         </Label>
@@ -970,7 +1168,7 @@ export default function ProofingOrderPage() {
                           )}
                         </div>
                         {existingPaperSize && (
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="text-xs font-medium text-muted-foreground">
                             Đã tồn tại:{" "}
                             {existingPaperSize.name ||
                               `${existingPaperSize.width}×${existingPaperSize.height}`}
@@ -979,10 +1177,10 @@ export default function ProofingOrderPage() {
                       </div>
                     ) : (
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-medium text-muted-foreground">
+                        <Label className="text-sm font-bold text-muted-foreground">
                           Kích thước
                         </Label>
-                        <div className="h-8 flex items-center px-2 rounded-md border bg-background text-xs text-muted-foreground">
+                        <div className="h-8 flex items-center px-2 rounded-md border bg-background text-sm font-semibold text-muted-foreground">
                           {paperSizeId !== "none" &&
                           paperSizes?.find(
                             (ps) => ps.id.toString() === paperSizeId
@@ -1010,8 +1208,8 @@ export default function ProofingOrderPage() {
 
                   {/* Row 2: Notes */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold flex items-center gap-1.5">
-                      <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                    <Label className="text-sm font-bold flex items-center gap-1.5">
+                      <MessageSquare className="h-4 w-4 text-primary" />
                       Ghi chú
                     </Label>
                     <Textarea
@@ -1025,13 +1223,16 @@ export default function ProofingOrderPage() {
                 </div>
 
                 {/* Footer summary */}
-                <div className="shrink-0 border-t px-4 py-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground bg-background">
+                <div className="shrink-0 border-t px-4 py-2 flex items-center justify-between gap-2 text-sm font-semibold text-muted-foreground bg-background">
                   <div>
                     {selectedCount > 0 && (
                       <span>
                         {selectedCount}/{selectedDesigns.length} thiết kế đã
                         nhập số lượng • Tổng lấy{" "}
-                        {totalSelectedQuantity.toLocaleString()} sp
+                        <span className="font-bold text-foreground">
+                          {totalSelectedQuantity.toLocaleString()}
+                        </span>{" "}
+                        sp
                       </span>
                     )}
                   </div>

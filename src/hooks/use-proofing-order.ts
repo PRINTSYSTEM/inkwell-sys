@@ -12,7 +12,6 @@ type ApiError = {
 
 import type {
   ProofingOrderResponse,
-  ProofingOrderResponsePagedResponse,
   ProofingOrderResponsePaginate,
 } from "@/Schema/proofing-order.schema";
 import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
@@ -51,7 +50,7 @@ const {
   UpdateProofingOrderRequest,
   number,
   ProofingOrderListParams,
-  ProofingOrderResponsePagedResponse
+  ProofingOrderResponsePaginate
 >({
   rootKey: "proofing-orders",
   basePath: API_SUFFIX.PROOFING_ORDERS,
@@ -141,7 +140,7 @@ export const useAvailableOrderDetailsForProofing = (params?: {
         API_SUFFIX.PROOFING_AVAILABLE_ORDER_DETAILS,
         { params: normalizedParams }
       );
-      
+
       // Debug: Log response structure
       console.log("📦 Proofing API Response:", {
         total: res.data.total,
@@ -186,19 +185,27 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             orderCode: design.latestOrderCode || "",
             customerName: design.customer?.name || "",
             customerCompanyName: design.customer?.companyName || "",
-            processClassificationOptionName: design.processClassification || undefined,
+            processClassificationOptionName:
+              design.processClassification || undefined,
             sidesClassification: design.sidesClassification || undefined,
             laminationType: design.laminationType || undefined,
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
             designId: design.id, // Store designId for fallback fetching if needed
+            designerName: design.designer?.fullName || undefined,
+            // Note: accountant may not be in DesignResponse schema, but if it exists in API response, it will be mapped
+            accountantName: (design as any).accountant?.fullName || undefined,
           };
-          
+          console.log(
+            "🚀 ~ useAvailableOrderDetailsForProofing ~ designItem:",
+            designItem
+          );
+
           // Debug: Log first transformed design
           if (index === 0) {
             console.log("✅ First transformed design:", designItem);
           }
-          
+
           return designItem;
         });
 
@@ -267,12 +274,12 @@ export const useProofingOrdersByOrder = (
       const res = await apiRequest.get<
         ProofingOrderResponsePaginate | ProofingOrderResponse[]
       >(API_SUFFIX.PROOFING_BY_ORDER(orderId as number));
-      
+
       // Handle both paginated response and array response
       if (Array.isArray(res.data)) {
         return res.data;
       }
-      
+
       // If paginated response, extract items
       return res.data.items ?? [];
     },
@@ -286,10 +293,10 @@ export const useProofingOrdersForProduction = (params?: {
   pageNumber?: number;
   pageSize?: number;
 }) => {
-  return useQuery<ProofingOrderResponsePagedResponse>({
+  return useQuery<ProofingOrderResponsePaginate>({
     queryKey: [proofingKeys.all[0], "for-production", params],
     queryFn: async () => {
-      const res = await apiRequest.get<ProofingOrderResponsePagedResponse>(
+      const res = await apiRequest.get<ProofingOrderResponsePaginate>(
         API_SUFFIX.PROOFING_FOR_PRODUCTION,
         { params }
       );
@@ -812,7 +819,7 @@ export const useRecordPlateExport = () => {
         API_SUFFIX.PROOFING_RECORD_PLATE(id),
         request
       );
-      
+
       // Sử dụng safeParse để tránh throw error khi validation fail
       // Nếu API trả về 200, coi như thành công dù schema validation có thể fail
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
@@ -820,7 +827,10 @@ export const useRecordPlateExport = () => {
         return parseResult.data;
       } else {
         // Log warning nhưng vẫn return response.data vì API đã trả về 200
-        console.warn("Schema validation failed for plate export response:", parseResult.error);
+        console.warn(
+          "Schema validation failed for plate export response:",
+          parseResult.error
+        );
         return response.data as ProofingOrderResponse;
       }
     },
@@ -865,7 +875,7 @@ export const useRecordDieExportWithFile = () => {
       receivedAt?: string | null;
     }) => {
       const formData = new FormData();
-      
+
       // Required fields according to API schema
       if (dieVendorId != null) {
         formData.append("DieVendorId", dieVendorId.toString());
@@ -901,7 +911,7 @@ export const useRecordDieExportWithFile = () => {
           },
         }
       );
-      
+
       // Sử dụng safeParse để tránh throw error khi validation fail
       // Nếu API trả về 200, coi như thành công dù schema validation có thể fail
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
@@ -909,7 +919,10 @@ export const useRecordDieExportWithFile = () => {
         return parseResult.data;
       } else {
         // Log warning nhưng vẫn return response.data vì API đã trả về 200
-        console.warn("Schema validation failed for die export response:", parseResult.error);
+        console.warn(
+          "Schema validation failed for die export response:",
+          parseResult.error
+        );
         return response.data as ProofingOrderResponse;
       }
     },
@@ -935,14 +948,17 @@ export const useHandToProduction = () => {
       const response = await apiRequest.put(
         API_SUFFIX.PROOFING_HAND_TO_PRODUCTION(id)
       );
-      
+
       // Sử dụng safeParse để tránh throw error khi validation fail
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
       if (parseResult.success) {
         return parseResult.data;
       } else {
         // Log warning nhưng vẫn return response.data vì API đã trả về 200
-        console.warn("Schema validation failed for hand to production response:", parseResult.error);
+        console.warn(
+          "Schema validation failed for hand to production response:",
+          parseResult.error
+        );
         return response.data as ProofingOrderResponse;
       }
     },
@@ -1000,12 +1016,15 @@ export const useAddDesignsToProofingOrder = () => {
         API_SUFFIX.PROOFING_ADD_DESIGNS(id),
         { orderDetailItems }
       );
-      
+
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
       if (parseResult.success) {
         return parseResult.data;
       } else {
-        console.warn("Schema validation failed for add designs response:", parseResult.error);
+        console.warn(
+          "Schema validation failed for add designs response:",
+          parseResult.error
+        );
         return response.data as ProofingOrderResponse;
       }
     },
@@ -1018,7 +1037,10 @@ export const useAddDesignsToProofingOrder = () => {
     },
     onError: (error: ApiError) => {
       toast.error("Lỗi", {
-        description: error.response?.data?.message || error.message || "Không thể thêm design",
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Không thể thêm design",
       });
     },
   });
@@ -1037,27 +1059,38 @@ export const useRemoveDesignFromProofingOrder = () => {
       proofingOrderDesignId: number;
     }) => {
       const response = await apiRequest.delete<ProofingOrderResponse>(
-        API_SUFFIX.PROOFING_REMOVE_DESIGN(proofingOrderId, proofingOrderDesignId)
+        API_SUFFIX.PROOFING_REMOVE_DESIGN(
+          proofingOrderId,
+          proofingOrderDesignId
+        )
       );
-      
+
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
       if (parseResult.success) {
         return parseResult.data;
       } else {
-        console.warn("Schema validation failed for remove design response:", parseResult.error);
+        console.warn(
+          "Schema validation failed for remove design response:",
+          parseResult.error
+        );
         return response.data as ProofingOrderResponse;
       }
     },
     onSuccess: (_, { proofingOrderId }) => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
-      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(proofingOrderId) });
+      queryClient.invalidateQueries({
+        queryKey: proofingKeys.detail(proofingOrderId),
+      });
       toast.success("Thành công", {
         description: "Đã xóa design khỏi bình bài",
       });
     },
     onError: (error: ApiError) => {
       toast.error("Lỗi", {
-        description: error.response?.data?.message || error.message || "Không thể xóa design",
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Không thể xóa design",
       });
     },
   });

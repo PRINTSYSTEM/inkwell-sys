@@ -270,7 +270,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         const hasHeight = (formData.height ?? 0) > 0;
         const hasWidth = (formData.width ?? 0) > 0;
         const needsWidth = isTui || isHop; // Túi xếp hông và hộp cần rộng
-        
+
         return (
           formData.designName?.trim() &&
           formData.designTypeId > 0 &&
@@ -398,25 +398,6 @@ export const DesignModal: React.FC<DesignModalProps> = ({
           {/* Step 1: Basic Info - Tên, Loại thiết kế, Chất liệu, Kích thước, Số lượng */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              {/* Tên thiết kế */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">
-                  Tên thiết kế <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  placeholder="VD: Bao bì túi phân bón kali"
-                  value={formData.designName}
-                  onChange={(e) => updateField("designName", e.target.value)}
-                  className="h-11"
-                  disabled={!!isExistingDesign}
-                />
-                {isExistingDesign && (
-                  <p className="text-xs text-muted-foreground">
-                    Thiết kế có sẵn - không thể chỉnh sửa
-                  </p>
-                )}
-              </div>
-
               {/* Loại thiết kế và Chất liệu - Cùng một hàng */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Loại thiết kế */}
@@ -524,12 +505,37 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                 </div>
               </div>
 
+              {/* Tên thiết kế */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">
+                  Tên thiết kế <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  placeholder={
+                    selectedDesignType
+                      ? `VD: ${selectedDesignType.name} ...`
+                      : "VD: Bao bì túi phân bón kali"
+                  }
+                  value={formData.designName}
+                  onChange={(e) => updateField("designName", e.target.value)}
+                  className="h-11"
+                  disabled={!!isExistingDesign}
+                />
+                {isExistingDesign && (
+                  <p className="text-xs text-muted-foreground">
+                    Thiết kế có sẵn - không thể chỉnh sửa
+                  </p>
+                )}
+              </div>
+
               {/* Kích thước */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">
                   Kích thước (mm) <span className="text-destructive">*</span>
                 </Label>
-                <div className="grid grid-cols-3 gap-4">
+                <div
+                  className={`grid gap-4 ${isTui || isHop ? "grid-cols-3" : "grid-cols-2"}`}
+                >
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">
                       Dài <span className="text-destructive">*</span>
@@ -566,24 +572,26 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       disabled={!!isExistingDesign}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Rộng {isTui || isHop ? <span className="text-destructive">*</span> : ""}
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={formData.width || ""}
-                      onChange={(e) =>
-                        updateField(
-                          "width",
-                          e.target.value === "" ? 0 : Number(e.target.value)
-                        )
-                      }
-                      className="h-11"
-                      disabled={!!isExistingDesign || (!isTui && !isHop)}
-                    />
-                  </div>
+                  {(isTui || isHop) && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Rộng <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={formData.width || ""}
+                        onChange={(e) =>
+                          updateField(
+                            "width",
+                            e.target.value === "" ? 0 : Number(e.target.value)
+                          )
+                        }
+                        className="h-11"
+                        disabled={!!isExistingDesign}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -628,14 +636,15 @@ export const DesignModal: React.FC<DesignModalProps> = ({
             </div>
           )}
 
-          {/* Step 2: Advanced Options - Số mặt in, Quy trình sản xuất, Yêu cầu, Ghi chú */}
+          {/* Step 2: Advanced Options - Số mặt in, Quy trình sản xuất, Cán màn, Yêu cầu, Ghi chú */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              {/* Classifications - Số mặt in, Quy trình sản xuất - Based on rules */}
+              {/* Classifications và Cán màn - Số mặt in, Quy trình sản xuất, Cán màn */}
               {(shouldShowSidesClassification ||
                 shouldShowProcessClassification ||
-                isTui) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                isTui ||
+                true) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Số mặt in - chỉ hiển thị khi cần chọn (không phải túi) */}
                   {shouldShowSidesClassification && !isTui && (
                     <div className="space-y-3">
@@ -735,34 +744,47 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       </div>
                     </div>
                   )}
+
+                  {/* Cán màn - Bắt buộc - chung hàng với 2 tùy chọn kia */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">
+                      Cán màn <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(
+                        ([key, label]) => {
+                          const isSelected = formData.laminationType === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => {
+                                updateField("laminationType", key);
+                              }}
+                              disabled={!!isExistingDesign}
+                              className={`
+                            px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all
+                            ${
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border hover:border-primary/50"
+                            }
+                            ${
+                              isExistingDesign
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }
+                          `}
+                            >
+                              {label}
+                            </button>
+                          );
+                        }
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
-
-              {/* Cán màn - Bắt buộc */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">
-                  Cán màn <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={formData.laminationType || ""}
-                  onValueChange={(value) =>
-                    updateField("laminationType", value)
-                  }
-                >
-                  <SelectTrigger className="max-w-xs h-11">
-                    <SelectValue placeholder="Chọn loại cán màn" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(
-                      ([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
 
               {/* Yêu cầu thiết kế */}
               <div className="space-y-3">
@@ -777,9 +799,9 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                 />
               </div>
 
-              {/* Ghi chú thêm */}
+              {/* Ghi chú thiết kế */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Ghi chú thêm</Label>
+                <Label className="text-sm font-medium">Ghi chú thiết kế</Label>
                 <Textarea
                   placeholder="Ghi chú bổ sung cho thiết kế này (nếu có)..."
                   value={formData.additionalNotes || ""}

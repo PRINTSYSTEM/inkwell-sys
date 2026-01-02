@@ -83,8 +83,8 @@ export function DesignerFormDialog({
         const updateData: UpdateUserRequest = {
           fullName: formData.fullName,
           role: formData.role as UpdateUserRequest["role"],
-          email: formData.email,
-          phone: formData.phone,
+          email: formData.email || undefined,
+          phone: formData.phone || undefined,
           isActive: formData.isActive,
         };
         await onSubmit({ id: designer.id as number, data: updateData });
@@ -94,8 +94,8 @@ export function DesignerFormDialog({
           password: formData.password,
           fullName: formData.fullName,
           role: formData.role as CreateUserRequest["role"],
-          email: formData.email,
-          phone: formData.phone,
+          email: formData.email || undefined,
+          phone: formData.phone || undefined,
         };
         await onSubmit(createData);
       }
@@ -186,33 +186,27 @@ export function DesignerFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">
-                Email <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
+                value={formData.email || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                placeholder="designer@example.com"
-                required
+                placeholder="designer@example.com (tùy chọn)"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">
-                Số điện thoại <span className="text-red-500">*</span>
-              </Label>
+              <Label htmlFor="phone">Số điện thoại</Label>
               <Input
                 id="phone"
-                value={formData.phone}
+                value={formData.phone || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
-                placeholder="0123456789"
-                required
+                placeholder="0123456789 (tùy chọn)"
               />
             </div>
 

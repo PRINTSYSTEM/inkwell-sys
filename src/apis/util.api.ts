@@ -135,6 +135,7 @@ export const API_SUFFIX = {
   DESIGN_UPLOAD_FILE: (id: number) => `/designs/${id}/upload-design-file`,
   DESIGN_UPLOAD_IMAGE: (id: number) => `/designs/${id}/upload-design-image`,
   DESIGN_GENERATE_EXCEL: (id: number) => `/designs/${id}/generate-excel`,
+  DESIGN_REVERT_TO_WAITING: (id: number) => `/designs/${id}/revert-to-waiting`,
 
   DESIGN_EMPLOYEES_FIXED_QUERY: () =>
     `/users?pageNumber=1&pageSize=10&role=design`,
@@ -174,6 +175,24 @@ export const API_SUFFIX = {
   VENDORS: "/vendors",
   VENDOR_BY_ID: (id: number) => `/vendors/${id}`,
   VENDORS_ACTIVE: "/vendors/active",
+
+  // ========== DIES ==========
+  DIES: "/dies",
+  DIE_BY_ID: (id: number) => `/dies/${id}`,
+  DIE_IMAGE: (id: number) => `/dies/${id}/image`,
+  DIE_FROM_DIE_EXPORT: (dieExportId: number) =>
+    `/dies/from-die-export/${dieExportId}`,
+  DIE_SEARCH: "/dies/search",
+  DIES_BY_PROOFING_ORDER: (proofingOrderId: number) =>
+    `/dies/proofing-order/${proofingOrderId}`,
+  DIE_ASSIGN_TO_PROOFING_ORDER: (proofingOrderId: number) =>
+    `/dies/proofing-order/${proofingOrderId}/assign`,
+  DIE_REMOVE_FROM_PROOFING_ORDER: (proofingOrderId: number, dieId: number) =>
+    `/dies/proofing-order/${proofingOrderId}/die/${dieId}`,
+  DIE_PROOFING_ORDER_DIE_RETURN: (proofingOrderDieId: number) =>
+    `/dies/proofing-order-die/${proofingOrderDieId}/return`,
+  DIE_PROOFING_ORDER_DIE_TAKE_OUT: (proofingOrderDieId: number) =>
+    `/dies/proofing-order-die/${proofingOrderDieId}/take-out`,
 
   // ========== STOCK ==========
   STOCK_INS: "/stock-ins",

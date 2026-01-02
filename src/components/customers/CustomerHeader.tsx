@@ -14,6 +14,8 @@ import {
   CustomerTypeBadge,
   DebtStatusBadge,
 } from "@/components/accounting/StatusBadges";
+import { StatusBadge } from "../ui/status-badge";
+import { debtStatusLabels } from "@/lib/status-utils";
 
 interface CustomerHeaderProps {
   customer: CustomerResponse;
@@ -31,7 +33,7 @@ export function CustomerHeader({
   const navigate = useNavigate();
 
   return (
-    <div className="sticky top-0 z-10 bg-background border-b">
+    <div className="sticky top-0 z-10 bg-background border-b shrink-0">
       <div className="px-6 py-3">
         {/* Breadcrumb */}
 
@@ -59,7 +61,6 @@ export function CustomerHeader({
               </div>
               <div className="flex items-center gap-2 mt-1">
                 <CustomerTypeBadge type={customer.type} />
-                <DebtStatusBadge status={customer.debtStatus} />
               </div>
             </div>
           </div>

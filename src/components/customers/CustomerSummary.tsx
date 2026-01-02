@@ -1,8 +1,17 @@
-import { CreditCard, Wallet, ShoppingCart, Calendar, TrendingUp, Receipt } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
-import type { CustomerResponse } from '@/Schema';
+import {
+  CreditCard,
+  Wallet,
+  ShoppingCart,
+  Calendar,
+  TrendingUp,
+  Receipt,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import type { CustomerResponse } from "@/Schema";
+import { StatusBadge } from "../ui/status-badge";
+import { debtStatusLabels } from "@/lib/status-utils";
 
 interface CustomerSummaryProps {
   customer: CustomerResponse;
@@ -22,78 +31,88 @@ export function CustomerSummary({
   onTabChange,
 }: CustomerSummaryProps) {
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
       maximumFractionDigits: 0,
     }).format(amount);
   };
 
   const currentDebt = customer.currentDebt || 0;
   const maxDebt = customer.maxDebt || 0;
-  const debtProgress = maxDebt > 0 
-    ? Math.min((currentDebt / maxDebt) * 100, 100) 
-    : 0;
+  const debtProgress =
+    maxDebt > 0 ? Math.min((currentDebt / maxDebt) * 100, 100) : 0;
 
   const getDebtProgressColor = () => {
-    if (debtProgress >= 90) return 'bg-destructive';
-    if (debtProgress >= 70) return 'bg-warning';
-    return 'bg-success';
+    if (debtProgress >= 90) return "bg-destructive";
+    if (debtProgress >= 70) return "bg-warning";
+    return "bg-success";
   };
 
   const kpis = [
     {
-      label: 'Công nợ hiện tại',
+      label: "Công nợ hiện tại",
       value: formatCurrency(currentDebt),
       icon: CreditCard,
-      extra: maxDebt > 0 ? (
-        <div className="mt-1.5">
-          <Progress value={debtProgress} className={cn("h-1.5", debtProgress >= 90 ? "[&>div]:bg-destructive" : debtProgress >= 70 ? "[&>div]:bg-warning" : "[&>div]:bg-success")} />
-          <span className="text-[11px] text-muted-foreground mt-0.5">
-            {debtProgress.toFixed(0)}% / {formatCurrency(maxDebt)}
-          </span>
-        </div>
-      ) : undefined,
-      tab: 'debt',
+      extra:
+        maxDebt > 0 ? (
+          <div className="mt-1.5">
+            <Progress
+              value={debtProgress}
+              className={cn(
+                "h-1.5",
+                debtProgress >= 90
+                  ? "[&>div]:bg-destructive"
+                  : debtProgress >= 70
+                    ? "[&>div]:bg-warning"
+                    : "[&>div]:bg-success"
+              )}
+            />
+            <span className="text-[11px] text-muted-foreground mt-0.5">
+              {debtProgress.toFixed(0)}% / {formatCurrency(maxDebt)}
+            </span>
+          </div>
+        ) : undefined,
+      tab: "debt",
     },
     {
-      label: 'Hạn mức công nợ',
-      value: maxDebt > 0 ? formatCurrency(maxDebt) : 'Chưa đặt',
+      label: "Hạn mức công nợ",
+      value: maxDebt > 0 ? formatCurrency(maxDebt) : "Chưa đặt",
       icon: Wallet,
-      tab: 'debt',
+      tab: "debt",
     },
     {
-      label: 'Tổng đơn hàng',
-      value: totalOrders > 0 ? totalOrders.toString() : '0',
-      subValue: ordersThisMonth > 0 ? `+${ordersThisMonth} tháng này` : undefined,
+      label: "Tổng đơn hàng",
+      value: totalOrders > 0 ? totalOrders.toString() : "0",
+      subValue:
+        ordersThisMonth > 0 ? `+${ordersThisMonth} tháng này` : undefined,
       icon: ShoppingCart,
-      tab: 'orders',
+      tab: "orders",
     },
     {
-      label: 'Doanh thu',
-      value: totalRevenue > 0 ? formatCurrency(totalRevenue) : '0 ₫',
+      label: "Doanh thu",
+      value: totalRevenue > 0 ? formatCurrency(totalRevenue) : "0 ₫",
       icon: TrendingUp,
-      tab: 'orders',
+      tab: "orders",
     },
     {
-      label: 'Đơn gần nhất',
+      label: "Đơn gần nhất",
       value: lastOrderDate
-        ? new Date(lastOrderDate).toLocaleDateString('vi-VN')
-        : 'Chưa có',
+        ? new Date(lastOrderDate).toLocaleDateString("vi-VN")
+        : "Chưa có",
       icon: Calendar,
-      tab: 'orders',
+      tab: "orders",
     },
     {
-      label: 'Trạng thái nợ',
-      value: customer.debtStatus === 'good' 
-        ? 'Tốt' 
-        : customer.debtStatus === 'warning' 
-        ? 'Cảnh báo' 
-        : customer.debtStatus === 'blocked'
-        ? 'Bị chặn'
-        : 'Chưa xác định',
+      label: "Trạng thái nợ",
+      value: (
+        <StatusBadge
+          status={customer.debtStatus}
+          label={debtStatusLabels[customer.debtStatus]}
+        />
+      ),
       icon: Receipt,
-      tab: 'debt',
+      tab: "debt",
     },
   ];
 
@@ -112,7 +131,9 @@ export function CustomerSummary({
                   <kpi.icon className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-muted-foreground truncate">{kpi.label}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {kpi.label}
+                  </p>
                   <p className="text-sm font-semibold truncate">{kpi.value}</p>
                   {kpi.subValue && (
                     <p className="text-[11px] text-success">{kpi.subValue}</p>

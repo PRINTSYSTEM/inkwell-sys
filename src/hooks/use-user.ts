@@ -10,7 +10,7 @@ type ApiError = {
 
 import type {
   UserResponse,
-  UserResponsePagedResponse,
+  UserResponsePaginate,
   UserListParams,
   CreateUserRequest,
   UpdateUserRequest,
@@ -40,7 +40,7 @@ const {
   UpdateUserRequest,
   number,
   UserListParams,
-  UserResponsePagedResponse
+  UserResponsePaginate
 >({
   rootKey,
   basePath: API_SUFFIX.USERS,

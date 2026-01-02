@@ -11,7 +11,7 @@ type ApiError = {
 
 import type {
   VendorResponse,
-  VendorResponsePagedResponse,
+  VendorResponsePaginate,
   CreateVendorRequest,
   UpdateVendorRequest,
 } from "@/Schema/vendor.schema";
@@ -40,7 +40,7 @@ const {
   UpdateVendorRequest,
   number,
   VendorListParams,
-  VendorResponsePagedResponse
+  VendorResponsePaginate
 >({
   rootKey: "vendors",
   basePath: API_SUFFIX.VENDORS,
@@ -87,7 +87,7 @@ export const useActiveVendors = (vendorType?: "plate" | "die") => {
       // }
       
       const normalizedParams = normalizeParams(params);
-      const res = await apiRequest.get<VendorResponsePagedResponse>(
+      const res = await apiRequest.get<VendorResponsePaginate>(
         API_SUFFIX.VENDORS,
         { params: normalizedParams }
       );

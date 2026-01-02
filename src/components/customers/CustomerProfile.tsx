@@ -1,15 +1,17 @@
-import { Phone, MapPin, Building2, FileText, Copy, ExternalLink, User, Clock, Mail } from 'lucide-react';
+import { Phone, MapPin, Building2, FileText, Copy, ExternalLink, User, Mail } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import type { CustomerResponse } from '@/Schema';
 
 interface CustomerProfileProps {
   customer: CustomerResponse;
+  isDesignRole?: boolean;
 }
 
-export function CustomerProfile({ customer }: CustomerProfileProps) {
+export function CustomerProfile({ customer, isDesignRole = false }: CustomerProfileProps) {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`Đã sao chép ${label}`);
@@ -19,186 +21,365 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
     window.open(`https://maps.google.com/?q=${encodeURIComponent(address)}`, '_blank');
   };
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'Chưa có';
-    try {
-      return new Date(dateString).toLocaleDateString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return 'Không hợp lệ';
-    }
-  };
-
   return (
-    <Card className="h-fit">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">Thông tin khách hàng</CardTitle>
+    <Card className={cn("h-fit", isDesignRole && "shadow-lg")}>
+      <CardHeader className={cn("pb-4", isDesignRole && "pb-6")}>
+        <CardTitle className={cn(
+          "font-semibold",
+          isDesignRole ? "text-2xl font-bold" : "text-base"
+        )}>
+          Thông tin khách hàng
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Contact Info */}
-        <div className="space-y-2.5">
-          {customer.phone ? (
-            <div className="flex items-center justify-between group">
-              <div className="flex items-center gap-2 text-sm">
-                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>{customer.phone}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => copyToClipboard(customer.phone!, 'số điện thoại')}
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Phone className="h-3.5 w-3.5" />
-              <span>Chưa có số điện thoại</span>
-            </div>
-          )}
-
-          {customer.email ? (
-            <div className="flex items-center justify-between group">
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>{customer.email}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => {
-                  window.location.href = `mailto:${customer.email}`;
-                }}
-              >
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Mail className="h-3.5 w-3.5" />
-              <span>Chưa có email</span>
-            </div>
-          )}
-
-          {customer.address ? (
-            <div className="flex items-start justify-between group">
-              <div className="flex items-start gap-2 text-sm">
-                <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
-                <span className="flex-1">{customer.address}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                onClick={() => openMap(customer.address!)}
-              >
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-start gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 mt-0.5" />
-              <span>Chưa có địa chỉ</span>
-            </div>
-          )}
-        </div>
-
-        {/* Company Info - only for company type */}
-        {customer.type === 'company' && (
-          <>
-            <Separator />
-            <div className="space-y-2.5">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Thông tin công ty
-              </p>
-              
-              {customer.companyName ? (
-                <div className="flex items-center gap-2 text-sm">
-                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>{customer.companyName}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Building2 className="h-3.5 w-3.5" />
-                  <span>Chưa có tên công ty</span>
-                </div>
-              )}
-
-              {customer.representativeName ? (
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>Đại diện: {customer.representativeName}</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <User className="h-3.5 w-3.5" />
-                  <span>Chưa có người đại diện</span>
-                </div>
-              )}
-
-              {customer.taxCode ? (
-                <div className="flex items-center justify-between group">
-                  <div className="flex items-center gap-2 text-sm">
-                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>MST: {customer.taxCode}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => copyToClipboard(customer.taxCode!, 'mã số thuế')}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-3.5 w-3.5" />
-                  <span>Chưa có mã số thuế</span>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Meta Info */}
-        <Separator />
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Thông tin hệ thống
+      <CardContent className={cn("space-y-6", isDesignRole && "space-y-8")}>
+        {/* Thông tin cơ bản */}
+        <div className={cn("space-y-4", isDesignRole && "space-y-6")}>
+          <p className={cn(
+            "font-semibold text-foreground uppercase tracking-wide",
+            isDesignRole ? "text-base font-bold" : "text-sm"
+          )}>
+            Thông tin cơ bản
           </p>
           
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>Tạo: {formatDate(customer.createdAt)}</span>
-          </div>
-          
-          {customer.updatedAt && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>Cập nhật: {formatDate(customer.updatedAt)}</span>
-            </div>
-          )}
+          <div className={cn("space-y-3", isDesignRole && "space-y-5")}>
+            {/* Tên khách hàng */}
+            {customer.name ? (
+              <div className={cn("flex items-center gap-3", isDesignRole && "gap-4")}>
+                <User className={cn(
+                  "text-muted-foreground shrink-0",
+                  isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                )} />
+                <div className="flex-1">
+                  <p className={cn(
+                    "text-muted-foreground mb-0.5",
+                    isDesignRole ? "text-sm font-medium" : "text-xs"
+                  )}>
+                    Tên khách hàng
+                  </p>
+                  <p className={cn(
+                    "font-semibold text-foreground",
+                    isDesignRole ? "text-xl font-bold" : "text-base"
+                  )}>
+                    {customer.name}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className={cn("flex items-center gap-3", isDesignRole && "gap-4")}>
+                <User className={cn(
+                  "text-muted-foreground shrink-0",
+                  isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                )} />
+                <div className="flex-1">
+                  <p className={cn(
+                    "text-muted-foreground mb-0.5",
+                    isDesignRole ? "text-sm font-medium" : "text-xs"
+                  )}>
+                    Tên khách hàng
+                  </p>
+                  <p className={cn(
+                    "text-muted-foreground",
+                    isDesignRole ? "text-lg" : "text-base"
+                  )}>
+                    Chưa có tên
+                  </p>
+                </div>
+              </div>
+            )}
 
-          {customer.createdBy ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <User className="h-3 w-3" />
-              <span>Người tạo: {customer.createdBy.fullName || customer.createdBy.username || 'N/A'}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <User className="h-3 w-3" />
-              <span>Người tạo: Chưa có thông tin</span>
-            </div>
-          )}
+            {/* MST */}
+            {customer.taxCode ? (
+              <div className={cn("flex items-center justify-between group", isDesignRole && "gap-4")}>
+                <div className={cn("flex items-center gap-3 flex-1", isDesignRole && "gap-4")}>
+                  <FileText className={cn(
+                    "text-muted-foreground shrink-0",
+                    isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                  )} />
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-muted-foreground mb-0.5",
+                      isDesignRole ? "text-sm font-medium" : "text-xs"
+                    )}>
+                      Mã số thuế
+                    </p>
+                    <p className={cn(
+                      "font-semibold text-foreground",
+                      isDesignRole ? "text-xl font-bold" : "text-base"
+                    )}>
+                      {customer.taxCode}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
+                    isDesignRole ? "h-8 w-8" : "h-7 w-7"
+                  )}
+                  onClick={() => copyToClipboard(customer.taxCode!, 'mã số thuế')}
+                >
+                  <Copy className={cn(isDesignRole ? "h-5 w-5" : "h-4 w-4")} />
+                </Button>
+              </div>
+            ) : (
+              <div className={cn("flex items-center gap-3", isDesignRole && "gap-4")}>
+                <FileText className={cn(
+                  "text-muted-foreground shrink-0",
+                  isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                )} />
+                <div className="flex-1">
+                  <p className={cn(
+                    "text-muted-foreground mb-0.5",
+                    isDesignRole ? "text-sm font-medium" : "text-xs"
+                  )}>
+                    Mã số thuế
+                  </p>
+                  <p className={cn(
+                    "text-muted-foreground",
+                    isDesignRole ? "text-lg" : "text-base"
+                  )}>
+                    Chưa có mã số thuế
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Tên công ty - chỉ hiển thị nếu là công ty */}
+            {customer.type === 'company' && customer.companyName && (
+              <div className={cn("flex items-center gap-3", isDesignRole && "gap-4")}>
+                <Building2 className={cn(
+                  "text-muted-foreground shrink-0",
+                  isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                )} />
+                <div className="flex-1">
+                  <p className={cn(
+                    "text-muted-foreground mb-0.5",
+                    isDesignRole ? "text-sm font-medium" : "text-xs"
+                  )}>
+                    Tên công ty
+                  </p>
+                  <p className={cn(
+                    "font-semibold text-foreground",
+                    isDesignRole ? "text-xl font-bold" : "text-base"
+                  )}>
+                    {customer.companyName}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Người đại diện - chỉ hiển thị nếu là công ty */}
+            {customer.type === 'company' && customer.representativeName && (
+              <div className={cn("flex items-center gap-3", isDesignRole && "gap-4")}>
+                <User className={cn(
+                  "text-muted-foreground shrink-0",
+                  isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                )} />
+                <div className="flex-1">
+                  <p className={cn(
+                    "text-muted-foreground mb-0.5",
+                    isDesignRole ? "text-sm font-medium" : "text-xs"
+                  )}>
+                    Người đại diện
+                  </p>
+                  <p className={cn(
+                    "font-semibold text-foreground",
+                    isDesignRole ? "text-xl font-bold" : "text-base"
+                  )}>
+                    {customer.representativeName}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Thông tin liên hệ */}
+        <div className={cn("space-y-4", isDesignRole && "space-y-6")}>
+          <p className={cn(
+            "font-semibold text-foreground uppercase tracking-wide",
+            isDesignRole ? "text-base font-bold" : "text-sm"
+          )}>
+            Thông tin liên hệ
+          </p>
+          
+          <div className={cn("space-y-3", isDesignRole && "space-y-5")}>
+            {customer.phone ? (
+              <div className={cn("flex items-center justify-between group", isDesignRole && "gap-4")}>
+                <div className={cn("flex items-center gap-3 flex-1", isDesignRole && "gap-4")}>
+                  <Phone className={cn(
+                    "text-muted-foreground shrink-0",
+                    isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                  )} />
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-muted-foreground mb-0.5",
+                      isDesignRole ? "text-sm font-medium" : "text-xs"
+                    )}>
+                      Số điện thoại
+                    </p>
+                    <p className={cn(
+                      "font-semibold text-foreground",
+                      isDesignRole ? "text-xl font-bold" : "text-base"
+                    )}>
+                      {customer.phone}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
+                    isDesignRole ? "h-8 w-8" : "h-7 w-7"
+                  )}
+                  onClick={() => copyToClipboard(customer.phone!, 'số điện thoại')}
+                >
+                  <Copy className={cn(isDesignRole ? "h-5 w-5" : "h-4 w-4")} />
+                </Button>
+              </div>
+            ) : (
+              <div className={cn("flex items-center gap-3", isDesignRole && "gap-4")}>
+                <Phone className={cn(
+                  "text-muted-foreground shrink-0",
+                  isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                )} />
+                <div className="flex-1">
+                  <p className={cn(
+                    "text-muted-foreground mb-0.5",
+                    isDesignRole ? "text-sm font-medium" : "text-xs"
+                  )}>
+                    Số điện thoại
+                  </p>
+                  <p className={cn(
+                    "text-muted-foreground",
+                    isDesignRole ? "text-lg" : "text-base"
+                  )}>
+                    Chưa có số điện thoại
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {customer.email ? (
+              <div className={cn("flex items-center justify-between group", isDesignRole && "gap-4")}>
+                <div className={cn("flex items-center gap-3 flex-1", isDesignRole && "gap-4")}>
+                  <Mail className={cn(
+                    "text-muted-foreground shrink-0",
+                    isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                  )} />
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-muted-foreground mb-0.5",
+                      isDesignRole ? "text-sm font-medium" : "text-xs"
+                    )}>
+                      Email
+                    </p>
+                    <p className={cn(
+                      "font-semibold text-foreground",
+                      isDesignRole ? "text-xl font-bold" : "text-base"
+                    )}>
+                      {customer.email}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
+                    isDesignRole ? "h-8 w-8" : "h-7 w-7"
+                  )}
+                  onClick={() => {
+                    window.location.href = `mailto:${customer.email}`;
+                  }}
+                >
+                  <ExternalLink className={cn(isDesignRole ? "h-5 w-5" : "h-4 w-4")} />
+                </Button>
+              </div>
+            ) : (
+              <div className={cn("flex items-center gap-3", isDesignRole && "gap-4")}>
+                <Mail className={cn(
+                  "text-muted-foreground shrink-0",
+                  isDesignRole ? "h-5 w-5" : "h-4 w-4"
+                )} />
+                <div className="flex-1">
+                  <p className={cn(
+                    "text-muted-foreground mb-0.5",
+                    isDesignRole ? "text-sm font-medium" : "text-xs"
+                  )}>
+                    Email
+                  </p>
+                  <p className={cn(
+                    "text-muted-foreground",
+                    isDesignRole ? "text-lg" : "text-base"
+                  )}>
+                    Chưa có email
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {customer.address ? (
+              <div className={cn("flex items-start justify-between group", isDesignRole && "gap-4")}>
+                <div className={cn("flex items-start gap-3 flex-1", isDesignRole && "gap-4")}>
+                  <MapPin className={cn(
+                    "text-muted-foreground mt-0.5 shrink-0",
+                    isDesignRole ? "h-5 w-5 mt-1" : "h-4 w-4"
+                  )} />
+                  <div className="flex-1">
+                    <p className={cn(
+                      "text-muted-foreground mb-0.5",
+                      isDesignRole ? "text-sm font-medium" : "text-xs"
+                    )}>
+                      Địa chỉ
+                    </p>
+                    <p className={cn(
+                      "font-semibold text-foreground",
+                      isDesignRole ? "text-xl font-bold" : "text-base"
+                    )}>
+                      {customer.address}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
+                    isDesignRole ? "h-8 w-8" : "h-7 w-7"
+                  )}
+                  onClick={() => openMap(customer.address!)}
+                >
+                  <ExternalLink className={cn(isDesignRole ? "h-5 w-5" : "h-4 w-4")} />
+                </Button>
+              </div>
+            ) : (
+              <div className={cn("flex items-start gap-3", isDesignRole && "gap-4")}>
+                <MapPin className={cn(
+                  "text-muted-foreground mt-0.5 shrink-0",
+                  isDesignRole ? "h-5 w-5 mt-1" : "h-4 w-4"
+                )} />
+                <div className="flex-1">
+                  <p className={cn(
+                    "text-muted-foreground mb-0.5",
+                    isDesignRole ? "text-sm font-medium" : "text-xs"
+                  )}>
+                    Địa chỉ
+                  </p>
+                  <p className={cn(
+                    "text-muted-foreground",
+                    isDesignRole ? "text-lg" : "text-base"
+                  )}>
+                    Chưa có địa chỉ
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

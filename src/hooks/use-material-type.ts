@@ -8,7 +8,7 @@ import type {
   UpdateMaterialTypeRequest,
   BulkCreateMaterialTypeRequest,
   MaterialTypeListParams,
-  MaterialTypeResponsePagedResponse,
+  MaterialTypeResponsePaginate,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -19,7 +19,7 @@ const materialTypeCrud = createCrudHooks<
   UpdateMaterialTypeRequest,
   number,
   MaterialTypeListParams,
-  MaterialTypeResponsePagedResponse
+  MaterialTypeResponsePaginate
 >({
   rootKey: "material-types",
   basePath: API_SUFFIX.MATERIAL_TYPES,

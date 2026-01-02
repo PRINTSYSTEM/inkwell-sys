@@ -11,7 +11,7 @@ type ApiError = {
 
 import type {
   ProductionResponse,
-  ProductionResponsePagedResponse,
+  ProductionResponsePaginate,
   ProductionListParams,
   CreateProductionRequest,
   UpdateProductionRequest,
@@ -34,7 +34,7 @@ const {
   UpdateProductionRequest,
   number,
   ProductionListParams,
-  ProductionResponsePagedResponse
+  ProductionResponsePaginate
 >({
   rootKey: "productions",
   basePath: API_SUFFIX.PRODUCTIONS,

@@ -1,21 +1,15 @@
-import type { FilterOption, ViewFilter, SortOption } from '@/types/proofing';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import type { FilterOption } from "@/types/proofing";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChevronDown, X } from 'lucide-react';
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, X, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface FilterSectionProps {
   designTypeOptions: FilterOption[];
@@ -23,12 +17,10 @@ interface FilterSectionProps {
   selectedDesignTypes: number[];
   selectedMaterialTypes: number[];
   currentMaterialTypeId: number | null;
-  viewFilter: ViewFilter;
-  sortOption: SortOption;
+  searchTerm: string;
   onDesignTypeChange: (ids: number[]) => void;
   onMaterialTypeChange: (ids: number[]) => void;
-  onViewFilterChange: (filter: ViewFilter) => void;
-  onSortChange: (sort: SortOption) => void;
+  onSearchChange: (search: string) => void;
   onClearFilters: () => void;
 }
 
@@ -38,22 +30,25 @@ export function FilterSection({
   selectedDesignTypes,
   selectedMaterialTypes,
   currentMaterialTypeId,
-  viewFilter,
-  sortOption,
+  searchTerm,
   onDesignTypeChange,
   onMaterialTypeChange,
-  onViewFilterChange,
-  onSortChange,
+  onSearchChange,
   onClearFilters,
 }: FilterSectionProps) {
   const hasActiveFilters =
-    selectedDesignTypes.length > 0 || selectedMaterialTypes.length > 0;
+    selectedDesignTypes.length > 0 ||
+    selectedMaterialTypes.length > 0 ||
+    searchTerm.trim().length > 0;
 
   const toggleDesignType = (id: number) => {
+    // Only allow selecting 1 design type at a time
     if (selectedDesignTypes.includes(id)) {
-      onDesignTypeChange(selectedDesignTypes.filter((t) => t !== id));
+      // If clicking the same design type, deselect it
+      onDesignTypeChange([]);
     } else {
-      onDesignTypeChange([...selectedDesignTypes, id]);
+      // Replace with the new selection (only 1 at a time)
+      onDesignTypeChange([id]);
     }
   };
 
@@ -75,34 +70,28 @@ export function FilterSection({
     <div className="space-y-4">
       {/* Filter Controls */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* Design Type Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              Loại Thiết Kế
-              {selectedDesignTypes.length > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {selectedDesignTypes.length}
-                </Badge>
-              )}
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56 bg-popover">
-            {designTypeOptions.map((option) => (
-              <DropdownMenuCheckboxItem
+        {/* Design Type Button Group */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            Loại thiết kế:
+          </span>
+          {designTypeOptions.map((option) => {
+            const isSelected =
+              selectedDesignTypes.length === 1 &&
+              selectedDesignTypes[0] === option.id;
+            return (
+              <Button
                 key={option.id}
-                checked={selectedDesignTypes.includes(option.id)}
-                onCheckedChange={() => toggleDesignType(option.id)}
+                variant={isSelected ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => toggleDesignType(option.id)}
               >
                 {option.name}
-                <Badge variant="secondary" className="ml-auto">
-                  {option.count}
-                </Badge>
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              </Button>
+            );
+          })}
+        </div>
 
         {/* Material Type Dropdown */}
         <DropdownMenu>
@@ -138,34 +127,16 @@ export function FilterSection({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* View Filter Tabs */}
-        <Tabs
-          value={viewFilter}
-          onValueChange={(v) => onViewFilterChange(v as ViewFilter)}
-        >
-          <TabsList>
-            <TabsTrigger value="all">Tất cả</TabsTrigger>
-            <TabsTrigger value="selected">Đã chọn</TabsTrigger>
-            <TabsTrigger value="unselected">Chưa chọn</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {/* Sort Dropdown */}
-        <Select value={sortOption} onValueChange={(v) => onSortChange(v as SortOption)}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Sắp xếp" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover">
-            <SelectItem value="code-asc">Mã (A-Z)</SelectItem>
-            <SelectItem value="code-desc">Mã (Z-A)</SelectItem>
-            <SelectItem value="name-asc">Tên (A-Z)</SelectItem>
-            <SelectItem value="name-desc">Tên (Z-A)</SelectItem>
-            <SelectItem value="quantity-desc">SL (Cao → Thấp)</SelectItem>
-            <SelectItem value="quantity-asc">SL (Thấp → Cao)</SelectItem>
-            <SelectItem value="date-desc">Mới nhất</SelectItem>
-            <SelectItem value="date-asc">Cũ nhất</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Search by Code */}
+        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Tìm theo mã hàng..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10 h-8 text-sm"
+          />
+        </div>
       </div>
 
       {/* Active Filter Tags */}
@@ -208,6 +179,17 @@ export function FilterSection({
                 </Badge>
               ) : null;
             })}
+          {searchTerm.trim().length > 0 && (
+            <Badge variant="outline" className="gap-1 pr-1">
+              Mã: {searchTerm}
+              <button
+                onClick={() => onSearchChange("")}
+                className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
           <Button
             variant="ghost"
             size="sm"

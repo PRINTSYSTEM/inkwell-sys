@@ -16,21 +16,32 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useCreateStockIn } from "@/hooks/use-stock";
 import type { StockInItemRequest } from "@/Schema/stock.schema";
 import { useVendors } from "@/hooks/use-vendor";
+import { vendorTypeLabels } from "@/lib/status-utils";
 
 export default function StockInCreatePage() {
   const navigate = useNavigate();
   const { mutate: createStockIn, isPending } = useCreateStockIn();
   const { data: vendorsData } = useVendors({ pageSize: 1000 });
-  const vendors = vendorsData?.items || [];
+  const allVendors = vendorsData?.items || [];
 
   const [formData, setFormData] = useState({
     type: "",
+    supplierType: "" as string,
     supplierId: null as number | null,
     orderId: null as number | null,
     productionId: null as number | null,
     notes: "",
     stockInDate: new Date().toISOString().split("T")[0],
   });
+
+  // Filter vendors based on selected supplier type
+  const filteredVendors = formData.supplierType
+    ? allVendors.filter(
+        (vendor) =>
+          vendor.vendorType?.toLowerCase() ===
+          formData.supplierType.toLowerCase()
+      )
+    : allVendors;
 
   const [items, setItems] = useState<StockInItemRequest[]>([
     {
@@ -165,6 +176,32 @@ export default function StockInCreatePage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="supplierType">Loại nhà cung cấp</Label>
+                  <Select
+                    value={formData.supplierType}
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        supplierType: value,
+                        supplierId: null, // Reset supplier when type changes
+                      })
+                    }
+                  >
+                    <SelectTrigger id="supplierType">
+                      <SelectValue placeholder="Chọn loại nhà cung cấp" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Tất cả</SelectItem>
+                      {Object.entries(vendorTypeLabels).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="supplierId">Nhà cung cấp</Label>
                   <Select
                     value={formData.supplierId?.toString() || ""}
@@ -174,24 +211,37 @@ export default function StockInCreatePage() {
                         supplierId: value ? Number(value) : null,
                       })
                     }
+                    disabled={!formData.supplierType}
                   >
                     <SelectTrigger id="supplierId">
-                      <SelectValue placeholder="Chọn nhà cung cấp" />
+                      <SelectValue
+                        placeholder={
+                          formData.supplierType
+                            ? "Chọn nhà cung cấp"
+                            : "Chọn loại nhà cung cấp trước"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {vendors.map((vendor) => (
-                        <SelectItem
-                          key={vendor.id}
-                          value={vendor.id?.toString() || ""}
-                        >
-                          {vendor.name}
+                      {filteredVendors.length === 0 ? (
+                        <SelectItem value="" disabled>
+                          Không có nhà cung cấp nào
                         </SelectItem>
-                      ))}
+                      ) : (
+                        filteredVendors.map((vendor) => (
+                          <SelectItem
+                            key={vendor.id}
+                            value={vendor.id?.toString() || ""}
+                          >
+                            {vendor.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="col-span-2 space-y-2">
                   <Label htmlFor="notes">Ghi chú</Label>
                   <Textarea
                     id="notes"

@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Filter,
@@ -15,6 +15,7 @@ import {
   Loader2,
   SlidersHorizontal,
   Eye,
+  Calendar,
   type LucideIcon,
 } from "lucide-react";
 
@@ -64,18 +65,29 @@ const DESIGN_STATUS_ICONS: Record<DesignStatusKey, LucideIcon> = {
 
 // Main Page Component
 export default function MyWorkPage() {
+  const navigate = useNavigate();
   // State
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
-  const pageSize = 20;
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(
+    new Date().getMonth() + 1
+  );
+  const [selectedYear, setSelectedYear] = useState<number | null>(
+    new Date().getFullYear()
+  );
+  const pageSize = 10;
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // API
   const { data, isLoading, isError } = useMyDesigns({
     pageNumber: currentPage,
     pageSize,
     status: statusFilter === "all" ? "" : statusFilter,
+    month: selectedMonth ?? undefined,
+    year: selectedYear ?? undefined,
   });
 
   const { mutate: generateExcel } = useGenerateDesignExcel();
@@ -86,6 +98,65 @@ export default function MyWorkPage() {
   const currentPageNum = data?.page || currentPage;
   const hasPreviousPage = currentPageNum > 1;
   const hasNextPage = currentPageNum < totalPages;
+
+  // Auto-adjust currentPage if it exceeds totalPages
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  // Sync pageInput with currentPage
+  useEffect(() => {
+    setPageInput(currentPageNum.toString());
+  }, [currentPageNum]);
+
+  // Scroll to top of table when page changes
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop = 0;
+    }
+  }, [currentPage]);
+
+  // Pagination handlers
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setPageInput("");
+      return;
+    }
+    const page = parseInt(value, 10);
+    if (!isNaN(page)) {
+      setPageInput(page.toString());
+    }
+  };
+
+  const handlePageInputBlur = () => {
+    const page = parseInt(pageInput, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    } else {
+      setPageInput(currentPageNum.toString());
+    }
+  };
 
   // Memoize designs to avoid useMemo dependency warnings
   const memoizedDesigns = useMemo(() => data?.items || [], [data?.items]);
@@ -132,10 +203,12 @@ export default function MyWorkPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <div className="text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Đang tải công việc của bạn...</p>
+          <p className="text-sm text-muted-foreground">
+            Đang tải công việc của bạn...
+          </p>
         </div>
       </div>
     );
@@ -144,7 +217,7 @@ export default function MyWorkPage() {
   // Error state
   if (isError) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="h-full flex items-center justify-center">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center">
             <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
@@ -161,23 +234,67 @@ export default function MyWorkPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             Công việc của tôi
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Quản lý {totalCount} thiết kế được giao cho bạn
           </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Calendar className="w-3.5 h-3.5 text-muted-foreground mr-0.5" />
+          <Select
+            value={selectedMonth?.toString() || "all"}
+            onValueChange={(v) => {
+              setSelectedMonth(v === "all" ? null : parseInt(v));
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[100px] h-8 text-xs bg-card">
+              <SelectValue placeholder="Tháng" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              {Array.from({ length: 12 }, (_, i) => (
+                <SelectItem key={i + 1} value={(i + 1).toString()}>
+                  Tháng {i + 1}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={selectedYear?.toString() || "all"}
+            onValueChange={(v) => {
+              setSelectedYear(v === "all" ? null : parseInt(v));
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[90px] h-8 text-xs bg-card">
+              <SelectValue placeholder="Năm" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              {Array.from({ length: 5 }, (_, i) => {
+                const year = new Date().getFullYear() - 2 + i;
+                return (
+                  <SelectItem key={year} value={year.toString()}>
+                    Năm {year}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-3 shrink-0">
         <Card
-          className={`cursor-pointer transition-all ${
+          className={`cursor-pointer transition-all p-2 ${
             statusFilter === "all" ? "ring-2 ring-primary" : "hover:shadow-md"
           }`}
           onClick={() => {
@@ -185,9 +302,9 @@ export default function MyWorkPage() {
             setCurrentPage(1);
           }}
         >
-          <CardContent className="p-3">
-            <div className="text-xl font-bold">{stats.total}</div>
-            <div className="text-xs text-muted-foreground">Tổng cộng</div>
+          <CardContent className="p-0">
+            <div className="text-lg font-bold">{stats.total}</div>
+            <div className="text-[10px] text-muted-foreground">Tổng cộng</div>
           </CardContent>
         </Card>
 
@@ -200,7 +317,7 @@ export default function MyWorkPage() {
           return (
             <Card
               key={key}
-              className={`cursor-pointer transition-all ${
+              className={`cursor-pointer transition-all p-2 ${
                 isActive ? "ring-2 ring-primary" : "hover:shadow-md"
               } ${config.bgColor}`}
               onClick={() => {
@@ -208,12 +325,12 @@ export default function MyWorkPage() {
                 setCurrentPage(1);
               }}
             >
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2">
-                  <Icon className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xl font-bold">{count}</span>
+              <CardContent className="p-0">
+                <div className="flex items-center gap-1.5">
+                  <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-lg font-bold">{count}</span>
                 </div>
-                <div className="text-xs text-muted-foreground line-clamp-1">
+                <div className="text-[10px] text-muted-foreground line-clamp-1">
                   {config.label}
                 </div>
               </CardContent>
@@ -223,20 +340,20 @@ export default function MyWorkPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-card border rounded-lg p-4">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between bg-card border rounded-lg p-3 mb-3 shrink-0">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             placeholder="Tìm theo mã, tên, loại thiết kế..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-9 text-sm"
           />
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Select
             value={statusFilter}
             onValueChange={(v) => {
@@ -244,8 +361,8 @@ export default function MyWorkPage() {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[200px]">
-              <Filter className="w-4 h-4 mr-2" />
+            <SelectTrigger className="w-[180px] h-9 text-sm">
+              <Filter className="w-3.5 h-3.5 mr-2" />
               <SelectValue placeholder="Lọc trạng thái" />
             </SelectTrigger>
             <SelectContent>
@@ -260,17 +377,23 @@ export default function MyWorkPage() {
             </SelectContent>
           </Select>
 
-          {(searchQuery || statusFilter !== "all") && (
+          {(searchQuery ||
+            statusFilter !== "all" ||
+            selectedMonth !== null ||
+            selectedYear !== null) && (
             <Button
               variant="ghost"
               size="sm"
+              className="h-9 text-xs"
               onClick={() => {
                 setSearchQuery("");
                 setStatusFilter("all");
+                setSelectedMonth(new Date().getMonth() + 1);
+                setSelectedYear(new Date().getFullYear());
                 setCurrentPage(1);
               }}
             >
-              <SlidersHorizontal className="w-4 h-4 mr-2" />
+              <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
               Xóa lọc
             </Button>
           )}
@@ -278,19 +401,30 @@ export default function MyWorkPage() {
       </div>
 
       {/* Table */}
-      <Card>
-        <div className="overflow-x-auto">
+      <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div ref={tableContainerRef} className="overflow-auto flex-1">
           <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="min-w-[120px]">Mã thiết kế</TableHead>
-                <TableHead className="min-w-[200px]">Tên thiết kế</TableHead>
-                <TableHead className="min-w-[120px]">Loại</TableHead>
-                <TableHead className="min-w-[120px]">Chất liệu</TableHead>
-                <TableHead className="min-w-[100px]">Kích thước</TableHead>
-                <TableHead className="min-w-[140px]">Trạng thái</TableHead>
-                <TableHead className="min-w-[100px]">Cập nhật</TableHead>
-                <TableHead className="w-[120px] text-right">Thao tác</TableHead>
+            <TableHeader className="sticky top-0 bg-background z-10">
+              <TableRow>
+                <TableHead className="h-9 text-sm font-bold">
+                  Mã thiết kế
+                </TableHead>
+                <TableHead className="h-9 text-sm font-bold">
+                  Tên thiết kế
+                </TableHead>
+                <TableHead className="h-9 text-sm font-bold">Loại</TableHead>
+                <TableHead className="h-9 text-sm font-bold">
+                  Chất liệu
+                </TableHead>
+                <TableHead className="h-9 text-sm font-bold">
+                  Kích thước
+                </TableHead>
+                <TableHead className="h-9 text-sm font-bold">
+                  Trạng thái
+                </TableHead>
+                <TableHead className="h-9 text-sm font-bold">
+                  Cập nhật
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -302,50 +436,48 @@ export default function MyWorkPage() {
                   return (
                     <TableRow
                       key={design.id}
-                      className="hover:bg-muted/50 cursor-pointer"
+                      className="hover:bg-muted/50 cursor-pointer h-14"
+                      onClick={() => navigate(`/design/detail/${design.id}`)}
                     >
                       {/* Code */}
-                      <TableCell>
-                        <Link
-                          to={`/design/detail/${design.id}`}
-                          className="font-semibold text-primary hover:underline"
-                        >
+                      <TableCell className="py-3">
+                        <span className="font-semibold text-sm text-primary">
                           {design.code || `DES-${design.id}`}
-                        </Link>
+                        </span>
                       </TableCell>
 
                       {/* Name */}
-                      <TableCell>
-                        <p className="font-medium line-clamp-1">
+                      <TableCell className="py-3">
+                        <p className="font-semibold text-sm line-clamp-1">
                           {design.designName || "Chưa đặt tên"}
                         </p>
                       </TableCell>
 
                       {/* Design Type */}
-                      <TableCell>
-                        <span className="text-sm">
+                      <TableCell className="py-3">
+                        <span className="text-sm font-semibold">
                           {design.designType?.name || "—"}
                         </span>
                       </TableCell>
 
                       {/* Material Type */}
-                      <TableCell>
-                        <span className="text-sm">
+                      <TableCell className="py-3">
+                        <span className="text-sm font-semibold">
                           {design.materialType?.name || "—"}
                         </span>
                       </TableCell>
 
                       {/* Dimensions */}
-                      <TableCell>
-                        <span className="text-sm font-mono">
-                          {design.width && design.height
-                            ? `${design.width}×${design.height}`
-                            : design.dimensions || "—"}
+                      <TableCell className="py-3">
+                        <span className="text-sm font-mono font-semibold">
+                          {design.width
+                            ? `${design.length} x ${design.width} x ${design.height}`
+                            : `${design.length} x ${design.height}`}
                         </span>
                       </TableCell>
 
                       {/* Status */}
-                      <TableCell>
+                      <TableCell className="py-3">
                         <Badge
                           className={`${config.color} border text-xs font-medium`}
                         >
@@ -355,48 +487,32 @@ export default function MyWorkPage() {
                       </TableCell>
 
                       {/* Updated At */}
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
+                      <TableCell className="py-3">
+                        <span className="text-sm font-medium text-muted-foreground">
                           {formatDate(design.updatedAt)}
                         </span>
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Link to={`/design/detail/${design.id}`}>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                </Link>
-                              </TooltipTrigger>
-                              <TooltipContent>Xem chi tiết</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
                       </TableCell>
                     </TableRow>
                   );
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-48">
-                    <div className="text-center">
-                      <Palette className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-                      <h3 className="text-base font-semibold mb-1">
-                        {searchQuery || statusFilter !== "all"
+                  <TableCell colSpan={7} className="text-center py-12">
+                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                      <Palette className="w-10 h-10 mb-2 opacity-50" />
+                      <h3 className="text-sm font-semibold mb-1">
+                        {searchQuery ||
+                        statusFilter !== "all" ||
+                        selectedMonth !== null ||
+                        selectedYear !== null
                           ? "Không tìm thấy thiết kế"
                           : "Chưa có thiết kế nào"}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {searchQuery || statusFilter !== "all"
+                      <p className="text-xs text-muted-foreground">
+                        {searchQuery ||
+                        statusFilter !== "all" ||
+                        selectedMonth !== null ||
+                        selectedYear !== null
                           ? "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm"
                           : "Các thiết kế được giao cho bạn sẽ hiển thị ở đây"}
                       </p>
@@ -409,36 +525,62 @@ export default function MyWorkPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-4 py-3">
-            <div className="text-sm text-muted-foreground">
-              Hiển thị {(currentPage - 1) * pageSize + 1} -{" "}
-              {Math.min(currentPage * pageSize, totalCount)} / {totalCount}{" "}
+        {totalCount > 0 && (
+          <div className="flex items-center justify-between border-t px-3 py-2 shrink-0 bg-background">
+            <div className="text-xs text-muted-foreground">
+              Hiển thị{" "}
+              <span className="font-medium text-foreground">
+                {(currentPageNum - 1) * pageSize + 1}
+              </span>
+              {" - "}
+              <span className="font-medium text-foreground">
+                {Math.min(currentPageNum * pageSize, totalCount)}
+              </span>{" "}
+              trong tổng số{" "}
+              <span className="font-medium text-foreground">{totalCount}</span>{" "}
               thiết kế
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={!hasPreviousPage}
+                className="h-8"
+                onClick={handlePreviousPage}
+                disabled={!hasPreviousPage || isLoading}
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Trước
+                <ChevronLeft className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Trang trước</span>
               </Button>
-              <span className="text-sm text-muted-foreground px-2">
-                {currentPage} / {totalPages}
-              </span>
+              <div className="flex items-center space-x-1">
+                <span className="text-xs text-muted-foreground">Trang</span>
+                <Input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  value={pageInput}
+                  onChange={handlePageInputChange}
+                  onBlur={handlePageInputBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="w-14 h-8 text-center text-xs"
+                  disabled={isLoading}
+                />
+                <span className="text-xs text-muted-foreground">
+                  / {totalPages}
+                </span>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={!hasNextPage}
+                className="h-8"
+                onClick={handleNextPage}
+                disabled={!hasNextPage || isLoading}
               >
-                Sau
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <span className="hidden sm:inline">Trang sau</span>
+                <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>

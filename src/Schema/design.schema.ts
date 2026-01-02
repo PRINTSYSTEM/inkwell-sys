@@ -22,6 +22,7 @@ import {
   CreateDesignRequestSchema as GenCreateDesignRequestSchema,
   UpdateDesignRequestSchema as GenUpdateDesignRequestSchema,
   postApidesignsIdtimeline_BodySchema as GenPostApidesignsIdtimelineBodySchema,
+  RevertDesignRequestSchema as GenRevertDesignRequestSchema,
 } from "./generated";
 
 // ===== DesignTimelineEntryResponse =====
@@ -125,4 +126,11 @@ export const CreateDesignTimelineEntryRequestSchema =
   GenPostApidesignsIdtimelineBodySchema.passthrough();
 export type CreateDesignTimelineEntryRequest = z.infer<
   typeof CreateDesignTimelineEntryRequestSchema
+>;
+
+// ===== RevertDesignRequest =====
+export const RevertDesignRequestSchema =
+  GenRevertDesignRequestSchema.passthrough();
+export type RevertDesignRequest = z.infer<
+  typeof RevertDesignRequestSchema
 >;

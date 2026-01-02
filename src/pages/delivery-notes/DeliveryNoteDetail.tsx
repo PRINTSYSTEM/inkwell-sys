@@ -487,7 +487,7 @@ export default function DeliveryNoteDetailPage() {
               </div>
               <div>
                 <strong>Loại:</strong>{" "}
-                {deliveryNote.failureTypeName ||
+                {(deliveryNote.failureTypeName as string | undefined) ||
                   deliveryNote.failureType ||
                   "—"}
               </div>

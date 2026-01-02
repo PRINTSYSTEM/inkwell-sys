@@ -156,54 +156,62 @@ export default function CollectionSchedulePage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                scheduleData.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-mono text-sm">
-                      {item.customerCode || "—"}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {item.customerName || "—"}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {item.orderCode || "—"}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {item.invoiceNumber || "—"}
-                    </TableCell>
-                    <TableCell className="text-center text-sm">
-                      {item.dueDate ? formatDate(item.dueDate) : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.amount !== undefined
-                        ? formatCurrency(item.amount)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {item.daysUntilDue !== undefined ? (
-                        item.daysUntilDue < 0 ? (
-                          <Badge variant="destructive">
-                            Quá hạn {Math.abs(item.daysUntilDue)} ngày
-                          </Badge>
-                        ) : item.daysUntilDue === 0 ? (
-                          <Badge variant="default">Hôm nay</Badge>
+                scheduleData.items.map((item, index) => {
+                  // Calculate days until due from dueDate
+                  const daysUntilDue = item.dueDate
+                    ? Math.ceil(
+                        (new Date(item.dueDate).getTime() - new Date().getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      )
+                    : undefined;
+                  
+                  // Use documentNumber for both order and invoice codes
+                  const orderCode = item.documentType === "order" ? item.documentNumber : null;
+                  const invoiceNumber = item.documentType === "invoice" ? item.documentNumber : null;
+                  
+                  return (
+                    <TableRow key={item.documentId || item.customerId || index}>
+                      <TableCell className="font-mono text-sm">
+                        {item.customerId ? `KH-${item.customerId}` : "—"}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {item.customerName || "—"}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {orderCode || "—"}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {invoiceNumber || "—"}
+                      </TableCell>
+                      <TableCell className="text-center text-sm">
+                        {item.dueDate ? formatDate(item.dueDate) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {item.amountDue !== undefined
+                          ? formatCurrency(item.amountDue)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {daysUntilDue !== undefined ? (
+                          daysUntilDue < 0 ? (
+                            <Badge variant="destructive">
+                              Quá hạn {Math.abs(daysUntilDue)} ngày
+                            </Badge>
+                          ) : daysUntilDue === 0 ? (
+                            <Badge variant="default">Hôm nay</Badge>
+                          ) : (
+                            <Badge variant="outline">{daysUntilDue} ngày</Badge>
+                          )
                         ) : (
-                          <Badge variant="outline">{item.daysUntilDue} ngày</Badge>
-                        )
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {item.status ? (
-                        <Badge variant={item.status === "paid" ? "default" : "secondary"}>
-                          {item.status === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}
-                        </Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary">Chưa thanh toán</Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

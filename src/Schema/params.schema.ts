@@ -215,3 +215,13 @@ export const CustomerOrdersParamsSchema = PagedParamsSchema.extend({
 });
 
 export type CustomerOrdersParams = z.infer<typeof CustomerOrdersParamsSchema>;
+
+// ==== Die list params (/api/dies) ====
+
+export const DieListParamsSchema = PagedParamsSchema.extend({
+  dieName: z.string().nullable().optional(),
+  isUsable: z.boolean().nullable().optional(),
+  location: z.string().nullable().optional(),
+});
+
+export type DieListParams = z.infer<typeof DieListParamsSchema>;
