@@ -575,7 +575,9 @@ export default function AccountingOrderDetail() {
                 </Button>
                 {/* {remainingAmount > 0 && ( */}
                 {order.customer?.companyName &&
-                  order.status === "production_completed" && (
+                  order.status === "confirmed_for_printing" &&
+                  order.customer?.email &&
+                  order.customer?.phone && (
                     <Button
                       size="sm"
                       onClick={handleUpdatePayment}

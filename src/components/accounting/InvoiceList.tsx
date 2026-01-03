@@ -1,18 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
   Search,
   Filter,
-  MoreHorizontal,
-  Eye,
   FileText,
   ChevronLeft,
   ChevronRight,
   Download,
   RefreshCw,
-  ExternalLink,
   Printer,
   Truck,
   AlertCircle,
@@ -36,13 +33,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -219,6 +209,7 @@ export function InvoiceList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState<string>("1");
   const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(
     null
   );
@@ -228,6 +219,7 @@ export function InvoiceList() {
   );
   const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] =
     useState(false);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const itemsPerPage = 10;
 
@@ -268,6 +260,64 @@ export function InvoiceList() {
   const totalPages = data?.totalPages || 1;
   const totalItems = data?.total || 0;
 
+  // Sync pageInput with currentPage
+  useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
+
+  // Auto-adjust currentPage if it exceeds totalPages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setPageInput("");
+      return;
+    }
+    const page = parseInt(value, 10);
+    if (!isNaN(page)) {
+      setPageInput(page.toString());
+    }
+  };
+
+  const handlePageInputBlur = () => {
+    const page = parseInt(pageInput, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -280,11 +330,12 @@ export function InvoiceList() {
     return format(new Date(dateStr), "dd/MM/yyyy", { locale: vi });
   };
 
-  const handleViewDetails = (order: OrderResponse) => {
+  const handleOrderClick = (order: OrderResponse) => {
     navigate(`/accounting/orders/${order.id}?tab=invoice`);
   };
 
-  const handleCreateInvoice = (order: OrderResponse) => {
+  const handleCreateInvoice = (order: OrderResponse, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedOrder(order);
     setIsInvoiceDialogOpen(true);
   };
@@ -522,7 +573,7 @@ export function InvoiceList() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-4">
+      <div className="h-full flex flex-col overflow-hidden">
         {/* Error Alert */}
         {isError && (
           <Alert variant="destructive">
@@ -537,7 +588,7 @@ export function InvoiceList() {
         )}
 
         {/* Filters and Actions */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 shrink-0">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -612,256 +663,240 @@ export function InvoiceList() {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[50px]">
-                  <Checkbox
-                    checked={
-                      filteredOrders.length > 0 &&
-                      selectedOrderIds.size === filteredOrders.length
-                    }
-                    onCheckedChange={handleSelectAll}
-                  />
-                </TableHead>
-                <TableHead className="w-[140px]">Mã đơn</TableHead>
-                <TableHead>Khách hàng</TableHead>
-                <TableHead className="text-right">Tổng tiền</TableHead>
-                <TableHead className="text-center">Trạng thái đơn</TableHead>
-                <TableHead className="text-center">Hóa đơn</TableHead>
-                <TableHead className="text-center">Ngày giao</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-5 w-full" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : filteredOrders.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    Không tìm thấy đơn hàng nào.
-                  </TableCell>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div
+            ref={tableContainerRef}
+            className="flex-1 overflow-auto rounded-lg border"
+          >
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-background">
+                <TableRow className="bg-muted/50 h-10">
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={
+                        filteredOrders.length > 0 &&
+                        selectedOrderIds.size === filteredOrders.length
+                      }
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead className="w-[140px] font-bold text-sm">
+                    Mã đơn
+                  </TableHead>
+                  <TableHead className="font-bold text-sm">
+                    Khách hàng
+                  </TableHead>
+                  <TableHead className="text-right font-bold text-sm">
+                    Tổng tiền
+                  </TableHead>
+                  <TableHead className="text-center font-bold text-sm">
+                    Trạng thái đơn
+                  </TableHead>
+                  <TableHead className="text-center font-bold text-sm">
+                    Hóa đơn
+                  </TableHead>
+                  <TableHead className="text-center font-bold text-sm">
+                    Ngày giao
+                  </TableHead>
                 </TableRow>
-              ) : (
-                filteredOrders.map((order) => {
-                  const customerType = deriveCustomerType(order.customer);
-                  const canInvoice = canIssueInvoice(order);
-                  const customerInfoComplete = isCustomerInfoComplete(order);
-                  // Invoice status: check if invoice has been issued
-                  // Use order.invoiceStatus if available, otherwise default to "not_issued"
-                  const orderWithInvoice = order as OrderWithInvoiceStatus;
-                  const invoiceStatus: InvoiceStatus =
-                    (orderWithInvoice.invoiceStatus as InvoiceStatus) ||
-                    "not_issued";
-                  const isSelected = order.id
-                    ? selectedOrderIds.has(order.id)
-                    : false;
-                  const isCheckboxDisabled =
-                    !customerInfoComplete ||
-                    !canInvoice ||
-                    invoiceStatus === "issued";
-                  const disableReason = getInvoiceDisableReason(
-                    order,
-                    canInvoice,
-                    customerInfoComplete,
-                    invoiceStatus
-                  );
-
-                  return (
-                    <TableRow
-                      key={order.id}
-                      className={`group ${isSelected ? "bg-muted/50" : ""}`}
-                    >
-                      <TableCell>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="inline-block">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() =>
-                                  order.id && handleToggleOrder(order.id)
-                                }
-                                disabled={isCheckboxDisabled}
-                              />
-                            </div>
-                          </TooltipTrigger>
-                          {isCheckboxDisabled && disableReason && (
-                            <TooltipContent>
-                              <p className="max-w-xs">{disableReason}</p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell className="font-medium font-mono text-sm">
-                        {order.code}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <TruncatedText
-                              text={
-                                order.customer?.companyName ||
-                                order.customer?.name ||
-                                "—"
-                              }
-                              className="font-medium text-sm"
-                            />
-                            {!customerInfoComplete &&
-                              invoiceStatus === "not_issued" && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <AlertTriangle className="h-3 w-3 text-warning" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Thiếu thông tin khách hàng</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              {order.customer?.phone || "—"}
-                            </span>
-                            <CustomerTypeBadge type={customerType} />
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {formatCurrency(order.totalAmount)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <StatusBadge
-                          status={
-                            order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
-                          }
-                          label={
-                            ENTITY_CONFIG.orderStatuses.values[
-                              order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
-                            ]
-                          }
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <InvoiceStatusBadge status={invoiceStatus} />
-                      </TableCell>
-                      <TableCell className="text-center text-sm text-muted-foreground">
-                        {formatDate(order.deliveryDate)}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleViewDetails(order)}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {invoiceStatus === "not_issued" ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="w-full">
-                                    <DropdownMenuItem
-                                      onClick={() => handleCreateInvoice(order)}
-                                      disabled={
-                                        !canInvoice || !customerInfoComplete
-                                      }
-                                      className="w-full"
-                                    >
-                                      <FileText className="h-4 w-4 mr-2" />
-                                      Xuất hóa đơn
-                                    </DropdownMenuItem>
-                                  </div>
-                                </TooltipTrigger>
-                                {(!canInvoice || !customerInfoComplete) &&
-                                  disableReason && (
-                                    <TooltipContent>
-                                      <p className="max-w-xs">
-                                        {disableReason}
-                                      </p>
-                                    </TooltipContent>
-                                  )}
-                              </Tooltip>
-                            ) : (
-                              <>
-                                <DropdownMenuItem
-                                  onClick={() => handleExportInvoice(order)}
-                                >
-                                  <Printer className="h-4 w-4 mr-2" />
-                                  In / Xuất Excel
-                                </DropdownMenuItem>
-                                {order.status === "completed" && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        handleExportDeliveryNote(order)
-                                      }
-                                    >
-                                      <Truck className="h-4 w-4 mr-2" />
-                                      Xuất phiếu giao hàng
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={i} className="h-14">
+                      {Array.from({ length: 7 }).map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableCell>
+                      ))}
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                  ))
+                ) : filteredOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      Không tìm thấy đơn hàng nào.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredOrders.map((order) => {
+                    const customerType = deriveCustomerType(order.customer);
+                    const canInvoice = canIssueInvoice(order);
+                    const customerInfoComplete = isCustomerInfoComplete(order);
+                    // Invoice status: check if invoice has been issued
+                    // Use order.invoiceStatus if available, otherwise default to "not_issued"
+                    const orderWithInvoice = order as OrderWithInvoiceStatus;
+                    const invoiceStatus: InvoiceStatus =
+                      (orderWithInvoice.invoiceStatus as InvoiceStatus) ||
+                      "not_issued";
+                    const isSelected = order.id
+                      ? selectedOrderIds.has(order.id)
+                      : false;
+                    const isCheckboxDisabled =
+                      !customerInfoComplete ||
+                      !canInvoice ||
+                      invoiceStatus === "issued";
+                    const disableReason = getInvoiceDisableReason(
+                      order,
+                      canInvoice,
+                      customerInfoComplete,
+                      invoiceStatus
+                    );
+
+                    return (
+                      <TableRow
+                        key={order.id}
+                        className={`h-14 cursor-pointer hover:bg-muted/50 ${
+                          isSelected ? "bg-muted/50" : ""
+                        }`}
+                        onClick={() => handleOrderClick(order)}
+                      >
+                        <TableCell
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-block">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => {
+                                    if (order.id) {
+                                      handleToggleOrder(order.id);
+                                    }
+                                  }}
+                                  disabled={isCheckboxDisabled}
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            {isCheckboxDisabled && disableReason && (
+                              <TooltipContent>
+                                <p className="max-w-xs">{disableReason}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell className="font-bold font-mono text-sm">
+                          {order.code}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <TruncatedText
+                                text={
+                                  order.customer?.companyName ||
+                                  order.customer?.name ||
+                                  "—"
+                                }
+                                className="font-semibold text-sm"
+                              />
+                              {!customerInfoComplete &&
+                                invoiceStatus === "not_issued" && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <AlertTriangle className="h-3 w-3 text-warning" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Thiếu thông tin khách hàng</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {order.customer?.phone || "—"}
+                              </span>
+                              <CustomerTypeBadge type={customerType} />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-bold tabular-nums text-sm">
+                          {formatCurrency(order.totalAmount)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <StatusBadge
+                            status={
+                              order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                            }
+                            label={
+                              ENTITY_CONFIG.orderStatuses.values[
+                                order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                              ]
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <InvoiceStatusBadge status={invoiceStatus} />
+                        </TableCell>
+                        <TableCell className="text-center text-sm font-semibold text-muted-foreground">
+                          {formatDate(order.deliveryDate)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Trang {currentPage} / {totalPages} ({totalItems} đơn hàng)
+        {totalItems > 0 && (
+          <div className="flex items-center justify-between shrink-0 pt-4 border-t">
+            <p className="text-sm font-semibold text-muted-foreground">
+              Hiển thị{" "}
+              <span className="font-bold text-foreground">
+                {(currentPage - 1) * itemsPerPage + 1}
+              </span>
+              {" - "}
+              <span className="font-bold text-foreground">
+                {Math.min(currentPage * itemsPerPage, totalItems)}
+              </span>{" "}
+              trong tổng số{" "}
+              <span className="font-bold text-foreground">{totalItems}</span>{" "}
+              đơn hàng
             </p>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                onClick={handlePreviousPage}
                 disabled={currentPage === 1 || isLoading}
+                className="h-8"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-medium px-2">
-                {currentPage} / {totalPages}
-              </span>
+              <div className="flex items-center space-x-1">
+                <span className="text-sm font-semibold text-muted-foreground">
+                  Trang
+                </span>
+                <Input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  value={pageInput}
+                  onChange={handlePageInputChange}
+                  onBlur={handlePageInputBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="w-14 h-8 text-center text-sm font-bold"
+                  disabled={isLoading}
+                />
+                <span className="text-sm font-semibold text-muted-foreground">
+                  / {totalPages}
+                </span>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
+                onClick={handleNextPage}
                 disabled={currentPage === totalPages || isLoading}
+                className="h-8"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>

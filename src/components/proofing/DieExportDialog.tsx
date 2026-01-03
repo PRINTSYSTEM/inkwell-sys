@@ -39,19 +39,23 @@ import {
   Check,
   ChevronsUpDown,
   Plus,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRecordDieExportWithFile } from "@/hooks/use-proofing-order";
 import { useActiveDieVendors, useCreateVendor } from "@/hooks/use-vendor";
 import {
-  useCreateDieFromDieExport,
-  useDies,
+  useCreateDie,
+  useSearchDies,
+  useAssignDieToProofingOrder,
   useDiesByProofingOrder,
+  useDies,
 } from "@/hooks/use-die";
 import type { ProofingOrderResponse } from "@/Schema/proofing-order.schema";
-import type { CreateDieRequest } from "@/Schema";
+import type { DieResponse } from "@/Schema";
 import { getErrorMessage } from "@/services/BaseService";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
 interface DieExportDialogProps {
   open: boolean;
@@ -77,29 +81,65 @@ export function DieExportDialog({
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [receivedAtManual, setReceivedAtManual] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
-  const [dieAction, setDieAction] = useState<"select" | "create">("create");
-  const [selectedDieId, setSelectedDieId] = useState<number | null>(null);
-  const [dieSearchOpen, setDieSearchOpen] = useState(false);
+  const [dieAction, setDieAction] = useState<"select" | "create">("select");
+
+  // For selecting existing dies
+  const [selectedDieIds, setSelectedDieIds] = useState<number[]>([]);
+  const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+  // For creating new die
   const [dieName, setDieName] = useState<string>("");
   const [dieSize, setDieSize] = useState<string>("");
   const [diePrice, setDiePrice] = useState<number | undefined>(undefined);
+  const [dieImage, setDieImage] = useState<File | null>(null);
+  const [dieImagePreview, setDieImagePreview] = useState<string | null>(null);
 
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordDie, isPending: recordingDie } =
     useRecordDieExportWithFile();
-  const { mutate: createDieFromDieExport, isPending: creatingDie } =
-    useCreateDieFromDieExport();
+  const { mutate: createDie, isPending: creatingDie } = useCreateDie();
+  const { mutate: assignDie, isPending: assigningDie } =
+    useAssignDieToProofingOrder();
 
-  // Fetch available dies for selection
-  const { data: diesData, isLoading: loadingDies } = useDies({
-    isUsable: true,
-    pageSize: 100,
-  });
-  const availableDies = diesData?.items || [];
+  // Get dies - use search when there's a search term, otherwise use list
+  const { data: searchDiesData, isLoading: loadingSearchDies } = useSearchDies(
+    open && dieSearchTerm.trim()
+      ? {
+          dieName: dieSearchTerm.trim(),
+          isUsable: true,
+          pageSize: 100,
+        }
+      : undefined
+  );
+
+  const { data: diesData, isLoading: loadingDies } = useDies(
+    open && !dieSearchTerm.trim()
+      ? {
+          isUsable: true,
+          pageSize: 100,
+        }
+      : undefined
+  );
+
+  const searchDies = searchDiesData?.items || [];
+  const listDies = diesData?.items || [];
+  const allDies = dieSearchTerm.trim() ? searchDies : listDies;
+  const isLoadingDies = dieSearchTerm.trim() ? loadingSearchDies : loadingDies;
 
   // Fetch dies already assigned to this proofing order
   const { data: assignedDies } = useDiesByProofingOrder(proofingOrderId, open);
+  const assignedDieIds = useMemo(
+    () => new Set(assignedDies?.map((ad) => ad.dieId).filter(Boolean) || []),
+    [assignedDies]
+  );
+
+  // Filter out already assigned dies from results
+  const availableDies = useMemo(
+    () => allDies.filter((die) => die.id && !assignedDieIds.has(die.id)),
+    [allDies, assignedDieIds]
+  );
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -113,26 +153,30 @@ export function DieExportDialog({
       setImagePreviews([]);
       setReceivedAtManual("");
       setNotes("");
-      setDieAction("create");
-      setSelectedDieId(null);
-      setDieSearchOpen(false);
+      setDieAction("select");
+      setSelectedDieIds([]);
+      setDieSearchTerm("");
       setDieName("");
       setDieSize("");
       setDiePrice(undefined);
+      setDieImage(null);
+      setDieImagePreview(null);
     }
   }, [open]);
 
-  // Cleanup image preview URLs when component unmounts or files change
+  // Cleanup image preview URLs
   useEffect(() => {
     return () => {
       imagePreviews.forEach((url) => {
         URL.revokeObjectURL(url);
       });
+      if (dieImagePreview) {
+        URL.revokeObjectURL(dieImagePreview);
+      }
     };
-  }, [imagePreviews]);
+  }, [imagePreviews, dieImagePreview]);
 
   // Helper function to format local datetime with timezone offset
-  // Returns format: "YYYY-MM-DDTHH:mm:ss+HH:mm" (e.g., "2025-01-01T10:00:00+07:00")
   const formatLocalDateTimeWithOffset = useCallback((date: Date): string => {
     const pad = (n: number) => String(n).padStart(2, "0");
     const year = date.getFullYear();
@@ -142,28 +186,22 @@ export function DieExportDialog({
     const minutes = pad(date.getMinutes());
     const seconds = pad(date.getSeconds());
 
-    // Get timezone offset in minutes and convert to hours and minutes
     const offsetMinutes = date.getTimezoneOffset();
     const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
     const offsetMins = Math.abs(offsetMinutes) % 60;
-    const offsetSign = offsetMinutes <= 0 ? "+" : "-"; // Note: getTimezoneOffset() returns negative for positive offsets
+    const offsetSign = offsetMinutes <= 0 ? "+" : "-";
 
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${pad(offsetHours)}:${pad(offsetMins)}`;
   }, []);
 
-  // Helper function to convert datetime-local string to local datetime with offset
   const convertLocalDateTimeToISO = useCallback(
     (localDateTime: string): string => {
-      // datetime-local format: "YYYY-MM-DDTHH:mm" (no timezone)
-      // Parse as local time
       const date = new Date(localDateTime);
-      // Format with local timezone offset
       return formatLocalDateTimeWithOffset(date);
     },
     [formatLocalDateTimeWithOffset]
   );
 
-  // Calculate receivedAt from manual input
   const receivedAt = useMemo(() => {
     return receivedAtManual
       ? convertLocalDateTimeToISO(receivedAtManual)
@@ -183,7 +221,7 @@ export function DieExportDialog({
         email: null,
         address: null,
         note: null,
-        vendorType: "die", // Specify vendor type as die
+        vendorType: "die",
       },
       {
         onSuccess: (newVendor) => {
@@ -205,12 +243,10 @@ export function DieExportDialog({
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    // Validate all files
     const validFiles: File[] = [];
     const newPreviews: string[] = [];
 
     files.forEach((file) => {
-      // Kiểm tra file ảnh
       if (!file.type.startsWith("image/")) {
         toast.error(`File "${file.name}" không phải là ảnh`);
         return;
@@ -228,7 +264,6 @@ export function DieExportDialog({
       setImagePreviews((prev) => [...prev, ...newPreviews]);
     }
 
-    // Reset input
     e.target.value = "";
   };
 
@@ -246,105 +281,247 @@ export function DieExportDialog({
     });
   };
 
-  const handleSubmit = () => {
-    if (!vendorId && !vendorName.trim()) {
+  const handleDieImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("File phải là ảnh");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File vượt quá 10MB");
+      return;
+    }
+
+    setDieImage(file);
+    if (dieImagePreview) {
+      URL.revokeObjectURL(dieImagePreview);
+    }
+    setDieImagePreview(URL.createObjectURL(file));
+    e.target.value = "";
+  };
+
+  const toggleDieSelection = (dieId: number) => {
+    setSelectedDieIds((prev) => {
+      if (prev.includes(dieId)) {
+        return prev.filter((id) => id !== dieId);
+      } else {
+        if (prev.length >= dieCount) {
+          toast.error(`Chỉ có thể chọn tối đa ${dieCount} khuôn`);
+          return prev;
+        }
+        return [...prev, dieId];
+      }
+    });
+  };
+
+  const handleSubmit = async () => {
+    // Validate vendor - chỉ khi tạo khuôn mới
+    if (dieAction === "create" && !vendorId && !vendorName.trim()) {
       toast.error("Vui lòng chọn hoặc nhập đơn vị làm khuôn bế");
       return;
     }
 
-    // Nếu không có file mới và không có ảnh cũ, yêu cầu upload file
-    if (
-      dieFiles.length === 0 &&
-      !proofingOrder?.dieExport?.imageUrl &&
-      (!proofingOrder?.dieExport?.images ||
-        proofingOrder.dieExport.images.length === 0)
-    ) {
-      toast.error("Vui lòng chọn ít nhất một ảnh khuôn bế");
-      return;
+    // Validate images - chỉ khi tạo khuôn mới
+    if (dieAction === "create") {
+      if (
+        dieFiles.length === 0 &&
+        !proofingOrder?.dieExport?.imageUrl &&
+        (!proofingOrder?.dieExport?.images ||
+          proofingOrder.dieExport.images.length === 0)
+      ) {
+        toast.error("Vui lòng chọn ít nhất một ảnh khuôn bế");
+        return;
+      }
     }
 
     // Validate die selection/creation
-    if (dieAction === "select" && !selectedDieId) {
-      toast.error("Vui lòng chọn khuôn bế từ danh sách");
-      return;
+    if (dieAction === "select") {
+      if (selectedDieIds.length === 0) {
+        toast.error("Vui lòng chọn ít nhất một khuôn bế từ danh sách");
+        return;
+      }
+      if (selectedDieIds.length !== dieCount) {
+        toast.error(
+          `Số lượng khuôn đã chọn (${selectedDieIds.length}) không khớp với số lượng khuôn (${dieCount})`
+        );
+        return;
+      }
     }
 
-    if (dieAction === "create" && !dieName.trim()) {
-      toast.error("Vui lòng nhập tên khuôn bế");
-      return;
+    if (dieAction === "create") {
+      if (!dieName.trim()) {
+        toast.error("Vui lòng nhập tên khuôn bế");
+        return;
+      }
     }
 
-    // sentAt is current local time, format with timezone offset
-    const sentAt = formatLocalDateTimeWithOffset(new Date());
-    // estimatedReceiveAt is same as receivedAt for now
-    const estimatedReceiveAt = receivedAt;
+    try {
+      // Step 1: Create vendor if needed - chỉ khi tạo khuôn mới
+      let finalVendorId = vendorId;
+      if (dieAction === "create" && !finalVendorId && vendorName.trim()) {
+        await new Promise<void>((resolve, reject) => {
+          createVendor(
+            {
+              name: vendorName.trim(),
+              phone: null,
+              email: null,
+              address: null,
+              note: null,
+              vendorType: "die",
+            },
+            {
+              onSuccess: (newVendor) => {
+                finalVendorId = newVendor.id;
+                resolve();
+              },
+              onError: (error) => {
+                reject(error);
+              },
+            }
+          );
+        });
+      }
 
-    // Record die export với files (nếu có)
-    recordDie(
-      {
-        id: proofingOrderId,
-        files: dieFiles.length > 0 ? dieFiles : undefined,
-        notes: notes.trim() || undefined,
-        dieVendorId: vendorId || undefined,
-        dieCount: dieCount,
-        sentAt: sentAt,
-        estimatedReceiveAt: estimatedReceiveAt || undefined,
-        receivedAt: receivedAt || undefined,
-      },
-      {
-        onSuccess: (response) => {
-          // If creating die from die export and dieExportId exists
-          if (dieAction === "create" && response?.dieExport?.id) {
-            const dieExportId = response.dieExport.id;
-            const createDieData: CreateDieRequest = {
+      // Step 2: Create die if needed
+      let createdDieIds: number[] = [];
+      if (dieAction === "create") {
+        // Create die first
+        await new Promise<void>((resolve, reject) => {
+          createDie(
+            {
               name: dieName.trim(),
               size: dieSize.trim() || undefined,
               price: diePrice || undefined,
-              vendorId: vendorId || undefined,
+              vendorId: finalVendorId || undefined,
               notes: notes.trim() || undefined,
-            };
+              image: dieImage || undefined,
+            },
+            {
+              onSuccess: (newDie) => {
+                if (newDie.id) {
+                  createdDieIds = [newDie.id];
+                }
+                resolve();
+              },
+              onError: (error) => {
+                toast.error("Không thể tạo khuôn bế", {
+                  description: getErrorMessage(error),
+                });
+                reject(error);
+              },
+            }
+          );
+        });
 
-            createDieFromDieExport(
+        // Assign created die to proofing order
+        if (createdDieIds.length > 0) {
+          for (const dieId of createdDieIds) {
+            await new Promise<void>((resolve, reject) => {
+              assignDie(
+                {
+                  proofingOrderId,
+                  data: {
+                    dieId,
+                    isNewDie: true,
+                    notes: notes.trim() || undefined,
+                  },
+                },
+                {
+                  onSuccess: () => resolve(),
+                  onError: (error) => {
+                    toast.error("Không thể gán khuôn bế vào bình bài", {
+                      description: getErrorMessage(error),
+                    });
+                    reject(error);
+                  },
+                }
+              );
+            });
+          }
+        }
+      } else {
+        // Step 3: Assign selected dies to proofing order
+        for (const dieId of selectedDieIds) {
+          await new Promise<void>((resolve, reject) => {
+            assignDie(
               {
-                dieExportId,
-                data: createDieData,
+                proofingOrderId,
+                data: {
+                  dieId,
+                  isNewDie: false,
+                  notes: notes.trim() || undefined,
+                },
               },
               {
-                onSuccess: () => {
-                  onSuccess?.();
-                  onOpenChange(false);
-                },
-                onError: () => {
-                  // Die export was recorded but die creation failed
-                  // Still call onSuccess to refresh the page
-                  onSuccess?.();
-                  onOpenChange(false);
+                onSuccess: () => resolve(),
+                onError: (error) => {
+                  toast.error("Không thể gán khuôn bế vào bình bài", {
+                    description: getErrorMessage(error),
+                  });
+                  reject(error);
                 },
               }
             );
-          } else {
-            // Just record die export, no die creation needed
-            onSuccess?.();
-            onOpenChange(false);
-          }
-        },
+          });
+        }
       }
-    );
+
+      // Step 4: Record die export
+      const sentAt = formatLocalDateTimeWithOffset(new Date());
+      const estimatedReceiveAt = receivedAt;
+
+      await new Promise<void>((resolve, reject) => {
+        recordDie(
+          {
+            id: proofingOrderId,
+            files: dieFiles.length > 0 ? dieFiles : undefined,
+            notes: notes.trim() || undefined,
+            dieVendorId: finalVendorId || undefined,
+            dieCount: dieCount,
+            sentAt: sentAt,
+            estimatedReceiveAt: estimatedReceiveAt || undefined,
+            receivedAt: receivedAt || undefined,
+          },
+          {
+            onSuccess: () => {
+              resolve();
+            },
+            onError: (error) => {
+              toast.error("Không thể ghi nhận xuất khuôn bế", {
+                description: getErrorMessage(error),
+              });
+              reject(error);
+            },
+          }
+        );
+      });
+
+      toast.success("Đã ghi nhận xuất khuôn bế thành công");
+      onSuccess?.();
+      onOpenChange(false);
+    } catch (error) {
+      // Errors are already handled in individual steps
+      console.error("Error in die export process:", error);
+    }
   };
 
   const selectedVendor = vendors?.find((v) => v.id === vendorId);
-
   const existingImages = proofingOrder?.dieExport?.images || [];
-  const existingImageUrl = proofingOrder?.dieExport?.imageUrl; // Fallback for old data
+  const existingImageUrl = proofingOrder?.dieExport?.imageUrl;
+
+  const isSubmitting =
+    recordingDie || creatingDie || assigningDie || creatingVendor;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-2">
           <DialogTitle>Xuất khuôn bế</DialogTitle>
           <DialogDescription>
-            Upload ảnh khuôn bế và ghi nhận thông tin khuôn bế cho lệnh bình bài
-            này.
+            Chọn khuôn bế có sẵn hoặc tạo khuôn mới, sau đó ghi nhận thông tin
+            xuất khuôn.
           </DialogDescription>
         </DialogHeader>
 
@@ -356,7 +533,14 @@ export function DieExportDialog({
             </Label>
             <Select
               value={dieCount.toString()}
-              onValueChange={(value) => setDieCount(Number(value))}
+              onValueChange={(value) => {
+                const newCount = Number(value);
+                setDieCount(newCount);
+                // Limit selected dies to new count
+                if (selectedDieIds.length > newCount) {
+                  setSelectedDieIds((prev) => prev.slice(0, newCount));
+                }
+              }}
             >
               <SelectTrigger id="dieCount">
                 <SelectValue placeholder="Chọn số lượng khuôn" />
@@ -369,282 +553,9 @@ export function DieExportDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Đơn vị làm khuôn */}
-          <div className="space-y-2">
-            <Label>
-              Đơn vị làm khuôn <span className="text-destructive">*</span>
-            </Label>
-            {!isCreatingVendor ? (
-              <div className="flex gap-2">
-                <Popover
-                  open={vendorSearchOpen}
-                  onOpenChange={setVendorSearchOpen}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="flex-1 justify-between"
-                      disabled={loadingVendors}
-                    >
-                      {selectedVendor
-                        ? selectedVendor.name
-                        : "Chọn nhà cung cấp..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0">
-                    <Command>
-                      <CommandInput placeholder="Tìm kiếm nhà cung cấp..." />
-                      <CommandList>
-                        <CommandEmpty>
-                          <div className="py-4 text-center text-sm">
-                            <p className="mb-2">Không tìm thấy nhà cung cấp</p>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setIsCreatingVendor(true);
-                                setVendorSearchOpen(false);
-                              }}
-                              className="gap-2"
-                            >
-                              <Plus className="h-4 w-4" />
-                              Tạo mới
-                            </Button>
-                          </div>
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {vendors?.map((vendor) => (
-                            <CommandItem
-                              key={vendor.id}
-                              value={vendor.name || ""}
-                              onSelect={() => {
-                                setVendorId(vendor.id);
-                                setVendorSearchOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  vendorId === vendor.id
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {vendor.name}
-                            </CommandItem>
-                          ))}
-                          <CommandItem
-                            onSelect={() => {
-                              setIsCreatingVendor(true);
-                              setVendorSearchOpen(false);
-                            }}
-                            className="text-primary"
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Tạo nhà cung cấp mới
-                          </CommandItem>
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreatingVendor(true)}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Mới
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nhập tên nhà cung cấp..."
-                    value={vendorName}
-                    onChange={(e) => setVendorName(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsCreatingVendor(false);
-                      setVendorName("");
-                    }}
-                  >
-                    Hủy
-                  </Button>
-                  <Button
-                    onClick={handleCreateVendor}
-                    disabled={!vendorName.trim() || creatingVendor}
-                  >
-                    {creatingVendor ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Lưu"
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Nhập tên nhà cung cấp và nhấn "Lưu" để tạo mới
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Ảnh khuôn bế */}
-          <div className="space-y-2">
-            <Label htmlFor="dieFiles">
-              Ảnh khuôn bế <span className="text-destructive">*</span>
-            </Label>
-            {dieFiles.length === 0 &&
-              existingImages.length === 0 &&
-              !existingImageUrl && (
-                <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  <Input
-                    id="dieFiles"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="dieFiles"
-                    className="cursor-pointer flex flex-col items-center gap-2"
-                  >
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      Click để chọn ảnh hoặc kéo thả vào đây
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      File ảnh (JPG, PNG, ...) - tối đa 10MB mỗi file
-                    </span>
-                  </label>
-                </div>
-              )}
-            {(dieFiles.length > 0 ||
-              existingImages.length > 0 ||
-              existingImageUrl) && (
-              <div className="space-y-3">
-                {/* Preview existing images */}
-                {existingImages.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Ảnh đã lưu:
-                    </Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {existingImages.map((imageUrl, index) => (
-                        <div
-                          key={index}
-                          className="relative group border rounded-lg overflow-hidden bg-muted/30"
-                        >
-                          <img
-                            src={imageUrl}
-                            alt={`Ảnh khuôn bế ${index + 1}`}
-                            className="w-full h-32 object-contain"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* Fallback for old single imageUrl */}
-                {existingImageUrl && existingImages.length === 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Ảnh đã lưu:
-                    </Label>
-                    <div className="border rounded-lg overflow-hidden bg-muted/30">
-                      <img
-                        src={existingImageUrl}
-                        alt="Ảnh khuôn bế"
-                        className="w-full h-32 object-contain"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Preview new images */}
-                {dieFiles.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Ảnh mới:
-                    </Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {dieFiles.map((file, index) => (
-                        <div
-                          key={index}
-                          className="relative group border rounded-lg overflow-hidden bg-muted/30"
-                        >
-                          <img
-                            src={imagePreviews[index]}
-                            alt={`Preview ${file.name}`}
-                            className="w-full h-32 object-contain"
-                          />
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleRemoveFile(index)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate">
-                            {file.name}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Add more images button */}
-                <div className="flex gap-2">
-                  <Input
-                    id="dieFiles"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <label htmlFor="dieFiles">
-                    <Button variant="outline" size="sm" asChild>
-                      <span>Thêm ảnh</span>
-                    </Button>
-                  </label>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Thời gian có khuôn */}
-          <div className="space-y-2">
-            <Label htmlFor="receivedAt">Thời gian có khuôn</Label>
-            <Input
-              id="receivedAt"
-              type="datetime-local"
-              value={receivedAtManual}
-              onChange={(e) => setReceivedAtManual(e.target.value)}
-            />
-            {receivedAt && (
-              <p className="text-xs text-muted-foreground">
-                Dự kiến có khuôn:{" "}
-                {new Date(receivedAt).toLocaleString("vi-VN", {
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Đã chọn: {selectedDieIds.length} / {dieCount} khuôn
+            </p>
           </div>
 
           {/* Chọn hoặc tạo khuôn bế */}
@@ -656,10 +567,15 @@ export function DieExportDialog({
                 size="sm"
                 onClick={() => {
                   setDieAction("select");
-                  setSelectedDieId(null);
+                  setSelectedDieIds([]);
                   setDieName("");
                   setDieSize("");
                   setDiePrice(undefined);
+                  setDieImage(null);
+                  if (dieImagePreview) {
+                    URL.revokeObjectURL(dieImagePreview);
+                    setDieImagePreview(null);
+                  }
                 }}
               >
                 Chọn khuôn có sẵn
@@ -669,7 +585,7 @@ export function DieExportDialog({
                 size="sm"
                 onClick={() => {
                   setDieAction("create");
-                  setSelectedDieId(null);
+                  setSelectedDieIds([]);
                 }}
               >
                 Tạo khuôn mới
@@ -677,65 +593,137 @@ export function DieExportDialog({
             </div>
 
             {dieAction === "select" ? (
-              <Popover open={dieSearchOpen} onOpenChange={setDieSearchOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="w-full justify-between"
-                    disabled={loadingDies}
-                  >
-                    {selectedDieId
-                      ? availableDies.find((d) => d.id === selectedDieId)
-                          ?.name || "Chọn khuôn..."
-                      : "Chọn khuôn bế..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0">
-                  <Command>
-                    <CommandInput placeholder="Tìm kiếm khuôn bế..." />
-                    <CommandList>
-                      <CommandEmpty>
-                        <div className="py-4 text-center text-sm">
-                          Không tìm thấy khuôn bế
-                        </div>
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {availableDies.map((die) => (
-                          <CommandItem
-                            key={die.id}
-                            value={die.name || ""}
-                            onSelect={() => {
-                              setSelectedDieId(die.id || null);
-                              setDieSearchOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedDieId === die.id
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              )}
-                            />
-                            <div className="flex flex-col">
-                              <span className="font-medium">{die.name}</span>
-                              {die.size && (
-                                <span className="text-xs text-muted-foreground">
-                                  Kích thước: {die.size}
-                                </span>
-                              )}
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            ) : (
               <div className="space-y-3">
+                {/* Search dies */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Tìm kiếm khuôn bế (tên, kích thước, vị trí)..."
+                    value={dieSearchTerm}
+                    onChange={(e) => setDieSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+
+                {/* Die grid */}
+                {isLoadingDies ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : availableDies.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-muted-foreground border rounded-lg">
+                    {dieSearchTerm.trim()
+                      ? "Không tìm thấy khuôn bế phù hợp"
+                      : "Không có khuôn bế có sẵn. Vui lòng tạo khuôn mới."}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2 max-h-96 overflow-y-auto p-2 border rounded-lg">
+                    {availableDies.map((die) => {
+                      const isSelected = die.id
+                        ? selectedDieIds.includes(die.id)
+                        : false;
+                      const canSelect =
+                        !isSelected && selectedDieIds.length < dieCount;
+
+                      return (
+                        <div
+                          key={die.id}
+                          className={cn(
+                            "relative border rounded-lg overflow-hidden cursor-pointer transition-all",
+                            isSelected
+                              ? "ring-2 ring-primary border-primary"
+                              : canSelect
+                                ? "hover:border-primary hover:shadow-md"
+                                : "opacity-50 cursor-not-allowed"
+                          )}
+                          onClick={() => {
+                            if (die.id && canSelect) {
+                              toggleDieSelection(die.id);
+                            } else if (die.id && isSelected) {
+                              toggleDieSelection(die.id);
+                            }
+                          }}
+                        >
+                          {/* Die image */}
+                          <div className="aspect-square bg-muted/30 relative h-24">
+                            {die.imageUrl ? (
+                              <img
+                                src={die.imageUrl}
+                                alt={die.name || "Khuôn bế"}
+                                className="w-full h-full object-contain cursor-zoom-in"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewImageUrl(die.imageUrl || null);
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                            )}
+                            {isSelected && (
+                              <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                                <Check className="h-3 w-3" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Die info */}
+                          <div className="p-1.5 space-y-0.5">
+                            <p className="font-medium text-xs truncate">
+                              {die.name || "—"}
+                            </p>
+                            {die.size && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {die.size}
+                              </p>
+                            )}
+                            {die.location && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                📍 {die.location}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {selectedDieIds.length > 0 && (
+                  <div className="p-3 bg-muted/30 rounded-lg">
+                    <p className="text-sm font-medium mb-2">
+                      Đã chọn {selectedDieIds.length} khuôn:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedDieIds.map((dieId) => {
+                        const die = availableDies.find((d) => d.id === dieId);
+                        return (
+                          <div
+                            key={dieId}
+                            className="flex items-center gap-2 px-2 py-1 bg-background border rounded text-sm"
+                          >
+                            <span>{die?.name || `Khuôn #${dieId}`}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleDieSelection(dieId);
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3 border rounded-lg p-4">
                 <div className="space-y-2">
                   <Label htmlFor="dieName">
                     Tên khuôn bế <span className="text-destructive">*</span>
@@ -778,7 +766,317 @@ export function DieExportDialog({
                     />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dieImage">Ảnh khuôn bế</Label>
+                  <Input
+                    id="dieImage"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleDieImageChange}
+                  />
+                  {dieImagePreview && (
+                    <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
+                      <img
+                        src={dieImagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-contain"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6"
+                        onClick={() => {
+                          setDieImage(null);
+                          if (dieImagePreview) {
+                            URL.revokeObjectURL(dieImagePreview);
+                            setDieImagePreview(null);
+                          }
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
+            )}
+          </div>
+
+          {/* Đơn vị làm khuôn - chỉ hiện khi tạo khuôn mới */}
+          {dieAction === "create" && (
+            <div className="space-y-2">
+              <Label>
+                Đơn vị làm khuôn <span className="text-destructive">*</span>
+              </Label>
+              {!isCreatingVendor ? (
+                <div className="flex gap-2">
+                  <Popover
+                    open={vendorSearchOpen}
+                    onOpenChange={setVendorSearchOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="flex-1 justify-between"
+                        disabled={loadingVendors}
+                      >
+                        {selectedVendor
+                          ? selectedVendor.name
+                          : "Chọn nhà cung cấp..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Tìm kiếm nhà cung cấp..." />
+                        <CommandList>
+                          <CommandEmpty>
+                            <div className="py-4 text-center text-sm">
+                              <p className="mb-2">
+                                Không tìm thấy nhà cung cấp
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setIsCreatingVendor(true);
+                                  setVendorSearchOpen(false);
+                                }}
+                                className="gap-2"
+                              >
+                                <Plus className="h-4 w-4" />
+                                Tạo mới
+                              </Button>
+                            </div>
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {vendors?.map((vendor) => (
+                              <CommandItem
+                                key={vendor.id}
+                                value={vendor.name || ""}
+                                onSelect={() => {
+                                  setVendorId(vendor.id);
+                                  setVendorSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    vendorId === vendor.id
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {vendor.name}
+                              </CommandItem>
+                            ))}
+                            <CommandItem
+                              onSelect={() => {
+                                setIsCreatingVendor(true);
+                                setVendorSearchOpen(false);
+                              }}
+                              className="text-primary"
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Tạo nhà cung cấp mới
+                            </CommandItem>
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCreatingVendor(true)}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Mới
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Nhập tên nhà cung cấp..."
+                      value={vendorName}
+                      onChange={(e) => setVendorName(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsCreatingVendor(false);
+                        setVendorName("");
+                      }}
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      onClick={handleCreateVendor}
+                      disabled={!vendorName.trim() || creatingVendor}
+                    >
+                      {creatingVendor ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Lưu"
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Nhập tên nhà cung cấp và nhấn "Lưu" để tạo mới
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Ảnh khuôn bế - chỉ hiển thị khi tạo khuôn mới */}
+          {dieAction === "create" && (
+            <div className="space-y-2">
+              <Label htmlFor="dieFiles">
+                Ảnh khuôn bế <span className="text-destructive">*</span>
+              </Label>
+              {dieFiles.length === 0 &&
+                existingImages.length === 0 &&
+                !existingImageUrl && (
+                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                    <Input
+                      id="dieFiles"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="dieFiles"
+                      className="cursor-pointer flex flex-col items-center gap-2"
+                    >
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        Click để chọn ảnh hoặc kéo thả vào đây
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        File ảnh (JPG, PNG, ...) - tối đa 10MB mỗi file
+                      </span>
+                    </label>
+                  </div>
+                )}
+              {(dieFiles.length > 0 ||
+                existingImages.length > 0 ||
+                existingImageUrl) && (
+                <div className="space-y-3">
+                  {existingImages.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Ảnh đã lưu:
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {existingImages.map((imageUrl, index) => (
+                          <div
+                            key={index}
+                            className="relative group border rounded-lg overflow-hidden bg-muted/30"
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`Ảnh khuôn bế ${index + 1}`}
+                              className="w-full h-32 object-contain"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {existingImageUrl && existingImages.length === 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Ảnh đã lưu:
+                      </Label>
+                      <div className="border rounded-lg overflow-hidden bg-muted/30">
+                        <img
+                          src={existingImageUrl}
+                          alt="Ảnh khuôn bế"
+                          className="w-full h-32 object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {dieFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Ảnh mới:
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {dieFiles.map((file, index) => (
+                          <div
+                            key={index}
+                            className="relative group border rounded-lg overflow-hidden bg-muted/30"
+                          >
+                            <img
+                              src={imagePreviews[index]}
+                              alt={`Preview ${file.name}`}
+                              className="w-full h-32 object-contain"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleRemoveFile(index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 truncate">
+                              {file.name}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Input
+                      id="dieFiles"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <label htmlFor="dieFiles">
+                      <Button variant="outline" size="sm" asChild>
+                        <span>Thêm ảnh</span>
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Thời gian có khuôn */}
+          <div className="space-y-2">
+            <Label htmlFor="receivedAt">Thời gian có khuôn</Label>
+            <Input
+              id="receivedAt"
+              type="datetime-local"
+              value={receivedAtManual}
+              onChange={(e) => setReceivedAtManual(e.target.value)}
+            />
+            {receivedAt && (
+              <p className="text-xs text-muted-foreground">
+                Dự kiến có khuôn:{" "}
+                {new Date(receivedAt).toLocaleString("vi-VN", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
             )}
           </div>
 
@@ -802,17 +1100,19 @@ export function DieExportDialog({
           <Button
             onClick={handleSubmit}
             disabled={
-              recordingDie ||
-              creatingDie ||
-              (dieFiles.length === 0 &&
+              isSubmitting ||
+              (dieAction === "create" &&
+                dieFiles.length === 0 &&
                 existingImages.length === 0 &&
                 !existingImageUrl) ||
-              (!vendorId && !vendorName.trim()) ||
-              (dieAction === "select" && !selectedDieId) ||
+              (dieAction === "create" && !vendorId && !vendorName.trim()) ||
+              (dieAction === "select" &&
+                (selectedDieIds.length === 0 ||
+                  selectedDieIds.length !== dieCount)) ||
               (dieAction === "create" && !dieName.trim())
             }
           >
-            {recordingDie || creatingDie ? (
+            {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Đang lưu...
@@ -823,6 +1123,16 @@ export function DieExportDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Image Preview Dialog */}
+      {previewImageUrl && (
+        <ImageViewerDialog
+          open={!!previewImageUrl}
+          onOpenChange={(open) => !open && setPreviewImageUrl(null)}
+          imageUrl={previewImageUrl}
+          title="Preview khuôn bế"
+        />
+      )}
     </Dialog>
   );
 }

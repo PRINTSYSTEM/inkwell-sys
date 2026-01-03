@@ -1954,13 +1954,6 @@ const CompleteProductionRequest = z.object({
   wastage: z.number().gte(0).optional(),
   producedQty: z.number().int().gte(1).lte(2147483647),
 });
-const CreateProofingOrderRequest = z.object({
-  materialTypeId: z.number().int(),
-  designIds: z.array(z.number().int()),
-  notes: z.string().nullish(),
-  paperSizeId: z.number().int().nullish(),
-  customPaperSize: z.string().nullish(),
-});
 const DieExportResponse = z
   .object({
     id: z.number().int(),
@@ -2029,6 +2022,14 @@ const ProofingOrderResponsePaginate = z
     items: z.array(ProofingOrderResponse).nullable(),
   })
   .partial();
+const AddDesignsToProofingOrderRequest = z.object({
+  materialTypeId: z.number().int(),
+  designIds: z.array(z.number().int()),
+  totalQuantity: z.number().int().nullish(),
+  paperSizeId: z.number().int().nullish(),
+  customPaperSize: z.string().nullish(),
+  notes: z.string().nullish(),
+});
 const CreateProofingOrderDetailItem = z.object({
   orderDetailId: z.number().int(),
   quantity: z.number().int(),
@@ -2585,11 +2586,11 @@ export const schemas = {
   UpdateProductionRequest,
   StartProductionRequest,
   CompleteProductionRequest,
-  CreateProofingOrderRequest,
   DieExportResponse,
   ProofingOrderDesignResponse,
   ProofingOrderResponse,
   ProofingOrderResponsePaginate,
+  AddDesignsToProofingOrderRequest,
   CreateProofingOrderDetailItem,
   CreateProofingOrderFromDesignsRequest,
   UpdateProofingDesignItem,
@@ -6169,13 +6170,6 @@ const endpoints = makeApi([
     path: "/api/proofing-orders",
     alias: "postApiproofingOrders",
     requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: CreateProofingOrderRequest,
-      },
-    ],
     response: ProofingOrderResponse,
   },
   {
@@ -6193,6 +6187,11 @@ const endpoints = makeApi([
         name: "pageSize",
         type: "Query",
         schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "designCode",
+        type: "Query",
+        schema: z.string().optional(),
       },
       {
         name: "materialTypeId",
@@ -6246,6 +6245,25 @@ const endpoints = makeApi([
     alias: "putApiproofingOrdersIdcomplete",
     requestFormat: "json",
     parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ProofingOrderResponse,
+  },
+  {
+    method: "post",
+    path: "/api/proofing-orders/:id/designs",
+    alias: "postApiproofingOrdersIddesigns",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: AddDesignsToProofingOrderRequest,
+      },
       {
         name: "id",
         type: "Path",
@@ -6456,6 +6474,11 @@ const endpoints = makeApi([
         name: "materialTypeId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "designCode",
+        type: "Query",
+        schema: z.string().optional(),
       },
       {
         name: "pageNumber",

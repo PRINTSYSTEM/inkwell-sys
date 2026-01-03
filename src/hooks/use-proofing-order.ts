@@ -25,12 +25,12 @@ import {
 } from "@/Schema/paper-size.schema";
 import type {
   ProofingOrderListParams,
-  CreateProofingOrderRequest,
   CreateProofingOrderFromDesignsRequest,
   UpdateProofingOrderRequest,
   OrderDetailResponse,
   OrderDetailResponsePaginate,
   RecordPlateExportRequest,
+  AddDesignsToProofingOrderRequest,
 } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
@@ -46,7 +46,7 @@ const {
   useUpdate: useUpdateProofingOrderBase,
 } = createCrudHooks<
   ProofingOrderResponse,
-  CreateProofingOrderRequest,
+  {},
   UpdateProofingOrderRequest,
   number,
   ProofingOrderListParams,
@@ -1000,21 +1000,21 @@ export const useAvailableQuantity = (
 };
 
 // ================== ADD/REMOVE DESIGNS ==================
-// POST /proofing-orders/{id}/add-designs
+// POST /proofing-orders/{id}/designs
 export const useAddDesignsToProofingOrder = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
       id,
-      orderDetailItems,
+      request,
     }: {
       id: number;
-      orderDetailItems: Array<{ orderDetailId: number; quantity: number }>;
+      request: AddDesignsToProofingOrderRequest;
     }) => {
       const response = await apiRequest.post<ProofingOrderResponse>(
         API_SUFFIX.PROOFING_ADD_DESIGNS(id),
-        { orderDetailItems }
+        request
       );
 
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);

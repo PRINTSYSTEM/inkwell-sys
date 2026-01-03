@@ -59,56 +59,62 @@ export default function DeliveryPage() {
         />
       </Helmet>
 
-      <div className="container mx-auto py-6 px-4 max-w-7xl">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight">Giao hàng</h1>
-          <p className="text-muted-foreground">
-            Quản lý giao hàng và xuất phiếu giao hàng cho đơn hàng đã hoàn thành
-            sản xuất
-          </p>
-        </div>
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="container mx-auto px-4 max-w-7xl">
+          {/* Header */}
+          <div className="mb-4 shrink-0 pt-6">
+            <h1 className="text-2xl font-bold tracking-tight">Giao hàng</h1>
+            <p className="text-muted-foreground">
+              Quản lý giao hàng và xuất phiếu giao hàng cho đơn hàng đã hoàn
+              thành sản xuất
+            </p>
+          </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-warning/10">
-                <Package className="h-5 w-5 text-warning" />
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 shrink-0">
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-warning/10">
+                  <Package className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Sẵn sàng giao</p>
+                  <p className="text-2xl font-bold">
+                    {summaryStats.readyForDelivery}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Sẵn sàng giao</p>
-                <p className="text-2xl font-bold">
-                  {summaryStats.readyForDelivery}
-                </p>
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-info/10">
+                  <Truck className="h-5 w-5 text-info" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Đang giao</p>
+                  <p className="text-2xl font-bold">
+                    {summaryStats.delivering}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-success/10">
+                  <Clock className="h-5 w-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Đã giao</p>
+                  <p className="text-2xl font-bold">{summaryStats.delivered}</p>
+                </div>
               </div>
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-info/10">
-                <Truck className="h-5 w-5 text-info" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Đang giao</p>
-                <p className="text-2xl font-bold">{summaryStats.delivering}</p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-success/10">
-                <Clock className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Đã giao</p>
-                <p className="text-2xl font-bold">{summaryStats.delivered}</p>
-              </div>
-            </div>
+
+          <div className="flex-1 flex flex-col min-h-0 pb-6">
+            <DeliveryList />
           </div>
         </div>
-
-        <DeliveryList />
       </div>
     </>
   );

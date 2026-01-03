@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-02T19:21:46.558Z */
+/* Generated at: 2026-01-03T03:21:47.307Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -23,6 +23,7 @@ export const ARSummaryResponseSchema = schemas.ARSummaryResponse;
 export const ARSummaryResponseIPaginateSchema = schemas.ARSummaryResponseIPaginate;
 export const AccountingResponseSchema = schemas.AccountingResponse;
 export const AddDesignToOrderRequestSchema = schemas.AddDesignToOrderRequest;
+export const AddDesignsToProofingOrderRequestSchema = schemas.AddDesignsToProofingOrderRequest;
 export const AssignDieToProofingOrderRequestSchema = schemas.AssignDieToProofingOrderRequest;
 export const BankAccountResponseSchema = schemas.BankAccountResponse;
 export const BankAccountResponseIPaginateSchema = schemas.BankAccountResponseIPaginate;
@@ -65,7 +66,6 @@ export const CreatePaymentRequestSchema = schemas.CreatePaymentRequest;
 export const CreateProductionRequestSchema = schemas.CreateProductionRequest;
 export const CreateProofingOrderDetailItemSchema = schemas.CreateProofingOrderDetailItem;
 export const CreateProofingOrderFromDesignsRequestSchema = schemas.CreateProofingOrderFromDesignsRequest;
-export const CreateProofingOrderRequestSchema = schemas.CreateProofingOrderRequest;
 export const CreateStockInRequestSchema = schemas.CreateStockInRequest;
 export const CreateStockOutRequestSchema = schemas.CreateStockOutRequest;
 export const CreateUserRequestSchema = schemas.CreateUserRequest;

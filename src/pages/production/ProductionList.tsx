@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,6 @@ import {
   Factory,
   CheckCircle,
   Clock,
-  Eye,
   Package,
   Loader2,
   FileText,
@@ -43,6 +42,8 @@ import {
   Layers,
   Calendar,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
@@ -72,17 +73,21 @@ export default function ProductionListPage() {
   const [proofingSearchTerm, setProofingSearchTerm] = useState("");
   const [debouncedSearch] = useDebounce(searchTerm, 300);
   const [debouncedProofingSearch] = useDebounce(proofingSearchTerm, 300);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState<string>("1");
+  const [itemsPerPage] = useState(10);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const queryParams = useMemo<ProductionListParams>(() => {
     const params: ProductionListParams = {
-      pageNumber: 1,
-      pageSize: 100,
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
     };
     if (selectedStatus !== "all") {
       params.status = selectedStatus;
     }
     return params;
-  }, [selectedStatus]);
+  }, [currentPage, itemsPerPage, selectedStatus]);
 
   const {
     data: productionsResp,
@@ -120,6 +125,61 @@ export default function ProductionListPage() {
     }
     return [];
   }, [parseProdResp?.items, productionsResp]);
+
+  // Get total count and total pages from API response
+  const totalCount = useMemo(() => {
+    if (parseProdResp?.total !== undefined) {
+      return parseProdResp.total;
+    }
+    if (
+      productionsResp &&
+      typeof productionsResp === "object" &&
+      "total" in productionsResp
+    ) {
+      return (productionsResp as { total?: number }).total ?? 0;
+    }
+    return productions.length;
+  }, [parseProdResp?.total, productionsResp, productions.length]);
+
+  const totalPages = useMemo(() => {
+    if (parseProdResp?.totalPages !== undefined) {
+      return parseProdResp.totalPages;
+    }
+    if (
+      productionsResp &&
+      typeof productionsResp === "object" &&
+      "totalPages" in productionsResp
+    ) {
+      return (productionsResp as { totalPages?: number }).totalPages ?? 1;
+    }
+    return Math.ceil(totalCount / itemsPerPage);
+  }, [parseProdResp?.totalPages, productionsResp, totalCount, itemsPerPage]);
+
+  // Sync pageInput with currentPage
+  useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
+
+  // Scroll to top of table when page changes
+  useEffect(() => {
+    if (tableContainerRef.current) {
+      tableContainerRef.current.scrollTop = 0;
+    }
+  }, [currentPage]);
+
+  // Auto-adjust currentPage if it exceeds totalPages
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(1);
+      setPageInput("1");
+    }
+  }, [totalPages, currentPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    setPageInput("1");
+  }, [selectedStatus]);
 
   const { mutate: createProduction, isPending: creating } =
     useCreateProduction();
@@ -173,6 +233,7 @@ export default function ProductionListPage() {
     );
   }, [proofingOrders, selectedProofingOrderId]);
 
+  // Client-side search filter (since API doesn't support search parameter)
   const filteredProductions = useMemo(
     () =>
       productions?.filter((prod: ProductionResponse) => {
@@ -192,6 +253,50 @@ export default function ProductionListPage() {
       }),
     [productions, debouncedSearch, selectedStatus]
   );
+
+  // Pagination handlers
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setPageInput("");
+      return;
+    }
+    const page = parseInt(value, 10);
+    if (!isNaN(page)) {
+      setPageInput(page.toString());
+    }
+  };
+
+  const handlePageInputBlur = () => {
+    const page = parseInt(pageInput, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
+  const handleProductionClick = (productionId: number) => {
+    navigate(`/productions/${productionId}`);
+  };
 
   const handleCreateProduction = async () => {
     if (!selectedProofingOrderId) {
@@ -236,14 +341,14 @@ export default function ProductionListPage() {
 
   const stats = useMemo(
     () => ({
-      total: productions?.length || 0,
+      total: totalCount,
       pending: productions?.filter((p) => p.status === "pending").length || 0,
       inProgress:
         productions?.filter((p) => p.status === "in_progress").length || 0,
       completed:
         productions?.filter((p) => p.status === "completed").length || 0,
     }),
-    [productions]
+    [totalCount, productions]
   );
 
   const formatDate = (dateStr?: string | null) =>
@@ -256,82 +361,103 @@ export default function ProductionListPage() {
       : "N/A";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-balance">Quản lý Sản xuất</h1>
-          <p className="text-muted-foreground text-pretty">
-            Theo dõi và quản lý tiến độ sản xuất
-          </p>
+    <div className="h-full flex flex-col overflow-hidden bg-background">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-4 py-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4 shrink-0">
+          <div>
+            <h1 className="text-2xl font-bold text-balance">
+              Quản lý Sản xuất
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Theo dõi và quản lý tiến độ sản xuất
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Tạo đơn sản xuất
+          </Button>
         </div>
-        <Button className="gap-2" onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Tạo đơn sản xuất
-        </Button>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng đơn</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.total}</div>
-            <p className="text-xs text-muted-foreground">Tất cả đơn sản xuất</p>
-          </CardContent>
-        </Card>
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4 shrink-0">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[10px] font-medium">
+                Tổng đơn
+              </CardTitle>
+              <Package className="h-3.5 w-3.5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-2">
+              <div className="text-lg font-bold">{stats?.total}</div>
+              <p className="text-[10px] text-muted-foreground">
+                Tất cả đơn sản xuất
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chờ sản xuất</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.pending || 0}</div>
-            <p className="text-xs text-muted-foreground">Chưa bắt đầu</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[10px] font-medium">
+                Chờ sản xuất
+              </CardTitle>
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-2">
+              <div className="text-lg font-bold">{stats?.pending || 0}</div>
+              <p className="text-[10px] text-muted-foreground">Chưa bắt đầu</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Đang sản xuất</CardTitle>
-            <Factory className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.inProgress}</div>
-            <p className="text-xs text-muted-foreground">Đang thực hiện</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[10px] font-medium">
+                Đang sản xuất
+              </CardTitle>
+              <Factory className="h-3.5 w-3.5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-2">
+              <div className="text-lg font-bold">{stats.inProgress}</div>
+              <p className="text-[10px] text-muted-foreground">
+                Đang thực hiện
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hoàn thành</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.completed}</div>
-            <p className="text-xs text-muted-foreground">Đã hoàn thành</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-[10px] font-medium">
+                Hoàn thành
+              </CardTitle>
+              <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="p-2">
+              <div className="text-lg font-bold">{stats.completed}</div>
+              <p className="text-[10px] text-muted-foreground">Đã hoàn thành</p>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-6">
+        {/* Filter Bar */}
+        <Card className="border-0 shadow-sm mb-4 shrink-0">
+          <CardContent className="p-3">
             <div className="flex items-center gap-3">
-              <div className="relative">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Tìm theo ID hoặc người phụ trách..."
-                  className="pl-10 w-72"
+                  className="pl-10 h-9 bg-muted/50 border-0 focus-visible:ring-1"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-40 h-9 bg-muted/50 border-0">
                   <SelectValue placeholder="Trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
@@ -343,49 +469,71 @@ export default function ProductionListPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {isLoading ? (
-            <div className="text-center py-12">
-              <Factory className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                Đang tải đơn sản xuất...
-              </p>
-            </div>
-          ) : filteredProductions.length === 0 ? (
-            <div className="text-center py-12">
-              <Factory className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">
-                Không tìm thấy đơn sản xuất nào
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-lg border">
+        {/* Table */}
+        <Card className="flex-1 flex flex-col min-h-0 overflow-hidden border-0 shadow-sm">
+          <div ref={tableContainerRef} className="flex-1 overflow-auto">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-full py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Đang tải đơn sản xuất...
+                </p>
+              </div>
+            ) : filteredProductions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full py-12">
+                <Factory className="h-12 w-12 text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Không tìm thấy đơn sản xuất nào
+                </p>
+              </div>
+            ) : (
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Người phụ trách</TableHead>
-                    <TableHead>Tiến độ</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Bắt đầu</TableHead>
-                    <TableHead>Hoàn thành</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
-                    <TableHead className="text-right">Thao tác</TableHead>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="h-10 font-bold text-sm">ID</TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Người phụ trách
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Tiến độ
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Trạng thái
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Bắt đầu
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Hoàn thành
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Ngày tạo
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProductions.map((prod: ProductionResponse) => (
-                    <TableRow key={prod.id}>
-                      <TableCell className="font-medium">
-                        {prod.id ?? "N/A"}
+                    <TableRow
+                      key={prod.id}
+                      className="h-14 cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleProductionClick(prod.id!)}
+                    >
+                      <TableCell className="py-3">
+                        <span className="font-bold text-sm">
+                          {prod.id ?? "N/A"}
+                        </span>
                       </TableCell>
 
-                      <TableCell>
-                        {prod.productionLead?.fullName || "Chưa phân công"}
+                      <TableCell className="py-3">
+                        <span className="font-semibold text-sm">
+                          {prod.productionLead?.fullName || "Chưa phân công"}
+                        </span>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                             <div
@@ -395,13 +543,13 @@ export default function ProductionListPage() {
                               }}
                             />
                           </div>
-                          <span className="text-xs font-medium">
+                          <span className="text-xs font-semibold">
                             {prod.progressPercent || 0}%
                           </span>
                         </div>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="py-3">
                         <StatusBadge
                           status={prod.status || "pending"}
                           label={
@@ -412,29 +560,106 @@ export default function ProductionListPage() {
                         />
                       </TableCell>
 
-                      <TableCell>{formatDate(prod.startedAt)}</TableCell>
-                      <TableCell>{formatDate(prod.completedAt)}</TableCell>
-                      <TableCell>{formatDate(prod.createdAt)}</TableCell>
-
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => navigate(`/productions/${prod.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          Xem
-                        </Button>
+                      <TableCell className="py-3">
+                        <span className="font-semibold text-sm">
+                          {formatDate(prod.startedAt)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <span className="font-semibold text-sm">
+                          {formatDate(prod.completedAt)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <span className="font-semibold text-sm">
+                          {formatDate(prod.createdAt)}
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!isLoading && filteredProductions.length > 0 && totalCount > 0 && (
+            <div className="flex items-center justify-between border-t px-4 py-3 shrink-0 bg-background">
+              <div className="text-sm font-medium text-muted-foreground">
+                {searchTerm.trim() ? (
+                  <>
+                    Hiển thị {filteredProductions.length} / {totalCount} đơn sản
+                    xuất (đã lọc theo từ khóa)
+                  </>
+                ) : (
+                  <>
+                    Hiển thị{" "}
+                    <span className="font-bold text-foreground">
+                      {productions.length > 0
+                        ? (currentPage - 1) * itemsPerPage + 1
+                        : 0}
+                    </span>
+                    {" - "}
+                    <span className="font-bold text-foreground">
+                      {Math.min(currentPage * itemsPerPage, totalCount)}
+                    </span>{" "}
+                    trong tổng số{" "}
+                    <span className="font-bold text-foreground">
+                      {totalCount}
+                    </span>{" "}
+                    đơn sản xuất
+                  </>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1 || isLoading}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Trang trước</span>
+                </Button>
+                <div className="flex items-center space-x-1">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Trang
+                  </span>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={pageInput}
+                    onChange={handlePageInputChange}
+                    onBlur={handlePageInputBlur}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="w-14 h-8 text-center text-sm font-semibold"
+                    disabled={isLoading}
+                  />
+                  <span className="text-sm font-medium text-muted-foreground">
+                    / {totalPages}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages || isLoading}
+                >
+                  <span className="hidden sm:inline">Trang sau</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
 
       <Dialog
         open={isCreateDialogOpen}
