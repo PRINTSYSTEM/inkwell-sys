@@ -29,3 +29,8 @@ dist-ssr
 
 # Schema generation cache
 .schema-cache.json
+.cursor/
+*.swp
+*.swo
+*~
+scripts

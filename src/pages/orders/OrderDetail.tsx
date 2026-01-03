@@ -1329,17 +1329,17 @@ export default function OrderDetailPage() {
                                   </Badge>
                                 </div>
                               )}
-                              {proof.isDieExported && proof.dieExport && (
+                              {proof.isDieExported && proof.dieExports?.[0] && (
                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
                                   <Box className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                                   <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
-                                    Khuôn: {proof.dieExport.vendorName}
+                                    Khuôn: {proof.dieExports[0].vendorName}
                                   </span>
                                   <Badge
                                     variant="secondary"
                                     className="ml-1 text-xs h-5 px-1.5"
                                   >
-                                    {proof.dieExport.dieCount} khuôn
+                                    {proof.dieExports[0].dieCount} khuôn
                                   </Badge>
                                 </div>
                               )}

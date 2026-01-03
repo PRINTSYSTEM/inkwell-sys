@@ -3257,50 +3257,29 @@ export default function ProofingOrderDetailPage() {
                         {order.isDieExported ? "Sửa" : "Ghi nhận"}
                       </Button>
                     </div>
-                    {order.dieExport ? (
+                    {order.dieExports?.[0] ? (
                       <div className="bg-muted/30 rounded p-2 text-xs space-y-1">
-                        {/* Display multiple images if available */}
-                        {order.dieExport.images &&
-                        order.dieExport.images.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {order.dieExport.images.map((imageUrl, index) => (
-                              <div
-                                key={index}
-                                className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => {
-                                  setViewingImageUrl(imageUrl);
-                                  setImageViewerOpen(true);
-                                }}
-                              >
-                                <img
-                                  src={imageUrl}
-                                  alt={`Khuôn bế ${index + 1}`}
-                                  className="w-full h-full object-contain"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        ) : order.dieExport.imageUrl ? (
-                          // Fallback for old single imageUrl
+                        {/* Display image if available */}
+                        {order.dieExports[0].imageUrl ? (
                           <div
                             className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => {
                               setViewingImageUrl(
-                                order.dieExport.imageUrl || null
+                                order.dieExports[0].imageUrl || null
                               );
                               setImageViewerOpen(true);
                             }}
                           >
                             <img
-                              src={order.dieExport.imageUrl}
+                              src={order.dieExports[0].imageUrl}
                               alt="Khuôn bế"
                               className="w-full h-full object-contain"
                             />
                           </div>
                         ) : null}
-                        {order.dieExport.notes && (
+                        {order.dieExports[0].notes && (
                           <p className="text-[10px] italic text-muted-foreground line-clamp-2 mt-1">
-                            {order.dieExport.notes}
+                            {order.dieExports[0].notes}
                           </p>
                         )}
                       </div>
