@@ -29,7 +29,7 @@ dist-ssr
 
 # Schema generation cache
 .schema-cache.json
-.cursor/
+.cursor/*
 *.swp
 *.swo
 *~
