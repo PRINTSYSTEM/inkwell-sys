@@ -30,10 +30,15 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useDebounce } from "use-debounce";
-import { useProofingOrders } from "@/hooks/use-proofing-order";
+import {
+  useProofingOrders,
+  useCreateProofingOrder,
+} from "@/hooks/use-proofing-order";
 import { ProofingOrderListParamsSchema } from "@/Schema/params.schema";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { proofingStatusLabels } from "@/lib/status-utils";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 type ProofingOrder =
   import("@/Schema/proofing-order.schema").ProofingOrderResponse;
@@ -47,6 +52,9 @@ export default function ProofingOrdersPage() {
   const [pageInput, setPageInput] = useState<string>("");
   const itemsPerPage = 30;
   const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  const { mutateAsync: createProofingOrder, isPending: isCreating } =
+    useCreateProofingOrder();
 
   const queryParams = useMemo(() => {
     const raw = {
@@ -194,12 +202,37 @@ export default function ProofingOrdersPage() {
           </p>
         </div>
         <Button
-          onClick={() => navigate("/proofing/create")}
+          onClick={async () => {
+            try {
+              // Call API to create empty proofing order (no payload needed)
+              const result = await createProofingOrder({} as any);
+              if (result?.id) {
+                navigate(`/proofing/${result.id}`);
+              } else {
+                toast.error("Lỗi", {
+                  description: "Không thể lấy ID của lệnh bình bài",
+                });
+              }
+            } catch (error) {
+              // Error is already handled by the hook via toast
+              console.error("Failed to create proofing order:", error);
+            }
+          }}
           size="sm"
           className="gap-2"
+          disabled={isCreating}
         >
-          <Plus className="h-4 w-4" />
-          Tạo lệnh mới
+          {isCreating ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Đang tạo...
+            </>
+          ) : (
+            <>
+              <Plus className="h-4 w-4" />
+              Tạo lệnh mới
+            </>
+          )}
         </Button>
       </div>
 

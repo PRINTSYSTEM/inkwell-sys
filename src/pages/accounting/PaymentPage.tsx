@@ -81,57 +81,63 @@ export default function PaymentPage() {
         />
       </Helmet>
 
-      <div className="container mx-auto py-6 px-4 max-w-7xl">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight">Thanh toán</h1>
-          <p className="text-muted-foreground">
-            Quản lý thanh toán cho đơn hàng
-          </p>
-        </div>
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="container mx-auto px-4 max-w-7xl">
+          {/* Header */}
+          <div className="mb-4 shrink-0 pt-6">
+            <h1 className="text-2xl font-bold tracking-tight">Thanh toán</h1>
+            <p className="text-muted-foreground">
+              Quản lý thanh toán cho đơn hàng
+            </p>
+          </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-warning/10">
-                <Clock className="h-5 w-5 text-warning" />
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 shrink-0">
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-warning/10">
+                  <Clock className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Chờ thanh toán
+                  </p>
+                  <p className="text-2xl font-bold">{summaryStats.pending}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Chờ thanh toán</p>
-                <p className="text-2xl font-bold">{summaryStats.pending}</p>
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-info/10">
+                  <TrendingUp className="h-5 w-5 text-info" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tổng còn nợ</p>
+                  <p className="text-2xl font-bold">
+                    {formatCurrency(summaryStats.pendingAmount)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-destructive/10">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Quá hạn</p>
+                  <p className="text-2xl font-bold">
+                    {summaryStats.overdueCount}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-info/10">
-                <TrendingUp className="h-5 w-5 text-info" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Tổng còn nợ</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(summaryStats.pendingAmount)}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-destructive/10">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Quá hạn</p>
-                <p className="text-2xl font-bold">
-                  {summaryStats.overdueCount}
-                </p>
-              </div>
-            </div>
+
+          <div className="flex-1 flex flex-col min-h-0 pb-6">
+            <PaymentList />
           </div>
         </div>
-
-        <PaymentList />
       </div>
     </>
   );

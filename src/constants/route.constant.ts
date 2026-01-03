@@ -39,7 +39,9 @@ export const ROUTE_PATHS = {
     CREATE_PRINT_ORDER: "/proofing/create-print-order" as const,
     CREATE: "/proofing/create" as const,
   },
-
+  DIES: {
+    ROOT: "/proofing/dies" as const,
+  },
   PRODUCTION: {
     ROOT: "/productions" as const,
     DETAIL: "/productions/:id" as const,

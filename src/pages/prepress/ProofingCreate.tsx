@@ -32,7 +32,8 @@ import {
 import {
   useAvailableOrderDetailsForProofing,
   usePaperSizes,
-  useCreateProofingOrderFromDesigns,
+  useCreateProofingOrder,
+  useAddDesignsToProofingOrder,
   useCreatePaperSize,
 } from "@/hooks/use-proofing-order";
 import { useDesignTypeList } from "@/hooks/use-design-type";
@@ -105,12 +106,18 @@ export default function ProofingOrderPage() {
     status: "active",
   });
 
-  // Paper sizes + create hook
+  // Paper sizes + create hooks
   const { data: paperSizes } = usePaperSizes();
-  const { mutate: createProofingOrder, loading: isCreating } =
-    useCreateProofingOrderFromDesigns();
+  const {
+    mutateAsync: createProofingOrder,
+    isPending: isCreatingProofingOrder,
+  } = useCreateProofingOrder();
+  const { mutateAsync: addDesignsToProofingOrder, isPending: isAddingDesigns } =
+    useAddDesignsToProofingOrder();
   const { mutate: createPaperSize, loading: isCreatingPaperSize } =
     useCreatePaperSize();
+
+  const isCreating = isCreatingProofingOrder || isAddingDesigns;
 
   // Debug: Log when materialTypeId changes
   useEffect(() => {
@@ -452,22 +459,13 @@ export default function ProofingOrderPage() {
         return;
       }
 
-      const orderDetailItems = Object.entries(designQuantities)
-        .filter(([_, qty]) => qty > 0)
-        .map(([id, qty]) => {
-          const quantity = Number.isInteger(qty)
-            ? qty
-            : Math.floor(qty as number);
-          if (quantity <= 0) {
-            throw new Error("Số lượng phải lớn hơn 0");
-          }
-          return {
-            orderDetailId: parseInt(id, 10),
-            quantity: quantity as number,
-          };
-        });
+      // Validate that we have at least one design with quantity > 0
+      const hasValidQuantities = selectedDesigns.some((design) => {
+        const qty = designQuantities[design.id] || 0;
+        return qty > 0;
+      });
 
-      if (orderDetailItems.length === 0) {
+      if (!hasValidQuantities) {
         toast.error("Lỗi", {
           description:
             "Vui lòng nhập số lượng lấy cho ít nhất một thiết kế (lớn hơn 0)",
@@ -475,23 +473,77 @@ export default function ProofingOrderPage() {
         return;
       }
 
-      const payload = {
-        orderDetailItems,
+      // Validate materialTypeId
+      if (!currentMaterialTypeId || selectedDesigns.length === 0) {
+        toast.error("Lỗi", {
+          description: "Vui lòng chọn thiết kế để tạo bình bài",
+        });
+        return;
+      }
+
+      // Step 1: Create proofing order first (without designs)
+      // Try to create with minimal payload (API might require some fields)
+      const createPayload: any = {
         totalQuantity: proofingSheetQuantity,
-        notes: notes?.trim() || undefined,
+        notes: notes?.trim() || null,
         paperSizeId:
           paperSizeId === "none" || paperSizeId === "custom"
-            ? undefined
+            ? null
             : Number(paperSizeId),
         customPaperSize:
           paperSizeId === "custom" && customPaperSize?.trim()
             ? customPaperSize.trim()
-            : undefined,
+            : null,
       };
 
-      const result = await createProofingOrder(payload);
+      // Create proofing order
+      const createResult = await createProofingOrder(createPayload);
 
-      // On success: reset and chuyển ngay sang màn chi tiết lệnh bình bài
+      if (!createResult?.id) {
+        throw new Error("Không thể lấy ID của bình bài");
+      }
+
+      const proofingOrderId = createResult.id;
+
+      // Step 2: Add designs to the proofing order
+      // Map orderDetailItems to designIds
+      const designIds = Object.entries(designQuantities)
+        .filter(([_, qty]) => qty > 0)
+        .map(([id, _]) => {
+          const design = selectedDesigns.find((d) => d.id === parseInt(id, 10));
+          return design?.designId;
+        })
+        .filter((id): id is number => id !== undefined);
+
+      if (designIds.length === 0) {
+        toast.error("Lỗi", {
+          description: "Không tìm thấy design IDs để thêm vào bình bài",
+        });
+        return;
+      }
+
+      const addDesignsPayload = {
+        materialTypeId: currentMaterialTypeId,
+        designIds: designIds,
+        totalQuantity: proofingSheetQuantity,
+        paperSizeId:
+          paperSizeId === "none" || paperSizeId === "custom"
+            ? null
+            : Number(paperSizeId),
+        customPaperSize:
+          paperSizeId === "custom" && customPaperSize?.trim()
+            ? customPaperSize.trim()
+            : null,
+        notes: notes?.trim() || null,
+      };
+
+      // Add designs to proofing order
+      await addDesignsToProofingOrder({
+        id: proofingOrderId,
+        request: addDesignsPayload,
+      });
+
+      // On success: reset and navigate to detail page
       clearSelection();
       setDesignQuantities({});
       setNotes("");
@@ -499,13 +551,10 @@ export default function ProofingOrderPage() {
       setPaperSizeId("none");
       setCustomPaperSize("");
 
-      if (result && (result as any).id) {
-        navigate(`${ROUTE_PATHS.PROOFING.ROOT}/${(result as any).id}`);
-      } else {
-        navigate(ROUTE_PATHS.PROOFING.ROOT);
-      }
+      navigate(`${ROUTE_PATHS.PROOFING.ROOT}/${proofingOrderId}`);
     } catch (error) {
       console.error("Failed to create proofing order:", error);
+      // Error is already handled by the hooks via toast
     }
   };
 
@@ -526,7 +575,7 @@ export default function ProofingOrderPage() {
       <header className="shrink-0 border-b bg-card/50 backdrop-blur-sm">
         <div className="px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold">Thiết kế chờ bình bài</h1>
+            <h1 className="text-xl font-bold">Tạo bài</h1>
             <p className="text-sm font-medium text-muted-foreground">
               Tổng cộng {data?.totalCount || 0} thiết kế •{" "}
               {selectedDesigns.length} đã chọn

@@ -12,11 +12,11 @@ import {
   ProofingOrderDesignResponseSchema as GenProofingOrderDesignResponseSchema,
   ProofingOrderResponseSchema as GenProofingOrderResponseSchema,
   ProofingOrderResponsePaginateSchema as GenProofingOrderResponsePaginateSchema,
-  CreateProofingOrderRequestSchema as GenCreateProofingOrderRequestSchema,
   CreateProofingOrderFromDesignsRequestSchema as GenCreateProofingOrderFromDesignsRequestSchema,
   CreateProofingOrderDetailItemSchema as GenCreateProofingOrderDetailItemSchema,
   UpdateProofingDesignItemSchema as GenUpdateProofingDesignItemSchema,
   UpdateProofingOrderRequestSchema as GenUpdateProofingOrderRequestSchema,
+  AddDesignsToProofingOrderRequestSchema as GenAddDesignsToProofingOrderRequestSchema,
 } from "./generated";
 
 // ===== ProofingOrderDesignResponse =====
@@ -42,22 +42,6 @@ export type ProofingOrderResponsePagedResponse = z.infer<
 export { GenProofingOrderResponsePaginateSchema as ProofingOrderResponsePaginateSchema };
 export type ProofingOrderResponsePaginate = z.infer<
   typeof GenProofingOrderResponsePaginateSchema
->;
-
-// ===== CreateProofingOrderRequest =====
-// Base from generated, but keep custom validation
-export const CreateProofingOrderRequestSchema =
-  GenCreateProofingOrderRequestSchema.refine(
-    (data) => {
-      if (data.designIds && data.designIds.length < 1) {
-        return false;
-      }
-      return true;
-    },
-    { message: "Cần ít nhất 1 thiết kế", path: ["designIds"] }
-  );
-export type CreateProofingOrderRequest = z.infer<
-  typeof CreateProofingOrderRequestSchema
 >;
 
 // ===== CreateProofingOrderDetailItem =====
@@ -95,6 +79,13 @@ export const UpdateProofingOrderRequestSchema =
   GenUpdateProofingOrderRequestSchema.passthrough();
 export type UpdateProofingOrderRequest = z.infer<
   typeof UpdateProofingOrderRequestSchema
+>;
+
+// ===== AddDesignsToProofingOrderRequest =====
+export const AddDesignsToProofingOrderRequestSchema =
+  GenAddDesignsToProofingOrderRequestSchema.passthrough();
+export type AddDesignsToProofingOrderRequest = z.infer<
+  typeof AddDesignsToProofingOrderRequestSchema
 >;
 
 // ===== AvailableQuantityResponse =====

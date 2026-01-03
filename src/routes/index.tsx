@@ -49,6 +49,9 @@ const ProofingCreatePrintOrder = lazy(
   () => import("@/pages/prepress/CreatePrintOrder")
 );
 
+//die management
+const DieManagement = lazy(() => import("@/pages/dies/DieListPage"));
+
 // Proofing
 const ProofingDetail = lazy(() => import("@/pages/prepress/PrepressDetail"));
 
@@ -401,6 +404,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <ProofingCreatePrintOrder />
+              </Suspense>
+            ),
+          },
+          {
+            path: lastSegment(ROUTE_PATHS.DIES.ROOT), // "dies"
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DieManagement />
               </Suspense>
             ),
           },

@@ -31,7 +31,8 @@ export const API_SUFFIX = {
   USER_ME: "/users/me",
   USER_CHANGE_PASSWORD: (id: number) => `/users/${id}/change-password`,
   USER_RESET_PASSWORD: (id: number) => `/users/${id}/reset-password`,
-  USER_DEPARTMENT_RESET_PASSWORD: (id: number) => `/users/${id}/department-reset-password`,
+  USER_DEPARTMENT_RESET_PASSWORD: (id: number) =>
+    `/users/${id}/department-reset-password`,
   USERS_DESIGNERS: "/users/designers",
   USER_KPI: (id: number, fromDate?: string, toDate?: string) => {
     const base = `/users/${id}/kpi`;
@@ -167,7 +168,7 @@ export const API_SUFFIX = {
     `/proofing-orders/${id}/hand-to-production`,
   PROOFING_AVAILABLE_QUANTITY: (designId: number) =>
     `/proofing-orders/available-quantity/${designId}`,
-  PROOFING_ADD_DESIGNS: (id: number) => `/proofing-orders/${id}/add-designs`,
+  PROOFING_ADD_DESIGNS: (id: number) => `/proofing-orders/${id}/designs`,
   PROOFING_REMOVE_DESIGN: (id: number, designId: number) =>
     `/proofing-orders/${id}/designs/${designId}`,
 
