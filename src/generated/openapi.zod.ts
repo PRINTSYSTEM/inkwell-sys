@@ -2095,9 +2095,6 @@ const RecordPlateExportRequest = z
   .partial();
 const RecordDieExportRequest = z.object({
   dieIds: z.array(z.number().int()).min(1),
-  sentAt: z.string().datetime({ offset: true }).nullish(),
-  estimatedReceiveAt: z.string().datetime({ offset: true }).nullish(),
-  receivedAt: z.string().datetime({ offset: true }).nullish(),
   notes: z.string().nullish(),
 });
 const ReportExportResponse = z
