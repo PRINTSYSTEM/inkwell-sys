@@ -1135,6 +1135,11 @@ const DieResponse = z
   .object({
     id: z.number().int(),
     name: z.string().nullable(),
+    code: z.string().nullable(),
+    type: z.string().nullable(),
+    length: z.number(),
+    width: z.number(),
+    height: z.number().nullable(),
     size: z.string().nullable(),
     price: z.number().nullable(),
     imageUrl: z.string().nullable(),
@@ -1160,7 +1165,12 @@ const DieResponseIPaginate = z
   .partial();
 const postApidies_Body = z
   .object({
-    Name: z.string().min(0).max(255),
+    Name: z.string().min(0).max(255).optional(),
+    Code: z.string(),
+    Type: z.string(),
+    Length: z.number().optional(),
+    Width: z.number().optional(),
+    Height: z.number().optional(),
     Size: z.string().min(0).max(100).optional(),
     Price: z.number().optional(),
     VendorId: z.number().int().optional(),
@@ -1171,6 +1181,11 @@ const postApidies_Body = z
 const UpdateDieRequest = z
   .object({
     name: z.string().min(0).max(255).nullable(),
+    code: z.string().nullable(),
+    type: z.string().nullable(),
+    length: z.number().nullable(),
+    width: z.number().nullable(),
+    height: z.number().nullable(),
     size: z.string().min(0).max(100).nullable(),
     price: z.number().nullable(),
     location: z.string().min(0).max(50).nullable(),
@@ -1199,7 +1214,12 @@ const AssignDieToProofingOrderRequest = z.object({
   notes: z.string().nullish(),
 });
 const CreateDieRequest = z.object({
-  name: z.string().min(0).max(255),
+  name: z.string().min(0).max(255).nullish(),
+  code: z.string().min(1),
+  type: z.string().min(1),
+  length: z.number().optional(),
+  width: z.number().optional(),
+  height: z.number().nullish(),
   size: z.string().min(0).max(100).nullish(),
   price: z.number().nullish(),
   vendorId: z.number().int().nullish(),
@@ -1967,7 +1987,6 @@ const DieExportResponse = z
     estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
     receivedAt: z.string().datetime({ offset: true }).nullable(),
     imageUrl: z.string().nullable(),
-    images: z.array(z.string()).nullable(),
     notes: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
     createdBy: UserInfo,
@@ -2005,7 +2024,7 @@ const ProofingOrderResponse = z
     isPlateExported: z.boolean(),
     isDieExported: z.boolean(),
     plateExport: PlateExportResponse,
-    dieExport: DieExportResponse,
+    dieExports: z.array(DieExportResponse).nullable(),
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }),
     proofingOrderDesigns: z.array(ProofingOrderDesignResponse).nullable(),
@@ -2074,18 +2093,13 @@ const RecordPlateExportRequest = z
     notes: z.string().nullable(),
   })
   .partial();
-const postApiproofingOrdersIddieExport_Body = z
-  .object({
-    DieVendorId: z.number().int(),
-    DieCount: z.number().int(),
-    SentAt: z.string().datetime({ offset: true }),
-    EstimatedReceiveAt: z.string().datetime({ offset: true }),
-    ReceivedAt: z.string().datetime({ offset: true }),
-    ImageFiles: z.array(z.instanceof(File)),
-    Notes: z.string(),
-  })
-  .partial()
-  .passthrough();
+const RecordDieExportRequest = z.object({
+  dieIds: z.array(z.number().int()).min(1),
+  sentAt: z.string().datetime({ offset: true }).nullish(),
+  estimatedReceiveAt: z.string().datetime({ offset: true }).nullish(),
+  receivedAt: z.string().datetime({ offset: true }).nullish(),
+  notes: z.string().nullish(),
+});
 const ReportExportResponse = z
   .object({
     id: z.number().int(),
@@ -2597,7 +2611,7 @@ export const schemas = {
   UpdateProofingOrderRequest,
   OrderDetailResponsePaginate,
   RecordPlateExportRequest,
-  postApiproofingOrdersIddieExport_Body,
+  RecordDieExportRequest,
   ReportExportResponse,
   ReportExportResponseIPaginate,
   SalesByPeriodResponse,
@@ -6276,12 +6290,12 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/proofing-orders/:id/die-export",
     alias: "postApiproofingOrdersIddieExport",
-    requestFormat: "form-data",
+    requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: postApiproofingOrdersIddieExport_Body,
+        schema: RecordDieExportRequest,
       },
       {
         name: "id",

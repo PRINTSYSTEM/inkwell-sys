@@ -11,7 +11,8 @@
     "analyze": "npx webpack-bundle-analyzer dist/assets/*.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    "schema:gen": "node scripts/gen-schema-compat.mjs"
+    "schema:sync": "node scripts/sync-api.mjs",
+    "schema:sync:guard": "node scripts/sync-api.mjs --guard"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

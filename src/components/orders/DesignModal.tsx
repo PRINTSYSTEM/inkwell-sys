@@ -56,6 +56,31 @@ const isNhanDesignType = (designTypeName: string): boolean => {
   );
 };
 
+const isTuiXepHongDesignType = (designTypeName: string): boolean => {
+  return (
+    designTypeName.toLowerCase().includes("túi xếp hông") ||
+    designTypeName.toLowerCase().includes("tui xep hong") ||
+    designTypeName.toLowerCase().includes("túi xếp") ||
+    designTypeName.toLowerCase().includes("tui xep")
+  );
+};
+
+const isDecalCuonDesignType = (designTypeName: string): boolean => {
+  return (
+    designTypeName.toLowerCase().includes("decal cuộn") ||
+    designTypeName.toLowerCase().includes("decal cuon") ||
+    designTypeName.toLowerCase().includes("decal cuộn")
+  );
+};
+
+const isTuiCuonDesignType = (designTypeName: string): boolean => {
+  return (
+    designTypeName.toLowerCase().includes("túi cuộn") ||
+    designTypeName.toLowerCase().includes("tui cuon") ||
+    designTypeName.toLowerCase().includes("túi cuộn")
+  );
+};
+
 const isTheTreoMaterial = (materialName: string): boolean => {
   return (
     materialName.toLowerCase().includes("thẻ treo") ||
@@ -230,27 +255,96 @@ export const DesignModal: React.FC<DesignModalProps> = ({
   const isHop = isHopDesignType(designTypeName);
   const isNhan = isNhanDesignType(designTypeName);
   const isTheTreo = isTheTreoMaterial(materialName);
+  const isTuiXepHong = isTuiXepHongDesignType(designTypeName);
+  const isDecalCuon = isDecalCuonDesignType(designTypeName);
+  const isTuiCuon = isTuiCuonDesignType(designTypeName);
 
-  // Determine which classifications to show based on rules:
-  // - decal: có cả sidesClass và processClass
-  // - thẻ treo: chỉ có sidesClass (khi là nhãn)
-  // - túi: mặc định 2 mặt, không hiển thị (tự động set)
-  // - hộp và nhãn (trừ thẻ treo): không có classification
+  // Determine which classifications to show and auto-set values based on rules:
+  // - Hộp: Bế, 1 mặt, Cán bóng hoặc cán mờ
+  // - Nhãn giấy: Cắt, 1 mặt, Cán bóng hoặc cán mờ
+  // - Thẻ treo (nhãn giấy đặc biệt): Cắt, 1 hoặc 2 mặt (cho phép chọn), Cán bóng hoặc cán mờ
+  // - Decal: Bế, 1 mặt, Cán bóng hoặc cán mờ
+  // - Túi: Cắt, 2 mặt, Cán bóng hoặc cán mờ
+  // - Túi xếp hông (túi đặc biệt): Bế, 2 mặt, Cán bóng hoặc cán mờ
+  // - Decal cuộn: 1 mặt, Cán bóng hoặc cán mờ (không có process)
+  // - Túi cuộn: 2 mặt, Cán bóng hoặc cán mờ (không có process)
+
+  // Determine which classifications to show
   const shouldShowSidesClassification =
     isDecal || // Decal: có cả sides và process
-    (isTheTreo && isNhan); // Thẻ treo (nhãn): chỉ có sides
+    (isTheTreo && isNhan) || // Thẻ treo (nhãn): chỉ có sides (cho phép chọn)
+    isDecalCuon || // Decal cuộn: chỉ có sides
+    isTuiCuon; // Túi cuộn: chỉ có sides
 
-  const shouldShowProcessClassification = isDecal; // Decal: có cả sides và process
+  const shouldShowProcessClassification =
+    isDecal || // Decal: có cả sides và process
+    isHop || // Hộp: có process (Bế)
+    (isNhan && !isTheTreo) || // Nhãn giấy (trừ thẻ treo): có process (Cắt)
+    (isTui && !isTuiXepHong) || // Túi (trừ túi xếp hông): có process (Cắt)
+    isTuiXepHong; // Túi xếp hông: có process (Bế)
 
-  // For Túi: automatically set to 2 mặt, don't show selector
+  // Auto-set classifications based on design type rules
   useEffect(() => {
-    if (isTui && formData.sidesClassification !== "two_side") {
-      setFormData((prev) => ({
-        ...prev,
-        sidesClassification: "two_side",
-      }));
+    if (!selectedDesignType) return;
+
+    const updates: Partial<CreateDesignRequestUI> = {};
+
+    // Hộp: Bế, 1 mặt
+    if (isHop) {
+      updates.processClassification = "die_cut";
+      updates.sidesClassification = "one_side";
     }
-  }, [isTui, formData.sidesClassification]);
+    // Nhãn giấy (trừ thẻ treo): Cắt, 1 mặt
+    else if (isNhan && !isTheTreo) {
+      updates.processClassification = "cut";
+      updates.sidesClassification = "one_side";
+    }
+    // Thẻ treo (nhãn giấy đặc biệt): Cắt, cho phép chọn 1 hoặc 2 mặt (không auto-set)
+    else if (isTheTreo && isNhan) {
+      updates.processClassification = "cut";
+      // Không auto-set sidesClassification, cho phép người dùng chọn
+    }
+    // Decal: Bế, 1 mặt
+    else if (isDecal && !isDecalCuon) {
+      updates.processClassification = "die_cut";
+      updates.sidesClassification = "one_side";
+    }
+    // Túi (trừ túi xếp hông): Cắt, 2 mặt
+    else if (isTui && !isTuiXepHong && !isTuiCuon) {
+      updates.processClassification = "cut";
+      updates.sidesClassification = "two_side";
+    }
+    // Túi xếp hông (túi đặc biệt): Bế, 2 mặt
+    else if (isTuiXepHong) {
+      updates.processClassification = "die_cut";
+      updates.sidesClassification = "two_side";
+    }
+    // Decal cuộn: 1 mặt (không có process)
+    else if (isDecalCuon) {
+      updates.processClassification = undefined;
+      updates.sidesClassification = "one_side";
+    }
+    // Túi cuộn: 2 mặt (không có process)
+    else if (isTuiCuon) {
+      updates.processClassification = undefined;
+      updates.sidesClassification = "two_side";
+    }
+
+    // Apply updates if any
+    if (Object.keys(updates).length > 0) {
+      setFormData((prev) => ({ ...prev, ...updates }));
+    }
+  }, [
+    selectedDesignType,
+    isHop,
+    isNhan,
+    isTheTreo,
+    isDecal,
+    isDecalCuon,
+    isTui,
+    isTuiXepHong,
+    isTuiCuon,
+  ]);
 
   // Reset width to 0 when design type is not Túi or Hộp
   useEffect(() => {
@@ -283,10 +377,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         );
       case 2:
         // Step 2: Các option nâng cao - Cán màn bắt buộc, classification nếu có thì phải chọn
-        // Bắt buộc chọn cán màn - check against valid lamination types from config
-        const validLaminationTypes = Object.keys(
-          ENTITY_CONFIG.laminationTypes.values
-        );
+        // Bắt buộc chọn cán màn - chỉ cho phép Cán bóng (glossy) hoặc Cán mờ (matte)
+        const validLaminationTypes = ["glossy", "matte"]; // Chỉ cho phép Cán bóng hoặc Cán mờ
         if (
           !formData.laminationType ||
           !validLaminationTypes.includes(formData.laminationType)
@@ -294,16 +386,23 @@ export const DesignModal: React.FC<DesignModalProps> = ({
           return false;
         }
         // Validate classifications based on design type and material rules
-        // Túi không cần validate vì đã tự động set mặc định
+        // Túi, Túi xếp hông, Túi cuộn, Decal cuộn không cần validate vì đã tự động set mặc định
         if (
           !isTui &&
+          !isTuiXepHong &&
+          !isTuiCuon &&
+          !isDecalCuon &&
           shouldShowSidesClassification &&
           !formData.sidesClassification
         ) {
           return false;
         }
+        // Validate process classification nếu cần hiển thị
+        // Decal cuộn và Túi cuộn không có process classification
         if (
           shouldShowProcessClassification &&
+          !isDecalCuon &&
+          !isTuiCuon &&
           !formData.processClassification
         ) {
           return false;
@@ -643,29 +742,50 @@ export const DesignModal: React.FC<DesignModalProps> = ({
               {(shouldShowSidesClassification ||
                 shouldShowProcessClassification ||
                 isTui ||
-                true) && (
+                isTuiXepHong ||
+                isTuiCuon ||
+                isDecalCuon ||
+                isHop ||
+                (isNhan && !isTheTreo)) && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Số mặt in - chỉ hiển thị khi cần chọn (không phải túi) */}
-                  {shouldShowSidesClassification && !isTui && (
+                  {/* Số mặt in - hiển thị khi cần */}
+                  {(shouldShowSidesClassification ||
+                    isTui ||
+                    isTuiXepHong ||
+                    isTuiCuon ||
+                    isDecalCuon ||
+                    isHop ||
+                    (isNhan && !isTheTreo)) && (
                     <div className="space-y-3">
                       <Label className="text-sm font-medium">
-                        Số mặt in <span className="text-destructive">*</span>
+                        Số mặt in
+                        {(shouldShowSidesClassification ||
+                          isTui ||
+                          isTuiXepHong ||
+                          isTuiCuon ||
+                          isDecalCuon ||
+                          isHop ||
+                          (isNhan && !isTheTreo)) && (
+                          <span className="text-destructive">*</span>
+                        )}
                       </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(
-                          ENTITY_CONFIG.sidesClassification.values
-                        ).map(([key, label]) => {
-                          const isSelected =
-                            formData.sidesClassification === key;
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => {
-                                updateField("sidesClassification", key);
-                              }}
-                              disabled={!!isExistingDesign}
-                              className={`
+                      {/* Cho phép chọn khi là thẻ treo */}
+                      {shouldShowSidesClassification && isTheTreo && isNhan ? (
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(
+                            ENTITY_CONFIG.sidesClassification.values
+                          ).map(([key, label]) => {
+                            const isSelected =
+                              formData.sidesClassification === key;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => {
+                                  updateField("sidesClassification", key);
+                                }}
+                                disabled={!!isExistingDesign}
+                                className={`
                                   px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all
                                   ${
                                     isSelected
@@ -678,81 +798,61 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                                       : ""
                                   }
                                 `}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        // Hiển thị thông tin (không cho chọn) cho các trường hợp auto-set
+                        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                          <Badge variant="outline" className="text-sm">
+                            {formData.sidesClassification
+                              ? ENTITY_CONFIG.sidesClassification.values[
+                                  formData.sidesClassification
+                                ]
+                              : "—"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            (Tự động thiết lập)
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Túi: mặc định 2 mặt, chỉ hiển thị thông tin (không cho chọn) */}
-                  {isTui && (
-                    <div className="space-y-3">
-                      <Label className="text-sm font-medium">Số mặt in</Label>
-                      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
-                        <Badge variant="outline" className="text-sm">
-                          {ENTITY_CONFIG.sidesClassification.values.two_side}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          (Mặc định cho loại túi)
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quy trình sản xuất */}
+                  {/* Quy trình sản xuất - chỉ hiển thị khi cần */}
                   {shouldShowProcessClassification && (
                     <div className="space-y-3">
                       <Label className="text-sm font-medium">
                         Quy trình sản xuất{" "}
                         <span className="text-destructive">*</span>
                       </Label>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(
-                          ENTITY_CONFIG.processClassification.values
-                        ).map(([key, label]) => {
-                          const isSelected =
-                            formData.processClassification === key;
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => {
-                                updateField("processClassification", key);
-                              }}
-                              disabled={!!isExistingDesign}
-                              className={`
-                                  px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all
-                                  ${
-                                    isSelected
-                                      ? "border-primary bg-primary text-primary-foreground"
-                                      : "border-border hover:border-primary/50"
-                                  }
-                                  ${
-                                    isExistingDesign
-                                      ? "opacity-50 cursor-not-allowed"
-                                      : ""
-                                  }
-                                `}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
+                      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                        <Badge variant="outline" className="text-sm">
+                          {formData.processClassification
+                            ? ENTITY_CONFIG.processClassification.values[
+                                formData.processClassification
+                              ]
+                            : "—"}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          (Tự động thiết lập)
+                        </span>
                       </div>
                     </div>
                   )}
 
-                  {/* Cán màn - Bắt buộc - chung hàng với 2 tùy chọn kia */}
+                  {/* Cán màn - Bắt buộc - chỉ cho phép Cán bóng hoặc Cán mờ - chung hàng với 2 tùy chọn kia */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">
                       Cán màn <span className="text-destructive">*</span>
                     </Label>
                     <div className="flex flex-wrap gap-2">
-                      {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(
-                        ([key, label]) => {
+                      {Object.entries(ENTITY_CONFIG.laminationTypes.values)
+                        .filter(([key]) => key === "glossy" || key === "matte") // Chỉ hiển thị Cán bóng và Cán mờ
+                        .map(([key, label]) => {
                           const isSelected = formData.laminationType === key;
                           return (
                             <button
@@ -779,8 +879,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                               {label}
                             </button>
                           );
-                        }
-                      )}
+                        })}
                     </div>
                   </div>
                 </div>

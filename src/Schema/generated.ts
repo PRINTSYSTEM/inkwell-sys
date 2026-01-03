@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-03T03:21:47.307Z */
+/* Generated at: 2026-01-03T10:36:15.606Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -149,6 +149,7 @@ export const ProofingOrderDesignResponseSchema = schemas.ProofingOrderDesignResp
 export const ProofingOrderDieResponseSchema = schemas.ProofingOrderDieResponse;
 export const ProofingOrderResponseSchema = schemas.ProofingOrderResponse;
 export const ProofingOrderResponsePaginateSchema = schemas.ProofingOrderResponsePaginate;
+export const RecordDieExportRequestSchema = schemas.RecordDieExportRequest;
 export const RecordPlateExportRequestSchema = schemas.RecordPlateExportRequest;
 export const RecreateDeliveryNoteRequestSchema = schemas.RecreateDeliveryNoteRequest;
 export const ReportExportResponseSchema = schemas.ReportExportResponse;
@@ -212,4 +213,3 @@ export const VendorResponseSchema = schemas.VendorResponse;
 export const VendorResponsePaginateSchema = schemas.VendorResponsePaginate;
 export const postApidesignsIdtimeline_BodySchema = schemas.postApidesignsIdtimeline_Body;
 export const postApidies_BodySchema = schemas.postApidies_Body;
-export const postApiproofingOrdersIddieExport_BodySchema = schemas.postApiproofingOrdersIddieExport_Body;

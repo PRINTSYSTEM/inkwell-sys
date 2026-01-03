@@ -3,7 +3,7 @@
 import { z } from "zod";
 import {
   DieExportResponseSchema as GenDieExportResponseSchema,
-  postApiproofingOrdersIddieExport_BodySchema as GenRecordDieExportRequestSchema,
+  RecordDieExportRequestSchema as GenRecordDieExportRequestSchema,
 } from "./generated";
 
 // ===== DieExportResponse =====
@@ -11,11 +11,8 @@ export const DieExportResponseSchema = GenDieExportResponseSchema.passthrough();
 export type DieExportResponse = z.infer<typeof DieExportResponseSchema>;
 
 // ===== RecordDieExportRequest =====
-// Extend generated schema to include vendorName for cases where vendor is not in system
-export const RecordDieExportRequestSchema =
-  GenRecordDieExportRequestSchema.extend({
-    vendorName: z.string().nullable().optional(),
-  }).passthrough();
+// Use the generated schema directly (no extension needed as schema changed)
+export const RecordDieExportRequestSchema = GenRecordDieExportRequestSchema;
 export type RecordDieExportRequest = z.infer<
   typeof RecordDieExportRequestSchema
 >;
