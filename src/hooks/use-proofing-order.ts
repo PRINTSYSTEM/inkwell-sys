@@ -30,8 +30,10 @@ import type {
   OrderDetailResponse,
   OrderDetailResponsePaginate,
   RecordPlateExportRequest,
+  RecordDieExportRequest,
   AddDesignsToProofingOrderRequest,
 } from "@/Schema";
+import { RecordDieExportRequestSchema } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
@@ -849,71 +851,50 @@ export const useRecordPlateExport = () => {
   });
 };
 
-// Upload file trực tiếp vào endpoint die-export
-// API expects: DieVendorId, DieCount, SentAt, EstimatedReceiveAt, ReceivedAt, ImageFiles (array), Notes
+// Record die export - API expects: dieIds (array), sentAt, estimatedReceiveAt, receivedAt, notes
 export const useRecordDieExportWithFile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
       id,
-      files,
+      dieIds,
       notes,
-      dieVendorId,
-      dieCount,
       sentAt,
       estimatedReceiveAt,
       receivedAt,
     }: {
       id: number;
-      files?: File[] | null;
+      dieIds: number[];
       notes?: string | null;
-      dieVendorId?: number | null;
-      dieCount?: number | null;
       sentAt?: string | null;
       estimatedReceiveAt?: string | null;
       receivedAt?: string | null;
     }) => {
-      const formData = new FormData();
+      // Build request payload according to RecordDieExportRequest schema
+      const requestPayload: RecordDieExportRequest = {
+        dieIds,
+        sentAt: sentAt ?? null,
+        estimatedReceiveAt: estimatedReceiveAt ?? null,
+        receivedAt: receivedAt ?? null,
+        notes: notes ?? null,
+      };
 
-      // Required fields according to API schema
-      if (dieVendorId != null) {
-        formData.append("DieVendorId", dieVendorId.toString());
-      }
-      if (dieCount != null) {
-        formData.append("DieCount", dieCount.toString());
-      }
-      if (sentAt) {
-        formData.append("SentAt", sentAt);
-      }
-      if (estimatedReceiveAt) {
-        formData.append("EstimatedReceiveAt", estimatedReceiveAt);
-      }
-      if (receivedAt) {
-        formData.append("ReceivedAt", receivedAt);
-      }
-      if (files && files.length > 0) {
-        // Append each file to ImageFiles array
-        files.forEach((file) => {
-          formData.append("ImageFiles", file);
-        });
-      }
-      if (notes) {
-        formData.append("Notes", notes);
+      // Validate request payload against schema
+      const validationResult =
+        RecordDieExportRequestSchema.safeParse(requestPayload);
+      if (!validationResult.success) {
+        throw new Error(
+          `Invalid request payload: ${validationResult.error.message}`
+        );
       }
 
       const response = await apiRequest.post(
         API_SUFFIX.PROOFING_RECORD_DIE(id),
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        validationResult.data
       );
 
-      // Sử dụng safeParse để tránh throw error khi validation fail
-      // Nếu API trả về 200, coi như thành công dù schema validation có thể fail
+      // Validate response against schema
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
       if (parseResult.success) {
         return parseResult.data;

@@ -64,15 +64,33 @@ export const useCreateDie = () => {
 
   return useMutation({
     mutationFn: async (data: {
-      name: string;
+      name?: string;
+      code: string;
+      type: string;
       size?: string;
       price?: number;
       vendorId?: number;
       notes?: string;
       image?: File;
+      length?: number;
+      width?: number;
+      height?: number;
     }) => {
       const formData = new FormData();
-      formData.append("Name", data.name);
+      if (data.name != null) {
+        formData.append("Name", data.name);
+      }
+      formData.append("Code", data.code);
+      formData.append("Type", data.type);
+      if (data.length != null) {
+        formData.append("Length", data.length.toString());
+      }
+      if (data.width != null) {
+        formData.append("Width", data.width.toString());
+      }
+      if (data.height != null) {
+        formData.append("Height", data.height.toString());
+      }
       if (data.size != null) {
         formData.append("Size", data.size);
       }
@@ -157,7 +175,7 @@ export const useCreateDieFromDieExport = () => {
       data,
     }: {
       dieExportId: number;
-      data: CreateDieRequest;
+      data: CreateDieRequest; // code and type are required in CreateDieRequest
     }) => {
       const response = await apiRequest.post<DieResponse>(
         API_SUFFIX.DIE_FROM_DIE_EXPORT(dieExportId),

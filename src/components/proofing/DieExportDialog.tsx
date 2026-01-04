@@ -90,6 +90,8 @@ export function DieExportDialog({
 
   // For creating new die
   const [dieName, setDieName] = useState<string>("");
+  const [dieCode, setDieCode] = useState<string>("");
+  const [dieType, setDieType] = useState<string>("");
   const [dieSize, setDieSize] = useState<string>("");
   const [diePrice, setDiePrice] = useState<number | undefined>(undefined);
   const [dieImage, setDieImage] = useState<File | null>(null);
@@ -135,11 +137,159 @@ export function DieExportDialog({
     [assignedDies]
   );
 
-  // Filter out already assigned dies from results
-  const availableDies = useMemo(
-    () => allDies.filter((die) => die.id && !assignedDieIds.has(die.id)),
-    [allDies, assignedDieIds]
+  // Extract design types and dimensions from proofing order
+  const proofingOrderDesigns = useMemo(() => {
+    if (!proofingOrder?.proofingOrderDesigns) return [];
+    return proofingOrder.proofingOrderDesigns
+      .map((pod) => pod.design)
+      .filter((d) => d != null);
+  }, [proofingOrder]);
+
+  // Get unique design types from proofing order
+  const designTypes = useMemo(() => {
+    const types = new Set<string>();
+    proofingOrderDesigns.forEach((design) => {
+      if (design?.designType?.name) {
+        types.add(design.designType.name.toLowerCase());
+      }
+    });
+    return Array.from(types);
+  }, [proofingOrderDesigns]);
+
+  // Get dimensions from designs (for filtering by size)
+  const designDimensions = useMemo(() => {
+    const dims: Array<{
+      length: number;
+      width?: number;
+      height: number;
+      designTypeName: string;
+    }> = [];
+    proofingOrderDesigns.forEach((design) => {
+      if (design?.length && design?.height) {
+        dims.push({
+          length: design.length,
+          width: design.width,
+          height: design.height,
+          designTypeName: design.designType?.name || "",
+        });
+      }
+    });
+    return dims;
+  }, [proofingOrderDesigns]);
+
+  // Helper function to format dimensions to string
+  const formatDimensions = useCallback(
+    (length: number, width: number | undefined, height: number): string => {
+      if (width && width > 0) {
+        return `${length}x${width}x${height}`;
+      }
+      return `${length}x${height}`;
+    },
+    []
   );
+
+  // Helper function to check if die matches design type
+  const matchesDesignType = useCallback(
+    (dieName: string | null | undefined, designTypes: string[]): boolean => {
+      if (!dieName || designTypes.length === 0) return true; // No filter if no design types
+      const dieNameLower = dieName.toLowerCase();
+      return designTypes.some((dt) => dieNameLower.includes(dt));
+    },
+    []
+  );
+
+  // Helper function to check if die size matches dimensions
+  const matchesDimensions = useCallback(
+    (
+      dieSize: string | null | undefined,
+      dimensions: Array<{
+        length: number;
+        width?: number;
+        height: number;
+        designTypeName: string;
+      }>
+    ): boolean => {
+      if (!dieSize || dimensions.length === 0) return true; // No filter if no dimensions
+      const dieSizeLower = dieSize.toLowerCase().replace(/\s/g, "");
+      return dimensions.some((dim) => {
+        const formatted = formatDimensions(dim.length, dim.width, dim.height);
+        return dieSizeLower.includes(formatted.toLowerCase());
+      });
+    },
+    [formatDimensions]
+  );
+
+  // Filter out already assigned dies and filter by design type and size
+  const availableDies = useMemo(() => {
+    let filtered = allDies.filter(
+      (die) => die.id && !assignedDieIds.has(die.id)
+    );
+
+    // Filter by design type if we have design types
+    if (designTypes.length > 0) {
+      filtered = filtered.filter((die) =>
+        matchesDesignType(die.name, designTypes)
+      );
+    }
+
+    // Filter by dimensions if we have dimensions
+    if (designDimensions.length > 0) {
+      filtered = filtered.filter((die) =>
+        matchesDimensions(die.size, designDimensions)
+      );
+    }
+
+    return filtered;
+  }, [
+    allDies,
+    assignedDieIds,
+    designTypes,
+    designDimensions,
+    matchesDesignType,
+    matchesDimensions,
+  ]);
+
+  // Auto-fill die name, code, type and size when creating new die based on proofing order designs
+  useEffect(() => {
+    if (
+      open &&
+      dieAction === "create" &&
+      proofingOrderDesigns.length > 0 &&
+      !dieName &&
+      !dieCode &&
+      !dieType &&
+      !dieSize
+    ) {
+      // Get first design to auto-fill
+      const firstDesign = proofingOrderDesigns[0];
+      if (firstDesign) {
+        // Auto-generate die name: Mã số + kích thước
+        const designTypeName = firstDesign.designType?.name || "";
+        const dimensions = formatDimensions(
+          firstDesign.length || 0,
+          firstDesign.width,
+          firstDesign.height || 0
+        );
+        const suggestedName = `${designTypeName} ${dimensions}`;
+        setDieName(suggestedName);
+        // Auto-generate code from design code
+        const suggestedCode = firstDesign.code || "";
+        setDieCode(suggestedCode);
+        // Auto-generate type from design type
+        setDieType(designTypeName);
+        setDieSize(dimensions);
+      }
+    }
+  }, [
+    open,
+    dieAction,
+    proofingOrderDesigns,
+    formatDimensions,
+    dieName,
+    dieCode,
+    dieType,
+    dieSize,
+  ]);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -325,11 +475,11 @@ export function DieExportDialog({
 
     // Validate images - chỉ khi tạo khuôn mới
     if (dieAction === "create") {
+      const firstDieExport = proofingOrder?.dieExports?.[0];
       if (
         dieFiles.length === 0 &&
-        !proofingOrder?.dieExport?.imageUrl &&
-        (!proofingOrder?.dieExport?.images ||
-          proofingOrder.dieExport.images.length === 0)
+        !firstDieExport?.imageUrl &&
+        (!firstDieExport || (firstDieExport && !firstDieExport.imageUrl))
       ) {
         toast.error("Vui lòng chọn ít nhất một ảnh khuôn bế");
         return;
@@ -351,8 +501,12 @@ export function DieExportDialog({
     }
 
     if (dieAction === "create") {
-      if (!dieName.trim()) {
-        toast.error("Vui lòng nhập tên khuôn bế");
+      if (!dieCode.trim()) {
+        toast.error("Vui lòng nhập mã khuôn bế");
+        return;
+      }
+      if (!dieType.trim()) {
+        toast.error("Vui lòng nhập loại khuôn bế");
         return;
       }
     }
@@ -391,9 +545,11 @@ export function DieExportDialog({
         await new Promise<void>((resolve, reject) => {
           createDie(
             {
-              name: dieName.trim(),
+              name: dieName.trim() || undefined,
+              code: dieCode.trim(),
+              type: dieType.trim(),
               size: dieSize.trim() || undefined,
-              price: diePrice || undefined,
+              price: diePrice ?? undefined,
               vendorId: finalVendorId || undefined,
               notes: notes.trim() || undefined,
               image: dieImage || undefined,
@@ -469,6 +625,14 @@ export function DieExportDialog({
       }
 
       // Step 4: Record die export
+      // Collect all die IDs (either created or selected)
+      const allDieIds = dieAction === "create" ? createdDieIds : selectedDieIds;
+
+      if (allDieIds.length === 0) {
+        toast.error("Không có khuôn bế nào để ghi nhận xuất");
+        return;
+      }
+
       const sentAt = formatLocalDateTimeWithOffset(new Date());
       const estimatedReceiveAt = receivedAt;
 
@@ -476,10 +640,8 @@ export function DieExportDialog({
         recordDie(
           {
             id: proofingOrderId,
-            files: dieFiles.length > 0 ? dieFiles : undefined,
+            dieIds: allDieIds,
             notes: notes.trim() || undefined,
-            dieVendorId: finalVendorId || undefined,
-            dieCount: dieCount,
             sentAt: sentAt,
             estimatedReceiveAt: estimatedReceiveAt || undefined,
             receivedAt: receivedAt || undefined,
@@ -508,8 +670,9 @@ export function DieExportDialog({
   };
 
   const selectedVendor = vendors?.find((v) => v.id === vendorId);
-  const existingImages = proofingOrder?.dieExport?.images || [];
-  const existingImageUrl = proofingOrder?.dieExport?.imageUrl;
+  const firstDieExport = proofingOrder?.dieExports?.[0];
+  const existingImages: string[] = []; // dieExports doesn't have images array, use imageUrl instead
+  const existingImageUrl = firstDieExport?.imageUrl;
 
   const isSubmitting =
     recordingDie || creatingDie || assigningDie || creatingVendor;
@@ -725,46 +888,37 @@ export function DieExportDialog({
             ) : (
               <div className="space-y-3 border rounded-lg p-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dieName">
-                    Tên khuôn bế <span className="text-destructive">*</span>
+                  <Label htmlFor="dieCode">
+                    Mã khuôn bế <span className="text-destructive">*</span>
                   </Label>
+                  <Input
+                    id="dieCode"
+                    placeholder="Nhập mã khuôn bế..."
+                    value={dieCode}
+                    onChange={(e) => setDieCode(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dieType">
+                    Loại khuôn bế <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="dieType"
+                    placeholder="Nhập loại khuôn bế..."
+                    value={dieType}
+                    onChange={(e) => setDieType(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dieName">Tên khuôn bế</Label>
                   <Input
                     id="dieName"
                     placeholder="Nhập tên khuôn bế..."
                     value={dieName}
                     onChange={(e) => setDieName(e.target.value)}
                   />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="dieSize">Kích thước</Label>
-                    <Input
-                      id="dieSize"
-                      placeholder="VD: 100x200"
-                      value={dieSize}
-                      onChange={(e) => setDieSize(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="diePrice">Giá (VND)</Label>
-                    <Input
-                      id="diePrice"
-                      type="number"
-                      placeholder="Nhập giá..."
-                      value={diePrice || ""}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === "") {
-                          setDiePrice(undefined);
-                        } else {
-                          const numValue = parseFloat(value);
-                          if (!isNaN(numValue) && numValue >= 0) {
-                            setDiePrice(numValue);
-                          }
-                        }
-                      }}
-                    />
-                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dieImage">Ảnh khuôn bế</Label>
@@ -1106,6 +1260,8 @@ export function DieExportDialog({
                 existingImages.length === 0 &&
                 !existingImageUrl) ||
               (dieAction === "create" && !vendorId && !vendorName.trim()) ||
+              (dieAction === "create" &&
+                (!dieCode.trim() || !dieType.trim())) ||
               (dieAction === "select" &&
                 (selectedDieIds.length === 0 ||
                   selectedDieIds.length !== dieCount)) ||

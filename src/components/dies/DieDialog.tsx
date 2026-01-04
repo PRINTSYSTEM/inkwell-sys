@@ -61,6 +61,8 @@ export function DieDialog({
 }: DieDialogProps) {
   const isEdit = !!die;
   const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [type, setType] = useState("");
   const [size, setSize] = useState("");
   const [price, setPrice] = useState<number | undefined>(0);
   const [location, setLocation] = useState("");
@@ -85,6 +87,8 @@ export function DieDialog({
     if (open) {
       if (die) {
         setName(die.name || "");
+        setCode(die.code || "");
+        setType(die.type || "");
         setSize(die.size || "");
         setPrice(die.price ?? 0);
         setLocation(die.location || "");
@@ -95,6 +99,8 @@ export function DieDialog({
         setImage(null);
       } else {
         setName("");
+        setCode("");
+        setType("");
         setSize("");
         setPrice(0);
         setLocation("");
@@ -173,18 +179,15 @@ export function DieDialog({
   };
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      toast.error("Vui lòng nhập tên khuôn bế");
-      return;
-    }
-
     if (isEdit && die?.id) {
       // Update die
       updateDie(
         {
           id: die.id,
           data: {
-            name: name.trim(),
+            name: name.trim() || null,
+            code: code.trim() || null,
+            type: type.trim() || null,
             size: size.trim() || null,
             price: price ?? null,
             location: location.trim() || null,
@@ -214,6 +217,14 @@ export function DieDialog({
       );
     } else {
       // Create die
+      if (!code.trim()) {
+        toast.error("Vui lòng nhập mã khuôn bế");
+        return;
+      }
+      if (!type.trim()) {
+        toast.error("Vui lòng nhập loại khuôn bế");
+        return;
+      }
       if (!vendorId) {
         toast.error("Vui lòng chọn nhà cung cấp");
         return;
@@ -221,12 +232,14 @@ export function DieDialog({
 
       createDie(
         {
-          name: name.trim(),
-          size: size.trim() || "",
-          price: price ?? 0,
+          name: name.trim() || undefined,
+          code: code.trim(),
+          type: type.trim(),
+          size: size.trim() || undefined,
+          price: price ?? undefined,
           vendorId,
-          notes: notes.trim() || "",
-          image: image || null,
+          notes: notes.trim() || undefined,
+          image: image || undefined,
         },
         {
           onSuccess: () => {
@@ -256,10 +269,41 @@ export function DieDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Mã khuôn bế - chỉ hiển thị khi tạo mới */}
+          {!isEdit && (
+            <div className="space-y-2">
+              <Label htmlFor="code">
+                Mã khuôn bế <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Nhập mã khuôn bế..."
+              />
+            </div>
+          )}
+
+          {/* Loại khuôn bế - chỉ hiển thị khi tạo mới */}
+          {!isEdit && (
+            <div className="space-y-2">
+              <Label htmlFor="type">
+                Loại khuôn bế <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="type"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                placeholder="Nhập loại khuôn bế..."
+              />
+            </div>
+          )}
+
           {/* Tên khuôn bế */}
           <div className="space-y-2">
             <Label htmlFor="name">
-              Tên khuôn bế <span className="text-destructive">*</span>
+              Tên khuôn bế{" "}
+              {!isEdit && <span className="text-destructive">*</span>}
             </Label>
             <Input
               id="name"
@@ -372,30 +416,32 @@ export function DieDialog({
             </div>
           )}
 
-          {/* Kích thước và Giá */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="size">Kích thước</Label>
-              <Input
-                id="size"
-                value={size}
-                onChange={(e) => setSize(e.target.value)}
-                placeholder="Nhập kích thước..."
-              />
+          {/* Kích thước và Giá - chỉ hiển thị khi edit */}
+          {isEdit && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="size">Kích thước</Label>
+                <Input
+                  id="size"
+                  value={size}
+                  onChange={(e) => setSize(e.target.value)}
+                  placeholder="Nhập kích thước..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Giá (VNĐ)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  value={price ?? ""}
+                  onChange={(e) =>
+                    setPrice(e.target.value ? parseFloat(e.target.value) : 0)
+                  }
+                  placeholder="Nhập giá..."
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="price">Giá (VNĐ)</Label>
-              <Input
-                id="price"
-                type="number"
-                value={price ?? ""}
-                onChange={(e) =>
-                  setPrice(e.target.value ? parseFloat(e.target.value) : 0)
-                }
-                placeholder="Nhập giá..."
-              />
-            </div>
-          </div>
+          )}
 
           {/* Vị trí - chỉ hiển thị khi edit */}
           {isEdit && (

@@ -30,6 +30,7 @@ import {
   Plus,
   Search,
   MapPin,
+  Ruler,
   CheckCircle2,
   XCircle,
   RefreshCw,
@@ -43,16 +44,20 @@ export default function DieListPage() {
   const [pageSize] = useState(20);
   const [dieName, setDieName] = useState("");
   const [location, setLocation] = useState("");
+  const [sizeFilter, setSizeFilter] = useState("");
   const [usableFilter, setUsableFilter] = useState<
     "all" | "usable" | "unusable"
   >("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDie, setSelectedDie] = useState<DieResponse | null>(null);
 
+  // Combine dieName and sizeFilter for search
+  const searchTerm = [dieName, sizeFilter].filter(Boolean).join(" ");
+
   const { data, isLoading, isFetching, refetch } = useDies({
     pageNumber: page,
     pageSize,
-    dieName: dieName || "",
+    dieName: searchTerm || "",
     location: location || "",
     isUsable:
       usableFilter === "all" ? null : usableFilter === "usable" ? true : false,
@@ -103,6 +108,7 @@ export default function DieListPage() {
   const handleResetFilters = () => {
     setDieName("");
     setLocation("");
+    setSizeFilter("");
     setUsableFilter("all");
     setPage(1);
   };
@@ -209,6 +215,18 @@ export default function DieListPage() {
                   value={dieName}
                   onChange={(e) => {
                     setDieName(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-8"
+                />
+              </div>
+              <div className="relative flex-1 md:max-w-xs">
+                <Ruler className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Tìm theo kích thước (VD: 100x200x50 hoặc 100x200)"
+                  value={sizeFilter}
+                  onChange={(e) => {
+                    setSizeFilter(e.target.value);
                     setPage(1);
                   }}
                   className="pl-8"
