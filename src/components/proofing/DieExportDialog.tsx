@@ -565,8 +565,8 @@ export function DieExportDialog({
       const firstDieExport = proofingOrder?.dieExports?.[0];
       if (
         dieFiles.length === 0 &&
-        !firstDieExport?.imageUrl &&
-        (!firstDieExport || (firstDieExport && !firstDieExport.imageUrl))
+        !firstDieExport?.die?.imageUrl &&
+        (!firstDieExport || (firstDieExport && !firstDieExport.die?.imageUrl))
       ) {
         toast.error("Vui lòng chọn ít nhất một ảnh khuôn bế");
         return;
@@ -753,8 +753,8 @@ export function DieExportDialog({
 
   const selectedVendor = vendors?.find((v) => v.id === vendorId);
   const firstDieExport = proofingOrder?.dieExports?.[0];
-  const existingImages: string[] = []; // dieExports doesn't have images array, use imageUrl instead
-  const existingImageUrl = firstDieExport?.imageUrl;
+  const existingImages: string[] = []; // dieExports doesn't have images array, use imageUrl from die instead
+  const existingImageUrl = firstDieExport?.die?.imageUrl;
 
   const isSubmitting =
     recordingDie || creatingDie || assigningDie || creatingVendor;

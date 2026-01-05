@@ -493,6 +493,7 @@ const CustomerSummaryResponse = z
     phone: z.string().nullable(),
     email: z.string().nullable(),
     address: z.string().nullable(),
+    type: z.string().nullable(),
     debtStatus: z.string().nullable(),
     scrapRate: z.number().nullable(),
     currentDebt: z.number(),
@@ -1127,8 +1128,7 @@ const DieUsageHistoryItem = z
   .object({
     proofingOrderId: z.number().int(),
     proofingOrderCode: z.string().nullable(),
-    takenOutAt: z.string().datetime({ offset: true }).nullable(),
-    returnedAt: z.string().datetime({ offset: true }).nullable(),
+    exportedAt: z.string().datetime({ offset: true }),
   })
   .partial();
 const DieResponse = z
@@ -1149,6 +1149,9 @@ const DieResponse = z
     location: z.string().nullable(),
     isUsable: z.boolean(),
     notes: z.string().nullable(),
+    sentAt: z.string().datetime({ offset: true }).nullable(),
+    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
+    receivedAt: z.string().datetime({ offset: true }).nullable(),
     createdAt: z.string().datetime({ offset: true }),
     createdBy: UserInfo,
     usageHistory: z.array(DieUsageHistoryItem).nullable(),
@@ -1175,6 +1178,9 @@ const postApidies_Body = z
     Price: z.number().optional(),
     VendorId: z.number().int().optional(),
     Notes: z.string().optional(),
+    SentAt: z.string().datetime({ offset: true }).optional(),
+    EstimatedReceiveAt: z.string().datetime({ offset: true }).optional(),
+    ReceivedAt: z.string().datetime({ offset: true }).optional(),
     image: z.instanceof(File).optional(),
   })
   .passthrough();
@@ -1191,19 +1197,20 @@ const UpdateDieRequest = z
     location: z.string().min(0).max(50).nullable(),
     isUsable: z.boolean().nullable(),
     notes: z.string().nullable(),
+    sentAt: z.string().datetime({ offset: true }).nullable(),
+    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
+    receivedAt: z.string().datetime({ offset: true }).nullable(),
   })
   .partial();
-const ProofingOrderDieResponse = z
+const DieExportResponse = z
   .object({
     id: z.number().int(),
+    proofingOrderId: z.number().int(),
+    proofingOrderCode: z.string().nullable(),
     dieId: z.number().int(),
     die: DieResponse,
-    isNewDie: z.boolean(),
-    borrowedFromProofingOrderId: z.number().int().nullable(),
-    borrowedFromProofingOrderCode: z.string().nullable(),
-    takenOutAt: z.string().datetime({ offset: true }).nullable(),
-    returnedAt: z.string().datetime({ offset: true }).nullable(),
     notes: z.string().nullable(),
+    createdBy: UserInfo,
     createdAt: z.string().datetime({ offset: true }),
   })
   .partial();
@@ -1213,6 +1220,9 @@ const AssignDieToProofingOrderRequest = z.object({
   borrowedFromProofingOrderId: z.number().int().nullish(),
   notes: z.string().nullish(),
 });
+const ReplaceDieRequest = z
+  .object({ newDieId: z.number().int(), notes: z.string().nullable() })
+  .partial();
 const CreateDieRequest = z.object({
   name: z.string().min(0).max(255).nullish(),
   code: z.string().min(1),
@@ -1224,6 +1234,9 @@ const CreateDieRequest = z.object({
   price: z.number().nullish(),
   vendorId: z.number().int().nullish(),
   notes: z.string().nullish(),
+  sentAt: z.string().datetime({ offset: true }).nullish(),
+  estimatedReceiveAt: z.string().datetime({ offset: true }).nullish(),
+  receivedAt: z.string().datetime({ offset: true }).nullish(),
 });
 const InventorySummaryItemResponse = z
   .object({
@@ -1974,26 +1987,6 @@ const CompleteProductionRequest = z.object({
   wastage: z.number().gte(0).optional(),
   producedQty: z.number().int().gte(1).lte(2147483647),
 });
-const DieExportResponse = z
-  .object({
-    id: z.number().int(),
-    proofingOrderId: z.number().int(),
-    proofingOrderCode: z.string().nullable(),
-    dieVendorId: z.number().int().nullable(),
-    vendorName: z.string().nullable(),
-    dieVendor: VendorResponse,
-    dieCount: z.number().int(),
-    sentAt: z.string().datetime({ offset: true }).nullable(),
-    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
-    receivedAt: z.string().datetime({ offset: true }).nullable(),
-    imageUrl: z.string().nullable(),
-    notes: z.string().nullable(),
-    createdAt: z.string().datetime({ offset: true }),
-    createdBy: UserInfo,
-    dieId: z.number().int().nullable(),
-    die: DieResponse,
-  })
-  .partial();
 const ProofingOrderDesignResponse = z
   .object({
     id: z.number().int(),
@@ -2029,7 +2022,7 @@ const ProofingOrderResponse = z
     updatedAt: z.string().datetime({ offset: true }),
     proofingOrderDesigns: z.array(ProofingOrderDesignResponse).nullable(),
     productions: z.array(ProductionResponse).nullable(),
-    proofingOrderDies: z.array(ProofingOrderDieResponse).nullable(),
+    proofingOrderDies: z.array(DieExportResponse).nullable(),
   })
   .partial();
 const ProofingOrderResponsePaginate = z
@@ -2536,8 +2529,9 @@ export const schemas = {
   DieResponseIPaginate,
   postApidies_Body,
   UpdateDieRequest,
-  ProofingOrderDieResponse,
+  DieExportResponse,
   AssignDieToProofingOrderRequest,
+  ReplaceDieRequest,
   CreateDieRequest,
   InventorySummaryItemResponse,
   InventorySummaryItemResponseIPaginate,
@@ -2597,7 +2591,6 @@ export const schemas = {
   UpdateProductionRequest,
   StartProductionRequest,
   CompleteProductionRequest,
-  DieExportResponse,
   ProofingOrderDesignResponse,
   ProofingOrderResponse,
   ProofingOrderResponsePaginate,
@@ -4837,6 +4830,34 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/dies/die-export/:dieExportId/return",
+    alias: "postApidiesdieExportDieExportIdreturn",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "dieExportId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DieExportResponse,
+  },
+  {
+    method: "post",
+    path: "/api/dies/die-export/:dieExportId/take-out",
+    alias: "postApidiesdieExportDieExportIdtakeOut",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "dieExportId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DieExportResponse,
+  },
+  {
+    method: "post",
     path: "/api/dies/from-die-export/:dieExportId",
     alias: "postApidiesfromDieExportDieExportId",
     requestFormat: "json",
@@ -4855,34 +4876,6 @@ const endpoints = makeApi([
     response: DieResponse,
   },
   {
-    method: "post",
-    path: "/api/dies/proofing-order-die/:proofingOrderDieId/return",
-    alias: "postApidiesproofingOrderDieProofingOrderDieIdreturn",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "proofingOrderDieId",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: ProofingOrderDieResponse,
-  },
-  {
-    method: "post",
-    path: "/api/dies/proofing-order-die/:proofingOrderDieId/take-out",
-    alias: "postApidiesproofingOrderDieProofingOrderDieIdtakeOut",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "proofingOrderDieId",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: ProofingOrderDieResponse,
-  },
-  {
     method: "get",
     path: "/api/dies/proofing-order/:proofingOrderId",
     alias: "getApidiesproofingOrderProofingOrderId",
@@ -4894,7 +4887,7 @@ const endpoints = makeApi([
         schema: z.number().int(),
       },
     ],
-    response: z.array(ProofingOrderDieResponse),
+    response: z.array(DieExportResponse),
   },
   {
     method: "post",
@@ -4913,7 +4906,31 @@ const endpoints = makeApi([
         schema: z.number().int(),
       },
     ],
-    response: ProofingOrderDieResponse,
+    response: DieExportResponse,
+  },
+  {
+    method: "put",
+    path: "/api/dies/proofing-order/:proofingOrderId/die/:currentDieId",
+    alias: "putApidiesproofingOrderProofingOrderIddieCurrentDieId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: ReplaceDieRequest,
+      },
+      {
+        name: "proofingOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "currentDieId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DieExportResponse,
   },
   {
     method: "delete",
