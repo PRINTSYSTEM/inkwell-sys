@@ -908,17 +908,6 @@ export default function DesignDetailPage() {
                         </div>
                       </div>
 
-                      {d.areaCm2 != null && typeof d.areaCm2 === "number" && (
-                        <div className="flex items-center justify-between p-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg border border-green-200 dark:border-green-800 text-sm">
-                          <span className="font-semibold text-green-900 dark:text-green-100">
-                            Diện tích
-                          </span>
-                          <span className="font-bold text-green-700 dark:text-green-300">
-                            {(d.areaCm2 / 100).toFixed(2)} cm²
-                          </span>
-                        </div>
-                      )}
-
                       {orderDetails?.[0]?.quantity && (
                         <div className="flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm">
                           <span className="font-semibold text-blue-900 dark:text-blue-100">
