@@ -193,7 +193,7 @@ export function PlateExportDialog({
         <DialogHeader>
           <DialogTitle>Xuất bản kẽm</DialogTitle>
           <DialogDescription>
-            Ghi nhận thông tin xuất bản kẽm cho lệnh bình bài này.
+            Ghi nhận thông tin xuất bản kẽm cho mã bài này.
           </DialogDescription>
         </DialogHeader>
 

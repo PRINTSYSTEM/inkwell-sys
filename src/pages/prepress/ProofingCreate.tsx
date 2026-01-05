@@ -792,7 +792,7 @@ export default function ProofingOrderPage() {
           {/* Right header */}
           <div className="shrink-0 border-b bg-card/50 px-4 py-2 flex items-center justify-between gap-2">
             <div>
-              <p className="text-base font-bold">Lệnh bình bài mới</p>
+              <p className="text-base font-bold">mã bài mới</p>
               <p className="text-sm font-medium text-muted-foreground">
                 {selectedDesigns.length > 0
                   ? `${selectedDesigns.length} thiết kế • ${selectedCount} đã nhập số lượng`
@@ -896,7 +896,7 @@ export default function ProofingOrderPage() {
 
                               <div>
                                 <span className="text-muted-foreground">
-                                  Vật liệu:
+                                  Chất liệu:
                                 </span>
                                 <span className="ml-2">
                                   {design.materialTypeName}
@@ -1264,7 +1264,7 @@ export default function ProofingOrderPage() {
                     <Textarea
                       id="notes"
                       className="min-h-[60px] text-sm resize-none"
-                      placeholder="Nhập ghi chú cho lệnh bình bài này (tùy chọn)..."
+                      placeholder="Nhập ghi chú cho mã bài này (tùy chọn)..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                     />

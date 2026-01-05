@@ -12,7 +12,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Search, Package, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search,
+  Package,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+} from "lucide-react";
 import { useDesigns, useFilters } from "@/hooks";
 import type { DesignResponse } from "@/Schema";
 import { designStatusLabels } from "@/lib/status-utils";
@@ -34,6 +40,12 @@ export default function AllDesignsPage() {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(
+    new Date().getMonth() + 1
+  );
+  const [selectedYear, setSelectedYear] = useState<number | null>(
+    new Date().getFullYear()
+  );
   const itemsPerPage = 10;
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -54,6 +66,8 @@ export default function AllDesignsPage() {
     ...(filterState.filters["designTypeId"]?.value
       ? { designTypeId: filterState.filters["designTypeId"].value as number }
       : {}),
+    ...(selectedMonth ? { month: selectedMonth } : {}),
+    ...(selectedYear ? { year: selectedYear } : {}),
   });
 
   // Memoize designs to prevent dependency warnings
@@ -112,7 +126,7 @@ export default function AllDesignsPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterState.filters, filterState.searchQuery]);
+  }, [filterState.filters, filterState.searchQuery, selectedMonth, selectedYear]);
 
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
@@ -220,7 +234,7 @@ export default function AllDesignsPage() {
       {/* Filters */}
       <Card className="p-3 mb-3 shrink-0">
         <CardContent className="p-0">
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-5">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -269,6 +283,54 @@ export default function AllDesignsPage() {
                     ) : null;
                   }
                 )}
+              </SelectContent>
+            </Select>
+
+            {/* Month filter */}
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select
+                value={selectedMonth?.toString() || "all"}
+                onValueChange={(v) => {
+                  setSelectedMonth(v === "all" ? null : parseInt(v, 10));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 text-sm flex-1">
+                  <SelectValue placeholder="Tháng" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                    <SelectItem key={month} value={month.toString()}>
+                      Tháng {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Year filter */}
+            <Select
+              value={selectedYear?.toString() || "all"}
+              onValueChange={(v) => {
+                setSelectedYear(v === "all" ? null : parseInt(v, 10));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Năm" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                {Array.from({ length: 5 }, (_, i) => {
+                  const year = new Date().getFullYear() - 2 + i;
+                  return (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -339,15 +401,21 @@ export default function AllDesignsPage() {
                         )}
                       </TableCell>
                       <TableCell className="py-3 text-sm font-semibold max-w-[150px]">
-                        {design.customer?.name ||
-                          design.customer?.companyName ||
-                          "—"}
+                        <div className="truncate" title={design.customer?.name || design.customer?.companyName || "—"}>
+                          {design.customer?.name ||
+                            design.customer?.companyName ||
+                            "—"}
+                        </div>
                       </TableCell>
                       <TableCell className="py-3 text-sm font-semibold max-w-[150px]">
-                        {design.designName || "—"}
+                        <div className="truncate" title={design.designName || "—"}>
+                          {design.designName || "—"}
+                        </div>
                       </TableCell>
                       <TableCell className="py-3 text-sm font-medium text-muted-foreground max-w-[200px]">
-                        {design.latestRequirements || "—"}
+                        <div className="truncate" title={design.latestRequirements || "—"}>
+                          {design.latestRequirements || "—"}
+                        </div>
                       </TableCell>
                       <TableCell className="py-3">
                         <StatusBadge

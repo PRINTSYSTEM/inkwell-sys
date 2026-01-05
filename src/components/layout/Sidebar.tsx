@@ -44,7 +44,6 @@ const departments: SidebarDepartment[] = [
     title: "Quản lý",
     icon: Building2,
     items: [
-      { title: "Dashboard", href: "/dashboard" },
       { title: "Quản lý nhân viên", href: "/manager/employees" },
       { title: "Phân công công việc", href: "/manager/assignments" },
       { title: "Báo cáo tổng quan", href: "/manager/reports" },
@@ -88,12 +87,12 @@ const departments: SidebarDepartment[] = [
     ],
   },
   {
-    title: "Vật liệu",
+    title: "Chất liệu",
     icon: Package,
     items: [
-      { title: "Kho vật liệu", href: "/materials" },
+      { title: "Kho Chất liệu", href: "/materials" },
       { title: "Nhập xuất kho", href: "/inventory" },
-      { title: "Loại vật liệu", href: "/material-types" },
+      { title: "Loại Chất liệu", href: "/material-types" },
     ],
   },
   {

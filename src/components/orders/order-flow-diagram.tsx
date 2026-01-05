@@ -33,6 +33,7 @@ interface OrderFlowDiagramProps {
   currentStatus: OrderStatus | null;
   customerType: "retail" | "company";
   hasDeposit: boolean;
+  canViewPayment?: boolean;
 }
 
 // Define status order for comparison
@@ -59,6 +60,7 @@ export function OrderFlowDiagram({
   currentStatus,
   customerType,
   hasDeposit,
+  canViewPayment = false,
 }: OrderFlowDiagramProps) {
   const status = (currentStatus || "pending") as OrderStatus;
 
@@ -110,21 +112,23 @@ export function OrderFlowDiagram({
       active: isExactly(["confirmed_for_printing"]),
     });
 
-    // 4. Thanh toán - different for retail vs company
-    if (customerType === "retail") {
-      steps.push({
-        id: "payment",
-        label: "Đặt cọc",
-        completed: hasDeposit || isAtOrPast(["deposit_received"]),
-        active: isExactly(["waiting_for_deposit"]),
-      });
-    } else {
-      steps.push({
-        id: "payment",
-        label: "Duyệt công nợ",
-        completed: isAtOrPast(["debt_approved", "waiting_for_proofing"]),
-        active: isExactly(["waiting_for_deposit", "deposit_received"]),
-      });
+    // 4. Thanh toán - different for retail vs company, only show for accounting and admin
+    if (canViewPayment) {
+      if (customerType === "retail") {
+        steps.push({
+          id: "payment",
+          label: "Đặt cọc",
+          completed: hasDeposit || isAtOrPast(["deposit_received"]),
+          active: isExactly(["waiting_for_deposit"]),
+        });
+      } else {
+        steps.push({
+          id: "payment",
+          label: "Cộng công nợ",
+          completed: isAtOrPast(["debt_approved", "waiting_for_proofing"]),
+          active: isExactly(["waiting_for_deposit", "deposit_received"]),
+        });
+      }
     }
 
     // 5. Bình bài (waiting_for_proofing)
@@ -221,8 +225,8 @@ export function OrderFlowDiagram({
                   step.completed
                     ? "bg-success border-success text-success-foreground"
                     : step.active
-                    ? "bg-primary border-primary text-primary-foreground animate-pulse-soft"
-                    : "bg-card border-border text-muted-foreground"
+                      ? "bg-primary border-primary text-primary-foreground animate-pulse-soft"
+                      : "bg-card border-border text-muted-foreground"
                 )}
               >
                 {step.completed ? (
@@ -239,8 +243,8 @@ export function OrderFlowDiagram({
                   step.active
                     ? "font-semibold text-foreground"
                     : step.completed
-                    ? "font-medium text-foreground"
-                    : "text-muted-foreground"
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground"
                 )}
               >
                 {step.label}

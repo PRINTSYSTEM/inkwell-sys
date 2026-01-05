@@ -21,7 +21,7 @@ export type DesignTypeResponse = {
 };
 
 // Material type definition
-export type MaterialTypeResponse = {
+type MaterialTypeResponse = {
   id: number;
   name: string;
   description?: string;
@@ -241,7 +241,7 @@ export const DesignCard: React.FC<DesignCardProps> = ({
                 <Layers className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground mb-0.5">
-                    Cán màn
+                    Cán màng
                   </p>
                   <p className="font-medium">
                     {ENTITY_CONFIG.laminationTypes.values[

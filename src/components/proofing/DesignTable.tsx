@@ -86,7 +86,7 @@ export function DesignTable({
                     </div>
 
                     <div>
-                      <span className="text-muted-foreground">Vật liệu:</span>
+                      <span className="text-muted-foreground">Chất liệu:</span>
                       <span className="ml-2">{design.materialTypeName}</span>
                     </div>
 

@@ -41,7 +41,6 @@ export function AppHeader() {
       <div className="flex h-20 items-center justify-between px-4">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <SidebarTrigger />
-          <h1 className="text-xl font-semibold ml-4 truncate">Dashboard</h1>
         </div>
 
         <div className="flex items-center gap-4 flex-shrink-0">

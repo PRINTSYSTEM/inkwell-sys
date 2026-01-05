@@ -238,15 +238,15 @@ export const router = createBrowserRouter([
       // redirect "/" -> "/dashboard"
       {
         index: true,
-        element: <Navigate to={ROUTE_PATHS.DASHBOARD} replace />,
+        element: <Navigate to={ROUTE_PATHS.AUTH.LOGIN} replace />,
       },
 
       // ===== DASHBOARD =====
       {
-        path: lastSegment(ROUTE_PATHS.DASHBOARD), // "dashboard"
+        path: lastSegment(ROUTE_PATHS.AUTH.LOGIN), // "login"
         element: (
           <Suspense fallback={<PageLoadingFallback />}>
-            <Dashboard />
+            <Login />
           </Suspense>
         ),
       },

@@ -9,6 +9,8 @@ import {
   Calendar,
   Image as ImageIcon,
   FileText,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
@@ -207,12 +209,26 @@ export default function OrderCreatePage() {
   const { mutateAsync: createCustomer, isPending: isCreatingCustomer } =
     useCreateCustomer();
 
+  // Existing designs section state - lazy load
+  const [existingDesignsDisplayLimit, setExistingDesignsDisplayLimit] =
+    useState(4); // Show 4 initially, load 4 more each time
+  const LOAD_MORE_INCREMENT = 4; // Load 4 more items each time
+
   // Handlers
   const handleCustomerSelect = (customer: CustomerSummaryResponse) => {
     setSelectedCustomer(customer);
     setDesigns([]);
     setDesignSearchQuery(""); // Reset search when customer changes
     setCustomerComboOpen(false);
+    setExistingDesignsDisplayLimit(4); // Reset to initial limit
+  };
+
+  const handleLoadMoreDesigns = () => {
+    setExistingDesignsDisplayLimit((prev) => prev + LOAD_MORE_INCREMENT);
+  };
+
+  const handleCollapseDesigns = () => {
+    setExistingDesignsDisplayLimit(4); // Reset to initial limit
   };
 
   const handleCreateCustomer = async () => {
@@ -400,7 +416,7 @@ export default function OrderCreatePage() {
         !validLaminationTypes.includes(design.laminationType)
       ) {
         toast.error(
-          `Thiết kế "${design.designName || "Chưa đặt tên"}" chưa chọn loại cán màn`
+          `Thiết kế "${design.designName || "Chưa đặt tên"}" chưa chọn loại cán màng`
         );
         return;
       }
@@ -502,7 +518,7 @@ export default function OrderCreatePage() {
       <div className="border-b bg-muted/30">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-4">
-            <Link to="/">
+            <Link to="/orders">
               <Button variant="ghost" size="sm" className="gap-2">
                 <ArrowLeft className="h-5 w-5" />
                 Quay lại
@@ -662,21 +678,36 @@ export default function OrderCreatePage() {
                   {selectedCustomer && (
                     <>
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">
-                          Chọn thiết kế có sẵn của khách (tuỳ chọn)
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          Click vào thiết kế để thêm vào đơn hàng
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label className="text-sm font-medium">
+                              Chọn thiết kế có sẵn của khách (tuỳ chọn)
+                            </Label>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Click vào thiết kế để thêm vào đơn hàng
+                              {existingDesigns.length > 0 && (
+                                <span className="ml-1 font-medium text-foreground">
+                                  ({existingDesigns.length} thiết kế)
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
                         {/* Search input for designs */}
                         <div className="space-y-2">
                           <Input
                             type="text"
                             placeholder="Tìm theo tên thiết kế hoặc mã thiết kế..."
                             value={designSearchQuery}
-                            onChange={(e) =>
-                              setDesignSearchQuery(e.target.value)
-                            }
+                            onChange={(e) => {
+                              setDesignSearchQuery(e.target.value);
+                              // Reset limit when searching to show more results
+                              if (e.target.value) {
+                                setExistingDesignsDisplayLimit(8);
+                              } else {
+                                setExistingDesignsDisplayLimit(4);
+                              }
+                            }}
                             className="h-9 text-sm bg-background"
                           />
                         </div>
@@ -687,37 +718,41 @@ export default function OrderCreatePage() {
                             </div>
                           ) : existingDesigns.length === 0 ? (
                             <div className="col-span-2 text-center py-4 text-sm text-muted-foreground">
-                              Không có thiết kế có sẵn
+                              {designSearchQuery.trim()
+                                ? "Không tìm thấy thiết kế phù hợp"
+                                : "Không có thiết kế có sẵn"}
                             </div>
                           ) : (
-                            existingDesigns.map((d) => {
-                              const selected = isDesignSelected(d);
-                              // Format kích thước: chỉ hiển thị các giá trị > 0
-                              const sizeParts: number[] = [];
-                              if (d.length && d.length > 0)
-                                sizeParts.push(d.length);
-                              if (d.width && d.width > 0)
-                                sizeParts.push(d.width);
-                              if (d.height && d.height > 0)
-                                sizeParts.push(d.height);
-                              const sizeLabel =
-                                sizeParts.length > 0
-                                  ? `${sizeParts.join(" × ")} mm`
-                                  : "—";
+                            existingDesigns
+                              .slice(0, existingDesignsDisplayLimit)
+                              .map((d) => {
+                                const selected = isDesignSelected(d);
+                                // Format kích thước: chỉ hiển thị các giá trị > 0
+                                const sizeParts: number[] = [];
+                                if (d.length && d.length > 0)
+                                  sizeParts.push(d.length);
+                                if (d.width && d.width > 0)
+                                  sizeParts.push(d.width);
+                                if (d.height && d.height > 0)
+                                  sizeParts.push(d.height);
+                                const sizeLabel =
+                                  sizeParts.length > 0
+                                    ? `${sizeParts.join(" × ")} mm`
+                                    : "—";
 
-                              const handleImageClick = (
-                                e: React.MouseEvent,
-                                imageUrl: string
-                              ) => {
-                                e.stopPropagation();
-                                setViewingImageUrl(imageUrl);
-                                setImageViewerOpen(true);
-                              };
+                                const handleImageClick = (
+                                  e: React.MouseEvent,
+                                  imageUrl: string
+                                ) => {
+                                  e.stopPropagation();
+                                  setViewingImageUrl(imageUrl);
+                                  setImageViewerOpen(true);
+                                };
 
-                              return (
-                                <div
-                                  key={d.id}
-                                  className={`
+                                return (
+                                  <div
+                                    key={d.id}
+                                    className={`
                                   w-full rounded-lg border p-3 flex flex-col gap-2 transition-all relative
                                   ${
                                     selected
@@ -725,10 +760,10 @@ export default function OrderCreatePage() {
                                       : "border-border bg-background hover:border-primary/50"
                                   }
                                 `}
-                                >
-                                  {/* Check button - Outside, top right */}
-                                  <div
-                                    className={`
+                                  >
+                                    {/* Check button - Outside, top right */}
+                                    <div
+                                      className={`
                                     absolute top-3 right-3 h-5 w-5 rounded-full border flex items-center justify-center shrink-0 z-10
                                     ${
                                       selected
@@ -736,100 +771,148 @@ export default function OrderCreatePage() {
                                         : "border-muted-foreground/30 bg-background"
                                     }
                                   `}
-                                  >
-                                    {selected && <Check className="h-3 w-3" />}
-                                  </div>
-
-                                  <div className="flex flex-row gap-3 pr-8">
-                                    {/* Main Content */}
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleSelectExistingDesign(d)
-                                      }
-                                      className="flex-1 text-left flex flex-col gap-1.5 min-w-0"
                                     >
-                                      <div className="flex flex-col gap-0.5">
-                                        <Badge
-                                          variant={
-                                            selected ? "default" : "outline"
-                                          }
-                                          className="font-mono text-xs w-fit"
-                                        >
-                                          {d.code}
-                                        </Badge>
-                                        <span className="text-sm font-medium line-clamp-2 mt-1">
-                                          {d.designName}
-                                        </span>
-                                      </div>
-                                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                        {d.designType?.name && (
-                                          <span className="px-2 py-0.5 rounded-full bg-muted">
-                                            {d.designType.name}
-                                          </span>
-                                        )}
-                                        {d.materialType?.name && (
-                                          <span className="px-2 py-0.5 rounded-full bg-muted">
-                                            {d.materialType.name}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <span className="text-xs text-muted-foreground">
-                                        Kích thước: {sizeLabel}
-                                      </span>
-                                    </button>
+                                      {selected && (
+                                        <Check className="h-3 w-3" />
+                                      )}
+                                    </div>
 
-                                    {/* Design Image - Compact Preview */}
-                                    {d.designImageUrl && (
+                                    <div className="flex flex-row gap-3 pr-8">
+                                      {/* Main Content */}
                                       <button
                                         type="button"
-                                        onClick={(e) =>
-                                          handleImageClick(e, d.designImageUrl!)
+                                        onClick={() =>
+                                          handleSelectExistingDesign(d)
                                         }
-                                        className="relative group shrink-0 rounded-md overflow-hidden border border-border hover:border-primary/50 transition-colors bg-muted"
-                                        style={{
-                                          width: "80px",
-                                          height: "80px",
-                                        }}
+                                        className="flex-1 text-left flex flex-col gap-1.5 min-w-0"
                                       >
-                                        <img
-                                          src={d.designImageUrl}
-                                          alt={d.designName || "Design image"}
-                                          className="w-full h-full object-cover"
-                                          onError={(e) => {
-                                            const target =
-                                              e.target as HTMLImageElement;
-                                            target.style.display = "none";
-                                          }}
-                                        />
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                          <ImageIcon className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                                        <div className="flex flex-col gap-0.5">
+                                          <Badge
+                                            variant={
+                                              selected ? "default" : "outline"
+                                            }
+                                            className="font-mono text-xs w-fit"
+                                          >
+                                            {d.code}
+                                          </Badge>
+                                          <span className="text-sm font-medium line-clamp-2 mt-1">
+                                            {d.designName}
+                                          </span>
                                         </div>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                          {d.designType?.name && (
+                                            <span className="px-2 py-0.5 rounded-full bg-muted">
+                                              {d.designType.name}
+                                            </span>
+                                          )}
+                                          {d.materialType?.name && (
+                                            <span className="px-2 py-0.5 rounded-full bg-muted">
+                                              {d.materialType.name}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">
+                                          Kích thước: {sizeLabel}
+                                        </span>
                                       </button>
-                                    )}
-                                  </div>
 
-                                  {/* Requirements */}
-                                  {(d.latestRequirements || d.notes) && (
-                                    <div className="pt-2 border-t">
-                                      <div className="flex items-start gap-2">
-                                        <FileText className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-xs font-medium text-muted-foreground mb-1">
-                                            Yêu cầu thiết kế:
-                                          </p>
-                                          <p className="text-xs text-foreground line-clamp-2">
-                                            {d.latestRequirements || d.notes}
-                                          </p>
+                                      {/* Design Image - Compact Preview */}
+                                      {d.designImageUrl && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) =>
+                                            handleImageClick(
+                                              e,
+                                              d.designImageUrl!
+                                            )
+                                          }
+                                          className="relative group shrink-0 rounded-md overflow-hidden border border-border hover:border-primary/50 transition-colors bg-muted"
+                                          style={{
+                                            width: "80px",
+                                            height: "80px",
+                                          }}
+                                        >
+                                          <img
+                                            src={d.designImageUrl}
+                                            alt={d.designName || "Design image"}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                              const target =
+                                                e.target as HTMLImageElement;
+                                              target.style.display = "none";
+                                            }}
+                                          />
+                                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                            <ImageIcon className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                                          </div>
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {/* Requirements */}
+                                    {(d.latestRequirements || d.notes) && (
+                                      <div className="pt-2 border-t">
+                                        <div className="flex items-start gap-2">
+                                          <FileText className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-medium text-muted-foreground mb-1">
+                                              Yêu cầu thiết kế:
+                                            </p>
+                                            <p className="text-xs text-foreground line-clamp-2">
+                                              {d.latestRequirements || d.notes}
+                                            </p>
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })
+                                    )}
+                                  </div>
+                                );
+                              })
                           )}
                         </div>
+                        {existingDesigns.length > 4 && (
+                          <div className="flex items-center justify-center gap-2 pt-3">
+                            {existingDesigns.length >
+                              existingDesignsDisplayLimit && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={handleLoadMoreDesigns}
+                              >
+                                <ChevronDown className="h-3 w-3 mr-1" />
+                                Hiện thêm{" "}
+                                {Math.min(
+                                  LOAD_MORE_INCREMENT,
+                                  existingDesigns.length -
+                                    existingDesignsDisplayLimit
+                                )}{" "}
+                                thiết kế
+                                {existingDesigns.length -
+                                  existingDesignsDisplayLimit >
+                                  LOAD_MORE_INCREMENT &&
+                                  ` (còn ${
+                                    existingDesigns.length -
+                                    existingDesignsDisplayLimit -
+                                    LOAD_MORE_INCREMENT
+                                  })`}
+                              </Button>
+                            )}
+                            {existingDesignsDisplayLimit > 4 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-3 text-xs"
+                                onClick={handleCollapseDesigns}
+                              >
+                                <ChevronUp className="h-3 w-3 mr-1" />
+                                Thu gọn
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <Separator />
                     </>
@@ -863,7 +946,13 @@ export default function OrderCreatePage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div
+                      className={`space-y-3 ${
+                        designs.length > 5
+                          ? "max-h-[600px] overflow-y-auto pr-2"
+                          : ""
+                      }`}
+                    >
                       {designs.map((design, index) => (
                         <DesignCard
                           key={design.id}
@@ -937,11 +1026,10 @@ export default function OrderCreatePage() {
 
                   <Button
                     type="submit"
-                    className="w-full gap-2"
-                    size="sm"
+                    className="w-full gap-2 h-[3rem] text-base font-semibold py-6 px-6"
                     disabled={isCreatingOrder}
                   >
-                    <Save className="h-4 w-4" />
+                    <Save className="h-5 w-5" />
                     {isCreatingOrder ? "Đang tạo..." : "Tạo đơn hàng"}
                   </Button>
                   <Button

@@ -530,6 +530,9 @@ export default function AccountingOrderDetail() {
                     <h1 className="text-xl font-semibold font-mono">
                       {order.code}
                     </h1>
+                    <span className="text-sm text-muted-foreground">
+                      Trạng thái hiện tại:
+                    </span>{" "}
                     <StatusBadge
                       status={
                         order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values

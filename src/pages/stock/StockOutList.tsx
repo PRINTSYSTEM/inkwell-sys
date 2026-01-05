@@ -137,7 +137,7 @@ export default function StockOutListPage() {
           <div>
             <h1 className="text-3xl font-bold">Quản lý xuất kho</h1>
             <p className="text-muted-foreground mt-1">
-              Quản lý các phiếu xuất kho vật liệu
+              Quản lý các phiếu xuất kho Chất liệu
             </p>
           </div>
           <Button onClick={() => navigate("/stock/stock-outs/create")}>
@@ -203,201 +203,209 @@ export default function StockOutListPage() {
               </Button>
             </div>
           </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8">Đang tải...</div>
-          ) : stockOuts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Không có phiếu xuất kho nào
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-[140px]">Số phiếu</TableHead>
-                    <TableHead className="w-[120px]">Ngày</TableHead>
-                    <TableHead>Lý do xuất</TableHead>
-                    <TableHead className="w-[120px]">Kho</TableHead>
-                    <TableHead className="text-right">Tổng SL</TableHead>
-                    <TableHead className="text-right">Tổng giá trị</TableHead>
-                    <TableHead>Tham chiếu</TableHead>
-                    <TableHead className="text-center">Trạng thái</TableHead>
-                    <TableHead className="w-[60px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stockOuts.map((stockOut) => (
-                    <TableRow
-                      key={stockOut.id}
-                      className="group cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleViewDetails(stockOut.id)}
-                    >
-                      <TableCell className="font-medium font-mono text-sm">
-                        {stockOut.code || `PXK-${stockOut.id}`}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {stockOut.stockOutDate
-                          ? formatDate(stockOut.stockOutDate)
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium text-sm">
-                            {stockOut.type === "sale"
-                              ? "Bán hàng"
-                              : stockOut.type === "production"
-                                ? "Sản xuất"
-                                : stockOut.type === "adjustment"
-                                  ? "Điều chỉnh"
-                                  : stockOut.type || "—"}
-                          </div>
-                          {stockOut.customer?.name && (
-                            <div className="text-xs text-muted-foreground">
-                              KH: {stockOut.customer.name}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {stockOut.warehouse || stockOut.warehouseName || "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {stockOut.totalQuantity
-                          ? stockOut.totalQuantity.toLocaleString("vi-VN")
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {stockOut.totalValue
-                          ? formatCurrency(stockOut.totalValue)
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {stockOut.orderCode && (
-                            <div className="text-xs">
-                              <span className="text-muted-foreground">Đơn:</span>{" "}
-                              <span className="font-mono">
-                                {stockOut.orderCode}
-                              </span>
-                            </div>
-                          )}
-                          {stockOut.productionCode && (
-                            <div className="text-xs">
-                              <span className="text-muted-foreground">SX:</span>{" "}
-                              <span className="font-mono">
-                                {stockOut.productionCode}
-                              </span>
-                            </div>
-                          )}
-                          {!stockOut.orderCode && !stockOut.productionCode && "—"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getStatusBadge(stockOut.status)}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewDetails(stockOut.id);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                            {stockOut.status !== "completed" &&
-                              stockOut.status !== "cancelled" && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(
-                                        `/stock/stock-outs/${stockOut.id}/edit`
-                                      );
-                                    }}
-                                  >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Chỉnh sửa
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleComplete(stockOut.id);
-                                    }}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Hoàn thành
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCancel(stockOut.id);
-                                    }}
-                                    className="text-destructive"
-                                  >
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Hủy
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDelete(stockOut.id);
-                                    }}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Xóa
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-muted-foreground">
-                  Trang {page} / {totalPages}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    Trước
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                  >
-                    Sau
-                  </Button>
-                </div>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-8">Đang tải...</div>
+            ) : stockOuts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Không có phiếu xuất kho nào
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[140px]">Số phiếu</TableHead>
+                      <TableHead className="w-[120px]">Ngày</TableHead>
+                      <TableHead>Lý do xuất</TableHead>
+                      <TableHead className="w-[120px]">Kho</TableHead>
+                      <TableHead className="text-right">Tổng SL</TableHead>
+                      <TableHead className="text-right">Tổng giá trị</TableHead>
+                      <TableHead>Tham chiếu</TableHead>
+                      <TableHead className="text-center">Trạng thái</TableHead>
+                      <TableHead className="w-[60px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stockOuts.map((stockOut) => (
+                      <TableRow
+                        key={stockOut.id}
+                        className="group cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleViewDetails(stockOut.id)}
+                      >
+                        <TableCell className="font-medium font-mono text-sm">
+                          {stockOut.code || `PXK-${stockOut.id}`}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {stockOut.stockOutDate
+                            ? formatDate(stockOut.stockOutDate)
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="font-medium text-sm">
+                              {stockOut.type === "sale"
+                                ? "Bán hàng"
+                                : stockOut.type === "production"
+                                  ? "Sản xuất"
+                                  : stockOut.type === "adjustment"
+                                    ? "Điều chỉnh"
+                                    : stockOut.type || "—"}
+                            </div>
+                            {stockOut.customer?.name && (
+                              <div className="text-xs text-muted-foreground">
+                                KH: {stockOut.customer.name}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {stockOut.warehouse || stockOut.warehouseName || "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {stockOut.totalQuantity
+                            ? stockOut.totalQuantity.toLocaleString("vi-VN")
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {stockOut.totalValue
+                            ? formatCurrency(stockOut.totalValue)
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {stockOut.orderCode && (
+                              <div className="text-xs">
+                                <span className="text-muted-foreground">
+                                  Đơn:
+                                </span>{" "}
+                                <span className="font-mono">
+                                  {stockOut.orderCode}
+                                </span>
+                              </div>
+                            )}
+                            {stockOut.productionCode && (
+                              <div className="text-xs">
+                                <span className="text-muted-foreground">
+                                  SX:
+                                </span>{" "}
+                                <span className="font-mono">
+                                  {stockOut.productionCode}
+                                </span>
+                              </div>
+                            )}
+                            {!stockOut.orderCode &&
+                              !stockOut.productionCode &&
+                              "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {getStatusBadge(stockOut.status)}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewDetails(stockOut.id);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Xem chi tiết
+                              </DropdownMenuItem>
+                              {stockOut.status !== "completed" &&
+                                stockOut.status !== "cancelled" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(
+                                          `/stock/stock-outs/${stockOut.id}/edit`
+                                        );
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Chỉnh sửa
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleComplete(stockOut.id);
+                                      }}
+                                    >
+                                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                                      Hoàn thành
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancel(stockOut.id);
+                                      }}
+                                      className="text-destructive"
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Hủy
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete(stockOut.id);
+                                      }}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Xóa
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-muted-foreground">
+                    Trang {page} / {totalPages}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      Trước
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={page === totalPages}
+                    >
+                      Sau
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </>
   );

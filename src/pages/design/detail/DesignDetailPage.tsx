@@ -6,13 +6,20 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   useDesign,
@@ -21,6 +28,7 @@ import {
   useUploadDesignImage,
   useAddDesignTimelineEntry,
   useUpdateDesign,
+  useRevertDesign,
 } from "@/hooks/use-design";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/error-components";
 
@@ -84,6 +92,7 @@ import {
   sidesClassificationLabels,
   processClassificationLabels,
   laminationTypeLabels,
+  designStatusConfig,
 } from "@/lib/status-utils";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
@@ -128,6 +137,8 @@ export default function DesignDetailPage() {
   } | null>(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showTimelineDialog, setShowTimelineDialog] = useState(false);
+  const [showRevertDialog, setShowRevertDialog] = useState(false);
+  const [revertReason, setRevertReason] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState({
     designName: "",
@@ -151,6 +162,7 @@ export default function DesignDetailPage() {
   const { mutate: uploadFile } = useUploadDesignFile();
   const { mutate: uploadImage } = useUploadDesignImage();
   const { mutate: addTimeline } = useAddDesignTimelineEntry();
+  const { mutate: revertDesign, loading: revertingDesign } = useRevertDesign();
 
   // ==== ORDER BY DESIGN ====
   const { data: orderDetails } = useQuery<OrderDetailResponse[]>({
@@ -195,10 +207,19 @@ export default function DesignDetailPage() {
 
   const canChangeStatus =
     canUpdateStatus &&
-    !isFinalStatus(currentStatus) &&
-    validNextStatuses.length > 0;
+    (!isFinalStatus(currentStatus) ||
+      currentStatus === "confirmed_for_printing") &&
+    (validNextStatuses.length > 0 ||
+      currentStatus === "confirmed_for_printing");
 
   const canTransitionTo = (targetStatus: DesignStatus): boolean => {
+    // Allow revert from confirmed_for_printing to waiting_for_customer_approval
+    if (
+      currentStatus === "confirmed_for_printing" &&
+      targetStatus === "waiting_for_customer_approval"
+    ) {
+      return true;
+    }
     if (
       currentStatus === "designing" &&
       targetStatus === "waiting_for_customer_approval"
@@ -252,6 +273,15 @@ export default function DesignDetailPage() {
   const handleStatusTransition = async (targetStatus: DesignStatus) => {
     if (!targetStatus || !design) return;
 
+    // Handle revert from confirmed_for_printing to waiting_for_customer_approval
+    if (
+      currentStatus === "confirmed_for_printing" &&
+      targetStatus === "waiting_for_customer_approval"
+    ) {
+      setShowRevertDialog(true);
+      return;
+    }
+
     if (!isValidStatusTransition(currentStatus, targetStatus)) {
       const errorMessage = getTransitionErrorMessage(
         currentStatus,
@@ -271,7 +301,7 @@ export default function DesignDetailPage() {
       if (!design.designFileUrl) {
         toast.error("Không thể chuyển trạng thái", {
           description:
-            "Vui lòng upload file thiết kế trước khi chuyển sang trạng thái 'Chờ khách duyệt'",
+            "Vui lòng tải lên file thiết kế trước khi chuyển sang trạng thái 'Chờ khách duyệt'",
         });
         return;
       }
@@ -296,6 +326,27 @@ export default function DesignDetailPage() {
       });
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const handleRevertConfirm = async () => {
+    if (!revertReason.trim()) {
+      toast.error("Lỗi", {
+        description: "Vui lòng nhập lý do hoàn nguyên",
+      });
+      return;
+    }
+
+    try {
+      await revertDesign({
+        id: designId,
+        reason: revertReason.trim(),
+      });
+      setShowRevertDialog(false);
+      setRevertReason("");
+      refetchDesign();
+    } catch {
+      // Error handled in hook
     }
   };
 
@@ -350,7 +401,7 @@ export default function DesignDetailPage() {
     // Hiển thị thông báo kết quả
     if (errors.length === 0) {
       toast.success("Thành công", {
-        description: "Đã upload tất cả files",
+        description: "Đã tải lên tất cả file",
       });
       refetchDesign();
     } else if (successes.length > 0) {
@@ -617,9 +668,9 @@ export default function DesignDetailPage() {
         {/* ===== BODY: 2 COLUMNS ===== */}
         <div className="flex-1 flex min-h-0">
           {/* ===== LEFT: INFO & SPECS ===== */}
-          <div className="basis-1/2 min-w-0 border-r flex flex-col min-h-0 bg-card/30">
+          <div className="flex-[7] min-w-0 border-r flex flex-col min-h-0 bg-card/30">
             <ScrollArea className="flex-1">
-              <div className="p-5 space-y-5">
+              <div className="p-3 space-y-3">
                 {/* Design summary */}
                 <DesignCode
                   code={d.code}
@@ -631,16 +682,16 @@ export default function DesignDetailPage() {
 
                 {/* Designer info */}
                 <Card className="border-primary/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <User className="h-6 w-6 text-primary" />
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <User className="h-5 w-5 text-primary" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-sm truncate">
+                        <p className="font-bold text-base truncate">
                           {d.designer?.fullName ?? "Chưa phân công"}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        <p className="text-sm text-muted-foreground truncate mt-0.5 font-medium">
                           {d.designer?.email ??
                             d.designer?.phone ??
                             "Chưa có thông tin"}
@@ -664,53 +715,67 @@ export default function DesignDetailPage() {
                 {/* Status transition helper */}
                 {canChangeStatus && (
                   <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                    <CardHeader className="pb-3 pt-4 px-4">
+                      <CardTitle className="flex items-center gap-2 text-base font-bold">
                         <Workflow className="h-4 w-4 text-primary" />
                         Chuyển trạng thái
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-3 px-4 pb-4">
                       {needsDesignFile && (
-                        <div className="flex items-start gap-2 p-2.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md text-xs">
+                        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
                           <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                          <p className="text-amber-800 dark:text-amber-200">
-                            Cần upload file thiết kế trước khi chuyển sang trạng
-                            thái &quot;Chờ khách duyệt&quot;.
+                          <p className="text-amber-800 dark:text-amber-200 font-medium">
+                            Cần tải lên file thiết kế trước khi chuyển sang
+                            trạng thái &quot;Chờ khách duyệt&quot;.
                           </p>
                         </div>
                       )}
 
-                      <div className="grid gap-2">
-                        {validNextStatuses.map((nextStatus) => (
-                          <Button
-                            key={nextStatus}
-                            size="sm"
-                            variant={
-                              nextStatus === "confirmed_for_printing"
-                                ? "default"
-                                : "outline"
-                            }
-                            onClick={() => handleStatusTransition(nextStatus)}
-                            disabled={
-                              updatingStatus || !canTransitionTo(nextStatus)
-                            }
-                            className={`w-full justify-start gap-2 h-10 ${
-                              nextStatus === "confirmed_for_printing"
-                                ? "bg-green-600 hover:bg-green-700 text-white"
-                                : "hover:bg-primary/5"
-                            }`}
-                          >
-                            <ArrowRight className="h-4 w-4" />
-                            <span className="font-medium">
-                              {designStatusLabels[nextStatus]}
-                            </span>
-                          </Button>
-                        ))}
+                      <div className="grid grid-cols-5 gap-2">
+                        {(
+                          Object.keys(designStatusLabels) as DesignStatus[]
+                        ).map((status) => {
+                          const isCurrentStatus = status === currentStatus;
+                          const isValidNext =
+                            validNextStatuses.includes(status);
+                          // Allow revert from confirmed_for_printing to waiting_for_customer_approval
+                          const isRevertAllowed =
+                            currentStatus === "confirmed_for_printing" &&
+                            status === "waiting_for_customer_approval";
+                          const isEnabled =
+                            (isValidNext && canTransitionTo(status)) ||
+                            isRevertAllowed;
+                          const statusConfig = designStatusConfig[status];
+
+                          return (
+                            <Button
+                              key={status}
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStatusTransition(status)}
+                              disabled={
+                                isCurrentStatus ||
+                                updatingStatus ||
+                                revertingDesign ||
+                                !isEnabled
+                              }
+                              className={`h-11 px-3 rounded-lg text-sm font-medium transition-all border ${
+                                isCurrentStatus
+                                  ? `cursor-not-allowed border-2 ${statusConfig.color} font-bold`
+                                  : isEnabled
+                                    ? `${statusConfig.color} hover:opacity-90 cursor-pointer shadow-sm`
+                                    : "opacity-40 cursor-not-allowed border-gray-300 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600"
+                              }`}
+                            >
+                              {designStatusLabels[status]}
+                            </Button>
+                          );
+                        })}
                       </div>
 
                       {updatingStatus && (
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
                           <Clock className="h-3 w-3" />
                           Đang cập nhật trạng thái...
                         </p>
@@ -719,267 +784,247 @@ export default function DesignDetailPage() {
                   </Card>
                 )}
 
-                {/* Tabs: Specs / Material / Process */}
-                <Tabs defaultValue="specs" className="w-full">
-                  <TabsList className="w-full grid grid-cols-3 h-10 bg-muted/50">
-                    <TabsTrigger
-                      value="specs"
-                      className="text-xs gap-1.5 data-[state=active]:bg-background"
-                    >
-                      <Ruler className="h-4 w-4" />
-                      Kích thước
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="material"
-                      className="text-xs gap-1.5 data-[state=active]:bg-background"
-                    >
-                      <Layers className="h-4 w-4" />
-                      Vật liệu
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="process"
-                      className="text-xs gap-1.5 data-[state=active]:bg-background"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Quy trình
-                    </TabsTrigger>
-                  </TabsList>
-
+                {/* Specs / Material / Process - stacked (no tabs) */}
+                <div className="space-y-3">
                   {/* Specs */}
-                  <TabsContent value="specs" className="mt-4 space-y-4">
-                    {isEditing ? (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <Label className="text-xs">Dài (mm)</Label>
-                            <Input
-                              type="number"
-                              value={editFormData.length || ""}
-                              onChange={(e) =>
-                                setEditFormData((prev) => ({
-                                  ...prev,
-                                  length:
-                                    e.target.value === ""
-                                      ? 0
-                                      : Number(e.target.value),
-                                }))
-                              }
-                              className="h-9"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Rộng (mm)</Label>
-                            <Input
-                              type="number"
-                              value={editFormData.width || ""}
-                              onChange={(e) =>
-                                setEditFormData((prev) => ({
-                                  ...prev,
-                                  width:
-                                    e.target.value === ""
-                                      ? 0
-                                      : Number(e.target.value),
-                                }))
-                              }
-                              className="h-9"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Cao (mm)</Label>
-                            <Input
-                              type="number"
-                              value={editFormData.height || ""}
-                              onChange={(e) =>
-                                setEditFormData((prev) => ({
-                                  ...prev,
-                                  height:
-                                    e.target.value === ""
-                                      ? 0
-                                      : Number(e.target.value),
-                                }))
-                              }
-                              className="h-9"
-                            />
-                          </div>
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <Label className="text-xs">Dài (mm)</Label>
+                          <Input
+                            type="number"
+                            value={editFormData.length || ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                length:
+                                  e.target.value === ""
+                                    ? 0
+                                    : Number(e.target.value),
+                              }))
+                            }
+                            className="h-9"
+                          />
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleCancelEdit}
-                            className="flex-1"
-                            disabled={updateDesign.isPending}
-                          >
-                            Hủy
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleSaveEdit}
-                            disabled={updateDesign.isPending}
-                            className="flex-1"
-                          >
-                            {updateDesign.isPending ? "Đang lưu..." : "Lưu"}
-                          </Button>
+                        <div>
+                          <Label className="text-xs">Rộng (mm)</Label>
+                          <Input
+                            type="number"
+                            value={editFormData.width || ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                width:
+                                  e.target.value === ""
+                                    ? 0
+                                    : Number(e.target.value),
+                              }))
+                            }
+                            className="h-9"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Cao (mm)</Label>
+                          <Input
+                            type="number"
+                            value={editFormData.height || ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                height:
+                                  e.target.value === ""
+                                    ? 0
+                                    : Number(e.target.value),
+                              }))
+                            }
+                            className="h-9"
+                          />
                         </div>
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Kích thước tổng thể
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleCancelEdit}
+                          className="flex-1"
+                          disabled={updateDesign.isPending}
+                        >
+                          Hủy
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveEdit}
+                          disabled={updateDesign.isPending}
+                          className="flex-1"
+                        >
+                          {updateDesign.isPending ? "Đang lưu..." : "Lưu"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground font-semibold">
+                          Kích thước tổng thể
+                        </span>
+                        {canEditDesign && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-xs gap-1"
+                            onClick={handleStartEdit}
+                          >
+                            <Pencil className="h-3 w-3" />
+                            Sửa
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
+                          <p className="text-xl font-bold text-blue-900 dark:text-blue-100">
+                            {d.length ?? "—"}
+                          </p>
+                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5 font-semibold">
+                            Dài (mm)
+                          </p>
+                        </div>
+                        <div className="p-2 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
+                          <p className="text-xl font-bold text-green-900 dark:text-green-100">
+                            {d.width ?? "—"}
+                          </p>
+                          <p className="text-xs text-green-700 dark:text-green-300 mt-0.5 font-semibold">
+                            Rộng (mm)
+                          </p>
+                        </div>
+                        <div className="p-2 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 text-center">
+                          <p className="text-xl font-bold text-purple-900 dark:text-purple-100">
+                            {d.height ?? "—"}
+                          </p>
+                          <p className="text-xs text-purple-700 dark:text-purple-300 mt-0.5 font-semibold">
+                            Cao (mm)
+                          </p>
+                        </div>
+                      </div>
+
+                      {d.areaCm2 != null && typeof d.areaCm2 === "number" && (
+                        <div className="flex items-center justify-between p-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg border border-green-200 dark:border-green-800 text-sm">
+                          <span className="font-semibold text-green-900 dark:text-green-100">
+                            Diện tích
                           </span>
-                          {canEditDesign && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 text-xs gap-1"
-                              onClick={handleStartEdit}
-                            >
-                              <Pencil className="h-3 w-3" />
-                              Sửa
-                            </Button>
-                          )}
+                          <span className="font-bold text-green-700 dark:text-green-300">
+                            {(d.areaCm2 / 100).toFixed(2)} cm²
+                          </span>
                         </div>
+                      )}
 
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                            <p className="text-xl font-bold text-blue-900 dark:text-blue-100">
-                              {d.length ?? "—"}
-                            </p>
-                            <p className="text-[10px] text-blue-700 dark:text-blue-300 mt-1 font-medium">
-                              Dài (mm)
-                            </p>
-                          </div>
-                          <div className="p-3 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-                            <p className="text-xl font-bold text-green-900 dark:text-green-100">
-                              {d.width ?? "—"}
-                            </p>
-                            <p className="text-[10px] text-green-700 dark:text-green-300 mt-1 font-medium">
-                              Rộng (mm)
-                            </p>
-                          </div>
-                          <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 text-center">
-                            <p className="text-xl font-bold text-purple-900 dark:text-purple-100">
-                              {d.height ?? "—"}
-                            </p>
-                            <p className="text-[10px] text-purple-700 dark:text-purple-300 mt-1 font-medium">
-                              Cao (mm)
-                            </p>
-                          </div>
+                      {orderDetails?.[0]?.quantity && (
+                        <div className="flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm">
+                          <span className="font-semibold text-blue-900 dark:text-blue-100">
+                            Số lượng
+                          </span>
+                          <span className="font-bold text-blue-700 dark:text-blue-300">
+                            {orderDetails[0].quantity.toLocaleString("vi-VN")}
+                          </span>
                         </div>
-
-                        {d.areaCm2 != null && typeof d.areaCm2 === "number" && (
-                          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg border border-green-200 dark:border-green-800 text-sm">
-                            <span className="font-medium text-green-900 dark:text-green-100">
-                              Diện tích
-                            </span>
-                            <span className="font-bold text-green-700 dark:text-green-300">
-                              {(d.areaCm2 / 100).toFixed(2)} cm²
-                            </span>
-                          </div>
-                        )}
-
-                        {orderDetails?.[0]?.quantity && (
-                          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm">
-                            <span className="font-medium text-blue-900 dark:text-blue-100">
-                              Số lượng
-                            </span>
-                            <span className="font-bold text-blue-700 dark:text-blue-300">
-                              {orderDetails[0].quantity.toLocaleString("vi-VN")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </TabsContent>
+                      )}
+                    </div>
+                  )}
 
                   {/* Material */}
-                  <TabsContent value="material" className="mt-4 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20">
-                        <CardContent className="p-4">
-                          <p className="text-[10px] text-purple-700 dark:text-purple-300 uppercase mb-2 font-semibold">
-                            Loại thiết kế
-                          </p>
-                          <p className="font-bold text-sm text-purple-900 dark:text-purple-100">
-                            {d.designType?.name ?? "—"}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Card className="border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/20">
-                        <CardContent className="p-4">
-                          <p className="text-[10px] text-amber-700 dark:text-amber-300 uppercase mb-2 font-semibold">
-                            Chất liệu
-                          </p>
-                          <p className="font-bold text-sm text-amber-900 dark:text-amber-100">
-                            {d.materialType?.name ?? "—"}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </TabsContent>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20">
+                      <CardContent className="p-2.5">
+                        <p className="text-xs text-purple-700 dark:text-purple-300 uppercase mb-1.5 font-bold">
+                          Loại thiết kế
+                        </p>
+                        <p className="font-bold text-sm text-purple-900 dark:text-purple-100">
+                          {d.designType?.name ?? "—"}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/20">
+                      <CardContent className="p-2.5">
+                        <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                          Chất liệu
+                        </p>
+                        <p className="font-bold text-sm text-amber-900 dark:text-amber-100">
+                          {d.materialType?.name ?? "—"}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
 
                   {/* Process */}
-                  <TabsContent value="process" className="mt-4 space-y-3">
-                    {(d.sidesClassification || d.sidesClassificationOption) && (
-                      <Card className="border-slate-200 dark:border-slate-800">
-                        <CardContent className="p-3">
-                          <p className="text-[10px] text-muted-foreground uppercase mb-1.5 font-semibold">
-                            Mặt cắt
-                          </p>
-                          <p className="text-sm font-semibold">
-                            {d.sidesClassification
-                              ? sidesClassificationLabels[
-                                  d.sidesClassification
-                                ] || d.sidesClassification
-                              : (
-                                  d.sidesClassificationOption as
-                                    | { value?: string }
-                                    | undefined
-                                )?.value || "—"}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
-                    {(d.processClassification ||
-                      d.processClassificationOption) && (
-                      <Card className="border-slate-200 dark:border-slate-800">
-                        <CardContent className="p-3">
-                          <p className="text-[10px] text-muted-foreground uppercase mb-1.5 font-semibold">
-                            Quy trình SX
-                          </p>
-                          <p className="text-sm font-semibold">
-                            {d.processClassification
-                              ? processClassificationLabels[
-                                  d.processClassification
-                                ] || d.processClassification
-                              : (
-                                  d.processClassificationOption as
-                                    | { value?: string }
-                                    | undefined
-                                )?.value || "—"}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
-                    {(d.laminationType ||
-                      orderDetails?.[0]?.laminationType) && (
-                      <Card className="border-slate-200 dark:border-slate-800">
-                        <CardContent className="p-3">
-                          <p className="text-[10px] text-muted-foreground uppercase mb-1.5 font-semibold">
-                            Cán màn
-                          </p>
-                          <p className="text-sm font-semibold">
-                            {laminationTypeLabels[
-                              (d.laminationType ||
-                                orderDetails?.[0]?.laminationType) as string
-                            ] || "—"}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                  {(d.sidesClassification ||
+                    d.sidesClassificationOption ||
+                    d.processClassification ||
+                    d.processClassificationOption ||
+                    d.laminationType ||
+                    orderDetails?.[0]?.laminationType) && (
+                    <div className="flex gap-2">
+                      {(d.sidesClassification ||
+                        d.sidesClassificationOption) && (
+                        <Card className="flex-1 border-slate-200 dark:border-slate-800">
+                          <CardContent className="p-2.5">
+                            <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
+                              Mặt cắt
+                            </p>
+                            <p className="text-sm font-bold">
+                              {d.sidesClassification
+                                ? sidesClassificationLabels[
+                                    d.sidesClassification
+                                  ] || d.sidesClassification
+                                : (
+                                    d.sidesClassificationOption as
+                                      | { value?: string }
+                                      | undefined
+                                  )?.value || "—"}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )}
+                      {(d.processClassification ||
+                        d.processClassificationOption) && (
+                        <Card className="flex-1 border-slate-200 dark:border-slate-800">
+                          <CardContent className="p-2.5">
+                            <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
+                              Quy trình sản xuất
+                            </p>
+                            <p className="text-sm font-bold">
+                              {d.processClassification
+                                ? processClassificationLabels[
+                                    d.processClassification
+                                  ] || d.processClassification
+                                : (
+                                    d.processClassificationOption as
+                                      | { value?: string }
+                                      | undefined
+                                  )?.value || "—"}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )}
+                      {(d.laminationType ||
+                        orderDetails?.[0]?.laminationType) && (
+                        <Card className="flex-1 border-slate-200 dark:border-slate-800">
+                          <CardContent className="p-2.5">
+                            <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
+                              Cán màn
+                            </p>
+                            <p className="text-sm font-bold">
+                              {laminationTypeLabels[
+                                (d.laminationType ||
+                                  orderDetails?.[0]?.laminationType) as string
+                              ] || "—"}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Notes */}
                 {(d.notes || d.latestRequirements) && (
@@ -990,37 +1035,37 @@ export default function DesignDetailPage() {
                     }
                   >
                     <Card className="border-amber-200 dark:border-amber-800 overflow-hidden">
-                      <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-950/30 dark:hover:to-orange-950/30 transition-colors">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                          <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-950/30 dark:hover:to-orange-950/30 transition-colors">
+                        <div className="flex items-center gap-1.5">
+                          <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                          <span className="text-sm font-bold text-amber-900 dark:text-amber-100">
                             Ghi chú &amp; Yêu cầu
                           </span>
                         </div>
                         {expandedSections.notes ? (
-                          <ChevronDown className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          <ChevronDown className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          <ChevronRight className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                         )}
                       </CollapsibleTrigger>
                       <CollapsibleContent>
-                        <CardContent className="p-4 space-y-4 border-t border-amber-200 dark:border-amber-800">
+                        <CardContent className="p-3 space-y-3 border-t border-amber-200 dark:border-amber-800">
                           {d.notes && (
                             <div>
-                              <p className="text-[10px] text-amber-700 dark:text-amber-300 uppercase mb-2 font-semibold">
+                              <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
                                 Ghi chú
                               </p>
-                              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed">
+                              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
                                 {d.notes}
                               </p>
                             </div>
                           )}
                           {d.latestRequirements && (
                             <div>
-                              <p className="text-[10px] text-amber-700 dark:text-amber-300 uppercase mb-2 font-semibold">
+                              <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
                                 Yêu cầu
                               </p>
-                              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed">
+                              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
                                 {d.latestRequirements}
                               </p>
                             </div>
@@ -1033,11 +1078,11 @@ export default function DesignDetailPage() {
 
                 {/* Timestamps */}
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
                     <div>
-                      <p className="font-medium">Tạo</p>
-                      <p className="text-[10px]">
+                      <p className="font-semibold">Tạo</p>
+                      <p className="text-xs font-medium">
                         {d.createdAt
                           ? new Date(d.createdAt).toLocaleDateString("vi-VN", {
                               day: "2-digit",
@@ -1048,11 +1093,11 @@ export default function DesignDetailPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
                     <div>
-                      <p className="font-medium">Cập nhật</p>
-                      <p className="text-[10px]">
+                      <p className="font-semibold">Cập nhật</p>
+                      <p className="text-xs font-medium">
                         {d.updatedAt
                           ? new Date(d.updatedAt).toLocaleDateString("vi-VN", {
                               day: "2-digit",
@@ -1069,7 +1114,7 @@ export default function DesignDetailPage() {
           </div>
 
           {/* ===== RIGHT: FILE & TIMELINE ===== */}
-          <div className="basis-1/2 flex flex-col min-h-0 min-w-0">
+          <div className="flex-[3] flex flex-col min-h-0 min-w-0">
             {/* Header actions */}
             <div className="shrink-0 px-5 py-3 border-b bg-card/50 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -1089,7 +1134,7 @@ export default function DesignDetailPage() {
                     className="h-9 gap-2"
                   >
                     <UploadCloud className="h-4 w-4" />
-                    {d.designFileUrl ? "Thay file" : "Upload file"}
+                    {d.designFileUrl ? "Thay file" : "Tải lên file"}
                   </Button>
                   <Button
                     size="sm"
@@ -1101,7 +1146,7 @@ export default function DesignDetailPage() {
                   </Button>
                 </div>
                 {needsDesignFile && (
-                  <p className="text-[11px] text-destructive flex items-center gap-1">
+                  <p className="text-xs text-destructive flex items-center gap-1 font-semibold">
                     <AlertCircle className="h-3 w-3" />
                     Bắt buộc có file thiết kế để chuyển trạng thái.
                   </p>
@@ -1112,7 +1157,7 @@ export default function DesignDetailPage() {
             {/* Content: left preview, right timeline */}
             <div className="flex-1 min-h-0 flex">
               {/* File preview */}
-              <div className="w-[320px] shrink-0 border-r p-4 flex flex-col gap-4 bg-muted/20">
+              <div className="w-1/2 shrink-0 border-r p-4 flex flex-col gap-4 bg-muted/20">
                 {!d.designFileUrl ? (
                   <Card
                     className="flex-1 flex flex-col items-center justify-center border-2 border-dashed cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all"
@@ -1124,7 +1169,7 @@ export default function DesignDetailPage() {
                         Chưa có file thiết kế
                       </p>
                       <p className="text-xs text-muted-foreground text-center">
-                        Click để upload file thiết kế
+                        Click để tải lên file thiết kế
                       </p>
                     </CardContent>
                   </Card>
@@ -1207,22 +1252,19 @@ export default function DesignDetailPage() {
               </div>
 
               {/* Timeline */}
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 w-1/2">
                 <div className="p-5">
                   <div className="flex items-center gap-3 mb-5 pb-3 border-b">
                     <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                       <History className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div className="flex-1">
-                      <span className="font-semibold text-base">
+                      <span className="font-bold text-base">
                         Timeline tiến trình
-                      </span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        ({timelineEntries.length} mục)
                       </span>
                     </div>
                     {timelineLoading && (
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
                         <Clock className="h-3 w-3" />
                         Đang tải timeline...
                       </span>
@@ -1237,7 +1279,7 @@ export default function DesignDetailPage() {
                     <div className="p-4 border border-destructive/30 rounded-lg flex items-start gap-2 text-sm">
                       <AlertCircle className="h-4 w-4 text-destructive mt-0.5" />
                       <div>
-                        <p className="font-medium">
+                        <p className="font-semibold">
                           Không thể tải timeline. Vui lòng thử lại.
                         </p>
                         <Button
@@ -1256,8 +1298,10 @@ export default function DesignDetailPage() {
                       onClick={() => setShowTimelineDialog(true)}
                     >
                       <History className="h-10 w-10 text-muted-foreground mb-3" />
-                      <p className="text-sm font-medium">Chưa có timeline</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-base font-semibold">
+                        Chưa có timeline
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1 font-medium">
                         Click để thêm mới
                       </p>
                     </div>
@@ -1320,10 +1364,10 @@ export default function DesignDetailPage() {
                                 >
                                   <div className="flex-1 min-w-0 space-y-1">
                                     <div className="flex items-center justify-between gap-2">
-                                      <p className="font-medium text-sm truncate">
+                                      <p className="font-semibold text-sm truncate">
                                         {entry.description}
                                       </p>
-                                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                      <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
                                         {entry.createdAt
                                           ? new Date(
                                               entry.createdAt
@@ -1338,9 +1382,9 @@ export default function DesignDetailPage() {
                                     </div>
 
                                     {entry.createdByName && (
-                                      <p className="text-[11px] text-muted-foreground">
+                                      <p className="text-xs text-muted-foreground font-medium">
                                         Người tạo:{" "}
-                                        <span className="font-medium">
+                                        <span className="font-semibold">
                                           {entry.createdByName as string}
                                         </span>
                                       </p>
@@ -1383,6 +1427,53 @@ export default function DesignDetailPage() {
           onOpenChange={setShowTimelineDialog}
           onAdd={handleTimelineAdd}
         />
+
+        {/* Revert Dialog */}
+        <Dialog open={showRevertDialog} onOpenChange={setShowRevertDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Hoàn nguyên thiết kế</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn hoàn nguyên thiết kế từ trạng thái
+                &quot;Đã chốt in&quot; về trạng thái &quot;Chờ khách
+                duyệt&quot;? Vui lòng nhập lý do.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="revert-reason">
+                  Lý do hoàn nguyên <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="revert-reason"
+                  placeholder="Nhập lý do hoàn nguyên thiết kế..."
+                  value={revertReason}
+                  onChange={(e) => setRevertReason(e.target.value)}
+                  className="min-h-[100px]"
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRevertDialog(false);
+                  setRevertReason("");
+                }}
+                disabled={revertingDesign}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleRevertConfirm}
+                disabled={revertingDesign || !revertReason.trim()}
+              >
+                {revertingDesign ? "Đang xử lý..." : "Xác nhận"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </ErrorBoundary>
   );

@@ -300,17 +300,17 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                 )}
             </div>
 
-            {/* Cán màn - Bắt buộc */}
+            {/* Cán màng - Bắt buộc */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">
-                Cán màn <span className="text-destructive">*</span>
+                Cán màng <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={laminationType}
                 onValueChange={(value) => setLaminationType(value)}
               >
                 <SelectTrigger className="h-11 w-full">
-                  <SelectValue placeholder="Chọn loại cán màn" />
+                  <SelectValue placeholder="Chọn loại cán màng" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(

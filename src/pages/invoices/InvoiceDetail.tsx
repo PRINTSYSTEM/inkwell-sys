@@ -148,6 +148,9 @@ export default function InvoiceDetailPage() {
               <h1 className="text-2xl font-bold tracking-tight">
                 Hóa đơn {invoice.invoiceNumber || `#${invoice.id}`}
               </h1>
+              <span className="text-sm text-muted-foreground">
+                Trạng thái hiện tại:
+              </span>{" "}
               {invoice.status && (
                 <StatusBadge
                   status={invoice.status}

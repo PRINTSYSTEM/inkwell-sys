@@ -725,6 +725,26 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   }`}
                 />
 
+                {/* Quick quantity buttons */}
+                <div className="flex flex-wrap gap-2">
+                  {[500, 1000, 2000, 3000, 4000].map((qty) => (
+                    <Button
+                      key={qty}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateField("quantity", qty)}
+                      className={`h-9 px-3 ${
+                        formData.quantity === qty
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : ""
+                      }`}
+                    >
+                      {qty.toLocaleString("vi-VN")}
+                    </Button>
+                  ))}
+                </div>
+
                 {isQuantityBelowMin && (
                   <p className="text-xs text-destructive">
                     Số lượng nhỏ hơn mức tối thiểu (
@@ -735,10 +755,10 @@ export const DesignModal: React.FC<DesignModalProps> = ({
             </div>
           )}
 
-          {/* Step 2: Advanced Options - Số mặt in, Quy trình sản xuất, Cán màn, Yêu cầu, Ghi chú */}
+          {/* Step 2: Advanced Options - Số mặt in, Quy trình sản xuất, Cán màng, Yêu cầu, Ghi chú */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              {/* Classifications và Cán màn - Số mặt in, Quy trình sản xuất, Cán màn */}
+              {/* Classifications và Cán màng - Số mặt in, Quy trình sản xuất, Cán màng */}
               {(shouldShowSidesClassification ||
                 shouldShowProcessClassification ||
                 isTui ||

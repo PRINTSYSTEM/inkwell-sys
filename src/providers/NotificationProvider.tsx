@@ -1,5 +1,5 @@
 // src/providers/NotificationProvider.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 import { toast } from "sonner";
 import { useAuthContext } from "@/context/auth-context";
@@ -21,11 +21,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     null
   );
   const [isConnected, setIsConnected] = useState(false);
+  const connectionRef = useRef<signalR.HubConnection | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated || !accessToken) {
-      if (connection) {
-        connection.stop();
+      const currentConnection = connectionRef.current;
+      if (currentConnection) {
+        currentConnection.off("ReceiveNotification");
+        currentConnection.stop().catch((err) => {
+          console.error("Error stopping SignalR connection: ", err);
+        });
+        connectionRef.current = null;
         setConnection(null);
         setIsConnected(false);
       }
@@ -50,7 +56,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       .configureLogging(signalR.LogLevel.Warning)
       .build();
 
-    newConnection.on("ReceiveNotification", (message: NotificationMessage) => {
+    // Handler function để có thể remove sau
+    const handleNotification = (message: NotificationMessage) => {
       // Hiển thị toast dựa trên type
       toast(message.title, {
         description: message.message,
@@ -63,27 +70,43 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
             }
           : undefined,
       });
-    });
+    };
+
+    newConnection.on("ReceiveNotification", handleNotification);
+
+    let isMounted = true;
 
     newConnection
       .start()
       .then(() => {
-        setIsConnected(true);
-        setConnection(newConnection);
+        if (isMounted) {
+          connectionRef.current = newConnection;
+          setIsConnected(true);
+          setConnection(newConnection);
+        }
       })
       .catch((err) => {
         console.error("SignalR Connection Error: ", err);
-        toast.error("Lỗi kết nối", {
-          description:
-            "Không thể kết nối tới server thông báo. Một số thông báo có thể bị trễ.",
-          duration: 5000,
-        });
+        if (isMounted) {
+          toast.error("Lỗi kết nối", {
+            description:
+              "Không thể kết nối tới server thông báo. Một số thông báo có thể bị trễ.",
+            duration: 5000,
+          });
+        }
       });
 
     return () => {
-      newConnection.stop();
+      isMounted = false;
+      // Remove event handler trước khi stop
+      newConnection.off("ReceiveNotification", handleNotification);
+      newConnection.stop().catch((err) => {
+        console.error("Error stopping SignalR connection: ", err);
+      });
+      if (connectionRef.current === newConnection) {
+        connectionRef.current = null;
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, isAuthenticated]);
 
   return (

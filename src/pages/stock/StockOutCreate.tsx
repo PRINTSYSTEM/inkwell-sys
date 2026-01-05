@@ -120,7 +120,7 @@ export default function StockOutCreatePage() {
           <div>
             <h1 className="text-3xl font-bold">Tạo phiếu xuất kho</h1>
             <p className="text-muted-foreground mt-1">
-              Tạo phiếu xuất kho mới cho vật liệu
+              Tạo phiếu xuất kho mới cho Chất liệu
             </p>
           </div>
         </div>

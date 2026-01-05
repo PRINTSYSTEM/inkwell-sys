@@ -7,8 +7,6 @@ export const ROUTE_PATHS = {
     LOGIN: "/login" as const,
   },
 
-  DASHBOARD: "/dashboard" as const,
-
   DESIGN: {
     ROOT: "/design" as const,
     ALL: "/design/all" as const,

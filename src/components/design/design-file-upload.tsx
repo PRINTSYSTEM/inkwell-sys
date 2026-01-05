@@ -54,11 +54,11 @@ export function DesignFileUploadDialog({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
-    
+
     // Phân loại files mới
     const newDesignFiles = newFiles.filter((f) => isDesignFile(f));
     const newImageFiles = newFiles.filter((f) => isImageFile(f));
-    
+
     // Kiểm tra số lượng
     if (newDesignFiles.length > 1) {
       toast.error("Lỗi", {
@@ -67,7 +67,7 @@ export function DesignFileUploadDialog({
       e.target.value = ""; // Reset input
       return;
     }
-    
+
     if (newImageFiles.length > 1) {
       toast.error("Lỗi", {
         description: "Chỉ được chọn 1 file ảnh",
@@ -75,7 +75,7 @@ export function DesignFileUploadDialog({
       e.target.value = ""; // Reset input
       return;
     }
-    
+
     // Kiểm tra tổng số file
     if (newFiles.length > 2) {
       toast.error("Lỗi", {
@@ -84,26 +84,26 @@ export function DesignFileUploadDialog({
       e.target.value = ""; // Reset input
       return;
     }
-    
+
     // Kiểm tra nếu đã có file cùng loại thì thay thế
     setSelectedFiles((prev) => {
       let updated = [...prev];
-      
+
       // Thay thế file design nếu có
       if (newDesignFiles.length > 0) {
         updated = updated.filter((f) => !isDesignFile(f));
         updated.push(newDesignFiles[0]);
       }
-      
+
       // Thay thế file ảnh nếu có
       if (newImageFiles.length > 0) {
         updated = updated.filter((f) => !isImageFile(f));
         updated.push(newImageFiles[0]);
       }
-      
+
       return updated;
     });
-    
+
     // Reset input để có thể chọn lại cùng file
     e.target.value = "";
   };
@@ -138,12 +138,12 @@ export function DesignFileUploadDialog({
         <DialogHeader>
           <DialogTitle>
             {mode === "create"
-              ? "Upload file thiết kế"
+              ? "Tải lên file thiết kế"
               : "Cập nhật file thiết kế"}
           </DialogTitle>
           <DialogDescription>
             {mode === "create"
-              ? "Upload file .ai và hình ảnh chụp file thiết kế"
+              ? "Tải lên file .ai và hình ảnh chụp file thiết kế"
               : "Thay thế file .ai và hình ảnh hiện tại"}
           </DialogDescription>
         </DialogHeader>
@@ -172,7 +172,9 @@ export function DesignFileUploadDialog({
           {/* Hiển thị danh sách file đã chọn */}
           {selectedFiles.length > 0 && (
             <div className="space-y-2 flex-1 min-h-0 flex flex-col">
-              <Label className="text-sm font-medium flex-shrink-0">Files đã chọn:</Label>
+              <Label className="text-sm font-medium flex-shrink-0">
+                Files đã chọn:
+              </Label>
               <ScrollArea className="flex-1 min-h-0">
                 <div className="space-y-2 pr-4">
                   {selectedFiles.map((file, index) => {

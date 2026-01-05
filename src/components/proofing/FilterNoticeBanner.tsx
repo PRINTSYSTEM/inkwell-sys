@@ -1,6 +1,6 @@
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Search, X } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Search, X } from "lucide-react";
 
 interface FilterNoticeBannerProps {
   materialTypeName: string;
@@ -16,7 +16,7 @@ export function FilterNoticeBanner({
       <Search className="h-4 w-4" />
       <AlertDescription className="flex items-center justify-between w-full">
         <span>
-          Đang hiển thị thiết kế với vật liệu:{' '}
+          Đang hiển thị thiết kế với Chất liệu:{" "}
           <strong>{materialTypeName}</strong>
         </span>
         <Button

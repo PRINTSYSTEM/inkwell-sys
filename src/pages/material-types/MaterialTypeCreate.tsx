@@ -55,7 +55,7 @@ export default function MaterialTypeCreate() {
   //         } else {
   //           toast({
   //             title: "Lỗi",
-  //             description: "Không tìm thấy loại vật liệu",
+  //             description: "Không tìm thấy loại Chất liệu",
   //             variant: "destructive",
   //           });
   //           navigate('/material-types');
@@ -63,7 +63,7 @@ export default function MaterialTypeCreate() {
   //       } catch (error) {
   //         toast({
   //           title: "Lỗi",
-  //           description: "Không thể tải thông tin loại vật liệu",
+  //           description: "Không thể tải thông tin loại Chất liệu",
   //           variant: "destructive",
   //         });
   //       } finally {
@@ -79,13 +79,13 @@ export default function MaterialTypeCreate() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.code?.trim()) {
-      newErrors.code = "Mã vật liệu là bắt buộc";
+      newErrors.code = "Mã Chất liệu là bắt buộc";
     } else if (!/^[A-Z0-9]{1,10}$/.test(formData.code.trim())) {
-      newErrors.code = "Mã vật liệu phải là 1-10 ký tự in hoa, số";
+      newErrors.code = "Mã Chất liệu phải là 1-10 ký tự in hoa, số";
     }
 
     if (!formData.name?.trim()) {
-      newErrors.name = "Tên loại vật liệu là bắt buộc";
+      newErrors.name = "Tên loại Chất liệu là bắt buộc";
     }
 
     if (!formData.displayOrder || formData.displayOrder < 0) {
@@ -108,13 +108,13 @@ export default function MaterialTypeCreate() {
   //       await materialTypeService.updateMaterialType(Number(id), formData);
   //       toast({
   //         title: "Thành công",
-  //         description: "Đã cập nhật loại vật liệu",
+  //         description: "Đã cập nhật loại Chất liệu",
   //       });
   //     } else {
   //       await materialTypeService.createMaterialType(formData);
   //       toast({
   //         title: "Thành công",
-  //         description: "Đã tạo loại vật liệu mới",
+  //         description: "Đã tạo loại Chất liệu mới",
   //       });
   //     }
 
@@ -168,7 +168,7 @@ export default function MaterialTypeCreate() {
             Quay lại
           </Button>
           <h1 className="text-2xl font-bold">
-            {isEdit ? "Sửa loại vật liệu" : "Thêm loại vật liệu mới"}
+            {isEdit ? "Sửa loại Chất liệu" : "Thêm loại Chất liệu mới"}
           </h1>
         </div>
       </div>
@@ -181,7 +181,7 @@ export default function MaterialTypeCreate() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="code">Mã loại vật liệu *</Label>
+                <Label htmlFor="code">Mã loại Chất liệu *</Label>
                 <Input
                   id="code"
                   value={formData.code}
@@ -218,7 +218,7 @@ export default function MaterialTypeCreate() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Tên loại vật liệu *</Label>
+              <Label htmlFor="name">Tên loại Chất liệu *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -253,7 +253,7 @@ export default function MaterialTypeCreate() {
                 id="description"
                 value={formData.description || ""}
                 onChange={(e) => updateFormData("description", e.target.value)}
-                placeholder="Mô tả chi tiết về loại vật liệu này..."
+                placeholder="Mô tả chi tiết về loại Chất liệu này..."
                 rows={3}
               />
             </div>

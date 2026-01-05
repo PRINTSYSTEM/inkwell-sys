@@ -69,15 +69,6 @@ export type MenuItem = MenuItemLeaf | MenuItemGroup;
 const ALL: RoleList = "all";
 
 export const MENU_ITEMS: MenuItem[] = [
-  // ==== Dashboard ====
-  {
-    id: "dashboard",
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    path: ROUTE_PATHS.DASHBOARD,
-    allowedRoles: ALL,
-  },
-
   // ==== Phòng ban thiết kế ====
   {
     id: "design-dept",
