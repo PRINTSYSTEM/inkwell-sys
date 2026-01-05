@@ -13,13 +13,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Package,
   Layers,
   Ruler,
@@ -77,11 +70,26 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
 
   if (!design) return null;
 
-  const sizeLabel =
-    design.width && design.height
-      ? `${design.length || 0} × ${design.width} × ${design.height} mm`
-      : "Chưa có";
+  // Format dimensions: handle width = 0 or missing
+  const formatDimensions = () => {
+    if (!design.length && !design.height) return "Chưa có";
 
+    const length = design.length || 0;
+    const width = design.width;
+    const height = design.height || 0;
+
+    // Convert cm to mm (multiply by 10)
+    const lengthMm = length * 10;
+    const widthMm = width != null ? width * 10 : undefined;
+    const heightMm = height * 10;
+
+    if (widthMm != null && widthMm > 0) {
+      return `${lengthMm} × ${widthMm} × ${heightMm} mm`;
+    }
+    return `${lengthMm} × ${heightMm} mm`;
+  };
+
+  const sizeLabel = formatDimensions();
   const minQuantity = design.materialType?.minimumQuantity;
 
   return (
@@ -96,7 +104,7 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto py-4 px-1 space-y-6">
           {/* Basic Info Section */}
           <div className="space-y-4">
             <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
@@ -161,14 +169,16 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                 )}
 
                 {/* Kích thước */}
-                {(design.length || design.width || design.height) && (
+                {(design.length || design.height) && (
                   <div className="flex items-start gap-2">
                     <Ruler className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground mb-0.5">
-                        Kích thước (mm)
+                        Kích thước
                       </p>
-                      <p className="text-sm font-medium">{sizeLabel}</p>
+                      <p className="text-sm font-medium font-mono">
+                        {sizeLabel}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -182,7 +192,9 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                         Số mặt in
                       </p>
                       <p className="text-sm font-medium">
-                        {design.sidesClassification}
+                        {ENTITY_CONFIG.sidesClassification?.values?.[
+                          design.sidesClassification as keyof typeof ENTITY_CONFIG.sidesClassification.values
+                        ] || design.sidesClassification}
                       </p>
                     </div>
                   </div>
@@ -197,7 +209,9 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                         Quy trình sản xuất
                       </p>
                       <p className="text-sm font-medium">
-                        {design.processClassification}
+                        {ENTITY_CONFIG.processClassification?.values?.[
+                          design.processClassification as keyof typeof ENTITY_CONFIG.processClassification.values
+                        ] || design.processClassification}
                       </p>
                     </div>
                   </div>
@@ -257,8 +271,9 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
 
           <Separator />
 
-          {/* Quantity input - Only editable field */}
-          <div className="space-y-4">
+          {/* Quantity input and Lamination - Only editable fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Số lượng */}
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
@@ -273,19 +288,21 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                   </p>
                 )}
               </div>
-              <Input
-                type="number"
-                placeholder="VD: 1000"
-                value={quantity || ""}
-                onChange={(e) =>
-                  setQuantity(
-                    e.target.value === "" ? 0 : Number(e.target.value)
-                  )
-                }
-                className="h-11 w-full"
-                min={minQuantity && minQuantity > 0 ? minQuantity : 1}
-                autoFocus
-              />
+              <div className="w-full">
+                <Input
+                  type="number"
+                  placeholder="VD: 1000"
+                  value={quantity || ""}
+                  onChange={(e) =>
+                    setQuantity(
+                      e.target.value === "" ? 0 : Number(e.target.value)
+                    )
+                  }
+                  className="h-11 w-full"
+                  min={minQuantity && minQuantity > 0 ? minQuantity : 1}
+                  autoFocus
+                />
+              </div>
               {minQuantity &&
                 minQuantity > 0 &&
                 quantity > 0 &&
@@ -305,23 +322,24 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
               <Label className="text-sm font-medium">
                 Cán màng <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={laminationType}
-                onValueChange={(value) => setLaminationType(value)}
-              >
-                <SelectTrigger className="h-11 w-full">
-                  <SelectValue placeholder="Chọn loại cán màng" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(
-                    ([key, label]) => (
-                      <SelectItem key={key} value={key}>
+              <div className="flex gap-2">
+                {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(
+                  ([key, label]) => {
+                    const isSelected = laminationType === key;
+                    return (
+                      <Button
+                        key={key}
+                        type="button"
+                        variant={isSelected ? "default" : "outline"}
+                        onClick={() => setLaminationType(key)}
+                        className="h-11 flex-1"
+                      >
                         {label}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
+                      </Button>
+                    );
+                  }
+                )}
+              </div>
             </div>
           </div>
         </div>
