@@ -108,6 +108,7 @@ export function OrderFlowDiagram({
         "deposit_received",
         "debt_approved",
         "waiting_for_proofing",
+        "confirmed_for_printing",
       ]),
       active: isExactly(["confirmed_for_printing"]),
     });
@@ -122,10 +123,11 @@ export function OrderFlowDiagram({
           active: isExactly(["waiting_for_deposit"]),
         });
       } else {
+        // Cộng công nợ: completed nếu có depositAmount > 0 hoặc đã qua các trạng thái sau
         steps.push({
           id: "payment",
           label: "Cộng công nợ",
-          completed: isAtOrPast(["debt_approved", "waiting_for_proofing"]),
+          completed: hasDeposit || isAtOrPast(["waiting_for_proofing"]),
           active: isExactly(["waiting_for_deposit", "deposit_received"]),
         });
       }
