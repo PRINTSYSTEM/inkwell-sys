@@ -9,6 +9,7 @@ import type {
 } from "@/Schema/accounting.schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
+import { orderKeys } from "@/hooks/use-order";
 
 // ===== Query Keys =====
 
@@ -258,6 +259,11 @@ export const useApproveDebt = () => {
 
       queryClient.invalidateQueries({
         queryKey: accountingKeys.byOrder(orderId),
+      });
+
+      // Invalidate order detail query
+      queryClient.invalidateQueries({
+        queryKey: orderKeys.detail(orderId),
       });
 
       queryClient.invalidateQueries({
