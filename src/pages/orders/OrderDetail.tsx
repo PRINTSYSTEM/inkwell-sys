@@ -835,23 +835,21 @@ export default function OrderDetailPage() {
                     return (
                       <div
                         key={orderDetail.id}
-                        className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative"
+                        className={`border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative ${
+                          editingOrderDetailId !== orderDetail.id && design?.id
+                            ? "cursor-pointer"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          // Only navigate if not editing this orderDetail and design exists
+                          if (
+                            editingOrderDetailId !== orderDetail.id &&
+                            design?.id
+                          ) {
+                            navigate(`/design/detail/${design.id}`);
+                          }
+                        }}
                       >
-                        {/* Chi tiết button - góc phải trên cùng */}
-                        {design?.id && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="absolute top-2 right-2 h-7 px-2 text-xs z-10 bg-background/80 backdrop-blur-sm hover:bg-background"
-                            onClick={() =>
-                              navigate(`/design/detail/${design.id}`)
-                            }
-                            title="Xem chi tiết thiết kế"
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            Chi tiết
-                          </Button>
-                        )}
                         <div className="flex flex-col sm:flex-row">
                           {/* Thumbnail */}
                           <div className="sm:w-32 h-32 sm:h-auto bg-muted flex-shrink-0">
@@ -892,7 +890,11 @@ export default function OrderDetailPage() {
                                   </span>{" "}
                                   <StatusBadge
                                     status={statusValue || ""}
-                                    label={statusLabel}
+                                    label={
+                                      designStatusLabels[statusValue || ""] ||
+                                      statusValue ||
+                                      "N/A"
+                                    }
                                   />
                                 </div>
                                 <h4 className="font-medium">
@@ -910,9 +912,12 @@ export default function OrderDetailPage() {
                                       <Button
                                         size="sm"
                                         variant="default"
-                                        onClick={() =>
-                                          handleSaveOrderDetail(orderDetail.id!)
-                                        }
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleSaveOrderDetail(
+                                            orderDetail.id!
+                                          );
+                                        }}
                                         disabled={isUpdatingForAccounting}
                                       >
                                         {isUpdatingForAccounting ? (
@@ -927,7 +932,10 @@ export default function OrderDetailPage() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={cancelEditingOrderDetail}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          cancelEditingOrderDetail();
+                                        }}
                                         disabled={isUpdatingForAccounting}
                                       >
                                         Hủy
@@ -938,12 +946,13 @@ export default function OrderDetailPage() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() =>
+                                        onClick={(e) => {
+                                          e.stopPropagation();
                                           startEditingOrderDetail(
                                             orderDetail.id!,
                                             orderDetail
-                                          )
-                                        }
+                                          );
+                                        }}
                                       >
                                         <Edit className="h-3 w-3 mr-1" />
                                         Sửa
@@ -952,7 +961,8 @@ export default function OrderDetailPage() {
                                         <Button
                                           size="sm"
                                           variant="outline"
-                                          onClick={() => {
+                                          onClick={(e) => {
+                                            e.stopPropagation();
                                             if (
                                               confirm(
                                                 "Bạn có chắc chắn muốn xóa sản phẩm này khỏi đơn hàng?"
@@ -1010,12 +1020,14 @@ export default function OrderDetailPage() {
                                         ? orderDetailEditValues.quantity
                                         : orderDetail.quantity?.toString() || ""
                                     }
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                      e.stopPropagation();
                                       setOrderDetailEditValues({
                                         ...orderDetailEditValues,
                                         quantity: e.target.value,
-                                      })
-                                    }
+                                      });
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
                                     className="h-8 text-sm w-24"
                                   />
                                 ) : (
@@ -1085,12 +1097,14 @@ export default function OrderDetailPage() {
                                             : orderDetail.unitPrice?.toString() ||
                                               ""
                                         }
-                                        onChange={(e) =>
+                                        onChange={(e) => {
+                                          e.stopPropagation();
                                           setOrderDetailEditValues({
                                             ...orderDetailEditValues,
                                             unitPrice: e.target.value,
-                                          })
-                                        }
+                                          });
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
                                         className="h-8 text-sm w-32"
                                       />
                                     ) : (
@@ -1151,12 +1165,14 @@ export default function OrderDetailPage() {
                                             ? orderDetailEditValues.requirements
                                             : orderDetail.requirements || ""
                                         }
-                                        onChange={(e) =>
+                                        onChange={(e) => {
+                                          e.stopPropagation();
                                           setOrderDetailEditValues({
                                             ...orderDetailEditValues,
                                             requirements: e.target.value,
-                                          })
-                                        }
+                                          });
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
                                         placeholder="Nhập yêu cầu"
                                         rows={2}
                                         className="text-sm"
@@ -1171,12 +1187,14 @@ export default function OrderDetailPage() {
                                             ? orderDetailEditValues.additionalNotes
                                             : orderDetail.additionalNotes || ""
                                         }
-                                        onChange={(e) =>
+                                        onChange={(e) => {
+                                          e.stopPropagation();
                                           setOrderDetailEditValues({
                                             ...orderDetailEditValues,
                                             additionalNotes: e.target.value,
-                                          })
-                                        }
+                                          });
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
                                         placeholder="Nhập ghi chú"
                                         rows={2}
                                         className="text-sm"
