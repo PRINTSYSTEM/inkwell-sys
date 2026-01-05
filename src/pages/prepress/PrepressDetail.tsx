@@ -3307,32 +3307,32 @@ export default function ProofingOrderDetailPage() {
 
                   {/* Die Export Info */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            order.isDieExported
-                              ? "bg-green-500"
-                              : "bg-yellow-500"
-                          }`}
-                        />
-                        <span className="font-medium text-xs">
-                          Xuất khuôn bế
-                          {order.dieExports && order.dieExports.length > 0 && (
-                            <span className="ml-1.5 text-muted-foreground font-normal">
-                              ({order.dieExports.length})
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => setIsDieExportDialogOpen(true)}
-                      >
-                        {order.isDieExported ? "Sửa" : "Ghi nhận"}
-                      </Button>
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          order.isDieExported
+                            ? "bg-green-500"
+                            : "bg-yellow-500"
+                        }`}
+                      />
+                      <span className="font-medium text-xs">
+                        Xuất khuôn bế
+                        {order.dieExports && order.dieExports.length > 0 && (
+                          <span className="ml-1.5 text-muted-foreground font-normal">
+                            ({order.dieExports.length})
+                          </span>
+                        )}
+                      </span>
+                      {!order.isDieExported && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs ml-auto"
+                          onClick={() => setIsDieExportDialogOpen(true)}
+                        >
+                          Ghi nhận
+                        </Button>
+                      )}
                     </div>
                     {order.dieExports && order.dieExports.length > 0 ? (
                       <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
