@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Calendar,
   Loader2,
+  Image as ImageIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,12 +37,19 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TruncatedText } from "@/components/ui/truncated-text";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import {
   orderStatusLabels,
+  designStatusLabels,
   formatCurrency,
   formatDate,
 } from "@/lib/status-utils";
-import type { OrderListParams, UserRole, OrderResponse } from "@/Schema";
+import type {
+  OrderListParams,
+  UserRole,
+  OrderResponse,
+  OrderDetailResponse,
+} from "@/Schema";
 import { useAuth } from "@/hooks";
 import { useOrdersByRole } from "@/hooks/use-order";
 import { ROLE } from "@/constants";
@@ -57,6 +65,7 @@ export default function OrderList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
   const [pageInput, setPageInput] = useState<string>("");
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Reset to page 1 when filters change
@@ -200,6 +209,26 @@ export default function OrderList() {
 
   const handleOrderClick = (orderId: number) => {
     navigate(`/orders/${orderId}`);
+  };
+
+  const handleDesignClick = (
+    designId: number | null | undefined,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (designId) {
+      navigate(`/design/detail/${designId}`);
+    }
+  };
+
+  const handleImageClick = (
+    imageUrl: string | null | undefined,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (imageUrl) {
+      setPreviewImageUrl(imageUrl);
+    }
   };
 
   // Permissions
@@ -372,90 +401,193 @@ export default function OrderList() {
                     const depositAmount =
                       (orderResponse.depositAmount as number | undefined) ?? 0;
                     const remaining = totalAmount - depositAmount;
+                    const orderDetails = orderResponse.orderDetails ?? [];
 
                     return (
-                      <TableRow
-                        key={order.id}
-                        className="h-14 cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleOrderClick(order.id)}
-                      >
-                        <TableCell className="py-3">
-                          <div className="font-bold text-sm text-primary">
-                            {order.code || `ORD-${order.id}`}
-                          </div>
-                          {order.createdAt && (
-                            <p className="text-xs font-medium text-muted-foreground mt-0.5">
-                              {formatDate(order.createdAt)}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted shrink-0">
-                              {isCompany ? (
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <User className="h-4 w-4 text-muted-foreground" />
-                              )}
+                      <>
+                        <TableRow
+                          key={order.id}
+                          className="h-14 cursor-pointer bg-background hover:bg-muted/30 border-l-2 border-r-2 border-t-2 border-border/60"
+                          onClick={() => handleOrderClick(order.id ?? 0)}
+                        >
+                          <TableCell className="py-3">
+                            <div className="font-bold text-sm text-primary">
+                              {order.code || `ORD-${order.id}`}
                             </div>
-                            <div className="min-w-0">
-                              <TruncatedText
-                                text={customerName || "-"}
-                                className="font-semibold text-sm"
-                              />
-                              {customerCompanyName && (
+                            {order.createdAt && (
+                              <p className="text-xs font-medium text-muted-foreground mt-0.5">
+                                {formatDate(order.createdAt)}
+                              </p>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted shrink-0">
+                                {isCompany ? (
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
                                 <TruncatedText
-                                  text={customerCompanyName}
-                                  className="text-xs font-medium text-muted-foreground"
+                                  text={customerName || "-"}
+                                  className="font-semibold text-sm"
                                 />
-                              )}
+                                {customerCompanyName && (
+                                  <TruncatedText
+                                    text={customerCompanyName}
+                                    className="text-xs font-medium text-muted-foreground"
+                                  />
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-3">
-                          <StatusBadge
-                            status={order.status}
-                            label={
-                              orderStatusLabels[order.status || ""] || "N/A"
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className="text-center py-3">
-                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-bold">
-                            {order.orderDetails?.length || 0}
-                          </span>
-                        </TableCell>
-                        <TableCell className="py-3">
-                          {order.deliveryDate ? (
-                            <div className="flex items-center gap-1.5 text-sm font-semibold">
-                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                              {formatDate(order.deliveryDate)}
-                            </div>
-                          ) : (
-                            <span className="text-sm font-medium text-muted-foreground">
-                              -
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <StatusBadge
+                              status={order.status}
+                              label={
+                                orderStatusLabels[order.status || ""] || "N/A"
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="text-center py-3">
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-bold">
+                              {order.orderDetails?.length || 0}
                             </span>
-                          )}
-                        </TableCell>
-                        {canViewPrice && (
-                          <>
-                            <TableCell className="text-right py-3 font-bold text-sm">
-                              {formatCurrency(totalAmount)}
-                            </TableCell>
-                            <TableCell className="text-right py-3">
-                              <span
-                                className={`text-sm font-bold ${
-                                  remaining > 0
-                                    ? "text-amber-600"
-                                    : "text-muted-foreground"
-                                }`}
-                              >
-                                {formatCurrency(remaining)}
+                          </TableCell>
+                          <TableCell className="py-3">
+                            {order.deliveryDate ? (
+                              <div className="flex items-center gap-1.5 text-sm font-semibold">
+                                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                {formatDate(order.deliveryDate)}
+                              </div>
+                            ) : (
+                              <span className="text-sm font-medium text-muted-foreground">
+                                -
                               </span>
+                            )}
+                          </TableCell>
+                          {canViewPrice && (
+                            <>
+                              <TableCell className="text-right py-3 font-bold text-sm">
+                                {formatCurrency(totalAmount)}
+                              </TableCell>
+                              <TableCell className="text-right py-3">
+                                <span
+                                  className={`text-sm font-bold ${
+                                    remaining > 0
+                                      ? "text-amber-600"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {formatCurrency(remaining)}
+                                </span>
+                              </TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                        {/* Expanded Design Rows - Always shown */}
+                        {orderDetails.length > 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={canViewPrice ? 7 : 5}
+                              className="p-0 bg-muted/10 border-l-2 border-r-2 border-b-2 border-border/60 border-l-4 border-l-primary/20"
+                            >
+                              <div className="px-4 py-2 pl-6">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/30">
+                                      <TableHead className="h-8 w-20 text-xs font-semibold text-muted-foreground">
+                                        Ảnh
+                                      </TableHead>
+                                      <TableHead className="h-8 text-xs font-semibold text-muted-foreground">
+                                        Mã thiết kế
+                                      </TableHead>
+                                      <TableHead className="h-8 text-xs font-semibold text-muted-foreground">
+                                        Trạng thái
+                                      </TableHead>
+                                      <TableHead className="h-8 text-xs font-semibold text-right text-muted-foreground">
+                                        Số lượng
+                                      </TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {orderDetails.map((orderDetail, index) => {
+                                      const detail =
+                                        orderDetail as OrderDetailResponse;
+                                      const design = detail.design;
+                                      if (!design) return null;
+
+                                      return (
+                                        <TableRow
+                                          key={detail.id}
+                                          className={`h-11 cursor-pointer bg-muted/5 hover:bg-muted/20 transition-colors ${
+                                            index < orderDetails.length - 1
+                                              ? "border-b border-border/20"
+                                              : ""
+                                          }`}
+                                          onClick={(e) =>
+                                            handleDesignClick(design.id, e)
+                                          }
+                                        >
+                                          <TableCell className="py-2">
+                                            <div className="relative w-12 h-12 bg-muted/50 rounded flex items-center justify-center overflow-hidden">
+                                              {design.designImageUrl ? (
+                                                <img
+                                                  src={design.designImageUrl}
+                                                  alt={design.code || "Design"}
+                                                  className="w-full h-full object-contain cursor-zoom-in hover:opacity-80 transition-opacity"
+                                                  onClick={(e) =>
+                                                    handleImageClick(
+                                                      design.designImageUrl,
+                                                      e
+                                                    )
+                                                  }
+                                                />
+                                              ) : (
+                                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                              )}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="py-2">
+                                            <span className="font-semibold text-sm text-primary">
+                                              {design.code ||
+                                                `DES-${design.id}`}
+                                            </span>
+                                            {design.designName && (
+                                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                                                {design.designName}
+                                              </p>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="py-2">
+                                            <StatusBadge
+                                              status={design.status}
+                                              label={
+                                                designStatusLabels[
+                                                  design.status || ""
+                                                ] ||
+                                                design.status ||
+                                                "N/A"
+                                              }
+                                            />
+                                          </TableCell>
+                                          <TableCell className="py-2 text-right">
+                                            <span className="font-semibold text-sm">
+                                              {detail.quantity ?? 0}
+                                            </span>
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                  </TableBody>
+                                </Table>
+                              </div>
                             </TableCell>
-                          </>
+                          </TableRow>
                         )}
-                      </TableRow>
+                      </>
                     );
                   })}
 
@@ -557,6 +689,16 @@ export default function OrderList() {
           )}
         </Card>
       </div>
+
+      {/* Image Preview Dialog */}
+      {previewImageUrl && (
+        <ImageViewerDialog
+          open={!!previewImageUrl}
+          onOpenChange={(open) => !open && setPreviewImageUrl(null)}
+          imageUrl={previewImageUrl}
+          title="Xem ảnh thiết kế"
+        />
+      )}
     </div>
   );
 }
