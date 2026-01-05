@@ -104,6 +104,7 @@ import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { downloadFile } from "@/lib/download-utils";
 import { Textarea } from "@/components/ui/textarea";
 import type { UpdateProofingOrderRequest } from "@/Schema";
+import { formatDesignDimensions } from "@/utils/format-die-size";
 
 export default function ProofingOrderDetailPage() {
   const params = useParams();
@@ -1416,10 +1417,13 @@ export default function ProofingOrderDetailPage() {
                                       Kích thước:
                                     </span>
                                     <span className="ml-2">
-                                      {design.length} × {design.height}
-                                      {design.width
-                                        ? ` × ${design.width}`
-                                        : ""}{" "}
+                                      {formatDesignDimensions(
+                                        design.length,
+                                        design.width,
+                                        design.height,
+                                        10,
+                                        " × "
+                                      )}{" "}
                                       mm
                                     </span>
                                   </div>
@@ -1552,8 +1556,13 @@ export default function ProofingOrderDetailPage() {
                                   </TableCell>
                                   <TableCell>
                                     <span className="text-sm font-semibold text-muted-foreground">
-                                      {design.length} × {design.height}
-                                      {design.width ? ` × ${design.width}` : ""}
+                                      {formatDesignDimensions(
+                                        design.length,
+                                        design.width,
+                                        design.height,
+                                        10,
+                                        " × "
+                                      )}
                                     </span>
                                   </TableCell>
                                   <TableCell className="text-right">
@@ -2416,11 +2425,13 @@ export default function ProofingOrderDetailPage() {
                                     Kích thước:
                                   </span>
                                   <span className="ml-2">
-                                    {pod.design.length * 10}×
-                                    {pod.design.width * 10}
-                                    {pod.design.height
-                                      ? `×${pod.design.height * 10}`
-                                      : ""}{" "}
+                                    {formatDesignDimensions(
+                                      pod.design.length,
+                                      pod.design.width,
+                                      pod.design.height,
+                                      10,
+                                      "×"
+                                    )}{" "}
                                     mm
                                   </span>
                                 </div>
@@ -2551,17 +2562,15 @@ export default function ProofingOrderDetailPage() {
                                 <TableCell className="px-2 py-1">
                                   <div className="text-xs">
                                     <p>
-                                      {pod.design.length * 10} ×{" "}
-                                      {pod.design.width * 10}
-                                      {`${pod.design.height ? ` × ${pod.design.height * 10}` : ""}`}{" "}
+                                      {formatDesignDimensions(
+                                        pod.design.length,
+                                        pod.design.width,
+                                        pod.design.height,
+                                        10,
+                                        " × "
+                                      )}{" "}
                                       mm
                                     </p>
-                                    {pod.design.areaM2 && (
-                                      <p className="text-[10px] text-muted-foreground">
-                                        {(pod.design.areaM2 * 10000).toFixed(0)}{" "}
-                                        cm²
-                                      </p>
-                                    )}
                                   </div>
                                 </TableCell>
                                 <TableCell className="px-2 py-1">
