@@ -209,8 +209,17 @@ export default function OrderDetailPage() {
   const canAddRemoveProducts =
     canUpdateOrderForAccounting && !isOrderRestricted;
 
-  // Can edit order detail - only unitPrice if restricted, all fields if not
-  const canEditOrderDetail = canUpdateOrderForAccounting;
+  // Can edit quantity - designer roles can edit quantity only
+  const canEditQuantity =
+    role === ROLE.DESIGN ||
+    role === ROLE.DESIGN_LEAD ||
+    canUpdateOrderForAccounting;
+
+  // Can edit order detail - accounting can edit all fields, designer can only edit quantity
+  const canEditOrderDetail = canUpdateOrderForAccounting || canEditQuantity;
+
+  // Check if current user is designer (not accounting/admin)
+  const isDesignerRole = role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD;
 
   const { mutate: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
@@ -251,7 +260,16 @@ export default function OrderDetailPage() {
     orderDetail: OrderDetailResponse
   ) => {
     setEditingOrderDetailId(orderDetailId);
-    // If order is restricted (from waiting_for_proofing onwards), only allow editing unitPrice
+
+    // Designer can only edit quantity
+    if (isDesignerRole) {
+      setOrderDetailEditValues({
+        quantity: orderDetail.quantity?.toString() || "",
+      });
+      return;
+    }
+
+    // Accounting roles: If order is restricted (from waiting_for_proofing onwards), only allow editing unitPrice
     if (isOrderRestricted) {
       setOrderDetailEditValues({
         unitPrice: orderDetail.unitPrice?.toString() || "",
@@ -281,33 +299,48 @@ export default function OrderDetailPage() {
     );
     if (!orderDetail) return;
 
-    // If order is restricted (from waiting_for_proofing onwards), only update unitPrice
     const updateData: UpdateOrderDetailForAccountingRequest = {
       orderDetailId: orderDetail.id,
-      unitPrice:
-        orderDetailEditValues.unitPrice === "" ||
-        orderDetailEditValues.unitPrice === null
-          ? null
-          : Number(orderDetailEditValues.unitPrice),
     };
 
-    // Only include other fields if order is NOT restricted
-    if (!isOrderRestricted) {
+    // Designer can only update quantity
+    if (isDesignerRole) {
       updateData.quantity =
         orderDetailEditValues.quantity === "" ||
         orderDetailEditValues.quantity === null
           ? null
           : Number(orderDetailEditValues.quantity);
-      updateData.requirements =
-        orderDetailEditValues.requirements === "" ||
-        orderDetailEditValues.requirements === null
-          ? null
-          : String(orderDetailEditValues.requirements).trim();
-      updateData.additionalNotes =
-        orderDetailEditValues.additionalNotes === "" ||
-        orderDetailEditValues.additionalNotes === null
-          ? null
-          : String(orderDetailEditValues.additionalNotes).trim();
+    } else {
+      // Accounting roles: If order is restricted (from waiting_for_proofing onwards), only update unitPrice
+      if (isOrderRestricted) {
+        updateData.unitPrice =
+          orderDetailEditValues.unitPrice === "" ||
+          orderDetailEditValues.unitPrice === null
+            ? null
+            : Number(orderDetailEditValues.unitPrice);
+      } else {
+        // Include all fields if order is NOT restricted
+        updateData.unitPrice =
+          orderDetailEditValues.unitPrice === "" ||
+          orderDetailEditValues.unitPrice === null
+            ? null
+            : Number(orderDetailEditValues.unitPrice);
+        updateData.quantity =
+          orderDetailEditValues.quantity === "" ||
+          orderDetailEditValues.quantity === null
+            ? null
+            : Number(orderDetailEditValues.quantity);
+        updateData.requirements =
+          orderDetailEditValues.requirements === "" ||
+          orderDetailEditValues.requirements === null
+            ? null
+            : String(orderDetailEditValues.requirements).trim();
+        updateData.additionalNotes =
+          orderDetailEditValues.additionalNotes === "" ||
+          orderDetailEditValues.additionalNotes === null
+            ? null
+            : String(orderDetailEditValues.additionalNotes).trim();
+      }
     }
 
     const orderDetailsUpdates: UpdateOrderDetailForAccountingRequest[] = [
@@ -891,9 +924,7 @@ export default function OrderDetailPage() {
                                   <StatusBadge
                                     status={statusValue || ""}
                                     label={
-                                      designStatusLabels[statusValue || ""] ||
-                                      statusValue ||
-                                      "N/A"
+                                      designStatusLabels[design?.status || ""]
                                     }
                                   />
                                 </div>
@@ -1010,7 +1041,7 @@ export default function OrderDetailPage() {
                                   Số lượng
                                 </p>
                                 {editingOrderDetailId === orderDetail.id &&
-                                !isOrderRestricted ? (
+                                (isDesignerRole || !isOrderRestricted) ? (
                                   <Input
                                     type="number"
                                     min="1"
@@ -1085,7 +1116,8 @@ export default function OrderDetailPage() {
                                     <p className="text-muted-foreground text-xs">
                                       Đơn giá
                                     </p>
-                                    {editingOrderDetailId === orderDetail.id ? (
+                                    {editingOrderDetailId === orderDetail.id &&
+                                    !isDesignerRole ? (
                                       <Input
                                         type="number"
                                         min="0"
@@ -1154,6 +1186,7 @@ export default function OrderDetailPage() {
                               orderDetail.additionalNotes) && (
                               <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm space-y-2">
                                 {editingOrderDetailId === orderDetail.id &&
+                                !isDesignerRole &&
                                 !isOrderRestricted ? (
                                   <>
                                     <div className="space-y-2">
