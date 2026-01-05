@@ -190,6 +190,8 @@ export const API_SUFFIX = {
     `/dies/proofing-order/${proofingOrderId}/assign`,
   DIE_REMOVE_FROM_PROOFING_ORDER: (proofingOrderId: number, dieId: number) =>
     `/dies/proofing-order/${proofingOrderId}/die/${dieId}`,
+  DIE_REPLACE: (proofingOrderId: number, currentDieId: number) =>
+    `/dies/proofing-order/${proofingOrderId}/die/${currentDieId}`,
   DIE_PROOFING_ORDER_DIE_RETURN: (proofingOrderDieId: number) =>
     `/dies/proofing-order-die/${proofingOrderDieId}/return`,
   DIE_PROOFING_ORDER_DIE_TAKE_OUT: (proofingOrderDieId: number) =>

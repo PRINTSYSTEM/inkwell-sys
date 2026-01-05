@@ -104,7 +104,9 @@ import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { downloadFile } from "@/lib/download-utils";
 import { Textarea } from "@/components/ui/textarea";
 import type { UpdateProofingOrderRequest } from "@/Schema";
-import { formatDesignDimensions } from "@/utils/format-die-size";
+import { formatDesignDimensions, formatDieSize } from "@/utils/format-die-size";
+import { useReplaceDie, useDies, useSearchDies } from "@/hooks/use-die";
+import type { DieResponse, ReplaceDieRequest } from "@/Schema";
 
 export default function ProofingOrderDetailPage() {
   const params = useParams();
@@ -145,6 +147,13 @@ export default function ProofingOrderDetailPage() {
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [isAddDesignDialogOpen, setIsAddDesignDialogOpen] = useState(false);
+  
+  // Replace die dialog state
+  const [isReplaceDieDialogOpen, setIsReplaceDieDialogOpen] = useState(false);
+  const [replacingDieExport, setReplacingDieExport] = useState<DieExportResponse | null>(null);
+  const [selectedNewDieId, setSelectedNewDieId] = useState<number | null>(null);
+  const [replaceDieNotes, setReplaceDieNotes] = useState<string>("");
+  const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
 
   // Form state cho từng card
   const [isQuantityEditOpen, setIsQuantityEditOpen] = useState(false);
@@ -202,6 +211,23 @@ export default function ProofingOrderDetailPage() {
     useAddDesignsToProofingOrder();
   const { mutate: removeDesignMutate, isPending: isRemovingDesign } =
     useRemoveDesignFromProofingOrder();
+  
+  // Replace die hooks
+  const { mutate: replaceDieMutate, isPending: isReplacingDie } = useReplaceDie();
+  
+  // Search dies for replacement
+  const [debouncedDieSearch] = useDebounce(dieSearchTerm, 300);
+  const dieSearchParams = useMemo(() => {
+    if (!isReplaceDieDialogOpen) return undefined;
+    return {
+      dieName: debouncedDieSearch.trim() || undefined,
+      isUsable: true,
+      pageSize: 50,
+    };
+  }, [isReplaceDieDialogOpen, debouncedDieSearch]);
+  
+  const { data: searchDiesData, isLoading: isLoadingDies } = useSearchDies(dieSearchParams);
+  const availableDies = searchDiesData?.items || [];
 
   // Check if order is empty (no designs)
   const isEmptyOrder = orderDesigns.length === 0;
@@ -934,6 +960,44 @@ export default function ProofingOrderDetailPage() {
 
   const handleDieExportSuccess = () => {
     // Dialog will handle refetch automatically via query invalidation
+  };
+
+  const handleOpenReplaceDieDialog = (dieExport: DieExportResponse) => {
+    setReplacingDieExport(dieExport);
+    setSelectedNewDieId(null);
+    setReplaceDieNotes("");
+    setDieSearchTerm("");
+    setIsReplaceDieDialogOpen(true);
+  };
+
+  const handleReplaceDie = async () => {
+    if (!order?.id || !replacingDieExport?.dieId || !selectedNewDieId) {
+      toast.error("Lỗi", {
+        description: "Vui lòng chọn khuôn mới để thay thế",
+      });
+      return;
+    }
+
+    try {
+      const replaceData: ReplaceDieRequest = {
+        newDieId: selectedNewDieId,
+        notes: replaceDieNotes.trim() || null,
+      };
+
+      await replaceDieMutate({
+        proofingOrderId: order.id,
+        currentDieId: replacingDieExport.dieId,
+        data: replaceData,
+      });
+
+      setIsReplaceDieDialogOpen(false);
+      setReplacingDieExport(null);
+      setSelectedNewDieId(null);
+      setReplaceDieNotes("");
+      setDieSearchTerm("");
+    } catch (error) {
+      // Error is handled by the hook
+    }
   };
 
   const handleUploadFiles = async (files: File[]) => {
@@ -3242,7 +3306,7 @@ export default function ProofingOrderDetailPage() {
                   <Separator className="my-2" />
 
                   {/* Die Export Info */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <div
@@ -3254,6 +3318,11 @@ export default function ProofingOrderDetailPage() {
                         />
                         <span className="font-medium text-xs">
                           Xuất khuôn bế
+                          {order.dieExports && order.dieExports.length > 0 && (
+                            <span className="ml-1.5 text-muted-foreground font-normal">
+                              ({order.dieExports.length})
+                            </span>
+                          )}
                         </span>
                       </div>
                       <Button
@@ -3265,34 +3334,135 @@ export default function ProofingOrderDetailPage() {
                         {order.isDieExported ? "Sửa" : "Ghi nhận"}
                       </Button>
                     </div>
-                    {order.dieExports?.[0] ? (
-                      <div className="bg-muted/30 rounded p-2 text-xs space-y-1">
-                        {/* Display image if available */}
-                        {order.dieExports[0].imageUrl ? (
+                    {order.dieExports && order.dieExports.length > 0 ? (
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {order.dieExports.map((dieExport, index) => (
                           <div
-                            className="relative h-16 rounded border overflow-hidden bg-black/5 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => {
-                              setViewingImageUrl(
-                                order.dieExports[0].imageUrl || null
-                              );
-                              setImageViewerOpen(true);
-                            }}
+                            key={dieExport.id}
+                            className="bg-muted/40 rounded-lg p-2.5 border border-border/50 hover:bg-muted/60 transition-colors"
                           >
-                            <img
-                              src={order.dieExports[0].imageUrl}
-                              alt="Khuôn bế"
-                              className="w-full h-full object-contain"
-                            />
+                            {/* Main Content Row */}
+                            <div className="flex items-start gap-2.5">
+                              {/* Image */}
+                              {dieExport.die?.imageUrl ? (
+                                <div
+                                  className="relative w-16 h-16 rounded-md border overflow-hidden bg-background cursor-pointer hover:opacity-90 transition-opacity shrink-0 group"
+                                  onClick={() => {
+                                    setViewingImageUrl(
+                                      dieExport.die?.imageUrl || null
+                                    );
+                                    setImageViewerOpen(true);
+                                  }}
+                                >
+                                  <img
+                                    src={dieExport.die.imageUrl}
+                                    alt={`Khuôn ${dieExport.die?.code || index + 1}`}
+                                    className="w-full h-full object-contain"
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                    <Eye className="h-3.5 w-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="w-16 h-16 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
+                                  <Package className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                              )}
+
+                              {/* Info */}
+                              <div className="flex-1 min-w-0 space-y-1">
+                                {/* Code & Name */}
+                                <div>
+                                  <div className="font-semibold text-xs text-foreground truncate">
+                                    {dieExport.die?.code || `Khuôn #${dieExport.dieId}`}
+                                  </div>
+                                  {dieExport.die?.name && (
+                                    <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
+                                      {dieExport.die.name}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Details Grid */}
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px]">
+                                  {/* Kích thước */}
+                                  {dieExport.die && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-muted-foreground">KT:</span>
+                                      <span className="font-medium text-foreground">
+                                        {formatDieSize(dieExport.die)}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Loại */}
+                                  {dieExport.die?.type && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-muted-foreground">Loại:</span>
+                                      <span className="font-medium text-foreground truncate">
+                                        {dieExport.die.type}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Nhà cung cấp */}
+                                  {dieExport.die?.vendorName && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-muted-foreground">NCC:</span>
+                                      <span className="font-medium text-foreground truncate">
+                                        {dieExport.die.vendorName}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Vị trí */}
+                                  {dieExport.die?.location && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-muted-foreground">Vị trí:</span>
+                                      <span className="font-medium text-foreground">
+                                        {dieExport.die.location}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Ngày xuất */}
+                                {dieExport.createdAt && (
+                                  <div className="text-[10px] text-muted-foreground pt-0.5 border-t border-border/30">
+                                    Xuất: {format(
+                                      new Date(dieExport.createdAt),
+                                      "dd/MM/yyyy HH:mm"
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Notes */}
+                                {dieExport.notes && (
+                                  <div className="text-[10px] italic text-muted-foreground pt-0.5 border-t border-border/30 line-clamp-2">
+                                    {dieExport.notes}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex items-start gap-1 shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => handleOpenReplaceDieDialog(dieExport)}
+                                  disabled={!order || order.status === "completed"}
+                                >
+                                  <Edit className="h-3 w-3 mr-1" />
+                                  Sửa
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                        ) : null}
-                        {order.dieExports[0].notes && (
-                          <p className="text-[10px] italic text-muted-foreground line-clamp-2 mt-1">
-                            {order.dieExports[0].notes}
-                          </p>
-                        )}
+                        ))}
                       </div>
                     ) : (
-                      <p className="text-[10px] text-muted-foreground italic pl-3.5">
+                      <p className="text-[10px] text-muted-foreground italic pl-3.5 py-2">
                         Chưa có thông tin
                       </p>
                     )}
@@ -3901,6 +4071,202 @@ export default function ProofingOrderDetailPage() {
           isSubmitting={isAddingDesigns}
         />
       )}
+
+      {/* Replace Die Dialog */}
+      <Dialog
+        open={isReplaceDieDialogOpen}
+        onOpenChange={(open) => {
+          setIsReplaceDieDialogOpen(open);
+          if (!open) {
+            setReplacingDieExport(null);
+            setSelectedNewDieId(null);
+            setReplaceDieNotes("");
+            setDieSearchTerm("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Thay thế khuôn bế</DialogTitle>
+            <DialogDescription>
+              Chọn khuôn mới để thay thế cho khuôn hiện tại
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4">
+            {/* Current Die Info */}
+            {replacingDieExport && (
+              <div className="bg-muted/50 rounded-lg p-3 border">
+                <Label className="text-xs font-semibold mb-2 block">
+                  Khuôn hiện tại:
+                </Label>
+                <div className="flex items-center gap-3">
+                  {replacingDieExport.die?.imageUrl && (
+                    <img
+                      src={replacingDieExport.die.imageUrl}
+                      alt={replacingDieExport.die?.code}
+                      className="w-12 h-12 rounded border object-contain bg-background"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm">
+                      {replacingDieExport.die?.code || `Khuôn #${replacingDieExport.dieId}`}
+                    </div>
+                    {replacingDieExport.die?.name && (
+                      <div className="text-xs text-muted-foreground">
+                        {replacingDieExport.die.name}
+                      </div>
+                    )}
+                    {replacingDieExport.die && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        KT: {formatDieSize(replacingDieExport.die)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Search */}
+            <div className="space-y-2">
+              <Label htmlFor="die-search">Tìm khuôn thay thế</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="die-search"
+                  placeholder="Nhập mã hoặc tên khuôn..."
+                  value={dieSearchTerm}
+                  onChange={(e) => setDieSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+
+            {/* Die List */}
+            <div className="flex-1 min-h-0 flex flex-col space-y-2">
+              <Label className="text-xs font-semibold">Chọn khuôn mới:</Label>
+              <ScrollArea className="flex-1 border rounded-lg">
+                {isLoadingDies ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                    Đang tải...
+                  </div>
+                ) : availableDies.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {dieSearchTerm.trim()
+                      ? "Không tìm thấy khuôn phù hợp"
+                      : "Nhập từ khóa để tìm khuôn"}
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-2">
+                    {availableDies.map((die: DieResponse) => {
+                      const isSelected = selectedNewDieId === die.id;
+                      const isCurrentDie = die.id === replacingDieExport?.dieId;
+                      
+                      return (
+                        <div
+                          key={die.id}
+                          className={cn(
+                            "p-3 rounded-lg border cursor-pointer transition-colors",
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:bg-muted/50",
+                            isCurrentDie && "opacity-50 cursor-not-allowed"
+                          )}
+                          onClick={() => {
+                            if (!isCurrentDie) {
+                              setSelectedNewDieId(die.id || null);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            {die.imageUrl ? (
+                              <img
+                                src={die.imageUrl}
+                                alt={die.code || ""}
+                                className="w-12 h-12 rounded border object-contain bg-background shrink-0"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded border bg-muted/50 flex items-center justify-center shrink-0">
+                                <Package className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm truncate">
+                                {die.code || `Khuôn #${die.id}`}
+                              </div>
+                              {die.name && (
+                                <div className="text-xs text-muted-foreground line-clamp-1">
+                                  {die.name}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                <span>KT: {formatDieSize(die)}</span>
+                                {die.type && <span>• {die.type}</span>}
+                                {die.vendorName && <span>• NCC: {die.vendorName}</span>}
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                            )}
+                            {isCurrentDie && (
+                              <Badge variant="secondary" className="text-xs shrink-0">
+                                Đang dùng
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="replace-die-notes">Ghi chú (tùy chọn)</Label>
+              <Textarea
+                id="replace-die-notes"
+                placeholder="Nhập ghi chú cho việc thay thế khuôn..."
+                value={replaceDieNotes}
+                onChange={(e) => setReplaceDieNotes(e.target.value)}
+                rows={2}
+                className="text-sm"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsReplaceDieDialogOpen(false);
+                setReplacingDieExport(null);
+                setSelectedNewDieId(null);
+                setReplaceDieNotes("");
+                setDieSearchTerm("");
+              }}
+              disabled={isReplacingDie}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleReplaceDie}
+              disabled={!selectedNewDieId || isReplacingDie}
+            >
+              {isReplacingDie ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang thay thế...
+                </>
+              ) : (
+                "Thay thế"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

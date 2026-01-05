@@ -9,7 +9,8 @@ import type {
   CreateDieRequest,
   UpdateDieRequest,
   AssignDieToProofingOrderRequest,
-  ProofingOrderDieResponse,
+  ReplaceDieRequest,
+  DieExportResponse,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -229,11 +230,11 @@ export const useDiesByProofingOrder = (
   proofingOrderId: number | null,
   enabled = true
 ) => {
-  return useQuery<ProofingOrderDieResponse[]>({
+  return useQuery<DieExportResponse[]>({
     queryKey: [dieKeys.all[0], "by-proofing-order", proofingOrderId],
     enabled: enabled && !!proofingOrderId,
     queryFn: async () => {
-      const res = await apiRequest.get<ProofingOrderDieResponse[]>(
+      const res = await apiRequest.get<DieExportResponse[]>(
         API_SUFFIX.DIES_BY_PROOFING_ORDER(proofingOrderId as number)
       );
       return res.data;
@@ -253,7 +254,7 @@ export const useAssignDieToProofingOrder = () => {
       proofingOrderId: number;
       data: AssignDieToProofingOrderRequest;
     }) => {
-      const response = await apiRequest.post<ProofingOrderDieResponse>(
+      const response = await apiRequest.post<DieExportResponse>(
         API_SUFFIX.DIE_ASSIGN_TO_PROOFING_ORDER(proofingOrderId),
         data
       );
@@ -319,7 +320,7 @@ export const useReturnDie = () => {
 
   return useMutation({
     mutationFn: async (proofingOrderDieId: number) => {
-      const response = await apiRequest.post<ProofingOrderDieResponse>(
+      const response = await apiRequest.post<DieExportResponse>(
         API_SUFFIX.DIE_PROOFING_ORDER_DIE_RETURN(proofingOrderDieId)
       );
       return response.data;
@@ -343,7 +344,7 @@ export const useTakeOutDie = () => {
 
   return useMutation({
     mutationFn: async (proofingOrderDieId: number) => {
-      const response = await apiRequest.post<ProofingOrderDieResponse>(
+      const response = await apiRequest.post<DieExportResponse>(
         API_SUFFIX.DIE_PROOFING_ORDER_DIE_TAKE_OUT(proofingOrderDieId)
       );
       return response.data;
@@ -355,6 +356,45 @@ export const useTakeOutDie = () => {
     },
     onError: (error: ApiError) => {
       toast.error("Không thể lấy khuôn bế", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+// PUT /api/dies/proofing-order/:proofingOrderId/die/:currentDieId
+export const useReplaceDie = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      proofingOrderId,
+      currentDieId,
+      data,
+    }: {
+      proofingOrderId: number;
+      currentDieId: number;
+      data: ReplaceDieRequest;
+    }) => {
+      const response = await apiRequest.put<DieExportResponse>(
+        API_SUFFIX.DIE_REPLACE(proofingOrderId, currentDieId),
+        data
+      );
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: dieKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: [dieKeys.all[0], "by-proofing-order", variables.proofingOrderId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
+      queryClient.invalidateQueries({
+        queryKey: ["proofing-orders", variables.proofingOrderId],
+      });
+      toast.success("Đã thay thế khuôn bế thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Không thể thay thế khuôn bế", {
         description: error.response?.data?.message || error.message,
       });
     },

@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-05T02:02:26.088Z */
+/* Generated at: 2026-01-05T08:22:07.073Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -146,12 +146,12 @@ export const ProductionResponseSchema = schemas.ProductionResponse;
 export const ProductionResponsePaginateSchema = schemas.ProductionResponsePaginate;
 export const ProofingAllocationResponseSchema = schemas.ProofingAllocationResponse;
 export const ProofingOrderDesignResponseSchema = schemas.ProofingOrderDesignResponse;
-export const ProofingOrderDieResponseSchema = schemas.ProofingOrderDieResponse;
 export const ProofingOrderResponseSchema = schemas.ProofingOrderResponse;
 export const ProofingOrderResponsePaginateSchema = schemas.ProofingOrderResponsePaginate;
 export const RecordDieExportRequestSchema = schemas.RecordDieExportRequest;
 export const RecordPlateExportRequestSchema = schemas.RecordPlateExportRequest;
 export const RecreateDeliveryNoteRequestSchema = schemas.RecreateDeliveryNoteRequest;
+export const ReplaceDieRequestSchema = schemas.ReplaceDieRequest;
 export const ReportExportResponseSchema = schemas.ReportExportResponse;
 export const ReportExportResponseIPaginateSchema = schemas.ReportExportResponseIPaginate;
 export const ResetPasswordRequestSchema = schemas.ResetPasswordRequest;
