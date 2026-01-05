@@ -88,6 +88,15 @@ const isTheTreoMaterial = (materialName: string): boolean => {
   );
 };
 
+const isTuiXepHongMaterial = (materialName: string): boolean => {
+  return (
+    materialName.toLowerCase().includes("túi xếp hông") ||
+    materialName.toLowerCase().includes("tui xep hong") ||
+    materialName.toLowerCase().includes("túi xếp") ||
+    materialName.toLowerCase().includes("tui xep")
+  );
+};
+
 // Material type definition
 export type MaterialClassificationOption = {
   id: number;
@@ -255,7 +264,9 @@ export const DesignModal: React.FC<DesignModalProps> = ({
   const isHop = isHopDesignType(designTypeName);
   const isNhan = isNhanDesignType(designTypeName);
   const isTheTreo = isTheTreoMaterial(materialName);
-  const isTuiXepHong = isTuiXepHongDesignType(designTypeName);
+  const isTuiXepHong =
+    isTuiXepHongDesignType(designTypeName) ||
+    isTuiXepHongMaterial(materialName);
   const isDecalCuon = isDecalCuonDesignType(designTypeName);
   const isTuiCuon = isTuiCuonDesignType(designTypeName);
 
@@ -336,6 +347,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     }
   }, [
     selectedDesignType,
+    selectedMaterial,
     isHop,
     isNhan,
     isTheTreo,
@@ -346,24 +358,24 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     isTuiCuon,
   ]);
 
-  // Reset width to 0 when design type is not Túi or Hộp
+  // Reset width to 0 when design type is not Hộp or Túi xếp hông (check both design type and material type)
   useEffect(() => {
-    if (!isTui && !isHop && formData.width && formData.width > 0) {
+    if (!isHop && !isTuiXepHong && formData.width && formData.width > 0) {
       setFormData((prev) => ({
         ...prev,
         width: 0,
       }));
     }
-  }, [isTui, isHop, formData.width]);
+  }, [isHop, isTuiXepHong, formData.width, materialName]);
 
   const canGoNext = () => {
     switch (currentStep) {
       case 1:
-        // Step 1: Tên thiết kế, loại thiết kế, chất liệu, kích thước (dài và cao bắt buộc, rộng bắt buộc cho túi và hộp), số lượng
+        // Step 1: Tên thiết kế, loại thiết kế, chất liệu, kích thước (dài và cao bắt buộc, rộng bắt buộc cho hộp và túi xếp hông), số lượng
         const hasLength = (formData.length ?? 0) > 0;
         const hasHeight = (formData.height ?? 0) > 0;
         const hasWidth = (formData.width ?? 0) > 0;
-        const needsWidth = isTui || isHop; // Túi xếp hông và hộp cần rộng
+        const needsWidth = isHop || isTuiXepHong; // Chỉ hộp và túi xếp hông cần rộng
 
         return (
           formData.designName?.trim() &&
@@ -633,7 +645,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   Kích thước (mm) <span className="text-destructive">*</span>
                 </Label>
                 <div
-                  className={`grid gap-4 ${isTui || isHop ? "grid-cols-3" : "grid-cols-2"}`}
+                  className={`grid gap-4 ${isHop || isTuiXepHong ? "grid-cols-3" : "grid-cols-2"}`}
                 >
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">
@@ -671,7 +683,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       disabled={!!isExistingDesign}
                     />
                   </div>
-                  {(isTui || isHop) && (
+                  {(isHop || isTuiXepHong) && (
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">
                         Rộng <span className="text-destructive">*</span>
