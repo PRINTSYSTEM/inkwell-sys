@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-03T23:14:37.844Z */
+/* Generated at: 2026-01-05T02:02:26.088Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 

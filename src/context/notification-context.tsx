@@ -9,4 +9,3 @@ export interface NotificationContextValue {
 export const NotificationContext = createContext<
   NotificationContextValue | undefined
 >(undefined);
-

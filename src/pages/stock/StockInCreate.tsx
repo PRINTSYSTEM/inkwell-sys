@@ -132,7 +132,7 @@ export default function StockInCreatePage() {
           <div>
             <h1 className="text-3xl font-bold">Tạo phiếu nhập kho</h1>
             <p className="text-muted-foreground mt-1">
-              Tạo phiếu nhập kho mới cho vật liệu
+              Tạo phiếu nhập kho mới cho Chất liệu
             </p>
           </div>
         </div>

@@ -633,18 +633,12 @@ export function DieExportDialog({
         return;
       }
 
-      const sentAt = formatLocalDateTimeWithOffset(new Date());
-      const estimatedReceiveAt = receivedAt;
-
       await new Promise<void>((resolve, reject) => {
         recordDie(
           {
             id: proofingOrderId,
             dieIds: allDieIds,
             notes: notes.trim() || undefined,
-            sentAt: sentAt,
-            estimatedReceiveAt: estimatedReceiveAt || undefined,
-            receivedAt: receivedAt || undefined,
           },
           {
             onSuccess: () => {

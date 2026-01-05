@@ -5,7 +5,7 @@ import { RouterProvider } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "./providers/AuthProvider";
 import { router } from "./routes";
-// import { NotificationProvider } from "./providers/NotificationProvider";
+import { NotificationProvider } from "./providers/NotificationProvider";
 
 // Debug API configuration in development
 if (import.meta.env.DEV) {
@@ -23,8 +23,10 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <RouterProvider router={router} />
-          <Sonner />
+          <NotificationProvider>
+            <RouterProvider router={router} />
+            <Sonner />
+          </NotificationProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

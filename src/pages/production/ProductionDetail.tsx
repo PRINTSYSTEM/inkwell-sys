@@ -258,6 +258,9 @@ export default function ProductionDetailPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">
+            Trạng thái hiện tại:
+          </span>{" "}
           <StatusBadge
             status={production.status || "pending"}
             label={
@@ -266,7 +269,6 @@ export default function ProductionDetailPage() {
               "N/A"
             }
           />
-
           {showStartButton && (
             <Button
               className="gap-2"
@@ -277,7 +279,6 @@ export default function ProductionDetailPage() {
               {starting ? "Đang xử lý..." : "Bắt đầu sản xuất"}
             </Button>
           )}
-
           {showUpdateButton && (
             <Button
               variant="outline"
@@ -289,7 +290,6 @@ export default function ProductionDetailPage() {
               Cập nhật tiến độ
             </Button>
           )}
-
           {showCompleteButton && (
             <Button
               className="gap-2 bg-green-600 hover:bg-green-700"
@@ -341,7 +341,7 @@ export default function ProductionDetailPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">
-                    ID lệnh bình bài
+                    ID mã bài
                   </Label>
                   <p className="font-medium">
                     {production.proofingOrderId ?? "N/A"}
@@ -452,7 +452,7 @@ export default function ProductionDetailPage() {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground flex items-center gap-1">
                       <Layers className="h-3 w-3" />
-                      Vật liệu
+                      Chất liệu
                     </Label>
                     <p className="text-sm font-medium">
                       {proofingOrder.materialType?.name || "N/A"}

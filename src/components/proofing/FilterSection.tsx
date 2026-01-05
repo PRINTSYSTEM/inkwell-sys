@@ -101,7 +101,7 @@ export function FilterSection({
               className="gap-2"
               disabled={!!currentMaterialTypeId}
             >
-              Vật liệu
+              Chất liệu
               {effectiveMaterialTypes.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
                   {effectiveMaterialTypes.length}

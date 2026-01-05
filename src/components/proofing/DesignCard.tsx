@@ -178,7 +178,7 @@ export function DesignCard({
           <div className="flex items-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs border border-blue-200 dark:border-blue-800">
             <FileText className="h-3 w-3 text-blue-600 mt-0.5 shrink-0" />
             <span className="text-blue-800 dark:text-blue-200 font-medium">
-              Quy trình:{" "}
+              Quy trình sản xuất:{" "}
               {processClassificationLabels[
                 design.processClassificationOptionName
               ] || design.processClassificationOptionName}

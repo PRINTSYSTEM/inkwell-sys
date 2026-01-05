@@ -196,9 +196,9 @@ export default function ProofingOrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Lệnh bình bài</h1>
+          <h1 className="text-2xl font-bold text-foreground">mã bài</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Quản lý và theo dõi các lệnh bình bài
+            Quản lý và theo dõi các mã bài
           </p>
         </div>
         <Button
@@ -210,7 +210,7 @@ export default function ProofingOrdersPage() {
                 navigate(`/proofing/${result.id}`);
               } else {
                 toast.error("Lỗi", {
-                  description: "Không thể lấy ID của lệnh bình bài",
+                  description: "Không thể lấy ID của mã bài",
                 });
               }
             } catch (error) {
@@ -248,7 +248,7 @@ export default function ProofingOrdersPage() {
           <CardContent className="p-0">
             <div className="text-lg font-bold">{stats.totalOrders}</div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              Tất cả lệnh bình bài
+              Tất cả mã bài
             </p>
           </CardContent>
         </Card>
@@ -347,7 +347,7 @@ export default function ProofingOrdersPage() {
               <div className="text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  Đang tải lệnh bình bài...
+                  Đang tải mã bài...
                 </p>
               </div>
             </div>
@@ -355,9 +355,7 @@ export default function ProofingOrdersPage() {
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <FileText className="h-10 w-10 text-red-500 mx-auto mb-2" />
-                <p className="text-sm text-red-600">
-                  Không thể tải lệnh bình bài
-                </p>
+                <p className="text-sm text-red-600">Không thể tải mã bài</p>
               </div>
             </div>
           ) : filteredProofingOrders.length === 0 ? (
@@ -366,8 +364,8 @@ export default function ProofingOrdersPage() {
                 <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-50" />
                 <p className="text-sm text-muted-foreground">
                   {searchTerm || selectedStatus !== "all"
-                    ? "Không tìm thấy lệnh bình bài phù hợp"
-                    : "Chưa có lệnh bình bài nào"}
+                    ? "Không tìm thấy mã bài phù hợp"
+                    : "Chưa có mã bài nào"}
                 </p>
               </div>
             </div>

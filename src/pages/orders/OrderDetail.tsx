@@ -6,7 +6,7 @@ import React, {
   useRef,
 } from "react";
 import { format } from "date-fns";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   User,
@@ -121,6 +121,7 @@ export default function OrderDetailPage() {
   const orderId = Number.parseInt(id || "0", 10);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const role = user?.role as UserRole;
 
@@ -171,6 +172,12 @@ export default function OrderDetailPage() {
     role === ROLE.ADMIN;
 
   const canUpdateOrderForAccounting =
+    role === ROLE.ACCOUNTING ||
+    role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.ADMIN;
+
+  // Can view payment step in flow diagram: ACCOUNTING, ACCOUNTING_LEAD, or ADMIN
+  const canViewPayment =
     role === ROLE.ACCOUNTING ||
     role === ROLE.ACCOUNTING_LEAD ||
     role === ROLE.ADMIN;
@@ -638,6 +645,9 @@ export default function OrderDetailPage() {
               <h1 className="text-2xl font-bold tracking-tight">
                 {order.code}
               </h1>
+              <span className="text-sm text-muted-foreground">
+                Trạng thái hiện tại:
+              </span>{" "}
               <StatusBadge
                 status={order.status}
                 label={orderStatusLabels[order.status || ""] || "N/A"}
@@ -766,6 +776,7 @@ export default function OrderDetailPage() {
             currentStatus={order.status}
             customerType={customerType}
             hasDeposit={hasDeposit}
+            canViewPayment={canViewPayment}
           />
         </CardContent>
       </Card>
@@ -824,8 +835,23 @@ export default function OrderDetailPage() {
                     return (
                       <div
                         key={orderDetail.id}
-                        className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+                        className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative"
                       >
+                        {/* Chi tiết button - góc phải trên cùng */}
+                        {design?.id && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="absolute top-2 right-2 h-7 px-2 text-xs z-10 bg-background/80 backdrop-blur-sm hover:bg-background"
+                            onClick={() =>
+                              navigate(`/design/detail/${design.id}`)
+                            }
+                            title="Xem chi tiết thiết kế"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            Chi tiết
+                          </Button>
+                        )}
                         <div className="flex flex-col sm:flex-row">
                           {/* Thumbnail */}
                           <div className="sm:w-32 h-32 sm:h-auto bg-muted flex-shrink-0">
@@ -861,6 +887,9 @@ export default function OrderDetailPage() {
                                   <p className="font-semibold text-primary hover:underline">
                                     {design?.code || "—"}
                                   </p>
+                                  <span className="text-sm text-muted-foreground">
+                                    Trạng thái hiện tại:
+                                  </span>{" "}
                                   <StatusBadge
                                     status={statusValue || ""}
                                     label={statusLabel}
@@ -998,7 +1027,7 @@ export default function OrderDetailPage() {
                               {design?.laminationType && (
                                 <div>
                                   <p className="text-muted-foreground text-xs">
-                                    Cán màn
+                                    Cán màng
                                   </p>
                                   <p className="font-medium">
                                     {laminationTypeLabels[
@@ -1026,7 +1055,7 @@ export default function OrderDetailPage() {
                               {design?.processClassification && (
                                 <div>
                                   <p className="text-muted-foreground text-xs">
-                                    Quy trình SX
+                                    Quy trình sản xuất
                                   </p>
                                   <p className="font-medium">
                                     {processClassificationLabels[
@@ -1198,7 +1227,7 @@ export default function OrderDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Package className="w-4 h-4 text-primary" />
-                Lệnh bình bài
+                mã bài
                 {relatedProofing.length > 0 && (
                   <Badge variant="secondary" className="ml-1">
                     {relatedProofing.length}
@@ -1245,6 +1274,9 @@ export default function OrderDetailPage() {
                                     )}
                                   </div>
                                 </div>
+                                <span className="text-sm text-muted-foreground">
+                                  Trạng thái hiện tại:
+                                </span>{" "}
                                 <StatusBadge
                                   status={proof.status}
                                   label={
@@ -1387,7 +1419,7 @@ export default function OrderDetailPage() {
                     <Package className="w-8 h-8 text-muted-foreground/50" />
                   </div>
                   <p className="text-muted-foreground font-medium">
-                    Chưa có lệnh bình bài nào
+                    Chưa có mã bài nào
                   </p>
                   <p className="text-sm text-muted-foreground/80 mt-1">
                     Tạo mã bài từ các thiết kế trong đơn hàng
@@ -1422,6 +1454,9 @@ export default function OrderDetailPage() {
                         <div className="space-y-2 flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold">SP-{prod.id}</span>
+                            <span className="text-sm text-muted-foreground">
+                              Trạng thái hiện tại:
+                            </span>{" "}
                             <StatusBadge
                               status={prod.status}
                               label={

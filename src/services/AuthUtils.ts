@@ -58,7 +58,6 @@ export class AuthUtils {
 
   /** Nhóm route base theo loại role */
   private static readonly ADMIN_ROUTES = [
-    "/dashboard",
     "/users",
     "/users/manage",
     "/settings",
@@ -68,18 +67,13 @@ export class AuthUtils {
   ] as const;
 
   private static readonly MANAGER_ROUTES = [
-    "/dashboard",
     "/reports",
     "/team",
     "/profile",
     "/projects",
   ] as const;
 
-  private static readonly STAFF_ROUTES = [
-    "/dashboard",
-    "/profile",
-    "/projects",
-  ] as const;
+  private static readonly STAFF_ROUTES = ["/profile", "/projects"] as const;
 
   /** Map tất cả UserRole → list routes được phép */
   private static readonly ROLE_ROUTES: Record<UserRole, readonly string[]> = {
@@ -102,6 +96,7 @@ export class AuthUtils {
     // ===== Warehouse =====
     warehouse: this.STAFF_ROUTES,
     warehouse_lead: this.STAFF_ROUTES,
+    proofer: this.STAFF_ROUTES,
 
     // ===== HR =====
     hr: this.STAFF_ROUTES,

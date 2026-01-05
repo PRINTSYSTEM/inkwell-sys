@@ -203,7 +203,7 @@ export const useUploadDesignFile = () => {
       });
 
       toast.success("Thành công", {
-        description: "Đã upload file thiết kế",
+        description: "Đã tải lên file thiết kế",
       });
 
       return result;
@@ -216,7 +216,7 @@ export const useUploadDesignFile = () => {
         description:
           error?.response?.data?.message ||
           error?.message ||
-          "Không thể upload file thiết kế",
+          "Không thể tải lên file thiết kế",
       });
       throw err;
     }
@@ -288,7 +288,6 @@ export const useUploadDesignImage = () => {
 
 // POST /api/designs/{id}/generate-excel
 export const useGenerateDesignExcel = () => {
-
   // Không cần trả data ra ngoài, chỉ cần download file
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {

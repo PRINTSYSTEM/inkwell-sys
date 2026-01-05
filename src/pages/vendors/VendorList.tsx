@@ -54,7 +54,7 @@ export default function VendorListPage() {
         <div>
           <h1 className="text-3xl font-bold">Quản lý nhà cung cấp</h1>
           <p className="text-muted-foreground mt-1">
-            Quản lý danh sách nhà cung cấp vật liệu
+            Quản lý danh sách nhà cung cấp Chất liệu
           </p>
         </div>
         <Button onClick={() => navigate("/vendors/create")}>

@@ -345,7 +345,7 @@ export const useUploadProofingFile = () => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
 
       toast.success("Thành công", {
-        description: "Đã upload file bình bài",
+        description: "Đã tải lên file bình bài",
       });
 
       return result;
@@ -355,7 +355,7 @@ export const useUploadProofingFile = () => {
         description:
           error?.response?.data?.message ||
           error?.message ||
-          "Không thể upload file bình bài",
+          "Không thể tải lên file bình bài",
       });
       throw err;
     }
@@ -851,7 +851,7 @@ export const useRecordPlateExport = () => {
   });
 };
 
-// Record die export - API expects: dieIds (array), sentAt, estimatedReceiveAt, receivedAt, notes
+// Record die export - API expects: dieIds (array), notes
 export const useRecordDieExportWithFile = () => {
   const queryClient = useQueryClient();
 
@@ -860,24 +860,15 @@ export const useRecordDieExportWithFile = () => {
       id,
       dieIds,
       notes,
-      sentAt,
-      estimatedReceiveAt,
-      receivedAt,
     }: {
       id: number;
       dieIds: number[];
       notes?: string | null;
-      sentAt?: string | null;
-      estimatedReceiveAt?: string | null;
-      receivedAt?: string | null;
     }) => {
       // Build request payload according to RecordDieExportRequest schema
       const requestPayload: RecordDieExportRequest = {
         dieIds,
-        sentAt: sentAt ?? null,
-        estimatedReceiveAt: estimatedReceiveAt ?? null,
-        receivedAt: receivedAt ?? null,
-        notes: notes ?? null,
+        notes: notes || undefined,
       };
 
       // Validate request payload against schema
@@ -947,7 +938,7 @@ export const useHandToProduction = () => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       queryClient.invalidateQueries({ queryKey: ["proofing-order", id] });
       toast.success("Bàn giao sản xuất thành công", {
-        description: "Lệnh bình bài đã được chuyển sang bộ phận sản xuất.",
+        description: "mã bài đã được chuyển sang bộ phận sản xuất.",
       });
     },
     onError: (error: ApiError) => {

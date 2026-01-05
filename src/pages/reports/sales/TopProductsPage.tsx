@@ -45,9 +45,7 @@ export default function TopProductsPage() {
   } = useTopProducts({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    fromDate: dateRange?.from
-      ? dateRange.from.toISOString()
-      : undefined,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     search: searchQuery || undefined,
   });
@@ -56,10 +54,7 @@ export default function TopProductsPage() {
     <>
       <Helmet>
         <title>Sản phẩm bán chạy | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Danh sách sản phẩm bán chạy nhất"
-        />
+        <meta name="description" content="Danh sách sản phẩm bán chạy nhất" />
       </Helmet>
 
       <div className="space-y-6">
@@ -122,7 +117,7 @@ export default function TopProductsPage() {
                 <TableHead className="w-[60px]">#</TableHead>
                 <TableHead className="w-[140px]">Mã thiết kế</TableHead>
                 <TableHead>Tên thiết kế</TableHead>
-                <TableHead className="w-[180px]">Vật liệu</TableHead>
+                <TableHead className="w-[180px]">Chất liệu</TableHead>
                 <TableHead className="text-right">Số lượng bán</TableHead>
                 <TableHead className="text-right">Doanh thu</TableHead>
                 <TableHead className="text-right">Số đơn hàng</TableHead>
@@ -162,7 +157,9 @@ export default function TopProductsPage() {
                       {item.designName || "—"}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{item.materialTypeName || "—"}</div>
+                      <div className="text-sm">
+                        {item.materialTypeName || "—"}
+                      </div>
                       {item.materialTypeCode && (
                         <div className="text-xs text-muted-foreground">
                           {item.materialTypeCode}
@@ -186,13 +183,9 @@ export default function TopProductsPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       {index < 3 ? (
-                        <Badge variant="default">
-                          Top {index + 1}
-                        </Badge>
+                        <Badge variant="default">Top {index + 1}</Badge>
                       ) : (
-                        <Badge variant="secondary">
-                          #{index + 1}
-                        </Badge>
+                        <Badge variant="secondary">#{index + 1}</Badge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -225,7 +218,9 @@ export default function TopProductsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setCurrentPage((p) => Math.min(productsData.totalPages, p + 1))
+                  setCurrentPage((p) =>
+                    Math.min(productsData.totalPages, p + 1)
+                  )
                 }
                 disabled={currentPage === productsData.totalPages || isLoading}
               >
@@ -238,4 +233,3 @@ export default function TopProductsPage() {
     </>
   );
 }
-

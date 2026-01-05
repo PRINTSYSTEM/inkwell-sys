@@ -687,7 +687,7 @@ export default function ProductionListPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Tìm kiếm theo mã, vật liệu, người tạo, thiết kế..."
+                    placeholder="Tìm kiếm theo mã, Chất liệu, người tạo, thiết kế..."
                     className="pl-10"
                     value={proofingSearchTerm}
                     onChange={(e) => setProofingSearchTerm(e.target.value)}
@@ -726,7 +726,7 @@ export default function ProductionListPage() {
                         <TableRow>
                           <TableHead className="w-12"></TableHead>
                           <TableHead>Mã bình bài</TableHead>
-                          <TableHead>Vật liệu</TableHead>
+                          <TableHead>Chất liệu</TableHead>
                           <TableHead>Số lượng</TableHead>
                           <TableHead>Người tạo</TableHead>
                           <TableHead>Ngày tạo</TableHead>
@@ -822,7 +822,7 @@ export default function ProductionListPage() {
                       <div>
                         <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
                           <Layers className="h-3 w-3" />
-                          Vật liệu
+                          Chất liệu
                         </Label>
                         <p className="text-sm font-medium">
                           {selectedProofingOrder.materialType?.name || "N/A"}

@@ -142,7 +142,7 @@ export default function StockInListPage() {
           <div>
             <h1 className="text-3xl font-bold">Quản lý nhập kho</h1>
             <p className="text-muted-foreground mt-1">
-              Quản lý các phiếu nhập kho vật liệu
+              Quản lý các phiếu nhập kho Chất liệu
             </p>
           </div>
           <Button onClick={() => navigate("/stock/stock-ins/create")}>
@@ -224,179 +224,183 @@ export default function StockInListPage() {
               </Button>
             </div>
           </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8">Đang tải...</div>
-          ) : stockIns.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Không có phiếu nhập kho nào
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-[140px]">Số phiếu</TableHead>
-                    <TableHead className="w-[120px]">Ngày</TableHead>
-                    <TableHead>Nhà cung cấp/Nguồn nhập</TableHead>
-                    <TableHead className="w-[120px]">Kho</TableHead>
-                    <TableHead className="text-right">Tổng SL</TableHead>
-                    <TableHead className="text-right">Tổng giá trị</TableHead>
-                    <TableHead className="text-center">Trạng thái</TableHead>
-                    <TableHead className="w-[60px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stockIns.map((stockIn) => (
-                    <TableRow
-                      key={stockIn.id}
-                      className="group cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleViewDetails(stockIn.id)}
-                    >
-                      <TableCell className="font-medium font-mono text-sm">
-                        {stockIn.code || `PNK-${stockIn.id}`}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {stockIn.stockInDate
-                          ? formatDate(stockIn.stockInDate)
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium text-sm">
-                            {stockIn.supplier?.name || stockIn.vendorName || "—"}
-                          </div>
-                          {stockIn.type && (
-                            <div className="text-xs text-muted-foreground">
-                              {stockIn.type === "purchase"
-                                ? "Mua hàng"
-                                : stockIn.type === "return"
-                                  ? "Trả hàng"
-                                  : stockIn.type === "adjustment"
-                                    ? "Điều chỉnh"
-                                    : stockIn.type}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {stockIn.warehouse || stockIn.warehouseName || "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {stockIn.totalQuantity
-                          ? stockIn.totalQuantity.toLocaleString("vi-VN")
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {stockIn.totalValue
-                          ? formatCurrency(stockIn.totalValue)
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getStatusBadge(stockIn.status)}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewDetails(stockIn.id);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                            {stockIn.status !== "completed" &&
-                              stockIn.status !== "cancelled" && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(
-                                        `/stock/stock-ins/${stockIn.id}/edit`
-                                      );
-                                    }}
-                                  >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Chỉnh sửa
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleComplete(stockIn.id);
-                                    }}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Hoàn thành
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCancel(stockIn.id);
-                                    }}
-                                    className="text-destructive"
-                                  >
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Hủy
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDelete(stockIn.id);
-                                    }}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Xóa
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-muted-foreground">
-                  Trang {page} / {totalPages}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    Trước
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                  >
-                    Sau
-                  </Button>
-                </div>
+          <CardContent>
+            {isLoading ? (
+              <div className="text-center py-8">Đang tải...</div>
+            ) : stockIns.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Không có phiếu nhập kho nào
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[140px]">Số phiếu</TableHead>
+                      <TableHead className="w-[120px]">Ngày</TableHead>
+                      <TableHead>Nhà cung cấp/Nguồn nhập</TableHead>
+                      <TableHead className="w-[120px]">Kho</TableHead>
+                      <TableHead className="text-right">Tổng SL</TableHead>
+                      <TableHead className="text-right">Tổng giá trị</TableHead>
+                      <TableHead className="text-center">Trạng thái</TableHead>
+                      <TableHead className="w-[60px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stockIns.map((stockIn) => (
+                      <TableRow
+                        key={stockIn.id}
+                        className="group cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleViewDetails(stockIn.id)}
+                      >
+                        <TableCell className="font-medium font-mono text-sm">
+                          {stockIn.code || `PNK-${stockIn.id}`}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {stockIn.stockInDate
+                            ? formatDate(stockIn.stockInDate)
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="font-medium text-sm">
+                              {stockIn.supplier?.name ||
+                                stockIn.vendorName ||
+                                "—"}
+                            </div>
+                            {stockIn.type && (
+                              <div className="text-xs text-muted-foreground">
+                                {stockIn.type === "purchase"
+                                  ? "Mua hàng"
+                                  : stockIn.type === "return"
+                                    ? "Trả hàng"
+                                    : stockIn.type === "adjustment"
+                                      ? "Điều chỉnh"
+                                      : stockIn.type}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {stockIn.warehouse || stockIn.warehouseName || "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {stockIn.totalQuantity
+                            ? stockIn.totalQuantity.toLocaleString("vi-VN")
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {stockIn.totalValue
+                            ? formatCurrency(stockIn.totalValue)
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {getStatusBadge(stockIn.status)}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewDetails(stockIn.id);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Xem chi tiết
+                              </DropdownMenuItem>
+                              {stockIn.status !== "completed" &&
+                                stockIn.status !== "cancelled" && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(
+                                          `/stock/stock-ins/${stockIn.id}/edit`
+                                        );
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Chỉnh sửa
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleComplete(stockIn.id);
+                                      }}
+                                    >
+                                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                                      Hoàn thành
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancel(stockIn.id);
+                                      }}
+                                      className="text-destructive"
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Hủy
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete(stockIn.id);
+                                      }}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Xóa
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-muted-foreground">
+                    Trang {page} / {totalPages}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      Trước
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={page === totalPages}
+                    >
+                      Sau
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </>
   );

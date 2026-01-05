@@ -51,7 +51,7 @@ export default function MaterialTypeDetail() {
     const loadMaterialType = async () => {
       if (!id) {
         toast.error("Lỗi", {
-          description: "ID loại vật liệu không hợp lệ",
+          description: "ID loại Chất liệu không hợp lệ",
         });
         navigate("/material-types");
         return;
@@ -62,7 +62,7 @@ export default function MaterialTypeDetail() {
         setMaterialType(materialTypeData);
       } catch (error) {
         toast.error("Lỗi", {
-          description: "Không thể tải thông tin loại vật liệu",
+          description: "Không thể tải thông tin loại Chất liệu",
         });
         navigate("/material-types");
       } finally {
@@ -84,7 +84,7 @@ export default function MaterialTypeDetail() {
       navigate("/material-types");
     } catch (error) {
       toast.error("Lỗi", {
-        description: "Không thể xóa loại vật liệu",
+        description: "Không thể xóa loại Chất liệu",
       });
     } finally {
       setDeleting(false);
@@ -99,7 +99,7 @@ export default function MaterialTypeDetail() {
       data: materialType,
     });
     toast.success("Thành công", {
-      description: "Đã cập nhật loại vật liệu",
+      description: "Đã cập nhật loại Chất liệu",
     });
     navigate("/material-types");
   };
@@ -147,7 +147,7 @@ export default function MaterialTypeDetail() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Quay lại
           </Button>
-          <h1 className="text-2xl font-bold">Chi tiết loại vật liệu</h1>
+          <h1 className="text-2xl font-bold">Chi tiết loại Chất liệu</h1>
         </div>
 
         <div className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export default function MaterialTypeDetail() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500">
-                    Mã loại vật liệu
+                    Mã loại Chất liệu
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">
@@ -221,7 +221,7 @@ export default function MaterialTypeDetail() {
 
               <div>
                 <p className="text-sm font-medium text-gray-500">
-                  Tên loại vật liệu
+                  Tên loại Chất liệu
                 </p>
                 <p className="text-lg font-semibold mt-1">
                   {materialType.name}
@@ -299,8 +299,8 @@ export default function MaterialTypeDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có chắc chắn muốn xóa loại vật liệu "{materialType.name}" (mã:{" "}
-              {materialType.code})?
+              Bạn có chắc chắn muốn xóa loại Chất liệu "{materialType.name}"
+              (mã: {materialType.code})?
               <br />
               <span className="font-medium text-red-600">
                 Hành động này không thể hoàn tác.

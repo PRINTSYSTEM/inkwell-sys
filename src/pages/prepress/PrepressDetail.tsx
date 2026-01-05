@@ -596,7 +596,7 @@ export default function ProofingOrderDetailPage() {
       if (!hasValidQuantities) {
         toast.error("Lỗi", {
           description:
-            "Vui lòng nhập số lượng lấy cho ít nhất một thiết kế (lớn hơn 0)",
+            "Vui lòng nhập số lượng lấy cho ít nhất một mã hàng (lớn hơn 0)",
         });
         return;
       }
@@ -604,7 +604,7 @@ export default function ProofingOrderDetailPage() {
       // Validate materialTypeId
       if (!currentMaterialTypeId || selectedDesigns.length === 0) {
         toast.error("Lỗi", {
-          description: "Vui lòng chọn thiết kế để thêm vào bình bài",
+          description: "Vui lòng chọn mã hàng để thêm vào bình bài",
         });
         return;
       }
@@ -666,7 +666,7 @@ export default function ProofingOrderDetailPage() {
     if (!order.proofingFileUrl) {
       toast.error("Lỗi", {
         description:
-          "Vui lòng upload file bình bài trước khi chuyển trạng thái",
+          "Vui lòng tải lên file bình bài trước khi chuyển trạng thái",
       });
       setIsConfirmStatusDialogOpen(false);
       return;
@@ -817,8 +817,7 @@ export default function ProofingOrderDetailPage() {
       return {
         nextStatus: "completed",
         buttonLabel: "Hoàn thành",
-        confirmMessage:
-          "Bạn có chắc chắn muốn đánh dấu lệnh bình bài là hoàn thành?",
+        confirmMessage: "Bạn có chắc chắn muốn đánh dấu mã bài là hoàn thành?",
       };
     }
 
@@ -827,7 +826,7 @@ export default function ProofingOrderDetailPage() {
       return {
         nextStatus: "paused",
         buttonLabel: "Tạm dừng",
-        confirmMessage: "Bạn có chắc chắn muốn tạm dừng lệnh bình bài này?",
+        confirmMessage: "Bạn có chắc chắn muốn tạm dừng mã bài này?",
       };
     }
 
@@ -836,7 +835,7 @@ export default function ProofingOrderDetailPage() {
       return {
         nextStatus: "completed",
         buttonLabel: "Tiếp tục",
-        confirmMessage: "Bạn có chắc chắn muốn tiếp tục lệnh bình bài này?",
+        confirmMessage: "Bạn có chắc chắn muốn tiếp tục mã bài này?",
       };
     }
 
@@ -1007,7 +1006,7 @@ export default function ProofingOrderDetailPage() {
     } catch (error) {
       console.error("Failed to upload proofing file:", error);
       toast.error("Lỗi", {
-        description: "Không thể upload file",
+        description: "Không thể tải lên file",
       });
     }
   };
@@ -1020,7 +1019,7 @@ export default function ProofingOrderDetailPage() {
       setUploadImage(null);
     } catch (error) {
       toast.error("Lỗi", {
-        description: "Không thể upload ảnh",
+        description: "Không thể tải lên ảnh",
       });
     }
   };
@@ -1042,7 +1041,7 @@ export default function ProofingOrderDetailPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-lg font-medium">Không tìm thấy lệnh bình bài</p>
+            <p className="text-lg font-medium">Không tìm thấy mã bài</p>
             <Button
               onClick={() => navigate("/proofing-orders")}
               className="mt-4"
@@ -1072,13 +1071,14 @@ export default function ProofingOrderDetailPage() {
           </Button>
           <div>
             <h1 className="text-xl font-semibold">{order.code}</h1>
-            <p className="text-xs text-muted-foreground">
-              Chi tiết lệnh bình bài
-            </p>
+            <p className="text-xs text-muted-foreground">Chi tiết mã bài</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Trạng thái hiện tại:
+          </span>{" "}
           <StatusBadge
             status={order.status}
             label={proofingStatusLabels[order.status]}
@@ -1103,7 +1103,7 @@ export default function ProofingOrderDetailPage() {
               disabled={!order.proofingFileUrl}
               title={
                 !order.proofingFileUrl
-                  ? "Vui lòng upload file bình bài trước"
+                  ? "Vui lòng tải lên file bình bài trước"
                   : "Chuyển sang chờ sản xuất"
               }
             >
@@ -1118,10 +1118,9 @@ export default function ProofingOrderDetailPage() {
               onClick={() => setIsUploadDialogOpen(true)}
             >
               <Upload className="h-3.5 w-3.5" />
-              {order.proofingFileUrl ? "Thay đổi file " : "Upload file"}
+              {order.proofingFileUrl ? "Thay đổi file " : "Tải lên file"}
             </Button>
           )}
-
           {order.isPlateExported && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <AlertCircle className="h-3.5 w-3.5 text-yellow-600" />
@@ -1170,7 +1169,7 @@ export default function ProofingOrderDetailPage() {
                 >
                   {isLoadingDesigns ? (
                     <div className="flex flex-col gap-2 text-sm font-medium text-muted-foreground">
-                      <span>Đang tải danh sách thiết kế...</span>
+                      <span>Đang tải danh sách mã hàng...</span>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                         {Array.from({ length: 6 }).map((_, i) => (
                           <DesignCardSkeleton key={i} />
@@ -1179,7 +1178,7 @@ export default function ProofingOrderDetailPage() {
                     </div>
                   ) : paginatedDesigns.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center text-base font-semibold text-muted-foreground">
-                      Không có thiết kế nào phù hợp.
+                      Không có mã hàng nào phù hợp.
                     </div>
                   ) : groupByOrder && groupedByOrder ? (
                     <div className="space-y-6">
@@ -1203,7 +1202,7 @@ export default function ProofingOrderDetailPage() {
                               variant="secondary"
                               className="ml-auto text-sm font-semibold"
                             >
-                              {group.designs.length} thiết kế
+                              {group.designs.length} mã hàng
                             </Badge>
                           </div>
                           <DesignTable
@@ -1242,7 +1241,7 @@ export default function ProofingOrderDetailPage() {
                     <span className="font-bold text-foreground">
                       {totalCount}
                     </span>{" "}
-                    thiết kế
+                    mã hàng
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button
@@ -1303,8 +1302,8 @@ export default function ProofingOrderDetailPage() {
                   </p>
                   <p className="text-sm font-medium text-muted-foreground">
                     {selectedDesigns.length > 0
-                      ? `${selectedDesigns.length} thiết kế • ${selectedCount} đã nhập số lượng`
-                      : "Chọn thiết kế ở cột bên trái để thêm vào lệnh"}
+                      ? `${selectedDesigns.length} mã hàng • ${selectedCount} đã nhập số lượng`
+                      : "Chọn mã hàng ở cột bên trái để thêm vào lệnh"}
                   </p>
                 </div>
                 {materialTypeName && (
@@ -1316,9 +1315,9 @@ export default function ProofingOrderDetailPage() {
 
               {selectedDesigns.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center px-6 text-base font-semibold text-muted-foreground">
-                  Chưa có thiết kế nào được chọn.
+                  Chưa có mã hàng nào được chọn.
                   <br />
-                  Hãy click chọn thiết kế ở cột bên trái, hệ thống sẽ tự động
+                  Hãy click chọn mã hàng ở cột bên trái, hệ thống sẽ tự động
                   thêm vào bảng bên phải.
                 </div>
               ) : (
@@ -1333,7 +1332,7 @@ export default function ProofingOrderDetailPage() {
                               #
                             </TableHead>
                             <TableHead className="min-w-[200px] text-sm font-bold">
-                              Thiết kế
+                              mã hàng
                             </TableHead>
                             <TableHead className="w-32 text-sm font-bold">
                               Kích thước (mm)
@@ -1405,7 +1404,7 @@ export default function ProofingOrderDetailPage() {
 
                                   <div>
                                     <span className="text-muted-foreground">
-                                      Vật liệu:
+                                      Chất liệu:
                                     </span>
                                     <span className="ml-2">
                                       {design.materialTypeName}
@@ -1461,7 +1460,7 @@ export default function ProofingOrderDetailPage() {
                                   </div>
                                   <div>
                                     <span className="text-muted-foreground">
-                                      Nhân viên thiết kế:
+                                      Nhân viên mã hàng:
                                     </span>
                                     <span className="ml-2">
                                       {design.designerName || "—"}
@@ -1789,7 +1788,7 @@ export default function ProofingOrderDetailPage() {
                         <Textarea
                           id="notes"
                           className="min-h-[60px] text-sm resize-none"
-                          placeholder="Nhập ghi chú cho lệnh bình bài này (tùy chọn)..."
+                          placeholder="Nhập ghi chú cho mã bài này (tùy chọn)..."
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
                         />
@@ -1801,7 +1800,7 @@ export default function ProofingOrderDetailPage() {
                       <div>
                         {selectedCount > 0 && (
                           <span>
-                            {selectedCount}/{selectedDesigns.length} thiết kế đã
+                            {selectedCount}/{selectedDesigns.length} mã hàng đã
                             nhập số lượng • Tổng lấy{" "}
                             <span className="font-bold text-foreground">
                               {totalSelectedQuantity.toLocaleString()}
@@ -2299,9 +2298,9 @@ export default function ProofingOrderDetailPage() {
                                       : isUpdatingImage
                                         ? "Đang cập nhật ảnh..."
                                         : isUploadingFile
-                                          ? "Đang upload file..."
+                                          ? "Đang tải lên file..."
                                           : isUploadingImage
-                                            ? "Đang upload ảnh..."
+                                            ? "Đang tải lên ảnh..."
                                             : "Đang cập nhật..."}
                                   </>
                                 ) : (
@@ -2333,7 +2332,7 @@ export default function ProofingOrderDetailPage() {
                         onClick={() => setIsAddDesignDialogOpen(true)}
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        Thêm thiết kế
+                        Thêm mã hàng
                       </Button>
                     )}
                   </div>
@@ -2368,7 +2367,7 @@ export default function ProofingOrderDetailPage() {
                             Quy trình
                           </TableHead>
                           <TableHead className="h-9 px-2 text-[10px]">
-                            Cán màn
+                            Cán màng
                           </TableHead>
                           <TableHead className="h-9 px-2 text-right text-[10px]">
                             Thao tác
@@ -2405,7 +2404,7 @@ export default function ProofingOrderDetailPage() {
 
                                 <div>
                                   <span className="text-muted-foreground">
-                                    Vật liệu:
+                                    Chất liệu:
                                   </span>
                                   <span className="ml-2">
                                     {pod.design.materialType?.name || "—"}
@@ -2437,7 +2436,7 @@ export default function ProofingOrderDetailPage() {
 
                                 <div>
                                   <span className="text-muted-foreground">
-                                    Nhân viên thiết kế:
+                                    Nhân viên mã hàng:
                                   </span>
                                   <span className="ml-2">
                                     {pod.design.designer?.fullName || "—"}
@@ -2782,9 +2781,9 @@ export default function ProofingOrderDetailPage() {
                                     : isUpdatingImage
                                       ? "Đang cập nhật ảnh..."
                                       : isUploadingFile
-                                        ? "Đang upload file..."
+                                        ? "Đang tải lên file..."
                                         : isUploadingImage
-                                          ? "Đang upload ảnh..."
+                                          ? "Đang tải lên ảnh..."
                                           : "Đang cập nhật..."}
                                 </>
                               ) : (
@@ -3158,9 +3157,9 @@ export default function ProofingOrderDetailPage() {
                                     : isUpdatingImage
                                       ? "Đang cập nhật ảnh..."
                                       : isUploadingFile
-                                        ? "Đang upload file..."
+                                        ? "Đang tải lên file..."
                                         : isUploadingImage
-                                          ? "Đang upload ảnh..."
+                                          ? "Đang tải lên ảnh..."
                                           : "Đang cập nhật..."}
                                 </>
                               ) : (
@@ -3333,6 +3332,9 @@ export default function ProofingOrderDetailPage() {
                   <Label className="text-xs text-muted-foreground mb-1 block">
                     Từ
                   </Label>
+                  <span className="text-sm text-muted-foreground">
+                    Trạng thái hiện tại:
+                  </span>{" "}
                   <StatusBadge
                     status={order?.status || ""}
                     label={
@@ -3347,6 +3349,9 @@ export default function ProofingOrderDetailPage() {
                   <Label className="text-xs text-muted-foreground mb-1 block">
                     Sang
                   </Label>
+                  <span className="text-sm text-muted-foreground">
+                    Trạng thái mới:
+                  </span>{" "}
                   <StatusBadge
                     status="waiting_for_production"
                     label={
@@ -3358,8 +3363,8 @@ export default function ProofingOrderDetailPage() {
               </div>
               {!order?.proofingFileUrl && (
                 <p className="text-destructive text-sm font-medium mt-2">
-                  ⚠️ Lưu ý: Bạn chưa upload file bình bài. Vui lòng upload file
-                  trước khi chuyển trạng thái.
+                  ⚠️ Lưu ý: Bạn chưa tải lên file bình bài. Vui lòng tải lên
+                  file trước khi chuyển trạng thái.
                 </p>
               )}
             </DialogDescription>
@@ -3394,7 +3399,7 @@ export default function ProofingOrderDetailPage() {
       >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Upload file bình bài và ảnh</DialogTitle>
+            <DialogTitle>Tải lên file bình bài và ảnh</DialogTitle>
             <DialogDescription>
               Chọn 1 file bình bài (.pdf, .ai, .psd) và 1 file ảnh cùng lúc
             </DialogDescription>
@@ -3573,7 +3578,7 @@ export default function ProofingOrderDetailPage() {
               }
             >
               <Upload className="h-4 w-4 mr-2" />
-              Upload
+              Tải file lên
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3732,8 +3737,8 @@ export default function ProofingOrderDetailPage() {
           <DialogHeader>
             <DialogTitle>Hoàn thành và chuyển xuống sản xuất</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn đánh dấu lệnh bình bài là hoàn thành và
-              chuyển xuống sản xuất?
+              Bạn có chắc chắn muốn đánh dấu mã bài là hoàn thành và chuyển
+              xuống sản xuất?
             </DialogDescription>
           </DialogHeader>
 
@@ -3842,7 +3847,7 @@ export default function ProofingOrderDetailPage() {
           ) => {
             if (!order?.materialTypeId) {
               toast.error("Lỗi", {
-                description: "Không thể lấy thông tin vật liệu",
+                description: "Không thể lấy thông tin Chất liệu",
               });
               return;
             }

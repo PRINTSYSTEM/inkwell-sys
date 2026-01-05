@@ -361,7 +361,7 @@ export default function DesignersPage() {
                   {teamKpi.totalProofingOrdersCompleted ?? 0}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Lệnh bình bài hoàn thành
+                  mã bài hoàn thành
                 </p>
               </div>
               <div className="text-center p-2.5 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">

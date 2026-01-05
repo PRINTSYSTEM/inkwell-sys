@@ -179,7 +179,7 @@ export function AddDesignToProofingDialog({
 
       if (invalidDesigns.length > 0) {
         toast.error("Lỗi", {
-          description: `Số lượng lấy vượt quá số lượng còn lại chưa bình bài cho ${invalidDesigns.length} thiết kế. Vui lòng kiểm tra lại.`,
+          description: `Số lượng lấy vượt quá số lượng còn lại chưa bình bài cho ${invalidDesigns.length} mã hàng. Vui lòng kiểm tra lại.`,
         });
         return;
       }
@@ -201,7 +201,7 @@ export function AddDesignToProofingDialog({
       if (orderDetailItems.length === 0) {
         toast.error("Lỗi", {
           description:
-            "Vui lòng nhập số lượng lấy cho ít nhất một thiết kế (lớn hơn 0)",
+            "Vui lòng nhập số lượng lấy cho ít nhất một mã hàng (lớn hơn 0)",
         });
         return;
       }
@@ -259,7 +259,8 @@ export function AddDesignToProofingDialog({
                   Thêm Design vào Bình Bài
                 </DialogTitle>
                 <DialogDescription className="text-xs mt-0.5">
-                  {availableDesigns.length} thiết kế có sẵn • {selectedCount} đã nhập số lượng
+                  {availableDesigns.length} mã hàng có sẵn • {selectedCount} đã
+                  nhập số lượng
                 </DialogDescription>
               </div>
             </div>
@@ -278,7 +279,10 @@ export function AddDesignToProofingDialog({
           <div className="grid grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg border">
             {/* Proofing Sheet Quantity */}
             <div className="space-y-1.5">
-              <Label htmlFor="proofingSheetQuantity" className="text-sm font-bold">
+              <Label
+                htmlFor="proofingSheetQuantity"
+                className="text-sm font-bold"
+              >
                 Số lượng giấy in
                 <span className="text-destructive"> *</span>
               </Label>
@@ -391,13 +395,15 @@ export function AddDesignToProofingDialog({
                   paperSizes?.find((ps) => ps.id.toString() === paperSizeId) ? (
                     <span>
                       {
-                        paperSizes.find((ps) => ps.id.toString() === paperSizeId)
-                          ?.width
+                        paperSizes.find(
+                          (ps) => ps.id.toString() === paperSizeId
+                        )?.width
                       }{" "}
                       ×{" "}
                       {
-                        paperSizes.find((ps) => ps.id.toString() === paperSizeId)
-                          ?.height
+                        paperSizes.find(
+                          (ps) => ps.id.toString() === paperSizeId
+                        )?.height
                       }
                     </span>
                   ) : (
@@ -417,7 +423,7 @@ export function AddDesignToProofingDialog({
             <Textarea
               id="notes"
               className="min-h-[60px] text-sm resize-none"
-              placeholder="Nhập ghi chú cho lệnh bình bài này (tùy chọn)..."
+              placeholder="Nhập ghi chú cho mã bài này (tùy chọn)..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
@@ -427,7 +433,7 @@ export function AddDesignToProofingDialog({
             <TableHeader className="sticky top-0 bg-muted/50 z-10">
               <TableRow>
                 <TableHead className="w-12 text-center">#</TableHead>
-                <TableHead className="min-w-[200px]">Thiết kế</TableHead>
+                <TableHead className="min-w-[200px]">mã hàng</TableHead>
                 <TableHead className="w-24 text-right">Đặt hàng</TableHead>
                 <TableHead className="w-24 text-right">Còn lại</TableHead>
                 <TableHead className="w-48">Số lượng lấy</TableHead>
@@ -557,9 +563,17 @@ export function AddDesignToProofingDialog({
           <div className="flex-1 text-xs text-muted-foreground">
             {selectedCount > 0 && (
               <span>
-                {selectedCount}/{availableDesigns.length} thiết kế đã nhập số lượng
+                {selectedCount}/{availableDesigns.length} mã hàng đã nhập số
+                lượng
                 {proofingSheetQuantity >= 1 && (
-                  <> • Tổng lấy {Object.values(designQuantities).reduce((sum, qty) => sum + qty, 0).toLocaleString()} sp</>
+                  <>
+                    {" "}
+                    • Tổng lấy{" "}
+                    {Object.values(designQuantities)
+                      .reduce((sum, qty) => sum + qty, 0)
+                      .toLocaleString()}{" "}
+                    sp
+                  </>
                 )}
               </span>
             )}
@@ -576,9 +590,7 @@ export function AddDesignToProofingDialog({
           <Button
             onClick={handleSubmit}
             disabled={
-              isSubmitting ||
-              !hasValidQuantities ||
-              proofingSheetQuantity < 1
+              isSubmitting || !hasValidQuantities || proofingSheetQuantity < 1
             }
             size="sm"
             className="h-9 gap-1.5 min-w-[120px]"
@@ -600,4 +612,3 @@ export function AddDesignToProofingDialog({
     </Dialog>
   );
 }
-

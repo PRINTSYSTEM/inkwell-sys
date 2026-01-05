@@ -60,7 +60,7 @@ export default function Login() {
   const getRedirectPath = (userRole?: string | null): string => {
     if (!userRole) {
       // Fallback to dashboard if no role
-      return ROUTE_PATHS.DASHBOARD;
+      return ROUTE_PATHS.AUTH.LOGIN;
     }
 
     // Check if role has specific redirect path in REDIRECT_ROLE
@@ -69,7 +69,7 @@ export default function Login() {
     }
 
     // Fallback to dashboard
-    return ROUTE_PATHS.DASHBOARD;
+    return ROUTE_PATHS.AUTH.LOGIN;
   };
 
   const handleQuickLogin = async (username: string, password: string) => {

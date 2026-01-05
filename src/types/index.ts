@@ -253,11 +253,10 @@ export interface User extends Omit<UserResponse, "id" | "role" | "isActive"> {
  * Customer interface - extends CustomerResponse from schema with additional UI-specific fields
  * Base type from schema: CustomerResponse
  */
-export interface Customer
-  extends Omit<
-    CustomerResponse,
-    "id" | "createdAt" | "updatedAt" | "createdBy"
-  > {
+export interface Customer extends Omit<
+  CustomerResponse,
+  "id" | "createdAt" | "updatedAt" | "createdBy"
+> {
   id: string; // Convert from number to string for UI compatibility
   code: string;
   companyName?: string; // Tên công ty (optional)
@@ -274,10 +273,7 @@ export interface Customer
 }
 
 // Re-export schema types for convenience
-export type {
-  CustomerResponse,
-  CustomerSummaryResponse,
-} from "@/Schema";
+export type { CustomerResponse, CustomerSummaryResponse } from "@/Schema";
 
 // Design item trong đơn hàng - dành cho giai đoạn thiết kế
 export interface OrderDesign {
@@ -315,11 +311,10 @@ export interface OrderDesign {
  * Order interface - extends OrderResponse from schema with additional UI-specific fields
  * Base type from schema: OrderResponse
  */
-export interface Order
-  extends Omit<
-    OrderResponse,
-    "id" | "customerId" | "createdAt" | "updatedAt" | "orderDetails"
-  > {
+export interface Order extends Omit<
+  OrderResponse,
+  "id" | "customerId" | "createdAt" | "updatedAt" | "orderDetails"
+> {
   id: string; // Convert from number to string for UI compatibility
   orderNumber: string;
   customerId: string;
@@ -370,7 +365,7 @@ export type { OrderResponse, OrderDetailResponse } from "@/Schema";
 
 export interface PrepressOrder {
   id: string;
-  prepressOrderNumber: string; // Mã lệnh bình bài (VD: PP001)
+  prepressOrderNumber: string; // Mã mã bài (VD: PP001)
   orderIds: string[]; // Danh sách ID đơn hàng
   orders: Order[]; // Chi tiết các đơn hàng
   paperType: string;
@@ -390,17 +385,16 @@ export interface PrepressOrder {
  * Design interface - extends DesignResponse from schema with additional UI-specific fields
  * Base type from schema: DesignResponse
  */
-export interface Design
-  extends Omit<
-    DesignResponse,
-    | "id"
-    | "customerId"
-    | "designerId"
-    | "designTypeId"
-    | "materialTypeId"
-    | "createdAt"
-    | "updatedAt"
-  > {
+export interface Design extends Omit<
+  DesignResponse,
+  | "id"
+  | "customerId"
+  | "designerId"
+  | "designTypeId"
+  | "materialTypeId"
+  | "createdAt"
+  | "updatedAt"
+> {
   id: string; // Convert from number to string for UI compatibility
   designCode: string; // Mã thiết kế tự động từ hệ thống
   orderId: string;
@@ -493,17 +487,16 @@ export interface DesignFile {
  * Production interface - extends ProductionResponse from schema with additional UI-specific fields
  * Base type from schema: ProductionResponse
  */
-export interface Production
-  extends Omit<
-    ProductionResponse,
-    | "id"
-    | "proofingOrderId"
-    | "productionLeadId"
-    | "createdAt"
-    | "updatedAt"
-    | "startedAt"
-    | "completedAt"
-  > {
+export interface Production extends Omit<
+  ProductionResponse,
+  | "id"
+  | "proofingOrderId"
+  | "productionLeadId"
+  | "createdAt"
+  | "updatedAt"
+  | "startedAt"
+  | "completedAt"
+> {
   id: string; // Convert from number to string for UI compatibility
   orderId: string;
   orderNumber: string;
@@ -544,8 +537,10 @@ export interface ProductionIssue {
  * Payment interface - extends PaymentResponse from schema with additional UI-specific fields
  * Base type from schema: PaymentResponse
  */
-export interface Payment
-  extends Omit<PaymentResponse, "id" | "orderId" | "createdAt" | "paidAt"> {
+export interface Payment extends Omit<
+  PaymentResponse,
+  "id" | "orderId" | "createdAt" | "paidAt"
+> {
   id: string; // Convert from number to string for UI compatibility
   orderId: string;
   orderNumber: string;
@@ -758,8 +753,7 @@ export interface DesignTypeCreateRequest {
   sortOrder?: number;
 }
 
-export interface DesignTypeUpdateRequest
-  extends Partial<DesignTypeCreateRequest> {
+export interface DesignTypeUpdateRequest extends Partial<DesignTypeCreateRequest> {
   id: string;
 }
 

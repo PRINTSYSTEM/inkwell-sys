@@ -136,7 +136,7 @@ export default function PrepressCreatePrintOrder() {
       !prepressOrderInfo.paperType ||
       !prepressOrderInfo.printMachine
     ) {
-      toast.error("Vui lòng điền đầy đủ thông tin lệnh bình bài");
+      toast.error("Vui lòng điền đầy đủ thông tin mã bài");
       return;
     }
 
@@ -471,7 +471,7 @@ export default function PrepressCreatePrintOrder() {
             {/* Prepress Order Info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Tên lệnh bình bài *</Label>
+                <Label>Tên mã bài *</Label>
                 <Input
                   placeholder="Ví dụ: Lệnh in 001 - Name Card Bristol"
                   value={prepressOrderInfo.title}

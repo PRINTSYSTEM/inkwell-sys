@@ -541,7 +541,7 @@ export function CreateProofingOrderModal({
                   <Textarea
                     id="notes"
                     className="min-h-[100px] resize-none"
-                    placeholder="Nhập ghi chú cho lệnh bình bài này (tùy chọn)..."
+                    placeholder="Nhập ghi chú cho mã bài này (tùy chọn)..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                   />
