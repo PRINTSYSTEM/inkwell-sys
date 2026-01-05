@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -113,6 +114,7 @@ export function DieExportDialog({
   const [dieImage, setDieImage] = useState<File | null>(null);
   const [dieImagePreview, setDieImagePreview] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordDie, isPending: recordingDie } =
@@ -122,66 +124,38 @@ export function DieExportDialog({
     useAssignDieToProofingOrder();
 
   // Get dies - use search when there's a search term, otherwise use list
-  const { data: searchDiesData, isLoading: loadingSearchDies } = useSearchDies(
+  const searchParams =
     open && dieSearchTerm.trim()
       ? {
           dieName: dieSearchTerm.trim(),
           isUsable: true,
           pageSize: 100,
         }
-      : undefined
-  );
+      : undefined;
 
-  const { data: diesData, isLoading: loadingDies } = useDies(
+  const listParams =
     open && !dieSearchTerm.trim()
       ? {
           isUsable: true,
           pageSize: 100,
         }
-      : undefined
-  );
+      : undefined;
+
+  const {
+    data: searchDiesData,
+    isLoading: loadingSearchDies,
+    isError: searchError,
+  } = useSearchDies(searchParams);
+  const {
+    data: diesData,
+    isLoading: loadingDies,
+    isError: listError,
+  } = useDies(listParams);
 
   const searchDies = searchDiesData?.items || [];
   const listDies = diesData?.items || [];
   const allDies = dieSearchTerm.trim() ? searchDies : listDies;
   const isLoadingDies = dieSearchTerm.trim() ? loadingSearchDies : loadingDies;
-  // #region agent log
-  useEffect(() => {
-    if (open) {
-      fetch(
-        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "DieExportDialog.tsx:138",
-            message: "API data received",
-            data: {
-              searchDiesCount: searchDies.length,
-              listDiesCount: listDies.length,
-              allDiesCount: allDies.length,
-              isLoadingDies,
-              dieSearchTerm,
-              open,
-              hasSearchTerm: !!dieSearchTerm.trim(),
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "A",
-          }),
-        }
-      ).catch(() => {});
-    }
-  }, [
-    open,
-    searchDies.length,
-    listDies.length,
-    allDies.length,
-    isLoadingDies,
-    dieSearchTerm,
-  ]);
-  // #endregion
 
   // Fetch dies already assigned to this proofing order
   const { data: assignedDies } = useDiesByProofingOrder(proofingOrderId, open);
@@ -263,26 +237,6 @@ export function DieExportDialog({
           dt.includes(dieTypeLower)
         );
       });
-      // #region agent log
-      if (designTypes.length > 0) {
-        fetch(
-          "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "DieExportDialog.tsx:203",
-              message: "matchesDesignType check",
-              data: { dieName, dieType, designTypes, matches },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "post-fix",
-              hypothesisId: "C",
-            }),
-          }
-        ).catch(() => {});
-      }
-      // #endregion
       return matches;
     },
     []
@@ -311,31 +265,6 @@ export function DieExportDialog({
         const formattedLower = formatted.toLowerCase();
         // Check if normalized die size contains the formatted dimension
         const result = dieSizeNormalized.includes(formattedLower);
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "DieExportDialog.tsx:295",
-              message: "Dimension match check",
-              data: {
-                dieSize,
-                dieSizeNormalized,
-                formatted,
-                formattedLower,
-                result,
-                dim,
-              },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "post-fix",
-              hypothesisId: "D",
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
         return result;
       });
       return matches;
@@ -343,184 +272,54 @@ export function DieExportDialog({
     [formatDimensions]
   );
 
-  // Filter out already assigned dies and filter by design type and size
+  // Filter out already assigned dies only (design type/dimensions are used for sorting/prioritization, not filtering)
   const availableDies = useMemo(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "DieExportDialog.tsx:230",
-        message: "Filtering starts",
-        data: {
-          allDiesCount: allDies.length,
-          assignedDieIdsCount: assignedDieIds.size,
-          designTypesCount: designTypes.length,
-          designDimensionsCount: designDimensions.length,
-          designTypes: designTypes,
-          designDimensions: designDimensions,
-          assignedDieIds: Array.from(assignedDieIds),
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "A",
-      }),
-    }).catch(() => {});
-    // #endregion
+    // Only filter out assigned dies - allow users to select any available die
     let filtered = allDies.filter(
       (die) => die.id && !assignedDieIds.has(die.id)
     );
-    // #region agent log
-    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "DieExportDialog.tsx:233",
-        message: "After assigned filter",
-        data: {
-          filteredCount: filtered.length,
-          filteredIds: filtered.map((d) => d.id),
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "B",
-      }),
-    }).catch(() => {});
-    // #endregion
 
-    // Filter by design type if we have design types
-    if (designTypes.length > 0) {
-      const beforeDesignTypeFilter = filtered.length;
-      filtered = filtered.filter((die) => {
-        const matches = matchesDesignType(die.name, die.type, designTypes);
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "DieExportDialog.tsx:240",
-              message: "Design type check",
-              data: {
-                dieId: die.id,
-                dieName: die.name,
-                dieType: die.type,
-                matches,
-                designTypes,
-              },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "post-fix",
-              hypothesisId: "C",
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
-        return matches;
+    // Sort dies: prioritize dies that match design type and dimensions
+    if (designTypes.length > 0 || designDimensions.length > 0) {
+      filtered = filtered.sort((a, b) => {
+        const aMatchesType =
+          designTypes.length > 0
+            ? matchesDesignType(a.name, a.type, designTypes)
+            : false;
+        const bMatchesType =
+          designTypes.length > 0
+            ? matchesDesignType(b.name, b.type, designTypes)
+            : false;
+        const aMatchesDim =
+          designDimensions.length > 0
+            ? matchesDimensions(a.size, designDimensions)
+            : false;
+        const bMatchesDim =
+          designDimensions.length > 0
+            ? matchesDimensions(b.size, designDimensions)
+            : false;
+
+        // Prioritize: matches both > matches type > matches dim > no match
+        const aScore =
+          aMatchesType && aMatchesDim
+            ? 3
+            : aMatchesType
+              ? 2
+              : aMatchesDim
+                ? 1
+                : 0;
+        const bScore =
+          bMatchesType && bMatchesDim
+            ? 3
+            : bMatchesType
+              ? 2
+              : bMatchesDim
+                ? 1
+                : 0;
+        return bScore - aScore;
       });
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "DieExportDialog.tsx:245",
-            message: "After design type filter",
-            data: {
-              beforeCount: beforeDesignTypeFilter,
-              afterCount: filtered.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "C",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
     }
 
-    // Filter by dimensions if we have dimensions
-    if (designDimensions.length > 0) {
-      const beforeDimensionsFilter = filtered.length;
-      filtered = filtered.filter((die) => {
-        const matches = matchesDimensions(die.size, designDimensions);
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "DieExportDialog.tsx:252",
-              message: "Dimensions check",
-              data: {
-                dieId: die.id,
-                dieSize: die.size,
-                matches,
-                designDimensions,
-              },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "run1",
-              hypothesisId: "D",
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
-        return matches;
-      });
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "DieExportDialog.tsx:257",
-            message: "After dimensions filter",
-            data: {
-              beforeCount: beforeDimensionsFilter,
-              afterCount: filtered.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "D",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
-    }
-
-    // #region agent log
-    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "DieExportDialog.tsx:262",
-        message: "Final availableDies",
-        data: {
-          finalCount: filtered.length,
-          finalIds: filtered.map((d) => d.id),
-          allDiesSample: allDies.slice(0, 3).map((d) => ({
-            id: d.id,
-            name: d.name,
-            type: d.type,
-            size: d.size,
-          })),
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "E",
-      }),
-    }).catch(() => {});
-    // #endregion
     return filtered;
   }, [
     allDies,
@@ -826,9 +625,12 @@ export function DieExportDialog({
         });
       }
 
-      // Step 2: Create die if needed
-      let createdDieIds: number[] = [];
+      // Step 2: Create die if needed (but don't assign yet)
       if (dieAction === "create") {
+        // Get image from dieFiles (first file) or dieImage
+        const imageToUpload =
+          dieFiles.length > 0 ? dieFiles[0] : dieImage || undefined;
+
         // Create die first
         await new Promise<void>((resolve, reject) => {
           createDie(
@@ -840,7 +642,7 @@ export function DieExportDialog({
               price: diePrice ?? undefined,
               vendorId: finalVendorId || undefined,
               notes: notes.trim() || undefined,
-              image: dieImage || undefined,
+              image: imageToUpload,
               length: dieLength,
               width: dieWidth,
               height: dieHeight,
@@ -848,7 +650,21 @@ export function DieExportDialog({
             {
               onSuccess: (newDie) => {
                 if (newDie.id) {
-                  createdDieIds = [newDie.id];
+                  // Invalidate and refetch dies list to show newly created die
+                  queryClient.invalidateQueries({ queryKey: ["dies"] });
+                  queryClient.invalidateQueries({
+                    queryKey: ["dies", "search"],
+                  });
+
+                  // Auto-select the newly created die
+                  setSelectedDieIds([newDie.id]);
+
+                  // Switch back to select mode so user can see and confirm the new die
+                  setDieAction("select");
+
+                  toast.success(
+                    "Đã tạo khuôn bế thành công. Vui lòng chọn khuôn và bấm 'Lưu thông tin' để xuất khuôn."
+                  );
                 }
                 resolve();
               },
@@ -862,62 +678,43 @@ export function DieExportDialog({
           );
         });
 
-        // Assign created die to proofing order
-        if (createdDieIds.length > 0) {
-          for (const dieId of createdDieIds) {
-            await new Promise<void>((resolve, reject) => {
-              assignDie(
-                {
-                  proofingOrderId,
-                  data: {
-                    dieId,
-                    isNewDie: true,
-                    notes: notes.trim() || undefined,
-                  },
-                },
-                {
-                  onSuccess: () => resolve(),
-                  onError: (error) => {
-                    toast.error("Không thể gán khuôn bế vào bình bài", {
-                      description: getErrorMessage(error),
-                    });
-                    reject(error);
-                  },
-                }
-              );
-            });
-          }
-        }
-      } else {
-        // Step 3: Assign selected dies to proofing order
-        for (const dieId of selectedDieIds) {
-          await new Promise<void>((resolve, reject) => {
-            assignDie(
-              {
-                proofingOrderId,
-                data: {
-                  dieId,
-                  isNewDie: false,
-                  notes: notes.trim() || undefined,
-                },
+        // After creating die, return early - user needs to select and submit
+        return;
+      }
+
+      // Step 3: Assign selected dies to proofing order
+      if (selectedDieIds.length === 0) {
+        toast.error("Vui lòng chọn ít nhất một khuôn bế");
+        return;
+      }
+
+      for (const dieId of selectedDieIds) {
+        await new Promise<void>((resolve, reject) => {
+          assignDie(
+            {
+              proofingOrderId,
+              data: {
+                dieId,
+                isNewDie: false,
+                notes: notes.trim() || undefined,
               },
-              {
-                onSuccess: () => resolve(),
-                onError: (error) => {
-                  toast.error("Không thể gán khuôn bế vào bình bài", {
-                    description: getErrorMessage(error),
-                  });
-                  reject(error);
-                },
-              }
-            );
-          });
-        }
+            },
+            {
+              onSuccess: () => resolve(),
+              onError: (error) => {
+                toast.error("Không thể gán khuôn bế vào bình bài", {
+                  description: getErrorMessage(error),
+                });
+                reject(error);
+              },
+            }
+          );
+        });
       }
 
       // Step 4: Record die export
-      // Collect all die IDs (either created or selected)
-      const allDieIds = dieAction === "create" ? createdDieIds : selectedDieIds;
+      // Use selected die IDs
+      const allDieIds = selectedDieIds;
 
       if (allDieIds.length === 0) {
         toast.error("Không có khuôn bế nào để ghi nhận xuất");
@@ -1074,88 +871,156 @@ export function DieExportDialog({
                         </div>
                       </div>
                     ) : (
-                      <div className="h-full overflow-y-auto border rounded-md">
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-background z-10">
-                            <TableRow>
-                              <TableHead className="w-20">Ảnh</TableHead>
-                              <TableHead>Mã khuôn</TableHead>
-                              <TableHead>Kích thước</TableHead>
-                              <TableHead>Nhà cung cấp</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {availableDies.map((die) => {
-                              const isSelected = die.id
-                                ? selectedDieIds.includes(die.id)
-                                : false;
-                              const canSelect =
-                                !isSelected && selectedDieIds.length < dieCount;
-                              const selectionIndex = isSelected
-                                ? selectedDieIds.indexOf(die.id!) + 1
-                                : null;
+                      <div className="h-full overflow-y-auto">
+                        <div className="grid grid-cols-1 gap-2 p-1">
+                          {availableDies.map((die) => {
+                            const isSelected = die.id
+                              ? selectedDieIds.includes(die.id)
+                              : false;
+                            const canSelect =
+                              !isSelected && selectedDieIds.length < dieCount;
+                            const selectionIndex = isSelected
+                              ? selectedDieIds.indexOf(die.id!) + 1
+                              : null;
 
-                              return (
-                                <TableRow
-                                  key={die.id}
-                                  className={cn(
-                                    "cursor-pointer transition-colors",
-                                    isSelected
-                                      ? "bg-primary/5 hover:bg-primary/10"
-                                      : canSelect
-                                        ? "hover:bg-muted/50"
-                                        : "opacity-50 cursor-not-allowed"
+                            // Check if die matches design type/dimensions for highlighting
+                            const matchesType =
+                              designTypes.length > 0
+                                ? matchesDesignType(
+                                    die.name,
+                                    die.type,
+                                    designTypes
+                                  )
+                                : false;
+                            const matchesDim =
+                              designDimensions.length > 0
+                                ? matchesDimensions(die.size, designDimensions)
+                                : false;
+                            const isRecommended = matchesType || matchesDim;
+
+                            return (
+                              <div
+                                key={die.id}
+                                className={cn(
+                                  "group relative flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer",
+                                  isSelected
+                                    ? "border-primary bg-primary/5 shadow-sm"
+                                    : canSelect
+                                      ? "border-border bg-background hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm"
+                                      : "border-border bg-muted/20 opacity-50 cursor-not-allowed",
+                                  isRecommended &&
+                                    !isSelected &&
+                                    canSelect &&
+                                    "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30"
+                                )}
+                                onClick={() => {
+                                  if (die.id && (canSelect || isSelected)) {
+                                    toggleDieSelection(die.id);
+                                  }
+                                }}
+                              >
+                                {/* Selection indicator */}
+                                {selectionIndex && (
+                                  <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg z-10">
+                                    {selectionIndex}
+                                  </div>
+                                )}
+
+                                {/* Recommended badge */}
+                                {isRecommended && !isSelected && (
+                                  <div className="absolute top-2 right-2 px-2 py-0.5 bg-blue-500 text-white text-[10px] font-medium rounded-full">
+                                    Gợi ý
+                                  </div>
+                                )}
+
+                                {/* Image */}
+                                <div className="relative flex-shrink-0 w-20 h-20 bg-muted/50 rounded-md overflow-hidden border">
+                                  {die.imageUrl ? (
+                                    <img
+                                      src={die.imageUrl}
+                                      alt={die.name || "Khuôn bế"}
+                                      className="w-full h-full object-contain cursor-zoom-in"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPreviewImageUrl(
+                                          die.imageUrl || null
+                                        );
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                    </div>
                                   )}
-                                  onClick={() => {
-                                    if (die.id && (canSelect || isSelected)) {
-                                      toggleDieSelection(die.id);
-                                    }
-                                  }}
-                                >
-                                  <TableCell className="w-20">
-                                    <div className="relative w-16 h-16 bg-muted/50 rounded flex items-center justify-center overflow-hidden">
-                                      {die.imageUrl ? (
-                                        <>
-                                          <img
-                                            src={die.imageUrl}
-                                            alt={die.name || "Khuôn bế"}
-                                            className="w-full h-full object-contain cursor-zoom-in"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setPreviewImageUrl(
-                                                die.imageUrl || null
-                                              );
-                                            }}
-                                          />
-                                          {selectionIndex && (
-                                            <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-lg">
-                                              {selectionIndex}
-                                            </div>
-                                          )}
-                                        </>
-                                      ) : (
-                                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                </div>
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-semibold text-sm truncate">
+                                        {die.code || die.name || "—"}
+                                      </h4>
+                                      {die.name && die.name !== die.code && (
+                                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                          {die.name}
+                                        </p>
                                       )}
                                     </div>
-                                  </TableCell>
-                                  <TableCell className="font-medium">
-                                    {die.code || "—"}
-                                  </TableCell>
-                                  <TableCell>
-                                    <span className="text-sm">
-                                      {formatDieSize(die)}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell>
-                                    <span className="text-sm text-muted-foreground truncate max-w-[150px] block">
-                                      {die.vendorName || "—"}
-                                    </span>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
+                                  </div>
+
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-medium">
+                                        Kích thước:
+                                      </span>
+                                      <span className="text-foreground">
+                                        {formatDieSize(die) || "—"}
+                                      </span>
+                                    </div>
+                                    {die.type && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="font-medium">
+                                          Loại:
+                                        </span>
+                                        <span className="text-foreground truncate max-w-[100px]">
+                                          {die.type}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {die.vendorName && (
+                                    <div className="mt-1.5 text-xs text-muted-foreground truncate">
+                                      <span className="font-medium">NCC:</span>{" "}
+                                      <span className="text-foreground">
+                                        {die.vendorName}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Selection checkbox */}
+                                <div className="flex-shrink-0">
+                                  <div
+                                    className={cn(
+                                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                                      isSelected
+                                        ? "bg-primary border-primary"
+                                        : canSelect
+                                          ? "border-muted-foreground/30 group-hover:border-primary/50"
+                                          : "border-muted-foreground/20"
+                                    )}
+                                  >
+                                    {isSelected && (
+                                      <Check className="h-3 w-3 text-primary-foreground" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
