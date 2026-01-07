@@ -1023,6 +1023,7 @@ const DesignResponse = z
     sidesClassification: z.string().nullable(),
     processClassification: z.string().nullable(),
     laminationType: z.string().nullable(),
+    adhesiveOffset: z.number().nullable(),
     designFileUrl: z.string().nullable(),
     designImageUrl: z.string().nullable(),
     excelFileUrl: z.string().nullable(),
