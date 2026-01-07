@@ -56,7 +56,7 @@ export default function SalesByCustomerPage() {
     search: searchQuery || undefined,
   });
 
-  const totalRevenue = salesData?.items?.reduce((sum, item) => sum + (item.totalRevenue || 0), 0) || 0;
+  const totalRevenue = salesData?.items?.reduce((sum, item) => sum + (item.netRevenue || 0), 0) || 0;
   const totalOrders = salesData?.items?.reduce((sum, item) => sum + (item.orderCount || 0), 0) || 0;
 
   const handleExportExcel = async () => {
@@ -129,7 +129,7 @@ export default function SalesByCustomerPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -211,13 +211,13 @@ export default function SalesByCustomerPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">
-                      {item.totalRevenue !== undefined
-                        ? formatCurrency(item.totalRevenue)
+                      {item.netRevenue !== undefined
+                        ? formatCurrency(item.netRevenue)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.totalRevenue !== undefined && item.orderCount !== undefined && item.orderCount > 0
-                        ? formatCurrency(item.totalRevenue / item.orderCount)
+                      {item.netRevenue !== undefined && item.orderCount !== undefined && item.orderCount > 0
+                        ? formatCurrency(item.netRevenue / item.orderCount)
                         : "—"}
                     </TableCell>
                     <TableCell>

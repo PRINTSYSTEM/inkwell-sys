@@ -84,7 +84,7 @@ export const AssignmentHistory: React.FC<AssignmentHistoryProps> = ({
             assignments.map((assignment) => {
               const status = getStatusBadge(assignment.status);
               const priority = getPriorityBadge(assignment.priority);
-              const overdue = isOverdue(assignment.dueDate, assignment.status);
+              const overdue = isOverdue(assignment.deadline, assignment.status);
 
               return (
                 <div
@@ -110,7 +110,7 @@ export const AssignmentHistory: React.FC<AssignmentHistoryProps> = ({
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span className={overdue ? 'text-red-600 font-medium' : ''}>
-                            Hạn: {formatDate(assignment.dueDate)}
+                            Hạn: {formatDate(assignment.deadline)}
                           </span>
                         </div>
 

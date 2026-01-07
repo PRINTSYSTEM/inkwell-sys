@@ -344,6 +344,7 @@ export default function OrderCreatePage() {
       length: design.length || 0,
       width: design.width || 0,
       height: design.height || 0,
+      adhesiveOffset: (design.adhesiveOffset as number | undefined) || undefined,
       laminationType: laminationType,
     };
     setDesigns((prev) => [...prev, newDesign]);
@@ -465,6 +466,10 @@ export default function OrderCreatePage() {
             length: design.length && design.length > 0 ? design.length : null,
             width: design.width && design.width > 0 ? design.width : null,
             height: design.height && design.height > 0 ? design.height : null,
+            adhesiveOffset:
+              design.adhesiveOffset != null && design.adhesiveOffset > 0
+                ? design.adhesiveOffset
+                : null,
             sidesClassification: design.sidesClassification || null,
             processClassification: design.processClassification || null,
             requirements: design.requirements?.trim() || null,

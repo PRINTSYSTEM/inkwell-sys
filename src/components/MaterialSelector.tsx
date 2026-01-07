@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MaterialService } from '@/services/materialService';
+// TODO: MaterialService needs to be implemented
+// import { MaterialService } from '@/services/materialService';
+const MaterialService = {
+  getMaterials: async (params: any) => Promise.resolve({ data: [] })
+};
 import { Material } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';

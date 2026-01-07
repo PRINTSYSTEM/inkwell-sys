@@ -95,7 +95,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   }, 0);
   const lastItem = monthlyDebtArray[monthlyDebtArray.length - 1];
   const closingBalance = lastItem
-    ? lastItem.closingDebt ?? lastItem.closingBalance ?? 0
+    ? Number(lastItem.closingDebt ?? lastItem.closingBalance ?? 0)
     : 0;
 
   return (
@@ -218,7 +218,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                   </TableHeader>
                   <TableBody>
                     {monthlyDebtArray.map((item: CustomerMonthlyDebtResponse) => {
-                      const changeInMonth = item.changeInMonth ?? 0;
+                      const changeInMonth = Number(item.changeInMonth ?? 0);
                       const increase = changeInMonth > 0 ? changeInMonth : 0;
                       const decrease =
                         changeInMonth < 0 ? Math.abs(changeInMonth) : 0;
@@ -229,7 +229,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                           </TableCell>
                           <TableCell className="text-xs py-2 text-right">
                             {formatCurrency(
-                              item.openingDebt ?? item.openingBalance ?? 0
+                              Number(item.openingDebt ?? item.openingBalance ?? 0)
                             )}
                           </TableCell>
                           <TableCell className="text-xs py-2 text-right text-success">
@@ -240,7 +240,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                           </TableCell>
                           <TableCell className="text-xs py-2 text-right font-medium">
                             {formatCurrency(
-                              item.closingDebt ?? item.closingBalance ?? 0
+                              Number(item.closingDebt ?? item.closingBalance ?? 0)
                             )}
                           </TableCell>
                         </TableRow>

@@ -156,6 +156,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     length: 0,
     width: 0,
     height: 0,
+    adhesiveOffset: undefined,
     requirements: "",
     additionalNotes: "",
     laminationType: undefined,
@@ -176,6 +177,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         length: 0,
         width: 0,
         height: 0,
+        adhesiveOffset: undefined,
         requirements: "",
         additionalNotes: "",
         laminationType: undefined,
@@ -645,7 +647,13 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   Kích thước (mm) <span className="text-destructive">*</span>
                 </Label>
                 <div
-                  className={`grid gap-4 ${isHop || isTuiXepHong ? "grid-cols-3" : "grid-cols-2"}`}
+                  className={`grid gap-4 ${
+                    isHop || isTuiXepHong
+                      ? "grid-cols-3"
+                      : isNhan
+                        ? "grid-cols-3"
+                        : "grid-cols-2"
+                  }`}
                 >
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">
@@ -703,7 +711,37 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       />
                     </div>
                   )}
+                  {/* Mép dán - chỉ hiển thị cho nhãn giấy, cùng hàng với kích thước */}
+                  {isNhan && !isHop && !isTuiXepHong && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Mép dán (mm)
+                      </Label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={formData.adhesiveOffset || ""}
+                        onChange={(e) =>
+                          updateField(
+                            "adhesiveOffset",
+                            e.target.value === ""
+                              ? undefined
+                              : Number(e.target.value)
+                          )
+                        }
+                        className="h-11"
+                        disabled={!!isExistingDesign}
+                        min="0"
+                      />
+                    </div>
+                  )}
                 </div>
+                {/* Tooltip cho Mép dán - chỉ hiển thị khi là nhãn giấy */}
+                {isNhan && (
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium">Mép dán:</span> Khoảng cách từ mép đến vị trí dán keo (nếu có)
+                  </p>
+                )}
               </div>
 
               {/* Số lượng */}

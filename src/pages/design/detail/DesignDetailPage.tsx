@@ -12,6 +12,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TruncatedText } from "@/components/ui/truncated-text";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +38,7 @@ import {
   useUpdateDesign,
   useRevertDesign,
 } from "@/hooks/use-design";
+import { useMaterialsByDesignType } from "@/hooks/use-material-type";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/error-components";
 
 import {
@@ -102,6 +111,108 @@ import DesignCodeGeneratorComponent from "@/components/DesignCodeGenerator";
 import DesignCode from "@/components/design/design-code";
 import { downloadFile } from "@/lib/download-utils";
 
+// Helper functions to check design type
+const isNhanDesignType = (designTypeName: string | undefined): boolean => {
+  if (!designTypeName) return false;
+  return (
+    designTypeName.toLowerCase().includes("nhãn") ||
+    designTypeName.toLowerCase().includes("nhan")
+  );
+};
+
+const isHopDesignType = (designTypeName: string | undefined): boolean => {
+  if (!designTypeName) return false;
+  return (
+    designTypeName.toLowerCase().includes("hộp") ||
+    designTypeName.toLowerCase().includes("hop")
+  );
+};
+
+const isTuiXepHongDesignType = (
+  designTypeName: string | undefined
+): boolean => {
+  if (!designTypeName) return false;
+  return (
+    designTypeName.toLowerCase().includes("túi xếp hông") ||
+    designTypeName.toLowerCase().includes("tui xep hong") ||
+    designTypeName.toLowerCase().includes("túi xếp") ||
+    designTypeName.toLowerCase().includes("tui xep")
+  );
+};
+
+function getTimelineVisual(entry: DesignTimelineEntryResponse) {
+  const description = (entry.description as string | undefined) || "";
+  const normalized = description.toLowerCase();
+  const hasImage = Boolean((entry as any).imageUrl || entry.fileUrl);
+
+  if (hasImage) {
+    return {
+      variant: "image" as const,
+      badgeClass:
+        "bg-violet-50 text-violet-800 dark:bg-violet-950/40 dark:text-violet-100 border-violet-200 dark:border-violet-700",
+      dotClass:
+        "bg-gradient-to-br from-violet-500 to-violet-600 border-violet-300 dark:border-violet-700",
+      icon: ImageIcon,
+      label: "Ảnh / file",
+    };
+  }
+
+  if (normalized.includes("trạng thái") || normalized.includes("status")) {
+    return {
+      variant: "status" as const,
+      badgeClass:
+        "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 border-emerald-200 dark:border-emerald-700",
+      dotClass:
+        "bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-300 dark:border-emerald-700",
+      icon: CheckCircle2,
+      label: "Trạng thái",
+    };
+  }
+
+  return {
+    variant: "note" as const,
+    badgeClass:
+      "bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-100 border-blue-200 dark:border-blue-700",
+    dotClass:
+      "bg-gradient-to-br from-blue-500 to-blue-600 border-blue-300 dark:border-blue-700",
+    icon: FileText,
+    label: "Ghi chú",
+  };
+}
+
+function groupTimelineByDate(entries: DesignTimelineEntryResponse[]) {
+  const groups: { date: string; items: DesignTimelineEntryResponse[] }[] = [];
+  const map = new Map<string, DesignTimelineEntryResponse[]>();
+
+  entries.forEach((entry) => {
+    const createdAt = entry.createdAt as string | undefined;
+    const dateKey = createdAt ? createdAt.slice(0, 10) : "Khác";
+    if (!map.has(dateKey)) {
+      map.set(dateKey, []);
+    }
+    map.get(dateKey)?.push(entry);
+  });
+
+  for (const [date, items] of map.entries()) {
+    groups.push({ date, items });
+  }
+
+  return groups;
+}
+
+function formatTimelineDateLabel(date: string) {
+  if (date === "Khác") return "Khác";
+  try {
+    return new Date(date).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return date;
+  }
+}
+
 export default function DesignDetailPage() {
   const params = useParams();
   const router = useNavigate();
@@ -145,10 +256,15 @@ export default function DesignDetailPage() {
     length: 0,
     width: 0,
     height: 0,
+    adhesiveOffset: undefined as number | undefined,
     requirements: "",
     additionalNotes: "",
+    materialTypeId: undefined as number | undefined,
     sidesClassificationOptionId: undefined as number | undefined,
     processClassificationOptionId: undefined as number | undefined,
+    sidesClassification: "" as string | undefined,
+    processClassification: "" as string | undefined,
+    laminationType: "" as string | undefined,
   });
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -163,6 +279,11 @@ export default function DesignDetailPage() {
   const { mutate: uploadImage } = useUploadDesignImage();
   const { mutate: addTimeline } = useAddDesignTimelineEntry();
   const { mutate: revertDesign, loading: revertingDesign } = useRevertDesign();
+
+  const { data: materialsByDesignType = [], isLoading: materialsLoading } =
+    useMaterialsByDesignType(
+      ((design as any)?.designType as any)?.id as number | undefined
+    );
 
   // ==== ORDER BY DESIGN ====
   const { data: orderDetails } = useQuery<OrderDetailResponse[]>({
@@ -459,13 +580,27 @@ export default function DesignDetailPage() {
       length: design.length || 0,
       width: design.width || 0,
       height: design.height || 0,
+      adhesiveOffset:
+        (design.adhesiveOffset as number | undefined) || undefined,
       requirements: design.latestRequirements || "",
       additionalNotes: design.notes || "",
+      materialTypeId:
+        (design.materialTypeId as number | undefined) ||
+        ((design.materialType as any)?.id as number | undefined) ||
+        undefined,
       sidesClassificationOptionId:
         (design.sidesClassificationOptionId as number | undefined) || undefined,
       processClassificationOptionId:
         (design.processClassificationOptionId as number | undefined) ||
         undefined,
+      sidesClassification:
+        (design.sidesClassification as string | undefined) || "",
+      processClassification:
+        (design.processClassification as string | undefined) || "",
+      laminationType:
+        (design.laminationType as string | undefined) ||
+        (orderDetails?.[0]?.laminationType as string | undefined) ||
+        "",
     });
     setIsEditing(true);
   };
@@ -477,10 +612,15 @@ export default function DesignDetailPage() {
       length: 0,
       width: 0,
       height: 0,
+      adhesiveOffset: undefined,
       requirements: "",
       additionalNotes: "",
+      materialTypeId: undefined,
       sidesClassificationOptionId: undefined,
       processClassificationOptionId: undefined,
+      sidesClassification: "",
+      processClassification: "",
+      laminationType: "",
     });
   };
 
@@ -494,12 +634,17 @@ export default function DesignDetailPage() {
           length: editFormData.length || null,
           width: editFormData.width || null,
           height: editFormData.height || null,
+          adhesiveOffset: editFormData.adhesiveOffset ?? null,
           requirements: editFormData.requirements || null,
           additionalNotes: editFormData.additionalNotes || null,
+          materialTypeId: editFormData.materialTypeId || null,
           sidesClassificationOptionId:
             editFormData.sidesClassificationOptionId || null,
           processClassificationOptionId:
             editFormData.processClassificationOptionId || null,
+          sidesClassification: editFormData.sidesClassification || null,
+          processClassification: editFormData.processClassification || null,
+          laminationType: editFormData.laminationType || null,
         },
       });
       toast.success("Thành công", {
@@ -575,6 +720,14 @@ export default function DesignDetailPage() {
   }
 
   const d = design as DesignResponse;
+
+  // Check design type for conditional editing
+  const designTypeName = d.designType?.name;
+  const isNhan = isNhanDesignType(designTypeName);
+  const isHop = isHopDesignType(designTypeName);
+  const isTuiXepHong = isTuiXepHongDesignType(designTypeName);
+  const canEditWidth = isHop || isTuiXepHong; // Only box and side-fold bag can edit width
+  const canEditAdhesiveOffset = isNhan; // Only label can edit adhesive offset
 
   // ==== MAIN LAYOUT ====
   return (
@@ -789,7 +942,9 @@ export default function DesignDetailPage() {
                   {/* Specs */}
                   {isEditing ? (
                     <div className="space-y-2">
-                      <div className="grid grid-cols-3 gap-2">
+                      <div
+                        className={`grid gap-2 ${canEditWidth ? "grid-cols-3" : "grid-cols-2"}`}
+                      >
                         <div>
                           <Label className="text-xs">Dài (mm)</Label>
                           <Input
@@ -807,23 +962,25 @@ export default function DesignDetailPage() {
                             className="h-9"
                           />
                         </div>
-                        <div>
-                          <Label className="text-xs">Rộng (mm)</Label>
-                          <Input
-                            type="number"
-                            value={editFormData.width || ""}
-                            onChange={(e) =>
-                              setEditFormData((prev) => ({
-                                ...prev,
-                                width:
-                                  e.target.value === ""
-                                    ? 0
-                                    : Number(e.target.value),
-                              }))
-                            }
-                            className="h-9"
-                          />
-                        </div>
+                        {canEditWidth && (
+                          <div>
+                            <Label className="text-xs">Rộng (mm)</Label>
+                            <Input
+                              type="number"
+                              value={editFormData.width || ""}
+                              onChange={(e) =>
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  width:
+                                    e.target.value === ""
+                                      ? 0
+                                      : Number(e.target.value),
+                                }))
+                              }
+                              className="h-9"
+                            />
+                          </div>
+                        )}
                         <div>
                           <Label className="text-xs">Cao (mm)</Label>
                           <Input
@@ -842,6 +999,30 @@ export default function DesignDetailPage() {
                           />
                         </div>
                       </div>
+                      {canEditAdhesiveOffset && (
+                        <div className="mt-2">
+                          <Label className="text-xs">Mép dán (mm)</Label>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={editFormData.adhesiveOffset || ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                adhesiveOffset:
+                                  e.target.value === ""
+                                    ? undefined
+                                    : Number(e.target.value),
+                              }))
+                            }
+                            className="h-9 max-w-xs"
+                            min="0"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Khoảng cách từ mép đến vị trí dán keo (nếu có)
+                          </p>
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -908,6 +1089,19 @@ export default function DesignDetailPage() {
                         </div>
                       </div>
 
+                      {d.adhesiveOffset != null &&
+                        typeof d.adhesiveOffset === "number" &&
+                        d.adhesiveOffset > 0 && (
+                          <div className="flex items-center justify-between p-2 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-sm mt-2">
+                            <span className="font-semibold text-orange-900 dark:text-orange-100">
+                              Mép dán
+                            </span>
+                            <span className="font-bold text-orange-700 dark:text-orange-300">
+                              {d.adhesiveOffset} mm
+                            </span>
+                          </div>
+                        )}
+
                       {orderDetails?.[0]?.quantity && (
                         <div className="flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm">
                           <span className="font-semibold text-blue-900 dark:text-blue-100">
@@ -934,13 +1128,49 @@ export default function DesignDetailPage() {
                       </CardContent>
                     </Card>
                     <Card className="border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/20">
-                      <CardContent className="p-2.5">
+                      <CardContent className="p-2.5 space-y-1.5">
                         <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
                           Chất liệu
                         </p>
-                        <p className="font-bold text-sm text-amber-900 dark:text-amber-100">
-                          {d.materialType?.name ?? "—"}
-                        </p>
+                        {isEditing && canEditDesign ? (
+                          <Select
+                            value={
+                              editFormData.materialTypeId
+                                ? String(editFormData.materialTypeId)
+                                : ""
+                            }
+                            onValueChange={(value) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                materialTypeId: value
+                                  ? Number(value)
+                                  : undefined,
+                              }))
+                            }
+                            disabled={materialsLoading}
+                          >
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue
+                                placeholder={
+                                  materialsLoading
+                                    ? "Đang tải chất liệu..."
+                                    : "Chọn chất liệu"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {materialsByDesignType.map((mt) => (
+                                <SelectItem key={mt.id} value={String(mt.id)}>
+                                  {mt.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="font-bold text-sm text-amber-900 dark:text-amber-100">
+                            {d.materialType?.name ?? "—"}
+                          </p>
+                        )}
                       </CardContent>
                     </Card>
                   </div>
@@ -958,19 +1188,47 @@ export default function DesignDetailPage() {
                         <Card className="flex-1 border-slate-200 dark:border-slate-800">
                           <CardContent className="p-2.5">
                             <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                              Mặt cắt
+                              Số mặt in
                             </p>
-                            <p className="text-sm font-bold">
-                              {d.sidesClassification
-                                ? sidesClassificationLabels[
-                                    d.sidesClassification
-                                  ] || d.sidesClassification
-                                : (
-                                    d.sidesClassificationOption as
-                                      | { value?: string }
-                                      | undefined
-                                  )?.value || "—"}
-                            </p>
+                            {isEditing && canEditDesign ? (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {Object.entries(sidesClassificationLabels).map(
+                                  ([value, label]) => (
+                                    <Button
+                                      key={value}
+                                      size="sm"
+                                      variant={
+                                        editFormData.sidesClassification ===
+                                        value
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                      className="h-7 px-2 text-xs rounded-full"
+                                      onClick={() =>
+                                        setEditFormData((prev) => ({
+                                          ...prev,
+                                          sidesClassification: value,
+                                        }))
+                                      }
+                                    >
+                                      {label}
+                                    </Button>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold">
+                                {d.sidesClassification
+                                  ? sidesClassificationLabels[
+                                      d.sidesClassification
+                                    ] || d.sidesClassification
+                                  : (
+                                      d.sidesClassificationOption as
+                                        | { value?: string }
+                                        | undefined
+                                    )?.value || "—"}
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -979,19 +1237,47 @@ export default function DesignDetailPage() {
                         <Card className="flex-1 border-slate-200 dark:border-slate-800">
                           <CardContent className="p-2.5">
                             <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                              Quy trình sản xuất
+                              Quy cách sản xuất
                             </p>
-                            <p className="text-sm font-bold">
-                              {d.processClassification
-                                ? processClassificationLabels[
-                                    d.processClassification
-                                  ] || d.processClassification
-                                : (
-                                    d.processClassificationOption as
-                                      | { value?: string }
-                                      | undefined
-                                  )?.value || "—"}
-                            </p>
+                            {isEditing && canEditDesign ? (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {Object.entries(
+                                  processClassificationLabels
+                                ).map(([value, label]) => (
+                                  <Button
+                                    key={value}
+                                    size="sm"
+                                    variant={
+                                      editFormData.processClassification ===
+                                      value
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    className="h-7 px-2 text-xs rounded-full"
+                                    onClick={() =>
+                                      setEditFormData((prev) => ({
+                                        ...prev,
+                                        processClassification: value,
+                                      }))
+                                    }
+                                  >
+                                    {label}
+                                  </Button>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold">
+                                {d.processClassification
+                                  ? processClassificationLabels[
+                                      d.processClassification
+                                    ] || d.processClassification
+                                  : (
+                                      d.processClassificationOption as
+                                        | { value?: string }
+                                        | undefined
+                                    )?.value || "—"}
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -1000,14 +1286,41 @@ export default function DesignDetailPage() {
                         <Card className="flex-1 border-slate-200 dark:border-slate-800">
                           <CardContent className="p-2.5">
                             <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                              Cán màn
+                              Cán màng
                             </p>
-                            <p className="text-sm font-bold">
-                              {laminationTypeLabels[
-                                (d.laminationType ||
-                                  orderDetails?.[0]?.laminationType) as string
-                              ] || "—"}
-                            </p>
+                            {isEditing && canEditDesign ? (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {Object.entries(laminationTypeLabels).map(
+                                  ([value, label]) => (
+                                    <Button
+                                      key={value}
+                                      size="sm"
+                                      variant={
+                                        editFormData.laminationType === value
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                      className="h-7 px-2 text-xs rounded-full"
+                                      onClick={() =>
+                                        setEditFormData((prev) => ({
+                                          ...prev,
+                                          laminationType: value,
+                                        }))
+                                      }
+                                    >
+                                      {label}
+                                    </Button>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold">
+                                {laminationTypeLabels[
+                                  (d.laminationType ||
+                                    orderDetails?.[0]?.laminationType) as string
+                                ] || "—"}
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -1016,7 +1329,9 @@ export default function DesignDetailPage() {
                 </div>
 
                 {/* Notes */}
-                {(d.notes || d.latestRequirements) && (
+                {(d.notes ||
+                  d.latestRequirements ||
+                  (isEditing && canEditDesign)) && (
                   <Collapsible
                     open={expandedSections.notes}
                     onOpenChange={(open) =>
@@ -1039,25 +1354,66 @@ export default function DesignDetailPage() {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <CardContent className="p-3 space-y-3 border-t border-amber-200 dark:border-amber-800">
-                          {d.notes && (
-                            <div>
-                              <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
-                                Ghi chú
-                              </p>
-                              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
-                                {d.notes}
-                              </p>
+                          {isEditing && canEditDesign ? (
+                            <div className="space-y-3">
+                              <div>
+                                <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                                  Ghi chú
+                                </p>
+                                <Textarea
+                                  value={editFormData.additionalNotes}
+                                  onChange={(e) =>
+                                    setEditFormData((prev) => ({
+                                      ...prev,
+                                      additionalNotes: e.target.value,
+                                    }))
+                                  }
+                                  rows={3}
+                                  className="text-sm"
+                                  placeholder="Nhập ghi chú nội bộ, lưu ý khi thiết kế..."
+                                />
+                              </div>
+                              <div>
+                                <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                                  Yêu cầu
+                                </p>
+                                <Textarea
+                                  value={editFormData.requirements}
+                                  onChange={(e) =>
+                                    setEditFormData((prev) => ({
+                                      ...prev,
+                                      requirements: e.target.value,
+                                    }))
+                                  }
+                                  rows={3}
+                                  className="text-sm"
+                                  placeholder="Nhập yêu cầu từ khách hàng, yêu cầu in ấn..."
+                                />
+                              </div>
                             </div>
-                          )}
-                          {d.latestRequirements && (
-                            <div>
-                              <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
-                                Yêu cầu
-                              </p>
-                              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
-                                {d.latestRequirements}
-                              </p>
-                            </div>
+                          ) : (
+                            <>
+                              {d.notes && (
+                                <div>
+                                  <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                                    Ghi chú
+                                  </p>
+                                  <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
+                                    {d.notes}
+                                  </p>
+                                </div>
+                              )}
+                              {d.latestRequirements && (
+                                <div>
+                                  <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                                    Yêu cầu
+                                  </p>
+                                  <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
+                                    {d.latestRequirements}
+                                  </p>
+                                </div>
+                              )}
+                            </>
                           )}
                         </CardContent>
                       </CollapsibleContent>
@@ -1241,8 +1597,11 @@ export default function DesignDetailPage() {
               </div>
 
               {/* Timeline */}
-              <ScrollArea className="flex-1 w-1/2">
-                <div className="p-5">
+              <ScrollArea className="flex-1 w-1/2 min-w-0">
+                <div
+                  className="w-full min-w-0 max-w-full"
+                  style={{ padding: "20px", maxWidth: "100%", width: "100%" }}
+                >
                   <div className="flex items-center gap-3 mb-5 pb-3 border-b">
                     <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                       <History className="h-5 w-5 text-purple-600 dark:text-purple-400" />
@@ -1295,95 +1654,137 @@ export default function DesignDetailPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="relative">
+                    <div
+                      className="relative w-full min-w-0 max-w-full"
+                      style={{ maxWidth: "100%", width: "100%" }}
+                    >
                       {/* Line - dừng ở giữa dot cuối cùng (dot cũ nhất) */}
                       <div
-                        className="absolute left-4 top-0 w-px bg-gradient-to-b from-purple-300 via-purple-400 to-purple-300 dark:from-purple-800 dark:via-purple-600 dark:to-purple-800"
+                        className="absolute left-4 top-0 w-px bg-gradient-to-b from-violet-300 via-blue-300 to-emerald-300 dark:from-violet-800 dark:via-blue-800 dark:to-emerald-800"
                         style={{
                           height: `calc(100% - 2rem)`,
                         }}
                       />
 
-                      <div className="space-y-4 pl-2">
-                        {timelineEntries.map((entry, index) => {
-                          const timelineNumber = timelineEntries.length - index;
-                          const isLast = index === timelineEntries.length - 1;
-                          return (
-                            <div
-                              key={entry.id}
-                              className="relative flex gap-4 group"
-                            >
-                              {/* Dot */}
-                              <div className="relative z-10 shrink-0 flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-background shadow-md flex items-center justify-center">
-                                  <span className="text-[10px] font-bold text-white">
-                                    {timelineNumber}
-                                  </span>
-                                </div>
+                      <div
+                        className="space-y-6 pl-2 min-w-0 w-full max-w-full"
+                        style={{ maxWidth: "100%", width: "100%" }}
+                      >
+                        {groupTimelineByDate(timelineEntries).map((group) => (
+                          <div key={group.date} className="space-y-3 min-w-0">
+                            {/* Date header */}
+                            <div className="flex items-center gap-2 pl-6">
+                              <div className="h-px flex-1 bg-border/60" />
+                              <div className="px-3 py-1 rounded-full text-[11px] font-semibold border bg-muted/60 text-muted-foreground uppercase tracking-wide">
+                                {formatTimelineDateLabel(group.date)}
                               </div>
+                            </div>
 
-                              {/* Card */}
-                              <Card
-                                className={`flex-1 group-hover:border-purple-400/70 transition-colors ${
-                                  entry.imageUrl ? "cursor-pointer" : ""
-                                }`}
-                                onClick={() => {
-                                  if (entry.imageUrl) {
-                                    setViewingImage({
-                                      url: entry.imageUrl as string,
-                                      title:
-                                        (entry.title as string) ||
-                                        `Timeline #${timelineNumber}`,
-                                    });
-                                  }
-                                }}
-                              >
-                                <CardContent
-                                  className="p-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
-                                  onClick={() => {
-                                    if (entry.fileUrl) {
-                                      setViewingImage({
-                                        url: entry.fileUrl as string,
-                                        title:
-                                          (entry.title as string) ||
-                                          `Timeline #${timelineNumber}`,
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <div className="flex-1 min-w-0 space-y-1">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <p className="font-semibold text-sm truncate">
-                                        {entry.description}
-                                      </p>
-                                      <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
-                                        {entry.createdAt
-                                          ? new Date(
-                                              entry.createdAt
-                                            ).toLocaleString("vi-VN", {
-                                              day: "2-digit",
-                                              month: "2-digit",
-                                              hour: "2-digit",
-                                              minute: "2-digit",
-                                            })
-                                          : ""}
-                                      </span>
+                            <div className="space-y-3">
+                              {group.items.map((entry) => {
+                                const visual = getTimelineVisual(entry);
+                                const hasImage = Boolean(
+                                  (entry as any).imageUrl || entry.fileUrl
+                                );
+                                const hoverBorderClass =
+                                  visual.variant === "image"
+                                    ? "group-hover:border-violet-400/70"
+                                    : visual.variant === "status"
+                                      ? "group-hover:border-emerald-400/70"
+                                      : "group-hover:border-blue-400/70";
+
+                                return (
+                                  <div
+                                    key={entry.id}
+                                    className="relative flex gap-4 group min-w-0 w-full max-w-full"
+                                  >
+                                    {/* Dot */}
+                                    <div className="relative z-10 shrink-0 flex items-start pt-1.5">
+                                      <div
+                                        className={`w-8 h-8 rounded-full ${visual.dotClass} border-2 border-background shadow-md flex items-center justify-center transition-transform group-hover:scale-110`}
+                                      >
+                                        <visual.icon className="h-4 w-4 text-white" />
+                                      </div>
                                     </div>
 
-                                    {entry.createdByName && (
-                                      <p className="text-xs text-muted-foreground font-medium">
-                                        Người tạo:{" "}
-                                        <span className="font-semibold">
-                                          {entry.createdByName as string}
-                                        </span>
-                                      </p>
-                                    )}
+                                    {/* Card */}
+                                    <Card
+                                      data-timeline-card
+                                      className={`flex-1 min-w-0 ${hoverBorderClass} transition-colors ${
+                                        hasImage ? "cursor-pointer" : ""
+                                      }`}
+                                      style={{
+                                        maxWidth: "calc(100% - 0px)",
+                                        width: "100%",
+                                      }}
+                                      onClick={() => {
+                                        if (hasImage) {
+                                          const imageUrl =
+                                            (entry as any).imageUrl ||
+                                            entry.fileUrl;
+                                          if (imageUrl) {
+                                            setViewingImage({
+                                              url: imageUrl as string,
+                                              title:
+                                                (entry.title as string) ||
+                                                (entry.description as string) ||
+                                                "Timeline",
+                                            });
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      <CardContent className="p-4 hover:bg-muted/50 transition-colors overflow-hidden">
+                                        <div className="space-y-1">
+                                          <div className="flex items-start justify-between gap-2 min-w-0">
+                                            <div
+                                              data-timeline-text
+                                              className="flex-1 min-w-0 overflow-hidden"
+                                            >
+                                              <div
+                                                data-timeline-truncated
+                                                className="w-full"
+                                              >
+                                                <TruncatedText
+                                                  text={
+                                                    entry.description as string
+                                                  }
+                                                  className="font-semibold text-sm block w-full"
+                                                />
+                                              </div>
+                                            </div>
+                                            <span className="text-xs text-muted-foreground whitespace-nowrap font-medium mt-0.5 shrink-0">
+                                              {entry.createdAt
+                                                ? new Date(
+                                                    entry.createdAt
+                                                  ).toLocaleTimeString(
+                                                    "vi-VN",
+                                                    {
+                                                      hour: "2-digit",
+                                                      minute: "2-digit",
+                                                    }
+                                                  )
+                                                : ""}
+                                            </span>
+                                          </div>
+
+                                          {entry.createdByName && (
+                                            <p className="text-xs text-muted-foreground font-medium">
+                                              Người tạo:{" "}
+                                              <span className="font-semibold">
+                                                {entry.createdByName as string}
+                                              </span>
+                                            </p>
+                                          )}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
                                   </div>
-                                </CardContent>
-                              </Card>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

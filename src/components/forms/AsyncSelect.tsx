@@ -86,9 +86,18 @@ export const AsyncSelect: React.FC<AsyncSelectProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  const selectedValues = multiple 
-    ? (Array.isArray(value) ? value : value !== undefined ? [value] : [])
-    : (value !== undefined ? [value] : []);
+  const selectedValues: (string | number)[] = React.useMemo(() => {
+    if (multiple) {
+      if (Array.isArray(value)) {
+        return value.filter((v): v is string | number => {
+          if (Array.isArray(v)) return false;
+          return typeof v === 'string' || typeof v === 'number';
+        });
+      }
+      return value !== undefined && !Array.isArray(value) ? [value as string | number] : [];
+    }
+    return value !== undefined && !Array.isArray(value) ? [value as string | number] : [];
+  }, [multiple, value]);
 
   const selectedOptions = options.filter(option => 
     selectedValues.includes(option.value)
@@ -143,7 +152,7 @@ export const AsyncSelect: React.FC<AsyncSelectProps> = ({
 
   const handleSelect = (optionValue: string | number) => {
     if (multiple) {
-      const newValues = selectedValues.includes(optionValue)
+      const newValues: (string | number)[] = selectedValues.includes(optionValue)
         ? selectedValues.filter(v => v !== optionValue)
         : [...selectedValues, optionValue];
       onValueChange?.(newValues);

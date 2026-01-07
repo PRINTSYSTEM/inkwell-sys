@@ -972,7 +972,7 @@ export default function ProofingOrderPage() {
                                 {design.processClassificationOptionName && (
                                   <div>
                                     <span className="text-muted-foreground">
-                                      Cắt - Bế:
+                                      Quy cách:
                                     </span>
                                     <span className="ml-2">
                                       {processClassificationLabels[
@@ -985,7 +985,7 @@ export default function ProofingOrderPage() {
                                 {design.sidesClassification && (
                                   <div>
                                     <span className="text-muted-foreground">
-                                      1 - 2 mặt:
+                                      Số mặt in:
                                     </span>
                                     <span className="ml-2">
                                       {sidesClassificationLabels[

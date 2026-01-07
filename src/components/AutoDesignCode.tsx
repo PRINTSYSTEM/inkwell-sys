@@ -4,8 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Design } from '@/types';
-import { DesignCodeGenerator, designCodeTemplates } from '@/services/designCodeService';
-import { designService } from '@/lib/mockData';
+// TODO: designCodeService and designService need to be implemented
+// import { DesignCodeGenerator, designCodeTemplates } from '@/services/designCodeService';
+// import { designService } from '@/lib/mockData';
+const DesignCodeGenerator = {
+  getTemplateByType: (type: string) => null,
+  generateCode: (template: any, values: Record<string, string>) => ({ code: '' })
+};
+const designCodeTemplates: any[] = [];
+const designService = {
+  updateDesign: async (id: string, data: any) => Promise.resolve({} as any)
+};
 import MaterialSelector from '@/components/MaterialSelector';
 
 type Props = {

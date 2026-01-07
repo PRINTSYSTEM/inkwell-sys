@@ -262,7 +262,7 @@ export function SimplePieChart<T extends ChartDataPoint>({
 
   return (
     <PieChart<{ name: string; value: number }>
-      {...props}
+      {...(props as Omit<typeof props, 'labelFormatter'>)}
       data={aggregatedData}
       nameKey="name"
       valueKey="value"
