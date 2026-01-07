@@ -7,7 +7,6 @@ import type {
   OrderResponse,
   OrderDetailResponse,
   DesignResponse,
-  PaymentResponse,
   ProductionResponse,
 } from "@/Schema";
 
@@ -272,9 +271,6 @@ export interface Customer extends Omit<
   createdBy: string;
 }
 
-// Re-export schema types for convenience
-export type { CustomerResponse, CustomerSummaryResponse } from "@/Schema";
-
 // Design item trong đơn hàng - dành cho giai đoạn thiết kế
 export interface OrderDesign {
   id: string;
@@ -359,9 +355,6 @@ export interface Order extends Omit<
   createdAt: string;
   createdBy: string;
 }
-
-// Re-export schema types for convenience
-export type { OrderResponse, OrderDetailResponse } from "@/Schema";
 
 export interface PrepressOrder {
   id: string;
@@ -448,9 +441,6 @@ export interface Design extends Omit<
   revisionCount: number;
 }
 
-// Re-export schema types for convenience
-export type { DesignResponse } from "@/Schema";
-
 export interface DesignProgressImage {
   id: string;
   designId: string;
@@ -519,7 +509,6 @@ export type {
   OrderResponse,
   OrderDetailResponse,
   DesignResponse,
-  PaymentResponse,
   ProductionResponse,
 } from "@/Schema";
 
@@ -534,13 +523,10 @@ export interface ProductionIssue {
 // Payment type - using schema type as base
 
 /**
- * Payment interface - extends PaymentResponse from schema with additional UI-specific fields
- * Base type from schema: PaymentResponse
+ * Payment interface - extends CashPaymentResponse from schema with additional UI-specific fields
+ * Base type from schema: CashPaymentResponse
  */
-export interface Payment extends Omit<
-  PaymentResponse,
-  "id" | "orderId" | "createdAt" | "paidAt"
-> {
+export interface Payment {
   id: string; // Convert from number to string for UI compatibility
   orderId: string;
   orderNumber: string;

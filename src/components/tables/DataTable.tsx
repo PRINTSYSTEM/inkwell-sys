@@ -178,7 +178,7 @@ export function DataTable<T extends Record<string, unknown>>({
     return sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
   };
 
-  const renderCellValue = (column: TableColumn<T>, row: T) => {
+  const renderCellValue = (column: TableColumn<T>, row: T): React.ReactNode => {
     const value = typeof column.key === 'string' && column.key.includes('.') 
       ? column.key.split('.').reduce((obj, key) => obj?.[key], row)
       : row[column.key as keyof T];
@@ -187,7 +187,7 @@ export function DataTable<T extends Record<string, unknown>>({
       return column.render(value, row);
     }
 
-    return value;
+    return value as React.ReactNode;
   };
 
   if (loading) {

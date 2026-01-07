@@ -407,7 +407,7 @@ export default function OrderList() {
                       <>
                         <TableRow
                           key={order.id}
-                          className="h-14 cursor-pointer bg-background hover:bg-muted/30 border-l-2 border-r-2 border-t-2 border-border/60"
+                          className="h-14 cursor-pointer bg-card hover:bg-muted/40 border-x-2 border-t-2 border-border border-l-4 border-l-primary shadow-sm"
                           onClick={() => handleOrderClick(order.id ?? 0)}
                         >
                           <TableCell className="py-3">
@@ -489,100 +489,95 @@ export default function OrderList() {
                         </TableRow>
                         {/* Expanded Design Rows - Always shown */}
                         {orderDetails.length > 0 && (
-                          <TableRow>
+                          <TableRow key={`designs-${order.id}`}>
                             <TableCell
                               colSpan={canViewPrice ? 7 : 5}
-                              className="p-0 bg-muted/10 border-l-2 border-r-2 border-b-2 border-border/60 border-l-4 border-l-primary/20"
+                              className="p-0 bg-muted/20 border-x-2 border-b-2 border-border border-l-4 border-l-primary"
                             >
-                              <div className="px-4 py-2 pl-6">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/30">
-                                      <TableHead className="h-8 w-20 text-xs font-semibold text-muted-foreground">
-                                        Ảnh
-                                      </TableHead>
-                                      <TableHead className="h-8 text-xs font-semibold text-muted-foreground">
-                                        Mã thiết kế
-                                      </TableHead>
-                                      <TableHead className="h-8 text-xs font-semibold text-muted-foreground">
-                                        Trạng thái
-                                      </TableHead>
-                                      <TableHead className="h-8 text-xs font-semibold text-right text-muted-foreground">
-                                        Số lượng
-                                      </TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {orderDetails.map((orderDetail, index) => {
-                                      const detail =
-                                        orderDetail as OrderDetailResponse;
-                                      const design = detail.design;
-                                      if (!design) return null;
+                              <div className="px-4 py-3 pl-6">
+                                <div className="overflow-hidden rounded-md border border-border/70 bg-background">
+                                  <Table className="mb-0">
+                                    <TableBody>
+                                      {orderDetails.map((orderDetail) => {
+                                        const detail =
+                                          orderDetail as OrderDetailResponse;
+                                        const design = detail.design;
+                                        if (!design) return null;
 
-                                      return (
-                                        <TableRow
-                                          key={detail.id}
-                                          className={`h-11 cursor-pointer bg-muted/5 hover:bg-muted/20 transition-colors ${
-                                            index < orderDetails.length - 1
-                                              ? "border-b border-border/20"
-                                              : ""
-                                          }`}
-                                          onClick={(e) =>
-                                            handleDesignClick(design.id, e)
-                                          }
-                                        >
-                                          <TableCell className="py-2">
-                                            <div className="relative w-12 h-12 bg-muted/50 rounded flex items-center justify-center overflow-hidden">
-                                              {design.designImageUrl ? (
-                                                <img
-                                                  src={design.designImageUrl}
-                                                  alt={design.code || "Design"}
-                                                  className="w-full h-full object-contain cursor-zoom-in hover:opacity-80 transition-opacity"
-                                                  onClick={(e) =>
-                                                    handleImageClick(
-                                                      design.designImageUrl,
-                                                      e
-                                                    )
-                                                  }
-                                                />
-                                              ) : (
-                                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                                              )}
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="py-2">
-                                            <span className="font-semibold text-sm text-primary">
-                                              {design.code ||
-                                                `DES-${design.id}`}
-                                            </span>
-                                            {design.designName && (
-                                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                                                {design.designName}
-                                              </p>
-                                            )}
-                                          </TableCell>
-                                          <TableCell className="py-2">
-                                            <StatusBadge
-                                              status={design.status}
-                                              label={
-                                                designStatusLabels[
-                                                  design.status || ""
-                                                ] ||
-                                                design.status ||
-                                                "N/A"
-                                              }
-                                            />
-                                          </TableCell>
-                                          <TableCell className="py-2 text-right">
-                                            <span className="font-semibold text-sm">
-                                              {detail.quantity ?? 0}
-                                            </span>
-                                          </TableCell>
-                                        </TableRow>
-                                      );
-                                    })}
-                                  </TableBody>
-                                </Table>
+                                        return (
+                                          <TableRow
+                                            key={detail.id}
+                                            className="hover:bg-muted/40 transition-colors border-b last:border-b-0 border-border/60 cursor-pointer"
+                                            onClick={(e) =>
+                                              handleDesignClick(design.id, e)
+                                            }
+                                          >
+                                            {/* Ảnh */}
+                                            <TableCell className="w-[72px] align-middle">
+                                              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted/60 flex items-center justify-center">
+                                                {design.designImageUrl ? (
+                                                  <img
+                                                    src={design.designImageUrl}
+                                                    alt={
+                                                      design.code || "Thiết kế"
+                                                    }
+                                                    className="h-full w-full object-cover cursor-zoom-in"
+                                                    onClick={(e) =>
+                                                      handleImageClick(
+                                                        design.designImageUrl!,
+                                                        e
+                                                      )
+                                                    }
+                                                  />
+                                                ) : (
+                                                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                                )}
+                                              </div>
+                                            </TableCell>
+
+                                            {/* Mã + tên thiết kế */}
+                                            <TableCell className="min-w-[220px] align-middle">
+                                              <div className="min-w-0 space-y-1">
+                                                <div className="flex items-center justify-between gap-2">
+                                                  <span className="truncate text-xs font-semibold uppercase tracking-wide text-primary">
+                                                    {design.code ||
+                                                      `DES-${design.id}`}
+                                                  </span>
+                                                </div>
+                                                {design.designName && (
+                                                  <p className="truncate text-xs text-muted-foreground">
+                                                    {design.designName}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </TableCell>
+
+                                            {/* Trạng thái */}
+                                            <TableCell className="w-[160px] align-middle">
+                                              <StatusBadge
+                                                status={design.status}
+                                                label={
+                                                  designStatusLabels[
+                                                    design.status || ""
+                                                  ] ||
+                                                  design.status ||
+                                                  "N/A"
+                                                }
+                                              />
+                                            </TableCell>
+
+                                            {/* Số lượng */}
+                                            <TableCell className="w-[110px] text-right align-middle">
+                                              <span className="inline-flex min-w-[56px] items-center justify-end rounded-full bg-muted px-2 py-1 text-xs font-semibold">
+                                                x{detail.quantity ?? 0}
+                                              </span>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
                               </div>
                             </TableCell>
                           </TableRow>

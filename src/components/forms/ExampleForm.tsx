@@ -341,7 +341,6 @@ export const ExampleForm: React.FC = () => {
             </Button>
             <Button
               type="submit"
-              loading={isSubmitting}
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Đang gửi...' : 'Gửi form'}

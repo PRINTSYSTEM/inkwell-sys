@@ -72,7 +72,6 @@ export default function ReportExportListPage() {
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     reportCode: reportCodeFilter !== "all" ? reportCodeFilter : undefined,
-    search: searchQuery || undefined,
   });
 
   const { download, loading: isDownloading } = useDownloadReportExport();

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -7,12 +7,25 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
-} from 'recharts';
-import { ChartContainer, CustomTooltip, CustomLegend, type ChartContainerProps } from './ChartBase';
-import { chartUtils, defaultChartConfig, type ChartConfig, type ChartDataPoint } from './chart-utils';
+  ResponsiveContainer,
+} from "recharts";
+import {
+  ChartContainer,
+  CustomTooltip,
+  CustomLegend,
+  type ChartContainerProps,
+} from "./ChartBase";
+import {
+  chartUtils,
+  defaultChartConfig,
+  type ChartConfig,
+  type ChartDataPoint,
+} from "./chart-utils";
 
-export interface AreaChartProps<T extends ChartDataPoint> extends Omit<ChartContainerProps, 'children'> {
+export interface AreaChartProps<T extends ChartDataPoint> extends Omit<
+  ChartContainerProps,
+  "children"
+> {
   data: T[];
   xAxisKey: keyof T;
   yAxisKeys: Array<{
@@ -26,7 +39,7 @@ export interface AreaChartProps<T extends ChartDataPoint> extends Omit<ChartCont
   config?: Partial<ChartConfig>;
   xAxisFormatter?: (value: unknown) => string;
   yAxisFormatter?: (value: number) => string;
-  valueType?: 'number' | 'currency' | 'percentage';
+  valueType?: "number" | "currency" | "percentage";
   smooth?: boolean;
   connectNulls?: boolean;
 }
@@ -38,7 +51,7 @@ export function AreaChart<T extends ChartDataPoint>({
   config = {},
   xAxisFormatter,
   yAxisFormatter,
-  valueType = 'number',
+  valueType = "number",
   smooth = true,
   connectNulls = false,
   ...containerProps
@@ -47,17 +60,21 @@ export function AreaChart<T extends ChartDataPoint>({
   const colors = chartUtils.generateColors(yAxisKeys.length);
 
   // Format X-axis values
-  const formatXAxis = xAxisFormatter || ((value: unknown) => {
-    if (value instanceof Date) {
-      return chartUtils.formatDate(value);
-    }
-    return String(value);
-  });
+  const formatXAxis =
+    xAxisFormatter ||
+    ((value: unknown) => {
+      if (value instanceof Date) {
+        return chartUtils.formatDate(value);
+      }
+      return String(value);
+    });
 
   // Format Y-axis values
-  const formatYAxis = yAxisFormatter || ((value: number) => {
-    return chartUtils.formatValue(value, valueType);
-  });
+  const formatYAxis =
+    yAxisFormatter ||
+    ((value: number) => {
+      return chartUtils.formatValue(value, valueType);
+    });
 
   // Format tooltip values
   const formatTooltipValue = (value: number, name: string) => {
@@ -72,26 +89,17 @@ export function AreaChart<T extends ChartDataPoint>({
   const isEmpty = !data || data.length === 0;
 
   return (
-    <ChartContainer 
-      {...containerProps}
-      empty={isEmpty}
-    >
-      <ResponsiveContainer 
-        width="100%" 
-        height={chartConfig.height}
-      >
-        <RechartsAreaChart
-          data={data}
-          margin={chartConfig.margin}
-        >
+    <ChartContainer {...containerProps} empty={isEmpty}>
+      <ResponsiveContainer width="100%" height={chartConfig.height}>
+        <RechartsAreaChart data={data} margin={chartConfig.margin}>
           {chartConfig.showGrid && (
-            <CartesianGrid 
-              strokeDasharray="3 3" 
+            <CartesianGrid
+              strokeDasharray="3 3"
               stroke="hsl(var(--border))"
               opacity={0.3}
             />
           )}
-          
+
           <XAxis
             dataKey={xAxisKey as string}
             tickFormatter={formatXAxis}
@@ -100,7 +108,7 @@ export function AreaChart<T extends ChartDataPoint>({
             tickLine={false}
             axisLine={false}
           />
-          
+
           <YAxis
             tickFormatter={formatYAxis}
             stroke="hsl(var(--muted-foreground))"
@@ -121,16 +129,12 @@ export function AreaChart<T extends ChartDataPoint>({
             />
           )}
 
-          {chartConfig.showLegend && (
-            <Legend
-              content={<CustomLegend />}
-            />
-          )}
+          {chartConfig.showLegend && <Legend content={<CustomLegend />} />}
 
           {yAxisKeys.map((yAxis, index) => (
             <Area
               key={String(yAxis.key)}
-              type={smooth ? 'monotone' : 'linear'}
+              type={smooth ? "monotone" : "linear"}
               dataKey={yAxis.key as string}
               name={yAxis.name || String(yAxis.key)}
               stackId={yAxis.stackId}
@@ -149,7 +153,10 @@ export function AreaChart<T extends ChartDataPoint>({
 }
 
 // Specialized area chart variants
-export interface SimpleAreaChartProps<T extends ChartDataPoint> extends Omit<AreaChartProps<T>, 'yAxisKeys'> {
+export interface SimpleAreaChartProps<T extends ChartDataPoint> extends Omit<
+  AreaChartProps<T>,
+  "yAxisKeys"
+> {
   yAxisKey: keyof T;
   areaColor?: string;
   areaName?: string;
@@ -163,18 +170,23 @@ export function SimpleAreaChart<T extends ChartDataPoint>({
   fillOpacity,
   ...props
 }: SimpleAreaChartProps<T>) {
-  const yAxisKeys = [{
-    key: yAxisKey,
-    name: areaName,
-    color: areaColor,
-    fillOpacity
-  }];
+  const yAxisKeys = [
+    {
+      key: yAxisKey,
+      name: areaName,
+      color: areaColor,
+      fillOpacity,
+    },
+  ];
 
   return <AreaChart {...props} yAxisKeys={yAxisKeys} />;
 }
 
 // Stacked area chart
-export interface StackedAreaChartProps<T extends ChartDataPoint> extends Omit<AreaChartProps<T>, 'yAxisKeys'> {
+export interface StackedAreaChartProps<T extends ChartDataPoint> extends Omit<
+  AreaChartProps<T>,
+  "yAxisKeys"
+> {
   yAxisKeys: (keyof T)[];
   areaNames?: string[];
   areaColors?: string[];
@@ -186,7 +198,7 @@ export function StackedAreaChart<T extends ChartDataPoint>({
   yAxisKeys: keys,
   areaNames = [],
   areaColors = [],
-  stackId = 'default',
+  stackId = "default",
   fillOpacity = 0.6,
   ...props
 }: StackedAreaChartProps<T>) {
@@ -195,7 +207,7 @@ export function StackedAreaChart<T extends ChartDataPoint>({
     name: areaNames[index] || String(key),
     color: areaColors[index],
     stackId,
-    fillOpacity
+    fillOpacity,
   }));
 
   return <AreaChart {...props} yAxisKeys={yAxisKeys} />;
@@ -206,23 +218,29 @@ export function PercentageAreaChart<T extends ChartDataPoint>({
   data,
   yAxisKeys: keys,
   ...props
-}: Omit<StackedAreaChartProps<T>, 'yAxisFormatter'>) {
+}: Omit<StackedAreaChartProps<T>, "yAxisFormatter">) {
   // Convert data to percentages
   const percentageData = React.useMemo(() => {
-    return data.map(item => {
-      const total = keys.reduce((sum, key) => {
-        const value = Number(item[key]) || 0;
+    return data.map((item) => {
+      const total = keys.reduce((sum: number, key) => {
+        const value =
+          Number((item as Record<string | number | symbol, unknown>)[key]) || 0;
         return sum + value;
       }, 0);
-      
+
       if (total === 0) return item;
-      
+
       const percentageItem = { ...item } as T;
-      keys.forEach(key => {
-        const value = Number(item[key]) || 0;
-        (percentageItem as Record<string, unknown>)[key as string] = (value / total) * 100;
+      const totalNum = Number(total) || 0;
+      keys.forEach((key) => {
+        const value =
+          Number((item as Record<string | number | symbol, unknown>)[key]) || 0;
+        const percentage = totalNum > 0 ? (value / totalNum) * 100 : 0;
+        (percentageItem as Record<string | number | symbol, unknown>)[
+          String(key)
+        ] = percentage;
       });
-      
+
       return percentageItem;
     });
   }, [data, keys]);
@@ -241,16 +259,18 @@ export function PercentageAreaChart<T extends ChartDataPoint>({
 }
 
 // Time series area chart with date formatting
-export interface TimeSeriesAreaChartProps<T extends ChartDataPoint> extends Omit<AreaChartProps<T>, 'xAxisFormatter'> {
-  dateFormat?: 'short' | 'medium' | 'long';
+export interface TimeSeriesAreaChartProps<
+  T extends ChartDataPoint,
+> extends Omit<AreaChartProps<T>, "xAxisFormatter"> {
+  dateFormat?: "short" | "medium" | "long";
 }
 
 export function TimeSeriesAreaChart<T extends ChartDataPoint>({
-  dateFormat = 'short',
+  dateFormat = "short",
   ...props
 }: TimeSeriesAreaChartProps<T>) {
   const xAxisFormatter = (value: unknown) => {
-    if (value instanceof Date || typeof value === 'string') {
+    if (value instanceof Date || typeof value === "string") {
       return chartUtils.formatDate(value, dateFormat);
     }
     return String(value);
@@ -260,7 +280,9 @@ export function TimeSeriesAreaChart<T extends ChartDataPoint>({
 }
 
 // Gradient area chart with custom gradients
-export interface GradientAreaChartProps<T extends ChartDataPoint> extends AreaChartProps<T> {
+export interface GradientAreaChartProps<
+  T extends ChartDataPoint,
+> extends AreaChartProps<T> {
   gradients?: Array<{
     id: string;
     colors: Array<{ offset: string; color: string; opacity?: number }>;
@@ -274,14 +296,24 @@ export function GradientAreaChart<T extends ChartDataPoint>({
 }: GradientAreaChartProps<T>) {
   return (
     <ChartContainer {...props}>
-      <ResponsiveContainer width="100%" height={props.config?.height || defaultChartConfig.height}>
+      <ResponsiveContainer
+        width="100%"
+        height={props.config?.height || defaultChartConfig.height}
+      >
         <RechartsAreaChart
           data={props.data}
           margin={props.config?.margin || defaultChartConfig.margin}
         >
           <defs>
-            {gradients.map(gradient => (
-              <linearGradient key={gradient.id} id={gradient.id} x1="0" y1="0" x2="0" y2="1">
+            {gradients.map((gradient) => (
+              <linearGradient
+                key={gradient.id}
+                id={gradient.id}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
                 {gradient.colors.map((color, index) => (
                   <stop
                     key={index}
@@ -295,9 +327,13 @@ export function GradientAreaChart<T extends ChartDataPoint>({
           </defs>
 
           {(props.config?.showGrid ?? defaultChartConfig.showGrid) && (
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="hsl(var(--border))"
+              opacity={0.3}
+            />
           )}
-          
+
           <XAxis
             dataKey={props.xAxisKey as string}
             tickFormatter={props.xAxisFormatter}
@@ -306,7 +342,7 @@ export function GradientAreaChart<T extends ChartDataPoint>({
             tickLine={false}
             axisLine={false}
           />
-          
+
           <YAxis
             tickFormatter={props.yAxisFormatter}
             stroke="hsl(var(--muted-foreground))"
@@ -319,9 +355,12 @@ export function GradientAreaChart<T extends ChartDataPoint>({
             <Tooltip
               content={
                 <CustomTooltip
-                  valueType={props.valueType || 'number'}
+                  valueType={props.valueType || "number"}
                   valueFormatter={(value: number, name: string) => {
-                    return chartUtils.formatValue(value, props.valueType || 'number');
+                    return chartUtils.formatValue(
+                      value,
+                      props.valueType || "number"
+                    );
                   }}
                 />
               }
@@ -333,13 +372,15 @@ export function GradientAreaChart<T extends ChartDataPoint>({
           )}
 
           {yAxisKeys.map((yAxis, index) => {
-            const gradient = gradients.find(g => g.id === `gradient-${index}`);
+            const gradient = gradients.find(
+              (g) => g.id === `gradient-${index}`
+            );
             const fill = gradient ? `url(#${gradient.id})` : yAxis.color;
-            
+
             return (
               <Area
                 key={String(yAxis.key)}
-                type={props.smooth ? 'monotone' : 'linear'}
+                type={props.smooth ? "monotone" : "linear"}
                 dataKey={yAxis.key as string}
                 name={yAxis.name || String(yAxis.key)}
                 stackId={yAxis.stackId}

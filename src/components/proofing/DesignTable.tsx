@@ -141,7 +141,7 @@ export function DesignTable({
                       {design.processClassificationOptionName && (
                         <div>
                           <span className="text-muted-foreground">
-                            Cắt - Bế:
+                            Quy cách:
                           </span>
                           <span className="ml-2">
                             {processClassificationLabels[
@@ -150,18 +150,7 @@ export function DesignTable({
                           </span>
                         </div>
                       )}
-                      {design.sidesClassification && (
-                        <div>
-                          <span className="text-muted-foreground">
-                            1 - 2 mặt:
-                          </span>
-                          <span className="ml-2">
-                            {sidesClassificationLabels[
-                              design.sidesClassification
-                            ] || design.sidesClassification}
-                          </span>
-                        </div>
-                      )}
+
                       {design.laminationType && (
                         <div>
                           <span className="text-muted-foreground">

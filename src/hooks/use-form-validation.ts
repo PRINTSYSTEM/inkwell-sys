@@ -6,6 +6,13 @@ import {
   getFieldError,
 } from "@/Schema";
 
+// Type guard for validation result
+function isValidationError<T>(
+  result: { success: true; data: T } | { success: false; errors: z.ZodError }
+): result is { success: false; errors: z.ZodError } {
+  return !result.success;
+}
+
 /**
  * Hook for form validation with Zod schemas
  * @param schema Zod schema to validate against
@@ -51,7 +58,7 @@ export function useFormValidation<T extends z.ZodType>(
   const validateForm = useCallback(
     (data: unknown, touchErrors = true): boolean => {
       const result = validateSchema(schema, data);
-      if (!result.success) {
+      if (isValidationError(result)) {
         const formattedErrors = formatValidationErrorsFlat(result.errors);
         setErrors(formattedErrors);
 
@@ -74,7 +81,7 @@ export function useFormValidation<T extends z.ZodType>(
   const validateAndParse = useCallback(
     (data: unknown, touchErrors = true): z.infer<T> | null => {
       const result = validateSchema(schema, data);
-      if (!result.success) {
+      if (isValidationError(result)) {
         const formattedErrors = formatValidationErrorsFlat(result.errors);
         setErrors(formattedErrors);
 
