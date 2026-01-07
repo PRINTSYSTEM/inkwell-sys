@@ -126,7 +126,12 @@ export default function AllDesignsPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterState.filters, filterState.searchQuery, selectedMonth, selectedYear]);
+  }, [
+    filterState.filters,
+    filterState.searchQuery,
+    selectedMonth,
+    selectedYear,
+  ]);
 
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
@@ -322,8 +327,7 @@ export default function AllDesignsPage() {
                 <SelectValue placeholder="Năm" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                {Array.from({ length: 5 }, (_, i) => {
+                {Array.from({ length: 3 }, (_, i) => {
                   const year = new Date().getFullYear() - 2 + i;
                   return (
                     <SelectItem key={year} value={year.toString()}>
@@ -401,19 +405,32 @@ export default function AllDesignsPage() {
                         )}
                       </TableCell>
                       <TableCell className="py-3 text-sm font-semibold max-w-[150px]">
-                        <div className="truncate" title={design.customer?.name || design.customer?.companyName || "—"}>
+                        <div
+                          className="truncate"
+                          title={
+                            design.customer?.name ||
+                            design.customer?.companyName ||
+                            "—"
+                          }
+                        >
                           {design.customer?.name ||
                             design.customer?.companyName ||
                             "—"}
                         </div>
                       </TableCell>
                       <TableCell className="py-3 text-sm font-semibold max-w-[150px]">
-                        <div className="truncate" title={design.designName || "—"}>
+                        <div
+                          className="truncate"
+                          title={design.designName || "—"}
+                        >
                           {design.designName || "—"}
                         </div>
                       </TableCell>
                       <TableCell className="py-3 text-sm font-medium text-muted-foreground max-w-[200px]">
-                        <div className="truncate" title={design.latestRequirements || "—"}>
+                        <div
+                          className="truncate"
+                          title={design.latestRequirements || "—"}
+                        >
                           {design.latestRequirements || "—"}
                         </div>
                       </TableCell>
@@ -432,7 +449,11 @@ export default function AllDesignsPage() {
                       </TableCell>
                       <TableCell className="py-3">
                         <div className="flex items-center gap-1 font-mono text-xs font-semibold">
-                          <span>{design.dimensions || "—"}</span>
+                          <span>
+                            {design.width
+                              ? `${design.length} x ${design.width} x ${design.height}`
+                              : `${design.length} x ${design.height}`}
+                          </span>
                         </div>
                       </TableCell>
                     </TableRow>

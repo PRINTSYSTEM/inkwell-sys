@@ -7,12 +7,14 @@ interface Props {
   dimensions: string; // "325 x 80"
   extraNote?: string; // "bao gồm 15mm mép dán"
   createdAt: string; // "2025-11-26T10:38:30.3642249"
+  adhesiveOffset?: number; // "15"
 }
 
 export default function DesignCode(props: Props) {
   const [copied, setCopied] = useState(false);
 
-  const { code, designName, dimensions, extraNote, createdAt } = props;
+  const { code, designName, dimensions, extraNote, createdAt, adhesiveOffset } =
+    props;
 
   // 2) Format date string "2025-11-26T10:38:30.3642249" -> "26/11/2025"
   const formattedDate = useMemo(() => {
@@ -29,7 +31,7 @@ export default function DesignCode(props: Props) {
   }, [createdAt]);
 
   const handleCopyToClipboard = async () => {
-    const text = `${code}: ${designName} - KT: ${dimensions}mm${
+    const text = `${code}: ${designName} - KT: ${dimensions}mm${adhesiveOffset > 0 ? `(bao gồm ${adhesiveOffset}mm mép dán)` : ""}${
       extraNote ? ` (${extraNote})` : ""
     } - Ngày ${formattedDate}`;
     await navigator.clipboard.writeText(text);
@@ -50,7 +52,12 @@ export default function DesignCode(props: Props) {
       <span className="font-normal">-</span>
       <span>KT:</span>
       <span className="font-bold">{dimensions}mm</span>
-
+      {adhesiveOffset > 0 && (
+        <div className="font-normal">
+          (bao gồm <span className="font-bold">{adhesiveOffset}mm</span> mép
+          dán)
+        </div>
+      )}
       {/* (bao gồm 15mm mép dán) */}
       {extraNote && <span className="italic text-gray-700">({extraNote})</span>}
 

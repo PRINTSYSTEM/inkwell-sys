@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -729,6 +729,12 @@ export default function DesignDetailPage() {
   const canEditWidth = isHop || isTuiXepHong; // Only box and side-fold bag can edit width
   const canEditAdhesiveOffset = isNhan; // Only label can edit adhesive offset
 
+  const calculatedDimensions = useMemo(() => {
+    return d.width
+      ? `${d.length} x ${d.width} x ${d.height}`
+      : `${d.length} x ${d.height}`;
+  }, [d.length, d.width, d.height]);
+
   // ==== MAIN LAYOUT ====
   return (
     <ErrorBoundary>
@@ -828,9 +834,10 @@ export default function DesignDetailPage() {
                 <DesignCode
                   code={d.code}
                   designName={d.designName}
-                  dimensions={d.dimensions}
+                  dimensions={calculatedDimensions}
                   extraNote={d.extraNote as string}
                   createdAt={d.createdAt}
+                  adhesiveOffset={d.adhesiveOffset}
                 />
 
                 {/* Designer info */}
@@ -1063,13 +1070,37 @@ export default function DesignDetailPage() {
                       </div>
 
                       <div className="grid grid-cols-3 gap-2">
-                        <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                          <p className="text-xl font-bold text-blue-900 dark:text-blue-100">
-                            {d.length ?? "—"}
-                          </p>
-                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5 font-semibold">
-                            Dài (mm)
-                          </p>
+                        <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                          {d.adhesiveOffset != null &&
+                          typeof d.adhesiveOffset === "number" &&
+                          d.adhesiveOffset > 0 ? (
+                            <div className="text-center">
+                              <p className="text-xl font-bold text-blue-900 dark:text-blue-100">
+                                {d.length ?? "—"}
+                              </p>
+                              <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5 font-semibold">
+                                Dài (mm)
+                              </p>
+                              <div className="mt-1 pt-1 border-t border-blue-200 dark:border-blue-700">
+                                <p className="text-[10px] text-blue-600 dark:text-blue-400 leading-tight">
+                                  <span className="font-medium">Bao gồm:</span>{" "}
+                                  <span className="font-bold">
+                                    {d.adhesiveOffset}mm
+                                  </span>{" "}
+                                  mép dán
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <p className="text-xl font-bold text-blue-900 dark:text-blue-100">
+                                {d.length ?? "—"}
+                              </p>
+                              <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5 font-semibold">
+                                Dài (mm)
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <div className="p-2 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
                           <p className="text-xl font-bold text-green-900 dark:text-green-100">
@@ -1116,7 +1147,32 @@ export default function DesignDetailPage() {
                   )}
 
                   {/* Material */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <Card className="border-teal-200 dark:border-teal-800 bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950/30 dark:to-teal-900/20">
+                      <CardContent className="p-2.5">
+                        <p className="text-xs text-teal-700 dark:text-teal-300 uppercase mb-1.5 font-bold">
+                          Tên thiết kế
+                        </p>
+                        {isEditing && canEditDesign ? (
+                          <Input
+                            value={editFormData.designName || ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                designName: e.target.value,
+                              }))
+                            }
+                            placeholder="Nhập tên thiết kế"
+                            className="h-9 text-sm font-bold"
+                            maxLength={255}
+                          />
+                        ) : (
+                          <p className="font-bold text-sm text-teal-900 dark:text-teal-100">
+                            {d.designName ?? "—"}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
                     <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20">
                       <CardContent className="p-2.5">
                         <p className="text-xs text-purple-700 dark:text-purple-300 uppercase mb-1.5 font-bold">
