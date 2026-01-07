@@ -1120,6 +1120,19 @@ export default function DesignDetailPage() {
                         </div>
                       </div>
 
+                      {d.adhesiveOffset != null &&
+                        typeof d.adhesiveOffset === "number" &&
+                        d.adhesiveOffset > 0 && (
+                          <div className="flex items-center justify-between p-2 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-sm mt-2">
+                            <span className="font-semibold text-orange-900 dark:text-orange-100">
+                              Mép dán
+                            </span>
+                            <span className="font-bold text-orange-700 dark:text-orange-300">
+                              {d.adhesiveOffset} mm
+                            </span>
+                          </div>
+                        )}
+
                       {orderDetails?.[0]?.quantity && (
                         <div className="flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm">
                           <span className="font-semibold text-blue-900 dark:text-blue-100">
