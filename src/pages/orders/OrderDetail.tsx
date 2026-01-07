@@ -1029,10 +1029,10 @@ export default function OrderDetailPage() {
                                   Kích thước
                                 </p>
                                 <p className="font-medium">
-                                  {design?.dimensions ||
-                                    (design?.width && design?.height
-                                      ? `${design.width}x${design.height} cm`
-                                      : "—")}
+                                  {design.width
+                                    ? `${design.length} x ${design.width} x ${design.height}`
+                                    : `${design.length} x ${design.height} `}{" "}
+                                  mm
                                 </p>
                               </div>
                               {/* Số lượng */}
@@ -1109,6 +1109,20 @@ export default function OrderDetailPage() {
                                   </p>
                                 </div>
                               )}
+                              {design?.adhesiveOffset != null &&
+                                typeof design.adhesiveOffset === "number" &&
+                                design.adhesiveOffset > 0 && (
+                                  <>
+                                    <div>
+                                      <p className="text-muted-foreground text-xs">
+                                        Mép dán
+                                      </p>
+                                      <p className="font-medium">
+                                        {design.adhesiveOffset} mm
+                                      </p>
+                                    </div>
+                                  </>
+                                )}
                               {canViewPrice && (
                                 <>
                                   {/* Đơn giá */}

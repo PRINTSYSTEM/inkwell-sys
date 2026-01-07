@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -31,8 +32,8 @@ import { useAuth } from "@/hooks";
 import { ROLE } from "@/constants";
 import type { CustomerResponse } from "@/Schema";
 
-// Schema cơ bản (không có công nợ)
-const basicFormSchema = z.object({
+// Schema base (chưa có refine)
+const baseFormSchema = z.object({
   name: z.string().min(1, "Tên không được để trống"),
   companyName: z.string().optional(),
   representativeName: z.string().optional(),
@@ -43,11 +44,37 @@ const basicFormSchema = z.object({
   type: z.enum(["retail", "company"]),
 });
 
-// Schema đầy đủ (có công nợ)
-const fullFormSchema = basicFormSchema.extend({
-  currentDebt: z.number().min(0, "Công nợ không được âm"),
-  maxDebt: z.number().min(0, "Hạn mức không được âm"),
-});
+// Helper function để thêm validation cho companyName khi type là company
+const addCompanyNameValidation = <T extends z.ZodTypeAny>(schema: T) => {
+  return schema.refine(
+    (data: any) => {
+      // Nếu type là "company" thì companyName phải có giá trị
+      if (data.type === "company") {
+        return (
+          data.companyName !== undefined &&
+          data.companyName !== null &&
+          data.companyName.trim().length > 0
+        );
+      }
+      return true;
+    },
+    {
+      message: "Tên công ty là bắt buộc khi chọn loại khách hàng là Công ty",
+      path: ["companyName"], // Đặt lỗi vào field companyName
+    }
+  );
+};
+
+// Schema cơ bản (không có công nợ)
+const basicFormSchema = addCompanyNameValidation(baseFormSchema);
+
+// Schema đầy đủ (có công nợ) - extend trước, refine sau
+const fullFormSchema = addCompanyNameValidation(
+  baseFormSchema.extend({
+    currentDebt: z.number().min(0, "Công nợ không được âm"),
+    maxDebt: z.number().min(0, "Hạn mức không được âm"),
+  })
+);
 
 interface EditCustomerModalProps {
   open: boolean;
@@ -97,6 +124,13 @@ export function EditCustomerModal({
   });
 
   const customerType = form.watch("type");
+
+  // Trigger validation khi type thay đổi để hiển thị lỗi ngay lập tức
+  useEffect(() => {
+    if (customerType === "company") {
+      form.trigger("companyName");
+    }
+  }, [customerType, form]);
 
   const onSubmit = async (values: FormValues) => {
     // Nếu không có quyền edit công nợ, giữ nguyên giá trị công nợ hiện tại
@@ -211,7 +245,9 @@ export function EditCustomerModal({
                   name="companyName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Tên công ty</FormLabel>
+                      <FormLabel className="text-xs">
+                        Tên công ty <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input {...field} className="h-9" />
                       </FormControl>
@@ -273,7 +309,7 @@ export function EditCustomerModal({
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name={"currentDebt" as keyof FormValues}
+                  name="currentDebt"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs">
@@ -296,7 +332,7 @@ export function EditCustomerModal({
 
                 <FormField
                   control={form.control}
-                  name={"maxDebt" as keyof FormValues}
+                  name="maxDebt"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs">Hạn mức công nợ</FormLabel>
