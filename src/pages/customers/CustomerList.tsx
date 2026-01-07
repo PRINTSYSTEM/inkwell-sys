@@ -380,7 +380,7 @@ export default function Customers() {
                             {customer.name}
                           </TableCell>
                           <TableCell className="py-2">
-                            {customer.companyName
+                            {customer.companyName && customer.type === "company"
                               ? customer.companyName
                               : "Cá nhân"}
                           </TableCell>

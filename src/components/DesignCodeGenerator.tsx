@@ -7,10 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Copy, RefreshCw, Eye } from 'lucide-react';
 import { toast } from 'sonner';
-import { 
-  DesignCodeGenerator as CodeGenerator, 
-  designCodeTemplates 
-} from '@/services/designCodeService';
+// TODO: designCodeService needs to be implemented
+// import { DesignCodeGenerator as CodeGenerator, designCodeTemplates } from '@/services/designCodeService';
+const CodeGenerator = {
+  validateFields: (template: any, values: Record<string, string>) => [] as string[],
+  generateCode: (template: any, values: Record<string, string>): GeneratedDesignCode => ({ 
+    code: '', 
+    template: template as DesignCodeTemplate,
+    values,
+    generatedAt: new Date() 
+  })
+};
+const designCodeTemplates: any[] = [];
 import { DesignCodeTemplate, GeneratedDesignCode } from '@/types/design-code';
 
 export default function DesignCodeGeneratorComponent() {

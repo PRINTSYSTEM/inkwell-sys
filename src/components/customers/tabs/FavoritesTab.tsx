@@ -11,7 +11,8 @@ interface FavoritesTabProps {
 }
 
 export function FavoritesTab({ customerId, isActive = true }: FavoritesTabProps) {
-  const { data: stats, isLoading, totalOrders } = useCustomerFavoriteStats(customerId, isActive);
+  const { data: stats, isLoading } = useCustomerFavoriteStats(customerId, isActive);
+  const totalOrders = stats ? stats.topDesignTypes.reduce((sum, item) => sum + item.count, 0) : 0;
 
   if (isLoading) {
     return (

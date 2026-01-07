@@ -58,7 +58,7 @@ export default function ExpenseByVendorPage() {
   // Group payments by vendor
   const groupedByVendor = paymentsData?.items?.reduce((acc, payment) => {
     const vendorId = payment.vendorId || "unknown";
-    const vendorName = payment.vendorName || payment.payeeName || "Không xác định";
+    const vendorName = payment.vendorName || payment.receiverName || "Không xác định";
     if (!acc[vendorId]) {
       acc[vendorId] = {
         vendorId: String(vendorId),

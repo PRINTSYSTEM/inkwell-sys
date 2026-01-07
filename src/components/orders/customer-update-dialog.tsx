@@ -52,7 +52,7 @@ export function CustomerUpdateDialog({
       setFormData({
         name: data?.name || "",
         companyName: data?.companyName || "",
-        representativeName: data?.representativeName || "",
+        representativeName: (data?.representativeName && typeof data.representativeName === "string") ? data.representativeName : "",
         phone: data?.phone || "",
         email: data?.email || "",
         taxCode: "taxCode" in (data || {}) && typeof data?.taxCode === "string" 

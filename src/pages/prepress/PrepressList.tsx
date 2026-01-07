@@ -82,6 +82,7 @@ export default function ProofingOrdersPage() {
     return items as unknown as ProofingOrder[];
   }, [ordersResp?.items]);
 
+
   const filteredProofingOrders = useMemo(() => {
     const filtered = proofingOrders.filter((order) => {
       const matchSearch =
@@ -444,19 +445,30 @@ export default function ProofingOrdersPage() {
                           />
                         </TableCell>
                         <TableCell className="py-3">
-                          <StatusBadge
-                            status={
-                              order.isDieExported ? "exported" : "not_exported"
-                            }
-                            label={
-                              order.isDieExported ? "Đã xuất" : "Chưa xuất"
-                            }
-                            className={
-                              order.isDieExported
-                                ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800 text-xs font-semibold"
-                                : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800 text-xs font-semibold"
-                            }
-                          />
+                          {order.proofingOrderDesigns?.some(
+                            (pod) =>
+                              pod.design?.processClassification === "die_cut"
+                          ) ? (
+                            <StatusBadge
+                              status={
+                                order.isDieExported
+                                  ? "exported"
+                                  : "not_exported"
+                              }
+                              label={
+                                order.isDieExported ? "Đã xuất" : "Chưa xuất"
+                              }
+                              className={
+                                order.isDieExported
+                                  ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800 text-xs font-semibold"
+                                  : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800 text-xs font-semibold"
+                              }
+                            />
+                          ) : (
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              Không có
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="py-3 font-semibold text-sm">
                           {order.createdBy?.fullName || "—"}

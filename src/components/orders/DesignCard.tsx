@@ -42,6 +42,7 @@ export type CreateDesignRequestUI = {
   width?: number;
   height?: number;
   depth?: number;
+  adhesiveOffset?: number;
   requirements?: string;
   additionalNotes?: string;
   minQuantity?: number;

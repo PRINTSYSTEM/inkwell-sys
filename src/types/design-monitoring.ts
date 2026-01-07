@@ -1,5 +1,10 @@
-import { DesignAssignment, DesignAssignmentStatus, DesignAssignmentPriority } from '@/Schema';
 import { Employee } from '@/types/employee';
+import { Assignment } from '@/types/assignment';
+
+// Type aliases for design assignments
+export type DesignAssignment = Assignment;
+export type DesignAssignmentStatus = Assignment['status'];
+export type DesignAssignmentPriority = Assignment['priority'];
 
 // Designer Workload - thông tin tải công việc của designer
 export interface DesignerWorkload {
@@ -237,10 +242,4 @@ export interface WorkloadChartData {
   efficiency: number;
 }
 
-// Export all types for easy import
-export type {
-  // Re-export from schema for convenience
-  DesignAssignment,
-  DesignAssignmentStatus,
-  DesignAssignmentPriority
-} from '@/Schema';
+// Types are already exported above

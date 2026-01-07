@@ -16,7 +16,28 @@ if (import.meta.env.DEV) {
   import("./tests/validation.spec").catch(() => {});
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: (failureCount, error: any) => {
+        // Don't retry on 4xx errors (client errors like 400, 401, 403, 404)
+        if (error?.response?.status >= 400 && error?.response?.status < 500) {
+          return false;
+        }
+        // Retry 3 times for server errors (5xx) and network errors
+        return failureCount < 3;
+      },
+      retryDelay: (attemptIndex) => {
+        // Exponential backoff: 1s, 2s, 4s, max 30s
+        return Math.min(1000 * 2 ** attemptIndex, 30000);
+      },
+    },
+  },
+});
 
 const App = () => (
   <HelmetProvider>

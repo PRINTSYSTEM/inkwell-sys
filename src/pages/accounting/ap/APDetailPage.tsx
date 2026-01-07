@@ -164,47 +164,47 @@ export default function APDetailPage() {
               ) : (
                 apData.items.map((item) => (
                   <TableRow
-                    key={item.id}
+                    key={item.documentId || item.vendorId}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleOrderClick(item.orderId)}
+                    onClick={() => handleOrderClick(item.documentId)}
                   >
                     <TableCell className="font-mono text-sm">
-                      {item.vendorCode || "—"}
+                      {item.vendorId || "—"}
                     </TableCell>
                     <TableCell className="font-medium">
                       {item.vendorName || "—"}
                     </TableCell>
                     <TableCell className="font-mono text-sm font-medium">
-                      {item.orderCode || "—"}
+                      {item.documentNumber || "—"}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {item.invoiceNumber || "—"}
+                      {item.documentNumber || "—"}
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
-                      {item.invoiceDate ? formatDate(item.invoiceDate) : "—"}
+                      {item.documentDate ? formatDate(item.documentDate) : "—"}
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
                       {item.dueDate ? formatDate(item.dueDate) : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.invoiceAmount !== undefined
-                        ? formatCurrency(item.invoiceAmount)
+                      {item.amountDue !== undefined
+                        ? formatCurrency(item.amountDue)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {item.paidAmount !== undefined
-                        ? formatCurrency(item.paidAmount)
+                      {item.amountPaid !== undefined
+                        ? formatCurrency(item.amountPaid)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.remainingAmount !== undefined
-                        ? formatCurrency(item.remainingAmount)
+                      {item.outstanding !== undefined
+                        ? formatCurrency(item.outstanding)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-center">
-                      {item.isOverdue ? (
+                      {item.overdueDays && item.overdueDays > 0 ? (
                         <Badge variant="destructive">
-                          Quá hạn {item.daysOverdue} ngày
+                          Quá hạn {item.overdueDays} ngày
                         </Badge>
                       ) : (
                         <Badge variant="default">Bình thường</Badge>

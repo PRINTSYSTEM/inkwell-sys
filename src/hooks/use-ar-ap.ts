@@ -97,11 +97,11 @@ export const useARAging = (params?: ARAgingParams) => {
   });
 };
 
-export const useExportARAging = () => {
+export const useExportARAging = (params?: ARAgingParams) => {
   return useQuery({
-    queryKey: ["ar-aging-export"],
+    queryKey: ["ar-aging-export", params],
     enabled: false,
-    queryFn: async (params?: ARAgingParams) => {
+    queryFn: async () => {
       const normalizedParams = normalizeParams(
         (params ?? {}) as Record<string, unknown>
       );

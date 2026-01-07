@@ -3,6 +3,13 @@ import { z, ZodSchema } from "zod";
 import { validateSchema, formatValidationErrorsFlat } from "@/Schema";
 import { toast } from "sonner";
 
+// Type guard for validation result
+function isValidationError<T>(
+  result: { success: true; data: T } | { success: false; errors: z.ZodError }
+): result is { success: false; errors: z.ZodError } {
+  return !result.success;
+}
+
 /**
  * Hook to wrap a mutation with schema validation
  * @param mutation Original mutation hook result
@@ -29,7 +36,7 @@ export function useValidatedMutation<
     // Validate if schema is provided and validation is enabled
     if (schema && validateBeforeMutate) {
       const result = validateSchema(schema, variables);
-      if (!result.success) {
+      if (isValidationError(result)) {
         const formattedErrors = formatValidationErrorsFlat(result.errors);
         const errorMessages = Object.values(formattedErrors);
 
@@ -62,7 +69,7 @@ export function useValidatedMutation<
     mutate: (variables: TVariables) => {
       if (schema && validateBeforeMutate) {
         const result = validateSchema(schema, variables);
-        if (!result.success) {
+        if (isValidationError(result)) {
           const formattedErrors = formatValidationErrorsFlat(result.errors);
           const errorMessages = Object.values(formattedErrors);
 

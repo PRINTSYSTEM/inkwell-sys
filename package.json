@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "schema:sync": "node scripts/sync-api.mjs",
     "schema:sync:guard": "node scripts/sync-api.mjs --guard",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.app.json --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -4,19 +4,13 @@ import { z } from "zod";
 import { createPagedResponseSchema } from "./Common";
 import { schemas } from "./generated";
 
-// Try to import Vendor schemas, fallback to PlateVendor if not available
-const GenVendorResponseSchema =
-  schemas.VendorResponse || schemas.PlateVendorResponse;
-const GenVendorResponsePaginateSchema =
-  schemas.VendorResponsePaginate || schemas.PlateVendorResponsePaginate;
-const GenCreateVendorRequestSchema =
-  schemas.CreateVendorRequest || schemas.CreatePlateVendorRequest;
-const GenUpdateVendorRequestSchema =
-  schemas.UpdateVendorRequest || schemas.UpdatePlateVendorRequest;
-const GenVendorCountOptionResponseSchema =
-  schemas.VendorCountOptionResponse || schemas.PlateCountOptionResponse;
-const GenVendorCountOptionResponsePaginateSchema =
-  schemas.VendorCountOptionResponseIPaginate || schemas.PlateCountOptionResponsePaginate;
+// Import Vendor schemas
+const GenVendorResponseSchema = schemas.VendorResponse;
+const GenVendorResponsePaginateSchema = schemas.VendorResponsePaginate;
+const GenCreateVendorRequestSchema = schemas.CreateVendorRequest;
+const GenUpdateVendorRequestSchema = schemas.UpdateVendorRequest;
+const GenVendorCountOptionResponseSchema = schemas.VendorCountOptionResponse;
+const GenVendorCountOptionResponsePaginateSchema = schemas.VendorCountOptionResponseIPaginate;
 
 // ===== VendorResponse =====
 export const VendorResponseSchema =

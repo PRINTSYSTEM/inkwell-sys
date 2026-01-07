@@ -38,10 +38,19 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ReportService } from '@/services/reportService';
+// TODO: ReportService needs to be implemented
+// import { ReportService } from '@/services/reportService';
 import { ExportJob, ExportFormat, BulkExportOptions } from '@/types/report';
 
-const reportService = new ReportService();
+const reportService = {
+  createExportJob: async (options: any) => Promise.resolve({} as ExportJob),
+  getExportJobs: async () => Promise.resolve([] as ExportJob[]),
+  getExportJob: async (id: string) => Promise.resolve({} as ExportJob),
+  cancelExportJob: async (id: string) => Promise.resolve(),
+  retryExportJob: async (id: string) => Promise.resolve(),
+  deleteExportJob: async (id: string) => Promise.resolve(),
+  downloadExport: async (id: string) => Promise.resolve(new Blob())
+};
 
 interface ExportManagerProps {
   reportIds?: string[];
