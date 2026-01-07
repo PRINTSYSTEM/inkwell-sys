@@ -246,8 +246,8 @@ export default function OrderCreatePage() {
         representativeName: newCustomerForm.representativeName.trim(),
         companyName: newCustomerForm.companyName.trim() || null,
         address: newCustomerForm.address.trim() || null,
-        type: newCustomerForm.companyName.trim() ? "company" : "individual",
-        maxDebt: 50000000, // Set 50tr, không hiển thị
+        type: newCustomerForm.companyName.trim() ? "company" : "retail",
+        maxDebt: 50000000,
       });
 
       if (result?.id) {
@@ -344,7 +344,8 @@ export default function OrderCreatePage() {
       length: design.length || 0,
       width: design.width || 0,
       height: design.height || 0,
-      adhesiveOffset: (design.adhesiveOffset as number | undefined) || undefined,
+      adhesiveOffset:
+        (design.adhesiveOffset as number | undefined) || undefined,
       laminationType: laminationType,
     };
     setDesigns((prev) => [...prev, newDesign]);
@@ -1128,7 +1129,7 @@ export default function OrderCreatePage() {
             <div className="space-y-2">
               <Label>Tên công ty</Label>
               <Input
-                placeholder="Nhập tên công ty (nếu có)"
+                placeholder="Bỏ qua nếu là khách lẻ"
                 value={newCustomerForm.companyName}
                 onChange={(e) =>
                   setNewCustomerForm((prev) => ({
