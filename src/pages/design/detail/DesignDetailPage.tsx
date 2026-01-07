@@ -665,6 +665,15 @@ export default function DesignDetailPage() {
       user?.role === ROLE.ADMIN) &&
     !hasProofingOrder;
 
+  // Calculate dimensions - must be before early returns to maintain hook order
+  const calculatedDimensions = useMemo(() => {
+    if (!design) return "";
+    const d = design as DesignResponse;
+    return d.width
+      ? `${d.length ?? ""} x ${d.width ?? ""} x ${d.height ?? ""}`
+      : `${d.length ?? ""} x ${d.height ?? ""}`;
+  }, [design?.length, design?.width, design?.height]);
+
   // ==== LOADING / ERROR ====
   if (designLoading) {
     return (
@@ -728,12 +737,6 @@ export default function DesignDetailPage() {
   const isTuiXepHong = isTuiXepHongDesignType(designTypeName);
   const canEditWidth = isHop || isTuiXepHong; // Only box and side-fold bag can edit width
   const canEditAdhesiveOffset = isNhan; // Only label can edit adhesive offset
-
-  const calculatedDimensions = useMemo(() => {
-    return d.width
-      ? `${d.length} x ${d.width} x ${d.height}`
-      : `${d.length} x ${d.height}`;
-  }, [d.length, d.width, d.height]);
 
   // ==== MAIN LAYOUT ====
   return (
