@@ -104,6 +104,7 @@ export type OrdersMyListParams = z.infer<typeof OrdersMyListParamsSchema>;
 export const ProofingOrderListParamsSchema = PagedParamsSchema.extend({
   materialTypeId: IdSchema.nullable().optional(),
   status: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
 });
 
 export type ProofingOrderListParams = z.infer<

@@ -77,7 +77,7 @@ export function CreateProofingOrderModal({
   const [designQuantities, setDesignQuantities] = useState<
     Record<number, number>
   >({});
-  const [paperSizeId, setPaperSizeId] = useState<string>("none");
+  const [paperSizeId, setPaperSizeId] = useState<string>("custom");
   const [customPaperSize, setCustomPaperSize] = useState("");
 
   const materialTypeName =
@@ -96,7 +96,7 @@ export function CreateProofingOrderModal({
       setNotes("");
       setProofingSheetQuantity(1);
       setDesignQuantities({});
-      setPaperSizeId("none");
+      setPaperSizeId("custom");
       setCustomPaperSize("");
     }
   }, [open, selectedDesigns]);
@@ -470,10 +470,15 @@ export function CreateProofingOrderModal({
                       >
                         <SelectTrigger id="paperSizeId" className="h-10">
                           <Maximize2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <SelectValue placeholder="Chọn khổ giấy" />
+                          <SelectValue
+                            defaultValue="custom"
+                            placeholder="Chọn khổ giấy"
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Chưa xác định</SelectItem>
+                          <SelectItem value="custom">
+                            -- Nhập thủ công --
+                          </SelectItem>
                           {paperSizes?.map((ps) => (
                             <SelectItem key={ps.id} value={ps.id.toString()}>
                               {ps.name}{" "}
@@ -482,9 +487,6 @@ export function CreateProofingOrderModal({
                                 : ""}
                             </SelectItem>
                           ))}
-                          <SelectItem value="custom">
-                            -- Nhập thủ công --
-                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
