@@ -198,4 +198,27 @@ export const ENTITY_CONFIG = {
       exceeded: "Vượt hạn mức",
     },
   },
+  productionStepTypes: {
+    entityType: "ProductionStep",
+    description: "Loại công đoạn sản xuất",
+    values: {
+      print: "In",
+      lamination: "Cán màng",
+      die_cut: "Bế",
+      cut: "Cắt",
+      glue: "Dán",
+      packaging: "Đóng gói",
+    },
+  },
+  productionStepStatuses: {
+    entityType: "ProductionStep",
+    description: "Trạng thái công đoạn sản xuất",
+    values: {
+      pending: "Chờ",
+      ready: "Sẵn sàng",
+      in_progress: "Đang thực hiện",
+      done: "Hoàn thành",
+      blocked: "Bị chặn/Lỗi",
+    },
+  },
 };

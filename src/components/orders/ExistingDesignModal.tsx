@@ -243,8 +243,8 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                         Khách hàng
                       </p>
                       <p className="text-sm font-medium">
-                        {(design.customer.companyName as string) ||
-                          (design.customer.name as string) ||
+                        {design.customer.companyName ??
+                          design.customer.name ??
                           "—"}
                       </p>
                     </div>

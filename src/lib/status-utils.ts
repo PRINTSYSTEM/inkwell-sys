@@ -224,6 +224,14 @@ export const deliveryLineStatusLabels: Record<string, string> =
 export const debtStatusLabels: Record<string, string> =
   ENTITY_CONFIG.debtStatuses.values;
 
+// Loại công đoạn sản xuất (ProductionStepType)
+export const productionStepTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.productionStepTypes.values;
+
+// Trạng thái công đoạn sản xuất (ProductionStepStatus)
+export const productionStepStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.productionStepStatuses.values;
+
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
 
@@ -411,6 +419,20 @@ export const statusColorMap: Record<string, string> = {
   normal: "bg-green-50 text-green-700 border-green-200",
   warning: "bg-amber-50 text-amber-700 border-amber-200",
   exceeded: "bg-red-50 text-red-700 border-red-200",
+
+  // ===== PRODUCTION STEP TYPES =====
+  // Note: cut và die_cut đã được định nghĩa ở PROCESS CLASSIFICATION ở trên
+  print: "bg-blue-50 text-blue-700 border-blue-200",
+  lamination: "bg-purple-50 text-purple-700 border-purple-200",
+  glue: "bg-orange-50 text-orange-700 border-orange-200",
+  packaging: "bg-green-50 text-green-700 border-green-200",
+
+  // ===== PRODUCTION STEP STATUSES =====
+  // pending đã được định nghĩa ở ORDER STATUSES ở trên
+  // in_progress đã được định nghĩa ở ORDER STATUSES ở trên
+  ready: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  done: "bg-green-50 text-green-700 border-green-200", // tương tự completed
+  blocked: "bg-red-50 text-red-700 border-red-200",
 };
 
 // Hàm helper: trả về class tailwind cho badge
@@ -433,15 +455,21 @@ export const formatCurrency = (
   }
 ): string => {
   const val = typeof value === "number" ? value : 0;
-  const { currency = "VND", minimumFractionDigits = 0 } = options || {};
+  const { currency = "VND", minimumFractionDigits } = options || {};
 
   try {
-    return new Intl.NumberFormat("vi-VN", {
+    const formatOptions: Intl.NumberFormatOptions = {
       style: "currency",
       currency,
-      minimumFractionDigits,
-      maximumFractionDigits: minimumFractionDigits,
-    }).format(val);
+    };
+    // Only set fraction digits if explicitly provided and > 0
+    // Don't set minimumFractionDigits to 0 as it can cause display issues
+    if (minimumFractionDigits !== undefined && minimumFractionDigits > 0) {
+      formatOptions.minimumFractionDigits = minimumFractionDigits;
+      formatOptions.maximumFractionDigits = minimumFractionDigits;
+    }
+    const result = new Intl.NumberFormat("vi-VN", formatOptions).format(val);
+    return result;
   } catch {
     // fallback đơn giản nếu Intl lỗi
     return `${val.toLocaleString("vi-VN")} ${currency}`;

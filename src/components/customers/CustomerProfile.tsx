@@ -117,7 +117,7 @@ export function CustomerProfile({ customer, isDesignRole = false }: CustomerProf
                     "opacity-0 group-hover:opacity-100 transition-opacity shrink-0",
                     isDesignRole ? "h-8 w-8" : "h-7 w-7"
                   )}
-                  onClick={() => copyToClipboard(customer.taxCode!, 'mã số thuế')}
+                  onClick={() => copyToClipboard(customer.taxCode ?? '', 'mã số thuế')}
                 >
                   <Copy className={cn(isDesignRole ? "h-5 w-5" : "h-4 w-4")} />
                 </Button>

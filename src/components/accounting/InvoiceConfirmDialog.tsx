@@ -72,7 +72,7 @@ export function InvoiceConfirmDialog({
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Khách hàng:</span>
                   <span className="font-medium text-foreground">
-                    {order.customer.companyName || order.customer.name}
+                    {order.customer.companyName ?? order.customer.name ?? ""}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

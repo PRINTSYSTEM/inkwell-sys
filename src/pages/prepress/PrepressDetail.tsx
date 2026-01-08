@@ -76,6 +76,7 @@ import {
   useAddDesignsToProofingOrder,
   useRemoveDesignFromProofingOrder,
   useCreatePaperSize,
+  useAvailableQuantity,
 } from "@/hooks/use-proofing-order";
 import { useAvailableOrderDetailsForProofing } from "@/hooks";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
@@ -105,8 +106,206 @@ import { downloadFile } from "@/lib/download-utils";
 import { Textarea } from "@/components/ui/textarea";
 import type { UpdateProofingOrderRequest } from "@/Schema";
 import { formatDesignDimensions, formatDieSize } from "@/utils/format-die-size";
-import { useReplaceDie, useDies, useSearchDies } from "@/hooks/use-die";
-import type { DieResponse, ReplaceDieRequest } from "@/Schema";
+import {
+  useReplaceDie,
+  useDies,
+  useSearchDies,
+  useAssignDieToProofingOrder,
+  useRemoveDieFromProofingOrder,
+} from "@/hooks/use-die";
+import type {
+  DieResponse,
+  ReplaceDieRequest,
+  AssignDieToProofingOrderRequest,
+} from "@/Schema";
+
+// Component for inline quantity editing with API available quantity
+function QuantityCell({
+  pod,
+  editingQuantityDesignId,
+  inlineQuantityValue,
+  setInlineQuantityValue,
+  setEditingQuantityDesignId,
+  handleUpdateDesignQuantity,
+  updatingDesignId,
+}: {
+  pod: import("@/Schema/proofing-order.schema").ProofingOrderDesignResponse;
+  editingQuantityDesignId: number | null;
+  inlineQuantityValue: string;
+  setInlineQuantityValue: (value: string) => void;
+  setEditingQuantityDesignId: (id: number | null) => void;
+  handleUpdateDesignQuantity: (designId: number) => void;
+  updatingDesignId: number | null;
+}) {
+  const isEditing = editingQuantityDesignId === pod.id;
+  const designId = pod.design?.id ?? null;
+
+  // Get available quantity from API when editing this design
+  const { data: availableQuantityFromApi, isLoading: isLoadingAvailableQty } =
+    useAvailableQuantity(
+      isEditing && designId ? designId : null,
+      isEditing && !!designId
+    );
+
+  // Extract quantity from API response (could be number or object)
+  const extractAvailableQuantity = (data: unknown): number | null => {
+    if (data == null) return null;
+    if (typeof data === "number") return data;
+    if (typeof data === "string") {
+      const parsed = parseInt(data, 10);
+      return !isNaN(parsed) ? parsed : null;
+    }
+    if (typeof data === "object" && data !== null) {
+      // Try common field names
+      const obj = data as Record<string, unknown>;
+      if ("quantity" in obj && typeof obj.quantity === "number") {
+        return obj.quantity;
+      }
+      if (
+        "availableQuantity" in obj &&
+        typeof obj.availableQuantity === "number"
+      ) {
+        return obj.availableQuantity;
+      }
+      if (
+        "availableQuantityForProofing" in obj &&
+        typeof obj.availableQuantityForProofing === "number"
+      ) {
+        return obj.availableQuantityForProofing;
+      }
+      // Log for debugging if structure is unexpected
+      console.warn("Unexpected available quantity response structure:", data);
+    }
+    return null;
+  };
+
+  const apiAvailableQty = extractAvailableQuantity(availableQuantityFromApi);
+
+  const maxAvailableQty =
+    apiAvailableQty != null
+      ? apiAvailableQty
+      : pod.design?.availableQuantityForProofing != null
+        ? pod.design.availableQuantityForProofing
+        : undefined;
+
+  if (isEditing) {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="number"
+            min="1"
+            max={maxAvailableQty}
+            value={inlineQuantityValue}
+            onChange={(e) => setInlineQuantityValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const qty = parseInt(inlineQuantityValue, 10);
+                if (!isNaN(qty) && qty >= 1) {
+                  handleUpdateDesignQuantity(pod.id!);
+                }
+              } else if (e.key === "Escape") {
+                setEditingQuantityDesignId(null);
+                setInlineQuantityValue("");
+              }
+            }}
+            className="h-7 w-24 text-xs font-semibold"
+            autoFocus
+            disabled={isLoadingAvailableQty || updatingDesignId === pod.id}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              const qty = parseInt(inlineQuantityValue, 10);
+              if (!isNaN(qty) && qty >= 1) {
+                handleUpdateDesignQuantity(pod.id!);
+              }
+            }}
+            disabled={updatingDesignId === pod.id || isLoadingAvailableQty}
+          >
+            {updatingDesignId === pod.id ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              "✓"
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              setEditingQuantityDesignId(null);
+              setInlineQuantityValue("");
+            }}
+            disabled={updatingDesignId === pod.id || isLoadingAvailableQty}
+          >
+            ✕
+          </Button>
+        </div>
+        <div className="text-[10px] text-muted-foreground space-y-0.5">
+          {isLoadingAvailableQty ? (
+            <div className="flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Đang tải số lượng...</span>
+            </div>
+          ) : apiAvailableQty != null ? (
+            <>
+              <p>
+                Có thể bình bài:{" "}
+                <span className="font-semibold text-foreground">
+                  {apiAvailableQty.toLocaleString()}
+                </span>
+              </p>
+              <p>
+                Hiện tại:{" "}
+                <span className="font-semibold text-foreground">
+                  {pod.quantity?.toLocaleString() || "0"}
+                </span>
+              </p>
+            </>
+          ) : pod.design?.availableQuantityForProofing != null ? (
+            <>
+              <p>
+                Có thể bình bài:{" "}
+                <span className="font-semibold text-foreground">
+                  {pod.design.availableQuantityForProofing.toLocaleString()}
+                </span>
+              </p>
+              <p>
+                Hiện tại:{" "}
+                <span className="font-semibold text-foreground">
+                  {pod.quantity?.toLocaleString() || "0"}
+                </span>
+              </p>
+            </>
+          ) : (
+            <p>
+              Hiện tại:{" "}
+              <span className="font-semibold text-foreground">
+                {pod.quantity?.toLocaleString() || "0"}
+              </span>
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-0.5">
+      <p className="text-xs font-semibold">
+        {pod.quantity?.toLocaleString() || "0"}
+      </p>
+      {pod.design?.availableQuantityForProofing != null && (
+        <p className="text-[10px] text-muted-foreground">
+          Còn: {pod.design.availableQuantityForProofing.toLocaleString()}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function ProofingOrderDetailPage() {
   const params = useParams();
@@ -156,6 +355,14 @@ export default function ProofingOrderDetailPage() {
   const [replaceDieNotes, setReplaceDieNotes] = useState<string>("");
   const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
 
+  // Add die dialog state
+  const [isAddDieDialogOpen, setIsAddDieDialogOpen] = useState(false);
+  const [selectedDieIdForAdd, setSelectedDieIdForAdd] = useState<number | null>(
+    null
+  );
+  const [addDieNotes, setAddDieNotes] = useState<string>("");
+  const [addDieSearchTerm, setAddDieSearchTerm] = useState<string>("");
+
   // Form state cho từng card
   const [isQuantityEditOpen, setIsQuantityEditOpen] = useState(false);
 
@@ -171,6 +378,11 @@ export default function ProofingOrderDetailPage() {
   const [updateDesignQuantities, setUpdateDesignQuantities] = useState<
     Record<number, string>
   >({});
+  const [updatingDesignId, setUpdatingDesignId] = useState<number | null>(null);
+  const [editingQuantityDesignId, setEditingQuantityDesignId] = useState<
+    number | null
+  >(null);
+  const [inlineQuantityValue, setInlineQuantityValue] = useState<string>("");
   const [updateImageFile, setUpdateImageFile] = useState<File | null>(null);
   const [updateProofingFile, setUpdateProofingFile] = useState<File | null>(
     null
@@ -201,6 +413,29 @@ export default function ProofingOrderDetailPage() {
     );
   }, [orderDesigns]);
 
+  // Extract unique lamination types and process classifications from designs
+  const uniqueLaminationTypes = useMemo(() => {
+    if (!orderDesigns || orderDesigns.length === 0) return [];
+    const types = new Set<string>();
+    orderDesigns.forEach((pod) => {
+      if (pod.design?.laminationType) {
+        types.add(pod.design.laminationType);
+      }
+    });
+    return Array.from(types);
+  }, [orderDesigns]);
+
+  const uniqueProcessClassifications = useMemo(() => {
+    if (!orderDesigns || orderDesigns.length === 0) return [];
+    const classifications = new Set<string>();
+    orderDesigns.forEach((pod) => {
+      if (pod.design?.processClassification) {
+        classifications.add(pod.design.processClassification);
+      }
+    });
+    return Array.from(classifications);
+  }, [orderDesigns]);
+
   const { mutate: updateProofing } = useUpdateProofingOrder();
   const { mutate: uploadProofing, loading: isUploadingFile } =
     useUploadProofingFile();
@@ -225,6 +460,12 @@ export default function ProofingOrderDetailPage() {
   const { mutate: replaceDieMutate, isPending: isReplacingDie } =
     useReplaceDie();
 
+  // Assign and remove die hooks
+  const { mutate: assignDieMutate, isPending: isAssigningDie } =
+    useAssignDieToProofingOrder();
+  const { mutate: removeDieMutate, isPending: isRemovingDie } =
+    useRemoveDieFromProofingOrder();
+
   // Search dies for replacement
   const [debouncedDieSearch] = useDebounce(dieSearchTerm, 300);
   const dieSearchParams = useMemo(() => {
@@ -236,9 +477,24 @@ export default function ProofingOrderDetailPage() {
     };
   }, [isReplaceDieDialogOpen, debouncedDieSearch]);
 
+  // Search dies for adding
+  const [debouncedAddDieSearch] = useDebounce(addDieSearchTerm, 300);
+  const addDieSearchParams = useMemo(() => {
+    if (!isAddDieDialogOpen) return undefined;
+    return {
+      dieName: debouncedAddDieSearch.trim() || undefined,
+      isUsable: true,
+      pageSize: 50,
+    };
+  }, [isAddDieDialogOpen, debouncedAddDieSearch]);
+
   const { data: searchDiesData, isLoading: isLoadingDies } =
     useSearchDies(dieSearchParams);
   const availableDies = searchDiesData?.items || [];
+
+  const { data: addDieSearchData, isLoading: isLoadingAddDies } =
+    useSearchDies(addDieSearchParams);
+  const availableDiesForAdd = addDieSearchData?.items || [];
 
   // Check if order is empty (no designs)
   const isEmptyOrder = orderDesigns.length === 0;
@@ -259,6 +515,7 @@ export default function ProofingOrderDetailPage() {
   const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<number[]>(
     []
   );
+
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [debouncedSearch] = useDebounce(searchTerm, 300);
 
@@ -278,10 +535,13 @@ export default function ProofingOrderDetailPage() {
   const [paperSizeId, setPaperSizeId] = useState<string>("none");
   const [customPaperSize, setCustomPaperSize] = useState("");
 
+  const materialTypeId = isEmptyOrder
+    ? (currentMaterialTypeId ?? null)
+    : (order.materialTypeId ?? null);
   // Get available designs for adding (when order is empty, no material type filter)
   const { data: availableDesignsData, isLoading: isLoadingDesigns } =
     useAvailableOrderDetailsForProofing({
-      materialTypeId: isEmptyOrder ? currentMaterialTypeId : null,
+      materialTypeId,
     });
 
   // Get available designs for adding (same material type, exclude already added designs) - for non-empty orders
@@ -670,25 +930,34 @@ export default function ProofingOrderDetailPage() {
         return;
       }
 
-      // Map designQuantities to designIds
-      const designIds = Object.entries(designQuantities)
+      // Map designQuantities to items array with orderDetailId and quantity
+      const items = Object.entries(designQuantities)
         .filter(([_, qty]) => qty > 0)
-        .map(([id, _]) => {
+        .map(([id, qty]) => {
           const design = selectedDesigns.find((d) => d.id === parseInt(id, 10));
-          return design?.designId;
+          if (!design) return null;
+          const quantity = Number.isInteger(qty) ? qty : Math.floor(qty);
+          if (quantity <= 0) return null;
+          return {
+            orderDetailId: design.id, // design.id is the orderDetailId
+            quantity: quantity,
+          };
         })
-        .filter((id): id is number => id !== undefined);
+        .filter(
+          (item): item is { orderDetailId: number; quantity: number } =>
+            item !== null
+        );
 
-      if (designIds.length === 0) {
+      if (items.length === 0) {
         toast.error("Lỗi", {
-          description: "Không tìm thấy design IDs để thêm vào bình bài",
+          description: "Không tìm thấy mã hàng để thêm vào bình bài",
         });
         return;
       }
 
       const addDesignsPayload = {
         materialTypeId: currentMaterialTypeId,
-        designIds: designIds,
+        items: items,
         totalQuantity: proofingSheetQuantity,
         paperSizeId:
           paperSizeId === "none" || paperSizeId === "custom"
@@ -769,7 +1038,7 @@ export default function ProofingOrderDetailPage() {
   const handleOpenQuantityEdit = () => {
     if (!order) return;
 
-    setUpdateTotalQuantity(order.totalQuantity?.toString() || "");
+    setUpdateTotalQuantity((order.totalQuantity ?? 0).toString());
 
     const initialQuantities: Record<number, string> = {};
     order.proofingOrderDesigns?.forEach((pod) => {
@@ -817,29 +1086,8 @@ export default function ProofingOrderDetailPage() {
       }
     }
 
-    // Handle designUpdates
-    const designUpdates: Array<{
-      proofingOrderDesignId: number;
-      quantity: number;
-    }> = [];
-    Object.entries(updateDesignQuantities).forEach(([designIdStr, qtyStr]) => {
-      const designId = parseInt(designIdStr, 10);
-      const qty = parseInt(String(qtyStr), 10);
-      if (!isNaN(designId) && !isNaN(qty) && qty >= 1) {
-        const originalDesign = order.proofingOrderDesigns?.find(
-          (pod) => pod.id === designId
-        );
-        if (originalDesign && originalDesign.quantity !== qty) {
-          designUpdates.push({
-            proofingOrderDesignId: designId,
-            quantity: qty,
-          });
-        }
-      }
-    });
-    if (designUpdates.length > 0) {
-      updateData.designUpdates = designUpdates;
-    }
+    // Note: designUpdates are now handled separately via handleUpdateDesignQuantity
+    // Each design item is updated individually, not all at once
 
     // Only call update API if there are changes (excluding image which was already uploaded)
     const hasChanges = Object.keys(updateData).length > 0;
@@ -859,6 +1107,91 @@ export default function ProofingOrderDetailPage() {
     toast.success("Thành công", {
       description: "Đã cập nhật thông tin bình bài",
     });
+  };
+
+  // Handle update quantity for a single design item
+  const handleUpdateDesignQuantity = async (designId: number) => {
+    if (!order?.id) return;
+
+    // Use inlineQuantityValue if editing, otherwise use updateDesignQuantities
+    const qtyStr =
+      editingQuantityDesignId === designId
+        ? inlineQuantityValue
+        : updateDesignQuantities[designId];
+
+    if (!qtyStr) return;
+
+    const qty = parseInt(qtyStr, 10);
+    if (isNaN(qty) || qty < 1) {
+      toast.error("Lỗi", {
+        description: "Số lượng phải là số nguyên lớn hơn 0",
+      });
+      return;
+    }
+
+    const originalDesign = order.proofingOrderDesigns?.find(
+      (pod) => pod.id === designId
+    );
+    if (!originalDesign) {
+      toast.error("Lỗi", {
+        description: "Không tìm thấy mã hàng",
+      });
+      return;
+    }
+
+    // If quantity hasn't changed, no need to update
+    if (originalDesign.quantity === qty) {
+      // Clear the input and exit editing mode
+      if (editingQuantityDesignId === designId) {
+        setEditingQuantityDesignId(null);
+        setInlineQuantityValue("");
+      } else {
+        setUpdateDesignQuantities((prev) => {
+          const next = { ...prev };
+          delete next[designId];
+          return next;
+        });
+      }
+      return;
+    }
+
+    setUpdatingDesignId(designId);
+
+    try {
+      const updateData: UpdateProofingOrderRequest = {
+        designUpdates: [
+          {
+            proofingOrderDesignId: designId,
+            quantity: qty,
+          },
+        ],
+      };
+
+      await updateProofingOrder({
+        id: order.id,
+        data: updateData,
+      });
+
+      // Clear the input and exit editing mode after successful update
+      if (editingQuantityDesignId === designId) {
+        setEditingQuantityDesignId(null);
+        setInlineQuantityValue("");
+      } else {
+        setUpdateDesignQuantities((prev) => {
+          const next = { ...prev };
+          delete next[designId];
+          return next;
+        });
+      }
+
+      toast.success("Thành công", {
+        description: `Đã cập nhật số lượng cho ${originalDesign.design?.code || "mã hàng"}`,
+      });
+    } catch (error) {
+      // Error is handled by the hook
+    } finally {
+      setUpdatingDesignId(null);
+    }
   };
   const handleOldStatusChangeClick = () => {
     // Chỉ cho phép khi status là waiting_for_file (logic cũ)
@@ -1040,6 +1373,62 @@ export default function ProofingOrderDetailPage() {
     }
   };
 
+  const handleRemoveDie = async (dieId: number) => {
+    if (!order?.id) return;
+
+    if (
+      !confirm(
+        "Bạn có chắc chắn muốn gỡ khuôn bế này khỏi bình bài? Hành động này không thể hoàn tác."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await removeDieMutate({
+        proofingOrderId: order.id,
+        dieId,
+      });
+    } catch (error) {
+      // Error is handled by the hook
+    }
+  };
+
+  const handleOpenAddDieDialog = () => {
+    setSelectedDieIdForAdd(null);
+    setAddDieNotes("");
+    setAddDieSearchTerm("");
+    setIsAddDieDialogOpen(true);
+  };
+
+  const handleAddDie = async () => {
+    if (!order?.id || !selectedDieIdForAdd) {
+      toast.error("Lỗi", {
+        description: "Vui lòng chọn khuôn bế để thêm",
+      });
+      return;
+    }
+
+    try {
+      const assignData: AssignDieToProofingOrderRequest = {
+        dieId: selectedDieIdForAdd,
+        notes: addDieNotes.trim() || undefined,
+      };
+
+      await assignDieMutate({
+        proofingOrderId: order.id,
+        data: assignData,
+      });
+
+      setIsAddDieDialogOpen(false);
+      setSelectedDieIdForAdd(null);
+      setAddDieNotes("");
+      setAddDieSearchTerm("");
+    } catch (error) {
+      // Error is handled by the hook
+    }
+  };
+
   const handleUploadFiles = async (files: File[]) => {
     if (!order?.id) return;
 
@@ -1175,7 +1564,7 @@ export default function ProofingOrderDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold">{order.code}</h1>
+            <h1 className="text-xl font-semibold">{order.code ?? ""}</h1>
             <p className="text-xs text-muted-foreground">Chi tiết mã bài</p>
           </div>
         </div>
@@ -1185,8 +1574,10 @@ export default function ProofingOrderDetailPage() {
             Trạng thái hiện tại:
           </span>{" "}
           <StatusBadge
-            status={order.status}
-            label={proofingStatusLabels[order.status]}
+            status={order.status ?? undefined}
+            label={
+              proofingStatusLabels[order.status ?? ""] ?? order.status ?? ""
+            }
           />
           {nextStatusInfo && (
             <Button
@@ -1240,7 +1631,7 @@ export default function ProofingOrderDetailPage() {
           // Render ProofingCreate-like UI when order is empty
           <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden">
             {/* LEFT: DESIGN LIST + FILTERS */}
-            <div className="basis-1/2 min-w-0 border-r flex flex-col min-h-0 bg-card/30">
+            <div className="basis-3/5 min-w-0 border-r flex flex-col min-h-0 bg-card/30">
               <div className="p-4 border-b">
                 <FilterSection
                   designTypeOptions={designTypeOptions}
@@ -1398,7 +1789,7 @@ export default function ProofingOrderDetailPage() {
             </div>
 
             {/* RIGHT: INLINE PROOFING ORDER CONFIG */}
-            <div className="basis-1/2 min-w-0 flex flex-col min-h-0">
+            <div className="basis-2/5 min-w-0 flex flex-col min-h-0">
               {/* Right header */}
               <div className="shrink-0 border-b bg-card/50 px-4 py-2 flex items-center justify-between gap-2">
                 <div>
@@ -1436,7 +1827,7 @@ export default function ProofingOrderDetailPage() {
                             <TableHead className="w-10 text-center text-sm font-bold">
                               #
                             </TableHead>
-                            <TableHead className="min-w-[200px] text-sm font-bold">
+                            <TableHead className="w-32 text-sm font-bold">
                               mã hàng
                             </TableHead>
                             <TableHead className="w-32 text-sm font-bold">
@@ -1642,9 +2033,6 @@ export default function ProofingOrderDetailPage() {
                                       <div className="font-bold text-base">
                                         {design.code}
                                       </div>
-                                      <code className="text-sm font-semibold text-muted-foreground font-mono">
-                                        {design.name}
-                                      </code>
                                     </div>
                                   </TableCell>
                                   <TableCell>
@@ -1894,30 +2282,6 @@ export default function ProofingOrderDetailPage() {
                       </div>
                     </div>
 
-                    {/* Footer summary */}
-                    <div className="shrink-0 border-t px-3 py-1.5 flex items-center justify-between gap-2 text-xs font-semibold text-muted-foreground bg-background">
-                      <div>
-                        {selectedCount > 0 && (
-                          <span>
-                            {selectedCount}/{selectedDesigns.length} mã hàng •
-                            Tổng{" "}
-                            <span className="font-bold text-foreground">
-                              {totalSelectedQuantity.toLocaleString()}
-                            </span>{" "}
-                            sp
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-right text-[10px]">
-                        {!hasValidQuantities && (
-                          <div>Số lượng &gt; 0 cho ít nhất 1 thiết kế</div>
-                        )}
-                        {proofingSheetQuantity < 1 && (
-                          <div>SL giấy in &gt;= 1</div>
-                        )}
-                      </div>
-                    </div>
-
                     {/* Submit Button */}
                     <div className="shrink-0 border-t px-3 py-2 bg-background">
                       <Button
@@ -1968,14 +2332,16 @@ export default function ProofingOrderDetailPage() {
                         <Label className="text-muted-foreground text-[10px] font-normal">
                           Mã lệnh
                         </Label>
-                        <p className="font-semibold text-sm">{order.code}</p>
+                        <p className="font-semibold text-sm">
+                          {order.code ?? ""}
+                        </p>
                       </div>
                       <div className="space-y-0.5">
                         <Label className="text-muted-foreground text-[10px] font-normal">
                           Tổng số lượng
                         </Label>
                         <p className="font-semibold text-sm">
-                          {order.totalQuantity.toLocaleString()}
+                          {(order.totalQuantity ?? 0).toLocaleString()}
                         </p>
                       </div>
                       <div className="space-y-0.5">
@@ -1983,7 +2349,7 @@ export default function ProofingOrderDetailPage() {
                           Số lượng hàng
                         </Label>
                         <p className="font-semibold text-sm">
-                          {order.proofingOrderDesigns.length}
+                          {order.proofingOrderDesigns?.length ?? 0}
                         </p>
                       </div>
                       <div className="space-y-0.5">
@@ -2076,7 +2442,7 @@ export default function ProofingOrderDetailPage() {
                             if (order.proofingFileUrl) {
                               downloadFile(
                                 order.proofingFileUrl,
-                                order.code || `BB-${order.id}`
+                                order.code ?? `BB-${order.id ?? ""}`
                               );
                             }
                           }}
@@ -2207,7 +2573,7 @@ export default function ProofingOrderDetailPage() {
                                       if (order.proofingFileUrl) {
                                         downloadFile(
                                           order.proofingFileUrl,
-                                          order.code || `BB-${order.id}`
+                                          order.code ?? `BB-${order.id ?? ""}`
                                         );
                                       }
                                     }}
@@ -2418,7 +2784,7 @@ export default function ProofingOrderDetailPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Layers className="h-4 w-4" />
-                      Danh sách mã hàng ({orderDesigns.length})
+                      Danh sách mã hàng ({orderDesigns?.length ?? 0})
                     </CardTitle>
                     {order && order.status !== "completed" && (
                       <Button
@@ -2457,10 +2823,10 @@ export default function ProofingOrderDetailPage() {
                             SL
                           </TableHead>
                           <TableHead className="h-9 px-2 text-[10px]">
-                            Mặt
+                            Số mặt in
                           </TableHead>
                           <TableHead className="h-9 px-2 text-[10px]">
-                            Quy trình
+                            Quy cách
                           </TableHead>
                           <TableHead className="h-9 px-2 text-[10px]">
                             Cán màng
@@ -2528,7 +2894,7 @@ export default function ProofingOrderDetailPage() {
                                     SL:
                                   </span>
                                   <span className="ml-2 font-semibold">
-                                    {pod.quantity.toLocaleString()}
+                                    {pod.quantity?.toLocaleString() || "0"}
                                   </span>
                                 </div>
 
@@ -2553,9 +2919,12 @@ export default function ProofingOrderDetailPage() {
                               {(pod.design.processClassification ||
                                 pod.design.sidesClassification ||
                                 pod.design.laminationType) && (
-                                <div className="pt-2 border-t space-y-1">
+                                <div className="pt-2 flex flex-wrap gap-1 justify-between border-t space-y-1">
                                   {pod.design.processClassification && (
-                                    <div>
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
                                       <span className="text-muted-foreground">
                                         Quy cách:
                                       </span>
@@ -2564,22 +2933,13 @@ export default function ProofingOrderDetailPage() {
                                           pod.design.processClassification
                                         ] || pod.design.processClassification}
                                       </span>
-                                    </div>
-                                  )}
-                                  {pod.design.sidesClassification && (
-                                    <div>
-                                      <span className="text-muted-foreground">
-                                        Số mặt in:
-                                      </span>
-                                      <span className="ml-2">
-                                        {sidesClassificationLabels[
-                                          pod.design.sidesClassification
-                                        ] || pod.design.sidesClassification}
-                                      </span>
-                                    </div>
+                                    </Badge>
                                   )}
                                   {pod.design.laminationType && (
-                                    <div>
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
                                       <span className="text-muted-foreground">
                                         Cán màng:
                                       </span>
@@ -2588,7 +2948,7 @@ export default function ProofingOrderDetailPage() {
                                           pod.design.laminationType
                                         ] || pod.design.laminationType}
                                       </span>
-                                    </div>
+                                    </Badge>
                                   )}
                                 </div>
                               )}
@@ -2661,9 +3021,23 @@ export default function ProofingOrderDetailPage() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="px-2 py-1">
-                                  <p className="text-xs">
-                                    {pod.quantity.toLocaleString()}
-                                  </p>
+                                  <QuantityCell
+                                    pod={pod}
+                                    editingQuantityDesignId={
+                                      editingQuantityDesignId
+                                    }
+                                    inlineQuantityValue={inlineQuantityValue}
+                                    setInlineQuantityValue={
+                                      setInlineQuantityValue
+                                    }
+                                    setEditingQuantityDesignId={
+                                      setEditingQuantityDesignId
+                                    }
+                                    handleUpdateDesignQuantity={
+                                      handleUpdateDesignQuantity
+                                    }
+                                    updatingDesignId={updatingDesignId}
+                                  />
                                 </TableCell>
                                 <TableCell className="px-2 py-1">
                                   <span className="text-xs">
@@ -2694,6 +3068,30 @@ export default function ProofingOrderDetailPage() {
                                 </TableCell>
                                 <TableCell className="px-2 py-1 text-right">
                                   <div className="flex items-center justify-end gap-1">
+                                    {order &&
+                                      order.status !== "completed" &&
+                                      pod.id && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingQuantityDesignId(pod.id!);
+                                            setInlineQuantityValue(
+                                              pod.quantity?.toString() || ""
+                                            );
+                                          }}
+                                          disabled={
+                                            editingQuantityDesignId ===
+                                              pod.id ||
+                                            updatingDesignId === pod.id
+                                          }
+                                          title="Cập nhật số lượng"
+                                        >
+                                          <Edit className="h-3.5 w-3.5" />
+                                        </Button>
+                                      )}
                                     {pod.design.designFileUrl && (
                                       <Button
                                         variant="ghost"
@@ -2790,10 +3188,18 @@ export default function ProofingOrderDetailPage() {
                                   const designId = pod.id;
                                   if (!designId) return null;
 
+                                  const currentQty =
+                                    updateDesignQuantities[designId] || "";
+                                  const hasChanged =
+                                    currentQty &&
+                                    parseInt(currentQty, 10) !== pod.quantity;
+                                  const isUpdating =
+                                    updatingDesignId === designId;
+
                                   return (
                                     <div
                                       key={designId}
-                                      className="flex items-center gap-3 p-2 rounded border bg-muted/30"
+                                      className="flex items-center gap-2 p-2 rounded border bg-muted/30"
                                     >
                                       <div className="flex-1 min-w-0">
                                         <div className="font-medium text-sm truncate">
@@ -2808,14 +3214,11 @@ export default function ProofingOrderDetailPage() {
                                           {pod.quantity?.toLocaleString() || 0}
                                         </div>
                                       </div>
-                                      <div className="w-24">
+                                      <div className="flex items-center gap-2">
                                         <Input
                                           type="number"
                                           min="1"
-                                          value={
-                                            updateDesignQuantities[designId] ||
-                                            ""
-                                          }
+                                          value={currentQty}
                                           onChange={(e) => {
                                             const value = e.target.value;
                                             setUpdateDesignQuantities(
@@ -2825,16 +3228,59 @@ export default function ProofingOrderDetailPage() {
                                               })
                                             );
                                           }}
-                                          placeholder="Số lượng"
-                                          className="text-sm"
+                                          onKeyDown={(e) => {
+                                            if (
+                                              e.key === "Enter" &&
+                                              hasChanged &&
+                                              !isUpdating
+                                            ) {
+                                              handleUpdateDesignQuantity(
+                                                designId
+                                              );
+                                            }
+                                          }}
+                                          onBlur={() => {
+                                            if (hasChanged && !isUpdating) {
+                                              handleUpdateDesignQuantity(
+                                                designId
+                                              );
+                                            }
+                                          }}
+                                          placeholder={
+                                            pod.quantity?.toString() ||
+                                            "Số lượng"
+                                          }
+                                          className="w-24 text-sm"
+                                          disabled={isUpdating}
                                         />
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-8 px-2 text-xs shrink-0"
+                                          onClick={() =>
+                                            handleUpdateDesignQuantity(designId)
+                                          }
+                                          disabled={
+                                            !hasChanged ||
+                                            isUpdating ||
+                                            !currentQty ||
+                                            parseInt(currentQty, 10) < 1
+                                          }
+                                        >
+                                          {isUpdating ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                          ) : (
+                                            "Cập nhật"
+                                          )}
+                                        </Button>
                                       </div>
                                     </div>
                                   );
                                 })}
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                Chỉ cập nhật các mã hàng có thay đổi số lượng
+                                Nhập số lượng mới và nhấn "Cập nhật" hoặc Enter
+                                cho từng mã hàng
                               </p>
                             </div>
                           )}
@@ -2843,48 +3289,13 @@ export default function ProofingOrderDetailPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setIsQuantityEditOpen(false)}
-                              disabled={
-                                isUpdatingInfo ||
-                                isUpdatingImage ||
-                                isUpdatingFile ||
-                                isUploadingImage ||
-                                isUploadingFile
-                              }
+                              onClick={() => {
+                                setIsQuantityEditOpen(false);
+                                setUpdateDesignQuantities({});
+                              }}
+                              disabled={updatingDesignId !== null}
                             >
-                              Hủy
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={handleUpdateInfo}
-                              disabled={
-                                isUpdatingInfo ||
-                                isUpdatingImage ||
-                                isUpdatingFile ||
-                                isUploadingImage ||
-                                isUploadingFile
-                              }
-                            >
-                              {isUpdatingInfo ||
-                              isUpdatingImage ||
-                              isUpdatingFile ||
-                              isUploadingImage ||
-                              isUploadingFile ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  {isUpdatingFile
-                                    ? "Đang cập nhật file..."
-                                    : isUpdatingImage
-                                      ? "Đang cập nhật ảnh..."
-                                      : isUploadingFile
-                                        ? "Đang tải lên file..."
-                                        : isUploadingImage
-                                          ? "Đang tải lên ảnh..."
-                                          : "Đang cập nhật..."}
-                                </>
-                              ) : (
-                                "Lưu số lượng"
-                              )}
+                              Đóng
                             </Button>
                           </div>
                         </div>
@@ -2911,14 +3322,16 @@ export default function ProofingOrderDetailPage() {
                       <Label className="text-muted-foreground text-[10px] font-normal">
                         Mã lệnh
                       </Label>
-                      <p className="font-semibold text-sm">{order.code}</p>
+                      <p className="font-semibold text-sm">
+                        {order.code ?? ""}
+                      </p>
                     </div>
                     <div className="space-y-0.5">
                       <Label className="text-muted-foreground text-[10px] font-normal">
                         Tổng số lượng
                       </Label>
                       <p className="font-semibold text-sm">
-                        {order.totalQuantity.toLocaleString()}
+                        {(order.totalQuantity ?? 0).toLocaleString()}
                       </p>
                     </div>
                     <div className="space-y-0.5">
@@ -2926,7 +3339,7 @@ export default function ProofingOrderDetailPage() {
                         Số lượng hàng
                       </Label>
                       <p className="font-semibold text-sm">
-                        {order.proofingOrderDesigns.length}
+                        {order.proofingOrderDesigns?.length ?? 0}
                       </p>
                     </div>
                     <div className="space-y-0.5">
@@ -2989,6 +3402,58 @@ export default function ProofingOrderDetailPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Process Classification & Lamination Type */}
+                  {(uniqueProcessClassifications.length > 0 ||
+                    uniqueLaminationTypes.length > 0) && (
+                    <div className="pt-2 border-t">
+                      <div className="flex justify-around gap-3">
+                        {uniqueProcessClassifications.length > 0 && (
+                          <div className="space-y-1.5 flex-1">
+                            <Label className="text-muted-foreground text-[10px] font-bold flex items-center gap-1.5">
+                              <Settings2 className="h-3 w-3" />
+                              Quy cách
+                            </Label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {uniqueProcessClassifications.map(
+                                (classification) => (
+                                  <Badge
+                                    key={classification}
+                                    variant="secondary"
+                                    className="text-xs font-bold px-2 py-0.5 bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 transition-colors"
+                                  >
+                                    {processClassificationLabels[
+                                      classification
+                                    ] || classification}
+                                  </Badge>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {uniqueLaminationTypes.length > 0 && (
+                          <div className="space-y-1.5 flex-1">
+                            <Label className="text-muted-foreground text-[10px] font-bold flex items-center gap-1.5">
+                              <Layers className="h-3 w-3" />
+                              Cán màng
+                            </Label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {uniqueLaminationTypes.map((laminationType) => (
+                                <Badge
+                                  key={laminationType}
+                                  variant="secondary"
+                                  className="text-xs font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+                                >
+                                  {laminationTypeLabels[laminationType] ||
+                                    laminationType}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {order.notes && (
                     <div className="p-2 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded text-xs">
@@ -3148,7 +3613,7 @@ export default function ProofingOrderDetailPage() {
                                     if (order.proofingFileUrl) {
                                       downloadFile(
                                         order.proofingFileUrl,
-                                        order.code || `BB-${order.id}`
+                                        order.code ?? `BB-${order.id ?? ""}`
                                       );
                                     }
                                   }}
@@ -3347,16 +3812,29 @@ export default function ProofingOrderDetailPage() {
                             </span>
                           )}
                         </span>
-                        {!order.isDieExported && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs ml-auto"
-                            onClick={() => setIsDieExportDialogOpen(true)}
-                          >
-                            Ghi nhận
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-1 ml-auto">
+                          {order.status !== "completed" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={handleOpenAddDieDialog}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Thêm
+                            </Button>
+                          )}
+                          {!order.isDieExported && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setIsDieExportDialogOpen(true)}
+                            >
+                              Ghi nhận
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       {order.dieExports && order.dieExports.length > 0 ? (
                         <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -3494,6 +3972,22 @@ export default function ProofingOrderDetailPage() {
                                     <Edit className="h-3 w-3 mr-1" />
                                     Sửa
                                   </Button>
+                                  {order &&
+                                    order.status !== "completed" &&
+                                    dieExport.dieId && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() =>
+                                          handleRemoveDie(dieExport.dieId!)
+                                        }
+                                        disabled={isRemovingDie}
+                                      >
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                        Xóa
+                                      </Button>
+                                    )}
                                 </div>
                               </div>
                             </div>
@@ -4061,13 +4555,7 @@ export default function ProofingOrderDetailPage() {
           onOpenChange={setIsAddDesignDialogOpen}
           availableDesigns={availableDesignsForAdding}
           materialTypeName={order.materialType?.name}
-          onSubmit={async (
-            orderDetailItems,
-            proofingSheetQuantity,
-            paperSizeId,
-            customPaperSize,
-            notes
-          ) => {
+          onSubmit={async (orderDetailItems) => {
             if (!order?.materialTypeId) {
               toast.error("Lỗi", {
                 description: "Không thể lấy thông tin Chất liệu",
@@ -4075,20 +4563,15 @@ export default function ProofingOrderDetailPage() {
               return;
             }
             // Map orderDetailItems to AddDesignsToProofingOrderRequest
-            // Note: API now requires designIds instead of orderDetailItems
-            // We need to extract designIds from availableDesigns based on orderDetailId
-            const designIds = orderDetailItems
-              .map((item) => {
-                const design = availableDesignsForAdding.find(
-                  (d) => d.id === item.orderDetailId
-                );
-                return design?.designId;
-              })
-              .filter((id): id is number => id !== undefined);
+            // API now requires items array with AddProofingOrderDetailItem (orderDetailId, quantity)
+            const items = orderDetailItems.map((item) => ({
+              orderDetailId: item.orderDetailId,
+              quantity: item.quantity,
+            }));
 
-            if (designIds.length === 0) {
+            if (items.length === 0) {
               toast.error("Lỗi", {
-                description: "Không tìm thấy design IDs",
+                description: "Không có chi tiết đơn hàng nào được chọn",
               });
               return;
             }
@@ -4097,18 +4580,7 @@ export default function ProofingOrderDetailPage() {
               id: order.id,
               request: {
                 materialTypeId: order.materialTypeId,
-                designIds: designIds,
-                totalQuantity:
-                  proofingSheetQuantity > 0 ? proofingSheetQuantity : null,
-                paperSizeId:
-                  paperSizeId === "none" || paperSizeId === "custom"
-                    ? null
-                    : Number(paperSizeId),
-                customPaperSize:
-                  paperSizeId === "custom" && customPaperSize?.trim()
-                    ? customPaperSize.trim()
-                    : null,
-                notes: notes?.trim() || null,
+                items: items,
               },
             });
           }}
@@ -4129,18 +4601,18 @@ export default function ProofingOrderDetailPage() {
           }
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Thay thế khuôn bế</DialogTitle>
             <DialogDescription>
               Chọn khuôn mới để thay thế cho khuôn hiện tại
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4">
+          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
             {/* Current Die Info */}
             {replacingDieExport && (
-              <div className="bg-muted/50 rounded-lg p-3 border">
+              <div className="bg-muted/50 rounded-lg p-3 border shrink-0">
                 <Label className="text-xs font-semibold mb-2 block">
                   Khuôn hiện tại:
                 </Label>
@@ -4173,7 +4645,7 @@ export default function ProofingOrderDetailPage() {
             )}
 
             {/* Search */}
-            <div className="space-y-2">
+            <div className="space-y-2 shrink-0">
               <Label htmlFor="die-search">Tìm khuôn thay thế</Label>
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -4189,8 +4661,10 @@ export default function ProofingOrderDetailPage() {
 
             {/* Die List */}
             <div className="flex-1 min-h-0 flex flex-col space-y-2">
-              <Label className="text-xs font-semibold">Chọn khuôn mới:</Label>
-              <ScrollArea className="flex-1 border rounded-lg">
+              <Label className="text-xs font-semibold shrink-0">
+                Chọn khuôn mới:
+              </Label>
+              <ScrollArea className="h-[300px] border rounded-lg">
                 {isLoadingDies ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
@@ -4274,7 +4748,7 @@ export default function ProofingOrderDetailPage() {
             </div>
 
             {/* Notes */}
-            <div className="space-y-2">
+            <div className="space-y-2 shrink-0">
               <Label htmlFor="replace-die-notes">Ghi chú (tùy chọn)</Label>
               <Textarea
                 id="replace-die-notes"
@@ -4287,7 +4761,7 @@ export default function ProofingOrderDetailPage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button
               variant="outline"
               onClick={() => {
@@ -4312,6 +4786,177 @@ export default function ProofingOrderDetailPage() {
                 </>
               ) : (
                 "Thay thế"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Die Dialog */}
+      <Dialog
+        open={isAddDieDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddDieDialogOpen(open);
+          if (!open) {
+            setSelectedDieIdForAdd(null);
+            setAddDieNotes("");
+            setAddDieSearchTerm("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle>Thêm khuôn bế</DialogTitle>
+            <DialogDescription>
+              Chọn khuôn bế để thêm vào bình bài
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
+            {/* Search */}
+            <div className="space-y-2 shrink-0">
+              <Label htmlFor="add-die-search">Tìm khuôn bế</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="add-die-search"
+                  placeholder="Nhập mã hoặc tên khuôn..."
+                  value={addDieSearchTerm}
+                  onChange={(e) => setAddDieSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+
+            {/* Die List */}
+            <div className="flex-1 min-h-0 flex flex-col space-y-2">
+              <Label className="text-xs font-semibold shrink-0">
+                Chọn khuôn:
+              </Label>
+              <ScrollArea className="h-[300px] border rounded-lg">
+                {isLoadingAddDies ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                    Đang tải...
+                  </div>
+                ) : availableDiesForAdd.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {addDieSearchTerm.trim()
+                      ? "Không tìm thấy khuôn phù hợp"
+                      : "Nhập từ khóa để tìm khuôn"}
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-2">
+                    {availableDiesForAdd.map((die: DieResponse) => {
+                      const isSelected = selectedDieIdForAdd === die.id;
+                      // Exclude dies that are already assigned to this proofing order
+                      const isAlreadyAssigned =
+                        order?.dieExports?.some((de) => de.dieId === die.id) ??
+                        false;
+
+                      return (
+                        <div
+                          key={die.id}
+                          className={cn(
+                            "p-3 rounded-lg border cursor-pointer transition-colors",
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:bg-muted/50",
+                            isAlreadyAssigned && "opacity-50 cursor-not-allowed"
+                          )}
+                          onClick={() => {
+                            if (!isAlreadyAssigned) {
+                              setSelectedDieIdForAdd(die.id || null);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            {die.imageUrl ? (
+                              <img
+                                src={die.imageUrl}
+                                alt={die.code || ""}
+                                className="w-12 h-12 rounded border object-contain bg-background shrink-0"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded border bg-muted/50 flex items-center justify-center shrink-0">
+                                <Package className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm truncate">
+                                {die.code || `Khuôn #${die.id}`}
+                              </div>
+                              {die.name && (
+                                <div className="text-xs text-muted-foreground line-clamp-1">
+                                  {die.name}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                <span>KT: {formatDieSize(die)}</span>
+                                {die.type && <span>• {die.type}</span>}
+                                {die.vendorName && (
+                                  <span>• NCC: {die.vendorName}</span>
+                                )}
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                            )}
+                            {isAlreadyAssigned && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs shrink-0"
+                              >
+                                Đã có
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2 shrink-0">
+              <Label htmlFor="add-die-notes">Ghi chú (tùy chọn)</Label>
+              <Textarea
+                id="add-die-notes"
+                placeholder="Nhập ghi chú cho khuôn bế..."
+                value={addDieNotes}
+                onChange={(e) => setAddDieNotes(e.target.value)}
+                rows={2}
+                className="text-sm"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddDieDialogOpen(false);
+                setSelectedDieIdForAdd(null);
+                setAddDieNotes("");
+                setAddDieSearchTerm("");
+              }}
+              disabled={isAssigningDie}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleAddDie}
+              disabled={!selectedDieIdForAdd || isAssigningDie}
+            >
+              {isAssigningDie ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang thêm...
+                </>
+              ) : (
+                "Thêm khuôn bế"
               )}
             </Button>
           </DialogFooter>

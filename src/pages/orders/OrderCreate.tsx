@@ -575,7 +575,7 @@ export default function OrderCreatePage() {
                           className="w-full justify-between bg-background h-10 px-3 text-sm"
                         >
                           {selectedCustomer
-                            ? `${selectedCustomer.name} - ${selectedCustomer.code}` +
+                            ? `${selectedCustomer.name ?? ""} - ${selectedCustomer.code ?? ""}` +
                               (selectedCustomer.companyName
                                 ? ` - ${selectedCustomer.companyName}`
                                 : "")
@@ -989,15 +989,21 @@ export default function OrderCreatePage() {
                   {/* Customer info */}
                   {selectedCustomer && (
                     <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-                      <p className="text-sm font-medium">
-                        {selectedCustomer.companyName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedCustomer.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedCustomer.phone}
-                      </p>
+                      {selectedCustomer.companyName && (
+                        <p className="text-sm font-medium">
+                          {selectedCustomer.companyName}
+                        </p>
+                      )}
+                      {selectedCustomer.name && (
+                        <p className="text-xs text-muted-foreground">
+                          {selectedCustomer.name}
+                        </p>
+                      )}
+                      {selectedCustomer.phone && (
+                        <p className="text-xs text-muted-foreground">
+                          {selectedCustomer.phone}
+                        </p>
+                      )}
                     </div>
                   )}
 

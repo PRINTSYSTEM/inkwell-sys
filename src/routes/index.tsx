@@ -193,7 +193,6 @@ const DeliveryNoteDetail = lazy(
 );
 
 // Invoices
-const InvoiceList = lazy(() => import("@/pages/invoices/InvoiceList"));
 const InvoiceDetail = lazy(() => import("@/pages/invoices/InvoiceDetail"));
 
 // Attendance
@@ -765,13 +764,13 @@ export const router = createBrowserRouter([
 
       // ===== INVOICES =====
       {
-        path: lastSegment(ROUTE_PATHS.INVOICES.ROOT), // "invoices"
+        path: lastSegment(ROUTE_PATHS.ACCOUNTING.INVOICE), // "invoices"
         children: [
           {
             index: true,
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
-                <InvoiceList />
+                <InvoicePage />
               </Suspense>
             ),
           },

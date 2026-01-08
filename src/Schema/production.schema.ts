@@ -4,58 +4,65 @@ import { z } from "zod";
 import { IdSchema, DateSchema, createPagedResponseSchema } from "./Common";
 import {
   ProductionResponseSchema as GenProductionResponseSchema,
-  ProductionResponsePaginateSchema as GenProductionResponsePaginateSchema,
-  CreateProductionRequestSchema as GenCreateProductionRequestSchema,
-  UpdateProductionRequestSchema as GenUpdateProductionRequestSchema,
-  StartProductionRequestSchema as GenStartProductionRequestSchema,
-  CompleteProductionRequestSchema as GenCompleteProductionRequestSchema,
+  ProductionOrderResponseSchema as GenProductionOrderResponseSchema,
+  ProductionOrderResponsePaginateSchema as GenProductionOrderResponsePaginateSchema,
+  ProductionStepResponseSchema as GenProductionStepResponseSchema,
+  CreateProductionOrderRequestSchema as GenCreateProductionOrderRequestSchema,
+  UpdateProductionStepRequestSchema as GenUpdateProductionStepRequestSchema,
+  AssignProductionStepRequestSchema as GenAssignProductionStepRequestSchema,
 } from "./generated";
 
-// ===== ProductionResponse =====
+// ===== ProductionResponse (Legacy - still used in some endpoints) =====
 export const ProductionResponseSchema =
   GenProductionResponseSchema.passthrough();
 export type ProductionResponse = z.infer<typeof ProductionResponseSchema>;
 
-// ===== PagedResponse =====
+// ===== ProductionOrderResponse =====
+export const ProductionOrderResponseSchema =
+  GenProductionOrderResponseSchema.passthrough();
+export type ProductionOrderResponse = z.infer<
+  typeof ProductionOrderResponseSchema
+>;
+
+// ===== ProductionOrderResponsePaginate =====
+export const ProductionOrderResponsePaginateSchema =
+  GenProductionOrderResponsePaginateSchema.passthrough();
+export type ProductionOrderResponsePaginate = z.infer<
+  typeof ProductionOrderResponsePaginateSchema
+>;
+
+// ===== ProductionStepResponse =====
+export const ProductionStepResponseSchema =
+  GenProductionStepResponseSchema.passthrough();
+export type ProductionStepResponse = z.infer<
+  typeof ProductionStepResponseSchema
+>;
+
+// ===== CreateProductionOrderRequest =====
+export const CreateProductionOrderRequestSchema =
+  GenCreateProductionOrderRequestSchema.passthrough();
+export type CreateProductionOrderRequest = z.infer<
+  typeof CreateProductionOrderRequestSchema
+>;
+
+// ===== UpdateProductionStepRequest =====
+export const UpdateProductionStepRequestSchema =
+  GenUpdateProductionStepRequestSchema.passthrough();
+export type UpdateProductionStepRequest = z.infer<
+  typeof UpdateProductionStepRequestSchema
+>;
+
+// ===== AssignProductionStepRequest =====
+export const AssignProductionStepRequestSchema =
+  GenAssignProductionStepRequestSchema.passthrough();
+export type AssignProductionStepRequest = z.infer<
+  typeof AssignProductionStepRequestSchema
+>;
+
+// ===== PagedResponse (Legacy helper for ProductionResponse) =====
 export const ProductionResponsePagedResponseSchema = createPagedResponseSchema(
   ProductionResponseSchema
 );
 export type ProductionResponsePagedResponse = z.infer<
   typeof ProductionResponsePagedResponseSchema
->;
-
-// Re-export generated paginate schema for compatibility
-export {
-  GenProductionResponsePaginateSchema as ProductionResponsePaginateSchema,
-};
-export type ProductionResponsePaginate = z.infer<
-  typeof GenProductionResponsePaginateSchema
->;
-
-// ===== CreateProductionRequest =====
-export const CreateProductionRequestSchema =
-  GenCreateProductionRequestSchema.passthrough();
-export type CreateProductionRequest = z.infer<
-  typeof CreateProductionRequestSchema
->;
-
-// ===== UpdateProductionRequest =====
-export const UpdateProductionRequestSchema =
-  GenUpdateProductionRequestSchema.passthrough();
-export type UpdateProductionRequest = z.infer<
-  typeof UpdateProductionRequestSchema
->;
-
-// ===== StartProductionRequest =====
-export const StartProductionRequestSchema =
-  GenStartProductionRequestSchema.passthrough();
-export type StartProductionRequest = z.infer<
-  typeof StartProductionRequestSchema
->;
-
-// ===== CompleteProductionRequest =====
-export const CompleteProductionRequestSchema =
-  GenCompleteProductionRequestSchema.passthrough();
-export type CompleteProductionRequest = z.infer<
-  typeof CompleteProductionRequestSchema
 >;
