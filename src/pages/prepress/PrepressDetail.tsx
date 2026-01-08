@@ -370,7 +370,7 @@ export default function ProofingOrderDetailPage() {
   // Form state for update info (Bình Bài)
   const [updateStatus, setUpdateStatus] = useState<string>("");
   const [updateNotes, setUpdateNotes] = useState<string>("");
-  const [updatePaperSizeId, setUpdatePaperSizeId] = useState<string>("none");
+  const [updatePaperSizeId, setUpdatePaperSizeId] = useState<string>("custom");
   const [updateCustomPaperSize, setUpdateCustomPaperSize] =
     useState<string>("");
   const [updateProofingFileUrl, setUpdateProofingFileUrl] =
@@ -533,7 +533,7 @@ export default function ProofingOrderDetailPage() {
   const [designQuantities, setDesignQuantities] = useState<
     Record<number, number>
   >({});
-  const [paperSizeId, setPaperSizeId] = useState<string>("none");
+  const [paperSizeId, setPaperSizeId] = useState<string>("custom");
   const [customPaperSize, setCustomPaperSize] = useState("");
 
   const materialTypeId = isEmptyOrder
@@ -1079,7 +1079,7 @@ export default function ProofingOrderDetailPage() {
       setDesignQuantities({});
       setNotes("");
       setProofingSheetQuantity(1);
-      setPaperSizeId("none");
+      setPaperSizeId("custom");
       setCustomPaperSize("");
     } catch (error) {
       console.error("Failed to add designs to proofing order:", error);
@@ -1125,7 +1125,7 @@ export default function ProofingOrderDetailPage() {
     setUpdateStatus(order.status || "");
     setUpdateNotes(order.notes || "");
     setUpdatePaperSizeId(
-      order.paperSizeId ? order.paperSizeId.toString() : "none"
+      order.paperSizeId ? order.paperSizeId.toString() : "custom"
     );
     setUpdateCustomPaperSize(order.customPaperSize || "");
 
@@ -2260,11 +2260,14 @@ export default function ProofingOrderDetailPage() {
                               className="h-7 text-xs"
                             >
                               <Maximize2 className="h-3 w-3 mr-1.5 text-muted-foreground" />
-                              <SelectValue placeholder="Chọn khổ giấy" />
+                              <SelectValue
+                                defaultValue="custom"
+                                placeholder="Chọn khổ giấy"
+                              />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">
-                                Chưa xác định
+                              <SelectItem value="custom">
+                                -- Nhập thủ công --
                               </SelectItem>
                               {paperSizes?.map((ps) => (
                                 <SelectItem
@@ -2277,9 +2280,6 @@ export default function ProofingOrderDetailPage() {
                                     : ""}
                                 </SelectItem>
                               ))}
-                              <SelectItem value="custom">
-                                -- Nhập thủ công --
-                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -2585,11 +2585,15 @@ export default function ProofingOrderDetailPage() {
                                 onValueChange={setUpdatePaperSizeId}
                               >
                                 <SelectTrigger id="update-paper-size">
-                                  <SelectValue placeholder="Chọn khổ giấy" />
+                                  <SelectValue
+                                    defaultValue="custom"
+                                    placeholder="Chọn khổ giấy"
+                                  />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="none">
-                                    Chưa xác định
+                                  <SelectItem value="custom">
+                                    {" "}
+                                    -- Nhập thủ công --{" "}
                                   </SelectItem>
                                   {paperSizes.map((ps) => (
                                     <SelectItem
@@ -2602,9 +2606,6 @@ export default function ProofingOrderDetailPage() {
                                         : ""}
                                     </SelectItem>
                                   ))}
-                                  <SelectItem value="custom">
-                                    -- Nhập thủ công --
-                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -3646,13 +3647,14 @@ export default function ProofingOrderDetailPage() {
                             <Select
                               value={updatePaperSizeId}
                               onValueChange={setUpdatePaperSizeId}
+                              defaultValue="custom"
                             >
                               <SelectTrigger id="update-paper-size">
                                 <SelectValue placeholder="Chọn khổ giấy" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="none">
-                                  Chưa xác định
+                                <SelectItem value="custom">
+                                  -- Nhập thủ công --
                                 </SelectItem>
                                 {paperSizes.map((ps) => (
                                   <SelectItem
@@ -3665,9 +3667,6 @@ export default function ProofingOrderDetailPage() {
                                       : ""}
                                   </SelectItem>
                                 ))}
-                                <SelectItem value="custom">
-                                  -- Nhập thủ công --
-                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>

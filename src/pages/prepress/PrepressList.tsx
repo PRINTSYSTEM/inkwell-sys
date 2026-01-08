@@ -45,9 +45,9 @@ type ProofingOrder =
 
 export default function ProofingOrdersPage() {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [designCode, setDesignCode] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [debouncedSearch] = useDebounce(searchTerm, 300);
+  const [debouncedDesignCode] = useDebounce(designCode, 300);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("");
   const itemsPerPage = 30;
@@ -59,12 +59,13 @@ export default function ProofingOrdersPage() {
   const queryParams = useMemo(() => {
     const raw = {
       status: selectedStatus === "all" ? null : selectedStatus,
+      designCode: debouncedDesignCode.trim() || null,
       pageSize: 30,
       pageNumber: currentPage,
     };
     const parsed = ProofingOrderListParamsSchema.safeParse(raw);
     return parsed.success ? parsed.data : {};
-  }, [selectedStatus, currentPage]);
+  }, [selectedStatus, debouncedDesignCode, currentPage]);
 
   const {
     data: ordersResp,
@@ -82,29 +83,15 @@ export default function ProofingOrdersPage() {
     return items as unknown as ProofingOrder[];
   }, [ordersResp?.items]);
 
-
   const filteredProofingOrders = useMemo(() => {
-    const filtered = proofingOrders.filter((order) => {
-      const matchSearch =
-        order.code?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        order.materialType?.name
-          ?.toLowerCase()
-          .includes(debouncedSearch.toLowerCase());
-
-      const matchStatus =
-        selectedStatus === "all" || order.status === selectedStatus;
-
-      return matchSearch && matchStatus;
-    });
-
     // Sort: incomplete (status !== "completed") first, completed last
-    return filtered.sort((a, b) => {
+    return [...proofingOrders].sort((a, b) => {
       const aIsCompleted = a.status === "completed";
       const bIsCompleted = b.status === "completed";
       if (aIsCompleted === bIsCompleted) return 0;
       return aIsCompleted ? 1 : -1; // incomplete first (return -1), completed last (return 1)
     });
-  }, [proofingOrders, debouncedSearch, selectedStatus]);
+  }, [proofingOrders]);
 
   // Pagination - use server-side total count
   const totalCount = ordersResp?.total ?? filteredProofingOrders.length;
@@ -136,7 +123,7 @@ export default function ProofingOrdersPage() {
   useEffect(() => {
     setCurrentPage(1);
     setPageInput("1");
-  }, [debouncedSearch, selectedStatus]);
+  }, [debouncedDesignCode, selectedStatus]);
 
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
@@ -305,15 +292,15 @@ export default function ProofingOrdersPage() {
         <CardContent className="p-4 pt-4 flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Filters */}
           <div className="flex items-center gap-2 mb-3 shrink-0">
-            {/* Search */}
+            {/* Design Code Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder="Tìm theo mã lệnh hoặc chất liệu..."
+                placeholder="Tìm theo mã hàng..."
                 className="pl-9 h-9 text-sm"
-                value={searchTerm}
+                value={designCode}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  setDesignCode(e.target.value);
                   setCurrentPage(1);
                 }}
               />
@@ -364,7 +351,7 @@ export default function ProofingOrdersPage() {
               <div className="text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-50" />
                 <p className="text-sm text-muted-foreground">
-                  {searchTerm || selectedStatus !== "all"
+                  {designCode || selectedStatus !== "all"
                     ? "Không tìm thấy mã bài phù hợp"
                     : "Chưa có mã bài nào"}
                 </p>
