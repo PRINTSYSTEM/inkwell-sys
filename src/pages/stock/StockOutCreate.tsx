@@ -183,7 +183,7 @@ export default function StockOutCreatePage() {
                           key={customer.id}
                           value={customer.id?.toString() || ""}
                         >
-                          {customer.name}
+                          {customer.name ?? ""}
                         </SelectItem>
                       ))}
                     </SelectContent>

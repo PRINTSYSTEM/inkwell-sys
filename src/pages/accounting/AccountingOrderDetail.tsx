@@ -66,9 +66,18 @@ import type {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AlertTriangle } from "lucide-react";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { toast } from "sonner";
 
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
@@ -144,6 +153,9 @@ export default function AccountingOrderDetail() {
   const [orderDetailEditValues, setOrderDetailEditValues] = useState<
     Record<string, string | number | null>
   >({});
+  // Deposit dialog state
+  const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState<string>("");
 
   // Mutations
   const exportInvoiceMutation = useExportOrderInvoice();
@@ -321,6 +333,13 @@ export default function AccountingOrderDetail() {
         cardEditValues.paymentDueDate === null
           ? null
           : new Date(cardEditValues.paymentDueDate).toISOString();
+      // Khi sửa cọc tiền, truyền paymentMethodId = 2
+      if (
+        cardEditValues.depositAmount !== "" &&
+        cardEditValues.depositAmount !== null
+      ) {
+        payload.paymentMethodId = 2;
+      }
     } else if (cardName === "recipientInfo") {
       payload.recipientName =
         cardEditValues.recipientName === "" ||
@@ -402,15 +421,50 @@ export default function AccountingOrderDetail() {
   const handleUpdatePayment = () => {
     if (!order) return;
 
-    const isCompany = !!order.customer?.companyName;
+    const isCompany = order.customer?.type === "company";
 
-    if (isCompany) {
+    if (order.customer?.type === "retail") {
+      // Khách lẻ: mở dialog để nhập số tiền cọc
+      setDepositAmount("");
+      setIsDepositDialogOpen(true);
+    } else {
       // Khách công ty: duyệt công nợ
       approveDebtMutation.mutate(order.id);
-    } else {
-      // Khách lẻ: cập nhật thanh toán (confirm deposit)
-      // Cần có dialog để nhập số tiền cọc, tạm thời gọi với depositAmount = totalAmount
-      confirmDepositMutation.mutate(order.id, order.totalAmount);
+    }
+  };
+
+  const handleConfirmDeposit = async () => {
+    if (!order) return;
+
+    const amount = parseFloat(depositAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Lỗi", {
+        description: "Vui lòng nhập số tiền cọc hợp lệ",
+      });
+      return;
+    }
+
+    if (amount > order.totalAmount) {
+      toast.error("Lỗi", {
+        description: "Số tiền cọc không được vượt quá tổng tiền đơn hàng",
+      });
+      return;
+    }
+
+    try {
+      // Bước 1: Cọc tiền với paymentMethodId = 2
+      await updateOrderForAccounting(order.id, {
+        depositAmount: amount,
+        paymentMethodId: 2,
+      } as UpdateOrderForAccountingRequest);
+
+      // Bước 2: Duyệt công nợ để cộng công nợ vào hệ thống
+      await approveDebtMutation.mutate(order.id);
+
+      setIsDepositDialogOpen(false);
+      setDepositAmount("");
+    } catch (error) {
+      // Error is handled by the mutation hooks
     }
   };
 
@@ -508,7 +562,7 @@ export default function AccountingOrderDetail() {
     order.depositAmount
   );
   const invoiceStatus = deriveInvoiceStatus(order);
-  const customerType = deriveCustomerType(order.customer?.companyName);
+  const customerType = order.customer?.type;
 
   return (
     <>
@@ -577,7 +631,7 @@ export default function AccountingOrderDetail() {
                   Xuất PDF Đơn Hàng
                 </Button>
                 {/* {remainingAmount > 0 && ( */}
-                {order.customer?.companyName &&
+                {order.customer?.type === "company" &&
                   order.status === "confirmed_for_printing" && (
                     <Button
                       size="sm"
@@ -596,24 +650,26 @@ export default function AccountingOrderDetail() {
                       Duyệt công nợ
                     </Button>
                   )}
-                {!order.customer?.companyName && (
-                  <Button
-                    size="sm"
-                    onClick={handleUpdatePayment}
-                    disabled={
-                      confirmDepositMutation.loading ||
-                      approveDebtMutation.loading
-                    }
-                  >
-                    {confirmDepositMutation.loading ||
-                    approveDebtMutation.loading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CreditCard className="h-4 w-4 mr-2" />
-                    )}
-                    Cập nhật thanh toán
-                  </Button>
-                )}
+                {order.customer?.type === "retail" &&
+                  order.status === "confirmed_for_printing" &&
+                  (!order.depositAmount || order.depositAmount <= 0) && (
+                    <Button
+                      size="sm"
+                      onClick={handleUpdatePayment}
+                      disabled={
+                        confirmDepositMutation.loading ||
+                        approveDebtMutation.loading
+                      }
+                    >
+                      {confirmDepositMutation.loading ||
+                      approveDebtMutation.loading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4 mr-2" />
+                      )}
+                      Cọc tiền
+                    </Button>
+                  )}
                 {/* )} */}
                 {invoiceStatus === "not_issued" &&
                   hasBeenDelivered(order.status) && (
@@ -779,19 +835,6 @@ export default function AccountingOrderDetail() {
                           }
                           placeholder="Nhập số tiền đã cọc"
                           className="text-lg font-medium"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Hạn thanh toán</Label>
-                        <Input
-                          type="datetime-local"
-                          value={cardEditValues.paymentDueDate || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              paymentDueDate: e.target.value,
-                            })
-                          }
                         />
                       </div>
                     </div>
@@ -1128,15 +1171,13 @@ export default function AccountingOrderDetail() {
                           variant="outline"
                           onClick={() =>
                             startEditingCard("customerInfo", {
-                              customerName: order.customer?.name || "",
+                              customerName: order.customerName || "",
                               customerCompanyName:
-                                order.customer?.companyName || "",
-                              customerPhone: order.customer?.phone || "",
-                              customerEmail: order.customer?.email || "",
-                              customerTaxCode:
-                                (order.customer as { taxCode?: string })
-                                  ?.taxCode || "",
-                              customerAddress: order.customer?.address || "",
+                                order.customerCompanyName || "",
+                              customerPhone: order.customerPhone || "",
+                              customerEmail: order.customerEmail || "",
+                              customerTaxCode: order.customerTaxCode || "",
+                              customerAddress: order.customerAddress || "",
                             })
                           }
                         >
@@ -1206,6 +1247,21 @@ export default function AccountingOrderDetail() {
                           placeholder="Nhập email"
                         />
                       </div>
+                      {customerType === "company" && (
+                        <div className="space-y-2">
+                          <Label>Mã số thuế</Label>
+                          <Input
+                            value={cardEditValues.customerTaxCode || ""}
+                            onChange={(e) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                customerTaxCode: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập mã số thuế"
+                          />
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label>Địa chỉ *</Label>
                         <Textarea
@@ -1224,7 +1280,7 @@ export default function AccountingOrderDetail() {
                   ) : (
                     /* View Mode */
                     <>
-                      {order.customer?.companyName && (
+                      {order.customerCompanyName && (
                         <div className="flex items-start gap-3">
                           <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
                           <div>
@@ -1232,7 +1288,7 @@ export default function AccountingOrderDetail() {
                               Công ty
                             </p>
                             <p className="font-medium">
-                              {order.customer.companyName}
+                              {order.customerCompanyName}
                             </p>
                           </div>
                         </div>
@@ -1244,7 +1300,7 @@ export default function AccountingOrderDetail() {
                             Liên hệ
                           </p>
                           <p className="font-medium">
-                            {order.customer?.name || "—"}
+                            {order.customerName || "—"}
                           </p>
                         </div>
                       </div>
@@ -1255,21 +1311,61 @@ export default function AccountingOrderDetail() {
                             Điện thoại
                           </p>
                           <p className="font-medium font-mono">
-                            {order.customer?.phone || "—"}
+                            {order.customerPhone || "—"}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3">
-                        <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Mã khách hàng
-                          </p>
-                          <p className="font-medium font-mono">
-                            {order.customer?.code || "—"}
-                          </p>
+                      {order.customerEmail && (
+                        <div className="flex items-start gap-3">
+                          <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Email
+                            </p>
+                            <p className="font-medium">{order.customerEmail}</p>
+                          </div>
                         </div>
-                      </div>
+                      )}
+                      {order.customer?.code && (
+                        <div className="flex items-start gap-3">
+                          <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Mã khách hàng
+                            </p>
+                            <p className="font-medium font-mono">
+                              {order.customer.code ?? ""}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Hiển thị mã số thuế cho khách hàng công ty */}
+                      {customerType === "company" && (
+                        <div className="flex items-start gap-3">
+                          <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Mã số thuế
+                            </p>
+                            <p className="font-medium font-mono">
+                              {order.customerTaxCode || "—"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {order.customerAddress && (
+                        <div className="flex items-start gap-3">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Địa chỉ
+                            </p>
+                            <p className="font-medium">
+                              {order.customerAddress}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       <Separator />
 
@@ -1622,6 +1718,89 @@ export default function AccountingOrderDetail() {
           </div>
         </div>
       </div>
+
+      {/* Deposit Dialog */}
+      <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nhận cọc đơn hàng</DialogTitle>
+            <DialogDescription>
+              Nhập số tiền cọc cho đơn hàng {order?.code}
+            </DialogDescription>
+          </DialogHeader>
+
+          {order && (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Tổng tiền</span>
+                  <span className="font-semibold">
+                    {formatCurrency(order.totalAmount)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Đã cọc</span>
+                  <span className="font-medium text-emerald-600">
+                    {formatCurrency(order.depositAmount)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t pt-1 mt-1">
+                  <span className="text-muted-foreground">Còn lại</span>
+                  <span className="font-medium text-orange-600">
+                    {formatCurrency(order.totalAmount - order.depositAmount)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="depositAmount">
+                  Số tiền cọc <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="depositAmount"
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  placeholder="Nhập số tiền cọc"
+                  className="text-lg font-medium"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDepositDialogOpen(false);
+                setDepositAmount("");
+              }}
+              disabled={confirmDepositMutation.loading}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleConfirmDeposit}
+              disabled={
+                confirmDepositMutation.loading ||
+                !depositAmount ||
+                parseFloat(depositAmount) <= 0
+              }
+            >
+              {confirmDepositMutation.loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Xác nhận nhận cọc"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

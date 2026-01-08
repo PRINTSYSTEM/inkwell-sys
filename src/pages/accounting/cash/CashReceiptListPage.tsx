@@ -304,7 +304,7 @@ export default function CashReceiptListPage() {
                   <SelectItem value="all">Tất cả khách hàng</SelectItem>
                   {customersData?.items?.map((customer) => (
                     <SelectItem key={customer.id} value={String(customer.id)}>
-                      {customer.name || customer.companyName || customer.code}
+                      {customer.name ?? customer.companyName ?? customer.code ?? ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

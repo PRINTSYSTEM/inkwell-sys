@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import type { DesignItem } from "@/types/proofing";
 import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
-import type { CreateProofingOrderFromDesignsRequest } from "@/Schema/proofing-order.schema";
+import type { AddProofingOrderDetailItem } from "@/Schema/proofing-order.schema";
 import {
   Dialog,
   DialogContent,
@@ -52,7 +52,13 @@ interface CreateProofingOrderModalProps {
   onOpenChange: (open: boolean) => void;
   selectedDesigns: DesignItem[];
   paperSizes?: PaperSizeResponse[];
-  onSubmit: (data: CreateProofingOrderFromDesignsRequest) => Promise<void>;
+  onSubmit: (data: {
+    orderDetailItems: AddProofingOrderDetailItem[];
+    totalQuantity: number;
+    notes?: string;
+    paperSizeId?: number;
+    customPaperSize?: string;
+  }) => Promise<void>;
   isSubmitting?: boolean;
   onSuccess: () => void;
 }
@@ -174,8 +180,8 @@ export function CreateProofingOrderModal({
         return;
       }
 
-      // Prepare request payload according to schema
-      const payload: CreateProofingOrderFromDesignsRequest = {
+      // Prepare request payload
+      const payload = {
         orderDetailItems,
         totalQuantity: proofingSheetQuantity,
         notes: notes?.trim() || undefined,

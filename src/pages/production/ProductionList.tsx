@@ -47,12 +47,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
-import { useProductions, useCreateProduction } from "@/hooks/use-production";
+import { useProductionOrders, useCreateProductionOrder } from "@/hooks/use-production";
 import { useProofingOrdersForProduction } from "@/hooks/use-proofing-order";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  ProductionResponse,
-  ProductionResponsePaginateSchema,
+  ProductionOrderResponse,
+  ProductionOrderResponsePaginateSchema,
   safeParseSchema,
   type ProductionListParams,
   type ProofingOrderResponse,
@@ -93,18 +93,18 @@ export default function ProductionListPage() {
     data: productionsResp,
     isLoading,
     error,
-  } = useProductions(queryParams);
+  } = useProductionOrders(queryParams);
 
   // Try to parse with schema, but fallback to raw data if validation fails
   // Similar to plate export issue - API returns 200 but schema validation might fail
   const parseProdResp = safeParseSchema(
-    ProductionResponsePaginateSchema,
+    ProductionOrderResponsePaginateSchema,
     productionsResp
   );
 
   // Memoize productions to prevent dependency warnings
   // Use raw data if schema validation fails (API returned 200 but schema is too strict)
-  const productions = useMemo<ProductionResponse[]>(() => {
+  const productions = useMemo<ProductionOrderResponse[]>(() => {
     if (parseProdResp?.items) {
       return parseProdResp.items;
     }
@@ -120,7 +120,7 @@ export default function ProductionListPage() {
           "Schema validation failed for productions response, using raw data:",
           productionsResp
         );
-        return rawItems as ProductionResponse[];
+        return rawItems as ProductionOrderResponse[];
       }
     }
     return [];
@@ -182,7 +182,7 @@ export default function ProductionListPage() {
   }, [selectedStatus]);
 
   const { mutate: createProduction, isPending: creating } =
-    useCreateProduction();
+    useCreateProductionOrder();
 
   // Fetch proofing orders waiting for production
   const { data: proofingOrdersResp, isLoading: isLoadingProofingOrders } =
@@ -236,7 +236,7 @@ export default function ProductionListPage() {
   // Client-side search filter (since API doesn't support search parameter)
   const filteredProductions = useMemo(
     () =>
-      productions?.filter((prod: ProductionResponse) => {
+      productions?.filter((prod: ProductionOrderResponse) => {
         const search = debouncedSearch.toLowerCase().trim();
 
         const matchSearch =
@@ -244,7 +244,7 @@ export default function ProductionListPage() {
           String(prod.id ?? "")
             .toLowerCase()
             .includes(search) ||
-          (prod.productionLead?.fullName ?? "").toLowerCase().includes(search);
+          (prod.productionLeadName ?? "").toLowerCase().includes(search);
 
         const matchStatus =
           selectedStatus === "all" || prod.status === selectedStatus;
@@ -316,8 +316,7 @@ export default function ProductionListPage() {
     try {
       await createProduction({
         proofingOrderId: selectedProofingOrderId,
-        productionLeadId: user.id,
-        notes: notes || undefined,
+        customSteps: notes ? [notes] : undefined,
       });
       setIsCreateDialogOpen(false);
       setSelectedProofingOrderId(null);
@@ -515,7 +514,7 @@ export default function ProductionListPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProductions.map((prod: ProductionResponse) => (
+                  {filteredProductions.map((prod: ProductionOrderResponse) => (
                     <TableRow
                       key={prod.id}
                       className="h-14 cursor-pointer hover:bg-muted/50"
@@ -529,7 +528,7 @@ export default function ProductionListPage() {
 
                       <TableCell className="py-3">
                         <span className="font-semibold text-sm">
-                          {prod.productionLead?.fullName || "Chưa phân công"}
+                          {prod.productionLeadName || "Chưa phân công"}
                         </span>
                       </TableCell>
 

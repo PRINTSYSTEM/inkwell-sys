@@ -10,34 +10,32 @@ type ApiError = {
 };
 
 import type {
-  ProductionResponse,
-  ProductionResponsePaginate,
+  ProductionOrderResponse,
+  ProductionOrderResponsePaginate,
+  ProductionStepResponse,
+  CreateProductionOrderRequest,
+  UpdateProductionStepRequest,
   ProductionListParams,
-  CreateProductionRequest,
-  UpdateProductionRequest,
-  StartProductionRequest,
-  CompleteProductionRequest,
 } from "@/Schema";
-import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
 
+// Production Order CRUD hooks (new API structure)
 const {
-  api: productionCrudApi,
-  keys: productionKeys,
-  useList: useProductionListBase,
-  useDetail: useProductionDetailBase,
-  useCreate: useCreateProductionBase,
-  useUpdate: useUpdateProductionBase,
+  api: productionOrderCrudApi,
+  keys: productionOrderKeys,
+  useList: useProductionOrderListBase,
+  useDetail: useProductionOrderDetailBase,
+  useCreate: useCreateProductionOrderBase,
 } = createCrudHooks<
-  ProductionResponse,
-  CreateProductionRequest,
-  UpdateProductionRequest,
+  ProductionOrderResponse,
+  CreateProductionOrderRequest,
+  never, // No update endpoint for production orders
   number,
   ProductionListParams,
-  ProductionResponsePaginate
+  ProductionOrderResponsePaginate
 >({
-  rootKey: "productions",
-  basePath: API_SUFFIX.PRODUCTIONS,
+  rootKey: "production-orders",
+  basePath: "/api/productions/orders",
   getItems: (resp) => resp.items ?? [],
   messages: {
     createSuccess: "Đã tạo lệnh sản xuất thành công",
@@ -45,134 +43,104 @@ const {
   },
 });
 
-export const useProductions = (params?: ProductionListParams) =>
-  useProductionListBase(params ?? ({} as ProductionListParams));
+// Production order hooks
+export const useProductionOrders = (params?: ProductionListParams) =>
+  useProductionOrderListBase(params ?? ({} as ProductionListParams));
 
-export const useProduction = (id: number | null, enabled = true) =>
-  useProductionDetailBase(id, enabled);
+export const useProductionOrder = (id: number | null, enabled = true) =>
+  useProductionOrderDetailBase(id, enabled);
 
-export const useCreateProduction = () => useCreateProductionBase();
-export const useUpdateProduction = () => useUpdateProductionBase();
+export const useCreateProductionOrder = () => useCreateProductionOrderBase();
 
-// GET /productions/proofing-order/{proofingOrderId}
-export const useProductionsByProofingOrder = (
-  proofingOrderId: number | null,
-  enabled = true
-) => {
-  return useQuery({
-    queryKey: [productionKeys.all[0], "by-proofing", proofingOrderId],
-    enabled: enabled && !!proofingOrderId,
-    queryFn: async () => {
-      const res = await apiRequest.get<ProductionResponse[]>(
-        API_SUFFIX.PRODUCTIONS_BY_PROOFING_ORDER(proofingOrderId as number)
-      );
-      return res.data;
-    },
+// PUT /api/productions/steps/:id/status - Update production step status
+export const useUpdateProductionStep = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProductionStepResponse,
+    [{ id: number; data: UpdateProductionStepRequest }]
+  >(async ({ id, data }) => {
+    const res = await apiRequest.put<ProductionStepResponse>(
+      `/api/productions/steps/${id}/status`,
+      data
+    );
+    return res.data;
   });
+
+  const mutate = async (payload: {
+    id: number;
+    data: UpdateProductionStepRequest;
+  }) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate production order queries to refresh step data
+      queryClient.invalidateQueries({
+        queryKey: productionOrderKeys.all,
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật trạng thái bước sản xuất",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật trạng thái bước sản xuất",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    isPending: loading,
+    error,
+    mutate,
+    reset,
+  };
 };
 
-// POST /productions/{id}/start
+// Legacy hooks for backward compatibility (deprecated - use useUpdateProductionStep instead)
+// These are kept for components that haven't been migrated yet
 export const useStartProduction = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    ProductionResponse,
-    [{ id: number; data?: StartProductionRequest }]
-  >(async ({ id, data }) => {
-    const res = await apiRequest.post<ProductionResponse>(
-      API_SUFFIX.PRODUCTION_START(id),
-      data ?? {}
-    );
-    return res.data;
-  });
-
-  const mutate = async (payload: {
-    id: number;
-    data?: StartProductionRequest;
-  }) => {
-    try {
-      const result = await execute(payload);
-
-      queryClient.invalidateQueries({
-        queryKey: productionKeys.detail(result.id),
-      });
-
-      toast.success("Thành công", {
-        description: "Đã bắt đầu sản xuất",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể bắt đầu sản xuất",
-      });
-      throw err;
-    }
-  };
-
+  console.warn(
+    "useStartProduction is deprecated. Use useUpdateProductionStep to update step status instead."
+  );
+  // Return a no-op hook for backward compatibility
   return {
-    data,
-    isPending: loading,
-    error,
-    mutate,
-    reset,
+    data: null,
+    isPending: false,
+    error: null,
+    mutate: async () => {
+      throw new Error(
+        "useStartProduction is deprecated. Please use useUpdateProductionStep instead."
+      );
+    },
+    reset: () => {},
   };
 };
 
-// POST /productions/{id}/complete
 export const useCompleteProduction = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    ProductionResponse,
-    [{ id: number; data?: CompleteProductionRequest }]
-  >(async ({ id, data }) => {
-    const res = await apiRequest.post<ProductionResponse>(
-      API_SUFFIX.PRODUCTION_COMPLETE(id),
-      data ?? {}
-    );
-    return res.data;
-  });
-
-  const mutate = async (payload: {
-    id: number;
-    data?: CompleteProductionRequest;
-  }) => {
-    try {
-      const result = await execute(payload);
-
-      queryClient.invalidateQueries({
-        queryKey: productionKeys.detail(result.id),
-      });
-
-      toast.success("Thành công", {
-        description: "Đã hoàn thành sản xuất",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể hoàn thành sản xuất",
-      });
-      throw err;
-    }
-  };
-
+  console.warn(
+    "useCompleteProduction is deprecated. Use useUpdateProductionStep to update step status instead."
+  );
+  // Return a no-op hook for backward compatibility
   return {
-    data,
-    isPending: loading,
-    error,
-    mutate,
-    reset,
+    data: null,
+    isPending: false,
+    error: null,
+    mutate: async () => {
+      throw new Error(
+        "useCompleteProduction is deprecated. Please use useUpdateProductionStep instead."
+      );
+    },
+    reset: () => {},
   };
 };
 
-export { productionCrudApi, productionKeys };
+export { productionOrderCrudApi, productionOrderKeys };

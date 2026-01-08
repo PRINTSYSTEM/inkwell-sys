@@ -13,6 +13,8 @@
     "preview": "vite preview",
     "schema:sync": "node scripts/sync-api.mjs",
     "schema:sync:guard": "node scripts/sync-api.mjs --guard",
+    "hooks:validate": "node scripts/validate-hooks.mjs",
+    "hooks:validate:verbose": "node scripts/validate-hooks.mjs --verbose",
     "typecheck": "tsc -p tsconfig.app.json --noEmit"
   },
   "dependencies": {

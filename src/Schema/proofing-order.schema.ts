@@ -12,11 +12,10 @@ import {
   ProofingOrderDesignResponseSchema as GenProofingOrderDesignResponseSchema,
   ProofingOrderResponseSchema as GenProofingOrderResponseSchema,
   ProofingOrderResponsePaginateSchema as GenProofingOrderResponsePaginateSchema,
-  CreateProofingOrderFromDesignsRequestSchema as GenCreateProofingOrderFromDesignsRequestSchema,
-  CreateProofingOrderDetailItemSchema as GenCreateProofingOrderDetailItemSchema,
   UpdateProofingDesignItemSchema as GenUpdateProofingDesignItemSchema,
   UpdateProofingOrderRequestSchema as GenUpdateProofingOrderRequestSchema,
   AddDesignsToProofingOrderRequestSchema as GenAddDesignsToProofingOrderRequestSchema,
+  AddProofingOrderDetailItemSchema as GenAddProofingOrderDetailItemSchema,
 } from "./generated";
 
 // ===== ProofingOrderDesignResponse =====
@@ -44,27 +43,11 @@ export type ProofingOrderResponsePaginate = z.infer<
   typeof GenProofingOrderResponsePaginateSchema
 >;
 
-// ===== CreateProofingOrderDetailItem =====
-export const CreateProofingOrderDetailItemSchema =
-  GenCreateProofingOrderDetailItemSchema.passthrough();
-export type CreateProofingOrderDetailItem = z.infer<
-  typeof CreateProofingOrderDetailItemSchema
->;
-
-// ===== CreateProofingOrderFromDesignsRequest =====
-// Base from generated, but keep custom validation
-export const CreateProofingOrderFromDesignsRequestSchema =
-  GenCreateProofingOrderFromDesignsRequestSchema.refine(
-    (data) => {
-      if (data.orderDetailItems && data.orderDetailItems.length < 1) {
-        return false;
-      }
-      return true;
-    },
-    { message: "Cần ít nhất 1 chi tiết đơn hàng", path: ["orderDetailItems"] }
-  );
-export type CreateProofingOrderFromDesignsRequest = z.infer<
-  typeof CreateProofingOrderFromDesignsRequestSchema
+// ===== AddProofingOrderDetailItem =====
+export const AddProofingOrderDetailItemSchema =
+  GenAddProofingOrderDetailItemSchema.passthrough();
+export type AddProofingOrderDetailItem = z.infer<
+  typeof AddProofingOrderDetailItemSchema
 >;
 
 // ===== UpdateProofingDesignItem =====

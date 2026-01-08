@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TruncatedText } from "@/components/ui/truncated-text";
+import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import {
   Select,
   SelectContent,
@@ -1740,102 +1741,90 @@ export default function DesignDetailPage() {
                             </div>
 
                             <div className="space-y-3">
-                              {group.items.map((entry) => {
-                                const visual = getTimelineVisual(entry);
-                                const hasImage = Boolean(
-                                  (entry as any).imageUrl || entry.fileUrl
-                                );
-                                const hoverBorderClass =
-                                  visual.variant === "image"
-                                    ? "group-hover:border-violet-400/70"
-                                    : visual.variant === "status"
-                                      ? "group-hover:border-emerald-400/70"
-                                      : "group-hover:border-blue-400/70";
-
+                              {timelineEntries.map((entry, index) => {
+                                const timelineNumber =
+                                  timelineEntries.length - index;
+                                const isLast =
+                                  index === timelineEntries.length - 1;
                                 return (
                                   <div
                                     key={entry.id}
-                                    className="relative flex gap-4 group min-w-0 w-full max-w-full"
+                                    className="relative flex gap-4 group"
                                   >
                                     {/* Dot */}
-                                    <div className="relative z-10 shrink-0 flex items-start pt-1.5">
-                                      <div
-                                        className={`w-8 h-8 rounded-full ${visual.dotClass} border-2 border-background shadow-md flex items-center justify-center transition-transform group-hover:scale-110`}
-                                      >
-                                        <visual.icon className="h-4 w-4 text-white" />
+                                    <div className="relative z-10 shrink-0 flex items-center">
+                                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-background shadow-md flex items-center justify-center">
+                                        <span className="text-[10px] font-bold text-white">
+                                          {timelineNumber}
+                                        </span>
                                       </div>
                                     </div>
 
                                     {/* Card */}
                                     <Card
-                                      data-timeline-card
-                                      className={`flex-1 min-w-0 ${hoverBorderClass} transition-colors ${
-                                        hasImage ? "cursor-pointer" : ""
+                                      className={`flex-1 group-hover:border-purple-400/70 transition-colors ${
+                                        entry.imageUrl ? "cursor-pointer" : ""
                                       }`}
-                                      style={{
-                                        maxWidth: "calc(100% - 0px)",
-                                        width: "100%",
-                                      }}
                                       onClick={() => {
-                                        if (hasImage) {
-                                          const imageUrl =
-                                            (entry as any).imageUrl ||
-                                            entry.fileUrl;
-                                          if (imageUrl) {
-                                            setViewingImage({
-                                              url: imageUrl as string,
-                                              title:
-                                                (entry.title as string) ||
-                                                (entry.description as string) ||
-                                                "Timeline",
-                                            });
-                                          }
+                                        if (entry.imageUrl) {
+                                          setViewingImage({
+                                            url: entry.imageUrl as string,
+                                            title:
+                                              (entry.title as string) ||
+                                              `Timeline #${timelineNumber}`,
+                                          });
                                         }
                                       }}
                                     >
-                                      <CardContent className="p-4 hover:bg-muted/50 transition-colors overflow-hidden">
-                                        <div className="space-y-1">
-                                          <div className="flex items-start justify-between gap-2 min-w-0">
-                                            <div
-                                              data-timeline-text
-                                              className="flex-1 min-w-0 overflow-hidden"
-                                            >
-                                              <div
-                                                data-timeline-truncated
-                                                className="w-full"
-                                              >
-                                                <TruncatedText
-                                                  text={
-                                                    entry.description as string
-                                                  }
-                                                  className="font-semibold text-sm block w-full"
-                                                />
-                                              </div>
-                                            </div>
-                                            <span className="text-xs text-muted-foreground whitespace-nowrap font-medium mt-0.5 shrink-0">
-                                              {entry.createdAt
-                                                ? new Date(
-                                                    entry.createdAt
-                                                  ).toLocaleTimeString(
-                                                    "vi-VN",
-                                                    {
+                                      <CardContent
+                                        className="p-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                                        onClick={() => {
+                                          if (entry.fileUrl) {
+                                            setViewingImage({
+                                              url: entry.fileUrl as string,
+                                              title:
+                                                (entry.title as string) ||
+                                                `Timeline #${timelineNumber}`,
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <CursorTooltip
+                                          content={entry.description}
+                                          delayDuration={200}
+                                          className="p-4 max-w-md"
+                                        >
+                                          <div className="flex-1 min-w-0 space-y-1">
+                                            <div className="flex items-center justify-between gap-2">
+                                              <p className="font-medium text-sm truncate max-w-[60px] cursor-pointer">
+                                                {entry.description}
+                                              </p>
+                                              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                                {entry.createdAt
+                                                  ? new Date(
+                                                      entry.createdAt
+                                                    ).toLocaleString("vi-VN", {
+                                                      day: "2-digit",
+                                                      month: "2-digit",
                                                       hour: "2-digit",
                                                       minute: "2-digit",
-                                                    }
-                                                  )
-                                                : ""}
-                                            </span>
-                                          </div>
-
-                                          {entry.createdByName && (
-                                            <p className="text-xs text-muted-foreground font-medium">
-                                              Người tạo:{" "}
-                                              <span className="font-semibold">
-                                                {entry.createdByName as string}
+                                                    })
+                                                  : ""}
                                               </span>
-                                            </p>
-                                          )}
-                                        </div>
+                                            </div>
+
+                                            {entry.createdByName && (
+                                              <p className="text-[11px] text-muted-foreground">
+                                                Người tạo:{" "}
+                                                <span className="font-medium">
+                                                  {
+                                                    entry.createdByName as string
+                                                  }
+                                                </span>
+                                              </p>
+                                            )}
+                                          </div>
+                                        </CursorTooltip>
                                       </CardContent>
                                     </Card>
                                   </div>

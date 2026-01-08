@@ -372,12 +372,12 @@ export default function Customers() {
                             <div className="flex items-center gap-1.5">
                               <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
                               <span className="font-mono text-sm">
-                                {customer.code}
+                                {customer.code ?? ""}
                               </span>
                             </div>
                           </TableCell>
                           <TableCell className="py-2">
-                            {customer.name}
+                            {customer.name ?? ""}
                           </TableCell>
                           <TableCell className="py-2">
                             {customer.companyName && customer.type === "company"
@@ -388,13 +388,13 @@ export default function Customers() {
                             <TableCell className="py-2">
                               <span
                                 className={`font-medium text-sm ${
-                                  (customer.currentDebt || 0) >
-                                  (customer.maxDebt || 0)
+                                  (customer.currentDebt ?? 0) >
+                                  (customer.maxDebt ?? 0)
                                     ? "text-red-600"
                                     : "text-green-600"
                                 }`}
                               >
-                                {(customer.currentDebt || 0).toLocaleString(
+                                {(customer.currentDebt ?? 0).toLocaleString(
                                   "vi-VN"
                                 )}{" "}
                                 ₫
@@ -403,7 +403,7 @@ export default function Customers() {
                           )}
                           <TableCell className="py-2">
                             <span className="font-medium text-sm">
-                              {(customer.maxDebt || 0).toLocaleString("vi-VN")}{" "}
+                              {(customer.maxDebt ?? 0).toLocaleString("vi-VN")}{" "}
                               ₫
                             </span>
                           </TableCell>

@@ -40,13 +40,12 @@ import {
   proofingStatusLabels,
 } from "@/lib/status-utils";
 import {
-  useProduction,
-  useStartProduction,
-  useUpdateProduction,
-  useCompleteProduction,
+  useProductionOrder,
+  useUpdateProductionStep,
 } from "@/hooks/use-production";
 import { useProofingOrder } from "@/hooks/use-proofing-order";
 import { IdSchema } from "@/Schema";
+import { toast } from "sonner";
 
 export default function ProductionDetailPage() {
   const params = useParams();
@@ -66,11 +65,12 @@ export default function ProductionDetailPage() {
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
 
+  // Use new production order API
   const {
     data: production,
     isLoading,
     error,
-  } = useProduction(idValid ? idValue : null, idValid);
+  } = useProductionOrder(idValid ? idValue : null, idValid);
 
   // Fetch proofing order details
   const { data: proofingOrder, isLoading: isLoadingProofingOrder } =
@@ -79,112 +79,187 @@ export default function ProductionDetailPage() {
       idValid && !!production?.proofingOrderId
     );
 
-  const { mutate: startProduction, isPending: starting } = useStartProduction();
-  const { mutate: updateProduction, isPending: updating } =
-    useUpdateProduction();
-  const { mutate: completeProduction, isPending: completing } =
-    useCompleteProduction();
+  const { mutate: updateStep, isPending: updating } = useUpdateProductionStep();
+  
+  // Use updating for both starting and completing
+  const starting = updating;
+  const completing = updating;
 
   useEffect(() => {
     if (production) {
       setProgressPercent(production.progressPercent?.toString() || "0");
-      setDefectNotes(production.defectNotes || "");
+      // ProductionOrderResponse doesn't have defectNotes at order level - it's on steps
+      setDefectNotes("");
       setWastage(
-        production.wastage !== undefined && production.wastage !== null
-          ? production.wastage.toString()
+        production.totalWastage !== undefined && production.totalWastage !== null
+          ? production.totalWastage.toString()
           : "0"
       );
-      // Set default producedQty from proofingOrder if available
-      if (proofingOrder?.totalQuantity) {
+      // Set default producedQty from production order if available
+      if (production.producedQty) {
+        setProducedQty(production.producedQty.toString());
+      } else if (proofingOrder?.totalQuantity) {
         setProducedQty(proofingOrder.totalQuantity.toString());
       }
     }
   }, [production, proofingOrder]);
 
-  // Determine which buttons to show
-  const showStartButton = useMemo(() => {
+  // Find the first pending step to start
+  const firstPendingStep = useMemo(() => {
+    if (!production?.steps || production.steps.length === 0) return null;
+    const sortedSteps = [...production.steps]
+      .filter((step) => step.id && step.stepOrder !== undefined)
+      .sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0));
     return (
-      production?.status === "pending" ||
-      production?.status === "waiting_for_production"
+      sortedSteps.find(
+        (step) =>
+          step.status === "pending" || step.status === "waiting_for_production"
+      ) || sortedSteps[0] || null
     );
-  }, [production?.status]);
+  }, [production?.steps]);
+
+  // Find the current active step (in_production)
+  const currentActiveStep = useMemo(() => {
+    if (!production?.steps || production.steps.length === 0) return null;
+    return (
+      production.steps.find((step) => step.status === "in_production") || null
+    );
+  }, [production?.steps]);
+
+  // Find the last step to complete (could be current active step or last step)
+  const stepToComplete = useMemo(() => {
+    if (!production?.steps || production.steps.length === 0) return null;
+    if (currentActiveStep) return currentActiveStep;
+    const sortedSteps = [...production.steps]
+      .filter((step) => step.id && step.stepOrder !== undefined)
+      .sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0));
+    return sortedSteps[sortedSteps.length - 1] || null;
+  }, [production?.steps, currentActiveStep]);
+
+  // Determine which buttons to show based on steps
+  const showStartButton = useMemo(() => {
+    return !!firstPendingStep && firstPendingStep.id;
+  }, [firstPendingStep]);
 
   const showUpdateButton = useMemo(() => {
-    return production?.status === "in_production";
-  }, [production?.status]);
+    return !!currentActiveStep && currentActiveStep.id;
+  }, [currentActiveStep]);
 
   const showCompleteButton = useMemo(() => {
     return (
-      production?.status === "in_production" &&
-      (production?.progressPercent || 0) >= 100
+      !!stepToComplete &&
+      stepToComplete.id &&
+      (currentActiveStep?.status === "in_production" ||
+        (production?.progressPercent || 0) >= 100)
     );
-  }, [production?.status, production?.progressPercent]);
+  }, [stepToComplete, currentActiveStep, production?.progressPercent]);
 
   const handleStartProduction = async () => {
-    if (!production?.id) return;
+    if (!firstPendingStep?.id) {
+      toast.error("Không tìm thấy bước sản xuất để bắt đầu");
+      setIsStartDialogOpen(false);
+      setStartNotes("");
+      return;
+    }
+
     try {
-      await startProduction({
-        id: production.id,
-        data: { notes: startNotes || undefined },
+      await updateStep({
+        id: firstPendingStep.id,
+        data: {
+          status: "in_production",
+          outputQty: firstPendingStep.inputQty || undefined,
+        },
       });
       setIsStartDialogOpen(false);
       setStartNotes("");
     } catch (error) {
-      // Error handled by hook
+      // Error is handled by the hook
     }
   };
 
   const handleUpdateProgress = async () => {
-    if (!production?.id) return;
+    if (!currentActiveStep?.id) {
+      toast.error("Không tìm thấy bước sản xuất đang hoạt động để cập nhật");
+      setIsUpdateDialogOpen(false);
+      return;
+    }
 
-    const progressValue =
-      progressPercent.trim() === "" ? 0 : Number(progressPercent);
+    const progressValue = Number(progressPercent);
+    if (isNaN(progressValue) || progressValue < 0 || progressValue > 100) {
+      toast.error("Tiến độ phải từ 0 đến 100");
+      return;
+    }
+
     const wastageValue = wastage.trim() === "" ? 0 : Number(wastage);
-
-    if (progressValue < 0 || progressValue > 100) {
+    if (isNaN(wastageValue) || wastageValue < 0) {
+      toast.error("Hao hụt phải là số dương");
       return;
     }
 
     try {
-      await updateProduction({
-        id: production.id,
+      // Calculate outputQty based on progress and inputQty
+      const inputQty = currentActiveStep.inputQty || 0;
+      const calculatedOutputQty = Math.round(
+        (inputQty * progressValue) / 100
+      );
+
+      await updateStep({
+        id: currentActiveStep.id,
         data: {
-          progressPercent: progressValue,
-          defectNotes: defectNotes || undefined,
-          wastage: wastageValue,
+          status: "in_production",
+          outputQty: calculatedOutputQty,
+          defectQty: wastageValue > 0 ? wastageValue : undefined,
+          defectNotes: defectNotes.trim() || undefined,
         },
       });
       setIsUpdateDialogOpen(false);
+      setProgressPercent("0");
+      setWastage("0");
+      setDefectNotes("");
     } catch (error) {
-      // Error handled by hook
+      // Error is handled by the hook
     }
   };
 
   const handleCompleteProduction = async () => {
-    if (!production?.id) return;
+    if (!stepToComplete?.id) {
+      toast.error("Không tìm thấy bước sản xuất để hoàn thành");
+      setIsCompleteDialogOpen(false);
+      setCompleteNotes("");
+      return;
+    }
 
-    const wastageValue = wastage.trim() === "" ? 0 : Number(wastage);
     const producedQtyValue =
       producedQty.trim() === "" ? 1 : Number(producedQty);
 
-    if (producedQtyValue < 1) {
+    if (isNaN(producedQtyValue) || producedQtyValue < 1) {
+      toast.error("Số lượng sản xuất phải lớn hơn 0");
+      return;
+    }
+
+    const wastageValue = wastage.trim() === "" ? 0 : Number(wastage);
+    if (isNaN(wastageValue) || wastageValue < 0) {
+      toast.error("Hao hụt phải là số dương");
       return;
     }
 
     try {
-      await completeProduction({
-        id: production.id,
+      await updateStep({
+        id: stepToComplete.id,
         data: {
-          progressPercent: 100,
-          defectNotes: defectNotes || null,
-          wastage: wastageValue,
-          producedQty: producedQtyValue,
+          status: "completed",
+          outputQty: producedQtyValue,
+          defectQty: wastageValue > 0 ? wastageValue : undefined,
+          defectNotes: defectNotes.trim() || undefined,
         },
       });
       setIsCompleteDialogOpen(false);
       setCompleteNotes("");
+      setProducedQty("1");
+      setWastage("0");
+      setDefectNotes("");
     } catch (error) {
-      // Error handled by hook
+      // Error is handled by the hook
     }
   };
 
@@ -349,9 +424,9 @@ export default function ProductionDetailPage() {
                 </div>
               </div>
 
-              {production.wastage !== undefined &&
-                production.wastage !== null &&
-                production.wastage > 0 && (
+              {production.totalWastage !== undefined &&
+                production.totalWastage !== null &&
+                (production.totalWastage as number) > 0 && (
                   <>
                     <Separator />
                     <div className="space-y-2">
@@ -360,30 +435,119 @@ export default function ProductionDetailPage() {
                         Hao hụt
                       </Label>
                       <p className="text-lg font-semibold text-orange-600">
-                        {production.wastage} đơn vị
+                        {production.totalWastage} đơn vị
                       </p>
                     </div>
                   </>
                 )}
 
-              {production.defectNotes && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-red-500" />
-                      Ghi chú lỗi
-                    </Label>
-                    <Card className="p-3 bg-red-50 border-red-200">
-                      <p className="text-sm text-red-800 whitespace-pre-wrap">
-                        {production.defectNotes}
-                      </p>
-                    </Card>
-                  </div>
-                </>
-              )}
             </CardContent>
           </Card>
+
+          {/* Production Steps Card */}
+          {production.steps && production.steps.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layers className="h-5 w-5" />
+                  Các bước sản xuất ({production.steps.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {production.steps
+                    .filter((step) => step.id && step.stepOrder !== undefined)
+                    .sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0))
+                    .map((step) => (
+                      <Card
+                        key={step.id}
+                        className={`p-4 ${
+                          step.status === "in_production"
+                            ? "border-primary bg-primary/5"
+                            : step.status === "completed"
+                              ? "border-green-500 bg-green-50 dark:bg-green-950/20"
+                              : "bg-muted/30"
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-muted-foreground">
+                                Bước {step.stepOrder}
+                              </span>
+                              <span className="text-sm font-medium">
+                                {step.stepTypeName || step.stepType || "N/A"}
+                              </span>
+                            </div>
+                            <StatusBadge
+                              status={step.status || "pending"}
+                              label={
+                                productionStatusLabels[
+                                  step.status || "pending"
+                                ] ||
+                                step.status ||
+                                "Chờ xử lý"
+                              }
+                            />
+                          </div>
+
+                          {step.assignedToName && (
+                            <p className="text-xs text-muted-foreground">
+                              Người phụ trách:{" "}
+                              <span className="font-medium">
+                                {step.assignedToName}
+                              </span>
+                            </p>
+                          )}
+
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">
+                                SL đầu vào:
+                              </span>{" "}
+                              <span className="font-medium">
+                                {step.inputQty || 0}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">
+                                SL đầu ra:
+                              </span>{" "}
+                              <span className="font-medium">
+                                {step.outputQty || 0}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Lỗi:</span>{" "}
+                              <span className="font-medium text-orange-600">
+                                {step.defectQty || 0}
+                              </span>
+                            </div>
+                          </div>
+
+                          {step.defectNotes && (
+                            <div className="p-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded text-xs">
+                              <p className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
+                                Ghi chú lỗi:
+                              </p>
+                              <p className="text-orange-800 dark:text-orange-200 whitespace-pre-wrap">
+                                {step.defectNotes}
+                              </p>
+                            </div>
+                          )}
+
+                          {step.completedAt && (
+                            <p className="text-xs text-muted-foreground">
+                              Hoàn thành: {formatDateTime(step.completedAt)}
+                            </p>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Proofing Order Details Card */}
           {isLoadingProofingOrder ? (
@@ -554,18 +718,9 @@ export default function ProductionDetailPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-medium">
-                    {production.productionLead?.fullName || "Chưa phân công"}
+                    {production.productionLeadName || "Chưa phân công"}
                   </p>
-                  {production.productionLead?.email && (
-                    <p className="text-xs text-muted-foreground">
-                      {production.productionLead.email}
-                    </p>
-                  )}
-                  {production.productionLead?.phone && (
-                    <p className="text-xs text-muted-foreground">
-                      {production.productionLead.phone}
-                    </p>
-                  )}
+                  {/* ProductionOrderResponse has productionLeadId and productionLeadName, not full object */}
                 </div>
               </div>
             </CardContent>
@@ -646,15 +801,15 @@ export default function ProductionDetailPage() {
                   </span>
                 </div>
               )}
-              {production.wastage !== undefined &&
-                production.wastage !== null &&
-                production.wastage > 0 && (
+              {production.totalWastage !== undefined &&
+                production.totalWastage !== null &&
+                (production.totalWastage as number) > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
                       Hao hụt
                     </span>
                     <span className="text-sm font-semibold text-orange-600">
-                      {production.wastage}
+                      {production.totalWastage}
                     </span>
                   </div>
                 )}

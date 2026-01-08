@@ -10,11 +10,11 @@ import type {
   CreateOrderRequest,
   UpdateOrderRequest,
   UpdateOrderForAccountingRequest,
-  CreateOrderWithExistingDesignsRequest,
   AddDesignToOrderRequest,
   OrderResponseForDesignerPaginate,
   UserRole,
   OrdersMyListParams,
+  OrderExportResponse,
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
@@ -131,63 +131,6 @@ export const useGenerateOrderExcel = () => {
 };
 
 export { orderCrudApi, orderKeys };
-// ================== ORDER: TẠO TỪ EXISTING DESIGNS ==================
-// POST /orders/with-existing-designs
-
-export const useCreateOrderWithExistingDesigns = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    OrderResponse,
-    [CreateOrderWithExistingDesignsRequest]
-  >(async (payload) => {
-    const res = await apiRequest.post<OrderResponse>(
-      API_SUFFIX.ORDERS_WITH_EXISTING_DESIGNS,
-      payload
-    );
-    return res.data;
-  });
-
-  const mutate = async (payload: CreateOrderWithExistingDesignsRequest) => {
-    try {
-      const result = await execute(payload);
-
-      // Cập nhật cache
-      if (result.id != null) {
-        queryClient.invalidateQueries({
-          queryKey: orderKeys.detail(result.id),
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: orderKeys.all });
-
-      toast.success("Thành công", {
-        description: "Đã tạo đơn hàng từ thiết kế có sẵn",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể tạo đơn hàng từ thiết kế có sẵn",
-      });
-      throw err;
-    }
-  };
-
-  return {
-    data,
-    loading,
-    error,
-    mutate,
-    reset,
-  };
-};
 
 // ================== ORDER: THÊM THIẾT KẾ VÀO ĐƠN ==================
 // PUT /orders/{id}/add-design
@@ -561,6 +504,128 @@ export const useExportOrderPDF = () => {
   };
 
   return { loading, error, mutate, reset };
+};
+
+// ================== ORDER: EXPORT DATA ==================
+// GET /orders/{id}/export-data
+
+export const useGetOrderExportData = () => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderExportResponse,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.get<OrderExportResponse>(
+      API_SUFFIX.ORDER_EXPORT_DATA(id)
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể lấy dữ liệu xuất",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
+// ================== ORDER: RECALCULATE TOTAL ==================
+// POST /orders/{id}/recalculate-total
+
+export const useRecalculateOrderTotal = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderResponse,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.post<OrderResponse>(
+      API_SUFFIX.ORDER_RECALCULATE_TOTAL(id)
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: orderKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+
+      toast.success("Thành công", {
+        description: "Đã tính lại tổng tiền đơn hàng",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể tính lại tổng tiền",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
+// ================== ORDER: VALIDATE EXPORT ==================
+// GET /orders/{id}/validate-export
+
+export const useValidateOrderExport = () => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    unknown,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.get<unknown>(
+      API_SUFFIX.ORDER_VALIDATE_EXPORT(id)
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể validate xuất",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
 };
 
 export const useMyOrders = (

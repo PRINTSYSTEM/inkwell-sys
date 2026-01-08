@@ -142,6 +142,12 @@ export function DeliveryList() {
     setPageInput(currentPage.toString());
   }, [currentPage]);
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    setPageInput("1");
+  }, [searchQuery, deliveryStatusFilter]);
+
   // Auto-adjust currentPage if it exceeds totalPages
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
@@ -152,7 +158,7 @@ export function DeliveryList() {
   // Scroll to top when page changes
   useEffect(() => {
     if (tableContainerRef.current) {
-      tableContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      tableContainerRef.current.scrollTop = 0;
     }
   }, [currentPage]);
 
@@ -480,7 +486,7 @@ export function DeliveryList() {
           >
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background">
-                <TableRow className="bg-muted/50 h-10">
+                <TableRow className="bg-muted/50 h-11">
                   <TableHead className="w-[50px]">
                     <Checkbox
                       checked={
@@ -513,7 +519,7 @@ export function DeliveryList() {
               <TableBody>
                 {isLoading ? (
                   Array.from({ length: 10 }).map((_, i) => (
-                    <TableRow key={i} className="h-14">
+                    <TableRow key={i} className="h-12">
                       {Array.from({ length: 7 }).map((_, j) => (
                         <TableCell key={j}>
                           <Skeleton className="h-5 w-full" />
@@ -543,7 +549,7 @@ export function DeliveryList() {
                     return (
                       <TableRow
                         key={order.id}
-                        className={`h-14 cursor-pointer hover:bg-muted/50 ${
+                        className={`h-12 cursor-pointer hover:bg-muted/50 transition-colors ${
                           isSelected ? "bg-muted/50" : ""
                         }`}
                         onClick={() => handleOrderClick(order)}
@@ -583,14 +589,14 @@ export function DeliveryList() {
                         <TableCell>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <div className="font-semibold text-sm">
+                              <div className="font-bold text-sm">
                                 {order.customer?.companyName ||
                                   order.customer?.name ||
                                   "—"}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-muted-foreground font-medium">
                                 {order.customer?.phone || "—"}
                               </span>
                               <CustomerTypeBadge type={customerType} />
@@ -631,7 +637,7 @@ export function DeliveryList() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-center text-sm font-semibold text-muted-foreground">
+                        <TableCell className="text-center text-sm font-bold text-muted-foreground">
                           {formatDate(order.deliveryDate)}
                         </TableCell>
                       </TableRow>
