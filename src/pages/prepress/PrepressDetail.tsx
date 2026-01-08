@@ -93,6 +93,7 @@ import { PlateExportDialog } from "@/components/proofing/PlateExportDialog";
 import { DieExportDialog } from "@/components/proofing/DieExportDialog";
 import { IdSchema } from "@/Schema";
 import type { PlateExportResponse, DieExportResponse } from "@/Schema";
+import type { DesignItem } from "@/types/proofing";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   designStatusLabels,
@@ -557,6 +558,38 @@ export default function ProofingOrderDetailPage() {
     );
   }, [availableDesignsData?.designs, order]);
 
+  // Get current design (first design in proofing order) for filtering by specifications
+  const currentDesignForAdding = useMemo((): DesignItem | null => {
+    if (!order?.proofingOrderDesigns || order.proofingOrderDesigns.length === 0)
+      return null;
+    const firstDesign = order.proofingOrderDesigns[0]?.design;
+    if (!firstDesign) return null;
+
+    // Convert ProofingOrderDesignResponse.design to DesignItem format
+    const pod = order.proofingOrderDesigns[0];
+    return {
+      id: pod.id || 0,
+      code: firstDesign.code || "",
+      name: firstDesign.designName || "",
+      designTypeId: firstDesign.designTypeId || 0,
+      designTypeName: firstDesign.designType?.name || "",
+      materialTypeId: firstDesign.materialTypeId || 0,
+      materialTypeName: firstDesign.materialType?.name || "",
+      length: firstDesign.length || 0,
+      width: firstDesign.width,
+      height: firstDesign.height || 0,
+      unit: "mm",
+      quantity: pod.quantity || 0,
+      unitPrice: 0,
+      orderId: "",
+      orderCode: "",
+      customerName: "",
+      thumbnailUrl: firstDesign.designImageUrl || "",
+      createdAt: firstDesign.createdAt || "",
+      designId: firstDesign.id,
+    };
+  }, [order?.proofingOrderDesigns]);
+
   // Fetch design types
   const { data: designTypesData } = useDesignTypeList({
     status: "active",
@@ -826,9 +859,12 @@ export default function ProofingOrderDetailPage() {
 
   // Parse custom paper size input
   const parsedCustomPaperSize = useMemo(() => {
-    if (!customPaperSize || paperSizeId !== "custom") return null;
+    if (!customPaperSize || paperSizeId !== "custom") {
+      return null;
+    }
     const trimmed = customPaperSize.trim();
-    const match = trimmed.match(/^(\d+)\s*[×xX]\s*(\d+)$/);
+    // Support multiple formats: 31×43, 31x43, 31 X 43, 31 x 43, etc.
+    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
     if (match) {
       const width = parseInt(match[1], 10);
       const height = parseInt(match[2], 10);
@@ -840,12 +876,17 @@ export default function ProofingOrderDetailPage() {
   }, [customPaperSize, paperSizeId]);
 
   const existingPaperSize = useMemo(() => {
-    if (!parsedCustomPaperSize || !paperSizes) return null;
-    return paperSizes.find(
+    if (!parsedCustomPaperSize || !paperSizes) {
+      return null;
+    }
+    // Fix: Check by width and height instead of name to handle different formats (15x15 vs 15×15)
+    const found = paperSizes.find(
       (ps) =>
         ps.width === parsedCustomPaperSize.width &&
         ps.height === parsedCustomPaperSize.height
     );
+    // Fix: Return null instead of undefined to match condition check
+    return found ?? null;
   }, [parsedCustomPaperSize, paperSizes]);
 
   const showCreateButton =
@@ -868,6 +909,63 @@ export default function ProofingOrderDetailPage() {
       }
     } catch (error) {
       console.error("Failed to create paper size:", error);
+    }
+  };
+
+  // Parse custom paper size for update dialog
+  const parsedUpdateCustomPaperSize = useMemo(() => {
+    if (!updateCustomPaperSize || updatePaperSizeId !== "custom") return null;
+    const trimmed = updateCustomPaperSize.trim();
+    // Support multiple formats: 31×43, 31x43, 31 X 43, 31 x 43, etc.
+    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    if (match) {
+      const width = parseInt(match[1], 10);
+      const height = parseInt(match[2], 10);
+      if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
+        return { width, height };
+      }
+    }
+    return null;
+  }, [updateCustomPaperSize, updatePaperSizeId]);
+
+  const existingUpdatePaperSize = useMemo(() => {
+    if (!parsedUpdateCustomPaperSize || !paperSizes) return null;
+    // Fix: Check by width and height instead of name to handle different formats (15x15 vs 15×15)
+    const found = paperSizes.find(
+      (ps) =>
+        ps.width === parsedUpdateCustomPaperSize.width &&
+        ps.height === parsedUpdateCustomPaperSize.height
+    );
+    // Fix: Return null instead of undefined to match condition check
+    return found ?? null;
+  }, [parsedUpdateCustomPaperSize, paperSizes]);
+
+  const showCreateButtonForUpdate =
+    updatePaperSizeId === "custom" &&
+    parsedUpdateCustomPaperSize !== null &&
+    existingUpdatePaperSize === null;
+
+  const handleCreatePaperSizeForUpdate = async () => {
+    if (!parsedUpdateCustomPaperSize) return;
+    try {
+      const newPaperSize = await createPaperSize({
+        name: `${parsedUpdateCustomPaperSize.width}×${parsedUpdateCustomPaperSize.height}`,
+        width: parsedUpdateCustomPaperSize.width,
+        height: parsedUpdateCustomPaperSize.height,
+        isCustom: true,
+      });
+      if (newPaperSize?.id) {
+        setUpdatePaperSizeId(newPaperSize.id.toString());
+        setUpdateCustomPaperSize("");
+        toast.success("Thành công", {
+          description: "Đã tạo khổ giấy mới thành công",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create paper size:", error);
+      toast.error("Lỗi", {
+        description: "Không thể tạo khổ giấy mới",
+      });
     }
   };
 
@@ -1915,9 +2013,7 @@ export default function ProofingOrderDetailPage() {
                                       {formatDesignDimensions(
                                         design.length,
                                         design.width,
-                                        design.height,
-                                        10,
-                                        " × "
+                                        design.height
                                       )}{" "}
                                       mm
                                     </span>
@@ -2040,9 +2136,7 @@ export default function ProofingOrderDetailPage() {
                                       {formatDesignDimensions(
                                         design.length,
                                         design.width,
-                                        design.height,
-                                        10,
-                                        " × "
+                                        design.height
                                       )}
                                     </span>
                                   </TableCell>
@@ -2521,14 +2615,41 @@ export default function ProofingOrderDetailPage() {
                                 <Label htmlFor="update-custom-paper-size">
                                   Khổ giấy tùy chỉnh
                                 </Label>
-                                <Input
-                                  id="update-custom-paper-size"
-                                  value={updateCustomPaperSize}
-                                  onChange={(e) =>
-                                    setUpdateCustomPaperSize(e.target.value)
-                                  }
-                                  placeholder="Ví dụ: 60x60"
-                                />
+                                <div className="flex gap-1.5">
+                                  <Input
+                                    id="update-custom-paper-size"
+                                    value={updateCustomPaperSize}
+                                    onChange={(e) =>
+                                      setUpdateCustomPaperSize(e.target.value)
+                                    }
+                                    placeholder="Ví dụ: 60×60, 31×43..."
+                                    disabled={isCreatingPaperSize}
+                                    className="flex-1"
+                                  />
+                                  {showCreateButtonForUpdate && (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="shrink-0"
+                                      onClick={handleCreatePaperSizeForUpdate}
+                                      disabled={isCreatingPaperSize}
+                                    >
+                                      {isCreatingPaperSize ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Plus className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  )}
+                                </div>
+                                {existingUpdatePaperSize && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Đã tồn tại:{" "}
+                                    {existingUpdatePaperSize.name ||
+                                      `${existingUpdatePaperSize.width}×${existingUpdatePaperSize.height}`}
+                                  </p>
+                                )}
                               </div>
                             )}
 
@@ -2881,9 +3002,7 @@ export default function ProofingOrderDetailPage() {
                                     {formatDesignDimensions(
                                       pod.design.length,
                                       pod.design.width,
-                                      pod.design.height,
-                                      10,
-                                      "×"
+                                      pod.design.height
                                     )}{" "}
                                     mm
                                   </span>
@@ -3012,9 +3131,7 @@ export default function ProofingOrderDetailPage() {
                                       {formatDesignDimensions(
                                         pod.design.length,
                                         pod.design.width,
-                                        pod.design.height,
-                                        10,
-                                        " × "
+                                        pod.design.height
                                       )}{" "}
                                       mm
                                     </p>
@@ -3561,14 +3678,41 @@ export default function ProofingOrderDetailPage() {
                               <Label htmlFor="update-custom-paper-size">
                                 Khổ giấy tùy chỉnh
                               </Label>
-                              <Input
-                                id="update-custom-paper-size"
-                                value={updateCustomPaperSize}
-                                onChange={(e) =>
-                                  setUpdateCustomPaperSize(e.target.value)
-                                }
-                                placeholder="Ví dụ: 60x60"
-                              />
+                              <div className="flex gap-1.5">
+                                <Input
+                                  id="update-custom-paper-size"
+                                  value={updateCustomPaperSize}
+                                  onChange={(e) =>
+                                    setUpdateCustomPaperSize(e.target.value)
+                                  }
+                                  placeholder="Ví dụ: 60×60, 31×43..."
+                                  disabled={isCreatingPaperSize}
+                                  className="flex-1"
+                                />
+                                {showCreateButtonForUpdate && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="shrink-0"
+                                    onClick={handleCreatePaperSizeForUpdate}
+                                    disabled={isCreatingPaperSize}
+                                  >
+                                    {isCreatingPaperSize ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Plus className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
+                              {existingUpdatePaperSize && (
+                                <p className="text-xs text-muted-foreground">
+                                  Đã tồn tại:{" "}
+                                  {existingUpdatePaperSize.name ||
+                                    `${existingUpdatePaperSize.width}×${existingUpdatePaperSize.height}`}
+                                </p>
+                              )}
                             </div>
                           )}
 
@@ -4555,6 +4699,7 @@ export default function ProofingOrderDetailPage() {
           onOpenChange={setIsAddDesignDialogOpen}
           availableDesigns={availableDesignsForAdding}
           materialTypeName={order.materialType?.name}
+          currentDesign={currentDesignForAdding}
           onSubmit={async (orderDetailItems) => {
             if (!order?.materialTypeId) {
               toast.error("Lỗi", {
