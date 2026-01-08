@@ -38,8 +38,8 @@ export function CustomerSummary({
     }).format(amount);
   };
 
-  const currentDebt = customer.currentDebt || 0;
-  const maxDebt = customer.maxDebt || 0;
+  const currentDebt = customer.currentDebt ?? 0;
+  const maxDebt = customer.maxDebt ?? 0;
   const debtProgress =
     maxDebt > 0 ? Math.min((currentDebt / maxDebt) * 100, 100) : 0;
 
@@ -107,8 +107,8 @@ export function CustomerSummary({
       label: "Trạng thái nợ",
       value: (
         <StatusBadge
-          status={customer.debtStatus}
-          label={debtStatusLabels[customer.debtStatus]}
+          status={customer.debtStatus ?? undefined}
+          label={debtStatusLabels[customer.debtStatus ?? ""]}
         />
       ),
       icon: Receipt,

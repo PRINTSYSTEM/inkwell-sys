@@ -239,11 +239,10 @@ export function DesignTable({
                     <TableCell className="py-3 font-mono text-sm font-semibold">
                       {design.code}
                     </TableCell>
-                    <TableCell className="py-3">
-                      <TruncatedText
-                        text={design.name}
-                        className="font-semibold text-sm"
-                      />
+                    <TableCell className="py-3 max-w-[200px]">
+                      <div title={design.name} className="truncate">
+                        {design.name}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1.5">

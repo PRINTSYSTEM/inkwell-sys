@@ -33,8 +33,8 @@ export default function VendorListPage() {
   const { data, isLoading } = useVendors({
     pageNumber: page,
     pageSize,
-    search: search || undefined,
-    vendorType: vendorTypeFilter || undefined,
+    search: search || "",
+    vendorType: vendorTypeFilter || "",
   });
 
   const { mutate: deleteVendor } = useDeleteVendor();

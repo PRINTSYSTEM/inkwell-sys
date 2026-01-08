@@ -240,18 +240,10 @@ export default function InvoiceDetailPage() {
                       <TableHead className="text-center w-20">ĐVT</TableHead>
                       <TableHead className="text-right w-24">SL</TableHead>
                       <TableHead className="text-right w-32">Đơn giá</TableHead>
-                      {(invoice.items.some(
-                        (item) =>
-                          item.discountPercent && item.discountPercent > 0
-                      ) ||
-                        invoice.items.some(
-                          (item) =>
-                            item.discountAmount && item.discountAmount > 0
-                        )) && (
-                        <TableHead className="text-right w-28">
-                          Giảm giá
-                        </TableHead>
-                      )}
+
+                      <TableHead className="text-right w-28">
+                        Giảm giá
+                      </TableHead>
                       <TableHead className="text-right w-32">
                         Thành tiền
                       </TableHead>
@@ -262,6 +254,20 @@ export default function InvoiceDetailPage() {
                       const hasDiscount =
                         (item.discountPercent && item.discountPercent > 0) ||
                         (item.discountAmount && item.discountAmount > 0);
+
+                      // Handle unitPrice: display "—" for null, undefined, 0, or NaN
+                      const unitPriceValue = item.unitPrice;
+                      const isNullOrUndefined = unitPriceValue == null;
+                      const numericValue =
+                        typeof unitPriceValue === "number"
+                          ? unitPriceValue
+                          : Number(unitPriceValue);
+                      const isZero = numericValue === 0 || isNaN(numericValue);
+                      const isValidPrice = !isNullOrUndefined && !isZero;
+                      const unitPriceCheckResult = isValidPrice
+                        ? formatCurrency(numericValue)
+                        : "—";
+
                       return (
                         <TableRow key={item.id || index}>
                           <TableCell className="font-medium">
@@ -286,19 +292,15 @@ export default function InvoiceDetailPage() {
                               : "—"}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {item.unitPrice
-                              ? formatCurrency(item.unitPrice)
-                              : "—"}
+                            {unitPriceCheckResult}
                           </TableCell>
-                          {hasDiscount && (
-                            <TableCell className="text-right tabular-nums text-orange-600">
-                              {item.discountPercent && item.discountPercent > 0
-                                ? `-${item.discountPercent}%`
-                                : item.discountAmount && item.discountAmount > 0
-                                  ? formatCurrency(item.discountAmount)
-                                  : "—"}
-                            </TableCell>
-                          )}
+                          <TableCell className="text-right tabular-nums text-orange-600">
+                            {item.discountPercent && item.discountPercent > 0
+                              ? `-${item.discountPercent}%`
+                              : item.discountAmount && item.discountAmount > 0
+                                ? formatCurrency(item.discountAmount)
+                                : "—"}
+                          </TableCell>
                           <TableCell className="text-right font-medium tabular-nums">
                             {item.amountAfterDiscount
                               ? formatCurrency(item.amountAfterDiscount)

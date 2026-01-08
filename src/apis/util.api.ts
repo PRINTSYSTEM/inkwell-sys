@@ -56,7 +56,6 @@ export const API_SUFFIX = {
 
   ORDERS_FOR_DESIGNER: "/orders/for-designer",
   ORDERS_FOR_ACCOUNTING: "/orders/for-accounting",
-  ORDERS_WITH_EXISTING_DESIGNS: "/orders/with-existing-designs",
 
   ORDER_ADD_DESIGN: (id: number) => `/orders/${id}/add-design`,
   ORDER_REMOVE_DESIGN: (orderId: number, orderDetailId: number) =>
@@ -66,6 +65,9 @@ export const API_SUFFIX = {
   ORDER_EXPORT_DELIVERY_NOTE: (id: number) =>
     `/orders/${id}/export-delivery-note`,
   ORDER_EXPORT_PDF: (id: number) => `/orders/${id}/export-pdf`,
+  ORDER_EXPORT_DATA: (id: number) => `/orders/${id}/export-data`,
+  ORDER_RECALCULATE_TOTAL: (id: number) => `/orders/${id}/recalculate-total`,
+  ORDER_VALIDATE_EXPORT: (id: number) => `/orders/${id}/validate-export`,
   ORDER_GENERATE_EXCEL: (id: number) => `/orders/${id}/generate-excel`,
 
   ORDERS_MY: "/orders/my",
@@ -159,11 +161,7 @@ export const API_SUFFIX = {
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
   PROOFING_COMPLETE: (id: number) => `/proofing-orders/${id}/complete`,
-  PROOFING_APPROVE: (id: number) => `/proofing-orders/${id}/approve`,
-  PROOFING_START_PRODUCTION: (id: number) =>
-    `/proofing-orders/${id}/start-production`,
-  PROOFING_COMPLETE_PRODUCTION: (id: number) =>
-    `/proofing-orders/${id}/complete-production`,
+  PROOFING_PAUSE: (id: number) => `/proofing-orders/${id}/pause`,
   PROOFING_HAND_TO_PRODUCTION: (id: number) =>
     `/proofing-orders/${id}/hand-to-production`,
   PROOFING_AVAILABLE_QUANTITY: (designId: number) =>
@@ -208,12 +206,10 @@ export const API_SUFFIX = {
   STOCK_OUT_COMPLETE: (id: number) => `/stock-outs/${id}/complete`,
 
   // ========== PRODUCTIONS ==========
-  PRODUCTIONS: "/productions",
-  PRODUCTION_BY_ID: (id: number) => `/productions/${id}`,
-  PRODUCTIONS_BY_PROOFING_ORDER: (proofingOrderId: number) =>
-    `/productions/proofing-order/${proofingOrderId}`,
-  PRODUCTION_START: (id: number) => `/productions/${id}/start`,
-  PRODUCTION_COMPLETE: (id: number) => `/productions/${id}/complete`,
+  PRODUCTION_ORDERS: "/api/productions/orders",
+  PRODUCTION_ORDER_BY_ID: (id: number) => `/api/productions/orders/${id}`,
+  PRODUCTION_STEP_ASSIGN: (id: number) => `/api/productions/steps/${id}/assign`,
+  PRODUCTION_STEP_STATUS: (id: number) => `/api/productions/steps/${id}/status`,
 
   // ========== DELIVERY NOTES ==========
   DELIVERY_NOTES: "/delivery-notes",

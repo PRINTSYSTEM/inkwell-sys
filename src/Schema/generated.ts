@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-07T01:41:35.868Z */
+/* Generated at: 2026-01-08T07:21:18.576Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -24,7 +24,9 @@ export const ARSummaryResponseIPaginateSchema = schemas.ARSummaryResponseIPagina
 export const AccountingResponseSchema = schemas.AccountingResponse;
 export const AddDesignToOrderRequestSchema = schemas.AddDesignToOrderRequest;
 export const AddDesignsToProofingOrderRequestSchema = schemas.AddDesignsToProofingOrderRequest;
+export const AddProofingOrderDetailItemSchema = schemas.AddProofingOrderDetailItem;
 export const AssignDieToProofingOrderRequestSchema = schemas.AssignDieToProofingOrderRequest;
+export const AssignProductionStepRequestSchema = schemas.AssignProductionStepRequest;
 export const BankAccountResponseSchema = schemas.BankAccountResponse;
 export const BankAccountResponseIPaginateSchema = schemas.BankAccountResponseIPaginate;
 export const BankLedgerEntryResponseSchema = schemas.BankLedgerEntryResponse;
@@ -42,7 +44,6 @@ export const CashReceiptResponseIPaginateSchema = schemas.CashReceiptResponseIPa
 export const ChangePasswordRequestSchema = schemas.ChangePasswordRequest;
 export const CollectionScheduleResponseSchema = schemas.CollectionScheduleResponse;
 export const CollectionScheduleResponseIPaginateSchema = schemas.CollectionScheduleResponseIPaginate;
-export const CompleteProductionRequestSchema = schemas.CompleteProductionRequest;
 export const ConfirmPaymentRequestSchema = schemas.ConfirmPaymentRequest;
 export const ConstantGroupSchema = schemas.ConstantGroup;
 export const ConstantsResponseSchema = schemas.ConstantsResponse;
@@ -63,9 +64,7 @@ export const CreateOrderRequestSchema = schemas.CreateOrderRequest;
 export const CreatePaperSizeRequestSchema = schemas.CreatePaperSizeRequest;
 export const CreatePaymentMethodRequestSchema = schemas.CreatePaymentMethodRequest;
 export const CreatePaymentRequestSchema = schemas.CreatePaymentRequest;
-export const CreateProductionRequestSchema = schemas.CreateProductionRequest;
-export const CreateProofingOrderDetailItemSchema = schemas.CreateProofingOrderDetailItem;
-export const CreateProofingOrderFromDesignsRequestSchema = schemas.CreateProofingOrderFromDesignsRequest;
+export const CreateProductionOrderRequestSchema = schemas.CreateProductionOrderRequest;
 export const CreateStockInRequestSchema = schemas.CreateStockInRequest;
 export const CreateStockOutRequestSchema = schemas.CreateStockOutRequest;
 export const CreateUserRequestSchema = schemas.CreateUserRequest;
@@ -142,8 +141,10 @@ export const PaymentSummaryResponseSchema = schemas.PaymentSummaryResponse;
 export const PlateExportResponseSchema = schemas.PlateExportResponse;
 export const PlateExportResponsePaginateSchema = schemas.PlateExportResponsePaginate;
 export const ProblemDetailsSchema = schemas.ProblemDetails;
+export const ProductionOrderResponseSchema = schemas.ProductionOrderResponse;
+export const ProductionOrderResponsePaginateSchema = schemas.ProductionOrderResponsePaginate;
 export const ProductionResponseSchema = schemas.ProductionResponse;
-export const ProductionResponsePaginateSchema = schemas.ProductionResponsePaginate;
+export const ProductionStepResponseSchema = schemas.ProductionStepResponse;
 export const ProofingAllocationResponseSchema = schemas.ProofingAllocationResponse;
 export const ProofingOrderDesignResponseSchema = schemas.ProofingOrderDesignResponse;
 export const ProofingOrderResponseSchema = schemas.ProofingOrderResponse;
@@ -168,7 +169,6 @@ export const SalesByPeriodResponseSchema = schemas.SalesByPeriodResponse;
 export const SalesByPeriodResponseIPaginateSchema = schemas.SalesByPeriodResponseIPaginate;
 export const SlowMovingResponseSchema = schemas.SlowMovingResponse;
 export const SlowMovingResponseIPaginateSchema = schemas.SlowMovingResponseIPaginate;
-export const StartProductionRequestSchema = schemas.StartProductionRequest;
 export const StockCardEntryResponseSchema = schemas.StockCardEntryResponse;
 export const StockCardResponseSchema = schemas.StockCardResponse;
 export const StockInItemRequestSchema = schemas.StockInItemRequest;
@@ -196,7 +196,7 @@ export const UpdateOrderForAccountingRequestSchema = schemas.UpdateOrderForAccou
 export const UpdateOrderRequestSchema = schemas.UpdateOrderRequest;
 export const UpdatePaperSizeRequestSchema = schemas.UpdatePaperSizeRequest;
 export const UpdatePaymentMethodRequestSchema = schemas.UpdatePaymentMethodRequest;
-export const UpdateProductionRequestSchema = schemas.UpdateProductionRequest;
+export const UpdateProductionStepRequestSchema = schemas.UpdateProductionStepRequest;
 export const UpdateProofingDesignItemSchema = schemas.UpdateProofingDesignItem;
 export const UpdateProofingOrderRequestSchema = schemas.UpdateProofingOrderRequest;
 export const UpdateStockInRequestSchema = schemas.UpdateStockInRequest;

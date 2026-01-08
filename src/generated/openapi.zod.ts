@@ -446,6 +446,8 @@ const ConstantsResponse = z
     deliveryNoteStatuses: ConstantGroup,
     deliveryLineStatuses: ConstantGroup,
     debtStatuses: ConstantGroup,
+    productionStepTypes: ConstantGroup,
+    productionStepStatuses: ConstantGroup,
   })
   .partial();
 const CreateCustomerRequest = z.object({
@@ -490,6 +492,7 @@ const CustomerSummaryResponse = z
     code: z.string().nullable(),
     name: z.string().nullable(),
     companyName: z.string().nullable(),
+    taxCode: z.string().nullable(),
     phone: z.string().nullable(),
     email: z.string().nullable(),
     address: z.string().nullable(),
@@ -1778,6 +1781,7 @@ const UpdateOrderForAccountingRequest = z
     recipientPhone: z.string().min(0).max(20).nullable(),
     recipientAddress: z.string().min(0).max(500).nullable(),
     paymentDueDate: z.string().datetime({ offset: true }).nullable(),
+    paymentMethodId: z.number().int().nullable(),
     orderDetails: z.array(UpdateOrderDetailForAccountingRequest).nullable(),
   })
   .partial();
@@ -1940,11 +1944,74 @@ const PlateExportResponsePaginate = z
     items: z.array(PlateExportResponse).nullable(),
   })
   .partial();
-const CreateProductionRequest = z.object({
+const CreateProductionOrderRequest = z.object({
   proofingOrderId: z.number().int(),
-  productionLeadId: z.number().int(),
-  notes: z.string().nullish(),
+  customSteps: z.array(z.string()).nullish(),
 });
+const ProductionStepResponse = z
+  .object({
+    id: z.number().int(),
+    productionOrderId: z.number().int(),
+    stepType: z.string().nullable(),
+    stepTypeName: z.string().nullable(),
+    stepOrder: z.number().int(),
+    status: z.string().nullable(),
+    assignedToId: z.number().int().nullable(),
+    assignedToName: z.string().nullable(),
+    inputQty: z.number().int(),
+    outputQty: z.number().int(),
+    defectQty: z.number().int(),
+    defectNotes: z.string().nullable(),
+    startedAt: z.string().datetime({ offset: true }).nullable(),
+    completedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const ProductionOrderResponse = z
+  .object({
+    id: z.number().int(),
+    proofingOrderId: z.number().int(),
+    proofingOrderCode: z.string().nullable(),
+    productionLeadId: z.number().int(),
+    productionLeadName: z.string().nullable(),
+    status: z.string().nullable(),
+    progressPercent: z.number().int(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+    startedAt: z.string().datetime({ offset: true }).nullable(),
+    completedAt: z.string().datetime({ offset: true }).nullable(),
+    producedQty: z.number().int(),
+    totalWastage: z.number(),
+    steps: z.array(ProductionStepResponse).nullable(),
+  })
+  .partial();
+const ProductionOrderResponsePaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ProductionOrderResponse).nullable(),
+  })
+  .partial();
+const UpdateProductionStepRequest = z.object({
+  status: z.string().min(1),
+  outputQty: z.number().int().nullish(),
+  defectQty: z.number().int().nullish(),
+  defectNotes: z.string().nullish(),
+});
+const AssignProductionStepRequest = z
+  .object({ assignedToUserId: z.number().int().nullable() })
+  .partial();
+const ProofingOrderDesignResponse = z
+  .object({
+    id: z.number().int(),
+    proofingOrderId: z.number().int(),
+    designId: z.number().int(),
+    design: DesignResponse,
+    quantity: z.number().int(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
 const ProductionResponse = z
   .object({
     id: z.number().int(),
@@ -1960,44 +2027,6 @@ const ProductionResponse = z
     completedAt: z.string().datetime({ offset: true }).nullable(),
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }),
-  })
-  .partial();
-const ProductionResponsePaginate = z
-  .object({
-    size: z.number().int(),
-    page: z.number().int(),
-    total: z.number().int(),
-    totalPages: z.number().int(),
-    items: z.array(ProductionResponse).nullable(),
-  })
-  .partial();
-const UpdateProductionRequest = z
-  .object({
-    status: z.string().min(0).max(50).nullable(),
-    progressPercent: z.number().int().gte(0).lte(100).nullable(),
-    defectNotes: z.string().nullable(),
-    wastage: z.number().gte(0).nullable(),
-    startedAt: z.string().datetime({ offset: true }).nullable(),
-    completedAt: z.string().datetime({ offset: true }).nullable(),
-  })
-  .partial();
-const StartProductionRequest = z
-  .object({ notes: z.string().nullable() })
-  .partial();
-const CompleteProductionRequest = z.object({
-  progressPercent: z.number().int().gte(0).lte(100).optional(),
-  defectNotes: z.string().nullish(),
-  wastage: z.number().gte(0).optional(),
-  producedQty: z.number().int().gte(1).lte(2147483647),
-});
-const ProofingOrderDesignResponse = z
-  .object({
-    id: z.number().int(),
-    proofingOrderId: z.number().int(),
-    designId: z.number().int(),
-    design: DesignResponse,
-    quantity: z.number().int(),
-    createdAt: z.string().datetime({ offset: true }),
   })
   .partial();
 const ProofingOrderResponse = z
@@ -2017,6 +2046,8 @@ const ProofingOrderResponse = z
     paperSizeId: z.number().int().nullable(),
     paperSize: PaperSizeResponse,
     customPaperSize: z.string().nullable(),
+    processClassification: z.string().nullable(),
+    laminationType: z.string().nullable(),
     isPlateExported: z.boolean(),
     isDieExported: z.boolean(),
     plateExport: PlateExportResponse,
@@ -2037,24 +2068,19 @@ const ProofingOrderResponsePaginate = z
     items: z.array(ProofingOrderResponse).nullable(),
   })
   .partial();
+const AddProofingOrderDetailItem = z.object({
+  orderDetailId: z.number().int(),
+  quantity: z.number().int().gte(1).lte(2147483647),
+});
 const AddDesignsToProofingOrderRequest = z.object({
   materialTypeId: z.number().int(),
-  designIds: z.array(z.number().int()),
+  items: z.array(AddProofingOrderDetailItem),
   totalQuantity: z.number().int().nullish(),
   paperSizeId: z.number().int().nullish(),
   customPaperSize: z.string().nullish(),
+  processClassification: z.string().nullish(),
+  laminationType: z.string().nullish(),
   notes: z.string().nullish(),
-});
-const CreateProofingOrderDetailItem = z.object({
-  orderDetailId: z.number().int(),
-  quantity: z.number().int(),
-});
-const CreateProofingOrderFromDesignsRequest = z.object({
-  orderDetailItems: z.array(CreateProofingOrderDetailItem),
-  totalQuantity: z.number().int().gte(1).lte(2147483647),
-  notes: z.string().nullish(),
-  paperSizeId: z.number().int().nullish(),
-  customPaperSize: z.string().nullish(),
 });
 const UpdateProofingDesignItem = z.object({
   proofingOrderDesignId: z.number().int(),
@@ -2588,18 +2614,18 @@ export const schemas = {
   PaymentResponsePaginate,
   PlateExportResponse,
   PlateExportResponsePaginate,
-  CreateProductionRequest,
-  ProductionResponse,
-  ProductionResponsePaginate,
-  UpdateProductionRequest,
-  StartProductionRequest,
-  CompleteProductionRequest,
+  CreateProductionOrderRequest,
+  ProductionStepResponse,
+  ProductionOrderResponse,
+  ProductionOrderResponsePaginate,
+  UpdateProductionStepRequest,
+  AssignProductionStepRequest,
   ProofingOrderDesignResponse,
+  ProductionResponse,
   ProofingOrderResponse,
   ProofingOrderResponsePaginate,
+  AddProofingOrderDetailItem,
   AddDesignsToProofingOrderRequest,
-  CreateProofingOrderDetailItem,
-  CreateProofingOrderFromDesignsRequest,
   UpdateProofingDesignItem,
   UpdateProofingOrderRequest,
   OrderDetailResponsePaginate,
@@ -6065,62 +6091,87 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/productions",
-    alias: "postApiproductions",
+    path: "/api/productions/orders",
+    alias: "postApiproductionsorders",
     requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: CreateProductionRequest,
+        schema: CreateProductionOrderRequest,
       },
     ],
-    response: ProductionResponse,
+    response: ProductionOrderResponse,
   },
   {
     method: "get",
-    path: "/api/productions",
-    alias: "getApiproductions",
+    path: "/api/productions/orders",
+    alias: "getApiproductionsorders",
     requestFormat: "json",
     parameters: [
       {
-        name: "pageNumber",
+        name: "page",
         type: "Query",
         schema: z.number().int().optional().default(1),
       },
       {
-        name: "pageSize",
+        name: "size",
         type: "Query",
         schema: z.number().int().optional().default(10),
-      },
-      {
-        name: "proofingOrderId",
-        type: "Query",
-        schema: z.number().int().optional(),
-      },
-      {
-        name: "productionLeadId",
-        type: "Query",
-        schema: z.number().int().optional(),
       },
       {
         name: "status",
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "proofingOrderId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
     ],
-    response: ProductionResponsePaginate,
+    response: ProductionOrderResponsePaginate,
+  },
+  {
+    method: "get",
+    path: "/api/productions/orders/:id",
+    alias: "getApiproductionsordersId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ProductionOrderResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/productions/orders/:id",
+    alias: "deleteApiproductionsordersId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
   },
   {
     method: "put",
-    path: "/api/productions/:id",
-    alias: "putApiproductionsId",
+    path: "/api/productions/steps/:id/assign",
+    alias: "putApiproductionsstepsIdassign",
     requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: UpdateProductionRequest,
+        schema: z
+          .object({ assignedToUserId: z.number().int().nullable() })
+          .partial(),
       },
       {
         name: "id",
@@ -6128,32 +6179,18 @@ const endpoints = makeApi([
         schema: z.number().int(),
       },
     ],
-    response: ProductionResponse,
+    response: ProductionStepResponse,
   },
   {
-    method: "get",
-    path: "/api/productions/:id",
-    alias: "getApiproductionsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "id",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: ProductionResponse,
-  },
-  {
-    method: "post",
-    path: "/api/productions/:id/complete",
-    alias: "postApiproductionsIdcomplete",
+    method: "put",
+    path: "/api/productions/steps/:id/status",
+    alias: "putApiproductionsstepsIdstatus",
     requestFormat: "json",
     parameters: [
       {
         name: "body",
         type: "Body",
-        schema: CompleteProductionRequest,
+        schema: UpdateProductionStepRequest,
       },
       {
         name: "id",
@@ -6161,40 +6198,7 @@ const endpoints = makeApi([
         schema: z.number().int(),
       },
     ],
-    response: ProductionResponse,
-  },
-  {
-    method: "post",
-    path: "/api/productions/:id/start",
-    alias: "postApiproductionsIdstart",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: z.object({ notes: z.string().nullable() }).partial(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: ProductionResponse,
-  },
-  {
-    method: "get",
-    path: "/api/productions/proofing-order/:proofingOrderId",
-    alias: "getApiproductionsproofingOrderProofingOrderId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "proofingOrderId",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: z.array(ProductionResponse),
+    response: ProductionStepResponse,
   },
   {
     method: "post",
@@ -6580,20 +6584,6 @@ const endpoints = makeApi([
       },
     ],
     response: ProofingOrderResponsePaginate,
-  },
-  {
-    method: "post",
-    path: "/api/proofing-orders/from-designs",
-    alias: "postApiproofingOrdersfromDesigns",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: CreateProofingOrderFromDesignsRequest,
-      },
-    ],
-    response: ProofingOrderResponse,
   },
   {
     method: "get",

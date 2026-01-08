@@ -332,18 +332,6 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
-      {
-        id: "invoices-list",
-        title: "Danh sách hóa đơn",
-        icon: FileText,
-        path: ROUTE_PATHS.INVOICES.ROOT,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
       // {
       //   id: "accounting-delivery",
       //   title: "Giao hàng",
@@ -358,7 +346,7 @@ export const MENU_ITEMS: MenuItem[] = [
       // },
       {
         id: "delivery-notes-list",
-        title: "Danh sách phiếu giao hàng",
+        title: "Phiếu giao hàng",
         icon: Truck,
         path: ROUTE_PATHS.DELIVERY_NOTES.ROOT,
         allowedRoles: [

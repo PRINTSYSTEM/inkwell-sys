@@ -536,10 +536,10 @@ export default function AccountingDebtReport() {
                             <TableCell>
                               <div>
                                 <p className="font-semibold text-sm">
-                                  {customer.name}
+                                  {customer.name ?? ""}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {customer.code}
+                                  {customer.code ?? ""}
                                 </p>
                               </div>
                             </TableCell>
@@ -562,12 +562,12 @@ export default function AccountingDebtReport() {
                                     : ""
                                 }`}
                               >
-                                {formatCurrency(customer.currentDebt)}
+                                {formatCurrency(customer.currentDebt ?? 0)}
                               </span>
                             </TableCell>
                             <TableCell>
                               <span className="font-bold text-sm">
-                                {formatCurrency(customer.maxDebt)}
+                                {formatCurrency(customer.maxDebt ?? 0)}
                               </span>
                             </TableCell>
                             <TableCell>
@@ -592,7 +592,7 @@ export default function AccountingDebtReport() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <DebtStatusBadge status={customer.debtStatus} />
+                              <DebtStatusBadge status={customer.debtStatus ?? undefined} />
                             </TableCell>
                           </TableRow>
                         );

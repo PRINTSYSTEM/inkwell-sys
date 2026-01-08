@@ -51,7 +51,7 @@ export function CustomerHeader({
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-semibold">
-                  {customer.name || customer.companyName || "Chưa có tên"}
+                  {customer.name ?? customer.companyName ?? "Chưa có tên"}
                 </h1>
                 {customer.code && (
                   <span className="text-sm text-muted-foreground">
@@ -60,7 +60,7 @@ export function CustomerHeader({
                 )}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <CustomerTypeBadge type={customer.type} />
+                <CustomerTypeBadge type={customer.type ?? undefined} />
               </div>
             </div>
           </div>

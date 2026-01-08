@@ -12,10 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useStartProduction, useCompleteProduction } from "@/hooks";
+import { useUpdateProductionStep } from "@/hooks";
 import type {
-  StartProductionRequest,
-  CompleteProductionRequest,
+  UpdateProductionStepRequest,
 } from "@/Schema/production.schema";
 
 type ProductionDialogMode = "start" | "complete";
@@ -23,24 +22,22 @@ type ProductionDialogMode = "start" | "complete";
 type ProductionDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  productionId: number;
+  stepId: number; // Changed from productionId to stepId for new API
   mode: ProductionDialogMode;
 };
 
 export function ProductionDialog({
   open,
   onOpenChange,
-  productionId,
+  stepId,
   mode,
 }: ProductionDialogProps) {
   const [wastage, setWastage] = useState<number>(0);
   const [producedQty, setProducedQty] = useState<number>(1);
   const [defectNotes, setDefectNotes] = useState("");
-  const { mutate: startProduction, isPending: starting } = useStartProduction();
-  const { mutate: completeProduction, isPending: completing } =
-    useCompleteProduction();
+  const { mutate: updateStep, isPending: updating } = useUpdateProductionStep();
 
-  const loading = starting || completing;
+  const loading = updating;
 
   const handleClose = () => {
     if (loading) return;
@@ -49,16 +46,20 @@ export function ProductionDialog({
 
   const handleSubmit = async () => {
     if (mode === "start") {
-      const payload: StartProductionRequest = {};
-      await startProduction({ id: productionId, data: payload });
-    } else {
-      const payload: CompleteProductionRequest = {
-        progressPercent: 100,
-        wastage: wastage || 0,
-        producedQty: producedQty || 1,
-        defectNotes: defectNotes || null,
+      // Start step: set status to "in_progress" or appropriate status
+      const payload: UpdateProductionStepRequest = {
+        status: "in_progress",
       };
-      await completeProduction({ id: productionId, data: payload });
+      await updateStep({ id: stepId, data: payload });
+    } else {
+      // Complete step: set status to "completed" with output and defect info
+      const payload: UpdateProductionStepRequest = {
+        status: "completed",
+        outputQty: producedQty || 1,
+        defectQty: wastage || 0,
+        defectNotes: defectNotes || undefined,
+      };
+      await updateStep({ id: stepId, data: payload });
     }
 
     handleClose();

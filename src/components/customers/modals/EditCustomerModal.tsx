@@ -102,19 +102,19 @@ export function EditCustomerModal({
   type FormValues = z.infer<typeof formSchema>;
 
   const defaultValues: Partial<FormValues> = {
-    name: customer.name || "",
-    companyName: customer.companyName || "",
-    representativeName: customer.representativeName || "",
-    phone: customer.phone || "",
-    email: customer.email || "",
-    taxCode: customer.taxCode || "",
-    address: customer.address || "",
+    name: customer.name ?? "",
+    companyName: customer.companyName ?? "",
+    representativeName: customer.representativeName ?? "",
+    phone: customer.phone ?? "",
+    email: customer.email ?? "",
+    taxCode: customer.taxCode ?? "",
+    address: customer.address ?? "",
     type: (customer.type === "retail" || customer.type === "company"
       ? customer.type
       : "retail") as "retail" | "company",
     ...(canEditDebt && {
-      currentDebt: customer.currentDebt,
-      maxDebt: customer.maxDebt,
+      currentDebt: customer.currentDebt ?? 0,
+      maxDebt: customer.maxDebt ?? 0,
     }),
   };
 
@@ -139,8 +139,8 @@ export function EditCustomerModal({
       maxDebt?: number;
     } = { ...values };
     if (!canEditDebt) {
-      updateData.currentDebt = customer.currentDebt;
-      updateData.maxDebt = customer.maxDebt;
+      updateData.currentDebt = customer.currentDebt ?? 0;
+      updateData.maxDebt = customer.maxDebt ?? 0;
     }
 
     await updateCustomer.mutateAsync({

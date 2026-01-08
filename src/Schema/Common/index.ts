@@ -52,6 +52,9 @@ export const ConstantsResponseSchema = z
     vendorTypes: ConstantGroupSchema.optional(),
     deliveryNoteStatuses: ConstantGroupSchema.optional(),
     deliveryLineStatuses: ConstantGroupSchema.optional(),
+    debtStatuses: ConstantGroupSchema.optional(),
+    productionStepTypes: ConstantGroupSchema.optional(),
+    productionStepStatuses: ConstantGroupSchema.optional(),
   })
   .passthrough();
 

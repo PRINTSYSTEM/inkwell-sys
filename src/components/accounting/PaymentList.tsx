@@ -5,7 +5,6 @@ import { vi } from "date-fns/locale";
 import {
   Search,
   Filter,
-  CreditCard,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -33,13 +32,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-import {
-  PaymentStatusBadge,
-  CustomerTypeBadge,
-  PaymentUpdateModal,
-} from "@/components/accounting";
+import { PaymentStatusBadge, CustomerTypeBadge } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
-import { useConfirmDeposit } from "@/hooks/use-accounting";
 import type { OrderResponse } from "@/Schema";
 import { StatusBadge } from "../ui/status-badge";
 import { ENTITY_CONFIG } from "@/config/entities.config";
@@ -58,7 +52,7 @@ function derivePaymentStatus(
 function deriveCustomerType(
   customer: OrderResponse["customer"]
 ): "company" | "retail" {
-  return customer?.companyName ? "company" : "retail";
+  return customer?.type as keyof typeof ENTITY_CONFIG.customerTypes.values;
 }
 
 export function PaymentList() {
@@ -67,10 +61,6 @@ export function PaymentList() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("1");
-  const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(
-    null
-  );
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const itemsPerPage = 10;
@@ -81,8 +71,6 @@ export function PaymentList() {
     pageSize: itemsPerPage,
     filterType: "payment",
   });
-
-  const confirmDepositMutation = useConfirmDeposit();
 
   // Filter orders client-side (search and payment status)
   const filteredOrders = useMemo(() => {
@@ -126,6 +114,11 @@ export function PaymentList() {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, paymentStatusFilter]);
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -189,58 +182,9 @@ export function PaymentList() {
     navigate(`/accounting/orders/${order.id}?tab=payment`);
   };
 
-  const handleUpdatePayment = (order: OrderResponse, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedOrder(order);
-    setIsPaymentModalOpen(true);
-  };
-
-  const handlePaymentConfirm = async (
-    orderId: string | number,
-    amount: number,
-    note: string
-  ) => {
-    try {
-      await confirmDepositMutation.mutate(Number(orderId), amount);
-      setIsPaymentModalOpen(false);
-      refetch();
-    } catch (error) {
-      console.error("Error confirming deposit:", error);
-    }
-  };
-
   const handleRefresh = () => {
     refetch();
   };
-
-  // Convert API order to modal format
-  const selectedOrderForModal = selectedOrder
-    ? {
-        id: selectedOrder.id,
-        code: selectedOrder.code || "",
-        status: selectedOrder.status || "",
-        statusType: selectedOrder.statusType || "",
-        totalAmount: selectedOrder.totalAmount,
-        depositAmount: selectedOrder.depositAmount,
-        deliveryDate: selectedOrder.deliveryDate || "",
-        note: selectedOrder.note || "",
-        createdAt: selectedOrder.createdAt,
-        updatedAt: selectedOrder.updatedAt,
-        customer: {
-          id: selectedOrder.customer?.id || 0,
-          name: selectedOrder.customer?.name || "",
-          companyName: selectedOrder.customer?.companyName || null,
-          phone: selectedOrder.customer?.phone || "",
-          type: deriveCustomerType(selectedOrder.customer) as
-            | "company"
-            | "retail",
-        },
-        paymentStatus: derivePaymentStatus(
-          selectedOrder.totalAmount,
-          selectedOrder.depositAmount
-        ),
-      }
-    : null;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -308,7 +252,7 @@ export function PaymentList() {
         >
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-background">
-              <TableRow className="bg-muted/50 h-10">
+              <TableRow className="bg-muted/50 h-11">
                 <TableHead className="w-[140px] font-bold text-sm">
                   Mã đơn
                 </TableHead>
@@ -336,7 +280,7 @@ export function PaymentList() {
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 10 }).map((_, i) => (
-                  <TableRow key={i} className="h-14">
+                  <TableRow key={i} className="h-12">
                     {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
@@ -348,14 +292,15 @@ export function PaymentList() {
                 <TableRow>
                   <TableCell
                     colSpan={8}
-                    className="h-24 text-center text-muted-foreground"
+                    className="h-24 text-center text-muted-foreground font-semibold"
                   >
                     Không tìm thấy đơn hàng nào.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredOrders.map((order) => {
-                  const remainingAmount = order.totalAmount - order.depositAmount;
+                  const remainingAmount =
+                    order.totalAmount - order.depositAmount;
                   const paymentStatus = derivePaymentStatus(
                     order.totalAmount,
                     order.depositAmount
@@ -365,7 +310,7 @@ export function PaymentList() {
                   return (
                     <TableRow
                       key={order.id}
-                      className="h-14 cursor-pointer hover:bg-muted/50"
+                      className="h-12 cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => handleOrderClick(order)}
                     >
                       <TableCell className="font-bold font-mono text-sm">
@@ -373,13 +318,13 @@ export function PaymentList() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="font-semibold text-sm">
+                          <div className="font-bold text-sm">
                             {order.customer?.companyName ||
                               order.customer?.name ||
                               "—"}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground font-medium">
                               {order.customer?.phone || "—"}
                             </span>
                             <CustomerTypeBadge type={customerType} />
@@ -389,7 +334,7 @@ export function PaymentList() {
                       <TableCell className="text-right font-bold tabular-nums text-sm">
                         {formatCurrency(order.totalAmount)}
                       </TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums text-sm text-success">
+                      <TableCell className="text-right font-bold tabular-nums text-sm text-success">
                         {formatCurrency(order.depositAmount)}
                       </TableCell>
                       <TableCell
@@ -416,7 +361,7 @@ export function PaymentList() {
                       <TableCell className="text-center">
                         <PaymentStatusBadge status={paymentStatus} />
                       </TableCell>
-                      <TableCell className="text-center text-sm font-semibold text-muted-foreground">
+                      <TableCell className="text-center text-sm font-bold text-muted-foreground">
                         {formatDate(order.deliveryDate)}
                       </TableCell>
                     </TableRow>
@@ -441,8 +386,8 @@ export function PaymentList() {
               {Math.min(currentPage * itemsPerPage, totalItems)}
             </span>{" "}
             trong tổng số{" "}
-            <span className="font-bold text-foreground">{totalItems}</span>{" "}
-            đơn hàng
+            <span className="font-bold text-foreground">{totalItems}</span> đơn
+            hàng
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -489,14 +434,6 @@ export function PaymentList() {
           </div>
         </div>
       )}
-
-      {/* Modals */}
-      <PaymentUpdateModal
-        open={isPaymentModalOpen}
-        onOpenChange={setIsPaymentModalOpen}
-        order={selectedOrderForModal}
-        onConfirm={handlePaymentConfirm}
-      />
     </div>
   );
 }

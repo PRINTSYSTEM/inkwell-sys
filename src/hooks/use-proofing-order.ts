@@ -25,7 +25,6 @@ import {
 } from "@/Schema/paper-size.schema";
 import type {
   ProofingOrderListParams,
-  CreateProofingOrderFromDesignsRequest,
   UpdateProofingOrderRequest,
   OrderDetailResponse,
   OrderDetailResponsePaginate,
@@ -72,56 +71,10 @@ export const useProofingOrder = (id: number | null, enabled = true) =>
 export const useCreateProofingOrder = () => useCreateProofingOrderBase();
 export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();
 
-// POST /proofing-orders/from-designs
-export const useCreateProofingOrderFromDesigns = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    ProofingOrderResponse,
-    [CreateProofingOrderFromDesignsRequest]
-  >(async (payload) => {
-    const res = await apiRequest.post<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_FROM_DESIGNS,
-      payload
-    );
-    return res.data;
-  });
-
-  const mutate = async (payload: CreateProofingOrderFromDesignsRequest) => {
-    try {
-      const result = await execute(payload);
-
-      // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
-      queryClient.invalidateQueries({
-        queryKey: [proofingKeys.all[0], "available-order-details"],
-      });
-
-      toast.success("Thành công", {
-        description: "Đã tạo bình bài từ danh sách thiết kế",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể tạo bình bài",
-      });
-      throw err;
-    }
-  };
-
-  return {
-    data,
-    loading,
-    error,
-    mutate,
-    reset,
-  };
-};
+// Note: POST /proofing-orders/from-designs endpoint has been removed from the API.
+// Use the two-step approach instead:
+// 1. Create proofing order with useCreateProofingOrder
+// 2. Add designs with useAddDesignsToProofingOrder
 
 // GET /proofing-orders/available-order-details
 export const useAvailableOrderDetailsForProofing = (params?: {
@@ -198,21 +151,9 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             // Note: accountant may not be in DesignResponse schema, but if it exists in API response, it will be mapped
             accountantName: (design as any).accountant?.fullName || undefined,
           };
-          console.log(
-            "🚀 ~ useAvailableOrderDetailsForProofing ~ designItem:",
-            designItem
-          );
-
-          // Debug: Log first transformed design
-          if (index === 0) {
-            console.log("✅ First transformed design:", designItem);
-          }
 
           return designItem;
         });
-
-      // Debug: Log final result
-      console.log("📊 Transformed designs count:", designs.length);
 
       // Extract unique design types with counts
       const designTypeMap = new Map<
@@ -566,10 +507,8 @@ export const useDownloadProofingFile = () => {
 
   return { loading, error, mutate, reset };
 };
-// ================== COMPLETE / START / COMPLETE PRODUCTION ==================
+// ================== COMPLETE PROOFING ORDER ==================
 // PUT /proofing-orders/{id}/complete
-// PUT /proofing-orders/{id}/start-production
-// PUT /proofing-orders/{id}/complete-production
 
 export const useCompleteProofingOrder = () => {
   const queryClient = useQueryClient();
@@ -615,22 +554,27 @@ export const useCompleteProofingOrder = () => {
   return { data, loading, error, mutate, reset };
 };
 
-export const useStartProductionFromProofing = () => {
+// ================== PAUSE PROOFING ORDER ==================
+// PUT /proofing-orders/{id}/pause
+// Note: API accepts optional query parameter "reason"
+
+export const usePauseProofingOrder = () => {
   const queryClient = useQueryClient();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
-    [number]
-  >(async (id: number) => {
-    const res = await apiRequest.put<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_START_PRODUCTION(id)
-    );
+    [{ id: number; reason?: string }]
+  >(async ({ id, reason }) => {
+    const url = reason
+      ? `${API_SUFFIX.PROOFING_PAUSE(id)}?reason=${encodeURIComponent(reason)}`
+      : API_SUFFIX.PROOFING_PAUSE(id);
+    const res = await apiRequest.put<ProofingOrderResponse>(url);
     return res.data;
   });
 
-  const mutate = async (id: number) => {
+  const mutate = async (args: { id: number; reason?: string }) => {
     try {
-      const result = await execute(id);
+      const result = await execute(args);
 
       if (result.id != null) {
         queryClient.invalidateQueries({
@@ -640,7 +584,7 @@ export const useStartProductionFromProofing = () => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
 
       toast.success("Thành công", {
-        description: "Đã bắt đầu sản xuất cho bình bài",
+        description: "Đã tạm dừng bình bài",
       });
 
       return result;
@@ -650,99 +594,7 @@ export const useStartProductionFromProofing = () => {
         description:
           error?.response?.data?.message ||
           error?.message ||
-          "Không thể bắt đầu sản xuất",
-      });
-      throw err;
-    }
-  };
-
-  return { data, loading, error, mutate, reset };
-};
-
-export const useCompleteProductionFromProofing = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    ProofingOrderResponse,
-    [number]
-  >(async (id: number) => {
-    const res = await apiRequest.put<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_COMPLETE_PRODUCTION(id)
-    );
-    return res.data;
-  });
-
-  const mutate = async (id: number) => {
-    try {
-      const result = await execute(id);
-
-      if (result.id != null) {
-        queryClient.invalidateQueries({
-          queryKey: proofingKeys.detail(result.id),
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
-
-      toast.success("Thành công", {
-        description: "Đã hoàn tất sản xuất cho bình bài",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể hoàn tất sản xuất",
-      });
-      throw err;
-    }
-  };
-
-  return { data, loading, error, mutate, reset };
-};
-
-// ================== APPROVE PROOFING ORDER ==================
-// PUT /proofing-orders/{id}/approve
-// Note: API no longer requires a request body, only the ID
-
-export const useApproveProofingOrder = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    ProofingOrderResponse,
-    [number]
-  >(async (id: number) => {
-    const res = await apiRequest.put<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_APPROVE(id)
-    );
-    return res.data;
-  });
-
-  const mutate = async (id: number) => {
-    try {
-      const result = await execute(id);
-
-      if (result.id != null) {
-        queryClient.invalidateQueries({
-          queryKey: proofingKeys.detail(result.id),
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
-
-      toast.success("Thành công", {
-        description: "Đã duyệt bình bài",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể duyệt bình bài",
+          "Không thể tạm dừng bình bài",
       });
       throw err;
     }
@@ -963,9 +815,14 @@ export const useAvailableQuantity = (
       const res = await apiRequest.get<unknown>(
         API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId as number)
       );
-      // Swagger shows empty schema, but likely returns a number (quantity)
-      // Cast to number if it's a number, otherwise return as-is
-      return typeof res.data === "number" ? res.data : res.data;
+      // API response could be a number or an object with quantity field
+      // Log for debugging
+      console.log(
+        "Available quantity API response:",
+        res.data,
+        typeof res.data
+      );
+      return res.data;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -1004,7 +861,7 @@ export const useAddDesignsToProofingOrder = () => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
       queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
       toast.success("Thành công", {
-        description: "Đã thêm design vào bình bài",
+        description: "Đã Thêm thiết kế vào Bình Bài",
       });
     },
     onError: (error: ApiError) => {
