@@ -35,6 +35,7 @@ interface AddDesignToProofingDialogProps {
   onOpenChange: (open: boolean) => void;
   availableDesigns: DesignItem[];
   materialTypeName?: string;
+  currentDesign?: DesignItem | null; // Design hiện tại để so sánh quy cách
   onSubmit: (
     orderDetailItems: Array<{ orderDetailId: number; quantity: number }>
   ) => Promise<void>;
@@ -46,6 +47,7 @@ export function AddDesignToProofingDialog({
   onOpenChange,
   availableDesigns,
   materialTypeName = "",
+  currentDesign = null,
   onSubmit,
   isSubmitting = false,
 }: AddDesignToProofingDialogProps) {
@@ -53,18 +55,33 @@ export function AddDesignToProofingDialog({
     Record<number, number>
   >({});
 
+  // Filter designs to only show those with same specifications as current design
+  const filteredDesigns = useMemo(() => {
+    if (!currentDesign) {
+      // If no current design, show all available designs
+      return availableDesigns;
+    }
+
+    // Filter designs that have the same materialTypeId and designTypeId as current design
+    return availableDesigns.filter(
+      (design) =>
+        design.materialTypeId === currentDesign.materialTypeId &&
+        design.designTypeId === currentDesign.designTypeId
+    );
+  }, [availableDesigns, currentDesign]);
+
   // Set default quantities when modal opens
   useEffect(() => {
     if (open) {
       const initialQuantities: Record<number, number> = {};
-      availableDesigns.forEach((design) => {
+      filteredDesigns.forEach((design) => {
         initialQuantities[design.id] = 0;
       });
       setDesignQuantities(initialQuantities);
     } else {
       setDesignQuantities({});
     }
-  }, [open, availableDesigns]);
+  }, [open, filteredDesigns]);
 
   const handleQuantityChange = (
     id: number,
@@ -87,7 +104,7 @@ export function AddDesignToProofingDialog({
   const handleSubmit = async () => {
     try {
       // Validate design quantities
-      const invalidDesigns = availableDesigns.filter((design) => {
+      const invalidDesigns = filteredDesigns.filter((design) => {
         const qty = designQuantities[design.id] || 0;
         if (qty <= 0) return false;
 
@@ -141,11 +158,11 @@ export function AddDesignToProofingDialog({
   }, [designQuantities]);
 
   const hasValidQuantities = useMemo(() => {
-    return availableDesigns.some((design) => {
+    return filteredDesigns.some((design) => {
       const qty = designQuantities[design.id] || 0;
       return qty > 0;
     });
-  }, [availableDesigns, designQuantities]);
+  }, [filteredDesigns, designQuantities]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,8 +179,11 @@ export function AddDesignToProofingDialog({
                   Thêm thiết kế vào Bình Bài
                 </DialogTitle>
                 <DialogDescription className="text-xs mt-0.5">
-                  {availableDesigns.length} mã hàng có sẵn • {selectedCount} đã
-                  nhập số lượng
+                  {filteredDesigns.length} mã hàng có sẵn
+                  {currentDesign &&
+                    ` (cùng quy cách: ${currentDesign.materialTypeName} - ${currentDesign.designTypeName})`}
+                  {" • "}
+                  {selectedCount} đã nhập số lượng
                 </DialogDescription>
               </div>
             </div>
@@ -191,118 +211,140 @@ export function AddDesignToProofingDialog({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {availableDesigns.map((design, index) => {
-                const currentQty = designQuantities[design.id] || 0;
-
-                const baseAvailableQty =
-                  design.availableQuantity !== undefined &&
-                  design.availableQuantity >= 0
-                    ? design.availableQuantity
-                    : design.quantity;
-
-                const maxQty = baseAvailableQty;
-                const remainingQty = Math.max(0, baseAvailableQty - currentQty);
-                const isValid = currentQty > 0 && currentQty <= maxQty;
-                const isExceeded = currentQty > maxQty;
-                const hasAvailableQuantity =
-                  design.availableQuantity !== undefined;
-
-                return (
-                  <TableRow
-                    key={design.id}
-                    className={cn(
-                      "hover:bg-muted/30",
-                      isValid && "bg-green-50/30",
-                      isExceeded && "bg-red-50/30"
-                    )}
+              {filteredDesigns.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="text-center text-muted-foreground py-8"
                   >
-                    <TableCell className="text-center text-xs text-muted-foreground font-medium">
-                      {index + 1}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium text-sm">{design.name}</div>
-                        <code className="text-xs text-muted-foreground font-mono">
-                          {design.code}
-                        </code>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="text-sm font-medium">
-                        {design.quantity.toLocaleString()}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {hasAvailableQuantity ? (
+                    {currentDesign
+                      ? `Không có mã hàng nào cùng quy cách với ${currentDesign.materialTypeName} - ${currentDesign.designTypeName}`
+                      : "Không có mã hàng nào"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredDesigns.map((design, index) => {
+                  const currentQty = designQuantities[design.id] || 0;
+
+                  const baseAvailableQty =
+                    design.availableQuantity !== undefined &&
+                    design.availableQuantity >= 0
+                      ? design.availableQuantity
+                      : design.quantity;
+
+                  const maxQty = baseAvailableQty;
+                  const remainingQty = Math.max(
+                    0,
+                    baseAvailableQty - currentQty
+                  );
+                  const isValid = currentQty > 0 && currentQty <= maxQty;
+                  const isExceeded = currentQty > maxQty;
+                  const hasAvailableQuantity =
+                    design.availableQuantity !== undefined;
+
+                  return (
+                    <TableRow
+                      key={design.id}
+                      className={cn(
+                        "hover:bg-muted/30",
+                        isValid && "bg-green-50/30",
+                        isExceeded && "bg-red-50/30"
+                      )}
+                    >
+                      <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                        {index + 1}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-sm">
+                            {design.name}
+                          </div>
+                          <code className="text-xs text-muted-foreground font-mono">
+                            {design.code}
+                          </code>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm font-medium">
+                          {design.quantity.toLocaleString()}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {hasAvailableQuantity ? (
+                          <span
+                            className={cn(
+                              "text-sm font-medium",
+                              design.availableQuantity! > 0
+                                ? "text-green-600"
+                                : design.availableQuantity! === 0
+                                  ? "text-orange-600"
+                                  : "text-red-600"
+                            )}
+                          >
+                            {design.availableQuantity!.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            -
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            max={maxQty}
+                            className={cn(
+                              "h-9 flex-1 text-right font-mono text-base font-semibold",
+                              isExceeded &&
+                                "border-destructive focus-visible:ring-destructive"
+                            )}
+                            value={currentQty || ""}
+                            onChange={(e) =>
+                              handleQuantityChange(
+                                design.id,
+                                e.target.value,
+                                design.quantity,
+                                design.availableQuantity
+                              )
+                            }
+                            placeholder="0"
+                          />
+                          <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                            /{maxQty.toLocaleString()}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
                         <span
                           className={cn(
                             "text-sm font-medium",
-                            design.availableQuantity! > 0
-                              ? "text-green-600"
-                              : design.availableQuantity! === 0
+                            remainingQty > 0
+                              ? "text-blue-600"
+                              : remainingQty === 0 && currentQty > 0
                                 ? "text-orange-600"
-                                : "text-red-600"
+                                : "text-muted-foreground"
                           )}
                         >
-                          {design.availableQuantity!.toLocaleString()}
+                          {remainingQty.toLocaleString()}
                         </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          max={maxQty}
-                          className={cn(
-                            "h-9 flex-1 text-right font-mono text-base font-semibold",
-                            isExceeded &&
-                              "border-destructive focus-visible:ring-destructive"
-                          )}
-                          value={currentQty || ""}
-                          onChange={(e) =>
-                            handleQuantityChange(
-                              design.id,
-                              e.target.value,
-                              design.quantity,
-                              design.availableQuantity
-                            )
-                          }
-                          placeholder="0"
-                        />
-                        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                          /{maxQty.toLocaleString()}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span
-                        className={cn(
-                          "text-sm font-medium",
-                          remainingQty > 0
-                            ? "text-blue-600"
-                            : remainingQty === 0 && currentQty > 0
-                              ? "text-orange-600"
-                              : "text-muted-foreground"
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {isExceeded ? (
+                          <AlertCircle className="h-4 w-4 text-destructive mx-auto" />
+                        ) : isValid ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            -
+                          </span>
                         )}
-                      >
-                        {remainingQty.toLocaleString()}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {isExceeded ? (
-                        <AlertCircle className="h-4 w-4 text-destructive mx-auto" />
-                      ) : isValid ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </div>
@@ -312,7 +354,7 @@ export function AddDesignToProofingDialog({
           <div className="flex-1 text-xs text-muted-foreground">
             {selectedCount > 0 && (
               <span>
-                {selectedCount}/{availableDesigns.length} mã hàng đã nhập số
+                {selectedCount}/{filteredDesigns.length} mã hàng đã nhập số
                 lượng • Tổng lấy{" "}
                 {Object.values(designQuantities)
                   .reduce((sum, qty) => sum + qty, 0)

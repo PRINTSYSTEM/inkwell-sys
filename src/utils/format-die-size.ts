@@ -33,15 +33,15 @@ export function formatDesignDimensions(
   if (length == null || height == null) {
     return "—";
   }
-  
+
   const lengthValue = length * multiplier;
   const heightValue = height * multiplier;
-  
+
   // If width is 0 or undefined, only show length × height
   if (!width || width === 0) {
     return `${lengthValue}${separator}${heightValue}`;
   }
-  
+
   // If width > 0, show length × width × height
   const widthValue = width * multiplier;
   return `${lengthValue}${separator}${widthValue}${separator}${heightValue}`;
@@ -67,7 +67,9 @@ export function formatDieSize(die: DieResponse): string {
     // Try to parse and reformat if it contains "x0x" pattern
     const sizeStr = die.size.trim();
     // Match patterns like "100x0x100", "100x0x100 cm", etc.
-    const match = sizeStr.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)/i);
+    const match = sizeStr.match(
+      /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)/i
+    );
     if (match) {
       const length = parseFloat(match[1]);
       const width = parseFloat(match[2]);
@@ -84,4 +86,3 @@ export function formatDieSize(die: DieResponse): string {
   }
   return "—";
 }
-

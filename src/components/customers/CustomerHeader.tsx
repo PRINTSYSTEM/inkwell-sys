@@ -21,6 +21,7 @@ interface CustomerHeaderProps {
   customer: CustomerResponse;
   onEdit: () => void;
   onExportDebt: () => void;
+  onCreateCashReceipt?: () => void;
   canViewFinancialInfo?: boolean;
 }
 
@@ -28,6 +29,7 @@ export function CustomerHeader({
   customer,
   onEdit,
   onExportDebt,
+  onCreateCashReceipt,
   canViewFinancialInfo = true,
 }: CustomerHeaderProps) {
   const navigate = useNavigate();
@@ -71,10 +73,18 @@ export function CustomerHeader({
               Sửa
             </Button>
             {canViewFinancialInfo && (
-              <Button variant="outline" size="sm" onClick={onExportDebt}>
-                <Download className="h-4 w-4 mr-1.5" />
-                Xuất công nợ
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={onExportDebt}>
+                  <Download className="h-4 w-4 mr-1.5" />
+                  Xuất công nợ
+                </Button>
+                {onCreateCashReceipt && (
+                  <Button variant="outline" size="sm" onClick={onCreateCashReceipt}>
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Tạo phiếu thu
+                  </Button>
+                )}
+              </>
             )}
             <Button
               size="sm"

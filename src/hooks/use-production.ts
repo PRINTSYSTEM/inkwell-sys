@@ -16,8 +16,10 @@ import type {
   CreateProductionOrderRequest,
   UpdateProductionStepRequest,
   ProductionListParams,
+  AssignProductionStepRequest,
 } from "@/Schema";
 import { useAsyncCallback } from "@/hooks/use-async";
+import { API_SUFFIX } from "@/apis";
 
 // Production Order CRUD hooks (new API structure)
 const {
@@ -35,7 +37,7 @@ const {
   ProductionOrderResponsePaginate
 >({
   rootKey: "production-orders",
-  basePath: "/api/productions/orders",
+  basePath: API_SUFFIX.PRODUCTION_ORDERS,
   getItems: (resp) => resp.items ?? [],
   messages: {
     createSuccess: "Đã tạo lệnh sản xuất thành công",
@@ -52,23 +54,23 @@ export const useProductionOrder = (id: number | null, enabled = true) =>
 
 export const useCreateProductionOrder = () => useCreateProductionOrderBase();
 
-// PUT /api/productions/steps/:id/status - Update production step status
+// PUT /api/production-orders/steps/:stepId/status - Update production step status
 export const useUpdateProductionStep = () => {
   const queryClient = useQueryClient();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProductionStepResponse,
-    [{ id: number; data: UpdateProductionStepRequest }]
-  >(async ({ id, data }) => {
+    [{ stepId: number; data: UpdateProductionStepRequest }]
+  >(async ({ stepId, data }) => {
     const res = await apiRequest.put<ProductionStepResponse>(
-      `/api/productions/steps/${id}/status`,
+      API_SUFFIX.PRODUCTION_STEP_STATUS(stepId),
       data
     );
     return res.data;
   });
 
   const mutate = async (payload: {
-    id: number;
+    stepId: number;
     data: UpdateProductionStepRequest;
   }) => {
     try {
@@ -102,6 +104,69 @@ export const useUpdateProductionStep = () => {
     error,
     mutate,
     reset,
+  };
+};
+
+// PUT /api/production-orders/steps/:stepId/assign - Assign worker to production step
+export const useAssignProductionWorker = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProductionStepResponse,
+    [{ stepId: number; data: AssignProductionStepRequest }]
+  >(async ({ stepId, data }) => {
+    const res = await apiRequest.put<ProductionStepResponse>(
+      API_SUFFIX.PRODUCTION_STEP_ASSIGN(stepId),
+      data
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: {
+    stepId: number;
+    data: AssignProductionStepRequest;
+  }) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate production order queries so step assignment is refreshed
+      queryClient.invalidateQueries({
+        queryKey: productionOrderKeys.all,
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật người phụ trách cho bước sản xuất",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật người phụ trách cho bước sản xuất",
+      });
+      throw err;
+    }
+  };
+};
+
+export const useCompleteProduction = () => {
+  console.warn(
+    "useCompleteProduction is deprecated. Use useUpdateProductionStep to update step status instead."
+  );
+  // Return a no-op hook for backward compatibility
+  return {
+    data: null,
+    isPending: false,
+    error: null,
+    mutate: async () => {
+      throw new Error(
+        "useCompleteProduction is deprecated. Please use useUpdateProductionStep instead."
+      );
+    },
+    reset: () => {},
   };
 };
 

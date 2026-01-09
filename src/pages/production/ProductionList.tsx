@@ -47,7 +47,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
-import { useProductionOrders, useCreateProductionOrder } from "@/hooks/use-production";
+import {
+  useProductionOrders,
+  useCreateProductionOrder,
+} from "@/hooks/use-production";
 import { useProofingOrdersForProduction } from "@/hooks/use-proofing-order";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -58,7 +61,10 @@ import {
   type ProofingOrderResponse,
 } from "@/Schema";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { productionStatusLabels } from "@/lib/status-utils";
+import {
+  orderDetailItemStatusLabels,
+  productionStatusLabels,
+} from "@/lib/status-utils";
 
 export default function ProductionListPage() {
   const navigate = useNavigate();
@@ -341,11 +347,13 @@ export default function ProductionListPage() {
   const stats = useMemo(
     () => ({
       total: totalCount,
-      pending: productions?.filter((p) => p.status === "pending").length || 0,
+      pending:
+        productions?.filter((p) => p.status === "WaitingForProduction")
+          .length || 0,
       inProgress:
-        productions?.filter((p) => p.status === "in_progress").length || 0,
+        productions?.filter((p) => p.status === "InProduction").length || 0,
       completed:
-        productions?.filter((p) => p.status === "completed").length || 0,
+        productions?.filter((p) => p.status === "Completed").length || 0,
     }),
     [totalCount, productions]
   );
@@ -461,10 +469,11 @@ export default function ProductionListPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="pending">Chờ sản xuất</SelectItem>
-                  <SelectItem value="in_progress">Đang sản xuất</SelectItem>
-                  <SelectItem value="completed">Hoàn thành</SelectItem>
-                  <SelectItem value="on_hold">Tạm dừng</SelectItem>
+                  <SelectItem value="WaitingForProduction">
+                    Chờ sản xuất
+                  </SelectItem>
+                  <SelectItem value="InProduction">Đang sản xuất</SelectItem>
+                  <SelectItem value="Completed">Hoàn thành</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -550,9 +559,11 @@ export default function ProductionListPage() {
 
                       <TableCell className="py-3">
                         <StatusBadge
-                          status={prod.status || "pending"}
+                          status={prod.status || "WaitingForProduction"}
                           label={
-                            productionStatusLabels[prod.status || "pending"] ||
+                            productionStatusLabels[
+                              prod.status || "WaitingForProduction"
+                            ] ||
                             prod.status ||
                             "N/A"
                           }
@@ -760,13 +771,9 @@ export default function ProductionListPage() {
                                 <div className="flex items-center gap-2">
                                   <span>{order.code || `BB${order.id}`}</span>
                                   <StatusBadge
-                                    status={
-                                      order.status || "waiting_for_production"
-                                    }
+                                    status={order.status}
                                     label={
-                                      order.status === "waiting_for_production"
-                                        ? "Chờ sản xuất"
-                                        : order.status || ""
+                                      orderDetailItemStatusLabels[order.status]
                                     }
                                   />
                                 </div>
