@@ -206,10 +206,12 @@ export const API_SUFFIX = {
   STOCK_OUT_COMPLETE: (id: number) => `/stock-outs/${id}/complete`,
 
   // ========== PRODUCTIONS ==========
-  PRODUCTION_ORDERS: "/api/productions/orders",
-  PRODUCTION_ORDER_BY_ID: (id: number) => `/api/productions/orders/${id}`,
-  PRODUCTION_STEP_ASSIGN: (id: number) => `/api/productions/steps/${id}/assign`,
-  PRODUCTION_STEP_STATUS: (id: number) => `/api/productions/steps/${id}/status`,
+  PRODUCTION_ORDERS: "/production-orders",
+  PRODUCTION_ORDER_BY_ID: (id: number) => `/production-orders/${id}`,
+  PRODUCTION_STEP_ASSIGN: (id: number) =>
+    `/production-orders/steps/${id}/assign`,
+  PRODUCTION_STEP_STATUS: (id: number) =>
+    `/production-orders/steps/${id}/status`,
 
   // ========== DELIVERY NOTES ==========
   DELIVERY_NOTES: "/delivery-notes",

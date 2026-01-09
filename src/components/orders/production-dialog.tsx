@@ -46,20 +46,20 @@ export function ProductionDialog({
 
   const handleSubmit = async () => {
     if (mode === "start") {
-      // Start step: set status to "in_progress" or appropriate status
+      // Start step: set status to "IN_PROGRESS" (API expects uppercase)
       const payload: UpdateProductionStepRequest = {
-        status: "in_progress",
+        status: "IN_PROGRESS",
       };
-      await updateStep({ id: stepId, data: payload });
+      await updateStep({ stepId, data: payload });
     } else {
-      // Complete step: set status to "completed" with output and defect info
+      // Complete step: set status to "DONE" with output and defect info (API expects uppercase)
       const payload: UpdateProductionStepRequest = {
-        status: "completed",
+        status: "DONE",
         outputQty: producedQty || 1,
         defectQty: wastage || 0,
         defectNotes: defectNotes || undefined,
       };
-      await updateStep({ id: stepId, data: payload });
+      await updateStep({ stepId, data: payload });
     }
 
     handleClose();

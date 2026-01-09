@@ -6091,8 +6091,8 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/productions/orders",
-    alias: "postApiproductionsorders",
+    path: "/api/production-orders",
+    alias: "postApiproductionOrders",
     requestFormat: "json",
     parameters: [
       {
@@ -6105,17 +6105,17 @@ const endpoints = makeApi([
   },
   {
     method: "get",
-    path: "/api/productions/orders",
-    alias: "getApiproductionsorders",
+    path: "/api/production-orders",
+    alias: "getApiproductionOrders",
     requestFormat: "json",
     parameters: [
       {
-        name: "page",
+        name: "pageNumber",
         type: "Query",
         schema: z.number().int().optional().default(1),
       },
       {
-        name: "size",
+        name: "pageSize",
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
@@ -6134,8 +6134,8 @@ const endpoints = makeApi([
   },
   {
     method: "get",
-    path: "/api/productions/orders/:id",
-    alias: "getApiproductionsordersId",
+    path: "/api/production-orders/:id",
+    alias: "getApiproductionOrdersId",
     requestFormat: "json",
     parameters: [
       {
@@ -6148,8 +6148,8 @@ const endpoints = makeApi([
   },
   {
     method: "delete",
-    path: "/api/productions/orders/:id",
-    alias: "deleteApiproductionsordersId",
+    path: "/api/production-orders/:id",
+    alias: "deleteApiproductionOrdersId",
     requestFormat: "json",
     parameters: [
       {
@@ -6162,8 +6162,8 @@ const endpoints = makeApi([
   },
   {
     method: "put",
-    path: "/api/productions/steps/:id/assign",
-    alias: "putApiproductionsstepsIdassign",
+    path: "/api/production-orders/steps/:stepId/assign",
+    alias: "putApiproductionOrdersstepsStepIdassign",
     requestFormat: "json",
     parameters: [
       {
@@ -6174,7 +6174,7 @@ const endpoints = makeApi([
           .partial(),
       },
       {
-        name: "id",
+        name: "stepId",
         type: "Path",
         schema: z.number().int(),
       },
@@ -6183,8 +6183,8 @@ const endpoints = makeApi([
   },
   {
     method: "put",
-    path: "/api/productions/steps/:id/status",
-    alias: "putApiproductionsstepsIdstatus",
+    path: "/api/production-orders/steps/:stepId/status",
+    alias: "putApiproductionOrdersstepsStepIdstatus",
     requestFormat: "json",
     parameters: [
       {
@@ -6193,7 +6193,7 @@ const endpoints = makeApi([
         schema: UpdateProductionStepRequest,
       },
       {
-        name: "id",
+        name: "stepId",
         type: "Path",
         schema: z.number().int(),
       },
