@@ -581,11 +581,24 @@ export const router = createBrowserRouter([
           },
           {
             path: "invoice",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <InvoicePage />
-              </Suspense>
-            ),
+            children: [
+              {
+                index: true,
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <InvoicePage />
+                  </Suspense>
+                ),
+              },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <InvoiceDetail />
+                  </Suspense>
+                ),
+              },
+            ],
           },
           {
             path: "delivery",
@@ -756,29 +769,6 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <DeliveryNoteDetail />
-              </Suspense>
-            ),
-          },
-        ],
-      },
-
-      // ===== INVOICES =====
-      {
-        path: lastSegment(ROUTE_PATHS.ACCOUNTING.INVOICE), // "invoices"
-        children: [
-          {
-            index: true,
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <InvoicePage />
-              </Suspense>
-            ),
-          },
-          {
-            path: ":id",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <InvoiceDetail />
               </Suspense>
             ),
           },

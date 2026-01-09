@@ -51,6 +51,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useInvoices, useExportInvoice } from "@/hooks/use-invoice";
 import { formatCurrency } from "@/lib/status-utils";
 import { CreateInvoiceFromLinesDialog } from "@/components/accounting";
+import { ROUTE_PATHS } from "@/constants";
 
 // Helper to calculate summary stats from orders
 const calculateInvoiceStats = (orders: OrderResponse[]) => {
@@ -180,7 +181,7 @@ function CreatedInvoicesTab() {
 
   const handleViewDetails = (invoiceId: number | undefined) => {
     if (invoiceId) {
-      navigate(`/invoices/${invoiceId}`);
+      navigate(`${ROUTE_PATHS.ACCOUNTING.INVOICE}/${invoiceId}`);
     }
   };
 
@@ -195,7 +196,7 @@ function CreatedInvoicesTab() {
 
   const handleRowClick = (invoiceId: number | undefined) => {
     if (invoiceId) {
-      navigate(`/invoices/${invoiceId}`);
+      navigate(`${ROUTE_PATHS.ACCOUNTING.INVOICE}/${invoiceId}`);
     }
   };
 
