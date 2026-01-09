@@ -6110,12 +6110,12 @@ const endpoints = makeApi([
     requestFormat: "json",
     parameters: [
       {
-        name: "pageNumber",
+        name: "page",
         type: "Query",
         schema: z.number().int().optional().default(1),
       },
       {
-        name: "pageSize",
+        name: "size",
         type: "Query",
         schema: z.number().int().optional().default(10),
       },

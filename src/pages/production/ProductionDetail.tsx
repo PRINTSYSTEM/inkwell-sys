@@ -305,6 +305,9 @@ export default function ProductionDetailPage() {
       setWastage("0");
       setDefectNotes("");
       setCompleteNotes("");
+      setProducedQty("1");
+      setWastage("0");
+      setDefectNotes("");
     } catch (error) {
       // Error is handled by the hook
     }
