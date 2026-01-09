@@ -101,8 +101,7 @@ export const ROUTE_PATHS = {
   },
 
   INVOICES: {
-    ROOT: "/invoices" as const,
-    DETAIL_BASE: "/invoices" as const, // prefix cho /invoices/:id
+    DETAIL_BASE: "/accounting/invoice" as const, // prefix cho /invoices/:id
   },
 
   ATTENDANCE: {
