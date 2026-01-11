@@ -1027,6 +1027,7 @@ const DesignResponse = z
     processClassification: z.string().nullable(),
     laminationType: z.string().nullable(),
     adhesiveOffset: z.number().nullable(),
+    laminationTypeName: z.string().nullable(),
     designFileUrl: z.string().nullable(),
     designImageUrl: z.string().nullable(),
     excelFileUrl: z.string().nullable(),
@@ -1152,6 +1153,8 @@ const DieResponse = z
     vendorName: z.string().nullable(),
     vendor: VendorResponse,
     location: z.string().nullable(),
+    status: z.string().nullable(),
+    usageType: z.string().nullable(),
     isUsable: z.boolean(),
     notes: z.string().nullable(),
     sentAt: z.string().datetime({ offset: true }).nullable(),
@@ -1173,30 +1176,19 @@ const DieResponseIPaginate = z
   .partial();
 const postApidies_Body = z
   .object({
-    Name: z.string().min(0).max(255).optional(),
-    Code: z.string(),
-    Type: z.string(),
-    Length: z.number().optional(),
-    Width: z.number().optional(),
-    Height: z.number().optional(),
-    Size: z.string().min(0).max(100).optional(),
-    Price: z.number().optional(),
-    VendorId: z.number().int().optional(),
-    Notes: z.string().optional(),
-    SentAt: z.string().datetime({ offset: true }).optional(),
-    EstimatedReceiveAt: z.string().datetime({ offset: true }).optional(),
-    ReceivedAt: z.string().datetime({ offset: true }).optional(),
-    image: z.instanceof(File).optional(),
+    Price: z.number(),
+    VendorId: z.number().int(),
+    Notes: z.string(),
+    EstimatedReceiveAt: z.string().datetime({ offset: true }),
+    ReceivedAt: z.string().datetime({ offset: true }),
+    IsReusable: z.boolean(),
+    image: z.instanceof(File),
   })
+  .partial()
   .passthrough();
 const UpdateDieRequest = z
   .object({
-    name: z.string().min(0).max(255).nullable(),
     code: z.string().nullable(),
-    type: z.string().nullable(),
-    length: z.number().nullable(),
-    width: z.number().nullable(),
-    height: z.number().nullable(),
     size: z.string().min(0).max(100).nullable(),
     price: z.number().nullable(),
     location: z.string().min(0).max(50).nullable(),
@@ -1228,21 +1220,17 @@ const AssignDieToProofingOrderRequest = z.object({
 const ReplaceDieRequest = z
   .object({ newDieId: z.number().int(), notes: z.string().nullable() })
   .partial();
-const CreateDieRequest = z.object({
-  name: z.string().min(0).max(255).nullish(),
-  code: z.string().min(1),
-  type: z.string().min(1),
-  length: z.number().optional(),
-  width: z.number().optional(),
-  height: z.number().nullish(),
-  size: z.string().min(0).max(100).nullish(),
-  price: z.number().nullish(),
-  vendorId: z.number().int().nullish(),
-  notes: z.string().nullish(),
-  sentAt: z.string().datetime({ offset: true }).nullish(),
-  estimatedReceiveAt: z.string().datetime({ offset: true }).nullish(),
-  receivedAt: z.string().datetime({ offset: true }).nullish(),
-});
+const CreateDieRequest = z
+  .object({
+    price: z.number().nullable(),
+    vendorId: z.number().int().nullable(),
+    notes: z.string().nullable(),
+    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
+    receivedAt: z.string().datetime({ offset: true }).nullable(),
+    isReusable: z.boolean(),
+  })
+  .partial();
+const UpdateDieStatusRequest = z.object({ status: z.string().min(1) });
 const InventorySummaryItemResponse = z
   .object({
     itemCode: z.string().nullable(),
@@ -1498,6 +1486,24 @@ const UpdateEInvoiceInfoRequest = z
     eInvoiceSerial: z.string().min(0).max(50).nullable(),
     taxAuthorityCode: z.string().min(0).max(100).nullable(),
     eInvoiceIssuedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const CreateMaterialRequest = z.object({
+  name: z.string().min(1),
+  materialTypeId: z.number().int(),
+  length: z.number().gte(0),
+  width: z.number().gte(0),
+  height: z.number().gte(0).optional(),
+  quantity: z.number().int().gte(0).lte(2147483647).optional(),
+});
+const UpdateMaterialRequest = z
+  .object({
+    name: z.string().nullable(),
+    materialTypeId: z.number().int().nullable(),
+    length: z.number().gte(0).nullable(),
+    width: z.number().gte(0).nullable(),
+    height: z.number().gte(0).nullable(),
+    quantity: z.number().int().gte(0).lte(2147483647).nullable(),
   })
   .partial();
 const CreateMaterialTypeRequest = z.object({
@@ -1995,6 +2001,7 @@ const ProductionOrderResponsePaginate = z
   .partial();
 const UpdateProductionStepRequest = z.object({
   status: z.string().min(1),
+  inputQty: z.number().int().nullish(),
   outputQty: z.number().int().nullish(),
   defectQty: z.number().int().nullish(),
   defectNotes: z.string().nullish(),
@@ -2048,6 +2055,7 @@ const ProofingOrderResponse = z
     customPaperSize: z.string().nullable(),
     processClassification: z.string().nullable(),
     laminationType: z.string().nullable(),
+    laminationTypeName: z.string().nullable(),
     isPlateExported: z.boolean(),
     isDieExported: z.boolean(),
     plateExport: PlateExportResponse,
@@ -2096,6 +2104,10 @@ const UpdateProofingOrderRequest = z
     designUpdates: z.array(UpdateProofingDesignItem).nullable(),
   })
   .partial();
+const RejectDesignRequest = z.object({
+  orderDetailId: z.number().int(),
+  reason: z.string().nullish(),
+});
 const OrderDetailResponsePaginate = z
   .object({
     size: z.number().int(),
@@ -2268,6 +2280,8 @@ const StockInItemRequest = z.object({
   quantity: z.number().int().gte(1).lte(2147483647),
   unitPrice: z.number().nullish(),
   notes: z.string().nullish(),
+  materialId: z.number().int().nullish(),
+  orderDetailId: z.number().int().nullish(),
 });
 const CreateStockInRequest = z.object({
   type: z.string().nullish(),
@@ -2296,6 +2310,8 @@ const StockOutItemRequest = z.object({
   unit: z.string().nullish(),
   quantity: z.number().int().gte(1).lte(2147483647),
   notes: z.string().nullish(),
+  materialId: z.number().int().nullish(),
+  orderDetailId: z.number().int().nullish(),
 });
 const CreateStockOutRequest = z.object({
   type: z.string().nullish(),
@@ -2562,6 +2578,7 @@ export const schemas = {
   AssignDieToProofingOrderRequest,
   ReplaceDieRequest,
   CreateDieRequest,
+  UpdateDieStatusRequest,
   InventorySummaryItemResponse,
   InventorySummaryItemResponseIPaginate,
   StockCardEntryResponse,
@@ -2583,6 +2600,8 @@ export const schemas = {
   CreateInvoiceFromLinesRequest,
   IssueInvoiceRequest,
   UpdateEInvoiceInfoRequest,
+  CreateMaterialRequest,
+  UpdateMaterialRequest,
   CreateMaterialTypeRequest,
   MaterialTypeResponsePaginate,
   MaterialTypeItem,
@@ -2628,6 +2647,7 @@ export const schemas = {
   AddDesignsToProofingOrderRequest,
   UpdateProofingDesignItem,
   UpdateProofingOrderRequest,
+  RejectDesignRequest,
   OrderDetailResponsePaginate,
   RecordPlateExportRequest,
   RecordDieExportRequest,
@@ -4747,7 +4767,7 @@ const endpoints = makeApi([
     requestFormat: "json",
     parameters: [
       {
-        name: "dieName",
+        name: "q",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -4760,6 +4780,16 @@ const endpoints = makeApi([
         name: "location",
         type: "Query",
         schema: z.string().optional(),
+      },
+      {
+        name: "designId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "designTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
       },
       {
         name: "pageNumber",
@@ -4848,6 +4878,25 @@ const endpoints = makeApi([
           .object({ image: z.instanceof(File) })
           .partial()
           .passthrough(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DieResponse,
+  },
+  {
+    method: "put",
+    path: "/api/dies/:id/status",
+    alias: "putApidiesIdstatus",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ status: z.string().min(1) }),
       },
       {
         name: "id",
@@ -4982,52 +5031,17 @@ const endpoints = makeApi([
   },
   {
     method: "get",
-    path: "/api/dies/search",
-    alias: "getApidiessearch",
+    path: "/api/dies/related",
+    alias: "getApidiesrelated",
     requestFormat: "json",
     parameters: [
       {
-        name: "proofingOrderCode",
+        name: "designId",
         type: "Query",
-        schema: z.string().optional(),
-      },
-      {
-        name: "customerName",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
-        name: "designName",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
-        name: "dieName",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
-        name: "isUsable",
-        type: "Query",
-        schema: z.boolean().optional(),
-      },
-      {
-        name: "location",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
-        name: "pageNumber",
-        type: "Query",
-        schema: z.number().int().optional().default(1),
-      },
-      {
-        name: "pageSize",
-        type: "Query",
-        schema: z.number().int().optional().default(10),
+        schema: z.number().int().optional(),
       },
     ],
-    response: DieResponseIPaginate,
+    response: z.array(DieResponse),
   },
   {
     method: "get",
@@ -5435,6 +5449,96 @@ const endpoints = makeApi([
       },
     ],
     response: z.string(),
+  },
+  {
+    method: "get",
+    path: "/api/materials",
+    alias: "getApimaterials",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "size",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "name",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "materialTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/materials",
+    alias: "postApimaterials",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateMaterialRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/materials/:id",
+    alias: "getApimaterialsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "put",
+    path: "/api/materials/:id",
+    alias: "putApimaterialsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateMaterialRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "delete",
+    path: "/api/materials/:id",
+    alias: "deleteApimaterialsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
   },
   {
     method: "post",
@@ -6110,12 +6214,12 @@ const endpoints = makeApi([
     requestFormat: "json",
     parameters: [
       {
-        name: "page",
+        name: "pageNumber",
         type: "Query",
         schema: z.number().int().optional().default(1),
       },
       {
-        name: "size",
+        name: "pageSize",
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
@@ -6565,6 +6669,20 @@ const endpoints = makeApi([
       },
     ],
     response: ProofingOrderResponsePaginate,
+  },
+  {
+    method: "post",
+    path: "/api/proofing-orders/designs/reject",
+    alias: "postApiproofingOrdersdesignsreject",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: RejectDesignRequest,
+      },
+    ],
+    response: z.void(),
   },
   {
     method: "get",

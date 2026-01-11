@@ -51,6 +51,7 @@ export const ENTITY_CONFIG = {
       editing: "Đang chỉnh sửa",
       waiting_for_customer_approval: "Chờ khách duyệt",
       confirmed_for_printing: "Đã chốt in",
+      returned: "Bị trả về",
     },
   },
   proofingOrderStatuses: {
@@ -72,6 +73,7 @@ export const ENTITY_CONFIG = {
       editing: "Đang chỉnh sửa",
       waiting_for_customer_approval: "Chờ khách duyệt",
       confirmed_for_printing: "Đã chốt in",
+      returned: "Bị trả về",
     },
   },
   orderDetailItemStatuses: {
@@ -84,6 +86,7 @@ export const ENTITY_CONFIG = {
       production_completed: "Hoàn thành sản xuất",
       delivering: "Đang giao hàng",
       completed: "Hoàn thành",
+      returned: "Trả về (từ bình bài)",
     },
   },
   productionStatuses: {
@@ -138,6 +141,7 @@ export const ENTITY_CONFIG = {
     values: {
       glossy: "Cán bóng",
       matte: "Cán mờ",
+      none: "Không cán",
     },
   },
   sidesClassification: {
@@ -160,8 +164,9 @@ export const ENTITY_CONFIG = {
     entityType: "Vendor",
     description: "Loại nhà cung cấp",
     values: {
-      plate: "Nhà cung cấp kẽm",
-      die: "Nhà cung cấp khuôn bế",
+      plate: "Cung cấp kẽm",
+      die: "Cung cấp khuôn bế",
+      material: "Cung cấp chất liệu",
     },
   },
   deliveryNoteStatuses: {
@@ -202,6 +207,7 @@ export const ENTITY_CONFIG = {
     entityType: "ProductionStep",
     description: "Loại công đoạn sản xuất",
     values: {
+      material_export: "Xuất nguyên liệu",
       print: "In",
       lamination: "Cán màng",
       die_cut: "Bế",

@@ -34,6 +34,7 @@ export const ROUTE_PATHS = {
 
   PROOFING: {
     ROOT: "/proofing" as const,
+    WAITING_DESIGNS: "/proofing/waiting-designs" as const,
     CREATE_PRINT_ORDER: "/proofing/create-print-order" as const,
     CREATE: "/proofing/create" as const,
   },

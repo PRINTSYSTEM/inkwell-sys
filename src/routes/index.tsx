@@ -44,9 +44,11 @@ const DesignTypes = lazy(() => import("@/pages/design-types/DesignTypeList"));
 
 // Proofing (prepress)
 const ProofingList = lazy(() => import("@/pages/prepress/PrepressList"));
-const ProofingCreate = lazy(() => import("@/pages/prepress/ProofingCreate"));
 const ProofingCreatePrintOrder = lazy(
   () => import("@/pages/prepress/CreatePrintOrder")
+);
+const WaitingDesignsPage = lazy(
+  () => import("@/pages/prepress/WaitingDesignsPage")
 );
 
 //die management
@@ -81,6 +83,7 @@ const StockOutCreate = lazy(() => import("@/pages/stock/StockOutCreate"));
 
 // Vendors
 const VendorList = lazy(() => import("@/pages/vendors/VendorList"));
+const VendorCreate = lazy(() => import("@/pages/vendors/VendorCreate"));
 
 const PaymentPage = lazy(() => import("@/pages/accounting/PaymentPage"));
 const InvoicePage = lazy(() => import("@/pages/accounting/InvoicePage"));
@@ -391,10 +394,10 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: lastSegment(ROUTE_PATHS.PROOFING.CREATE),
+            path: lastSegment(ROUTE_PATHS.PROOFING.WAITING_DESIGNS),
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
-                <ProofingCreate />
+                <WaitingDesignsPage />
               </Suspense>
             ),
           },
@@ -561,6 +564,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <VendorList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "create",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <VendorCreate />
               </Suspense>
             ),
           },

@@ -150,23 +150,14 @@ export const useAssignProductionWorker = () => {
       throw err;
     }
   };
-};
 
-export const useCompleteProduction = () => {
-  console.warn(
-    "useCompleteProduction is deprecated. Use useUpdateProductionStep to update step status instead."
-  );
-  // Return a no-op hook for backward compatibility
   return {
-    data: null,
-    isPending: false,
-    error: null,
-    mutate: async () => {
-      throw new Error(
-        "useCompleteProduction is deprecated. Please use useUpdateProductionStep instead."
-      );
-    },
-    reset: () => {},
+    data,
+    isPending: loading,
+    error,
+    mutate,
+    mutateAsync: mutate, // Alias for async/await usage
+    reset,
   };
 };
 

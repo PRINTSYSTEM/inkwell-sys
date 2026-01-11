@@ -105,10 +105,11 @@ export const API_SUFFIX = {
   // ========== CUSTOMERS ==========
   CUSTOMERS: "/customers",
   CUSTOMER_BY_ID: (id: number) => `/customers/${id}`,
-  CUSTOMER_CHECK_DUPLICATE_COMPANY: (name: string) =>
-    `/customers/check-duplicate-company?companyName=${encodeURIComponent(
-      name
-    )}`,
+  // DEPRECATED: Endpoint not found in OpenAPI schema
+  // CUSTOMER_CHECK_DUPLICATE_COMPANY: (name: string) =>
+  //   `/customers/check-duplicate-company?companyName=${encodeURIComponent(
+  //     name
+  //   )}`,
   CUSTOMER_DEBT_HISTORY: (id: number) => `/customers/${id}/debt-history`,
   CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
   CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
@@ -169,6 +170,7 @@ export const API_SUFFIX = {
   PROOFING_ADD_DESIGNS: (id: number) => `/proofing-orders/${id}/designs`,
   PROOFING_REMOVE_DESIGN: (id: number, designId: number) =>
     `/proofing-orders/${id}/designs/${designId}`,
+  PROOFING_REJECT_DESIGN: "/proofing-orders/designs/reject",
 
   // ========== VENDORS ==========
   VENDORS: "/vendors",
@@ -179,9 +181,11 @@ export const API_SUFFIX = {
   DIES: "/dies",
   DIE_BY_ID: (id: number) => `/dies/${id}`,
   DIE_IMAGE: (id: number) => `/dies/${id}/image`,
+  DIE_UPDATE_STATUS: (id: number) => `/dies/${id}/status`,
+  DIES_RELATED: "/dies/related",
   DIE_FROM_DIE_EXPORT: (dieExportId: number) =>
     `/dies/from-die-export/${dieExportId}`,
-  DIE_SEARCH: "/dies/search",
+  // DIE_SEARCH: "/dies/search", // Endpoint removed - use regular DIES endpoint with q parameter
   DIES_BY_PROOFING_ORDER: (proofingOrderId: number) =>
     `/dies/proofing-order/${proofingOrderId}`,
   DIE_ASSIGN_TO_PROOFING_ORDER: (proofingOrderId: number) =>
@@ -190,10 +194,10 @@ export const API_SUFFIX = {
     `/dies/proofing-order/${proofingOrderId}/die/${dieId}`,
   DIE_REPLACE: (proofingOrderId: number, currentDieId: number) =>
     `/dies/proofing-order/${proofingOrderId}/die/${currentDieId}`,
-  DIE_PROOFING_ORDER_DIE_RETURN: (proofingOrderDieId: number) =>
-    `/dies/proofing-order-die/${proofingOrderDieId}/return`,
-  DIE_PROOFING_ORDER_DIE_TAKE_OUT: (proofingOrderDieId: number) =>
-    `/dies/proofing-order-die/${proofingOrderDieId}/take-out`,
+  DIE_PROOFING_ORDER_DIE_RETURN: (dieExportId: number) =>
+    `/dies/die-export/${dieExportId}/return`,
+  DIE_PROOFING_ORDER_DIE_TAKE_OUT: (dieExportId: number) =>
+    `/dies/die-export/${dieExportId}/take-out`,
 
   // ========== STOCK ==========
   STOCK_INS: "/stock-ins",

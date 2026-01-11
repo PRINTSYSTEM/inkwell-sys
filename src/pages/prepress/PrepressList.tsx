@@ -28,6 +28,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Box,
 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import {
@@ -39,6 +40,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { proofingStatusLabels } from "@/lib/status-utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { DieListDialog } from "@/components/dies/DieListDialog";
 
 type ProofingOrder =
   import("@/Schema/proofing-order.schema").ProofingOrderResponse;
@@ -50,6 +52,7 @@ export default function ProofingOrdersPage() {
   const [debouncedDesignCode] = useDebounce(designCode, 300);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("");
+  const [isDieListDialogOpen, setIsDieListDialogOpen] = useState(false);
   const itemsPerPage = 30;
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -189,39 +192,50 @@ export default function ProofingOrdersPage() {
             Quản lý và theo dõi các mã bài
           </p>
         </div>
-        <Button
-          onClick={async () => {
-            try {
-              // Call API to create empty proofing order (no payload needed)
-              const result = await createProofingOrder({} as any);
-              if (result?.id) {
-                navigate(`/proofing/${result.id}`);
-              } else {
-                toast.error("Lỗi", {
-                  description: "Không thể lấy ID của mã bài",
-                });
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setIsDieListDialogOpen(true)}
+          >
+            <Box className="h-4 w-4" />
+            Danh sách khuôn bế
+          </Button>
+          <Button
+            onClick={async () => {
+              try {
+                // Call API to create empty proofing order (no payload needed)
+                const result = await createProofingOrder({} as any);
+                if (result?.id) {
+                  navigate(`/proofing/${result.id}`);
+                } else {
+                  toast.error("Lỗi", {
+                    description: "Không thể lấy ID của mã bài",
+                  });
+                }
+              } catch (error) {
+                // Error is already handled by the hook via toast
+                console.error("Failed to create proofing order:", error);
               }
-            } catch (error) {
-              // Error is already handled by the hook via toast
-              console.error("Failed to create proofing order:", error);
-            }
-          }}
-          size="sm"
-          className="gap-2"
-          disabled={isCreating}
-        >
-          {isCreating ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Đang tạo...
-            </>
-          ) : (
-            <>
-              <Plus className="h-4 w-4" />
-              Tạo lệnh mới
-            </>
-          )}
-        </Button>
+            }}
+            size="sm"
+            className="gap-2"
+            disabled={isCreating}
+          >
+            {isCreating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Đang tạo...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Tạo lệnh mới
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -541,6 +555,12 @@ export default function ProofingOrdersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Die List Dialog */}
+      <DieListDialog
+        open={isDieListDialogOpen}
+        onOpenChange={setIsDieListDialogOpen}
+      />
     </div>
   );
 }

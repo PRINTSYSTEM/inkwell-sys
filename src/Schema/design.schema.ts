@@ -23,6 +23,7 @@ import {
   UpdateDesignRequestSchema as GenUpdateDesignRequestSchema,
   postApidesignsIdtimeline_BodySchema as GenPostApidesignsIdtimelineBodySchema,
   RevertDesignRequestSchema as GenRevertDesignRequestSchema,
+  RejectDesignRequestSchema as GenRejectDesignRequestSchema,
 } from "./generated";
 
 // ===== DesignTimelineEntryResponse =====
@@ -133,4 +134,11 @@ export const RevertDesignRequestSchema =
   GenRevertDesignRequestSchema.passthrough();
 export type RevertDesignRequest = z.infer<
   typeof RevertDesignRequestSchema
+>;
+
+// ===== RejectDesignRequest =====
+export const RejectDesignRequestSchema =
+  GenRejectDesignRequestSchema.passthrough();
+export type RejectDesignRequest = z.infer<
+  typeof RejectDesignRequestSchema
 >;

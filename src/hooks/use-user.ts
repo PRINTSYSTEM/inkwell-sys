@@ -260,6 +260,8 @@ export const useDepartmentResetPassword = () => {
 // ====== KPI Hooks ======
 
 // GET /users/{id}/kpi
+// NOTE: Endpoint exists in OpenAPI (/api/users/:id/kpi)
+// but validation script cannot extract path from function body in API_SUFFIX
 export const useUserKpi = (
   userId: number | null,
   fromDate?: string,
@@ -280,6 +282,8 @@ export const useUserKpi = (
 };
 
 // GET /users/kpi/team
+// NOTE: Endpoint exists in OpenAPI (/api/users/kpi/team)
+// but validation script cannot extract path from function body in API_SUFFIX
 export const useTeamKpi = (
   fromDate?: string,
   toDate?: string,

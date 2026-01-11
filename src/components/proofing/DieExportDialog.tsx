@@ -42,6 +42,7 @@ import {
   Plus,
   Search,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRecordDieExportWithFile } from "@/hooks/use-proofing-order";
@@ -113,6 +114,7 @@ export function DieExportDialog({
   const [dieHeight, setDieHeight] = useState<number | undefined>(undefined);
   const [dieImage, setDieImage] = useState<File | null>(null);
   const [dieImagePreview, setDieImagePreview] = useState<string | null>(null);
+  const [isReusable, setIsReusable] = useState<boolean>(true);
 
   const queryClient = useQueryClient();
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
@@ -395,6 +397,7 @@ export function DieExportDialog({
       setDieHeight(undefined);
       setDieImage(null);
       setDieImagePreview(null);
+      setIsReusable(true);
     }
   }, [open]);
 
@@ -588,14 +591,7 @@ export function DieExportDialog({
     }
 
     if (dieAction === "create") {
-      if (!dieCode.trim()) {
-        toast.error("Vui lòng nhập mã khuôn bế");
-        return;
-      }
-      if (!dieType.trim()) {
-        toast.error("Vui lòng nhập loại khuôn bế");
-        return;
-      }
+      // No validation required - all fields are optional per schema
     }
 
     try {
@@ -633,19 +629,17 @@ export function DieExportDialog({
 
         // Create die first
         await new Promise<void>((resolve, reject) => {
+          const estimatedReceiveAt = receivedAtManual
+            ? convertLocalDateTimeToISO(receivedAtManual)
+            : undefined;
+
           createDie(
             {
-              name: dieName.trim() || undefined,
-              code: dieCode.trim(),
-              type: dieType.trim(),
-              size: dieSize.trim() || undefined,
               price: diePrice ?? undefined,
               vendorId: finalVendorId || undefined,
-              notes: notes.trim() || undefined,
+              estimatedReceiveAt: estimatedReceiveAt,
+              isReusable: isReusable,
               image: imageToUpload,
-              length: dieLength,
-              width: dieWidth,
-              height: dieHeight,
             },
             {
               onSuccess: (newDie) => {
@@ -1088,156 +1082,6 @@ export function DieExportDialog({
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
               {dieAction === "create" ? (
                 <>
-                  {/* Thông tin cơ bản */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b">
-                      <h4 className="text-sm font-semibold">
-                        Thông tin cơ bản
-                      </h4>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieCode">
-                          Mã khuôn bế{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="dieCode"
-                          placeholder="VD: KB-1234"
-                          value={dieCode}
-                          onChange={(e) => setDieCode(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieType">
-                          Loại khuôn bế{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="dieType"
-                          placeholder="VD: Khuôn bế hộp cứng"
-                          value={dieType}
-                          onChange={(e) => setDieType(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieName">Tên khuôn bế</Label>
-                        <Input
-                          id="dieName"
-                          placeholder="Tên gợi nhớ (tự động gợi ý từ mã bài)"
-                          value={dieName}
-                          onChange={(e) => setDieName(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Kích thước */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b">
-                      <h4 className="text-sm font-semibold">Kích thước</h4>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieLength" className="text-xs">
-                          Dài (mm)
-                        </Label>
-                        <Input
-                          id="dieLength"
-                          type="number"
-                          min={0}
-                          value={dieLength ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const next = value ? Number(value) : undefined;
-                            setDieLength(next);
-                            const length = next;
-                            const width = dieWidth;
-                            const height = dieHeight;
-                            if (length && height) {
-                              setDieSize(
-                                formatDimensions(length, width ?? 0, height)
-                              );
-                            }
-                          }}
-                          className="h-9 text-sm"
-                          placeholder="0"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieWidth" className="text-xs">
-                          Rộng (mm)
-                        </Label>
-                        <Input
-                          id="dieWidth"
-                          type="number"
-                          min={0}
-                          value={dieWidth ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const next = value ? Number(value) : undefined;
-                            setDieWidth(next);
-                            const length = dieLength;
-                            const width = next;
-                            const height = dieHeight;
-                            if (length && height) {
-                              setDieSize(
-                                formatDimensions(length, width ?? 0, height)
-                              );
-                            }
-                          }}
-                          className="h-9 text-sm"
-                          placeholder="0"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieHeight" className="text-xs">
-                          Cao (mm)
-                        </Label>
-                        <Input
-                          id="dieHeight"
-                          type="number"
-                          min={0}
-                          value={dieHeight ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const next = value ? Number(value) : undefined;
-                            setDieHeight(next);
-                            const length = dieLength;
-                            const width = dieWidth;
-                            const height = next;
-                            if (length && height) {
-                              setDieSize(
-                                formatDimensions(length, width ?? 0, height)
-                              );
-                            }
-                          }}
-                          className="h-9 text-sm"
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label
-                        htmlFor="dieSize"
-                        className="text-xs text-muted-foreground"
-                      >
-                        Kích thước tổng hợp
-                      </Label>
-                      <Input
-                        id="dieSize"
-                        placeholder="Tự động từ Dài × Rộng × Cao"
-                        value={dieSize}
-                        onChange={(e) => setDieSize(e.target.value)}
-                        className="h-9 text-sm font-mono bg-muted/50"
-                        readOnly
-                      />
-                    </div>
-                  </div>
-
                   {/* Vendor selection / creation */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 pb-1 border-b">
@@ -1563,7 +1407,32 @@ export function DieExportDialog({
                     </div>
                   </div>
 
-                  {/* Time & notes */}
+                  {/* Price */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 pb-1 border-b">
+                      <h4 className="text-sm font-semibold">Giá</h4>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="diePrice" className="text-xs">
+                        Giá khuôn bế
+                      </Label>
+                      <Input
+                        id="diePrice"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={diePrice ?? ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setDiePrice(value ? Number(value) : undefined);
+                        }}
+                        className="h-9 text-sm"
+                        placeholder="Nhập giá khuôn bế"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Estimated Receive At & Is Reusable */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 pb-1 border-b">
                       <h4 className="text-sm font-semibold">
@@ -1572,11 +1441,11 @@ export function DieExportDialog({
                     </div>
                     <div className="grid grid-cols-1 gap-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor="receivedAt" className="text-xs">
-                          Thời gian có khuôn
+                        <Label htmlFor="estimatedReceiveAt" className="text-xs">
+                          Dự kiến nhận khuôn
                         </Label>
                         <Input
-                          id="receivedAt"
+                          id="estimatedReceiveAt"
                           type="datetime-local"
                           value={receivedAtManual}
                           onChange={(e) => setReceivedAtManual(e.target.value)}
@@ -1595,17 +1464,19 @@ export function DieExportDialog({
                           </p>
                         )}
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="notes" className="text-xs">
-                          Ghi chú
-                        </Label>
-                        <Textarea
-                          id="notes"
-                          placeholder="Nhập ghi chú về khuôn bế, yêu cầu gia công..."
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                          rows={3}
-                          className="min-h-[80px] text-sm"
+                      <div className="flex items-center justify-between gap-3 py-2 rounded-md border bg-muted/30 px-3">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="isReusable" className="text-xs font-medium">
+                            Khuôn tái sử dụng
+                          </Label>
+                          <p className="text-[11px] text-muted-foreground">
+                            Khuôn này có thể tái sử dụng cho các đơn hàng khác
+                          </p>
+                        </div>
+                        <Switch
+                          id="isReusable"
+                          checked={isReusable}
+                          onCheckedChange={setIsReusable}
                         />
                       </div>
                     </div>
@@ -1638,8 +1509,6 @@ export function DieExportDialog({
                     dieFiles.length === 0 &&
                     !existingImageUrl) ||
                   (dieAction === "create" && !vendorId && !vendorName.trim()) ||
-                  (dieAction === "create" &&
-                    (!dieCode.trim() || !dieType.trim())) ||
                   (dieAction === "select" &&
                     (selectedDieIds.length === 0 ||
                       selectedDieIds.length !== dieCount))
