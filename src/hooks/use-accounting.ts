@@ -174,6 +174,8 @@ export const useConfirmPayment = () => {
 
 // ===== POST /accountings/order/{orderId}/confirm-deposit =====
 // Xác nhận cọc
+// NOTE: Endpoint exists in OpenAPI (/api/accountings/order/:orderId/confirm-deposit)
+// but validation script cannot extract path from function body in API_SUFFIX
 
 export const useConfirmDeposit = () => {
   const queryClient = useQueryClient();

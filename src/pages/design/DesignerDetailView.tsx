@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Target,
   DollarSign,
+  RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 
@@ -72,6 +73,7 @@ const DESIGN_STATUS_ICONS: Record<DesignStatusKey, LucideIcon> = {
   editing: Edit3,
   waiting_for_customer_approval: AlertCircle,
   confirmed_for_printing: CheckCircle2,
+  returned: RotateCcw,
 };
 
 export default function DesignerDetailPage() {

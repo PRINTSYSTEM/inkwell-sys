@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   useCreateCustomer,
   useFormValidation,
-  useCheckDuplicateCompany,
+  // useCheckDuplicateCompany, // DEPRECATED: Endpoint not found in OpenAPI
 } from "@/hooks";
 import { CreateCustomerRequest, CreateCustomerRequestSchema } from "@/Schema";
 import { FormFieldError } from "@/components/ui/form-field-error";
@@ -43,8 +43,9 @@ export default function CreateCustomer() {
 
   const [generatedCode, setGeneratedCode] = useState("");
   const [duplicateCompany, setDuplicateCompany] = useState<string | null>(null);
-  const { check: checkDuplicate, loading: checkingDuplicate } =
-    useCheckDuplicateCompany();
+  // DEPRECATED: Endpoint not found in OpenAPI
+  // const { check: checkDuplicate, loading: checkingDuplicate } =
+  //   useCheckDuplicateCompany();
   const {
     mutateAsync: createCustomer,
     isPending,
@@ -89,18 +90,19 @@ export default function CreateCustomer() {
   const handleBlur = async (field: keyof CreateCustomerRequest) => {
     touchField(field as string);
 
-    if (field === "companyName" && form.companyName?.trim()) {
-      try {
-        const isDuplicate = await checkDuplicate(form.companyName.trim());
-        if (isDuplicate) {
-          setDuplicateCompany(form.companyName.trim());
-        } else {
-          setDuplicateCompany(null);
-        }
-      } catch (err) {
-        console.error("Error checking duplicate company:", err);
-      }
-    }
+    // DEPRECATED: Endpoint not found in OpenAPI
+    // if (field === "companyName" && form.companyName?.trim()) {
+    //   try {
+    //     const isDuplicate = await checkDuplicate(form.companyName.trim());
+    //     if (isDuplicate) {
+    //       setDuplicateCompany(form.companyName.trim());
+    //     } else {
+    //       setDuplicateCompany(null);
+    //     }
+    //   } catch (err) {
+    //     console.error("Error checking duplicate company:", err);
+    //   }
+    // }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -274,21 +276,25 @@ export default function CreateCustomer() {
                       }
                       onBlur={() => handleBlur("companyName")}
                       className={
-                        duplicateCompany === form.companyName?.trim() &&
-                        duplicateCompany !== null
-                          ? "border-amber-500 bg-amber-50/50"
-                          : getError("companyName")
+                        // DEPRECATED: duplicateCompany check removed
+                        // duplicateCompany === form.companyName?.trim() &&
+                        // duplicateCompany !== null
+                        //   ? "border-amber-500 bg-amber-50/50"
+                        //   : 
+                        getError("companyName")
                           ? "border-destructive"
                           : ""
                       }
                     />
-                    {checkingDuplicate && (
+                    {/* DEPRECATED: Endpoint not found in OpenAPI */}
+                  {/* {checkingDuplicate && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                       </div>
-                    )}
+                    )} */}
                   </div>
-                  {duplicateCompany === form.companyName?.trim() &&
+                  {/* DEPRECATED: Endpoint not found in OpenAPI */}
+                  {/* {duplicateCompany === form.companyName?.trim() &&
                     duplicateCompany !== null && (
                       <div className="flex items-center gap-2 text-amber-600 text-xs mt-1 animate-in fade-in slide-in-from-top-1">
                         <AlertCircle className="h-3.5 w-3.5" />
@@ -296,7 +302,7 @@ export default function CreateCustomer() {
                           Tên công ty "{duplicateCompany}" đã có trong hệ thống!
                         </span>
                       </div>
-                    )}
+                    )} */}
                   <FormFieldError error={getError("companyName")} />
                 </div>
 

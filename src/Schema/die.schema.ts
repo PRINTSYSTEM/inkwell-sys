@@ -9,6 +9,7 @@ import {
   UpdateDieRequestSchema as GenUpdateDieRequestSchema,
   AssignDieToProofingOrderRequestSchema as GenAssignDieToProofingOrderRequestSchema,
   ReplaceDieRequestSchema as GenReplaceDieRequestSchema,
+  UpdateDieStatusRequestSchema as GenUpdateDieStatusRequestSchema,
 } from "./generated";
 
 // ===== DieResponse =====
@@ -41,5 +42,12 @@ export type AssignDieToProofingOrderRequest = z.infer<
 // ===== ReplaceDieRequest =====
 export const ReplaceDieRequestSchema = GenReplaceDieRequestSchema.passthrough();
 export type ReplaceDieRequest = z.infer<typeof ReplaceDieRequestSchema>;
+
+// ===== UpdateDieStatusRequest =====
+export const UpdateDieStatusRequestSchema =
+  GenUpdateDieStatusRequestSchema.passthrough();
+export type UpdateDieStatusRequest = z.infer<
+  typeof UpdateDieStatusRequestSchema
+>;
 
 

@@ -220,9 +220,13 @@ export type CustomerOrdersParams = z.infer<typeof CustomerOrdersParamsSchema>;
 // ==== Die list params (/api/dies) ====
 
 export const DieListParamsSchema = PagedParamsSchema.extend({
-  dieName: z.string().nullable().optional(),
+  q: z.string().nullable().optional(), // General search (replaces dieName)
   isUsable: z.boolean().nullable().optional(),
   location: z.string().nullable().optional(),
+  designId: z.number().int().nullable().optional(),
+  designTypeId: z.number().int().nullable().optional(),
+  // Legacy support - dieName will be mapped to q
+  dieName: z.string().nullable().optional(),
 });
 
 export type DieListParams = z.infer<typeof DieListParamsSchema>;

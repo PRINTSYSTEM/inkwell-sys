@@ -274,12 +274,12 @@ export const DesignModal: React.FC<DesignModalProps> = ({
 
   // Determine which classifications to show and auto-set values based on rules:
   // - Hộp: Bế, 1 mặt, Cán bóng hoặc cán mờ
-  // - Nhãn giấy: Cắt, 1 mặt, Cán bóng hoặc cán mờ
-  // - Thẻ treo (nhãn giấy đặc biệt): Cắt, 1 hoặc 2 mặt (cho phép chọn), Cán bóng hoặc cán mờ
-  // - Decal: Bế, 1 mặt, Cán bóng hoặc cán mờ
+  // - Nhãn giấy: Cắt, 1 mặt, Cán bóng, cán mờ, hoặc không cán
+  // - Thẻ treo (nhãn giấy đặc biệt): Cắt, 1 hoặc 2 mặt (cho phép chọn), Cán bóng, cán mờ, hoặc không cán
+  // - Decal: Bế, 1 mặt, Cán bóng, cán mờ, hoặc không cán
   // - Túi: Cắt, 2 mặt, Cán bóng hoặc cán mờ
   // - Túi xếp hông (túi đặc biệt): Bế, 2 mặt, Cán bóng hoặc cán mờ
-  // - Decal cuộn: 1 mặt, Cán bóng hoặc cán mờ (không có process)
+  // - Decal cuộn: 1 mặt, Cán bóng, cán mờ, hoặc không cán (không có process)
   // - Túi cuộn: 2 mặt, Cán bóng hoặc cán mờ (không có process)
 
   // Determine which classifications to show
@@ -391,8 +391,13 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         );
       case 2:
         // Step 2: Các option nâng cao - Cán màn bắt buộc, classification nếu có thì phải chọn
-        // Bắt buộc chọn cán màn - chỉ cho phép Cán bóng (glossy) hoặc Cán mờ (matte)
-        const validLaminationTypes = ["glossy", "matte"]; // Chỉ cho phép Cán bóng hoặc Cán mờ
+        // Bắt buộc chọn cán màn:
+        // - Nhãn giấy và Decal: cho phép Cán bóng (glossy), Cán mờ (matte), hoặc Không cán (none)
+        // - Các loại khác: chỉ cho phép Cán bóng (glossy) hoặc Cán mờ (matte)
+        const validLaminationTypes =
+          isNhan || isDecal
+            ? ["glossy", "matte", "none"] // Nhãn giấy và Decal có thể chọn "không cán"
+            : ["glossy", "matte"]; // Các loại khác chỉ cho phép cán bóng hoặc cán mờ
         if (
           !formData.laminationType ||
           !validLaminationTypes.includes(formData.laminationType)
@@ -739,7 +744,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                 {/* Tooltip cho Mép dán - chỉ hiển thị khi là nhãn giấy */}
                 {isNhan && (
                   <p className="text-xs text-muted-foreground">
-                    <span className="font-medium">Mép dán:</span> Khoảng cách từ mép đến vị trí dán keo (nếu có)
+                    <span className="font-medium">Mép dán:</span> Khoảng cách từ
+                    mép đến vị trí dán keo (nếu có)
                   </p>
                 )}
               </div>
@@ -914,14 +920,25 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     </div>
                   )}
 
-                  {/* Cán màn - Bắt buộc - chỉ cho phép Cán bóng hoặc Cán mờ - chung hàng với 2 tùy chọn kia */}
+                  {/* Cán màn - Bắt buộc - chung hàng với 2 tùy chọn kia */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">
                       Cán màn <span className="text-destructive">*</span>
                     </Label>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(ENTITY_CONFIG.laminationTypes.values)
-                        .filter(([key]) => key === "glossy" || key === "matte") // Chỉ hiển thị Cán bóng và Cán mờ
+                        .filter(([key]) => {
+                          // Nhãn giấy và Decal: hiển thị Cán bóng, Cán mờ, và Không cán
+                          if (isNhan || isDecal) {
+                            return (
+                              key === "glossy" ||
+                              key === "matte" ||
+                              key === "none"
+                            );
+                          }
+                          // Các loại khác: chỉ hiển thị Cán bóng và Cán mờ
+                          return key === "glossy" || key === "matte";
+                        })
                         .map(([key, label]) => {
                           const isSelected = formData.laminationType === key;
                           return (

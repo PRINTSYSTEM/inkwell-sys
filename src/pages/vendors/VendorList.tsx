@@ -83,8 +83,11 @@ export default function VendorListPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="plate">Nhà cung cấp kẽm</SelectItem>
-                <SelectItem value="die">Nhà cung cấp khuôn bế</SelectItem>
+                {Object.entries(vendorTypeLabels).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -574,12 +574,16 @@ export default function OrderCreatePage() {
                           role="combobox"
                           className="w-full justify-between bg-background h-10 px-3 text-sm"
                         >
-                          {selectedCustomer
-                            ? `${selectedCustomer.name ?? ""} - ${selectedCustomer.code ?? ""}` +
-                              (selectedCustomer.companyName
-                                ? ` - ${selectedCustomer.companyName}`
-                                : "")
-                            : "Tìm và chọn khách hàng..."}
+                          <span className="truncate text-left">
+                            {selectedCustomer
+                              ? `${selectedCustomer.name ?? ""} - ${
+                                  selectedCustomer.code ?? ""
+                                }` +
+                                (selectedCustomer.companyName
+                                  ? ` - ${selectedCustomer.companyName}`
+                                  : "")
+                              : "Tìm và chọn khách hàng..."}
+                          </span>
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -612,14 +616,14 @@ export default function OrderCreatePage() {
                                   disabled={loadingCustomers}
                                 >
                                   <Check
-                                    className={`mr-2 h-4 w-4 ${
+                                    className={`mr-2 h-4 w-4 shrink-0 ${
                                       selectedCustomer?.id === customer.id
                                         ? "opacity-100"
                                         : "opacity-0"
                                     }`}
                                   />
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="font-medium">
+                                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                    <span className="font-medium truncate">
                                       {customer.name || ""} -{" "}
                                       {customer.code || ""}
                                       {customer.companyName
@@ -627,7 +631,7 @@ export default function OrderCreatePage() {
                                         : ""}
                                     </span>
                                     {customer.phone && (
-                                      <span className="text-xs text-muted-foreground">
+                                      <span className="text-xs text-muted-foreground truncate">
                                         {customer.phone}
                                       </span>
                                     )}

@@ -148,13 +148,13 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.PROOFING.ROOT,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
       },
-      // {
-      //   id: "proofing-create-print-order",
-      //   title: "Tạo mã bài",
-      //   icon: Layers,
-      //   path: ROUTE_PATHS.PROOFING.CREATE,
-      //   allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      // },
+      {
+        id: "proofing-waiting-designs",
+        title: "Thiết kế chờ bình bài",
+        icon: Layers,
+        path: ROUTE_PATHS.PROOFING.WAITING_DESIGNS,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
       {
         id: "dies-management",
         title: "Quản lý khuôn bế",

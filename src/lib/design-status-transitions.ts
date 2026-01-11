@@ -5,22 +5,18 @@
  * received_info → designing → waiting_for_customer_approval → editing/confirmed_for_printing
  *                                                             ↓
  *                                                    confirmed_for_printing (FINAL)
+ * returned → editing (can only go to editing status)
  */
+
+import { designStatusLabels } from "./status-utils";
 
 export type DesignStatus =
   | "received_info"
   | "designing"
   | "editing"
   | "waiting_for_customer_approval"
-  | "confirmed_for_printing";
-
-export const designStatusLabels: Record<DesignStatus, string> = {
-  received_info: "Nhận thông tin",
-  designing: "Đang thiết kế",
-  editing: "Đang chỉnh sửa",
-  waiting_for_customer_approval: "Chờ khách duyệt",
-  confirmed_for_printing: "Đã chốt in",
-};
+  | "confirmed_for_printing"
+  | "returned";
 
 /**
  * Defines valid next statuses for each current status
@@ -31,6 +27,7 @@ const statusTransitions: Record<DesignStatus, DesignStatus[]> = {
   waiting_for_customer_approval: ["editing", "confirmed_for_printing"],
   editing: ["waiting_for_customer_approval"],
   confirmed_for_printing: [], // Final status - no transitions allowed
+  returned: ["editing"], // Returned designs can only go to editing
 };
 
 /**
@@ -65,8 +62,8 @@ export function getTransitionErrorMessage(
   currentStatus: DesignStatus,
   attemptedStatus: DesignStatus
 ): string {
-  const currentLabel = designStatusLabels[currentStatus];
-  const attemptedLabel = designStatusLabels[attemptedStatus];
+  const currentLabel = designStatusLabels[currentStatus] || currentStatus;
+  const attemptedLabel = designStatusLabels[attemptedStatus] || attemptedStatus;
 
   // Special case for final status
   if (currentStatus === "confirmed_for_printing") {
@@ -80,7 +77,7 @@ export function getTransitionErrorMessage(
   }
 
   const validLabels = validNextStatuses
-    .map((status) => `"${designStatusLabels[status]}"`)
+    .map((status) => `"${designStatusLabels[status] || status}"`)
     .join(" hoặc ");
 
   return `Không thể chuyển từ "${currentLabel}" sang "${attemptedLabel}". Chỉ có thể chuyển sang ${validLabels}.`;
