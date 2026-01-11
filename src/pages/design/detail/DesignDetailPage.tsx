@@ -37,7 +37,6 @@ import {
   useUploadDesignImage,
   useAddDesignTimelineEntry,
   useUpdateDesign,
-  useRevertDesign,
 } from "@/hooks/use-design";
 import { useMaterialsByDesignType } from "@/hooks/use-material-type";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/error-components";
@@ -76,7 +75,6 @@ import {
 
 import {
   type DesignStatus,
-  designStatusLabels,
   getValidNextStatuses,
   isValidStatusTransition,
   getTransitionErrorMessage,
@@ -103,6 +101,7 @@ import {
   processClassificationLabels,
   laminationTypeLabels,
   designStatusConfig,
+  designStatusLabels,
 } from "@/lib/status-utils";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
@@ -249,8 +248,6 @@ export default function DesignDetailPage() {
   } | null>(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showTimelineDialog, setShowTimelineDialog] = useState(false);
-  const [showRevertDialog, setShowRevertDialog] = useState(false);
-  const [revertReason, setRevertReason] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState({
     designName: "",
@@ -279,7 +276,6 @@ export default function DesignDetailPage() {
   const { mutate: uploadFile } = useUploadDesignFile();
   const { mutate: uploadImage } = useUploadDesignImage();
   const { mutate: addTimeline } = useAddDesignTimelineEntry();
-  const { mutate: revertDesign, loading: revertingDesign } = useRevertDesign();
 
   const { data: materialsByDesignType = [], isLoading: materialsLoading } =
     useMaterialsByDesignType(
@@ -335,13 +331,6 @@ export default function DesignDetailPage() {
       currentStatus === "confirmed_for_printing");
 
   const canTransitionTo = (targetStatus: DesignStatus): boolean => {
-    // Allow revert from confirmed_for_printing to waiting_for_customer_approval
-    if (
-      currentStatus === "confirmed_for_printing" &&
-      targetStatus === "waiting_for_customer_approval"
-    ) {
-      return true;
-    }
     if (
       currentStatus === "designing" &&
       targetStatus === "waiting_for_customer_approval"
@@ -395,15 +384,6 @@ export default function DesignDetailPage() {
   const handleStatusTransition = async (targetStatus: DesignStatus) => {
     if (!targetStatus || !design) return;
 
-    // Handle revert from confirmed_for_printing to waiting_for_customer_approval
-    if (
-      currentStatus === "confirmed_for_printing" &&
-      targetStatus === "waiting_for_customer_approval"
-    ) {
-      setShowRevertDialog(true);
-      return;
-    }
-
     if (!isValidStatusTransition(currentStatus, targetStatus)) {
       const errorMessage = getTransitionErrorMessage(
         currentStatus,
@@ -448,27 +428,6 @@ export default function DesignDetailPage() {
       });
     } finally {
       setUpdatingStatus(false);
-    }
-  };
-
-  const handleRevertConfirm = async () => {
-    if (!revertReason.trim()) {
-      toast.error("Lỗi", {
-        description: "Vui lòng nhập lý do hoàn nguyên",
-      });
-      return;
-    }
-
-    try {
-      await revertDesign({
-        id: designId,
-        reason: revertReason.trim(),
-      });
-      setShowRevertDialog(false);
-      setRevertReason("");
-      refetchDesign();
-    } catch {
-      // Error handled in hook
     }
   };
 
@@ -896,20 +855,15 @@ export default function DesignDetailPage() {
                         </div>
                       )}
 
-                      <div className="grid grid-cols-5 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         {(
-                          Object.keys(designStatusLabels) as DesignStatus[]
+                          Object.keys(designStatusConfig) as DesignStatus[]
                         ).map((status) => {
                           const isCurrentStatus = status === currentStatus;
                           const isValidNext =
                             validNextStatuses.includes(status);
-                          // Allow revert from confirmed_for_printing to waiting_for_customer_approval
-                          const isRevertAllowed =
-                            currentStatus === "confirmed_for_printing" &&
-                            status === "waiting_for_customer_approval";
                           const isEnabled =
-                            (isValidNext && canTransitionTo(status)) ||
-                            isRevertAllowed;
+                            isValidNext && canTransitionTo(status);
                           const statusConfig = designStatusConfig[status];
 
                           return (
@@ -919,17 +873,14 @@ export default function DesignDetailPage() {
                               variant="outline"
                               onClick={() => handleStatusTransition(status)}
                               disabled={
-                                isCurrentStatus ||
-                                updatingStatus ||
-                                revertingDesign ||
-                                !isEnabled
+                                isCurrentStatus || updatingStatus || !isEnabled
                               }
-                              className={`h-11 px-3 rounded-lg text-sm font-medium transition-all border ${
+                              className={`h-11 px-3 rounded-lg text-sm font-medium transition-all ${
                                 isCurrentStatus
-                                  ? `cursor-not-allowed border-2 ${statusConfig.color} font-bold`
+                                  ? `cursor-not-allowed ${statusConfig.color} font-bold`
                                   : isEnabled
                                     ? `${statusConfig.color} hover:opacity-90 cursor-pointer shadow-sm`
-                                    : "opacity-40 cursor-not-allowed border-gray-300 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600"
+                                    : "opacity-40 cursor-not-allowed border-2 border-gray-300 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600"
                               }`}
                             >
                               {designStatusLabels[status]}
@@ -1865,53 +1816,6 @@ export default function DesignDetailPage() {
           onOpenChange={setShowTimelineDialog}
           onAdd={handleTimelineAdd}
         />
-
-        {/* Revert Dialog */}
-        <Dialog open={showRevertDialog} onOpenChange={setShowRevertDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Hoàn nguyên thiết kế</DialogTitle>
-              <DialogDescription>
-                Bạn có chắc chắn muốn hoàn nguyên thiết kế từ trạng thái
-                &quot;Đã chốt in&quot; về trạng thái &quot;Chờ khách
-                duyệt&quot;? Vui lòng nhập lý do.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="revert-reason">
-                  Lý do hoàn nguyên <span className="text-red-500">*</span>
-                </Label>
-                <Textarea
-                  id="revert-reason"
-                  placeholder="Nhập lý do hoàn nguyên thiết kế..."
-                  value={revertReason}
-                  onChange={(e) => setRevertReason(e.target.value)}
-                  className="min-h-[100px]"
-                  rows={4}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowRevertDialog(false);
-                  setRevertReason("");
-                }}
-                disabled={revertingDesign}
-              >
-                Hủy
-              </Button>
-              <Button
-                onClick={handleRevertConfirm}
-                disabled={revertingDesign || !revertReason.trim()}
-              >
-                {revertingDesign ? "Đang xử lý..." : "Xác nhận"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </ErrorBoundary>
   );

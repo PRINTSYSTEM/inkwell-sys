@@ -55,6 +55,18 @@ export function AddDesignToProofingDialog({
     Record<number, number>
   >({});
 
+  // Helper functions to check design type
+  const isNhanDesignType = (designTypeName: string): boolean => {
+    return (
+      designTypeName.toLowerCase().includes("nhãn") ||
+      designTypeName.toLowerCase().includes("nhan")
+    );
+  };
+
+  const isDecalDesignType = (designTypeName: string): boolean => {
+    return designTypeName.toLowerCase().includes("decal");
+  };
+
   // Filter designs to only show those with same specifications as current design
   const filteredDesigns = useMemo(() => {
     if (!currentDesign) {
@@ -62,12 +74,25 @@ export function AddDesignToProofingDialog({
       return availableDesigns;
     }
 
+    const isCurrentDesignNhanOrDecal =
+      isNhanDesignType(currentDesign.designTypeName || "") ||
+      isDecalDesignType(currentDesign.designTypeName || "");
+
     // Filter designs that have the same materialTypeId and designTypeId as current design
-    return availableDesigns.filter(
-      (design) =>
+    // EXCEPTION: Nếu current design là nhãn giấy hoặc decal, không bắt buộc phải có laminationType giống nhau
+    return availableDesigns.filter((design) => {
+      const hasSameMaterialAndDesignType =
         design.materialTypeId === currentDesign.materialTypeId &&
-        design.designTypeId === currentDesign.designTypeId
-    );
+        design.designTypeId === currentDesign.designTypeId;
+
+      if (!hasSameMaterialAndDesignType) return false;
+
+      // Nếu current design là nhãn giấy hoặc decal, chỉ cần cùng materialTypeId và designTypeId
+      if (isCurrentDesignNhanOrDecal) return true;
+
+      // Các loại khác: phải có cùng laminationType
+      return design.laminationType === currentDesign.laminationType;
+    });
   }, [availableDesigns, currentDesign]);
 
   // Set default quantities when modal opens

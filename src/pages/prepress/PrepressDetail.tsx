@@ -620,6 +620,28 @@ export default function ProofingOrderDetailPage() {
     }));
   }, [designTypesData, availableDesignsData?.designs]);
 
+  // Helper functions to check design type
+  const isNhanDesignType = (designTypeName: string): boolean => {
+    return (
+      designTypeName.toLowerCase().includes("nhãn") ||
+      designTypeName.toLowerCase().includes("nhan")
+    );
+  };
+
+  const isDecalDesignType = (designTypeName: string): boolean => {
+    return designTypeName.toLowerCase().includes("decal");
+  };
+
+  // Check if all selected designs are nhãn giấy or decal (these can have different laminationType)
+  const areAllSelectedDesignsNhanOrDecal = useMemo(() => {
+    if (selectedDesigns.length === 0) return false;
+    return selectedDesigns.every(
+      (design) =>
+        isNhanDesignType(design.designTypeName || "") ||
+        isDecalDesignType(design.designTypeName || "")
+    );
+  }, [selectedDesigns]);
+
   // Get laminationType from selected designs (if any)
   const selectedLaminationType = useMemo(() => {
     if (selectedDesigns.length === 0) return null;
@@ -648,7 +670,13 @@ export default function ProofingOrderDetailPage() {
     }
 
     // Filter by laminationType (when designs are selected)
-    if (selectedLaminationType !== null && selectedDesigns.length > 0) {
+    // EXCEPTION: Nhãn giấy và Decal không bắt buộc phải có laminationType giống nhau
+    // Chỉ áp dụng filter laminationType nếu KHÔNG phải tất cả selected designs đều là nhãn giấy hoặc decal
+    if (
+      selectedLaminationType !== null &&
+      selectedDesigns.length > 0 &&
+      !areAllSelectedDesignsNhanOrDecal
+    ) {
       result = result.filter((d) => {
         // Match designs with same laminationType (including both null/undefined)
         if (
@@ -675,6 +703,7 @@ export default function ProofingOrderDetailPage() {
     currentMaterialTypeId,
     selectedLaminationType,
     selectedDesigns.length,
+    areAllSelectedDesignsNhanOrDecal,
     debouncedSearch,
   ]);
 
@@ -2432,7 +2461,7 @@ export default function ProofingOrderDetailPage() {
                       </div>
                       <div className="space-y-0.5">
                         <Label className="text-muted-foreground text-[10px] font-normal">
-                          Tổng số lượng
+                          Số giấy in
                         </Label>
                         <p className="font-semibold text-sm">
                           {(order.totalQuantity ?? 0).toLocaleString()}
@@ -2769,7 +2798,7 @@ export default function ProofingOrderDetailPage() {
                             {/* Total Quantity */}
                             <div className="space-y-2">
                               <Label htmlFor="update-total-quantity">
-                                Tổng số lượng
+                                Số giấy in
                               </Label>
                               <Input
                                 id="update-total-quantity"
@@ -2779,7 +2808,7 @@ export default function ProofingOrderDetailPage() {
                                 onChange={(e) =>
                                   setUpdateTotalQuantity(e.target.value)
                                 }
-                                placeholder="Nhập tổng số lượng..."
+                                placeholder="Nhập số giấy in..."
                               />
                             </div>
 
@@ -3283,7 +3312,7 @@ export default function ProofingOrderDetailPage() {
                           {/* Tổng số lượng */}
                           <div className="space-y-2">
                             <Label htmlFor="update-total-quantity">
-                              Tổng số lượng
+                              Số giấy in
                             </Label>
                             <Input
                               id="update-total-quantity"
@@ -3293,7 +3322,7 @@ export default function ProofingOrderDetailPage() {
                               onChange={(e) =>
                                 setUpdateTotalQuantity(e.target.value)
                               }
-                              placeholder="Nhập tổng số lượng..."
+                              placeholder="Nhập số giấy in..."
                             />
                           </div>
 
@@ -3446,7 +3475,7 @@ export default function ProofingOrderDetailPage() {
                     </div>
                     <div className="space-y-0.5">
                       <Label className="text-muted-foreground text-[10px] font-normal">
-                        Tổng số lượng
+                        Số giấy in
                       </Label>
                       <p className="font-semibold text-sm">
                         {(order.totalQuantity ?? 0).toLocaleString()}

@@ -562,7 +562,10 @@ async function main() {
     // Step 3: Extract Endpoints Snapshot
     const endpointsSnapshot = await extractEndpointsSnapshot(openApiContent);
 
-    // Step 4: Copy snapshot to previous (local dev only)
+    // Step 4: Diff Endpoints (MUST do this BEFORE copying snapshot to prev)
+    const changes = await diffEndpoints(endpointsSnapshot, schemaChanges);
+
+    // Step 5: Copy snapshot to previous (local dev only) - AFTER diff is done
     if (!process.env.CI) {
       try {
         await copyFile(SNAPSHOT_FILE, PREV_SNAPSHOT_FILE);
@@ -573,9 +576,6 @@ async function main() {
         }
       }
     }
-
-    // Step 5: Diff Endpoints
-    const changes = await diffEndpoints(endpointsSnapshot, schemaChanges);
 
     // Step 6: Run CI Guard (if requested)
     if (runGuard && !skipGuard) {

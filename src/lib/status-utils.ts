@@ -22,9 +22,13 @@ export const orderStatusDescription: Record<string, string> = {
   waiting_for_production: "Chờ tạo lệnh sản xuất.",
   in_production: "Đơn đang được xử lý tại xưởng.",
   production_completed: "Sản xuất xong, chờ giao hàng / tất toán.",
-  invoice_issued: "Đã xuất hóa đơn cho đơn hàng.",
+  waiting_for_delivery: "Sản phẩm đã sẵn sàng, chờ giao hàng.",
+  waiting_for_redelivery: "Chờ giao lại hàng sau lần giao trước.",
   delivering: "Đang giao hàng cho khách.",
+  delivered: "Đã giao hàng thành công cho khách.",
+  invoice_issued: "Đã xuất hóa đơn cho đơn hàng.",
   completed: "Đơn hàng đã hoàn tất.",
+  return_processing: "Đang xử lý trả/đổi hàng từ khách.",
   cancelled: "Đơn hàng bị hủy.",
 };
 
@@ -245,28 +249,33 @@ export const designStatusConfig: Record<
 > = {
   received_info: {
     label: ENTITY_CONFIG.designStatuses.values.received_info,
-    color: "bg-slate-100 text-slate-700 border-slate-300",
+    color: "bg-slate-200 text-slate-900 border-slate-400 border-2",
     bgColor: "bg-slate-50",
   },
   designing: {
     label: ENTITY_CONFIG.designStatuses.values.designing,
-    color: "bg-blue-100 text-blue-700 border-blue-300",
+    color: "bg-blue-200 text-blue-900 border-blue-400 border-2",
     bgColor: "bg-blue-50",
   },
   editing: {
     label: ENTITY_CONFIG.designStatuses.values.editing,
-    color: "bg-amber-100 text-amber-700 border-amber-300",
+    color: "bg-amber-200 text-amber-900 border-amber-400 border-2",
     bgColor: "bg-amber-50",
   },
   waiting_for_customer_approval: {
     label: ENTITY_CONFIG.designStatuses.values.waiting_for_customer_approval,
-    color: "bg-orange-100 text-orange-700 border-orange-300",
+    color: "bg-orange-200 text-orange-900 border-orange-400 border-2",
     bgColor: "bg-orange-50",
   },
   confirmed_for_printing: {
     label: ENTITY_CONFIG.designStatuses.values.confirmed_for_printing,
-    color: "bg-green-100 text-green-700 border-green-300",
+    color: "bg-green-200 text-green-900 border-green-400 border-2",
     bgColor: "bg-green-50",
+  },
+  returned: {
+    label: ENTITY_CONFIG.designStatuses.values.returned,
+    color: "bg-red-200 text-red-900 border-red-400 border-2",
+    bgColor: "bg-red-50",
   },
 };
 
@@ -282,6 +291,8 @@ export function getStatusVariant(
     "waiting_for_customer_approval",
     "waiting_for_proofing",
     "waiting_for_production",
+    "waiting_for_delivery",
+    "waiting_for_redelivery",
     "waiting_for_file",
     "waiting_for_deposit",
     "not_paid",
@@ -306,6 +317,7 @@ export function getStatusVariant(
     "in_production",
     "deposit_received",
     "delivering",
+    "return_processing",
     "confirmed",
     "ready_to_ship",
     "handed_over",
@@ -343,9 +355,13 @@ export const statusColorMap: Record<string, string> = {
   waiting_for_production: "bg-indigo-50 text-indigo-700 border-indigo-200",
   in_production: "bg-cyan-50 text-cyan-700 border-cyan-200",
   production_completed: "bg-green-50 text-green-700 border-green-200",
-  invoice_issued: "bg-teal-50 text-teal-700 border-teal-200",
+  waiting_for_delivery: "bg-amber-50 text-amber-700 border-amber-200",
+  waiting_for_redelivery: "bg-orange-50 text-orange-700 border-orange-200",
   delivering: "bg-blue-50 text-blue-700 border-blue-200",
+  delivered: "bg-green-100 text-green-800 border-green-200",
+  invoice_issued: "bg-teal-50 text-teal-700 border-teal-200",
   completed: "bg-green-100 text-green-800 border-green-200",
+  return_processing: "bg-purple-50 text-purple-700 border-purple-200",
   cancelled: "bg-red-50 text-red-700 border-red-200",
 
   // ===== DESIGN STATUSES (dùng chung với Order) =====
@@ -410,7 +426,7 @@ export const statusColorMap: Record<string, string> = {
 
   // ===== DELIVERY LINE STATUSES =====
   // pending đã được định nghĩa ở ORDER STATUSES ở trên
-  // delivered: sử dụng màu xanh lá cho thành công (tương tự completed)
+  // delivered đã được định nghĩa ở ORDER STATUSES ở trên (sử dụng màu xanh lá cho thành công)
   failed_reschedule: "bg-orange-50 text-orange-700 border-orange-200",
   returned: "bg-rose-50 text-rose-700 border-rose-200",
   // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
@@ -422,6 +438,7 @@ export const statusColorMap: Record<string, string> = {
 
   // ===== PRODUCTION STEP TYPES =====
   // Note: cut và die_cut đã được định nghĩa ở PROCESS CLASSIFICATION ở trên
+  material_export: "bg-slate-50 text-slate-700 border-slate-200",
   print: "bg-blue-50 text-blue-700 border-blue-200",
   lamination: "bg-purple-50 text-purple-700 border-purple-200",
   glue: "bg-orange-50 text-orange-700 border-orange-200",

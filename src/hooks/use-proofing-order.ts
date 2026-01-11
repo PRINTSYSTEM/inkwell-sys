@@ -31,6 +31,7 @@ import type {
   RecordPlateExportRequest,
   RecordDieExportRequest,
   AddDesignsToProofingOrderRequest,
+  RejectDesignRequest,
 } from "@/Schema";
 import { RecordDieExportRequestSchema } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
@@ -920,6 +921,43 @@ export const useRemoveDesignFromProofingOrder = () => {
           error.response?.data?.message ||
           error.message ||
           "Không thể xóa design",
+      });
+    },
+  });
+};
+
+// POST /api/proofing-orders/designs/reject
+export const useRejectDesignFromProofingOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      orderDetailId,
+      reason,
+    }: {
+      orderDetailId: number;
+      reason?: string | null;
+    }) => {
+      await apiRequest.post<void>(
+        API_SUFFIX.PROOFING_REJECT_DESIGN,
+        { orderDetailId, reason: reason ?? null } as RejectDesignRequest
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: [proofingKeys.all[0], "available-order-details"],
+      });
+      toast.success("Thành công", {
+        description: "Đã từ chối thiết kế và hoàn về phòng thiết kế",
+      });
+    },
+    onError: (error: ApiError) => {
+      toast.error("Lỗi", {
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Không thể từ chối thiết kế",
       });
     },
   });

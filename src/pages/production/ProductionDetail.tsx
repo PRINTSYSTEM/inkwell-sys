@@ -60,6 +60,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDieSize } from "@/utils/format-die-size";
+import {
+  MaterialExportDialog,
+  DieCutStepDialog,
+  CompletionDialog,
+} from "@/components/production";
+import { productionStepTypeLabels } from "@/lib/status-utils";
 
 export default function ProductionDetailPage() {
   const params = useParams();
@@ -67,6 +73,14 @@ export default function ProductionDetailPage() {
   const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+
+  // New dialog states for step-specific dialogs
+  const [isMaterialExportDialogOpen, setIsMaterialExportDialogOpen] =
+    useState(false);
+  const [isDieCutStartDialogOpen, setIsDieCutStartDialogOpen] = useState(false);
+  const [isDieCutCompleteDialogOpen, setIsDieCutCompleteDialogOpen] =
+    useState(false);
+  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
 
   // Form states
   const [progressPercent, setProgressPercent] = useState("0");
@@ -79,6 +93,14 @@ export default function ProductionDetailPage() {
   // Worker search state (debounced to avoid spamming API)
   const [workerSearch, setWorkerSearch] = useState("");
   const [debouncedWorkerSearch] = useDebounce(workerSearch, 400);
+
+  // Track selected worker for each step (single worker per step)
+  const [selectedWorkersByStep, setSelectedWorkersByStep] = useState<
+    Record<number, number | null>
+  >({});
+  const [isEditingWorker, setIsEditingWorker] = useState<
+    Record<number, boolean>
+  >({});
 
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
@@ -98,8 +120,35 @@ export default function ProductionDetailPage() {
     );
 
   const { mutate: updateStep, isPending: updating } = useUpdateProductionStep();
-  const { mutate: assignWorker, isPending: assigning } =
+  const { mutateAsync: assignWorker, isPending: assigning } =
     useAssignProductionWorker();
+
+  // Sync selected worker with API response when production data changes
+  useEffect(() => {
+    if (production?.steps) {
+      setSelectedWorkersByStep((prev) => {
+        const merged = { ...prev };
+        let hasChanges = false;
+
+        production.steps?.forEach((step) => {
+          if (step.id) {
+            const stepId = step.id;
+            const apiAssignedId = step.assignedToId;
+
+            // Sync from API if not currently editing this step
+            if (!isEditingWorker[stepId]) {
+              if (apiAssignedId !== merged[stepId]) {
+                merged[stepId] = apiAssignedId || null;
+                hasChanges = true;
+              }
+            }
+          }
+        });
+
+        return hasChanges ? merged : prev;
+      });
+    }
+  }, [production?.steps, isEditingWorker]);
 
   const { data: usersResponse } = useUsers({
     pageNumber: 1,
@@ -190,17 +239,65 @@ export default function ProductionDetailPage() {
     );
   }, [currentActiveStep]);
 
-  const handleStartProduction = async () => {
+  // Check if step is the last step (for completion dialog with stock-in)
+  const isLastStep = useMemo(() => {
+    if (!stepToComplete || !sortedSteps.length) return false;
+    const lastStep = sortedSteps[sortedSteps.length - 1];
+    return stepToComplete.id === lastStep.id;
+  }, [stepToComplete, sortedSteps]);
+
+  // Determine which start dialog to open based on step type
+  const shouldShowMaterialExportDialog = useMemo(() => {
+    return firstReadyStep?.stepType === "material_export";
+  }, [firstReadyStep]);
+
+  const shouldShowDieCutStartDialog = useMemo(() => {
+    return (
+      firstReadyStep?.stepType === "die_cut" ||
+      firstReadyStep?.stepType === "cut"
+    );
+  }, [firstReadyStep]);
+
+  // Determine which complete dialog to open based on step type
+  const shouldShowDieCutCompleteDialog = useMemo(() => {
+    return (
+      stepToComplete?.stepType === "die_cut" ||
+      stepToComplete?.stepType === "cut"
+    );
+  }, [stepToComplete]);
+
+  const shouldShowCompletionDialog = useMemo(() => {
+    // Show completion dialog for last step or steps that need stock-in
+    // You can add more conditions here based on business logic
+    return isLastStep || stepToComplete?.stepType === "packaging";
+  }, [isLastStep, stepToComplete]);
+
+  const handleStartProduction = () => {
     if (!firstReadyStep?.id) {
       toast.error("Không tìm thấy bước sản xuất sẵn sàng để bắt đầu");
-      setIsStartDialogOpen(false);
-      setStartNotes("");
       return;
     }
 
     // Validate that step is actually READY
     if (firstReadyStep.status !== "ready") {
       toast.error("Bước này chưa sẵn sàng để bắt đầu");
+      return;
+    }
+
+    // Open appropriate dialog based on step type
+    if (shouldShowMaterialExportDialog) {
+      setIsMaterialExportDialogOpen(true);
+    } else if (shouldShowDieCutStartDialog) {
+      setIsDieCutStartDialogOpen(true);
+    } else {
+      // Default simple dialog for other step types
+      setIsStartDialogOpen(true);
+    }
+  };
+
+  const handleSimpleStartProduction = async () => {
+    if (!firstReadyStep?.id) {
+      toast.error("Không tìm thấy bước sản xuất sẵn sàng để bắt đầu");
       setIsStartDialogOpen(false);
       setStartNotes("");
       return;
@@ -210,7 +307,7 @@ export default function ProductionDetailPage() {
       await updateStep({
         stepId: firstReadyStep.id,
         data: {
-          status: "IN_PROGRESS", // API expects uppercase
+          status: "in_progress",
           outputQty: firstReadyStep.inputQty || undefined,
           defectNotes: startNotes.trim() || undefined,
         },
@@ -249,7 +346,7 @@ export default function ProductionDetailPage() {
       await updateStep({
         stepId: currentActiveStep.id,
         data: {
-          status: "IN_PROGRESS", // API expects uppercase
+          status: "in_progress", // API expects lowercase (snake_case)
           outputQty: calculatedOutputQty,
           defectQty: wastageValue > 0 ? wastageValue : undefined,
           defectNotes: defectNotes.trim() || undefined,
@@ -264,7 +361,24 @@ export default function ProductionDetailPage() {
     }
   };
 
-  const handleCompleteProduction = async () => {
+  const handleCompleteProduction = () => {
+    if (!stepToComplete?.id) {
+      toast.error("Không tìm thấy bước sản xuất để hoàn thành");
+      return;
+    }
+
+    // Open appropriate dialog based on step type
+    if (shouldShowDieCutCompleteDialog) {
+      setIsDieCutCompleteDialogOpen(true);
+    } else if (shouldShowCompletionDialog) {
+      setIsCompletionDialogOpen(true);
+    } else {
+      // Default simple dialog for other step types
+      setIsCompleteDialogOpen(true);
+    }
+  };
+
+  const handleSimpleCompleteProduction = async () => {
     if (!stepToComplete?.id) {
       toast.error("Không tìm thấy bước sản xuất để hoàn thành");
       setIsCompleteDialogOpen(false);
@@ -294,7 +408,7 @@ export default function ProductionDetailPage() {
       await updateStep({
         stepId: stepToComplete.id,
         data: {
-          status: "DONE", // API expects uppercase
+          status: "done",
           outputQty: producedQtyValue,
           defectQty: wastageValue > 0 ? wastageValue : undefined,
           defectNotes: combinedNotes || undefined,
@@ -305,9 +419,6 @@ export default function ProductionDetailPage() {
       setWastage("0");
       setDefectNotes("");
       setCompleteNotes("");
-      setProducedQty("1");
-      setWastage("0");
-      setDefectNotes("");
     } catch (error) {
       // Error is handled by the hook
     }
@@ -499,10 +610,7 @@ export default function ProductionDetailPage() {
                       .sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0))
                       .map((step, index) => {
                         const currentAssignedUserId = step.assignedToId;
-
-                        const selectValue = currentAssignedUserId
-                          ? currentAssignedUserId.toString()
-                          : "none";
+                        const stepId = step.id!;
 
                         // Get previous step to show InputQty logic
                         const previousStep =
@@ -516,146 +624,268 @@ export default function ProductionDetailPage() {
                         // READY: highlighted (ready to start)
                         // IN_PROGRESS: primary (active)
                         // DONE: emerald (completed)
-                        const getCardClassName = () => {
+                        const getCardStyles = () => {
                           if (step.status === "in_progress") {
-                            return "border-primary/70 bg-primary/5";
+                            return {
+                              border:
+                                "border-l-4 border-l-primary border-r border-t border-b border-primary/20",
+                              bg: "bg-primary/5 dark:bg-primary/10",
+                              shadow: "shadow-md shadow-primary/10",
+                            };
                           }
                           if (step.status === "done") {
-                            return "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20";
+                            return {
+                              border:
+                                "border-l-4 border-l-emerald-500 border-r border-t border-b border-emerald-200 dark:border-emerald-800",
+                              bg: "bg-emerald-50/80 dark:bg-emerald-950/30",
+                              shadow: "shadow-sm shadow-emerald-500/10",
+                            };
                           }
                           if (step.status === "ready") {
-                            return "border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/10 border-2";
+                            return {
+                              border:
+                                "border-l-4 border-l-emerald-400 border-r-2 border-t-2 border-b-2 border-emerald-300/50 dark:border-emerald-600",
+                              bg: "bg-emerald-50/60 dark:bg-emerald-950/20",
+                              shadow: "shadow-lg shadow-emerald-500/20",
+                            };
                           }
-                          return "border-dashed bg-muted/40";
+                          return {
+                            border:
+                              "border-l-4 border-l-dashed border-l-muted-foreground/30 border-r border-t border-b border-dashed border-muted-foreground/20",
+                            bg: "bg-muted/30 dark:bg-muted/20",
+                            shadow: "shadow-sm",
+                          };
                         };
+
+                        const cardStyles = getCardStyles();
 
                         return (
                           <Card
                             key={step.id}
-                            className={`p-4 transition-colors ${getCardClassName()}`}
+                            className={`relative overflow-hidden ${cardStyles.border} ${cardStyles.bg} ${cardStyles.shadow} transition-all duration-200 hover:shadow-lg`}
                           >
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-semibold text-muted-foreground">
-                                    Bước {step.stepOrder}
-                                  </span>
-                                  <span className="text-sm font-medium">
-                                    {step.stepTypeName ||
-                                      step.stepType ||
-                                      "N/A"}
-                                  </span>
+                            <div className="p-5 space-y-4">
+                              {/* Header Section */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-background/80 dark:bg-background/40 flex items-center justify-center border border-border/50 shadow-sm">
+                                    <span className="text-xs font-bold text-foreground/80">
+                                      {step.stepOrder}
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <h3 className="text-sm font-semibold text-foreground leading-tight truncate">
+                                      {step.stepTypeName ||
+                                        step.stepType ||
+                                        "N/A"}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      Bước {step.stepOrder}
+                                    </p>
+                                  </div>
                                 </div>
-                                <StatusBadge
-                                  status={step.status || "pending"}
-                                  label={
-                                    productionStepStatusLabels[
-                                      step.status || "pending"
-                                    ] || "Chờ xử lý"
-                                  }
-                                />
+                                <div className="flex-shrink-0">
+                                  <StatusBadge
+                                    status={step.status}
+                                    label={
+                                      productionStepStatusLabels[step.status]
+                                    }
+                                  />
+                                </div>
                               </div>
 
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="space-y-1 text-xs">
-                                  <p className="text-muted-foreground">
-                                    Người phụ trách
-                                  </p>
-                                  <p className="font-medium">
-                                    {step.assignedToName || "Chưa phân công"}
-                                  </p>
+                              {/* Worker Assignment Section */}
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between pt-2 border-t border-border/50">
+                                <div className="space-y-2 flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Label className="text-xs font-medium text-muted-foreground">
+                                      Người phụ trách
+                                    </Label>
+                                  </div>
+                                  {currentAssignedUserId &&
+                                  !isEditingWorker[stepId] ? (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs font-medium px-2.5 py-1"
+                                      >
+                                        {(() => {
+                                          const assignedWorker = workers.find(
+                                            (w: any) =>
+                                              w.id === currentAssignedUserId
+                                          );
+                                          return (
+                                            assignedWorker?.fullName ||
+                                            assignedWorker?.username ||
+                                            `Nhân viên ${currentAssignedUserId}`
+                                          );
+                                        })()}
+                                      </Badge>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 px-2 text-xs hover:bg-accent"
+                                        onClick={() => {
+                                          setIsEditingWorker((prev) => ({
+                                            ...prev,
+                                            [stepId]: true,
+                                          }));
+                                        }}
+                                      >
+                                        <Edit className="h-3 w-3 mr-1.5" />
+                                        Sửa
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground italic">
+                                      Chưa phân công
+                                    </p>
+                                  )}
                                 </div>
-                                <div className="flex w-full items-center gap-2 sm:w-auto">
-                                  <Select
-                                    value={selectValue}
-                                    onValueChange={(value) => {
-                                      const userId =
-                                        value === "none" ? null : Number(value);
-                                      assignWorker({
-                                        stepId: step.id!,
-                                        data: { assignedToUserId: userId },
-                                      });
-                                    }}
-                                    disabled={assigning}
-                                  >
-                                    <SelectTrigger className="w-full sm:w-48">
-                                      <SelectValue placeholder="Chọn thợ" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">
-                                        Chưa phân công
-                                      </SelectItem>
-                                      {workers.map((worker: any) => (
-                                        <SelectItem
-                                          key={worker.id}
-                                          value={worker.id?.toString() || ""}
-                                        >
-                                          {worker.fullName ||
-                                            worker.username ||
-                                            `Nhân viên ${worker.id}`}
+                                {(!currentAssignedUserId ||
+                                  isEditingWorker[stepId]) && (
+                                  <div className="flex w-full items-center gap-2 sm:w-auto sm:min-w-[200px]">
+                                    <Select
+                                      value={
+                                        selectedWorkersByStep[stepId]
+                                          ? selectedWorkersByStep[
+                                              stepId
+                                            ]!.toString()
+                                          : undefined
+                                      }
+                                      onValueChange={(value) => {
+                                        const userId =
+                                          value === "none"
+                                            ? null
+                                            : Number(value);
+                                        setSelectedWorkersByStep((prev) => ({
+                                          ...prev,
+                                          [stepId]: userId,
+                                        }));
+
+                                        // Update API immediately
+                                        assignWorker({
+                                          stepId: stepId,
+                                          data: {
+                                            assignedToUserId: userId,
+                                          },
+                                        });
+
+                                        // Close edit mode if was editing
+                                        if (isEditingWorker[stepId]) {
+                                          setIsEditingWorker((prev) => ({
+                                            ...prev,
+                                            [stepId]: false,
+                                          }));
+                                        }
+                                      }}
+                                      disabled={assigning}
+                                    >
+                                      <SelectTrigger className="w-full sm:w-48 h-9">
+                                        <SelectValue placeholder="Chọn nhân viên" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">
+                                          Chưa phân công
                                         </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
+                                        {workers.map((worker: any) => (
+                                          <SelectItem
+                                            key={worker.id}
+                                            value={worker.id.toString()}
+                                          >
+                                            {worker.fullName ||
+                                              worker.username ||
+                                              `Nhân viên ${worker.id}`}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    {isEditingWorker[stepId] && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-9 px-3"
+                                        onClick={() => {
+                                          setIsEditingWorker((prev) => ({
+                                            ...prev,
+                                            [stepId]: false,
+                                          }));
+                                        }}
+                                      >
+                                        Hủy
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
 
-                              <div className="grid grid-cols-3 gap-2 text-xs">
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    SL đầu vào:
-                                  </span>{" "}
-                                  <span className="font-medium">
+                              {/* Stats Grid */}
+                              <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border/50">
+                                <div className="space-y-1">
+                                  <p className="text-xs font-medium text-muted-foreground">
+                                    SL đầu vào
+                                  </p>
+                                  <p className="text-lg font-semibold text-foreground">
                                     {displayInputQty}
-                                  </span>
+                                  </p>
                                   {previousStep &&
                                     previousStep.status === "done" &&
                                     previousStep.outputQty !== undefined && (
-                                      <span className="ml-1 text-xs text-muted-foreground">
-                                        (từ bước trước: {previousStep.outputQty}
-                                        )
-                                      </span>
+                                      <p className="text-[10px] text-muted-foreground/80">
+                                        Từ bước trước: {previousStep.outputQty}
+                                      </p>
                                     )}
                                 </div>
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    SL đầu ra:
-                                  </span>{" "}
-                                  <span className="font-medium">
+                                <div className="space-y-1">
+                                  <p className="text-xs font-medium text-muted-foreground">
+                                    SL đầu ra
+                                  </p>
+                                  <p className="text-lg font-semibold text-foreground">
                                     {step.outputQty || 0}
-                                  </span>
+                                  </p>
                                 </div>
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Lỗi:
-                                  </span>{" "}
-                                  <span className="font-medium text-orange-600">
+                                <div className="space-y-1">
+                                  <p className="text-xs font-medium text-muted-foreground">
+                                    Lỗi
+                                  </p>
+                                  <p className="text-lg font-semibold text-orange-600 dark:text-orange-500">
                                     {step.defectQty || 0}
-                                  </span>
+                                  </p>
                                 </div>
                               </div>
 
+                              {/* Notes Section */}
                               {step.defectNotes && (
                                 <div
-                                  className={`rounded border p-2 text-xs ${
+                                  className={`rounded-lg border p-3 text-xs ${
                                     (step.defectQty || 0) > 0
-                                      ? "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20"
-                                      : "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20"
+                                      ? "border-orange-200/80 bg-orange-50/80 dark:border-orange-800/50 dark:bg-orange-950/30"
+                                      : "border-blue-200/80 bg-blue-50/80 dark:border-blue-800/50 dark:bg-blue-950/30"
                                   }`}
                                 >
+                                  <div className="flex items-center gap-1.5 mb-2">
+                                    <FileText
+                                      className={`h-3.5 w-3.5 ${
+                                        (step.defectQty || 0) > 0
+                                          ? "text-orange-600 dark:text-orange-400"
+                                          : "text-blue-600 dark:text-blue-400"
+                                      }`}
+                                    />
+                                    <p
+                                      className={`font-semibold ${
+                                        (step.defectQty || 0) > 0
+                                          ? "text-orange-900 dark:text-orange-100"
+                                          : "text-blue-900 dark:text-blue-100"
+                                      }`}
+                                    >
+                                      {(step.defectQty || 0) > 0
+                                        ? "Ghi chú lỗi"
+                                        : "Ghi chú"}
+                                    </p>
+                                  </div>
                                   <p
-                                    className={`mb-1 font-semibold ${
-                                      (step.defectQty || 0) > 0
-                                        ? "text-orange-900 dark:text-orange-100"
-                                        : "text-blue-900 dark:text-blue-100"
-                                    }`}
-                                  >
-                                    {(step.defectQty || 0) > 0
-                                      ? "Ghi chú lỗi:"
-                                      : "Ghi chú:"}
-                                  </p>
-                                  <p
-                                    className={`whitespace-pre-wrap ${
+                                    className={`whitespace-pre-wrap leading-relaxed ${
                                       (step.defectQty || 0) > 0
                                         ? "text-orange-800 dark:text-orange-200"
                                         : "text-blue-800 dark:text-blue-200"
@@ -666,31 +896,48 @@ export default function ProductionDetailPage() {
                                 </div>
                               )}
 
-                              {/* Show status-specific information */}
-                              {step.status === "ready" && (
-                                <div className="flex items-center gap-2 rounded-md bg-emerald-100/50 px-2 py-1 text-xs text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  <span>Sẵn sàng để bắt đầu</span>
+                              {/* Status Messages & Timestamps */}
+                              <div className="space-y-2 pt-2 border-t border-border/50">
+                                {/* Status-specific information */}
+                                {step.status === "ready" && (
+                                  <div className="flex items-center gap-2 rounded-lg bg-emerald-100/60 dark:bg-emerald-950/40 px-3 py-2 text-xs">
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                    <span className="font-medium text-emerald-900 dark:text-emerald-100">
+                                      Sẵn sàng để bắt đầu
+                                    </span>
+                                  </div>
+                                )}
+                                {step.status === "pending" && previousStep && (
+                                  <div className="flex items-center gap-2 rounded-lg bg-slate-100/60 dark:bg-slate-800/40 px-3 py-2 text-xs">
+                                    <AlertCircle className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                                      Chờ bước trước hoàn thành để kích hoạt
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Timestamps */}
+                                <div className="flex flex-col gap-1.5 text-xs">
+                                  {step.startedAt && (
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <Calendar className="h-3 w-3 flex-shrink-0" />
+                                      <span>
+                                        Bắt đầu:{" "}
+                                        {formatDateTime(step.startedAt)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {step.completedAt && (
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <CheckCircle className="h-3 w-3 flex-shrink-0" />
+                                      <span>
+                                        Hoàn thành:{" "}
+                                        {formatDateTime(step.completedAt)}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {step.status === "pending" && previousStep && (
-                                <div className="flex items-center gap-2 rounded-md bg-slate-100/50 px-2 py-1 text-xs text-slate-600 dark:bg-slate-800/30 dark:text-slate-400">
-                                  <AlertCircle className="h-3 w-3" />
-                                  <span>
-                                    Chờ bước trước hoàn thành để kích hoạt
-                                  </span>
-                                </div>
-                              )}
-                              {step.startedAt && (
-                                <p className="text-xs text-muted-foreground">
-                                  Bắt đầu: {formatDateTime(step.startedAt)}
-                                </p>
-                              )}
-                              {step.completedAt && (
-                                <p className="text-xs text-muted-foreground">
-                                  Hoàn thành: {formatDateTime(step.completedAt)}
-                                </p>
-                              )}
+                              </div>
                             </div>
                           </Card>
                         );
@@ -781,7 +1028,7 @@ export default function ProductionDetailPage() {
                       <div className="space-y-1">
                         <Label className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Package className="h-3 w-3" />
-                          Tổng số lượng
+                          Số giấy in
                         </Label>
                         <p className="text-sm font-semibold">
                           {proofingOrder.totalQuantity || 0} sản phẩm
@@ -1217,7 +1464,7 @@ export default function ProductionDetailPage() {
                       <div className="space-y-1">
                         <Label className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Package className="h-3 w-3" />
-                          Tổng số lượng
+                          Số giấy in
                         </Label>
                         <p className="text-sm font-semibold">
                           {proofingOrder.totalQuantity || 0} sản phẩm
@@ -1606,7 +1853,7 @@ export default function ProductionDetailPage() {
               >
                 Hủy
               </Button>
-              <Button onClick={handleStartProduction} disabled={starting}>
+              <Button onClick={handleSimpleStartProduction} disabled={starting}>
                 {starting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1782,7 +2029,7 @@ export default function ProductionDetailPage() {
                 Hủy
               </Button>
               <Button
-                onClick={handleCompleteProduction}
+                onClick={handleSimpleCompleteProduction}
                 disabled={completing}
                 className="bg-green-600 hover:bg-green-700"
               >
@@ -1801,6 +2048,54 @@ export default function ProductionDetailPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Step-Specific Dialogs */}
+
+        {/* Material Export Dialog - for material_export step type */}
+        {firstReadyStep && production && (
+          <MaterialExportDialog
+            open={isMaterialExportDialogOpen}
+            onOpenChange={setIsMaterialExportDialogOpen}
+            step={firstReadyStep}
+            productionOrder={production}
+            proofingOrder={proofingOrder || null}
+          />
+        )}
+
+        {/* Die Cut Start Dialog - for die_cut/cut step type when starting */}
+        {firstReadyStep && production && (
+          <DieCutStepDialog
+            open={isDieCutStartDialogOpen}
+            onOpenChange={setIsDieCutStartDialogOpen}
+            step={firstReadyStep}
+            productionOrder={production}
+            proofingOrder={proofingOrder || null}
+            mode="start"
+          />
+        )}
+
+        {/* Die Cut Complete Dialog - for die_cut/cut step type when completing */}
+        {stepToComplete && production && (
+          <DieCutStepDialog
+            open={isDieCutCompleteDialogOpen}
+            onOpenChange={setIsDieCutCompleteDialogOpen}
+            step={stepToComplete}
+            productionOrder={production}
+            proofingOrder={proofingOrder || null}
+            mode="complete"
+          />
+        )}
+
+        {/* Completion Dialog - for last step or steps that need stock-in */}
+        {stepToComplete && production && (
+          <CompletionDialog
+            open={isCompletionDialogOpen}
+            onOpenChange={setIsCompletionDialogOpen}
+            step={stepToComplete}
+            productionOrder={production}
+            proofingOrder={proofingOrder || null}
+          />
+        )}
       </div>
     </div>
   );

@@ -655,6 +655,20 @@ export default function OrderDetailPage() {
 
   const isCustomerInfoComplete = missingFields.length === 0;
 
+  // Check for warnings and critical issues
+  const now = new Date();
+  const isPaymentDueOverdue = order.paymentDueDate
+    ? new Date(order.paymentDueDate) < now
+    : false;
+  const isDeliveryDatePassed =
+    order.deliveryDate && order.status !== "completed" && order.status !== "delivered"
+      ? new Date(order.deliveryDate) < now
+      : false;
+  const isDebtOverLimit =
+    order.customer?.currentDebt &&
+    order.customer?.maxDebt &&
+    order.customer.currentDebt > order.customer.maxDebt;
+
   return (
     <div className="space-y-6">
       {/* ===== HEADER ===== */}
@@ -1638,12 +1652,12 @@ export default function OrderDetailPage() {
             <CardContent className="space-y-4">
               {/* Warning banner if customer info is incomplete */}
               {!isCustomerInfoComplete && editingCard !== "customerInfo" && (
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-2">
+                <div className="bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-300 dark:border-amber-700 rounded-lg p-3 space-y-2">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                        Thông tin khách hàng chưa đầy đủ
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                        ⚠️ Thông tin khách hàng chưa đầy đủ
                       </p>
                       <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                         Cần cập nhật để có thể xuất hóa đơn:
@@ -1653,6 +1667,23 @@ export default function OrderDetailPage() {
                           <li key={field}>{field}</li>
                         ))}
                       </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Critical warning if debt over limit */}
+              {isDebtOverLimit && editingCard !== "customerInfo" && (
+                <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-400 dark:border-red-700 rounded-lg p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-red-900 dark:text-red-100">
+                        🚨 Công nợ vượt hạn mức
+                      </p>
+                      <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                        Khách hàng đang nợ {formatCurrency(order.customer?.currentDebt || 0)}, vượt quá hạn mức cho phép {formatCurrency(order.customer?.maxDebt || 0)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -2090,14 +2121,32 @@ export default function OrderDetailPage() {
                   !order.recipientPhone ||
                   !order.recipientAddress) &&
                   editingCard !== "recipientInfo" && (
-                    <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                    <div className={`rounded-lg p-3 border-2 ${
+                      isDeliveryDatePassed
+                        ? "bg-red-50 dark:bg-red-950/30 border-red-400 dark:border-red-700"
+                        : "bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700"
+                    }`}>
                       <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                        {isDeliveryDatePassed ? (
+                          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                        )}
                         <div className="flex-1">
-                          <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+                          <p className={`text-xs font-semibold ${
+                            isDeliveryDatePassed
+                              ? "text-red-900 dark:text-red-100"
+                              : "text-amber-900 dark:text-amber-100"
+                          }`}>
+                            {isDeliveryDatePassed ? "🚨 " : "⚠️ "}
                             Thiếu thông tin người nhận
+                            {isDeliveryDatePassed && " - Đã quá ngày giao!"}
                           </p>
-                          <ul className="text-xs text-amber-700 dark:text-amber-300 mt-1 list-disc list-inside space-y-0.5">
+                          <ul className={`text-xs mt-1 list-disc list-inside space-y-0.5 ${
+                            isDeliveryDatePassed
+                              ? "text-red-700 dark:text-red-300"
+                              : "text-amber-700 dark:text-amber-300"
+                          }`}>
                             {!order.recipientName && <li>Tên người nhận</li>}
                             {!order.recipientPhone && <li>Số điện thoại</li>}
                             {!order.recipientAddress && <li>Địa chỉ</li>}
@@ -2400,16 +2449,50 @@ export default function OrderDetailPage() {
 
                     {/* Payment Due Date */}
                     {order.paymentDueDate && (
-                      <div className="pt-2 border-t">
+                      <div className={`pt-2 border-t ${isPaymentDueOverdue ? "bg-red-50 dark:bg-red-950/20 -mx-4 px-4 py-2 rounded" : ""}`}>
                         <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <Calendar className={`w-4 h-4 flex-shrink-0 ${
+                            isPaymentDueOverdue
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-muted-foreground"
+                          }`} />
                           <div className="flex-1">
-                            <span className="text-xs text-muted-foreground">
+                            <span className={`text-xs ${
+                              isPaymentDueOverdue
+                                ? "text-red-700 dark:text-red-300 font-semibold"
+                                : "text-muted-foreground"
+                            }`}>
                               Hạn thanh toán:{" "}
                             </span>
-                            <span className="text-sm font-medium">
+                            <span className={`text-sm font-medium ${
+                              isPaymentDueOverdue
+                                ? "text-red-900 dark:text-red-100"
+                                : ""
+                            }`}>
                               {formatDateTime(order.paymentDueDate)}
+                              {isPaymentDueOverdue && (
+                                <span className="ml-2 text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2 py-0.5 rounded">
+                                  ĐÃ QUÁ HẠN
+                                </span>
+                              )}
                             </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Delivery Date Warning */}
+                    {isDeliveryDatePassed && (
+                      <div className="bg-orange-50 dark:bg-orange-950/20 border-2 border-orange-300 dark:border-orange-700 rounded-lg p-3 mt-2">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-orange-900 dark:text-orange-100">
+                              ⚠️ Đã quá ngày giao hàng dự kiến
+                            </p>
+                            <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                              Ngày giao: {formatDate(order.deliveryDate)} - Cần xử lý gấp
+                            </p>
                           </div>
                         </div>
                       </div>

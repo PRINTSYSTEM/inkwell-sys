@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-09T03:15:11.452Z */
+/* Generated at: 2026-01-11T16:04:41.496Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -59,6 +59,7 @@ export const CreateDieRequestSchema = schemas.CreateDieRequest;
 export const CreateExpenseCategoryRequestSchema = schemas.CreateExpenseCategoryRequest;
 export const CreateInvoiceFromLinesRequestSchema = schemas.CreateInvoiceFromLinesRequest;
 export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
+export const CreateMaterialRequestSchema = schemas.CreateMaterialRequest;
 export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
 export const CreateOrderRequestSchema = schemas.CreateOrderRequest;
 export const CreatePaperSizeRequestSchema = schemas.CreatePaperSizeRequest;
@@ -152,6 +153,7 @@ export const ProofingOrderResponsePaginateSchema = schemas.ProofingOrderResponse
 export const RecordDieExportRequestSchema = schemas.RecordDieExportRequest;
 export const RecordPlateExportRequestSchema = schemas.RecordPlateExportRequest;
 export const RecreateDeliveryNoteRequestSchema = schemas.RecreateDeliveryNoteRequest;
+export const RejectDesignRequestSchema = schemas.RejectDesignRequest;
 export const ReplaceDieRequestSchema = schemas.ReplaceDieRequest;
 export const ReportExportResponseSchema = schemas.ReportExportResponse;
 export const ReportExportResponseIPaginateSchema = schemas.ReportExportResponseIPaginate;
@@ -186,9 +188,11 @@ export const UpdateDeliveryStatusRequestSchema = schemas.UpdateDeliveryStatusReq
 export const UpdateDesignRequestSchema = schemas.UpdateDesignRequest;
 export const UpdateDesignTypeRequestSchema = schemas.UpdateDesignTypeRequest;
 export const UpdateDieRequestSchema = schemas.UpdateDieRequest;
+export const UpdateDieStatusRequestSchema = schemas.UpdateDieStatusRequest;
 export const UpdateEInvoiceInfoRequestSchema = schemas.UpdateEInvoiceInfoRequest;
 export const UpdateExpenseCategoryRequestSchema = schemas.UpdateExpenseCategoryRequest;
 export const UpdateInvoiceRequestSchema = schemas.UpdateInvoiceRequest;
+export const UpdateMaterialRequestSchema = schemas.UpdateMaterialRequest;
 export const UpdateMaterialTypeRequestSchema = schemas.UpdateMaterialTypeRequest;
 export const UpdateMyProfileRequestSchema = schemas.UpdateMyProfileRequest;
 export const UpdateOrderDetailForAccountingRequestSchema = schemas.UpdateOrderDetailForAccountingRequest;

@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useDesigns, useFilters } from "@/hooks";
 import type { DesignResponse } from "@/Schema";
-import { designStatusLabels } from "@/lib/status-utils";
+import { designStatusConfig, designStatusLabels } from "@/lib/status-utils";
 import {
   Table,
   TableHeader,
@@ -30,6 +30,7 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
+import { ENTITY_CONFIG } from "@/config/entities.config";
 
 type DesignWithSearch = DesignResponse & {
   designerFullName: string;
@@ -386,7 +387,7 @@ export default function AllDesignsPage() {
                   filteredDesigns.map((design) => (
                     <TableRow
                       key={design.id}
-                      className="cursor-pointer hover:bg-muted/50 h-14"
+                      className={`cursor-pointer hover:bg-muted/50 h-14 ${design.status === "returned" && `bg-red-50`}`}
                       onClick={() => navigate(`/design/detail/${design.id}`)}
                     >
                       <TableCell className="py-3 font-semibold text-sm">

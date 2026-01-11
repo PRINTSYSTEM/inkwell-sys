@@ -128,22 +128,25 @@ export const useExportDebtComparison = () => {
 };
 
 // ================== CHECK DUPLICATE COMPANY ==================
-export const useCheckDuplicateCompany = () => {
-  const { execute, loading, error } = useAsyncCallback<boolean, [string]>(
-    async (name: string) => {
-      const res = await apiRequest.get<boolean>(
-        API_SUFFIX.CUSTOMER_CHECK_DUPLICATE_COMPANY(name)
-      );
-      return res.data;
-    }
-  );
+// DEPRECATED: Endpoint not found in OpenAPI schema
+// TODO: Remove or implement when endpoint is available
+// This endpoint was commented out because it doesn't exist in the OpenAPI specification
+// export const useCheckDuplicateCompany = () => {
+//   const { execute, loading, error } = useAsyncCallback<boolean, [string]>(
+//     async (name: string) => {
+//       const res = await apiRequest.get<boolean>(
+//         API_SUFFIX.CUSTOMER_CHECK_DUPLICATE_COMPANY(name)
+//       );
+//       return res.data;
+//     }
+//   );
 
-  return {
-    check: execute,
-    loading,
-    error,
-  };
-};
+//   return {
+//     check: execute,
+//     loading,
+//     error,
+//   };
+// };
 
 // ================== GET CUSTOMER DEBT HISTORY ==================
 // GET /customers/{id}/debt-history
@@ -159,11 +162,10 @@ export const useCustomerDebtHistory = (
     queryFn: async () => {
       const normalizedParams = normalizeParams(params ?? {});
       // API returns CustomerDebtHistoryResponsePaginate
-      const res =
-        await apiRequest.get<CustomerDebtHistoryResponsePaginate>(
-          API_SUFFIX.CUSTOMER_DEBT_HISTORY(customerId as number),
-          { params: normalizedParams }
-        );
+      const res = await apiRequest.get<CustomerDebtHistoryResponsePaginate>(
+        API_SUFFIX.CUSTOMER_DEBT_HISTORY(customerId as number),
+        { params: normalizedParams }
+      );
       return res.data;
     },
     staleTime: 5 * 60 * 1000,

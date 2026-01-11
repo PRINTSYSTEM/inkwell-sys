@@ -35,6 +35,9 @@ import {
   RefreshCw,
   Loader2,
   MoreHorizontal,
+  Package,
+  Filter,
+  Building2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -105,7 +108,6 @@ export default function StockInListPage() {
   };
 
   const handleExportExcel = async () => {
-    // TODO: Implement export Excel when API endpoint is available
     toast.info("Chức năng xuất Excel đang được phát triển");
   };
 
@@ -137,270 +139,363 @@ export default function StockInListPage() {
         <meta name="description" content="Quản lý phiếu nhập kho" />
       </Helmet>
 
-      <div className="min-h-screen bg-background p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Quản lý nhập kho</h1>
-            <p className="text-muted-foreground mt-1">
-              Quản lý các phiếu nhập kho Chất liệu
-            </p>
-          </div>
-          <Button onClick={() => navigate("/stock/stock-ins/create")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Tạo phiếu nhập kho
-          </Button>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Tìm kiếm theo mã phiếu, nhà cung cấp..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                />
+      <div className="min-h-screen bg-background">
+        {/* Modern Header */}
+        <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+                    <Package className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-slate-900">
+                      Quản lý nhập kho
+                    </h1>
+                    <p className="text-xs text-slate-500">
+                      Quản lý các phiếu nhập kho Chất liệu
+                    </p>
+                  </div>
+                </div>
               </div>
-              <DateRangePicker value={dateRange} onValueChange={setDateRange} />
-              <Select
-                value={typeFilter || "all"}
-                onValueChange={(v) => setTypeFilter(v === "all" ? "" : v)}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Loại phiếu" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="purchase">Mua hàng</SelectItem>
-                  <SelectItem value="return">Trả hàng</SelectItem>
-                  <SelectItem value="adjustment">Điều chỉnh</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={vendorFilter || "all"}
-                onValueChange={(v) => setVendorFilter(v === "all" ? "" : v)}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Nhà cung cấp" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả NCC</SelectItem>
-                  {vendorsData?.map((vendor) => (
-                    <SelectItem key={vendor.id} value={String(vendor.id)}>
-                      {vendor.name || vendor.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={statusFilter || "all"}
-                onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  <SelectItem value="draft">Nháp</SelectItem>
-                  <SelectItem value="pending">Chờ xử lý</SelectItem>
-                  <SelectItem value="completed">Hoàn thành</SelectItem>
-                  <SelectItem value="cancelled">Đã hủy</SelectItem>
-                </SelectContent>
-              </Select>
               <Button
-                variant="outline"
-                size="icon"
-                onClick={() => refetch()}
-                disabled={isLoading}
+                onClick={() => navigate("/stock/stock-ins/create")}
+                className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg shadow-blue-500/25"
               >
-                <RefreshCw
-                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-                />
-              </Button>
-              <Button variant="outline" size="icon" onClick={handleExportExcel}>
-                <Download className="h-4 w-4" />
+                <Plus className="h-4 w-4 mr-2" />
+                Tạo phiếu nhập kho
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">Đang tải...</div>
-            ) : stockIns.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Không có phiếu nhập kho nào
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Filters Card */}
+          <Card className="mb-6 border-slate-200/60 shadow-lg shadow-slate-200/50">
+            <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 border-b border-slate-200/60">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Filter className="h-5 w-5 text-blue-600" />
+                </div>
+                <CardTitle className="text-lg">Bộ lọc</CardTitle>
               </div>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[140px]">Số phiếu</TableHead>
-                      <TableHead className="w-[120px]">Ngày</TableHead>
-                      <TableHead>Nhà cung cấp/Nguồn nhập</TableHead>
-                      <TableHead className="w-[120px]">Kho</TableHead>
-                      <TableHead className="text-right">Tổng SL</TableHead>
-                      <TableHead className="text-right">Tổng giá trị</TableHead>
-                      <TableHead className="text-center">Trạng thái</TableHead>
-                      <TableHead className="w-[60px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stockIns.map((stockIn) => (
-                      <TableRow
-                        key={stockIn.id}
-                        className="group cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleViewDetails(stockIn.id)}
-                      >
-                        <TableCell className="font-medium font-mono text-sm">
-                          {stockIn.code || `PNK-${stockIn.id}`}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {stockIn.stockInDate
-                            ? formatDate(stockIn.stockInDate)
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="font-medium text-sm">
-                              {stockIn.supplier?.name ||
-                                stockIn.vendorName ||
-                                "—"}
-                            </div>
-                            {stockIn.type && (
-                              <div className="text-xs text-muted-foreground">
-                                {stockIn.type === "purchase"
-                                  ? "Mua hàng"
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Tìm kiếm theo mã phiếu, nhà cung cấp..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 h-11 transition-colors duration-200"
+                  />
+                </div>
+                <DateRangePicker value={dateRange} onValueChange={setDateRange} />
+                <Select
+                  value={typeFilter || "all"}
+                  onValueChange={(v) => setTypeFilter(v === "all" ? "" : v)}
+                >
+                  <SelectTrigger className="h-11 cursor-pointer transition-colors duration-200">
+                    <SelectValue placeholder="Loại phiếu" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="purchase">Mua hàng</SelectItem>
+                    <SelectItem value="production_completion">
+                      Hoàn thành SX
+                    </SelectItem>
+                    <SelectItem value="return">Trả hàng</SelectItem>
+                    <SelectItem value="adjustment">Điều chỉnh</SelectItem>
+                    <SelectItem value="other">Khác</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={vendorFilter || "all"}
+                  onValueChange={(v) => setVendorFilter(v === "all" ? "" : v)}
+                >
+                  <SelectTrigger className="h-11 cursor-pointer transition-colors duration-200">
+                    <SelectValue placeholder="Nhà cung cấp" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả NCC</SelectItem>
+                    {vendorsData?.map((vendor) => (
+                      <SelectItem key={vendor.id} value={String(vendor.id)}>
+                        {vendor.name || vendor.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={statusFilter || "all"}
+                  onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
+                >
+                  <SelectTrigger className="h-11 cursor-pointer transition-colors duration-200">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="draft">Nháp</SelectItem>
+                    <SelectItem value="pending">Chờ xử lý</SelectItem>
+                    <SelectItem value="completed">Hoàn thành</SelectItem>
+                    <SelectItem value="cancelled">Đã hủy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  disabled={isLoading}
+                  className="cursor-pointer transition-colors duration-200"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+                  />
+                  Làm mới
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportExcel}
+                  className="cursor-pointer transition-colors duration-200"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Xuất Excel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Table Card */}
+          <Card className="border-slate-200/60 shadow-lg shadow-slate-200/50 overflow-hidden">
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                  <span className="ml-3 text-slate-600">Đang tải dữ liệu...</span>
+                </div>
+              ) : stockIns.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                    <Package className="h-8 w-8 text-blue-500" />
+                  </div>
+                  <p className="text-slate-600 font-medium">
+                    Không có phiếu nhập kho nào
+                  </p>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Tạo phiếu nhập kho mới để bắt đầu
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-b border-slate-200/60">
+                          <TableHead className="w-[140px] font-semibold text-slate-700">
+                            Số phiếu
+                          </TableHead>
+                          <TableHead className="w-[120px] font-semibold text-slate-700">
+                            Ngày
+                          </TableHead>
+                          <TableHead className="font-semibold text-slate-700">
+                            Nhà cung cấp/Nguồn nhập
+                          </TableHead>
+                          <TableHead className="w-[120px] font-semibold text-slate-700">
+                            Loại phiếu
+                          </TableHead>
+                          <TableHead className="w-[120px] font-semibold text-slate-700">
+                            Kho
+                          </TableHead>
+                          <TableHead className="text-right font-semibold text-slate-700">
+                            Tổng SL
+                          </TableHead>
+                          <TableHead className="text-right font-semibold text-slate-700">
+                            Tổng giá trị
+                          </TableHead>
+                          <TableHead className="text-center font-semibold text-slate-700">
+                            Trạng thái
+                          </TableHead>
+                          <TableHead className="w-[60px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stockIns.map((stockIn) => (
+                          <TableRow
+                            key={stockIn.id}
+                            className="group cursor-pointer hover:bg-blue-50/30 transition-colors duration-200 border-b border-slate-100"
+                            onClick={() => handleViewDetails(stockIn.id)}
+                          >
+                            <TableCell className="font-medium font-mono text-sm">
+                              {stockIn.code || `PNK-${stockIn.id}`}
+                            </TableCell>
+                            <TableCell className="text-sm text-slate-600">
+                              {stockIn.stockInDate
+                                ? formatDate(stockIn.stockInDate)
+                                : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="font-medium text-sm">
+                                  {stockIn.supplier?.name ||
+                                    stockIn.vendorName ||
+                                    "—"}
+                                </div>
+                                {stockIn.type && (
+                                  <div className="text-xs text-slate-500">
+                                    {stockIn.type === "purchase"
+                                      ? "Mua hàng"
+                                      : stockIn.type === "return"
+                                        ? "Trả hàng"
+                                        : stockIn.type === "adjustment"
+                                          ? "Điều chỉnh"
+                                          : stockIn.type}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-slate-600">
+                              {stockIn.type === "purchase"
+                                ? "Mua hàng"
+                                : stockIn.type === "production_completion"
+                                  ? "Hoàn thành SX"
                                   : stockIn.type === "return"
                                     ? "Trả hàng"
                                     : stockIn.type === "adjustment"
                                       ? "Điều chỉnh"
-                                      : stockIn.type}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {stockIn.warehouse || stockIn.warehouseName || "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
-                          {stockIn.totalQuantity
-                            ? stockIn.totalQuantity.toLocaleString("vi-VN")
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-medium tabular-nums">
-                          {stockIn.totalValue
-                            ? formatCurrency(stockIn.totalValue)
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {getStatusBadge(stockIn.status)}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleViewDetails(stockIn.id);
-                                }}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Xem chi tiết
-                              </DropdownMenuItem>
-                              {stockIn.status !== "completed" &&
-                                stockIn.status !== "cancelled" && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(
-                                          `/stock/stock-ins/${stockIn.id}/edit`
-                                        );
-                                      }}
-                                    >
-                                      <Edit className="h-4 w-4 mr-2" />
-                                      Chỉnh sửa
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleComplete(stockIn.id);
-                                      }}
-                                    >
-                                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                                      Hoàn thành
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCancel(stockIn.id);
-                                      }}
-                                      className="text-destructive"
-                                    >
-                                      <XCircle className="h-4 w-4 mr-2" />
-                                      Hủy
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDelete(stockIn.id);
-                                      }}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Xóa
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    Trang {page} / {totalPages}
+                                      : stockIn.type || "—"}
+                            </TableCell>
+                            <TableCell className="text-sm text-slate-600">
+                              {stockIn.warehouse || stockIn.warehouseName || "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-medium tabular-nums text-slate-700">
+                              {stockIn.totalQuantity
+                                ? stockIn.totalQuantity.toLocaleString("vi-VN")
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-medium tabular-nums text-slate-700">
+                              {stockIn.totalValue
+                                ? formatCurrency(stockIn.totalValue)
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {getStatusBadge(stockIn.status)}
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewDetails(stockIn.id);
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Xem chi tiết
+                                  </DropdownMenuItem>
+                                  {stockIn.status !== "completed" &&
+                                    stockIn.status !== "cancelled" && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(
+                                              `/stock/stock-ins/${stockIn.id}/edit`
+                                            );
+                                          }}
+                                          className="cursor-pointer"
+                                        >
+                                          <Edit className="h-4 w-4 mr-2" />
+                                          Chỉnh sửa
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleComplete(stockIn.id);
+                                          }}
+                                          className="cursor-pointer"
+                                        >
+                                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                                          Hoàn thành
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCancel(stockIn.id);
+                                          }}
+                                          className="text-destructive cursor-pointer"
+                                        >
+                                          <XCircle className="h-4 w-4 mr-2" />
+                                          Hủy
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(stockIn.id);
+                                          }}
+                                          className="text-destructive cursor-pointer"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Xóa
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      Trước
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={page === totalPages}
-                    >
-                      Sau
-                    </Button>
+                  <div className="flex items-center justify-between p-4 border-t border-slate-200/60 bg-slate-50/50">
+                    <div className="text-sm text-slate-600">
+                      Trang <span className="font-semibold">{page}</span> /{" "}
+                      <span className="font-semibold">{totalPages}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="cursor-pointer transition-colors duration-200"
+                      >
+                        Trước
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setPage((p) => Math.min(totalPages, p + 1))
+                        }
+                        disabled={page === totalPages}
+                        className="cursor-pointer transition-colors duration-200"
+                      >
+                        Sau
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </>
   );

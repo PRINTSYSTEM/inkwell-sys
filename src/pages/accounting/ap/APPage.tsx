@@ -2,23 +2,18 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import APSummaryPage from "./APSummaryPage";
-import APDetailPage from "./APDetailPage";
+import APUnifiedPage from "./APUnifiedPage";
 import APAgingPage from "./APAgingPage";
 
 export default function APPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const defaultTab = searchParams.get("tab") || "summary";
+  const defaultTab = searchParams.get("tab") || "debt";
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     const newParams = new URLSearchParams(searchParams);
     newParams.set("tab", value);
-    // Keep vendorId if switching to detail tab
-    if (value !== "detail") {
-      newParams.delete("vendorId");
-    }
     setSearchParams(newParams);
   };
 
@@ -45,18 +40,13 @@ export default function APPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="summary">Tổng hợp</TabsTrigger>
-            <TabsTrigger value="detail">Chi tiết</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="debt">Công nợ</TabsTrigger>
             <TabsTrigger value="aging">Phân tích tuổi nợ</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="summary" className="mt-6">
-            <APSummaryPage />
-          </TabsContent>
-
-          <TabsContent value="detail" className="mt-6">
-            <APDetailPage />
+          <TabsContent value="debt" className="mt-6">
+            <APUnifiedPage />
           </TabsContent>
 
           <TabsContent value="aging" className="mt-6">

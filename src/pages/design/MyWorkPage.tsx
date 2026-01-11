@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Eye,
   Calendar,
+  RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 
@@ -61,6 +62,7 @@ const DESIGN_STATUS_ICONS: Record<DesignStatusKey, LucideIcon> = {
   editing: Edit3,
   waiting_for_customer_approval: AlertCircle,
   confirmed_for_printing: CheckCircle2,
+  returned: RotateCcw,
 };
 
 // Main Page Component
