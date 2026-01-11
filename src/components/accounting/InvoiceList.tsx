@@ -75,6 +75,7 @@ import {
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 import { StatusBadge } from "../ui/status-badge";
+import { ROUTE_PATHS } from "@/constants/route.constant";
 
 // Helper to derive customer type
 function deriveCustomerType(
@@ -478,13 +479,10 @@ export function InvoiceList() {
 
       // Navigate to invoice detail page
       if (result?.id) {
-        navigate(`/invoices/${result.id}`);
-      } else {
-        // If no ID returned, just refetch
-        refetch();
+        navigate(`${ROUTE_PATHS.ACCOUNTING.INVOICE}/${result.id}`);
       }
     } catch (error) {
-      // Error is handled by the hook
+      console.error("Error creating invoice:", error);
     }
   };
 
