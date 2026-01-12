@@ -25,26 +25,80 @@ import {
   Loader2,
   LogOut,
 } from "lucide-react";
-import { useCreateStockOut } from "@/hooks/use-stock";
+import {
+  useCreateStockOutForProduction,
+  useCreateStockOutForDelivery,
+} from "@/hooks/use-stock";
 import type { StockOutItemRequest } from "@/Schema/stock.schema";
 import { useCustomers } from "@/hooks/use-customer";
+import { useProductionOrders } from "@/hooks/use-production";
+import { useDeliveryNotes } from "@/hooks/use-delivery-note";
+import { useMaterials } from "@/hooks/use-material";
 import { toast } from "sonner";
+import { Factory, Truck } from "lucide-react";
+
+// Utility function to generate material code from name
+// Example: "Hộp Duplex 350 - 20x15x10cm" -> "HOP-DUPLEX-350-20x15x10"
+const generateMaterialCode = (name: string): string => {
+  if (!name) return "";
+
+  let code = name
+    // Normalize Vietnamese characters (remove accents)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    // Remove "cm" suffix (case insensitive, with optional spaces)
+    .replace(/\s*cm\s*$/i, "")
+    // Replace multiple spaces with single space
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Replace spaces, underscores, and special characters with hyphens
+  // Keep x and X for dimensions (like 20x15x10)
+  code = code
+    .replace(/[\s_\-]+/g, "-")
+    // Replace any character that's not alphanumeric, hyphen, or x/X with empty string
+    .replace(/[^A-Za-z0-9\-xX]/g, "")
+    // Replace multiple consecutive hyphens with single hyphen
+    .replace(/-+/g, "-")
+    // Convert to uppercase (but preserve x as X for dimensions)
+    .toUpperCase()
+    // Remove leading/trailing hyphens
+    .replace(/^-+|-+$/g, "");
+
+  return code;
+};
 
 export default function StockOutCreatePage() {
   const navigate = useNavigate();
-  const { mutate: createStockOut, isPending, isSuccess } = useCreateStockOut();
+  const { mutate: createStockOutForProduction, isPending: isPendingProduction, isSuccess: isSuccessProduction } = useCreateStockOutForProduction();
+  const { mutate: createStockOutForDelivery, isPending: isPendingDelivery, isSuccess: isSuccessDelivery } = useCreateStockOutForDelivery();
+  
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const customers = customersData?.items || [];
+  
+  const { data: productionOrdersData } = useProductionOrders({ pageSize: 1000 });
+  const productionOrders = productionOrdersData?.items || [];
+  
+  const { data: deliveryNotesData } = useDeliveryNotes({ pageSize: 1000 });
+  const deliveryNotes = deliveryNotesData?.items || [];
+
+  const { data: materialsData } = useMaterials({ size: 1000 });
+  const materials = materialsData?.items || [];
+
+  const [stockOutType, setStockOutType] = useState<"production" | "delivery">("production");
 
   const [formData, setFormData] = useState({
-    type: "",
+    itemType: "",
     customerId: null as number | null,
     orderId: null as number | null,
-    productionId: null as number | null,
+    productionOrderId: null as number | null,
     deliveryNoteId: null as number | null,
     notes: "",
     stockOutDate: new Date().toISOString().slice(0, 16),
   });
+
+  const isPending = isPendingProduction || isPendingDelivery;
+  const isSuccess = isSuccessProduction || isSuccessDelivery;
 
   const [items, setItems] = useState<StockOutItemRequest[]>([
     {
@@ -141,6 +195,29 @@ export default function StockOutCreatePage() {
     validateItem(index, items[index]);
   };
 
+  const handleMaterialSelect = (index: number, materialId: string) => {
+    const material = materials.find((m) => m.id?.toString() === materialId);
+    if (material && material.id) {
+      const materialName = material.name || material.materialTypeName || "";
+      const generatedCode = generateMaterialCode(materialName);
+      const newItems = [...items];
+      newItems[index] = {
+        ...newItems[index],
+        itemName: materialName,
+        itemCode: generatedCode,
+        unit: material.unit || "",
+        materialId: material.id,
+      };
+      setItems(newItems);
+      // Clear errors when material is selected
+      if (itemErrors[index]) {
+        const newErrors = { ...itemErrors };
+        delete newErrors[index];
+        setItemErrors(newErrors);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -183,31 +260,72 @@ export default function StockOutCreatePage() {
       return date.toISOString();
     };
 
-    createStockOut(
-      {
-        type: formData.type?.trim() || "",
-        customerId: formData.customerId || undefined,
-        orderId: formData.orderId || undefined,
-        productionId: formData.productionId || undefined,
-        deliveryNoteId: formData.deliveryNoteId || undefined,
-        notes: formData.notes?.trim() || "",
-        stockOutDate: formData.stockOutDate
-          ? formatDateWithOffset(formData.stockOutDate)
-          : undefined,
-        items: validItems.map((item) => ({
-          itemName: item.itemName.trim(),
-          itemCode: (item.itemCode || "").trim(),
-          unit: (item.unit || "").trim(),
-          quantity: Math.floor(item.quantity),
-          notes: (item.notes || "").trim(),
-        })),
-      },
-      {
-        onSuccess: () => {
-          // Navigation handled by isSuccess state
-        },
+    const mappedItems = validItems.map((item) => ({
+      itemName: item.itemName.trim(),
+      itemCode: (item.itemCode || "").trim() || undefined,
+      unit: (item.unit || "").trim() || undefined,
+      quantity: Math.floor(item.quantity),
+      notes: (item.notes || "").trim() || undefined,
+      materialId: item.materialId ?? undefined,
+      orderDetailId: item.orderDetailId ?? undefined,
+    }));
+
+    // Handle different stock out types
+    if (stockOutType === "production") {
+      if (!formData.productionOrderId) {
+        toast.error("Vui lòng chọn lệnh sản xuất", {
+          description: "Lệnh sản xuất là bắt buộc khi tạo phiếu xuất kho cho sản xuất",
+        });
+        return;
       }
-    );
+      createStockOutForProduction(
+        {
+          productionOrderId: formData.productionOrderId,
+          itemType: formData.itemType?.trim() || undefined,
+          notes: formData.notes?.trim() || undefined,
+          stockOutDate: formData.stockOutDate
+            ? formatDateWithOffset(formData.stockOutDate)
+            : undefined,
+          items: mappedItems,
+        },
+        {
+          onSuccess: (data) => {
+            // Navigate to detail page
+            if (data?.id) {
+              navigate(`/stock/stock-outs/${data.id}`);
+            }
+          },
+        }
+      );
+    } else if (stockOutType === "delivery") {
+      if (!formData.deliveryNoteId) {
+        toast.error("Vui lòng chọn phiếu giao hàng", {
+          description: "Phiếu giao hàng là bắt buộc khi tạo phiếu xuất kho cho giao hàng",
+        });
+        return;
+      }
+      createStockOutForDelivery(
+        {
+          deliveryNoteId: formData.deliveryNoteId,
+          customerId: formData.customerId || undefined,
+          orderId: formData.orderId || undefined,
+          itemType: formData.itemType?.trim() || undefined,
+          notes: formData.notes?.trim() || undefined,
+          stockOutDate: formData.stockOutDate
+            ? formatDateWithOffset(formData.stockOutDate)
+            : undefined,
+          items: mappedItems,
+        },
+        {
+          onSuccess: (data) => {
+            // Navigate to detail page
+            if (data?.id) {
+              navigate(`/stock/stock-outs/${data.id}`);
+            }
+          },
+        }
+      );
+    }
   };
 
   if (isSuccess) {
@@ -324,107 +442,238 @@ export default function StockOutCreatePage() {
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Stock Out Type Selection */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700">
+                  Loại phiếu xuất kho <span className="text-red-500">*</span>
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStockOutType("production");
+                      setFormData({
+                        ...formData,
+                        productionOrderId: null,
+                        deliveryNoteId: null,
+                        customerId: null,
+                        orderId: null,
+                      });
+                    }}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                      stockOutType === "production"
+                        ? "border-orange-500 bg-orange-50 shadow-md"
+                        : "border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                        stockOutType === "production"
+                          ? "bg-orange-500 text-white"
+                          : "bg-slate-100 text-slate-600"
+                      }`}>
+                        <Factory className="h-5 w-5" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-semibold text-slate-900">Sản xuất</div>
+                        <div className="text-xs text-slate-500">Cho phòng ban sản xuất</div>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStockOutType("delivery");
+                      setFormData({
+                        ...formData,
+                        productionOrderId: null,
+                        deliveryNoteId: null,
+                      });
+                    }}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 ${
+                      stockOutType === "delivery"
+                        ? "border-orange-500 bg-orange-50 shadow-md"
+                        : "border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                        stockOutType === "delivery"
+                          ? "bg-orange-500 text-white"
+                          : "bg-slate-100 text-slate-600"
+                      }`}>
+                        <Truck className="h-5 w-5" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-semibold text-slate-900">Giao hàng</div>
+                        <div className="text-xs text-slate-500">Giao hàng cho khách</div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Production Order Selection (for production type) */}
+              {stockOutType === "production" && (
                 <div className="space-y-2">
                   <Label
-                    htmlFor="type"
-                    className="text-sm font-medium text-slate-700"
+                    htmlFor="productionOrderId"
+                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
                   >
-                    Loại phiếu
+                    <Factory className="h-4 w-4 text-slate-500" />
+                    Lệnh sản xuất <span className="text-red-500">*</span>
                   </Label>
                   <Select
-                    value={formData.type || undefined}
+                    value={formData.productionOrderId?.toString() || ""}
                     onValueChange={(value) =>
                       setFormData({
                         ...formData,
-                        type: value === "none" ? "" : value,
+                        productionOrderId: value ? Number(value) : null,
                       })
                     }
                   >
                     <SelectTrigger
-                      id="type"
+                      id="productionOrderId"
                       className="h-11 cursor-pointer transition-colors duration-200"
                     >
-                      <SelectValue placeholder="Chọn loại phiếu (tùy chọn)" />
+                      <SelectValue placeholder="Chọn lệnh sản xuất" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Không chọn</SelectItem>
-                      <SelectItem value="sale">Bán hàng</SelectItem>
-                      <SelectItem value="material_export">
-                        Xuất nguyên liệu
-                      </SelectItem>
-                      <SelectItem value="production">Sản xuất</SelectItem>
-                      <SelectItem value="adjustment">Điều chỉnh</SelectItem>
-                      <SelectItem value="other">Khác</SelectItem>
+                      {productionOrders.length === 0 ? (
+                        <div className="px-2 py-1.5 text-sm text-slate-500">
+                          Không có lệnh sản xuất nào
+                        </div>
+                      ) : (
+                        productionOrders.map((order) => (
+                          <SelectItem
+                            key={order.id}
+                            value={order.id?.toString() || ""}
+                          >
+                            {order.proofingOrderCode || `Lệnh sản xuất #${order.id}`}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="stockOutDate"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                  >
-                    <Calendar className="h-4 w-4 text-slate-500" />
-                    Ngày xuất kho
-                  </Label>
-                  <Input
-                    id="stockOutDate"
-                    type="datetime-local"
-                    value={
-                      formData.stockOutDate
-                        ? formData.stockOutDate.includes("T")
-                          ? formData.stockOutDate.slice(0, 16)
-                          : formData.stockOutDate + "T00:00"
-                        : new Date().toISOString().slice(0, 16)
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setFormData({
-                        ...formData,
-                        stockOutDate:
-                          value || new Date().toISOString().slice(0, 16),
-                      });
-                    }}
-                    className="h-11 transition-colors duration-200"
-                  />
-                </div>
-              </div>
+              {/* Delivery Note Selection (for delivery type) */}
+              {stockOutType === "delivery" && (
+                <>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="deliveryNoteId"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <Truck className="h-4 w-4 text-slate-500" />
+                      Phiếu giao hàng <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={formData.deliveryNoteId?.toString() || ""}
+                      onValueChange={(value) => {
+                        const selectedNote = deliveryNotes.find(
+                          (note) => note.id?.toString() === value
+                        );
+                        setFormData({
+                          ...formData,
+                          deliveryNoteId: value ? Number(value) : null,
+                          customerId: selectedNote?.customerId ? Number(selectedNote.customerId) : null,
+                          orderId: selectedNote?.orderId ? Number(selectedNote.orderId) : null,
+                        });
+                      }}
+                    >
+                      <SelectTrigger
+                        id="deliveryNoteId"
+                        className="h-11 cursor-pointer transition-colors duration-200"
+                      >
+                        <SelectValue placeholder="Chọn phiếu giao hàng" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {deliveryNotes.length === 0 ? (
+                          <div className="px-2 py-1.5 text-sm text-slate-500">
+                            Không có phiếu giao hàng nào
+                          </div>
+                        ) : (
+                          deliveryNotes.map((note) => (
+                            <SelectItem
+                              key={note.id}
+                              value={note.id?.toString() || ""}
+                            >
+                              {note.code || `Phiếu giao hàng #${note.id}`}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="customerId"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      <User className="h-4 w-4 text-slate-500" />
+                      Khách hàng
+                    </Label>
+                    <Select
+                      value={formData.customerId?.toString() || ""}
+                      onValueChange={(value) =>
+                        setFormData({
+                          ...formData,
+                          customerId: value ? Number(value) : null,
+                        })
+                      }
+                    >
+                      <SelectTrigger
+                        id="customerId"
+                        className="h-11 cursor-pointer transition-colors duration-200"
+                      >
+                        <SelectValue placeholder="Chọn khách hàng (tùy chọn)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map((customer) => (
+                          <SelectItem
+                            key={customer.id}
+                            value={customer.id?.toString() || ""}
+                          >
+                            {customer.name ?? ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
+              {/* Common fields for all types */}
               <div className="space-y-2">
                 <Label
-                  htmlFor="customerId"
+                  htmlFor="stockOutDate"
                   className="text-sm font-medium text-slate-700 flex items-center gap-2"
                 >
-                  <User className="h-4 w-4 text-slate-500" />
-                  Khách hàng
+                  <Calendar className="h-4 w-4 text-slate-500" />
+                  Ngày xuất kho
                 </Label>
-                <Select
-                  value={formData.customerId?.toString() || ""}
-                  onValueChange={(value) =>
+                <Input
+                  id="stockOutDate"
+                  type="datetime-local"
+                  value={
+                    formData.stockOutDate
+                      ? formData.stockOutDate.includes("T")
+                        ? formData.stockOutDate.slice(0, 16)
+                        : formData.stockOutDate + "T00:00"
+                      : new Date().toISOString().slice(0, 16)
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
                     setFormData({
                       ...formData,
-                      customerId: value ? Number(value) : null,
-                    })
-                  }
-                >
-                  <SelectTrigger
-                    id="customerId"
-                    className="h-11 cursor-pointer transition-colors duration-200"
-                  >
-                    <SelectValue placeholder="Chọn khách hàng (tùy chọn)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer) => (
-                      <SelectItem
-                        key={customer.id}
-                        value={customer.id?.toString() || ""}
-                      >
-                        {customer.name ?? ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      stockOutDate:
+                        value || new Date().toISOString().slice(0, 16),
+                    });
+                  }}
+                  className="h-11 transition-colors duration-200"
+                />
               </div>
 
               <div className="space-y-2">
@@ -507,6 +756,41 @@ export default function StockOutCreatePage() {
                     )}
                   </div>
 
+                  {/* Material Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-slate-600">
+                      Chọn chất liệu
+                    </Label>
+                    <Select
+                      value={item.materialId?.toString() || ""}
+                      onValueChange={(value) =>
+                        handleMaterialSelect(index, value)
+                      }
+                    >
+                      <SelectTrigger className="h-10 cursor-pointer transition-colors duration-200">
+                        <SelectValue placeholder="Chọn chất liệu để tự động điền thông tin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {materials.length === 0 ? (
+                          <div className="px-2 py-1.5 text-sm text-slate-500">
+                            Không có chất liệu nào
+                          </div>
+                        ) : (
+                          materials.map((material) => (
+                            <SelectItem
+                              key={material.id}
+                              value={material.id?.toString() || ""}
+                            >
+                              {material.name ||
+                                material.materialTypeName ||
+                                `Chất liệu #${material.id}`}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     <div className="md:col-span-2 space-y-2">
                       <Label className="text-xs font-medium text-slate-600">
@@ -518,7 +802,7 @@ export default function StockOutCreatePage() {
                           handleItemChange(index, "itemName", e.target.value)
                         }
                         onBlur={() => handleItemBlur(index)}
-                        placeholder="Nhập tên vật phẩm"
+                        placeholder="Nhập tên vật phẩm hoặc chọn chất liệu"
                         className={
                           itemErrors[index]?.itemName
                             ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
@@ -542,7 +826,7 @@ export default function StockOutCreatePage() {
                         onChange={(e) =>
                           handleItemChange(index, "itemCode", e.target.value)
                         }
-                        placeholder="Mã (tùy chọn)"
+                        placeholder="Mã (tự động hoặc nhập thủ công)"
                       />
                     </div>
 
@@ -555,7 +839,7 @@ export default function StockOutCreatePage() {
                         onChange={(e) =>
                           handleItemChange(index, "unit", e.target.value)
                         }
-                        placeholder="Đơn vị (tùy chọn)"
+                        placeholder="Đơn vị (tự động hoặc nhập thủ công)"
                       />
                     </div>
                   </div>

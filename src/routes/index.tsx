@@ -78,8 +78,10 @@ const ProductTemplates = lazy(
 // Stock Management
 const StockInList = lazy(() => import("@/pages/stock/StockInList"));
 const StockInCreate = lazy(() => import("@/pages/stock/StockInCreate"));
+const StockInDetail = lazy(() => import("@/pages/stock/StockInDetail"));
 const StockOutList = lazy(() => import("@/pages/stock/StockOutList"));
 const StockOutCreate = lazy(() => import("@/pages/stock/StockOutCreate"));
+const StockOutDetail = lazy(() => import("@/pages/stock/StockOutDetail"));
 
 // Vendors
 const VendorList = lazy(() => import("@/pages/vendors/VendorList"));
@@ -529,6 +531,14 @@ export const router = createBrowserRouter([
                   </Suspense>
                 ),
               },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <StockInDetail />
+                  </Suspense>
+                ),
+              },
             ],
           },
           {
@@ -547,6 +557,14 @@ export const router = createBrowserRouter([
                 element: (
                   <Suspense fallback={<PageLoadingFallback />}>
                     <StockOutCreate />
+                  </Suspense>
+                ),
+              },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <StockOutDetail />
                   </Suspense>
                 ),
               },
