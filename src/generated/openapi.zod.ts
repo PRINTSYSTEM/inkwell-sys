@@ -1488,6 +1488,31 @@ const UpdateEInvoiceInfoRequest = z
     eInvoiceIssuedAt: z.string().datetime({ offset: true }).nullable(),
   })
   .partial();
+const MaterialResponse = z
+  .object({
+    id: z.number().int(),
+    name: z.string().nullable(),
+    materialTypeId: z.number().int(),
+    materialTypeName: z.string().nullable(),
+    length: z.number(),
+    width: z.number(),
+    height: z.number(),
+    quantity: z.number().int(),
+    createdById: z.number().int(),
+    createdBy: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const MaterialResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(MaterialResponse).nullable(),
+  })
+  .partial();
 const CreateMaterialRequest = z.object({
   name: z.string().min(1),
   materialTypeId: z.number().int(),
@@ -2282,23 +2307,57 @@ const StockInItemRequest = z.object({
   notes: z.string().nullish(),
   materialId: z.number().int().nullish(),
   orderDetailId: z.number().int().nullish(),
+  length: z.number().nullish(),
+  width: z.number().nullish(),
+  height: z.number().nullish(),
 });
 const CreateStockInRequest = z.object({
-  type: z.string().nullish(),
-  supplierId: z.number().int().nullish(),
+  source: z.string().min(1),
+  itemType: z.string().nullish(),
+  vendorId: z.number().int().nullish(),
+  productionOrderId: z.number().int().nullish(),
+  deliveryNoteId: z.number().int().nullish(),
+  originalStockOutId: z.number().int().nullish(),
   orderId: z.number().int().nullish(),
-  productionId: z.number().int().nullish(),
+  totalAmount: z.number().nullish(),
+  notes: z.string().nullish(),
+  stockInDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(StockInItemRequest),
+});
+const CreateStockInFromVendorRequest = z.object({
+  vendorId: z.number().int(),
+  itemType: z.string().nullish(),
+  totalAmount: z.number().nullish(),
+  notes: z.string().nullish(),
+  stockInDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(StockInItemRequest),
+});
+const CreateStockInFromProductionRequest = z.object({
+  productionOrderId: z.number().int(),
+  itemType: z.string().nullish(),
+  notes: z.string().nullish(),
+  stockInDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(StockInItemRequest),
+});
+const CreateStockInFromDeliveryReturnRequest = z.object({
+  deliveryNoteId: z.number().int(),
+  originalStockOutId: z.number().int(),
+  itemType: z.string().nullish(),
+  returnReason: z.string().nullish(),
   notes: z.string().nullish(),
   stockInDate: z.string().datetime({ offset: true }).nullish(),
   items: z.array(StockInItemRequest),
 });
 const UpdateStockInRequest = z
   .object({
-    type: z.string().nullable(),
+    source: z.string().nullable(),
+    itemType: z.string().nullable(),
     status: z.string().nullable(),
-    supplierId: z.number().int().nullable(),
+    vendorId: z.number().int().nullable(),
+    productionOrderId: z.number().int().nullable(),
+    deliveryNoteId: z.number().int().nullable(),
     orderId: z.number().int().nullable(),
-    productionId: z.number().int().nullable(),
+    totalAmount: z.number().nullable(),
     notes: z.string().nullable(),
     stockInDate: z.string().datetime({ offset: true }).nullable(),
     items: z.array(StockInItemRequest).nullable(),
@@ -2314,23 +2373,52 @@ const StockOutItemRequest = z.object({
   orderDetailId: z.number().int().nullish(),
 });
 const CreateStockOutRequest = z.object({
-  type: z.string().nullish(),
+  purpose: z.string().min(1),
+  itemType: z.string().nullish(),
+  productionOrderId: z.number().int().nullish(),
+  deliveryNoteId: z.number().int().nullish(),
   customerId: z.number().int().nullish(),
   orderId: z.number().int().nullish(),
-  productionId: z.number().int().nullish(),
-  deliveryNoteId: z.number().int().nullish(),
   notes: z.string().nullish(),
   stockOutDate: z.string().datetime({ offset: true }).nullish(),
   items: z.array(StockOutItemRequest),
 });
+const CreateStockOutForProductionRequest = z.object({
+  productionOrderId: z.number().int(),
+  itemType: z.string().nullish(),
+  notes: z.string().nullish(),
+  stockOutDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(StockOutItemRequest),
+});
+const CreateStockOutForDeliveryRequest = z.object({
+  deliveryNoteId: z.number().int(),
+  customerId: z.number().int().nullish(),
+  orderId: z.number().int().nullish(),
+  itemType: z.string().nullish(),
+  notes: z.string().nullish(),
+  stockOutDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(StockOutItemRequest),
+});
+const ReturnItemRequest = z.object({
+  stockOutItemId: z.number().int(),
+  returnQuantity: z.number().int().gte(1).lte(2147483647),
+  notes: z.string().nullish(),
+});
+const ProcessDeliveryReturnRequest = z.object({
+  stockOutId: z.number().int(),
+  returnReason: z.string().min(1),
+  notes: z.string().nullish(),
+  returnItems: z.array(ReturnItemRequest),
+});
 const UpdateStockOutRequest = z
   .object({
-    type: z.string().nullable(),
+    purpose: z.string().nullable(),
+    itemType: z.string().nullable(),
     status: z.string().nullable(),
+    productionOrderId: z.number().int().nullable(),
+    deliveryNoteId: z.number().int().nullable(),
     customerId: z.number().int().nullable(),
     orderId: z.number().int().nullable(),
-    productionId: z.number().int().nullable(),
-    deliveryNoteId: z.number().int().nullable(),
     notes: z.string().nullable(),
     stockOutDate: z.string().datetime({ offset: true }).nullable(),
     items: z.array(StockOutItemRequest).nullable(),
@@ -2600,6 +2688,8 @@ export const schemas = {
   CreateInvoiceFromLinesRequest,
   IssueInvoiceRequest,
   UpdateEInvoiceInfoRequest,
+  MaterialResponse,
+  MaterialResponseIPaginate,
   CreateMaterialRequest,
   UpdateMaterialRequest,
   CreateMaterialTypeRequest,
@@ -2667,9 +2757,16 @@ export const schemas = {
   OrderDrillDownResponseIPaginate,
   StockInItemRequest,
   CreateStockInRequest,
+  CreateStockInFromVendorRequest,
+  CreateStockInFromProductionRequest,
+  CreateStockInFromDeliveryReturnRequest,
   UpdateStockInRequest,
   StockOutItemRequest,
   CreateStockOutRequest,
+  CreateStockOutForProductionRequest,
+  CreateStockOutForDeliveryRequest,
+  ReturnItemRequest,
+  ProcessDeliveryReturnRequest,
   UpdateStockOutRequest,
   CreateUserRequest,
   UserResponse,
@@ -5477,7 +5574,7 @@ const endpoints = makeApi([
         schema: z.number().int().optional(),
       },
     ],
-    response: z.void(),
+    response: MaterialResponseIPaginate,
   },
   {
     method: "post",
@@ -5491,7 +5588,7 @@ const endpoints = makeApi([
         schema: CreateMaterialRequest,
       },
     ],
-    response: z.void(),
+    response: MaterialResponse,
   },
   {
     method: "get",
@@ -5505,7 +5602,7 @@ const endpoints = makeApi([
         schema: z.number().int(),
       },
     ],
-    response: z.void(),
+    response: MaterialResponse,
   },
   {
     method: "put",
@@ -5524,7 +5621,7 @@ const endpoints = makeApi([
         schema: z.number().int(),
       },
     ],
-    response: z.void(),
+    response: MaterialResponse,
   },
   {
     method: "delete",
@@ -7160,7 +7257,12 @@ const endpoints = makeApi([
         schema: z.number().int().optional().default(10),
       },
       {
-        name: "type",
+        name: "source",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "itemType",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -7173,6 +7275,16 @@ const endpoints = makeApi([
         name: "search",
         type: "Query",
         schema: z.string().optional(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
       },
     ],
     response: z.void(),
@@ -7253,6 +7365,109 @@ const endpoints = makeApi([
     response: z.void(),
   },
   {
+    method: "get",
+    path: "/api/stock-ins/by-delivery-note/:deliveryNoteId",
+    alias: "getApistockInsbyDeliveryNoteDeliveryNoteId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "deliveryNoteId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-ins/by-production-order/:productionOrderId",
+    alias: "getApistockInsbyProductionOrderProductionOrderId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "productionOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-ins/by-vendor/:vendorId",
+    alias: "getApistockInsbyVendorVendorId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "vendorId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-ins/from-delivery-return",
+    alias: "postApistockInsfromDeliveryReturn",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateStockInFromDeliveryReturnRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-ins/from-production",
+    alias: "postApistockInsfromProduction",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateStockInFromProductionRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-ins/from-vendor",
+    alias: "postApistockInsfromVendor",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateStockInFromVendorRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-ins/summary",
+    alias: "getApistockInssummary",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
     method: "post",
     path: "/api/stock-outs",
     alias: "postApistockOuts",
@@ -7283,7 +7498,12 @@ const endpoints = makeApi([
         schema: z.number().int().optional().default(10),
       },
       {
-        name: "type",
+        name: "purpose",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "itemType",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -7296,6 +7516,16 @@ const endpoints = makeApi([
         name: "search",
         type: "Query",
         schema: z.string().optional(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
       },
     ],
     response: z.void(),
@@ -7371,6 +7601,109 @@ const endpoints = makeApi([
         name: "id",
         type: "Path",
         schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-outs/by-delivery-note/:deliveryNoteId",
+    alias: "getApistockOutsbyDeliveryNoteDeliveryNoteId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "deliveryNoteId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-outs/by-production-order/:productionOrderId",
+    alias: "getApistockOutsbyProductionOrderProductionOrderId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "productionOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs/for-delivery",
+    alias: "postApistockOutsforDelivery",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateStockOutForDeliveryRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs/for-production",
+    alias: "postApistockOutsforProduction",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateStockOutForProductionRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs/process-return",
+    alias: "postApistockOutsprocessReturn",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: ProcessDeliveryReturnRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-outs/returnable/by-delivery-note/:deliveryNoteId",
+    alias: "getApistockOutsreturnablebyDeliveryNoteDeliveryNoteId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "deliveryNoteId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/stock-outs/summary",
+    alias: "getApistockOutssummary",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
       },
     ],
     response: z.void(),

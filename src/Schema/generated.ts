@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-11T16:04:41.496Z */
+/* Generated at: 2026-01-12T01:37:09.230Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -66,7 +66,12 @@ export const CreatePaperSizeRequestSchema = schemas.CreatePaperSizeRequest;
 export const CreatePaymentMethodRequestSchema = schemas.CreatePaymentMethodRequest;
 export const CreatePaymentRequestSchema = schemas.CreatePaymentRequest;
 export const CreateProductionOrderRequestSchema = schemas.CreateProductionOrderRequest;
+export const CreateStockInFromDeliveryReturnRequestSchema = schemas.CreateStockInFromDeliveryReturnRequest;
+export const CreateStockInFromProductionRequestSchema = schemas.CreateStockInFromProductionRequest;
+export const CreateStockInFromVendorRequestSchema = schemas.CreateStockInFromVendorRequest;
 export const CreateStockInRequestSchema = schemas.CreateStockInRequest;
+export const CreateStockOutForDeliveryRequestSchema = schemas.CreateStockOutForDeliveryRequest;
+export const CreateStockOutForProductionRequestSchema = schemas.CreateStockOutForProductionRequest;
 export const CreateStockOutRequestSchema = schemas.CreateStockOutRequest;
 export const CreateUserRequestSchema = schemas.CreateUserRequest;
 export const CreateVendorRequestSchema = schemas.CreateVendorRequest;
@@ -115,6 +120,8 @@ export const LoginRequestSchema = schemas.LoginRequest;
 export const LoginResponseSchema = schemas.LoginResponse;
 export const LowStockResponseSchema = schemas.LowStockResponse;
 export const LowStockResponseIPaginateSchema = schemas.LowStockResponseIPaginate;
+export const MaterialResponseSchema = schemas.MaterialResponse;
+export const MaterialResponseIPaginateSchema = schemas.MaterialResponseIPaginate;
 export const MaterialTypeItemSchema = schemas.MaterialTypeItem;
 export const MaterialTypeResponseSchema = schemas.MaterialTypeResponse;
 export const MaterialTypeResponsePaginateSchema = schemas.MaterialTypeResponsePaginate;
@@ -142,6 +149,7 @@ export const PaymentSummaryResponseSchema = schemas.PaymentSummaryResponse;
 export const PlateExportResponseSchema = schemas.PlateExportResponse;
 export const PlateExportResponsePaginateSchema = schemas.PlateExportResponsePaginate;
 export const ProblemDetailsSchema = schemas.ProblemDetails;
+export const ProcessDeliveryReturnRequestSchema = schemas.ProcessDeliveryReturnRequest;
 export const ProductionOrderResponseSchema = schemas.ProductionOrderResponse;
 export const ProductionOrderResponsePaginateSchema = schemas.ProductionOrderResponsePaginate;
 export const ProductionResponseSchema = schemas.ProductionResponse;
@@ -158,6 +166,7 @@ export const ReplaceDieRequestSchema = schemas.ReplaceDieRequest;
 export const ReportExportResponseSchema = schemas.ReportExportResponse;
 export const ReportExportResponseIPaginateSchema = schemas.ReportExportResponseIPaginate;
 export const ResetPasswordRequestSchema = schemas.ResetPasswordRequest;
+export const ReturnItemRequestSchema = schemas.ReturnItemRequest;
 export const ReturnsDiscountsResponseSchema = schemas.ReturnsDiscountsResponse;
 export const ReturnsDiscountsResponseIPaginateSchema = schemas.ReturnsDiscountsResponseIPaginate;
 export const RevertDesignRequestSchema = schemas.RevertDesignRequest;

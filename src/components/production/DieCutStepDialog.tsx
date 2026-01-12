@@ -24,9 +24,14 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useUpdateProductionStep } from "@/hooks/use-production";
+import {
+  useStockOutsByProductionOrder,
+  useCompleteStockOut,
+} from "@/hooks/use-stock";
 import { useTakeOutDie, useReturnDie } from "@/hooks/use-die";
 import { useSearchDies } from "@/hooks/use-die";
 import { useDebounce } from "use-debounce";
+import { toast } from "sonner";
 import type {
   ProductionStepResponse,
   ProductionOrderResponse,
@@ -34,7 +39,6 @@ import type {
   DieExportResponse,
   DieResponse,
 } from "@/Schema";
-import { toast } from "sonner";
 import { formatDieSize } from "@/utils/format-die-size";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
@@ -74,6 +78,14 @@ export function DieCutStepDialog({
     useUpdateProductionStep();
   const { mutate: takeOutDie, isPending: takingOutDie } = useTakeOutDie();
   const { mutate: returnDie, isPending: returningDie } = useReturnDie();
+  const { mutate: completeStockOut } = useCompleteStockOut();
+
+  // Fetch stock outs for this production order to find material export stock out
+  const { data: stockOutsData } = useStockOutsByProductionOrder(
+    productionOrder?.id || null,
+    open && !!productionOrder?.id && mode === "complete"
+  );
+  const stockOuts = stockOutsData || [];
 
   // Fetch dies from proofing order
   // Note: proofingOrder.dieExports or proofingOrder.proofingOrderDies contains the die exports
@@ -202,6 +214,34 @@ export function DieCutStepDialog({
           onError: reject,
         });
       });
+
+      // If this is a material_export step, find and complete the related stock-out
+      if (step.stepType === "material_export" && productionOrder?.id) {
+        // Find the stock-out for this production order that hasn't been completed yet
+        const pendingStockOut = stockOuts.find(
+          (so: any) =>
+            so.productionOrderId === productionOrder.id &&
+            so.status !== "completed" &&
+            so.status !== "cancelled"
+        );
+
+        if (pendingStockOut?.id) {
+          // Complete the stock-out
+          completeStockOut(pendingStockOut.id, {
+            onSuccess: () => {
+              toast.success("Đã hoàn thành phiếu xuất kho");
+            },
+            onError: (error: any) => {
+              toast.error("Không thể hoàn thành phiếu xuất kho", {
+                description:
+                  error?.response?.data?.message ||
+                  error?.message ||
+                  "Đã xảy ra lỗi",
+              });
+            },
+          });
+        }
+      }
 
       // Step 2: Update production step to DONE
       const combinedNotes = [notes.trim(), defectNotes.trim()]

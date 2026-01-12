@@ -56,6 +56,15 @@ import {
 import { formatDate, formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AlertTriangle, AlertCircle } from "lucide-react";
 
 export default function StockOutListPage() {
   const navigate = useNavigate();
@@ -84,21 +93,92 @@ export default function StockOutListPage() {
   const stockOuts = data?.items || [];
   const totalPages = data?.totalPages || 1;
 
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    id: number | null;
+    type: "complete" | "cancel" | "delete" | null;
+    title: string;
+    description: string;
+    confirmText: string;
+    confirmVariant?: "default" | "destructive";
+  }>({
+    open: false,
+    id: null,
+    type: null,
+    title: "",
+    description: "",
+    confirmText: "",
+    confirmVariant: "default",
+  });
+
   const handleDelete = (id: number) => {
-    if (confirm("Bạn có chắc chắn muốn xóa phiếu xuất kho này?")) {
-      deleteStockOut(id);
-    }
+    setConfirmDialog({
+      open: true,
+      id,
+      type: "delete",
+      title: "Xác nhận xóa phiếu xuất kho",
+      description:
+        "Bạn có chắc chắn muốn xóa phiếu xuất kho này? Hành động này không thể hoàn tác và sẽ xóa vĩnh viễn dữ liệu.",
+      confirmText: "Xóa",
+      confirmVariant: "destructive",
+    });
   };
 
   const handleComplete = (id: number) => {
-    if (confirm("Bạn có chắc chắn muốn hoàn thành phiếu xuất kho này?")) {
-      completeStockOut(id);
-    }
+    setConfirmDialog({
+      open: true,
+      id,
+      type: "complete",
+      title: "Xác nhận hoàn thành phiếu xuất kho",
+      description:
+        "Bạn có chắc chắn muốn hoàn thành phiếu xuất kho này? Hành động này không thể hoàn tác.",
+      confirmText: "Hoàn thành",
+      confirmVariant: "default",
+    });
   };
 
   const handleCancel = (id: number) => {
-    if (confirm("Bạn có chắc chắn muốn hủy phiếu xuất kho này?")) {
-      cancelStockOut(id);
+    setConfirmDialog({
+      open: true,
+      id,
+      type: "cancel",
+      title: "Xác nhận hủy phiếu xuất kho",
+      description:
+        "Bạn có chắc chắn muốn hủy phiếu xuất kho này? Hành động này không thể hoàn tác.",
+      confirmText: "Hủy phiếu",
+      confirmVariant: "destructive",
+    });
+  };
+
+  const handleConfirm = () => {
+    if (!confirmDialog.id || !confirmDialog.type) return;
+
+    switch (confirmDialog.type) {
+      case "complete":
+        completeStockOut(confirmDialog.id, {
+          onSuccess: () => {
+            toast.success("Đã hoàn thành phiếu xuất kho");
+            setConfirmDialog({ ...confirmDialog, open: false });
+          },
+        });
+        break;
+      case "cancel":
+        cancelStockOut(confirmDialog.id, {
+          onSuccess: () => {
+            toast.success("Đã hủy phiếu xuất kho");
+            setConfirmDialog({ ...confirmDialog, open: false });
+          },
+        });
+        break;
+      case "delete":
+        deleteStockOut(confirmDialog.id, {
+          onSuccess: () => {
+            toast.success("Đã xóa phiếu xuất kho");
+            setConfirmDialog({ ...confirmDialog, open: false });
+          },
+        });
+        break;
     }
   };
 
@@ -483,6 +563,55 @@ export default function StockOutListPage() {
           </Card>
         </div>
       </div>
+
+      {/* Confirm Dialog */}
+      <Dialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                confirmDialog.confirmVariant === "destructive"
+                  ? "bg-red-100"
+                  : "bg-orange-100"
+              }`}>
+                {confirmDialog.confirmVariant === "destructive" ? (
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                )}
+              </div>
+              <DialogTitle className="text-lg font-semibold text-slate-900">
+                {confirmDialog.title}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-sm text-slate-600 pt-2">
+              {confirmDialog.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+              className="cursor-pointer transition-colors duration-200"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant={confirmDialog.confirmVariant || "default"}
+              onClick={handleConfirm}
+              className={`cursor-pointer transition-colors duration-200 ${
+                confirmDialog.confirmVariant === "destructive"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-orange-600 hover:bg-orange-700"
+              }`}
+            >
+              {confirmDialog.confirmText}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

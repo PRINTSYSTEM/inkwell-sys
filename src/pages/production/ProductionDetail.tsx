@@ -48,6 +48,10 @@ import {
   useUpdateProductionStep,
   useAssignProductionWorker,
 } from "@/hooks/use-production";
+import {
+  useStockOutsByProductionOrder,
+  useCompleteStockOut,
+} from "@/hooks/use-stock";
 import { useProofingOrder } from "@/hooks/use-proofing-order";
 import { IdSchema } from "@/Schema";
 import { toast } from "sonner";
@@ -122,6 +126,14 @@ export default function ProductionDetailPage() {
   const { mutate: updateStep, isPending: updating } = useUpdateProductionStep();
   const { mutateAsync: assignWorker, isPending: assigning } =
     useAssignProductionWorker();
+  const { mutate: completeStockOut } = useCompleteStockOut();
+
+  // Fetch stock outs for this production order to find material export stock out
+  const { data: stockOutsData } = useStockOutsByProductionOrder(
+    production?.id || null,
+    idValid && !!production?.id
+  );
+  const stockOuts: any[] = Array.isArray(stockOutsData) ? stockOutsData : [];
 
   // Sync selected worker with API response when production data changes
   useEffect(() => {
@@ -251,6 +263,28 @@ export default function ProductionDetailPage() {
     return firstReadyStep?.stepType === "material_export";
   }, [firstReadyStep]);
 
+  // Check if current active step is material_export (for auto-opening dialog)
+  const shouldShowMaterialExportDialogForActiveStep = useMemo(() => {
+    return currentActiveStep?.stepType === "material_export";
+  }, [currentActiveStep]);
+
+  // Auto-open MaterialExportDialog when step is in_progress and type is material_export
+  useEffect(() => {
+    if (
+      shouldShowMaterialExportDialogForActiveStep &&
+      currentActiveStep?.id &&
+      production?.id &&
+      !isMaterialExportDialogOpen
+    ) {
+      setIsMaterialExportDialogOpen(true);
+    }
+  }, [
+    shouldShowMaterialExportDialogForActiveStep,
+    currentActiveStep?.id,
+    production?.id,
+    isMaterialExportDialogOpen,
+  ]);
+
   const shouldShowDieCutStartDialog = useMemo(() => {
     return (
       firstReadyStep?.stepType === "die_cut" ||
@@ -272,7 +306,7 @@ export default function ProductionDetailPage() {
     return isLastStep || stepToComplete?.stepType === "packaging";
   }, [isLastStep, stepToComplete]);
 
-  const handleStartProduction = () => {
+  const handleStartProduction = async () => {
     if (!firstReadyStep?.id) {
       toast.error("Không tìm thấy bước sản xuất sẵn sàng để bắt đầu");
       return;
@@ -284,8 +318,17 @@ export default function ProductionDetailPage() {
       return;
     }
 
-    // Open appropriate dialog based on step type
-    if (shouldShowMaterialExportDialog) {
+    // For material_export step, update step status first, then open dialog
+    if (shouldShowMaterialExportDialog && production?.id) {
+      // Update step to IN_PROGRESS first, then open dialog
+      updateStep({
+        stepId: firstReadyStep.id!,
+        data: {
+          status: "in_progress",
+          inputQty: firstReadyStep.inputQty || undefined,
+        },
+      });
+      // Open dialog immediately (step update will happen in background)
       setIsMaterialExportDialogOpen(true);
     } else if (shouldShowDieCutStartDialog) {
       setIsDieCutStartDialogOpen(true);
@@ -401,6 +444,22 @@ export default function ProductionDetailPage() {
     }
 
     try {
+      // If this is a material_export step, find and complete the related stock-out
+      if (stepToComplete.stepType === "material_export" && production?.id) {
+        // Find the stock-out for this production order that hasn't been completed yet
+        const pendingStockOut = stockOuts.find(
+          (so: any) =>
+            so.productionOrderId === production.id &&
+            so.status !== "completed" &&
+            so.status !== "cancelled"
+        );
+
+        if (pendingStockOut?.id) {
+          // Complete the stock-out first
+          completeStockOut(pendingStockOut.id);
+        }
+      }
+
       const combinedNotes = [defectNotes.trim(), completeNotes.trim()]
         .filter(Boolean)
         .join("\n\n");
@@ -542,7 +601,7 @@ export default function ProductionDetailPage() {
               {showStartButton && (
                 <Button
                   className="gap-2"
-                  onClick={() => setIsStartDialogOpen(true)}
+                  onClick={handleStartProduction}
                   disabled={starting}
                 >
                   <PlayCircle className="h-4 w-4" />
@@ -2052,11 +2111,11 @@ export default function ProductionDetailPage() {
         {/* Step-Specific Dialogs */}
 
         {/* Material Export Dialog - for material_export step type */}
-        {firstReadyStep && production && (
+        {(firstReadyStep || currentActiveStep) && production && (
           <MaterialExportDialog
             open={isMaterialExportDialogOpen}
             onOpenChange={setIsMaterialExportDialogOpen}
-            step={firstReadyStep}
+            step={(currentActiveStep || firstReadyStep)!}
             productionOrder={production}
             proofingOrder={proofingOrder || null}
           />

@@ -6,9 +6,16 @@ import { schemas } from "./generated";
 // Try to import Stock schemas from generated, with fallback
 const GenStockInItemRequestSchema = schemas.StockInItemRequest;
 const GenCreateStockInRequestSchema = schemas.CreateStockInRequest;
+const GenCreateStockInFromVendorRequestSchema = schemas.CreateStockInFromVendorRequest;
+const GenCreateStockInFromProductionRequestSchema = schemas.CreateStockInFromProductionRequest;
+const GenCreateStockInFromDeliveryReturnRequestSchema = schemas.CreateStockInFromDeliveryReturnRequest;
 const GenUpdateStockInRequestSchema = schemas.UpdateStockInRequest;
 const GenStockOutItemRequestSchema = schemas.StockOutItemRequest;
 const GenCreateStockOutRequestSchema = schemas.CreateStockOutRequest;
+const GenCreateStockOutForProductionRequestSchema = schemas.CreateStockOutForProductionRequest;
+const GenCreateStockOutForDeliveryRequestSchema = schemas.CreateStockOutForDeliveryRequest;
+const GenProcessDeliveryReturnRequestSchema = schemas.ProcessDeliveryReturnRequest;
+const GenReturnItemRequestSchema = schemas.ReturnItemRequest;
 const GenUpdateStockOutRequestSchema = schemas.UpdateStockOutRequest;
 
 // New stock/inventory schemas
@@ -35,6 +42,27 @@ export type CreateStockInRequest = z.infer<
   typeof CreateStockInRequestSchema
 >;
 
+// ===== CreateStockInFromVendorRequest =====
+export const CreateStockInFromVendorRequestSchema =
+  GenCreateStockInFromVendorRequestSchema?.passthrough() || z.any();
+export type CreateStockInFromVendorRequest = z.infer<
+  typeof CreateStockInFromVendorRequestSchema
+>;
+
+// ===== CreateStockInFromProductionRequest =====
+export const CreateStockInFromProductionRequestSchema =
+  GenCreateStockInFromProductionRequestSchema?.passthrough() || z.any();
+export type CreateStockInFromProductionRequest = z.infer<
+  typeof CreateStockInFromProductionRequestSchema
+>;
+
+// ===== CreateStockInFromDeliveryReturnRequest =====
+export const CreateStockInFromDeliveryReturnRequestSchema =
+  GenCreateStockInFromDeliveryReturnRequestSchema?.passthrough() || z.any();
+export type CreateStockInFromDeliveryReturnRequest = z.infer<
+  typeof CreateStockInFromDeliveryReturnRequestSchema
+>;
+
 // ===== UpdateStockInRequest =====
 export const UpdateStockInRequestSchema =
   GenUpdateStockInRequestSchema?.passthrough() || z.any();
@@ -53,6 +81,32 @@ export const CreateStockOutRequestSchema =
 export type CreateStockOutRequest = z.infer<
   typeof CreateStockOutRequestSchema
 >;
+
+// ===== CreateStockOutForProductionRequest =====
+export const CreateStockOutForProductionRequestSchema =
+  GenCreateStockOutForProductionRequestSchema?.passthrough() || z.any();
+export type CreateStockOutForProductionRequest = z.infer<
+  typeof CreateStockOutForProductionRequestSchema
+>;
+
+// ===== CreateStockOutForDeliveryRequest =====
+export const CreateStockOutForDeliveryRequestSchema =
+  GenCreateStockOutForDeliveryRequestSchema?.passthrough() || z.any();
+export type CreateStockOutForDeliveryRequest = z.infer<
+  typeof CreateStockOutForDeliveryRequestSchema
+>;
+
+// ===== ProcessDeliveryReturnRequest =====
+export const ProcessDeliveryReturnRequestSchema =
+  GenProcessDeliveryReturnRequestSchema?.passthrough() || z.any();
+export type ProcessDeliveryReturnRequest = z.infer<
+  typeof ProcessDeliveryReturnRequestSchema
+>;
+
+// ===== ReturnItemRequest =====
+export const ReturnItemRequestSchema =
+  GenReturnItemRequestSchema?.passthrough() || z.any();
+export type ReturnItemRequest = z.infer<typeof ReturnItemRequestSchema>;
 
 // ===== UpdateStockOutRequest =====
 export const UpdateStockOutRequestSchema =
