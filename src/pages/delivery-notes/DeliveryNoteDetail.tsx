@@ -98,6 +98,8 @@ function OrderDetailRow({
     isExpanded && !!order.orderId // Only fetch when expanded and orderId exists
   );
 
+  const scrapQuantity = (quantity: number) => Math.floor(quantity * 0.05);
+
   return (
     <>
       <TableRow className="cursor-pointer hover:bg-muted/50" onClick={onToggle}>
@@ -164,9 +166,9 @@ function OrderDetailRow({
                               {/* Phụ hao = quantity - proofedQuantity */}
                               {detail.proofedQuantity != null &&
                               detail.quantity != null
-                                ? (
-                                    detail.quantity - detail.proofedQuantity
-                                  ).toLocaleString("vi-VN")
+                                ? scrapQuantity(detail.quantity).toLocaleString(
+                                    "vi-VN"
+                                  )
                                 : "—"}
                             </p>
                           </div>
@@ -175,11 +177,9 @@ function OrderDetailRow({
                               Số lượng thực
                             </Label>
                             <p className="font-medium">
-                              {detail.proofedQuantity?.toLocaleString(
-                                "vi-VN"
-                              ) ||
-                                detail.quantity?.toLocaleString("vi-VN") ||
-                                "—"}
+                              {(
+                                detail.quantity - scrapQuantity(detail.quantity)
+                              ).toLocaleString("vi-VN") || "—"}
                             </p>
                           </div>
                         </div>
