@@ -204,7 +204,10 @@ export default function StockInDetailPage() {
   }
 
   const items = stockIn.items || [];
-  const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  const totalQuantity = items.reduce(
+    (sum, item) => sum + (item.quantity || 0),
+    0
+  );
   const totalAmount = stockIn.totalAmount || 0;
   const status = stockIn.status || "pending";
 
@@ -315,338 +318,343 @@ export default function StockInDetailPage() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-3">
-            {/* Status and Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-4 py-2.5 border-b border-slate-200/60">
-                <CardTitle className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-                  <Hash className="h-3.5 w-3.5" />
-                  Trạng thái
-                </CardTitle>
+            {/* Items Table Card - Moved to top */}
+            <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col min-h-[500px]">
+              <CardHeader className="bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 px-4 py-3 border-b border-slate-200/60 flex-shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+                    <Package className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <CardTitle className="text-base font-semibold text-slate-900">
+                      Danh sách vật phẩm ({items.length})
+                    </CardTitle>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="px-4 py-2.5">
-                {stockIn.status && (
-                  <StatusBadge
-                    status={stockIn.status}
-                    label={stockIn.statusName || stockIn.status}
-                  />
+              <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
+                <div className="overflow-auto flex-1">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
+                      <TableRow className="bg-slate-50/95">
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-12">
+                          STT
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4">
+                          Tên vật phẩm
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4">
+                          Mã vật phẩm
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-24">
+                          Đơn vị
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 text-right w-28">
+                          Số lượng
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 text-right w-32">
+                          Đơn giá
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 text-right w-32">
+                          Thành tiền
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-40">
+                          Ghi chú
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="text-center py-12 text-slate-500 text-sm"
+                          >
+                            Không có vật phẩm nào
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        items.map((item, index) => {
+                          const itemTotal =
+                            (item.quantity || 0) * (item.unitPrice || 0);
+                          return (
+                            <TableRow
+                              key={index}
+                              className="hover:bg-slate-50/50 transition-colors duration-150"
+                            >
+                              <TableCell className="text-slate-600 text-sm py-3 px-4">
+                                {index + 1}
+                              </TableCell>
+                              <TableCell className="font-medium text-slate-900 text-sm py-3 px-4">
+                                {item.itemName || "Không có"}
+                              </TableCell>
+                              <TableCell className="text-slate-600 text-sm py-3 px-4">
+                                {item.itemCode || "Không có"}
+                              </TableCell>
+                              <TableCell className="text-slate-600 text-sm py-3 px-4">
+                                {item.unit || "Không có"}
+                              </TableCell>
+                              <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
+                                {(item.quantity || 0).toLocaleString("vi-VN")}
+                              </TableCell>
+                              <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
+                                {item.unitPrice
+                                  ? formatCurrency(item.unitPrice)
+                                  : "Không có"}
+                              </TableCell>
+                              <TableCell className="text-right font-medium text-slate-900 text-sm py-3 px-4">
+                                {formatCurrency(itemTotal)}
+                              </TableCell>
+                              <TableCell className="text-slate-600 text-sm py-3 px-4 truncate max-w-[160px]">
+                                {item.notes || "Không có"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Status and Summary Cards - Compact */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-3 py-2 border-b border-slate-200/60">
+                  <CardTitle className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                    <Hash className="h-3 w-3" />
+                    Trạng thái
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 py-2">
+                  {stockIn.status && (
+                    <StatusBadge
+                      status={stockIn.status}
+                      label={stockIn.statusName || stockIn.status}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-3 py-2 border-b border-slate-200/60">
+                  <CardTitle className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                    <Box className="h-3 w-3" />
+                    Tổng số lượng
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 py-2">
+                  <p className="text-base font-bold text-slate-900">
+                    {totalQuantity.toLocaleString("vi-VN")}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-3 py-2 border-b border-slate-200/60">
+                  <CardTitle className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                    <FileText className="h-3 w-3" />
+                    Tổng giá trị
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 py-2">
+                  <p className="text-base font-bold text-slate-900">
+                    {formatCurrency(totalAmount)}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Main Information Card - Compact */}
+            <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-3 py-2 border-b border-slate-200/60">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-3.5 w-3.5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xs font-semibold text-slate-900">
+                      Thông tin phiếu nhập kho
+                    </CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {/* Column 1: Thông tin cơ bản */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
+                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                        <Calendar className="h-3.5 w-3.5 text-blue-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-slate-500 mb-0.5">
+                          Ngày nhập kho
+                        </p>
+                        <p className="text-xs font-semibold text-slate-900">
+                          {stockIn.stockInDate
+                            ? formatDateTimeFull(stockIn.stockInDate)
+                            : "Chưa có"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {stockIn.vendor && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
+                        <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="h-3.5 w-3.5 text-indigo-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-500 mb-0.5">
+                            Nhà cung cấp
+                          </p>
+                          <p className="text-xs font-semibold text-slate-900 truncate">
+                            {stockIn.vendor.name || "Không có"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
+                      <div className="h-8 w-8 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                        <Hash className="h-3.5 w-3.5 text-purple-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-slate-500 mb-0.5">
+                          Nguồn nhập
+                        </p>
+                        <p className="text-xs font-semibold text-slate-900 truncate">
+                          {stockIn.source || "Không có"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 2: Thông tin liên quan */}
+                  <div className="space-y-2.5">
+                    {stockIn.productionOrder && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
+                        <div className="h-8 w-8 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
+                          <Factory className="h-3.5 w-3.5 text-orange-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-500 mb-0.5">
+                            Lệnh sản xuất
+                          </p>
+                          <p className="text-xs font-semibold text-slate-900 truncate">
+                            {stockIn.productionOrder.code ||
+                              `Lệnh sản xuất #${stockIn.productionOrder.id}`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {stockIn.deliveryNote && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
+                        <div className="h-8 w-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                          <Truck className="h-3.5 w-3.5 text-green-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-500 mb-0.5">
+                            Phiếu giao hàng
+                          </p>
+                          <p className="text-xs font-semibold text-slate-900 truncate">
+                            {stockIn.deliveryNote.code ||
+                              `Phiếu giao hàng #${stockIn.deliveryNote.id}`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
+                      <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
+                        <Box className="h-3.5 w-3.5 text-slate-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-slate-500 mb-0.5">
+                          Loại vật phẩm
+                        </p>
+                        <p className="text-xs font-semibold text-slate-900 truncate">
+                          {stockIn.itemType || "Không có"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 3: Thông tin hệ thống */}
+                  <div className="space-y-2.5">
+                    {stockIn.createdBy && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
+                        <div className="h-8 w-8 rounded-lg bg-pink-50 flex items-center justify-center flex-shrink-0">
+                          <User className="h-3.5 w-3.5 text-pink-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-500 mb-0.5">
+                            Người tạo
+                          </p>
+                          <p className="text-xs font-semibold text-slate-900 truncate">
+                            {stockIn.createdBy.fullName || "Không có"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {stockIn.createdAt && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
+                        <div className="h-8 w-8 rounded-lg bg-cyan-50 flex items-center justify-center flex-shrink-0">
+                          <Calendar className="h-3.5 w-3.5 text-cyan-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-500 mb-0.5">
+                            Ngày tạo
+                          </p>
+                          <p className="text-xs font-semibold text-slate-900 truncate">
+                            {formatDateTimeFull(stockIn.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {stockIn.notes && (
+                  <>
+                    <Separator className="my-3" />
+                    <div className="p-2.5 rounded-lg bg-slate-50/50 border border-slate-200/60">
+                      <div className="flex items-start gap-2 mb-1.5">
+                        <FileText className="h-3.5 w-3.5 text-slate-500 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs font-semibold text-slate-700">
+                          Ghi chú
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-600 whitespace-pre-wrap line-clamp-3 pl-6">
+                        {stockIn.notes}
+                      </p>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
-
-            <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-4 py-2.5 border-b border-slate-200/60">
-                <CardTitle className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-                  <Box className="h-3.5 w-3.5" />
-                  Tổng số lượng
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 py-2.5">
-                <p className="text-lg font-bold text-slate-900">
-                  {totalQuantity.toLocaleString("vi-VN")}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-4 py-2.5 border-b border-slate-200/60">
-                <CardTitle className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5" />
-                  Tổng giá trị
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 py-2.5">
-                <p className="text-lg font-bold text-slate-900">
-                  {formatCurrency(totalAmount)}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Information Card */}
-          <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-4 py-3 border-b border-slate-200/60">
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                  <FileText className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-sm font-semibold text-slate-900">
-                    Thông tin phiếu nhập kho
-                  </CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Column 1: Thông tin cơ bản */}
-                <div className="space-y-3.5">
-                  <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                    <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-slate-500 mb-1">
-                        Ngày nhập kho
-                      </p>
-                      <p className="text-sm font-semibold text-slate-900">
-                        {stockIn.stockInDate
-                          ? formatDateTimeFull(stockIn.stockInDate)
-                          : "Chưa có"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {stockIn.vendor && (
-                    <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-9 w-9 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                        <Building2 className="h-4 w-4 text-indigo-600" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-slate-500 mb-1">
-                          Nhà cung cấp
-                        </p>
-                        <p className="text-sm font-semibold text-slate-900 truncate">
-                          {stockIn.vendor.name || "Không có"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                    <div className="h-9 w-9 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
-                      <Hash className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-slate-500 mb-1">
-                        Nguồn nhập
-                      </p>
-                      <p className="text-sm font-semibold text-slate-900 truncate">
-                        {stockIn.source || "Không có"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Column 2: Thông tin liên quan */}
-                <div className="space-y-3.5">
-                  {stockIn.productionOrder && (
-                    <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-9 w-9 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
-                        <Factory className="h-4 w-4 text-orange-600" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-slate-500 mb-1">
-                          Lệnh sản xuất
-                        </p>
-                        <p className="text-sm font-semibold text-slate-900 truncate">
-                          {stockIn.productionOrder.code ||
-                            `Lệnh sản xuất #${stockIn.productionOrder.id}`}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {stockIn.deliveryNote && (
-                    <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-9 w-9 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-                        <Truck className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-slate-500 mb-1">
-                          Phiếu giao hàng
-                        </p>
-                        <p className="text-sm font-semibold text-slate-900 truncate">
-                          {stockIn.deliveryNote.code ||
-                            `Phiếu giao hàng #${stockIn.deliveryNote.id}`}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                    <div className="h-9 w-9 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
-                      <Box className="h-4 w-4 text-slate-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-slate-500 mb-1">
-                        Loại vật phẩm
-                      </p>
-                      <p className="text-sm font-semibold text-slate-900 truncate">
-                        {stockIn.itemType || "Không có"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Column 3: Thông tin hệ thống */}
-                <div className="space-y-3.5">
-                  {stockIn.createdBy && (
-                    <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-9 w-9 rounded-lg bg-pink-50 flex items-center justify-center flex-shrink-0">
-                        <User className="h-4 w-4 text-pink-600" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-slate-500 mb-1">
-                          Người tạo
-                        </p>
-                        <p className="text-sm font-semibold text-slate-900 truncate">
-                          {stockIn.createdBy.fullName || "Không có"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {stockIn.createdAt && (
-                    <div className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-9 w-9 rounded-lg bg-cyan-50 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="h-4 w-4 text-cyan-600" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-slate-500 mb-1">
-                          Ngày tạo
-                        </p>
-                        <p className="text-sm font-semibold text-slate-900 truncate">
-                          {formatDateTimeFull(stockIn.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {stockIn.notes && (
-                <>
-                  <Separator className="my-4" />
-                  <div className="p-3 rounded-lg bg-slate-50/50 border border-slate-200/60">
-                    <div className="flex items-start gap-2 mb-2">
-                      <FileText className="h-4 w-4 text-slate-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs font-semibold text-slate-700">
-                        Ghi chú
-                      </p>
-                    </div>
-                    <p className="text-xs text-slate-600 whitespace-pre-wrap line-clamp-3 pl-6">
-                      {stockIn.notes}
-                    </p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Items Table Card */}
-          <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col min-h-0">
-            <CardHeader className="bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 px-4 py-3 border-b border-slate-200/60 flex-shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-                  <Package className="h-4 w-4 text-indigo-600" />
-                </div>
-                <div className="min-w-0">
-                  <CardTitle className="text-sm font-semibold text-slate-900">
-                    Danh sách vật phẩm ({items.length})
-                  </CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
-              <div className="overflow-auto flex-1">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
-                    <TableRow className="bg-slate-50/95">
-                      <TableHead className="font-semibold text-slate-700 text-xs py-2 px-3 w-12">
-                        STT
-                      </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-xs py-2 px-3">
-                        Tên vật phẩm
-                      </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-xs py-2 px-3">
-                        Mã vật phẩm
-                      </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-xs py-2 px-3 w-20">
-                        Đơn vị
-                      </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-xs py-2 px-3 text-right w-24">
-                        Số lượng
-                      </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-xs py-2 px-3 text-right w-28">
-                        Đơn giá
-                      </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-xs py-2 px-3 text-right w-28">
-                        Thành tiền
-                      </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-xs py-2 px-3 w-32">
-                        Ghi chú
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="text-center py-8 text-slate-500 text-xs"
-                        >
-                          Không có vật phẩm nào
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      items.map((item, index) => {
-                        const itemTotal =
-                          (item.quantity || 0) * (item.unitPrice || 0);
-                        return (
-                          <TableRow
-                            key={index}
-                            className="hover:bg-slate-50/50 transition-colors duration-150"
-                          >
-                            <TableCell className="text-slate-600 text-xs py-2 px-3">
-                              {index + 1}
-                            </TableCell>
-                            <TableCell className="font-medium text-slate-900 text-xs py-2 px-3">
-                              {item.itemName || "Không có"}
-                            </TableCell>
-                            <TableCell className="text-slate-600 text-xs py-2 px-3">
-                              {item.itemCode || "Không có"}
-                            </TableCell>
-                            <TableCell className="text-slate-600 text-xs py-2 px-3">
-                              {item.unit || "Không có"}
-                            </TableCell>
-                            <TableCell className="text-right text-slate-600 text-xs py-2 px-3">
-                              {(item.quantity || 0).toLocaleString("vi-VN")}
-                            </TableCell>
-                            <TableCell className="text-right text-slate-600 text-xs py-2 px-3">
-                              {item.unitPrice
-                                ? formatCurrency(item.unitPrice)
-                                : "Không có"}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-slate-900 text-xs py-2 px-3">
-                              {formatCurrency(itemTotal)}
-                            </TableCell>
-                            <TableCell className="text-slate-600 text-xs py-2 px-3 truncate max-w-[120px]">
-                              {item.notes || "Không có"}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
           </div>
         </div>
       </div>
 
       {/* Confirm Dialog */}
-      <Dialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
+      <Dialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3">
-              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                confirmDialog.confirmVariant === "destructive"
-                  ? "bg-red-100"
-                  : "bg-blue-100"
-              }`}>
+              <div
+                className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                  confirmDialog.confirmVariant === "destructive"
+                    ? "bg-red-100"
+                    : "bg-blue-100"
+                }`}
+              >
                 {confirmDialog.confirmVariant === "destructive" ? (
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                 ) : (
@@ -665,7 +673,9 @@ export default function StockInDetailPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+              onClick={() =>
+                setConfirmDialog({ ...confirmDialog, open: false })
+              }
               className="cursor-pointer transition-colors duration-200"
             >
               Hủy
@@ -702,4 +712,3 @@ export default function StockInDetailPage() {
     </>
   );
 }
-

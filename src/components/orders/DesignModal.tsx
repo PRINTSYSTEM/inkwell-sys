@@ -923,7 +923,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   {/* Cán màn - Bắt buộc - chung hàng với 2 tùy chọn kia */}
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">
-                      Cán màn <span className="text-destructive">*</span>
+                      Cán màng <span className="text-destructive">*</span>
                     </Label>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(ENTITY_CONFIG.laminationTypes.values)
