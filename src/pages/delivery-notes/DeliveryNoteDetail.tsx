@@ -112,9 +112,6 @@ function OrderDetailRow({
           </div>
         </TableCell>
         <TableCell>{order.customerName || "—"}</TableCell>
-        <TableCell className="text-right font-medium tabular-nums">
-          {order.totalAmount ? formatCurrency(order.totalAmount) : "—"}
-        </TableCell>
         <TableCell className="text-sm text-muted-foreground">
           {order.deliveryAddress || "—"}
         </TableCell>
@@ -183,16 +180,6 @@ function OrderDetailRow({
                               ) ||
                                 detail.quantity?.toLocaleString("vi-VN") ||
                                 "—"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-xs text-muted-foreground">
-                              Đơn giá
-                            </Label>
-                            <p className="font-medium tabular-nums">
-                              {detail.unitPrice
-                                ? formatCurrency(detail.unitPrice)
-                                : "—"}
                             </p>
                           </div>
                         </div>
@@ -526,7 +513,6 @@ export default function DeliveryNoteDetailPage() {
                     <TableRow>
                       <TableHead>Mã đơn</TableHead>
                       <TableHead>Khách hàng</TableHead>
-                      <TableHead className="text-right">Tổng tiền</TableHead>
                       <TableHead>Địa chỉ</TableHead>
                     </TableRow>
                   </TableHeader>

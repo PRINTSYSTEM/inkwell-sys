@@ -126,7 +126,7 @@ export default function ProductionDetailPage() {
   const { mutate: updateStep, isPending: updating } = useUpdateProductionStep();
   const { mutateAsync: assignWorker, isPending: assigning } =
     useAssignProductionWorker();
-  const { mutate: completeStockOut } = useCompleteStockOut();
+  const { mutateAsync: completeStockOutAsync } = useCompleteStockOut();
 
   // Fetch stock outs for this production order to find material export stock out
   const { data: stockOutsData } = useStockOutsByProductionOrder(
@@ -421,6 +421,58 @@ export default function ProductionDetailPage() {
     }
   };
 
+  const handleCompleteMaterialExportStep = async () => {
+    const step = currentActiveStep || firstReadyStep;
+    if (!step?.id) {
+      toast.error("Không tìm thấy bước sản xuất để hoàn thành");
+      return;
+    }
+
+    // Validate step is material_export and in_progress
+    if (step.stepType !== "material_export" || step.status !== "in_progress") {
+      toast.error(
+        "Bước này không phải là bước xuất nguyên liệu đang thực hiện"
+      );
+      return;
+    }
+
+    try {
+      // Find and complete the related stock-out first
+      if (production?.id) {
+        const pendingStockOut = stockOuts.find(
+          (so: any) =>
+            so.productionOrderId === production.id &&
+            so.status !== "completed" &&
+            so.status !== "cancelled"
+        );
+
+        if (pendingStockOut?.id) {
+          // Complete the stock-out first (wait for it to complete)
+          await completeStockOutAsync(pendingStockOut.id);
+        }
+      }
+
+      // Complete step with outputQty = inputQty (same quantity as input)
+      const outputQty = step.inputQty || proofingOrder?.totalQuantity || 0;
+
+      await updateStep({
+        stepId: step.id,
+        data: {
+          status: "done",
+          outputQty: outputQty,
+        },
+      });
+
+      toast.success("Đã hoàn thành bước xuất nguyên liệu");
+      setIsMaterialExportDialogOpen(false);
+    } catch (error: any) {
+      toast.error("Không thể hoàn thành bước", {
+        description:
+          error?.response?.data?.message || error?.message || "Đã xảy ra lỗi",
+      });
+    }
+  };
+
   const handleSimpleCompleteProduction = async () => {
     if (!stepToComplete?.id) {
       toast.error("Không tìm thấy bước sản xuất để hoàn thành");
@@ -455,8 +507,8 @@ export default function ProductionDetailPage() {
         );
 
         if (pendingStockOut?.id) {
-          // Complete the stock-out first
-          completeStockOut(pendingStockOut.id);
+          // Complete the stock-out first (wait for it to complete)
+          await completeStockOutAsync(pendingStockOut.id);
         }
       }
 
@@ -2118,6 +2170,36 @@ export default function ProductionDetailPage() {
             step={(currentActiveStep || firstReadyStep)!}
             productionOrder={production}
             proofingOrder={proofingOrder || null}
+            onCancel={async () => {
+              // Rollback step to ready when user cancels without creating stock out
+              const stepToRollback = currentActiveStep || firstReadyStep;
+              if (
+                stepToRollback?.id &&
+                stepToRollback.status === "in_progress"
+              ) {
+                try {
+                  await updateStep({
+                    stepId: stepToRollback.id,
+                    data: {
+                      status: "ready",
+                      inputQty: stepToRollback.inputQty || undefined,
+                    },
+                  });
+                  toast.success("Đã hủy tạo phiếu xuất kho", {
+                    description:
+                      "Bước sản xuất đã được quay lại trạng thái sẵn sàng",
+                  });
+                } catch (error: any) {
+                  toast.error("Không thể quay lại trạng thái bước", {
+                    description:
+                      error?.response?.data?.message ||
+                      error?.message ||
+                      "Đã xảy ra lỗi",
+                  });
+                }
+              }
+            }}
+            onComplete={handleCompleteMaterialExportStep}
           />
         )}
 

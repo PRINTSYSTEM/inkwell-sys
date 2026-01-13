@@ -918,26 +918,51 @@ export default function ProofingOrderDetailPage() {
     return found ?? null;
   }, [parsedCustomPaperSize, paperSizes]);
 
-  const showCreateButton =
-    paperSizeId === "custom" &&
-    parsedCustomPaperSize !== null &&
-    existingPaperSize === null;
+  // Helper function to create paper size if needed
+  const ensurePaperSizeExists = async (
+    customSize: string,
+    currentPaperSizeId: string
+  ): Promise<number | null> => {
+    if (currentPaperSizeId !== "custom" || !customSize?.trim()) {
+      return currentPaperSizeId === "none" || currentPaperSizeId === "custom"
+        ? null
+        : Number(currentPaperSizeId);
+    }
 
-  const handleCreatePaperSize = async () => {
-    if (!parsedCustomPaperSize) return;
+    // Parse custom paper size
+    const trimmed = customSize.trim();
+    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    if (!match) {
+      return null;
+    }
+
+    const width = parseInt(match[1], 10);
+    const height = parseInt(match[2], 10);
+    if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+      return null;
+    }
+
+    // Check if paper size already exists
+    const existing = paperSizes.find(
+      (ps) => ps.width === width && ps.height === height
+    );
+
+    if (existing) {
+      return existing.id;
+    }
+
+    // Create new paper size
     try {
       const newPaperSize = await createPaperSize({
-        name: `${parsedCustomPaperSize.width}×${parsedCustomPaperSize.height}`,
-        width: parsedCustomPaperSize.width,
-        height: parsedCustomPaperSize.height,
+        name: `${width}×${height}`,
+        width: width,
+        height: height,
         isCustom: true,
       });
-      if (newPaperSize?.id) {
-        setPaperSizeId(newPaperSize.id.toString());
-        setCustomPaperSize("");
-      }
+      return newPaperSize?.id || null;
     } catch (error) {
       console.error("Failed to create paper size:", error);
+      throw error;
     }
   };
 
@@ -969,32 +994,51 @@ export default function ProofingOrderDetailPage() {
     return found ?? null;
   }, [parsedUpdateCustomPaperSize, paperSizes]);
 
-  const showCreateButtonForUpdate =
-    updatePaperSizeId === "custom" &&
-    parsedUpdateCustomPaperSize !== null &&
-    existingUpdatePaperSize === null;
+  // Helper function to create paper size for update if needed
+  const ensurePaperSizeExistsForUpdate = async (
+    customSize: string,
+    currentPaperSizeId: string
+  ): Promise<number | null> => {
+    if (currentPaperSizeId !== "custom" || !customSize?.trim()) {
+      return currentPaperSizeId === "none" || currentPaperSizeId === "custom"
+        ? null
+        : Number(currentPaperSizeId);
+    }
 
-  const handleCreatePaperSizeForUpdate = async () => {
-    if (!parsedUpdateCustomPaperSize) return;
+    // Parse custom paper size
+    const trimmed = customSize.trim();
+    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    if (!match) {
+      return null;
+    }
+
+    const width = parseInt(match[1], 10);
+    const height = parseInt(match[2], 10);
+    if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+      return null;
+    }
+
+    // Check if paper size already exists
+    const existing = paperSizes.find(
+      (ps) => ps.width === width && ps.height === height
+    );
+
+    if (existing) {
+      return existing.id;
+    }
+
+    // Create new paper size
     try {
       const newPaperSize = await createPaperSize({
-        name: `${parsedUpdateCustomPaperSize.width}×${parsedUpdateCustomPaperSize.height}`,
-        width: parsedUpdateCustomPaperSize.width,
-        height: parsedUpdateCustomPaperSize.height,
+        name: `${width}×${height}`,
+        width: width,
+        height: height,
         isCustom: true,
       });
-      if (newPaperSize?.id) {
-        setUpdatePaperSizeId(newPaperSize.id.toString());
-        setUpdateCustomPaperSize("");
-        toast.success("Thành công", {
-          description: "Đã tạo khổ giấy mới thành công",
-        });
-      }
+      return newPaperSize?.id || null;
     } catch (error) {
       console.error("Failed to create paper size:", error);
-      toast.error("Lỗi", {
-        description: "Không thể tạo khổ giấy mới",
-      });
+      throw error;
     }
   };
 
@@ -1082,18 +1126,43 @@ export default function ProofingOrderDetailPage() {
         return;
       }
 
+      // Create paper size if needed (for custom paper size)
+      let finalPaperSizeId: number | null = null;
+      let finalCustomPaperSize: string | null = null;
+
+      if (paperSizeId === "custom" && customPaperSize?.trim()) {
+        try {
+          const createdPaperSizeId = await ensurePaperSizeExists(
+            customPaperSize,
+            paperSizeId
+          );
+          if (createdPaperSizeId) {
+            finalPaperSizeId = createdPaperSizeId;
+            finalCustomPaperSize = null;
+          } else {
+            finalPaperSizeId = null;
+            finalCustomPaperSize = customPaperSize.trim();
+          }
+        } catch (error) {
+          toast.error("Lỗi", {
+            description: "Không thể tạo khổ giấy mới",
+          });
+          return;
+        }
+      } else if (paperSizeId !== "none" && paperSizeId !== "custom") {
+        finalPaperSizeId = Number(paperSizeId);
+        finalCustomPaperSize = null;
+      } else {
+        finalPaperSizeId = null;
+        finalCustomPaperSize = null;
+      }
+
       const addDesignsPayload = {
         materialTypeId: currentMaterialTypeId,
         items: items,
         totalQuantity: proofingSheetQuantity,
-        paperSizeId:
-          paperSizeId === "none" || paperSizeId === "custom"
-            ? null
-            : Number(paperSizeId),
-        customPaperSize:
-          paperSizeId === "custom" && customPaperSize?.trim()
-            ? customPaperSize.trim()
-            : null,
+        paperSizeId: finalPaperSizeId,
+        customPaperSize: finalCustomPaperSize,
         notes: notes?.trim() || null,
       };
 
@@ -1188,10 +1257,28 @@ export default function ProofingOrderDetailPage() {
     if (updateNotes !== order.notes) {
       updateData.notes = updateNotes || null;
     }
-    if (updatePaperSizeId === "custom") {
-      updateData.paperSizeId = null;
-      updateData.customPaperSize = updateCustomPaperSize || null;
-    } else if (updatePaperSizeId !== "none") {
+
+    // Create paper size if needed (for custom paper size)
+    if (updatePaperSizeId === "custom" && updateCustomPaperSize?.trim()) {
+      try {
+        const createdPaperSizeId = await ensurePaperSizeExistsForUpdate(
+          updateCustomPaperSize,
+          updatePaperSizeId
+        );
+        if (createdPaperSizeId) {
+          updateData.paperSizeId = createdPaperSizeId;
+          updateData.customPaperSize = null;
+        } else {
+          updateData.paperSizeId = null;
+          updateData.customPaperSize = updateCustomPaperSize || null;
+        }
+      } catch (error) {
+        toast.error("Lỗi", {
+          description: "Không thể tạo khổ giấy mới",
+        });
+        return;
+      }
+    } else if (updatePaperSizeId !== "none" && updatePaperSizeId !== "custom") {
       const paperSizeIdNum = parseInt(updatePaperSizeId, 10);
       if (!isNaN(paperSizeIdNum)) {
         updateData.paperSizeId = paperSizeIdNum;
@@ -2331,24 +2418,7 @@ export default function ProofingOrderDetailPage() {
                                 onChange={(e) =>
                                   setCustomPaperSize(e.target.value)
                                 }
-                                disabled={isCreatingPaperSize}
                               />
-                              {showCreateButton && (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2 shrink-0"
-                                  onClick={handleCreatePaperSize}
-                                  disabled={isCreatingPaperSize}
-                                >
-                                  {isCreatingPaperSize ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Plus className="h-3 w-3" />
-                                  )}
-                                </Button>
-                              )}
                             </div>
                             {existingPaperSize && (
                               <p className="text-[10px] font-medium text-muted-foreground">
@@ -2653,25 +2723,8 @@ export default function ProofingOrderDetailPage() {
                                       setUpdateCustomPaperSize(e.target.value)
                                     }
                                     placeholder="Ví dụ: 60×60, 31×43..."
-                                    disabled={isCreatingPaperSize}
                                     className="flex-1"
                                   />
-                                  {showCreateButtonForUpdate && (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      className="shrink-0"
-                                      onClick={handleCreatePaperSizeForUpdate}
-                                      disabled={isCreatingPaperSize}
-                                    >
-                                      {isCreatingPaperSize ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Plus className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                  )}
                                 </div>
                                 {existingUpdatePaperSize && (
                                   <p className="text-xs text-muted-foreground">
@@ -3714,25 +3767,8 @@ export default function ProofingOrderDetailPage() {
                                     setUpdateCustomPaperSize(e.target.value)
                                   }
                                   placeholder="Ví dụ: 60×60, 31×43..."
-                                  disabled={isCreatingPaperSize}
                                   className="flex-1"
                                 />
-                                {showCreateButtonForUpdate && (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    className="shrink-0"
-                                    onClick={handleCreatePaperSizeForUpdate}
-                                    disabled={isCreatingPaperSize}
-                                  >
-                                    {isCreatingPaperSize ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      <Plus className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                )}
                               </div>
                               {existingUpdatePaperSize && (
                                 <p className="text-xs text-muted-foreground">
@@ -3985,17 +4021,19 @@ export default function ProofingOrderDetailPage() {
                           )}
                         </span>
                         <div className="flex items-center gap-1 ml-auto">
-                          {order.status !== "completed" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={handleOpenAddDieDialog}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Thêm
-                            </Button>
-                          )}
+                          {order.status !== "completed" &&
+                            order.dieExports &&
+                            order.dieExports.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={handleOpenAddDieDialog}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Thêm
+                              </Button>
+                            )}
                           {!order.isDieExported && (
                             <Button
                               variant="ghost"
