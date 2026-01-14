@@ -81,7 +81,7 @@ export default function StockInCreatePage() {
     isPending,
     isSuccess,
   } = useCreateStockInFromVendor();
-  const { data: vendorsData } = useVendors({ pageNumber: 1, pageSize: 1000 });
+  const { data: vendorsData } = useVendors({ pageNumber: 1, pageSize: 100 });
   const allVendors = vendorsData?.items || [];
   const { mutate: createVendor, isPending: isCreatingVendor } =
     useCreateVendor();
@@ -91,7 +91,7 @@ export default function StockInCreatePage() {
     useCreateMaterial();
   const { data: materialTypesData } = useMaterialTypeList({
     pageNumber: 1,
-    pageSize: 1000,
+    pageSize: 100,
     status: "active",
   });
   const materialTypes = materialTypesData?.items || [];

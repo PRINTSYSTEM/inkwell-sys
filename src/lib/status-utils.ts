@@ -236,6 +236,30 @@ export const productionStepTypeLabels: Record<string, string> =
 export const productionStepStatusLabels: Record<string, string> =
   ENTITY_CONFIG.productionStepStatuses.values;
 
+// Nguồn nhập kho (StockInSource)
+export const stockInSourceLabels: Record<string, string> =
+  ENTITY_CONFIG.stockInSources.values;
+
+// Loại vật phẩm nhập kho (StockInItemType)
+export const stockInItemTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.stockInItemTypes.values;
+
+// Trạng thái nhập kho (StockInStatus)
+export const stockInStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.stockInStatuses.values;
+
+// Mục đích xuất kho (StockOutPurpose)
+export const stockOutPurposeLabels: Record<string, string> =
+  ENTITY_CONFIG.stockOutPurposes.values;
+
+// Loại vật phẩm xuất kho (StockOutItemType)
+export const stockOutItemTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.stockOutItemTypes.values;
+
+// Trạng thái xuất kho (StockOutStatus)
+export const stockOutStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.stockOutStatuses.values;
+
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
 
@@ -450,6 +474,18 @@ export const statusColorMap: Record<string, string> = {
   ready: "bg-emerald-50 text-emerald-700 border-emerald-200",
   done: "bg-green-50 text-green-700 border-green-200", // tương tự completed
   blocked: "bg-red-50 text-red-700 border-red-200",
+
+  // ===== STOCK IN STATUSES =====
+  // pending đã được định nghĩa ở ORDER STATUSES ở trên
+  // completed đã được định nghĩa ở ORDER STATUSES ở trên
+  // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
+
+  // ===== STOCK OUT STATUSES =====
+  // pending đã được định nghĩa ở ORDER STATUSES ở trên
+  // completed đã được định nghĩa ở ORDER STATUSES ở trên
+  // returned đã được định nghĩa ở DELIVERY LINE STATUSES ở trên
+  partially_returned: "bg-amber-50 text-amber-700 border-amber-200",
+  // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
 };
 
 // Hàm helper: trả về class tailwind cho badge

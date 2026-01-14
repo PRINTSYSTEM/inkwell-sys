@@ -11,6 +11,16 @@ export type DateString = z.infer<typeof DateSchema>;
 export const NameSchema = z.string().max(255);
 export type Name = z.infer<typeof NameSchema>;
 
+// ===== Paged Params =====
+export const PagedParamsSchema = z
+  .object({
+    pageNumber: z.number().int().min(1).optional(),
+    pageSize: z.number().int().min(1).optional(),
+  })
+  .passthrough();
+
+export type PagedParams = z.infer<typeof PagedParamsSchema>;
+
 // ===== PagedResponse base =====
 // Updated to match swagger.json pagination structure: size, page, total, totalPages, items
 

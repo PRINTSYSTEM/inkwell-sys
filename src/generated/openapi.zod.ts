@@ -448,6 +448,12 @@ const ConstantsResponse = z
     debtStatuses: ConstantGroup,
     productionStepTypes: ConstantGroup,
     productionStepStatuses: ConstantGroup,
+    stockInSources: ConstantGroup,
+    stockInItemTypes: ConstantGroup,
+    stockInStatuses: ConstantGroup,
+    stockOutPurposes: ConstantGroup,
+    stockOutItemTypes: ConstantGroup,
+    stockOutStatuses: ConstantGroup,
   })
   .partial();
 const CreateCustomerRequest = z.object({
@@ -891,7 +897,6 @@ const DeliveryNoteResponse = z
     orders: z.array(DeliveryNoteOrderResponse).nullable(),
     lines: z.array(DeliveryNoteLineResponse).nullable(),
     totalDeliveryQty: z.number().int(),
-    totalLineAmount: z.number(),
     totalPendingLines: z.number().int(),
     totalDeliveredLines: z.number().int(),
     totalFailedLines: z.number().int(),
@@ -5554,12 +5559,12 @@ const endpoints = makeApi([
     requestFormat: "json",
     parameters: [
       {
-        name: "page",
+        name: "pageNumber",
         type: "Query",
         schema: z.number().int().optional().default(1),
       },
       {
-        name: "size",
+        name: "pageSize",
         type: "Query",
         schema: z.number().int().optional().default(10),
       },

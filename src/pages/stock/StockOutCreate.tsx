@@ -70,22 +70,32 @@ const generateMaterialCode = (name: string): string => {
 
 export default function StockOutCreatePage() {
   const navigate = useNavigate();
-  const { mutate: createStockOutForProduction, isPending: isPendingProduction, isSuccess: isSuccessProduction } = useCreateStockOutForProduction();
-  const { mutate: createStockOutForDelivery, isPending: isPendingDelivery, isSuccess: isSuccessDelivery } = useCreateStockOutForDelivery();
-  
-  const { data: customersData } = useCustomers({ pageSize: 1000 });
+  const {
+    mutate: createStockOutForProduction,
+    isPending: isPendingProduction,
+    isSuccess: isSuccessProduction,
+  } = useCreateStockOutForProduction();
+  const {
+    mutate: createStockOutForDelivery,
+    isPending: isPendingDelivery,
+    isSuccess: isSuccessDelivery,
+  } = useCreateStockOutForDelivery();
+
+  const { data: customersData } = useCustomers({ pageSize: 100 });
   const customers = customersData?.items || [];
-  
-  const { data: productionOrdersData } = useProductionOrders({ pageSize: 1000 });
+
+  const { data: productionOrdersData } = useProductionOrders({ pageSize: 100 });
   const productionOrders = productionOrdersData?.items || [];
-  
-  const { data: deliveryNotesData } = useDeliveryNotes({ pageSize: 1000 });
+
+  const { data: deliveryNotesData } = useDeliveryNotes({ pageSize: 100 });
   const deliveryNotes = deliveryNotesData?.items || [];
 
   const { data: materialsData } = useMaterials({ size: 1000 });
   const materials = materialsData?.items || [];
 
-  const [stockOutType, setStockOutType] = useState<"production" | "delivery">("production");
+  const [stockOutType, setStockOutType] = useState<"production" | "delivery">(
+    "production"
+  );
 
   const [formData, setFormData] = useState({
     itemType: "",
@@ -274,7 +284,8 @@ export default function StockOutCreatePage() {
     if (stockOutType === "production") {
       if (!formData.productionOrderId) {
         toast.error("Vui lòng chọn lệnh sản xuất", {
-          description: "Lệnh sản xuất là bắt buộc khi tạo phiếu xuất kho cho sản xuất",
+          description:
+            "Lệnh sản xuất là bắt buộc khi tạo phiếu xuất kho cho sản xuất",
         });
         return;
       }
@@ -300,7 +311,8 @@ export default function StockOutCreatePage() {
     } else if (stockOutType === "delivery") {
       if (!formData.deliveryNoteId) {
         toast.error("Vui lòng chọn phiếu giao hàng", {
-          description: "Phiếu giao hàng là bắt buộc khi tạo phiếu xuất kho cho giao hàng",
+          description:
+            "Phiếu giao hàng là bắt buộc khi tạo phiếu xuất kho cho giao hàng",
         });
         return;
       }
@@ -467,16 +479,22 @@ export default function StockOutCreatePage() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                        stockOutType === "production"
-                          ? "bg-orange-500 text-white"
-                          : "bg-slate-100 text-slate-600"
-                      }`}>
+                      <div
+                        className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                          stockOutType === "production"
+                            ? "bg-orange-500 text-white"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
                         <Factory className="h-5 w-5" />
                       </div>
                       <div className="text-left">
-                        <div className="font-semibold text-slate-900">Sản xuất</div>
-                        <div className="text-xs text-slate-500">Cho phòng ban sản xuất</div>
+                        <div className="font-semibold text-slate-900">
+                          Sản xuất
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Cho phòng ban sản xuất
+                        </div>
                       </div>
                     </div>
                   </button>
@@ -497,16 +515,22 @@ export default function StockOutCreatePage() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
-                        stockOutType === "delivery"
-                          ? "bg-orange-500 text-white"
-                          : "bg-slate-100 text-slate-600"
-                      }`}>
+                      <div
+                        className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                          stockOutType === "delivery"
+                            ? "bg-orange-500 text-white"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
                         <Truck className="h-5 w-5" />
                       </div>
                       <div className="text-left">
-                        <div className="font-semibold text-slate-900">Giao hàng</div>
-                        <div className="text-xs text-slate-500">Giao hàng cho khách</div>
+                        <div className="font-semibold text-slate-900">
+                          Giao hàng
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Giao hàng cho khách
+                        </div>
                       </div>
                     </div>
                   </button>
@@ -549,7 +573,8 @@ export default function StockOutCreatePage() {
                             key={order.id}
                             value={order.id?.toString() || ""}
                           >
-                            {order.proofingOrderCode || `Lệnh sản xuất #${order.id}`}
+                            {order.proofingOrderCode ||
+                              `Lệnh sản xuất #${order.id}`}
                           </SelectItem>
                         ))
                       )}
@@ -578,8 +603,12 @@ export default function StockOutCreatePage() {
                         setFormData({
                           ...formData,
                           deliveryNoteId: value ? Number(value) : null,
-                          customerId: selectedNote?.customerId ? Number(selectedNote.customerId) : null,
-                          orderId: selectedNote?.orderId ? Number(selectedNote.orderId) : null,
+                          customerId: selectedNote?.customerId
+                            ? Number(selectedNote.customerId)
+                            : null,
+                          orderId: selectedNote?.orderId
+                            ? Number(selectedNote.orderId)
+                            : null,
                         });
                       }}
                     >
@@ -861,11 +890,7 @@ export default function StockOutCreatePage() {
                             handleItemChange(index, "quantity", 1);
                           } else {
                             const num = parseInt(val, 10);
-                            if (
-                              !isNaN(num) &&
-                              num >= 1 &&
-                              num <= 2147483647
-                            ) {
+                            if (!isNaN(num) && num >= 1 && num <= 2147483647) {
                               handleItemChange(index, "quantity", num);
                             }
                           }

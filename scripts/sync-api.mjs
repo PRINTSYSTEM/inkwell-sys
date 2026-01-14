@@ -29,6 +29,7 @@ const OUT_DIR = "src/generated";
 const SWAGGER_FILE = "swagger.json";
 const OUT_FILE = `${OUT_DIR}/openapi.zod.ts`;
 const COMPAT_FILE = join(rootDir, "src/Schema/generated.ts");
+const GENERATED_PARAMS_FILE = join(rootDir, "src/Schema/generated-params.ts");
 const CACHE_FILE = join(rootDir, ".schema-cache.json");
 const SNAPSHOT_FILE = join(rootDir, ".cursor/openapi.endpoints.snapshot.json");
 const PREV_SNAPSHOT_FILE = join(
@@ -36,6 +37,228 @@ const PREV_SNAPSHOT_FILE = join(
   ".cursor/openapi.endpoints.snapshot.prev.json"
 );
 const SCHEMA_CHANGES_FILE = join(rootDir, ".cursor/schema-route-changes.json");
+
+// ============================================
+// Generic Resource Mapping Utilities
+// ============================================
+
+/**
+ * Singularize a resource name (plural -> singular)
+ * Examples: customers -> customer, orders -> order, proofing-orders -> proofing-order
+ */
+function singularizeResource(resource) {
+  // Handle compound resources
+  if (resource.includes("-")) {
+    const parts = resource.split("-");
+    const lastPart = parts[parts.length - 1];
+    if (lastPart.endsWith("s") && lastPart !== "status") {
+      parts[parts.length - 1] = lastPart.slice(0, -1);
+    }
+    return parts.join("-");
+  }
+
+  // Simple singularization
+  if (resource.endsWith("ies")) {
+    return resource.slice(0, -3) + "y";
+  }
+  if (resource.endsWith("es") && !["status", "process"].includes(resource)) {
+    return resource.slice(0, -2);
+  }
+  if (resource.endsWith("s") && resource.length > 1) {
+    return resource.slice(0, -1);
+  }
+  return resource;
+}
+
+/**
+ * Extract resource name from endpoint path
+ * Examples: /api/customers -> customers, /api/orders/:id -> orders
+ */
+function pathToResource(path) {
+  const parts = path
+    .replace("/api/", "")
+    .split("/")
+    .filter((p) => p && !p.startsWith(":"));
+  return parts[0] || null;
+}
+
+/**
+ * Convert resource name to hook file name
+ * Examples: customer -> use-customer.ts, proofing-order -> use-proofing-order.ts
+ */
+function resourceToHookFile(resource) {
+  if (!resource) return null;
+  const singular = singularizeResource(resource);
+  return `use-${singular}.ts`;
+}
+
+/**
+ * Convert kebab-case to PascalCase
+ * Examples: customer-debt-history -> CustomerDebtHistory
+ */
+function kebabToPascalCase(str) {
+  return str
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
+}
+
+/**
+ * Convert resource name to PascalCase (singular)
+ * Examples: customers -> Customer, proofing-orders -> ProofingOrder
+ */
+function resourceToPascalCase(resource) {
+  const singular = singularizeResource(resource);
+  return kebabToPascalCase(singular);
+}
+
+/**
+ * Generate param name from endpoint path (pattern-based, generic)
+ * Examples:
+ *   /api/customers -> CustomerListParams
+ *   /api/customers/:id/debt-history -> CustomerDebtHistoryParams
+ *   /api/orders/for-designer -> OrdersForDesignerListParams
+ */
+function generateParamName(path, httpMethod) {
+  // Remove /api prefix and split path
+  const pathParts = path.replace("/api/", "").split("/");
+  const parts = pathParts.filter((p) => p && !p.startsWith(":"));
+  const hasIdParam = pathParts.some((p) => p.startsWith(":"));
+
+  if (parts.length === 0) return null;
+
+  // For non-GET methods, use simple path-based naming
+  if (httpMethod !== "GET") {
+    const name = parts.map(kebabToPascalCase).join("");
+    return `${name}Params`;
+  }
+
+  const resource = parts[0];
+
+  // Special handling for compound resources that need singular form
+  // production-orders -> Production (not ProductionOrder)
+  let resourcePascal;
+  if (resource === "production-orders") {
+    resourcePascal = "Production";
+  } else {
+    resourcePascal = resourceToPascalCase(resource);
+  }
+
+  // Pattern 1: Simple list endpoint (/api/resource)
+  if (parts.length === 1) {
+    // Special case: dies -> Die (singular)
+    if (resource === "dies") {
+      return "DieListParams";
+    }
+    return `${resourcePascal}ListParams`;
+  }
+
+  // Pattern 2: Resource with ID param (/api/resource/:id/action)
+  if (hasIdParam && parts.length === 2) {
+    const action = parts[1];
+    // Special cases
+    if (resource === "customers" && action === "order-history") {
+      return "CustomerOrdersParams"; // Alias for order-history
+    }
+    const actionPascal = kebabToPascalCase(action);
+    return `${resourcePascal}${actionPascal}Params`;
+  }
+
+  // Pattern 3: Nested resource (/api/resource/sub-resource)
+  if (parts.length === 2 && !hasIdParam) {
+    const subResource = parts[1];
+
+    // Special cases for specific patterns
+    if (resource === "designs") {
+      if (subResource === "types") return "DesignTypeListParams"; // Singular Type
+      if (subResource === "materials") return "MaterialTypeListParams";
+      if (subResource === "my") return "MyDesignListParams";
+      if (subResource === "by-customer") return "DesignByCustomerListParams";
+      if (subResource === "user") return "DesignByUserListParams";
+    }
+
+    // Handle /api/designs/by-customer/:customerId (has ID param but we're checking non-ID case)
+    if (resource === "designs" && subResource === "by-customer" && hasIdParam) {
+      return "DesignByCustomerListParams";
+    }
+
+    if (resource === "orders") {
+      if (subResource === "for-designer") return "OrdersForDesignerListParams"; // Plural Orders
+      if (subResource === "for-accounting")
+        return "OrdersForAccountingListParams";
+      if (subResource === "my") return "OrdersMyListParams";
+    }
+
+    if (resource === "categories") {
+      const subPascal = kebabToPascalCase(subResource);
+      return `${subPascal}ListParams`;
+    }
+
+    // Check if it's a list endpoint (common patterns)
+    const listPatterns = [
+      "types",
+      "materials",
+      "designers",
+      "available-orders",
+      "failure-reasons",
+    ];
+    if (listPatterns.includes(subResource)) {
+      // For types, use singular
+      if (subResource === "types") {
+        return `${resourcePascal}TypeListParams`;
+      }
+      const subPascal = kebabToPascalCase(subResource);
+      return `${resourcePascal}${subPascal}ListParams`;
+    }
+
+    // Check if it's a filtered list
+    if (
+      subResource.startsWith("for-") ||
+      subResource.startsWith("by-") ||
+      subResource === "my"
+    ) {
+      const subPascal = kebabToPascalCase(subResource);
+      // For orders, keep plural
+      if (resource === "orders") {
+        return `Orders${subPascal}ListParams`;
+      }
+      return `${resourcePascal}${subPascal}ListParams`;
+    }
+
+    // Generic sub-resource
+    const subPascal = kebabToPascalCase(subResource);
+    return `${resourcePascal}${subPascal}Params`;
+  }
+
+  // Pattern 4: Deeply nested (/api/resource/:id/sub-resource/action)
+  if (hasIdParam && parts.length >= 2) {
+    // Special case: /api/designs/by-customer/:customerId
+    if (
+      resource === "designs" &&
+      parts[0] === "designs" &&
+      parts[1] === "by-customer"
+    ) {
+      return "DesignByCustomerListParams";
+    }
+    const subParts = parts.slice(1).map(kebabToPascalCase).join("");
+    return `${resourcePascal}${subParts}Params`;
+  }
+
+  // Pattern 5: Multi-level path (/api/resource/sub-resource/action)
+  if (parts.length >= 2) {
+    const actionParts = parts.slice(1).map(kebabToPascalCase).join("");
+    // Check for export pattern
+    if (parts[parts.length - 1] === "export") {
+      const baseName = parts.slice(0, -1).map(kebabToPascalCase).join("");
+      return `${baseName}ExportParams`;
+    }
+    return `${resourcePascal}${actionParts}Params`;
+  }
+
+  // Fallback: convert all parts to PascalCase
+  const name = parts.map(kebabToPascalCase).join("");
+  return `${name}Params`;
+}
 
 // ============================================
 // Step 1: Generate OpenAPI Zod Schema
@@ -273,6 +496,125 @@ async function generateCompatLayer(openApiContent) {
 }
 
 // ============================================
+// Step 3.5: Generate Params Schemas
+// ============================================
+function convertZodSchemaToParams(zodSchemaStr) {
+  // Convert zod schema string to params schema format
+  // Remove .default() calls
+  zodSchemaStr = zodSchemaStr.replace(/\.default\([^)]+\)/g, "");
+
+  // Add .nullable() before .optional() if not already nullable
+  if (
+    zodSchemaStr.includes(".optional()") &&
+    !zodSchemaStr.includes(".nullable()")
+  ) {
+    zodSchemaStr = zodSchemaStr.replace(
+      /\.optional\(\)/,
+      ".nullable().optional()"
+    );
+  }
+
+  return zodSchemaStr;
+}
+
+// generateParamName is now defined above in Generic Resource Mapping Utilities
+
+async function generateParamsSchemas(endpoints) {
+  console.log("📝 Generating params schemas...");
+
+  const paramsMap = new Map();
+
+  // Group endpoints by param name
+  for (const endpoint of endpoints) {
+    if (!endpoint.queryParams || endpoint.queryParams.length === 0) {
+      continue;
+    }
+
+    const paramName = generateParamName(endpoint.path, endpoint.httpMethod);
+    if (!paramName) continue;
+
+    if (!paramsMap.has(paramName)) {
+      paramsMap.set(paramName, {
+        name: paramName,
+        path: endpoint.path,
+        method: endpoint.httpMethod,
+        queryParams: [],
+      });
+    }
+
+    // Merge query params (avoid duplicates)
+    const existing = paramsMap.get(paramName);
+    for (const qp of endpoint.queryParams) {
+      if (!existing.queryParams.find((p) => p.name === qp.name)) {
+        existing.queryParams.push(qp);
+      }
+    }
+  }
+
+  const lines = [];
+  lines.push(`/* AUTO-GENERATED FILE. DO NOT EDIT. */`);
+  lines.push(`/* Source: src/generated/openapi.zod.ts */`);
+  lines.push(`/* Generated at: ${new Date().toISOString()} */\n`);
+  lines.push(`import { z } from "zod";`);
+  lines.push(`import { IdSchema, PagedParamsSchema } from "./Common";\n`);
+  lines.push(`// ===== Generated Params Schemas =====\n`);
+
+  // Sort by name
+  const sortedParams = Array.from(paramsMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  for (const param of sortedParams) {
+    const hasPageNumber = param.queryParams.some(
+      (p) => p.name === "pageNumber" || p.name === "PageNumber"
+    );
+    const hasPageSize = param.queryParams.some(
+      (p) => p.name === "pageSize" || p.name === "PageSize"
+    );
+    const hasPagination = hasPageNumber && hasPageSize;
+
+    lines.push(`// ==== ${param.name} (${param.method} ${param.path}) ====`);
+
+    if (hasPagination) {
+      lines.push(
+        `export const ${param.name}Schema = PagedParamsSchema.extend({`
+      );
+    } else {
+      lines.push(`export const ${param.name}Schema = z.object({`);
+    }
+
+    // Add non-pagination params
+    for (const qp of param.queryParams) {
+      if (qp.name === "pageNumber" || qp.name === "PageNumber") continue;
+      if (qp.name === "pageSize" || qp.name === "PageSize") continue;
+
+      const convertedSchema = convertZodSchemaToParams(qp.schema);
+      const paramName = qp.name;
+      lines.push(`  ${paramName}: ${convertedSchema},`);
+    }
+
+    if (hasPagination) {
+      lines.push(`});`);
+    } else {
+      lines.push(`}).passthrough();`);
+    }
+
+    const typeName = param.name.replace("Schema", "");
+    lines.push(
+      `export type ${typeName} = z.infer<typeof ${param.name}Schema>;\n`
+    );
+  }
+
+  await writeFile(GENERATED_PARAMS_FILE, lines.join("\n"), "utf8");
+  console.log(
+    `✅ Generated ${GENERATED_PARAMS_FILE.replace(rootDir + "/", "")}`
+  );
+  console.log(`   Exported ${paramsMap.size} params schemas`);
+
+  return paramsMap.size;
+}
+
+// ============================================
 // Step 4: Extract Endpoints Snapshot
 // ============================================
 async function extractEndpointsSnapshot(openApiContent) {
@@ -353,6 +695,150 @@ async function extractEndpointsSnapshot(openApiContent) {
       const responseMatch = endpointBlock.match(/response:\s*(\w+)/);
       const responseSchema = responseMatch ? responseMatch[1] : null;
 
+      // Extract query parameters
+      const queryParams = [];
+      const paramsBlockMatch = endpointBlock.match(
+        /parameters:\s*\[([\s\S]*?)\]/
+      );
+      if (paramsBlockMatch) {
+        const paramsBlock = paramsBlockMatch[1];
+        // Find all parameter objects
+        let paramPos = 0;
+        while (paramPos < paramsBlock.length) {
+          const paramStart = paramsBlock.indexOf("{", paramPos);
+          if (paramStart === -1) break;
+
+          // Find matching closing brace for this parameter
+          let depth = 0;
+          let inString = false;
+          let stringChar = null;
+          let paramEnd = paramStart;
+
+          for (let i = paramStart; i < paramsBlock.length; i++) {
+            const char = paramsBlock[i];
+            const prevChar = i > 0 ? paramsBlock[i - 1] : "";
+
+            if (!inString && (char === '"' || char === "'" || char === "`")) {
+              inString = true;
+              stringChar = char;
+            } else if (inString && char === stringChar && prevChar !== "\\") {
+              inString = false;
+              stringChar = null;
+            }
+
+            if (inString) continue;
+
+            if (char === "{") depth++;
+            else if (char === "}") {
+              depth--;
+              if (depth === 0) {
+                paramEnd = i + 1;
+                break;
+              }
+            }
+          }
+
+          const paramBlock = paramsBlock.substring(paramStart, paramEnd);
+
+          // Check if it's a Query parameter
+          const typeMatch = paramBlock.match(/type:\s*"Query"/);
+          if (typeMatch) {
+            const nameMatch = paramBlock.match(/name:\s*"([^"]+)"/);
+
+            if (nameMatch) {
+              const paramName = nameMatch[1];
+
+              // Extract schema - need to find schema: and capture until next property or end of object
+              const schemaStart = paramBlock.indexOf("schema:");
+              if (schemaStart !== -1) {
+                let schemaPos = schemaStart + 7; // length of "schema:"
+                // Skip whitespace
+                while (
+                  schemaPos < paramBlock.length &&
+                  /\s/.test(paramBlock[schemaPos])
+                ) {
+                  schemaPos++;
+                }
+
+                // Find the end of the schema expression
+                // Schema can be: z.string(), z.number().int(), z.string().datetime({ offset: true }).optional(), etc.
+                let depth = 0;
+                let inString = false;
+                let stringChar = null;
+                let schemaEnd = schemaPos;
+                let started = false;
+
+                for (let i = schemaPos; i < paramBlock.length; i++) {
+                  const char = paramBlock[i];
+                  const prevChar = i > 0 ? paramBlock[i - 1] : "";
+
+                  if (
+                    !inString &&
+                    (char === '"' || char === "'" || char === "`")
+                  ) {
+                    inString = true;
+                    stringChar = char;
+                  } else if (
+                    inString &&
+                    char === stringChar &&
+                    prevChar !== "\\"
+                  ) {
+                    inString = false;
+                    stringChar = null;
+                  }
+
+                  if (inString) continue;
+
+                  if (char === "(" || char === "{" || char === "[") {
+                    depth++;
+                    started = true;
+                  } else if (char === ")" || char === "}" || char === "]") {
+                    depth--;
+                  }
+
+                  // Check if we've reached the end of the schema expression
+                  // End when we hit a comma at depth 0 (after we've started parsing)
+                  if (started && depth === 0) {
+                    if (char === ",") {
+                      schemaEnd = i;
+                      break;
+                    }
+                    // Also check for next property (name: or type: or closing brace)
+                    const remaining = paramBlock.substring(i);
+                    if (
+                      remaining.match(/^\s*[,}]/) ||
+                      remaining.match(/^\s*(name|type|schema):/)
+                    ) {
+                      schemaEnd = i;
+                      break;
+                    }
+                  }
+
+                  // If we haven't started but hit a comma, it's a simple schema
+                  if (!started && char === ",") {
+                    schemaEnd = i;
+                    break;
+                  }
+                }
+
+                let paramSchema = paramBlock
+                  .substring(schemaPos, schemaEnd)
+                  .trim();
+
+                // Clean up schema string (remove trailing commas, etc)
+                paramSchema = paramSchema.replace(/,\s*$/, "").trim();
+
+                if (paramSchema) {
+                  queryParams.push({ name: paramName, schema: paramSchema });
+                }
+              }
+            }
+          }
+
+          paramPos = paramEnd;
+        }
+      }
+
       endpoints.push({
         clientMethod:
           clientMethod ||
@@ -361,6 +847,7 @@ async function extractEndpointsSnapshot(openApiContent) {
         path,
         requestSchema,
         responseSchema,
+        queryParams,
       });
     }
 
@@ -561,6 +1048,9 @@ async function main() {
 
     // Step 3: Extract Endpoints Snapshot
     const endpointsSnapshot = await extractEndpointsSnapshot(openApiContent);
+
+    // Step 3.5: Generate Params Schemas
+    await generateParamsSchemas(endpointsSnapshot);
 
     // Step 4: Diff Endpoints (MUST do this BEFORE copying snapshot to prev)
     const changes = await diffEndpoints(endpointsSnapshot, schemaChanges);

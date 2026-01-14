@@ -8,6 +8,7 @@ import type {
   UpdateMaterialRequest,
   MaterialResponseIPaginate,
 } from "@/Schema/material.schema";
+import type { MaterialListParams } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
 
@@ -15,14 +16,6 @@ import { normalizeParams } from "@/apis/util.api";
 type ApiError = {
   response?: { data?: { message?: string } };
   message?: string;
-};
-
-// Material list params
-export type MaterialListParams = {
-  page?: number;
-  size?: number;
-  name?: string;
-  materialTypeId?: number;
 };
 
 // ========== MATERIAL KEYS ==========
@@ -137,5 +130,3 @@ export const useDeleteMaterial = () => {
     },
   });
 };
-
-

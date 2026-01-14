@@ -15,29 +15,17 @@ import type {
 } from "@/Schema/stock.schema";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
+import type {
+  StockInListParams,
+  StockOutListParams,
+  StockInSummaryParams,
+  StockOutSummaryParams,
+} from "@/Schema";
 
 // Error type for API responses
 type ApiError = {
   response?: { data?: { message?: string } };
   message?: string;
-};
-
-// StockIn list params
-export type StockInListParams = {
-  pageNumber?: number;
-  pageSize?: number;
-  type?: string;
-  status?: string;
-  search?: string;
-};
-
-// StockOut list params
-export type StockOutListParams = {
-  pageNumber?: number;
-  pageSize?: number;
-  type?: string;
-  status?: string;
-  search?: string;
 };
 
 // ========== STOCK IN ==========
@@ -204,11 +192,6 @@ export const useStockInsByVendor = (
     },
     enabled: enabled && vendorId !== null,
   });
-};
-
-export type StockInSummaryParams = {
-  fromDate?: string;
-  toDate?: string;
 };
 
 export const useStockInSummary = (params?: StockInSummaryParams) => {
@@ -571,11 +554,6 @@ export const useReturnableStockOutsByDeliveryNote = (
     },
     enabled: enabled && deliveryNoteId !== null,
   });
-};
-
-export type StockOutSummaryParams = {
-  fromDate?: string;
-  toDate?: string;
 };
 
 export const useStockOutSummary = (params?: StockOutSummaryParams) => {

@@ -587,6 +587,9 @@ export default function ProofingOrderDetailPage() {
       thumbnailUrl: firstDesign.designImageUrl || "",
       createdAt: firstDesign.createdAt || "",
       designId: firstDesign.id,
+      laminationType: firstDesign.laminationType ?? undefined,
+      processClassificationOptionName: firstDesign.processClassification ?? undefined,
+      sidesClassification: firstDesign.sidesClassification ?? undefined,
     };
   }, [order?.proofingOrderDesigns]);
 
@@ -4787,13 +4790,20 @@ export default function ProofingOrderDetailPage() {
               return;
             }
 
-            await addDesignsMutate({
-              id: order.id,
-              request: {
-                materialTypeId: order.materialTypeId,
-                items: items,
-              },
-            });
+            try {
+              await addDesignsMutate({
+                id: order.id,
+                request: {
+                  materialTypeId: order.materialTypeId,
+                  items: items,
+                },
+              });
+              // Query invalidation happens in the hook's onSuccess callback
+              // The dialog will close automatically via the component's handleSubmit
+            } catch (error) {
+              // Error is already handled by the hook
+              throw error;
+            }
           }}
           isSubmitting={isAddingDesigns}
         />
