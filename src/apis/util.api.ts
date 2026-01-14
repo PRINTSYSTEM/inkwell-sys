@@ -126,6 +126,8 @@ export const API_SUFFIX = {
   MATERIAL_TYPES_BY_DESIGN_TYPE: (designTypeId: number) =>
     `/designs/materials/design-type/${designTypeId}`,
   MATERIAL_TYPES_BULK: "/designs/materials/bulk",
+  MATERIALS: "/materials",
+  MATERIAL_BY_ID: (id: number) => `/materials/${id}`,
 
   // ========== DESIGNS ==========
   DESIGNS: "/designs",
@@ -204,10 +206,30 @@ export const API_SUFFIX = {
   STOCK_IN_BY_ID: (id: number) => `/stock-ins/${id}`,
   STOCK_IN_CANCEL: (id: number) => `/stock-ins/${id}/cancel`,
   STOCK_IN_COMPLETE: (id: number) => `/stock-ins/${id}/complete`,
+  STOCK_IN_FROM_VENDOR: "/stock-ins/from-vendor",
+  STOCK_IN_FROM_PRODUCTION: "/stock-ins/from-production",
+  STOCK_IN_FROM_DELIVERY_RETURN: "/stock-ins/from-delivery-return",
+  STOCK_IN_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>
+    `/stock-ins/by-delivery-note/${deliveryNoteId}`,
+  STOCK_IN_BY_PRODUCTION_ORDER: (productionOrderId: number) =>
+    `/stock-ins/by-production-order/${productionOrderId}`,
+  STOCK_IN_BY_VENDOR: (vendorId: number) =>
+    `/stock-ins/by-vendor/${vendorId}`,
+  STOCK_IN_SUMMARY: "/stock-ins/summary",
   STOCK_OUTS: "/stock-outs",
   STOCK_OUT_BY_ID: (id: number) => `/stock-outs/${id}`,
   STOCK_OUT_CANCEL: (id: number) => `/stock-outs/${id}/cancel`,
   STOCK_OUT_COMPLETE: (id: number) => `/stock-outs/${id}/complete`,
+  STOCK_OUT_FOR_PRODUCTION: "/stock-outs/for-production",
+  STOCK_OUT_FOR_DELIVERY: "/stock-outs/for-delivery",
+  STOCK_OUT_PROCESS_RETURN: "/stock-outs/process-return",
+  STOCK_OUT_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>
+    `/stock-outs/by-delivery-note/${deliveryNoteId}`,
+  STOCK_OUT_BY_PRODUCTION_ORDER: (productionOrderId: number) =>
+    `/stock-outs/by-production-order/${productionOrderId}`,
+  STOCK_OUT_RETURNABLE_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>
+    `/stock-outs/returnable/by-delivery-note/${deliveryNoteId}`,
+  STOCK_OUT_SUMMARY: "/stock-outs/summary",
 
   // ========== PRODUCTIONS ==========
   PRODUCTION_ORDERS: "/production-orders",

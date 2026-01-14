@@ -537,7 +537,7 @@ export default function OrderDetailPage() {
     );
 
   // Fetch users for assignedToUserId select
-  const { data: usersData } = useUsers({ pageSize: 1000 });
+  const { data: usersData } = useUsers({ pageSize: 100 });
   const users = usersData?.items || [];
 
   // Fetch designers for designer assignment
@@ -545,7 +545,7 @@ export default function OrderDetailPage() {
     data: designersData,
     isLoading: isLoadingDesigners,
     isFetching: isFetchingDesigners,
-  } = useUsers({ role: "design", pageSize: 1000 });
+  } = useUsers({ role: "design", pageSize: 100 });
   // Memoize designers array to prevent unnecessary re-renders
   const designers = useMemo(
     () => designersData?.items || [],
@@ -661,7 +661,9 @@ export default function OrderDetailPage() {
     ? new Date(order.paymentDueDate) < now
     : false;
   const isDeliveryDatePassed =
-    order.deliveryDate && order.status !== "completed" && order.status !== "delivered"
+    order.deliveryDate &&
+    order.status !== "completed" &&
+    order.status !== "delivered"
       ? new Date(order.deliveryDate) < now
       : false;
   const isDebtOverLimit =
@@ -1098,7 +1100,7 @@ export default function OrderDetailPage() {
                               {design?.sidesClassification && (
                                 <div>
                                   <p className="text-muted-foreground text-xs">
-                                    Mặt cắt
+                                    Mặt in
                                   </p>
                                   <p className="font-medium">
                                     {sidesClassificationLabels[
@@ -1112,7 +1114,7 @@ export default function OrderDetailPage() {
                               {design?.processClassification && (
                                 <div>
                                   <p className="text-muted-foreground text-xs">
-                                    Quy trình sản xuất
+                                    Quy cách sản xuất
                                   </p>
                                   <p className="font-medium">
                                     {processClassificationLabels[
@@ -1682,7 +1684,10 @@ export default function OrderDetailPage() {
                         🚨 Công nợ vượt hạn mức
                       </p>
                       <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                        Khách hàng đang nợ {formatCurrency(order.customer?.currentDebt || 0)}, vượt quá hạn mức cho phép {formatCurrency(order.customer?.maxDebt || 0)}
+                        Khách hàng đang nợ{" "}
+                        {formatCurrency(order.customer?.currentDebt || 0)}, vượt
+                        quá hạn mức cho phép{" "}
+                        {formatCurrency(order.customer?.maxDebt || 0)}
                       </p>
                     </div>
                   </div>
@@ -2121,11 +2126,13 @@ export default function OrderDetailPage() {
                   !order.recipientPhone ||
                   !order.recipientAddress) &&
                   editingCard !== "recipientInfo" && (
-                    <div className={`rounded-lg p-3 border-2 ${
-                      isDeliveryDatePassed
-                        ? "bg-red-50 dark:bg-red-950/30 border-red-400 dark:border-red-700"
-                        : "bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700"
-                    }`}>
+                    <div
+                      className={`rounded-lg p-3 border-2 ${
+                        isDeliveryDatePassed
+                          ? "bg-red-50 dark:bg-red-950/30 border-red-400 dark:border-red-700"
+                          : "bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700"
+                      }`}
+                    >
                       <div className="flex items-start gap-2">
                         {isDeliveryDatePassed ? (
                           <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
@@ -2133,20 +2140,24 @@ export default function OrderDetailPage() {
                           <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                         )}
                         <div className="flex-1">
-                          <p className={`text-xs font-semibold ${
-                            isDeliveryDatePassed
-                              ? "text-red-900 dark:text-red-100"
-                              : "text-amber-900 dark:text-amber-100"
-                          }`}>
+                          <p
+                            className={`text-xs font-semibold ${
+                              isDeliveryDatePassed
+                                ? "text-red-900 dark:text-red-100"
+                                : "text-amber-900 dark:text-amber-100"
+                            }`}
+                          >
                             {isDeliveryDatePassed ? "🚨 " : "⚠️ "}
                             Thiếu thông tin người nhận
                             {isDeliveryDatePassed && " - Đã quá ngày giao!"}
                           </p>
-                          <ul className={`text-xs mt-1 list-disc list-inside space-y-0.5 ${
-                            isDeliveryDatePassed
-                              ? "text-red-700 dark:text-red-300"
-                              : "text-amber-700 dark:text-amber-300"
-                          }`}>
+                          <ul
+                            className={`text-xs mt-1 list-disc list-inside space-y-0.5 ${
+                              isDeliveryDatePassed
+                                ? "text-red-700 dark:text-red-300"
+                                : "text-amber-700 dark:text-amber-300"
+                            }`}
+                          >
                             {!order.recipientName && <li>Tên người nhận</li>}
                             {!order.recipientPhone && <li>Số điện thoại</li>}
                             {!order.recipientAddress && <li>Địa chỉ</li>}
@@ -2449,26 +2460,34 @@ export default function OrderDetailPage() {
 
                     {/* Payment Due Date */}
                     {order.paymentDueDate && (
-                      <div className={`pt-2 border-t ${isPaymentDueOverdue ? "bg-red-50 dark:bg-red-950/20 -mx-4 px-4 py-2 rounded" : ""}`}>
+                      <div
+                        className={`pt-2 border-t ${isPaymentDueOverdue ? "bg-red-50 dark:bg-red-950/20 -mx-4 px-4 py-2 rounded" : ""}`}
+                      >
                         <div className="flex items-center gap-2">
-                          <Calendar className={`w-4 h-4 flex-shrink-0 ${
-                            isPaymentDueOverdue
-                              ? "text-red-600 dark:text-red-400"
-                              : "text-muted-foreground"
-                          }`} />
-                          <div className="flex-1">
-                            <span className={`text-xs ${
+                          <Calendar
+                            className={`w-4 h-4 flex-shrink-0 ${
                               isPaymentDueOverdue
-                                ? "text-red-700 dark:text-red-300 font-semibold"
+                                ? "text-red-600 dark:text-red-400"
                                 : "text-muted-foreground"
-                            }`}>
+                            }`}
+                          />
+                          <div className="flex-1">
+                            <span
+                              className={`text-xs ${
+                                isPaymentDueOverdue
+                                  ? "text-red-700 dark:text-red-300 font-semibold"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
                               Hạn thanh toán:{" "}
                             </span>
-                            <span className={`text-sm font-medium ${
-                              isPaymentDueOverdue
-                                ? "text-red-900 dark:text-red-100"
-                                : ""
-                            }`}>
+                            <span
+                              className={`text-sm font-medium ${
+                                isPaymentDueOverdue
+                                  ? "text-red-900 dark:text-red-100"
+                                  : ""
+                              }`}
+                            >
                               {formatDateTime(order.paymentDueDate)}
                               {isPaymentDueOverdue && (
                                 <span className="ml-2 text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2 py-0.5 rounded">
@@ -2491,7 +2510,8 @@ export default function OrderDetailPage() {
                               ⚠️ Đã quá ngày giao hàng dự kiến
                             </p>
                             <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
-                              Ngày giao: {formatDate(order.deliveryDate)} - Cần xử lý gấp
+                              Ngày giao: {formatDate(order.deliveryDate)} - Cần
+                              xử lý gấp
                             </p>
                           </div>
                         </div>
@@ -2628,7 +2648,7 @@ function AddDesignToOrderForm({
   const [selectedDesignId, setSelectedDesignId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<string>("1");
   const { mutate: addDesignToOrder, loading: isAdding } = useAddDesignToOrder();
-  const { data: designsData } = useDesigns({ pageNumber: 1, pageSize: 1000 });
+  const { data: designsData } = useDesigns({ pageNumber: 1, pageSize: 100 });
 
   const designs = designsData?.items || [];
 

@@ -40,6 +40,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { proofingStatusLabels } from "@/lib/status-utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { DieListDialog } from "@/components/dies/DieListDialog";
 
 type ProofingOrder =
@@ -103,12 +104,13 @@ export default function ProofingOrdersPage() {
   const paginatedOrders = filteredProofingOrders;
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (ordersResp && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
       setPageInput("1");
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, ordersResp]);
 
   // Sync pageInput with currentPage
   useEffect(() => {
@@ -345,12 +347,38 @@ export default function ProofingOrdersPage() {
 
           {/* Table */}
           {loadingOrders ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Đang tải mã bài...
-                </p>
+            <div className="rounded-lg border flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div ref={tableContainerRef} className="overflow-auto flex-1">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10">
+                    <TableRow>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Mã bài
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        SL Mã hàng
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Trạng thái
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Trạng thái xuất kẽm
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Trạng thái xuất khuôn
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Người tạo
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Ngày tạo
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableSkeleton cols={8} rows={10} rowHeight="h-14" />
+                  </TableBody>
+                </Table>
               </div>
             </div>
           ) : ordersError ? (

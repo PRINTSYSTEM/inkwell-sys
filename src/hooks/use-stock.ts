@@ -3,35 +3,29 @@ import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import type {
   CreateStockInRequest,
+  CreateStockInFromVendorRequest,
+  CreateStockInFromProductionRequest,
+  CreateStockInFromDeliveryReturnRequest,
   UpdateStockInRequest,
   CreateStockOutRequest,
+  CreateStockOutForProductionRequest,
+  CreateStockOutForDeliveryRequest,
+  ProcessDeliveryReturnRequest,
   UpdateStockOutRequest,
 } from "@/Schema/stock.schema";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
+import type {
+  StockInListParams,
+  StockOutListParams,
+  StockInSummaryParams,
+  StockOutSummaryParams,
+} from "@/Schema";
 
 // Error type for API responses
 type ApiError = {
   response?: { data?: { message?: string } };
   message?: string;
-};
-
-// StockIn list params
-export type StockInListParams = {
-  pageNumber?: number;
-  pageSize?: number;
-  type?: string;
-  status?: string;
-  search?: string;
-};
-
-// StockOut list params
-export type StockOutListParams = {
-  pageNumber?: number;
-  pageSize?: number;
-  type?: string;
-  status?: string;
-  search?: string;
 };
 
 // ========== STOCK IN ==========
@@ -83,6 +77,131 @@ export const useCreateStockIn = () => {
       toast.error("Tạo phiếu nhập kho thất bại", {
         description: error.response?.data?.message || error.message,
       });
+    },
+  });
+};
+
+export const useCreateStockInFromVendor = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { id: number },
+    ApiError,
+    CreateStockInFromVendorRequest
+  >({
+    mutationFn: async (data: CreateStockInFromVendorRequest) => {
+      const response = await apiRequest.post<{ id: number }>(
+        API_SUFFIX.STOCK_IN_FROM_VENDOR,
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      toast.success("Tạo phiếu nhập kho từ nhà cung cấp thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu nhập kho thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useCreateStockInFromProduction = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateStockInFromProductionRequest) => {
+      await apiRequest.post(API_SUFFIX.STOCK_IN_FROM_PRODUCTION, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      toast.success("Tạo phiếu nhập kho từ sản xuất thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu nhập kho thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useCreateStockInFromDeliveryReturn = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateStockInFromDeliveryReturnRequest) => {
+      await apiRequest.post(API_SUFFIX.STOCK_IN_FROM_DELIVERY_RETURN, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      toast.success("Tạo phiếu nhập kho từ trả hàng thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu nhập kho thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useStockInsByDeliveryNote = (
+  deliveryNoteId: number | null,
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: [...stockInKeys.all, "by-delivery-note", deliveryNoteId],
+    queryFn: async () => {
+      const response = await apiRequest.get(
+        API_SUFFIX.STOCK_IN_BY_DELIVERY_NOTE(deliveryNoteId!)
+      );
+      return response.data;
+    },
+    enabled: enabled && deliveryNoteId !== null,
+  });
+};
+
+export const useStockInsByProductionOrder = (
+  productionOrderId: number | null,
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: [...stockInKeys.all, "by-production-order", productionOrderId],
+    queryFn: async () => {
+      const response = await apiRequest.get(
+        API_SUFFIX.STOCK_IN_BY_PRODUCTION_ORDER(productionOrderId!)
+      );
+      return response.data;
+    },
+    enabled: enabled && productionOrderId !== null,
+  });
+};
+
+export const useStockInsByVendor = (
+  vendorId: number | null,
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: [...stockInKeys.all, "by-vendor", vendorId],
+    queryFn: async () => {
+      const response = await apiRequest.get(
+        API_SUFFIX.STOCK_IN_BY_VENDOR(vendorId!)
+      );
+      return response.data;
+    },
+    enabled: enabled && vendorId !== null,
+  });
+};
+
+export const useStockInSummary = (params?: StockInSummaryParams) => {
+  return useQuery({
+    queryKey: [...stockInKeys.all, "summary", normalizeParams(params || {})],
+    queryFn: async () => {
+      const response = await apiRequest.get(API_SUFFIX.STOCK_IN_SUMMARY, {
+        params: normalizeParams(params || {}),
+      });
+      return response.data;
     },
   });
 };
@@ -310,4 +429,141 @@ export const useCancelStockOut = () => {
   });
 };
 
+export const useCreateStockOutForProduction = () => {
+  const queryClient = useQueryClient();
 
+  return useMutation<
+    { id: number },
+    ApiError,
+    CreateStockOutForProductionRequest
+  >({
+    mutationFn: async (data: CreateStockOutForProductionRequest) => {
+      const response = await apiRequest.post<{ id: number }>(
+        API_SUFFIX.STOCK_OUT_FOR_PRODUCTION,
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
+      toast.success("Tạo phiếu xuất kho cho sản xuất thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu xuất kho thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useCreateStockOutForDelivery = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { id: number },
+    ApiError,
+    CreateStockOutForDeliveryRequest
+  >({
+    mutationFn: async (data: CreateStockOutForDeliveryRequest) => {
+      const response = await apiRequest.post<{ id: number }>(
+        API_SUFFIX.STOCK_OUT_FOR_DELIVERY,
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
+      toast.success("Tạo phiếu xuất kho cho giao hàng thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu xuất kho thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useProcessDeliveryReturn = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: ProcessDeliveryReturnRequest) => {
+      await apiRequest.post(API_SUFFIX.STOCK_OUT_PROCESS_RETURN, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      toast.success("Xử lý trả hàng thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Xử lý trả hàng thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useStockOutsByDeliveryNote = (
+  deliveryNoteId: number | null,
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: [...stockOutKeys.all, "by-delivery-note", deliveryNoteId],
+    queryFn: async () => {
+      const response = await apiRequest.get(
+        API_SUFFIX.STOCK_OUT_BY_DELIVERY_NOTE(deliveryNoteId!)
+      );
+      return response.data;
+    },
+    enabled: enabled && deliveryNoteId !== null,
+  });
+};
+
+export const useStockOutsByProductionOrder = (
+  productionOrderId: number | null,
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: [...stockOutKeys.all, "by-production-order", productionOrderId],
+    queryFn: async () => {
+      const response = await apiRequest.get(
+        API_SUFFIX.STOCK_OUT_BY_PRODUCTION_ORDER(productionOrderId!)
+      );
+      return response.data;
+    },
+    enabled: enabled && productionOrderId !== null,
+  });
+};
+
+export const useReturnableStockOutsByDeliveryNote = (
+  deliveryNoteId: number | null,
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: [
+      ...stockOutKeys.all,
+      "returnable",
+      "by-delivery-note",
+      deliveryNoteId,
+    ],
+    queryFn: async () => {
+      const response = await apiRequest.get(
+        API_SUFFIX.STOCK_OUT_RETURNABLE_BY_DELIVERY_NOTE(deliveryNoteId!)
+      );
+      return response.data;
+    },
+    enabled: enabled && deliveryNoteId !== null,
+  });
+};
+
+export const useStockOutSummary = (params?: StockOutSummaryParams) => {
+  return useQuery({
+    queryKey: [...stockOutKeys.all, "summary", normalizeParams(params || {})],
+    queryFn: async () => {
+      const response = await apiRequest.get(API_SUFFIX.STOCK_OUT_SUMMARY, {
+        params: normalizeParams(params || {}),
+      });
+      return response.data;
+    },
+  });
+};

@@ -13,6 +13,7 @@ export { filterHelpers } from "./use-filters";
 export * from "./use-design-type";
 
 export * from "./use-material-type";
+export * from "./use-material";
 export * from "./use-user";
 export * from "./use-order";
 export * from "./use-proofing-order";

@@ -23,7 +23,11 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { useUpdateProductionStep } from "@/hooks/use-production";
-import { useCreateStockIn } from "@/hooks/use-stock";
+import {
+  useCreateStockIn,
+  useStockOutsByProductionOrder,
+  useCompleteStockOut,
+} from "@/hooks/use-stock";
 import type {
   ProductionStepResponse,
   ProductionOrderResponse,
@@ -86,6 +90,14 @@ export function CompletionDialog({
 
   const { mutate: updateStep, isPending: updatingStep } =
     useUpdateProductionStep();
+  const { mutate: completeStockOut } = useCompleteStockOut();
+
+  // Fetch stock outs for this production order to find material export stock out
+  const { data: stockOutsData } = useStockOutsByProductionOrder(
+    productionOrder?.id || null,
+    open && !!productionOrder?.id
+  );
+  const stockOuts = stockOutsData || [];
 
   const isProcessing = updatingStep || isCreatingStockIn;
 
@@ -176,20 +188,21 @@ export function CompletionDialog({
     try {
       // Step 1: Create stock-in request (nhập sản phẩm vào kho)
       const stockInRequest: CreateStockInRequest = {
-        type: "production_completion",
-        productionId: productionOrder.id,
+        source: "production",
+        itemType: "production_completion",
+        productionOrderId: productionOrder.id,
         orderId: productionOrder.proofingOrderId || undefined,
         stockInDate: stockInDate
           ? new Date(stockInDate).toISOString()
           : undefined,
-        notes: notes.trim() || "",
+        notes: notes.trim() || undefined,
         items: validItems.map((item) => ({
           itemName: item.itemName.trim(),
-          itemCode: (item.itemCode || "").trim(),
-          unit: (item.unit || "").trim(),
+          itemCode: (item.itemCode || "").trim() || undefined,
+          unit: (item.unit || "").trim() || undefined,
           quantity: item.quantity,
           unitPrice: item.unitPrice || undefined,
-          notes: (item.notes || "").trim(),
+          notes: (item.notes || "").trim() || undefined,
         })),
       };
 
@@ -206,6 +219,34 @@ export function CompletionDialog({
 
       // Complete stock-in immediately (products are received into warehouse)
       await apiRequest.post(API_SUFFIX.STOCK_IN_COMPLETE(stockInId));
+
+      // If this is a material_export step, find and complete the related stock-out
+      if (step.stepType === "material_export" && productionOrder?.id) {
+        // Find the stock-out for this production order that hasn't been completed yet
+        const pendingStockOut = stockOuts.find(
+          (so: any) =>
+            so.productionOrderId === productionOrder.id &&
+            so.status !== "completed" &&
+            so.status !== "cancelled"
+        );
+
+        if (pendingStockOut?.id) {
+          // Complete the stock-out
+          completeStockOut(pendingStockOut.id, {
+            onSuccess: () => {
+              toast.success("Đã hoàn thành phiếu xuất kho");
+            },
+            onError: (error: any) => {
+              toast.error("Không thể hoàn thành phiếu xuất kho", {
+                description:
+                  error?.response?.data?.message ||
+                  error?.message ||
+                  "Đã xảy ra lỗi",
+              });
+            },
+          });
+        }
+      }
 
       // Step 2: Update production step to DONE
       const combinedNotes = [notes.trim(), defectNotes.trim()]

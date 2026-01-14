@@ -46,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useInvoices, useExportInvoice } from "@/hooks/use-invoice";
@@ -127,11 +128,12 @@ function CreatedInvoicesTab() {
   }, [currentPage]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
+    if (invoicesData && currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages]);
+  }, [currentPage, totalPages, invoicesData]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -286,15 +288,7 @@ function CreatedInvoicesTab() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array.from({ length: 10 }).map((_, i) => (
-                  <TableRow key={i} className="h-12">
-                    {Array.from({ length: 6 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-5 w-full" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                <TableSkeleton cols={6} rows={10} rowHeight="h-12" />
               ) : invoices.length === 0 ? (
                 <TableRow>
                   <TableCell
@@ -467,7 +461,7 @@ export default function InvoicePage() {
   // Fetch all orders for accounting to calculate summary stats
   const { data: allOrdersData } = useOrdersForAccounting({
     pageNumber: 1,
-    pageSize: 1000, // Get all orders for stats calculation
+    pageSize: 100, // Get all orders for stats calculation
     filterType: "invoice",
   });
 

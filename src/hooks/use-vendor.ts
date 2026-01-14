@@ -17,14 +17,7 @@ import type {
 } from "@/Schema/vendor.schema";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
-
-// Vendor list params
-export type VendorListParams = {
-  pageNumber?: number;
-  pageSize?: number;
-  search?: string;
-  vendorType?: string; // Filter by vendor type (plate, die)
-};
+import type { VendorListParams } from "@/Schema";
 
 const {
   api: vendorCrudApi,
@@ -76,22 +69,22 @@ export const useActiveVendors = (vendorType?: "plate" | "die") => {
       const params: Record<string, unknown> = {
         isActive: true,
         pageNumber: 1,
-        pageSize: 1000, // Lấy tất cả vendors active
+        pageSize: 100, // Lấy tất cả vendors active
       };
-      
+
       // Note: vendorType không có trong OpenAPI schema của /vendors endpoint
       // Có thể cần filter ở client side hoặc backend cần thêm query param này
       // Tạm thời comment lại để tránh lỗi
       // if (vendorType) {
       //   params.vendorType = vendorType;
       // }
-      
+
       const normalizedParams = normalizeParams(params);
       const res = await apiRequest.get<VendorResponsePaginate>(
         API_SUFFIX.VENDORS,
         { params: normalizedParams }
       );
-      
+
       // Filter theo vendorType ở client side nếu cần
       let vendors = res.data.items ?? [];
       if (vendorType) {
@@ -99,7 +92,7 @@ export const useActiveVendors = (vendorType?: "plate" | "die") => {
           (v) => v.vendorType?.toLowerCase() === vendorType.toLowerCase()
         );
       }
-      
+
       return vendors;
     },
   });
@@ -113,5 +106,3 @@ export const useActiveDieVendors = () => useActiveVendors("die");
 
 // Export for custom usage
 export { vendorCrudApi, vendorKeys };
-
-

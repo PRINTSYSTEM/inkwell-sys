@@ -55,6 +55,12 @@ export const ConstantsResponseSchema = z
     debtStatuses: ConstantGroupSchema.optional(),
     productionStepTypes: ConstantGroupSchema.optional(),
     productionStepStatuses: ConstantGroupSchema.optional(),
+    stockInSources: ConstantGroupSchema.optional(),
+    stockInItemTypes: ConstantGroupSchema.optional(),
+    stockInStatuses: ConstantGroupSchema.optional(),
+    stockOutPurposes: ConstantGroupSchema.optional(),
+    stockOutItemTypes: ConstantGroupSchema.optional(),
+    stockOutStatuses: ConstantGroupSchema.optional(),
   })
   .passthrough();
 

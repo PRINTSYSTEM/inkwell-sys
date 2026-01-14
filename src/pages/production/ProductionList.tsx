@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import {
   Select,
   SelectContent,
@@ -174,12 +175,13 @@ export default function ProductionListPage() {
   }, [currentPage]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (productionsResp && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
       setPageInput("1");
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, productionsResp]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -484,12 +486,34 @@ export default function ProductionListPage() {
         <Card className="flex-1 flex flex-col min-h-0 overflow-hidden border-0 shadow-sm">
           <div ref={tableContainerRef} className="flex-1 overflow-auto">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center h-full py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-primary mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  Đang tải đơn sản xuất...
-                </p>
-              </div>
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="h-10 font-bold text-sm">ID</TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Người phụ trách
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Tiến độ
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Trạng thái
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Bắt đầu
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Hoàn thành
+                    </TableHead>
+                    <TableHead className="h-10 font-bold text-sm">
+                      Ngày tạo
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableSkeleton cols={7} rows={10} rowHeight="h-14" />
+                </TableBody>
+              </Table>
             ) : filteredProductions.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full py-12">
                 <Factory className="h-12 w-12 text-muted-foreground mb-3" />

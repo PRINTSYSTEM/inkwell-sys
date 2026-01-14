@@ -98,6 +98,8 @@ function OrderDetailRow({
     isExpanded && !!order.orderId // Only fetch when expanded and orderId exists
   );
 
+  const scrapQuantity = (quantity: number) => Math.floor(quantity * 0.05);
+
   return (
     <>
       <TableRow className="cursor-pointer hover:bg-muted/50" onClick={onToggle}>
@@ -112,9 +114,6 @@ function OrderDetailRow({
           </div>
         </TableCell>
         <TableCell>{order.customerName || "—"}</TableCell>
-        <TableCell className="text-right font-medium tabular-nums">
-          {order.totalAmount ? formatCurrency(order.totalAmount) : "—"}
-        </TableCell>
         <TableCell className="text-sm text-muted-foreground">
           {order.deliveryAddress || "—"}
         </TableCell>
@@ -167,9 +166,9 @@ function OrderDetailRow({
                               {/* Phụ hao = quantity - proofedQuantity */}
                               {detail.proofedQuantity != null &&
                               detail.quantity != null
-                                ? (
-                                    detail.quantity - detail.proofedQuantity
-                                  ).toLocaleString("vi-VN")
+                                ? scrapQuantity(detail.quantity).toLocaleString(
+                                    "vi-VN"
+                                  )
                                 : "—"}
                             </p>
                           </div>
@@ -178,21 +177,9 @@ function OrderDetailRow({
                               Số lượng thực
                             </Label>
                             <p className="font-medium">
-                              {detail.proofedQuantity?.toLocaleString(
-                                "vi-VN"
-                              ) ||
-                                detail.quantity?.toLocaleString("vi-VN") ||
-                                "—"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-xs text-muted-foreground">
-                              Đơn giá
-                            </Label>
-                            <p className="font-medium tabular-nums">
-                              {detail.unitPrice
-                                ? formatCurrency(detail.unitPrice)
-                                : "—"}
+                              {(
+                                detail.quantity - scrapQuantity(detail.quantity)
+                              ).toLocaleString("vi-VN") || "—"}
                             </p>
                           </div>
                         </div>
@@ -526,7 +513,6 @@ export default function DeliveryNoteDetailPage() {
                     <TableRow>
                       <TableHead>Mã đơn</TableHead>
                       <TableHead>Khách hàng</TableHead>
-                      <TableHead className="text-right">Tổng tiền</TableHead>
                       <TableHead>Địa chỉ</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -627,18 +613,72 @@ export default function DeliveryNoteDetailPage() {
                 </>
               )}
 
-              {deliveryNote.deliveredBy && (
+              {deliveryNote.confirmedAt && (
                 <>
                   <Separator />
                   <div>
-                    <Label className="text-muted-foreground">Người giao</Label>
+                    <Label className="text-muted-foreground">Xác nhận</Label>
                     <div className="flex items-center gap-2 mt-1">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span>
-                        {(deliveryNote.deliveredBy as { fullName?: string })
-                          ?.fullName || "—"}
-                      </span>
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{formatDateTime(deliveryNote.confirmedAt)}</span>
                     </div>
+                    {deliveryNote.confirmedBy && (
+                      <div className="flex items-center gap-2 mt-1 ml-6">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>{deliveryNote.confirmedBy.fullName || "—"}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {deliveryNote.handedOverAt && (
+                <>
+                  <Separator />
+                  <div>
+                    <Label className="text-muted-foreground">Bàn giao</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{formatDateTime(deliveryNote.handedOverAt)}</span>
+                    </div>
+                    {deliveryNote.handedOverBy && (
+                      <div className="flex items-center gap-2 mt-1 ml-6">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>{deliveryNote.handedOverBy.fullName || "—"}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {deliveryNote.deliveredAt && (
+                <>
+                  <Separator />
+                  <div>
+                    <Label className="text-muted-foreground">Ngày giao</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{formatDateTime(deliveryNote.deliveredAt)}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {deliveryNote.cancelledAt && (
+                <>
+                  <Separator />
+                  <div>
+                    <Label className="text-muted-foreground">Hủy</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{formatDateTime(deliveryNote.cancelledAt)}</span>
+                    </div>
+                    {deliveryNote.cancelledBy && (
+                      <div className="flex items-center gap-2 mt-1 ml-6">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>{deliveryNote.cancelledBy.fullName || "—"}</span>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

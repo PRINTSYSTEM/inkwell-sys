@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -54,6 +55,21 @@ export function AddDesignToProofingDialog({
   const [designQuantities, setDesignQuantities] = useState<
     Record<number, number>
   >({});
+  const [selectedDesignIds, setSelectedDesignIds] = useState<Set<number>>(
+    new Set()
+  );
+
+  // Helper functions to check design type
+  const isNhanDesignType = (designTypeName: string): boolean => {
+    return (
+      designTypeName.toLowerCase().includes("nhãn") ||
+      designTypeName.toLowerCase().includes("nhan")
+    );
+  };
+
+  const isDecalDesignType = (designTypeName: string): boolean => {
+    return designTypeName.toLowerCase().includes("decal");
+  };
 
   // Helper functions to check design type
   const isNhanDesignType = (designTypeName: string): boolean => {
@@ -90,8 +106,10 @@ export function AddDesignToProofingDialog({
       // Nếu current design là nhãn giấy hoặc decal, chỉ cần cùng materialTypeId và designTypeId
       if (isCurrentDesignNhanOrDecal) return true;
 
-      // Các loại khác: phải có cùng laminationType
-      return design.laminationType === currentDesign.laminationType;
+      // Các loại khác: phải có cùng laminationType (handle null/undefined)
+      const currentLaminationType = currentDesign.laminationType ?? null;
+      const designLaminationType = design.laminationType ?? null;
+      return currentLaminationType === designLaminationType;
     });
   }, [availableDesigns, currentDesign]);
 
@@ -99,14 +117,38 @@ export function AddDesignToProofingDialog({
   useEffect(() => {
     if (open) {
       const initialQuantities: Record<number, number> = {};
+      const initialSelected = new Set<number>();
       filteredDesigns.forEach((design) => {
         initialQuantities[design.id] = 0;
       });
       setDesignQuantities(initialQuantities);
+      setSelectedDesignIds(initialSelected);
     } else {
       setDesignQuantities({});
+      setSelectedDesignIds(new Set());
     }
   }, [open, filteredDesigns]);
+
+  // Handle checkbox toggle - set quantity to max when checked, 0 when unchecked
+  const handleToggleDesign = (design: DesignItem) => {
+    const isSelected = selectedDesignIds.has(design.id);
+    const maxQty =
+      design.availableQuantity !== undefined && design.availableQuantity >= 0
+        ? design.availableQuantity
+        : design.quantity;
+
+    setSelectedDesignIds((prev) => {
+      const next = new Set(prev);
+      if (isSelected) {
+        next.delete(design.id);
+        setDesignQuantities((qty) => ({ ...qty, [design.id]: 0 }));
+      } else {
+        next.add(design.id);
+        setDesignQuantities((qty) => ({ ...qty, [design.id]: maxQty }));
+      }
+      return next;
+    });
+  };
 
   const handleQuantityChange = (
     id: number,
@@ -149,9 +191,12 @@ export function AddDesignToProofingDialog({
         return;
       }
 
-      // Build orderDetailItems - filter out zero quantities
+      // Build orderDetailItems - only include selected designs with quantity > 0
       const orderDetailItems = Object.entries(designQuantities)
-        .filter(([_, qty]) => qty > 0)
+        .filter(
+          ([id, qty]) =>
+            selectedDesignIds.has(parseInt(id, 10)) && qty > 0
+        )
         .map(([id, qty]) => {
           const quantity = Number.isInteger(qty) ? qty : Math.floor(qty);
           if (quantity <= 0) {
@@ -166,28 +211,32 @@ export function AddDesignToProofingDialog({
       if (orderDetailItems.length === 0) {
         toast.error("Lỗi", {
           description:
-            "Vui lòng nhập số lượng lấy cho ít nhất một mã hàng (lớn hơn 0)",
+            "Vui lòng chọn ít nhất một mã hàng để thêm vào bình bài",
         });
         return;
       }
 
       await onSubmit(orderDetailItems);
+      // Reset state and close dialog on success
+      setDesignQuantities({});
+      setSelectedDesignIds(new Set());
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to add designs:", error);
+      // Don't close dialog on error so user can retry
     }
   };
 
   const selectedCount = useMemo(() => {
-    return Object.values(designQuantities).filter((qty) => qty > 0).length;
-  }, [designQuantities]);
+    return selectedDesignIds.size;
+  }, [selectedDesignIds]);
 
   const hasValidQuantities = useMemo(() => {
-    return filteredDesigns.some((design) => {
-      const qty = designQuantities[design.id] || 0;
+    return Array.from(selectedDesignIds).some((designId) => {
+      const qty = designQuantities[designId] || 0;
       return qty > 0;
     });
-  }, [filteredDesigns, designQuantities]);
+  }, [selectedDesignIds, designQuantities]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -208,7 +257,7 @@ export function AddDesignToProofingDialog({
                   {currentDesign &&
                     ` (cùng quy cách: ${currentDesign.materialTypeName} - ${currentDesign.designTypeName})`}
                   {" • "}
-                  {selectedCount} đã nhập số lượng
+                  {selectedCount} đã chọn
                 </DialogDescription>
               </div>
             </div>
@@ -226,6 +275,44 @@ export function AddDesignToProofingDialog({
           <Table>
             <TableHeader className="sticky top-0 bg-muted/50 z-10">
               <TableRow>
+                <TableHead className="w-12 text-center">
+                  <Checkbox
+                    checked={
+                      filteredDesigns.length > 0 &&
+                      filteredDesigns.every((d) => selectedDesignIds.has(d.id))
+                    }
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        const allSelected = new Set<number>();
+                        const newQuantities: Record<number, number> = {};
+                        filteredDesigns.forEach((design) => {
+                          allSelected.add(design.id);
+                          const maxQty =
+                            design.availableQuantity !== undefined &&
+                            design.availableQuantity >= 0
+                              ? design.availableQuantity
+                              : design.quantity;
+                          newQuantities[design.id] = maxQty;
+                        });
+                        setSelectedDesignIds(allSelected);
+                        setDesignQuantities((prev) => ({
+                          ...prev,
+                          ...newQuantities,
+                        }));
+                      } else {
+                        const newQuantities: Record<number, number> = {};
+                        filteredDesigns.forEach((design) => {
+                          newQuantities[design.id] = 0;
+                        });
+                        setSelectedDesignIds(new Set());
+                        setDesignQuantities((prev) => ({
+                          ...prev,
+                          ...newQuantities,
+                        }));
+                      }
+                    }}
+                  />
+                </TableHead>
                 <TableHead className="w-12 text-center">#</TableHead>
                 <TableHead className="min-w-[200px]">mã hàng</TableHead>
                 <TableHead className="w-24 text-right">Đặt hàng</TableHead>
@@ -239,7 +326,7 @@ export function AddDesignToProofingDialog({
               {filteredDesigns.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center text-muted-foreground py-8"
                   >
                     {currentDesign
@@ -250,6 +337,7 @@ export function AddDesignToProofingDialog({
               ) : (
                 filteredDesigns.map((design, index) => {
                   const currentQty = designQuantities[design.id] || 0;
+                  const isSelected = selectedDesignIds.has(design.id);
 
                   const baseAvailableQty =
                     design.availableQuantity !== undefined &&
@@ -272,10 +360,16 @@ export function AddDesignToProofingDialog({
                       key={design.id}
                       className={cn(
                         "hover:bg-muted/30",
-                        isValid && "bg-green-50/30",
-                        isExceeded && "bg-red-50/30"
+                        isSelected && isValid && "bg-green-50/30",
+                        isSelected && isExceeded && "bg-red-50/30"
                       )}
                     >
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleToggleDesign(design)}
+                        />
+                      </TableCell>
                       <TableCell className="text-center text-xs text-muted-foreground font-medium">
                         {index + 1}
                       </TableCell>
@@ -323,7 +417,8 @@ export function AddDesignToProofingDialog({
                             className={cn(
                               "h-9 flex-1 text-right font-mono text-base font-semibold",
                               isExceeded &&
-                                "border-destructive focus-visible:ring-destructive"
+                                "border-destructive focus-visible:ring-destructive",
+                              !isSelected && "opacity-50"
                             )}
                             value={currentQty || ""}
                             onChange={(e) =>
@@ -335,6 +430,7 @@ export function AddDesignToProofingDialog({
                               )
                             }
                             placeholder="0"
+                            disabled={!isSelected}
                           />
                           <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                             /{maxQty.toLocaleString()}
@@ -379,10 +475,13 @@ export function AddDesignToProofingDialog({
           <div className="flex-1 text-xs text-muted-foreground">
             {selectedCount > 0 && (
               <span>
-                {selectedCount}/{filteredDesigns.length} mã hàng đã nhập số
-                lượng • Tổng lấy{" "}
-                {Object.values(designQuantities)
-                  .reduce((sum, qty) => sum + qty, 0)
+                {selectedCount}/{filteredDesigns.length} mã hàng đã chọn • Tổng
+                lấy{" "}
+                {Array.from(selectedDesignIds)
+                  .reduce(
+                    (sum, id) => sum + (designQuantities[id] || 0),
+                    0
+                  )
                   .toLocaleString()}{" "}
                 sp
               </span>

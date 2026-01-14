@@ -9,7 +9,7 @@ import type {
   DesignTimelineEntryResponse,
   DesignTimelineEntryResponsePaginate,
   UpdateDesignRequest,
-  DesignByCustomerListParams,
+  DesignByCustomerParams,
   RevertDesignRequest,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
@@ -345,7 +345,7 @@ export const useGenerateDesignExcel = () => {
 };
 
 // GET /api/designs/by-customer/:id
-export const useDesignsByCustomer = (params?: DesignByCustomerListParams) => {
+export const useDesignsByCustomer = (params?: DesignByCustomerParams) => {
   return useQuery({
     queryKey: [designKeys.all[0], "by-customer", params ?? {}],
     enabled: !!params?.customerId, // Only query when customerId is provided
