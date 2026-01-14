@@ -71,18 +71,6 @@ export function AddDesignToProofingDialog({
     return designTypeName.toLowerCase().includes("decal");
   };
 
-  // Helper functions to check design type
-  const isNhanDesignType = (designTypeName: string): boolean => {
-    return (
-      designTypeName.toLowerCase().includes("nhãn") ||
-      designTypeName.toLowerCase().includes("nhan")
-    );
-  };
-
-  const isDecalDesignType = (designTypeName: string): boolean => {
-    return designTypeName.toLowerCase().includes("decal");
-  };
-
   // Filter designs to only show those with same specifications as current design
   const filteredDesigns = useMemo(() => {
     if (!currentDesign) {
@@ -194,8 +182,7 @@ export function AddDesignToProofingDialog({
       // Build orderDetailItems - only include selected designs with quantity > 0
       const orderDetailItems = Object.entries(designQuantities)
         .filter(
-          ([id, qty]) =>
-            selectedDesignIds.has(parseInt(id, 10)) && qty > 0
+          ([id, qty]) => selectedDesignIds.has(parseInt(id, 10)) && qty > 0
         )
         .map(([id, qty]) => {
           const quantity = Number.isInteger(qty) ? qty : Math.floor(qty);
@@ -210,8 +197,7 @@ export function AddDesignToProofingDialog({
 
       if (orderDetailItems.length === 0) {
         toast.error("Lỗi", {
-          description:
-            "Vui lòng chọn ít nhất một mã hàng để thêm vào bình bài",
+          description: "Vui lòng chọn ít nhất một mã hàng để thêm vào bình bài",
         });
         return;
       }
@@ -478,10 +464,7 @@ export function AddDesignToProofingDialog({
                 {selectedCount}/{filteredDesigns.length} mã hàng đã chọn • Tổng
                 lấy{" "}
                 {Array.from(selectedDesignIds)
-                  .reduce(
-                    (sum, id) => sum + (designQuantities[id] || 0),
-                    0
-                  )
+                  .reduce((sum, id) => sum + (designQuantities[id] || 0), 0)
                   .toLocaleString()}{" "}
                 sp
               </span>
