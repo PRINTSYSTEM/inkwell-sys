@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TableRow, TableCell } from '@/components/ui/table';
 
 export function DesignerCardSkeleton() {
   return (
@@ -115,6 +116,37 @@ export function TableRowSkeleton({ cols = 4 }: { cols?: number }) {
         <Skeleton key={i} className="h-4 flex-1" />
       ))}
     </div>
+  );
+}
+
+/**
+ * Reusable table skeleton component for loading states
+ * Use this component inside TableBody to show loading skeleton rows
+ * @param cols - Number of columns in the table
+ * @param rows - Number of skeleton rows to display (default: 10)
+ * @param rowHeight - Height of each row (default: "h-14")
+ */
+export function TableSkeleton({
+  cols = 4,
+  rows = 10,
+  rowHeight = "h-14",
+}: {
+  cols?: number;
+  rows?: number;
+  rowHeight?: string;
+}) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, i) => (
+        <TableRow key={i} className={rowHeight}>
+          {Array.from({ length: cols }).map((_, j) => (
+            <TableCell key={j}>
+              <Skeleton className="h-5 w-full" />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
   );
 }
 

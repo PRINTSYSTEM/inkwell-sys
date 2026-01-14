@@ -613,18 +613,72 @@ export default function DeliveryNoteDetailPage() {
                 </>
               )}
 
-              {deliveryNote.deliveredBy && (
+              {deliveryNote.confirmedAt && (
                 <>
                   <Separator />
                   <div>
-                    <Label className="text-muted-foreground">Người giao</Label>
+                    <Label className="text-muted-foreground">Xác nhận</Label>
                     <div className="flex items-center gap-2 mt-1">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span>
-                        {(deliveryNote.deliveredBy as { fullName?: string })
-                          ?.fullName || "—"}
-                      </span>
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{formatDateTime(deliveryNote.confirmedAt)}</span>
                     </div>
+                    {deliveryNote.confirmedBy && (
+                      <div className="flex items-center gap-2 mt-1 ml-6">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>{deliveryNote.confirmedBy.fullName || "—"}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {deliveryNote.handedOverAt && (
+                <>
+                  <Separator />
+                  <div>
+                    <Label className="text-muted-foreground">Bàn giao</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{formatDateTime(deliveryNote.handedOverAt)}</span>
+                    </div>
+                    {deliveryNote.handedOverBy && (
+                      <div className="flex items-center gap-2 mt-1 ml-6">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>{deliveryNote.handedOverBy.fullName || "—"}</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {deliveryNote.deliveredAt && (
+                <>
+                  <Separator />
+                  <div>
+                    <Label className="text-muted-foreground">Ngày giao</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{formatDateTime(deliveryNote.deliveredAt)}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {deliveryNote.cancelledAt && (
+                <>
+                  <Separator />
+                  <div>
+                    <Label className="text-muted-foreground">Hủy</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span>{formatDateTime(deliveryNote.cancelledAt)}</span>
+                    </div>
+                    {deliveryNote.cancelledBy && (
+                      <div className="flex items-center gap-2 mt-1 ml-6">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>{deliveryNote.cancelledBy.fullName || "—"}</span>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

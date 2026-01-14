@@ -858,9 +858,17 @@ export const useAddDesignsToProofingOrder = () => {
         return response.data as ProofingOrderResponse;
       }
     },
-    onSuccess: (_, { id }) => {
+    onSuccess: (_, { id, request }) => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
       queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
+      // Invalidate available-order-details query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: [
+          proofingKeys.all[0],
+          "available-order-details",
+          request.materialTypeId ?? null,
+        ],
+      });
       toast.success("Thành công", {
         description: "Đã Thêm thiết kế vào Bình Bài",
       });

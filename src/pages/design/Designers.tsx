@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,11 +141,12 @@ export default function DesignersPage() {
   const inactiveCount = designers.filter((d) => !d.isActive).length;
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (data && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, data]);
 
   // Scroll to top of table when page changes
   useEffect(() => {
@@ -498,14 +500,7 @@ export default function DesignersPage() {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                          Đang tải...
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <TableSkeleton cols={6} rows={10} rowHeight="h-11" />
                   ) : designers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8">

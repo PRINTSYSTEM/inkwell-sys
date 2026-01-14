@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
@@ -122,12 +123,13 @@ export default function OrderList() {
   }, [currentPage]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (data && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
       setPageInput("1");
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, data]);
 
   // Client-side search filter (since API doesn't support search parameter)
   const filteredOrders = useMemo(() => {
@@ -344,19 +346,7 @@ export default function OrderList() {
               <TableBody>
                 {/* Loading */}
                 {isLoading && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={canViewPrice ? 7 : 5}
-                      className="h-32 text-center"
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        <p className="text-muted-foreground">
-                          Đang tải danh sách đơn hàng...
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <TableSkeleton cols={canViewPrice ? 7 : 5} rows={8} rowHeight="h-14" />
                 )}
 
                 {/* Error */}

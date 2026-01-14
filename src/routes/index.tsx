@@ -247,6 +247,16 @@ export const router = createBrowserRouter([
 
       // ===== DASHBOARD =====
       {
+        path: lastSegment(ROUTE_PATHS.DASHBOARD), // "dashboard"
+        element: (
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Dashboard />
+          </Suspense>
+        ),
+      },
+
+      // ===== LOGIN (redirect case) =====
+      {
         path: lastSegment(ROUTE_PATHS.AUTH.LOGIN), // "login"
         element: (
           <Suspense fallback={<PageLoadingFallback />}>

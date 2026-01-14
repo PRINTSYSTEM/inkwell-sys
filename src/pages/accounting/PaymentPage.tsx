@@ -46,7 +46,7 @@ export default function PaymentPage() {
   // Fetch all orders for accounting to calculate summary stats
   const { data: allOrdersData } = useOrdersForAccounting({
     pageNumber: 1,
-    pageSize: 1000, // Get all orders for stats calculation
+    pageSize: 100, // Get all orders for stats calculation
     filterType: "payment",
   });
 

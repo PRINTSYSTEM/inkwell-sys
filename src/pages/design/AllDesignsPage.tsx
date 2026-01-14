@@ -30,6 +30,7 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 
 type DesignWithSearch = DesignResponse & {
@@ -58,18 +59,28 @@ export default function AllDesignsPage() {
   });
 
   // gọi React Query lấy list với pagination
-  const { data, isLoading } = useDesigns({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    ...(filterState.filters["status"]?.value
-      ? { status: filterState.filters["status"].value as string }
-      : {}),
-    ...(filterState.filters["designTypeId"]?.value
-      ? { designTypeId: filterState.filters["designTypeId"].value as number }
-      : {}),
-    ...(selectedMonth ? { month: selectedMonth } : {}),
-    ...(selectedYear ? { year: selectedYear } : {}),
-  });
+  const useDesignsParams = useMemo(
+    () => ({
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      ...(filterState.filters["status"]?.value
+        ? { status: filterState.filters["status"].value as string }
+        : {}),
+      ...(filterState.filters["designTypeId"]?.value
+        ? { designTypeId: filterState.filters["designTypeId"].value as number }
+        : {}),
+      ...(selectedMonth ? { month: selectedMonth } : {}),
+      ...(selectedYear ? { year: selectedYear } : {}),
+    }),
+    [
+      currentPage,
+      itemsPerPage,
+      filterState.filters,
+      selectedMonth,
+      selectedYear,
+    ]
+  );
+  const { data, isLoading } = useDesigns(useDesignsParams);
 
   // Memoize designs to prevent dependency warnings
   const designs = useMemo<DesignResponse[]>(
@@ -106,11 +117,12 @@ export default function AllDesignsPage() {
   }, [designsWithSearch, filterState.searchQuery]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (data && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, data]);
 
   // Sync pageInput with currentPage
   useEffect(() => {
@@ -124,15 +136,12 @@ export default function AllDesignsPage() {
     }
   }, [currentPage]);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when search query changes
+  // Note: handleStatusChange, handleTypeChange, and month/year handlers already call setCurrentPage(1)
+  // This effect only handles search query changes (handleSearchChange doesn't reset page)
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    filterState.filters,
-    filterState.searchQuery,
-    selectedMonth,
-    selectedYear,
-  ]);
+  }, [filterState.searchQuery]);
 
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
@@ -375,14 +384,7 @@ export default function AllDesignsPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                        Đang tải...
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <TableSkeleton cols={8} rows={10} rowHeight="h-14" />
                 ) : filteredDesigns.length > 0 ? (
                   filteredDesigns.map((design) => (
                     <TableRow

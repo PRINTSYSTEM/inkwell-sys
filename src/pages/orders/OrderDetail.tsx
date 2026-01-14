@@ -537,7 +537,7 @@ export default function OrderDetailPage() {
     );
 
   // Fetch users for assignedToUserId select
-  const { data: usersData } = useUsers({ pageSize: 1000 });
+  const { data: usersData } = useUsers({ pageSize: 100 });
   const users = usersData?.items || [];
 
   // Fetch designers for designer assignment
@@ -545,7 +545,7 @@ export default function OrderDetailPage() {
     data: designersData,
     isLoading: isLoadingDesigners,
     isFetching: isFetchingDesigners,
-  } = useUsers({ role: "design", pageSize: 1000 });
+  } = useUsers({ role: "design", pageSize: 100 });
   // Memoize designers array to prevent unnecessary re-renders
   const designers = useMemo(
     () => designersData?.items || [],
@@ -2648,7 +2648,7 @@ function AddDesignToOrderForm({
   const [selectedDesignId, setSelectedDesignId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<string>("1");
   const { mutate: addDesignToOrder, loading: isAdding } = useAddDesignToOrder();
-  const { data: designsData } = useDesigns({ pageNumber: 1, pageSize: 1000 });
+  const { data: designsData } = useDesigns({ pageNumber: 1, pageSize: 100 });
 
   const designs = designsData?.items || [];
 

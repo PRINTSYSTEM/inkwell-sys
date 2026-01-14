@@ -164,9 +164,8 @@ export const ENTITY_CONFIG = {
     entityType: "Vendor",
     description: "Loại nhà cung cấp",
     values: {
-      plate: "Cung cấp kẽm",
-      die: "Cung cấp khuôn bế",
-      material: "Cung cấp chất liệu",
+      plate: "Nhà cung cấp kẽm",
+      die: "Nhà cung cấp khuôn bế",
     },
   },
   deliveryNoteStatuses: {
@@ -225,6 +224,62 @@ export const ENTITY_CONFIG = {
       in_progress: "Đang thực hiện",
       done: "Hoàn thành",
       blocked: "Bị chặn/Lỗi",
+    },
+  },
+  stockInSources: {
+    entityType: "StockIn",
+    description: "Nguồn nhập kho",
+    values: {
+      vendor: "Nhập từ NCC",
+      production: "Nhập từ sản xuất",
+      delivery_return: "Nhập từ trả hàng",
+      adjustment: "Điều chỉnh",
+    },
+  },
+  stockInItemTypes: {
+    entityType: "StockIn",
+    description: "Loại vật phẩm nhập kho",
+    values: {
+      material: "Nguyên vật liệu",
+      product: "Thành phẩm",
+    },
+  },
+  stockInStatuses: {
+    entityType: "StockIn",
+    description: "Trạng thái nhập kho",
+    values: {
+      pending: "Chờ xử lý",
+      completed: "Hoàn thành",
+      cancelled: "Đã hủy",
+    },
+  },
+  stockOutPurposes: {
+    entityType: "StockOut",
+    description: "Mục đích xuất kho",
+    values: {
+      production: "Xuất sản xuất",
+      delivery: "Xuất giao hàng",
+      adjustment: "Điều chỉnh",
+      transfer: "Chuyển kho",
+    },
+  },
+  stockOutItemTypes: {
+    entityType: "StockOut",
+    description: "Loại vật phẩm xuất kho",
+    values: {
+      material: "Nguyên vật liệu",
+      product: "Thành phẩm",
+    },
+  },
+  stockOutStatuses: {
+    entityType: "StockOut",
+    description: "Trạng thái xuất kho",
+    values: {
+      pending: "Chờ xử lý",
+      completed: "Hoàn thành",
+      returned: "Đã trả hàng",
+      partially_returned: "Trả một phần",
+      cancelled: "Đã hủy",
     },
   },
 };

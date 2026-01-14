@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks";
@@ -97,11 +98,12 @@ export default function Customers() {
   const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
   // Auto-adjust currentPage if it exceeds totalPages (e.g., after search/filter)
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (customersResponse && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, customersResponse]);
 
   // Scroll to top of table when page changes
   useEffect(() => {
@@ -109,17 +111,6 @@ export default function Customers() {
       tableContainerRef.current.scrollTop = 0;
     }
   }, [currentPage]);
-
-  // Add loading and error states
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">
-          Đang tải danh sách khách hàng...
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -336,17 +327,7 @@ export default function Customers() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={canViewFinancialInfo ? 6 : 5}
-                        className="text-center py-8"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                          Đang tải...
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <TableSkeleton cols={canViewFinancialInfo ? 6 : 5} rows={10} rowHeight="h-11" />
                   ) : customers.length === 0 ? (
                     <TableRow>
                       <TableCell
