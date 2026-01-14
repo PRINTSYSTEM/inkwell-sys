@@ -162,6 +162,33 @@ export default function ProductionDetailPage() {
     }
   }, [production?.steps, isEditingWorker]);
 
+  // Sync selected worker with API response when production data changes
+  useEffect(() => {
+    if (production?.steps) {
+      setSelectedWorkersByStep((prev) => {
+        const merged = { ...prev };
+        let hasChanges = false;
+
+        production.steps?.forEach((step) => {
+          if (step.id) {
+            const stepId = step.id;
+            const apiAssignedId = step.assignedToId;
+
+            // Sync from API if not currently editing this step
+            if (!isEditingWorker[stepId]) {
+              if (apiAssignedId !== merged[stepId]) {
+                merged[stepId] = apiAssignedId || null;
+                hasChanges = true;
+              }
+            }
+          }
+        });
+
+        return hasChanges ? merged : prev;
+      });
+    }
+  }, [production?.steps, isEditingWorker]);
+
   const { data: usersResponse } = useUsers({
     pageNumber: 1,
     pageSize: 50,

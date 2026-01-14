@@ -164,8 +164,9 @@ export const ENTITY_CONFIG = {
     entityType: "Vendor",
     description: "Loại nhà cung cấp",
     values: {
-      plate: "Nhà cung cấp kẽm",
-      die: "Nhà cung cấp khuôn bế",
+      plate: "Cung cấp kẽm",
+      die: "Cung cấp khuôn bế",
+      material: "Cung cấp chất liệu",
     },
   },
   deliveryNoteStatuses: {

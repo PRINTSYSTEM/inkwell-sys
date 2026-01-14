@@ -514,6 +514,7 @@ export default function StockInCreatePage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
                 <div className="space-y-2">
                   <Label

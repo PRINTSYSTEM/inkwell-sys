@@ -71,6 +71,18 @@ export function AddDesignToProofingDialog({
     return designTypeName.toLowerCase().includes("decal");
   };
 
+  // Helper functions to check design type
+  const isNhanDesignType = (designTypeName: string): boolean => {
+    return (
+      designTypeName.toLowerCase().includes("nhãn") ||
+      designTypeName.toLowerCase().includes("nhan")
+    );
+  };
+
+  const isDecalDesignType = (designTypeName: string): boolean => {
+    return designTypeName.toLowerCase().includes("decal");
+  };
+
   // Filter designs to only show those with same specifications as current design
   const filteredDesigns = useMemo(() => {
     if (!currentDesign) {
