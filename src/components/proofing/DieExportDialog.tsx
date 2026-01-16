@@ -41,6 +41,7 @@ import {
   ChevronsUpDown,
   Plus,
   Search,
+  Copy,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -67,6 +68,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDieSize } from "@/utils/format-die-size";
+import { dieUsageTypeLabels } from "@/lib/status-utils";
 
 interface DieExportDialogProps {
   open: boolean;
@@ -102,6 +104,9 @@ export function DieExportDialog({
   const [selectedDieIds, setSelectedDieIds] = useState<number[]>([]);
   const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [copiedProofingOrderCode, setCopiedProofingOrderCode] = useState<
+    string | null
+  >(null);
 
   // For creating new die
   const [dieName, setDieName] = useState<string>("");
@@ -556,6 +561,23 @@ export function DieExportDialog({
     });
   };
 
+  const handleCopyProofingOrderCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedProofingOrderCode(code);
+      toast.success("Đã sao chép mã bài", {
+        description: `Mã bài "${code}" đã được sao chép vào clipboard`,
+      });
+      setTimeout(() => {
+        setCopiedProofingOrderCode(null);
+      }, 2000);
+    } catch (error) {
+      toast.error("Không thể sao chép mã bài", {
+        description: "Đã xảy ra lỗi khi sao chép vào clipboard",
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     // Validate vendor - chỉ khi tạo khuôn mới
     if (dieAction === "create" && !vendorId && !vendorName.trim()) {
@@ -640,6 +662,7 @@ export function DieExportDialog({
               estimatedReceiveAt: estimatedReceiveAt,
               isReusable: isReusable,
               image: imageToUpload,
+              FirstProofingOrderId: proofingOrderId,
             },
             {
               onSuccess: (newDie) => {
@@ -990,6 +1013,36 @@ export function DieExportDialog({
                                       <span className="text-foreground">
                                         {die.vendorName}
                                       </span>
+                                    </div>
+                                  )}
+
+                                  {die.firstProofingOrderCode && (
+                                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                      <span className="font-medium">
+                                        Được sử dụng trong mã bài:
+                                      </span>{" "}
+                                      <span className="text-foreground font-semibold">
+                                        {die.firstProofingOrderCode}
+                                      </span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 p-0 hover:bg-primary/10"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopyProofingOrderCode(
+                                            die.firstProofingOrderCode || ""
+                                          );
+                                        }}
+                                        title="Sao chép mã bài"
+                                      >
+                                        {copiedProofingOrderCode ===
+                                        die.firstProofingOrderCode ? (
+                                          <Check className="h-3 w-3 text-green-600" />
+                                        ) : (
+                                          <Copy className="h-3 w-3 text-muted-foreground" />
+                                        )}
+                                      </Button>
                                     </div>
                                   )}
                                 </div>
@@ -1466,11 +1519,18 @@ export function DieExportDialog({
                       </div>
                       <div className="flex items-center justify-between gap-3 py-2 rounded-md border bg-muted/30 px-3">
                         <div className="space-y-0.5">
-                          <Label htmlFor="isReusable" className="text-xs font-medium">
-                            Khuôn tái sử dụng
+                          <Label
+                            htmlFor="isReusable"
+                            className="text-xs font-medium"
+                          >
+                            {isReusable
+                              ? dieUsageTypeLabels.reusable
+                              : dieUsageTypeLabels.one_time}
                           </Label>
                           <p className="text-[11px] text-muted-foreground">
-                            Khuôn này có thể tái sử dụng cho các đơn hàng khác
+                            {isReusable
+                              ? "Khuôn này có thể tái sử dụng cho các đơn hàng khác"
+                              : "Khuôn này chỉ dùng 1 lần"}
                           </p>
                         </div>
                         <Switch

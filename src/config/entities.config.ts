@@ -27,7 +27,6 @@ export const ENTITY_CONFIG = {
       confirmed_for_printing: "Đã chốt in",
       waiting_for_deposit: "Chờ đặt cọc",
       deposit_received: "Đã nhận cọc",
-      debt_approved: "Đã duyệt công nợ",
       waiting_for_proofing: "Chờ bình bài",
       waiting_for_production: "Chờ sản xuất",
       in_production: "Đang sản xuất",
@@ -164,9 +163,8 @@ export const ENTITY_CONFIG = {
     entityType: "Vendor",
     description: "Loại nhà cung cấp",
     values: {
-      plate: "Cung cấp kẽm",
-      die: "Cung cấp khuôn bế",
-      material: "Cung cấp chất liệu",
+      plate: "Nhà cung cấp kẽm",
+      die: "Nhà cung cấp khuôn bế",
     },
   },
   deliveryNoteStatuses: {
@@ -281,6 +279,73 @@ export const ENTITY_CONFIG = {
       returned: "Đã trả hàng",
       partially_returned: "Trả một phần",
       cancelled: "Đã hủy",
+    },
+  },
+  dieSearchRelevances: {
+    entityType: "Die",
+    description: "Loại tìm kiếm khuôn (query parameter)",
+    values: {
+      exact_match: "Khớp chính xác (tất cả)",
+      related: "Liên quan (cùng/khác khách hàng)",
+      unrelated: "Không liên quan (chỉ khách hàng hiện tại)",
+    },
+  },
+  deliveryFailureTypes: {
+    entityType: "DeliveryNote",
+    description: "Loại lý do giao hàng thất bại",
+    values: {
+      customer_refused: "Do khách từ chối",
+      company_issue: "Do công ty",
+    },
+  },
+  invoiceStatuses: {
+    entityType: "Invoice",
+    description: "Trạng thái hóa đơn VAT",
+    values: {
+      draft: "Nháp",
+      pending_issue: "Chờ phát hành",
+      issued: "Đã phát hành",
+      rejected: "Bị từ chối",
+      voided: "Đã hủy",
+      adjusted: "Điều chỉnh",
+      replaced: "Thay thế",
+    },
+  },
+  paymentTypes: {
+    entityType: "Payment",
+    description: "Loại thanh toán",
+    values: {
+      deposit: "Đặt cọc",
+      payment: "Thanh toán",
+    },
+  },
+  debtChangeTypes: {
+    entityType: "DebtHistory",
+    description: "Loại thay đổi công nợ",
+    values: {
+      order_created: "Phát sinh đơn hàng",
+      payment_received: "Thanh toán",
+      deposit_received: "Nhận cọc",
+      debt_adjustment: "Điều chỉnh",
+    },
+  },
+  dieUsageTypes: {
+    entityType: "Die",
+    description: "Loại sử dụng khuôn bế",
+    values: {
+      one_time: "Dùng 1 lần",
+      reusable: "Tái sử dụng",
+    },
+  },
+  dieStatuses: {
+    entityType: "Die",
+    description: "Trạng thái khuôn bế",
+    values: {
+      new: "Mới tạo (chờ SX)",
+      ready: "Sẵn sàng (trong kho)",
+      in_production: "Đang sử dụng",
+      broken: "Hỏng",
+      disposed: "Đã hủy",
     },
   },
 };

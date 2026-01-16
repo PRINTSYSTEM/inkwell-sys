@@ -55,9 +55,9 @@ const generateMaterialCode = (name: string): string => {
   // Replace spaces, underscores, and special characters with hyphens
   // Keep x and X for dimensions (like 20x15x10)
   code = code
-    .replace(/[\s_\-]+/g, "-")
+    .replace(/[\s_-]+/g, "-")
     // Replace any character that's not alphanumeric, hyphen, or x/X with empty string
-    .replace(/[^A-Za-z0-9\-xX]/g, "")
+    .replace(/[^A-Za-z0-9xX-]/g, "")
     // Replace multiple consecutive hyphens with single hyphen
     .replace(/-+/g, "-")
     // Convert to uppercase (but preserve x as X for dimensions)

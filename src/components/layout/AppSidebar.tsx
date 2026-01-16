@@ -181,12 +181,11 @@ export function AppSidebar() {
   const location = useLocation();
   const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
 
-  if (!user) return null;
-
-  const role = user.role as UserRole;
+  const role = user?.role as UserRole | undefined;
 
   // Auto-expand submenus that have active children
   useEffect(() => {
+    if (!role) return;
     const activeSubmenuIds: string[] = [];
 
     MENU_ITEMS.forEach((item) => {
@@ -213,6 +212,8 @@ export function AppSidebar() {
       });
     }
   }, [location.pathname, role]);
+
+  if (!user || !role) return null;
 
   const toggleSubmenu = (id: string) => {
     setOpenSubmenus((prev) =>

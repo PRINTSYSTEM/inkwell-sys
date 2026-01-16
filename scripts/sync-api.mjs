@@ -6,12 +6,15 @@
 // 4. Validate changes with CI guard (optional)
 
 import { mkdir, writeFile, readFile, unlink, copyFile } from "node:fs/promises";
-import { execSync } from "node:child_process";
+import { execSync, exec } from "node:child_process";
+import { promisify } from "node:util";
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createHash } from "node:crypto";
 import { glob } from "glob";
+
+const execAsync = promisify(exec);
 
 dotenv.config({ path: ".env.development" });
 
@@ -30,6 +33,10 @@ const SWAGGER_FILE = "swagger.json";
 const OUT_FILE = `${OUT_DIR}/openapi.zod.ts`;
 const COMPAT_FILE = join(rootDir, "src/Schema/generated.ts");
 const GENERATED_PARAMS_FILE = join(rootDir, "src/Schema/generated-params.ts");
+const GENERATED_FORM_BODY_FILE = join(
+  rootDir,
+  "src/Schema/generated-form-body.ts"
+);
 const CACHE_FILE = join(rootDir, ".schema-cache.json");
 const SNAPSHOT_FILE = join(rootDir, ".cursor/openapi.endpoints.snapshot.json");
 const PREV_SNAPSHOT_FILE = join(
@@ -37,6 +44,53 @@ const PREV_SNAPSHOT_FILE = join(
   ".cursor/openapi.endpoints.snapshot.prev.json"
 );
 const SCHEMA_CHANGES_FILE = join(rootDir, ".cursor/schema-route-changes.json");
+
+// ============================================
+// Cache Helpers (schemas + params + others)
+// ============================================
+/**
+ * Cache file format (new):
+ * {
+ *   schemas: { [SchemaName]: { hash: string } },
+ *   params: { [ParamSchemaName]: { hash: string } }
+ * }
+ *
+ * Backward compatible with old format:
+ * { [SchemaName]: { hash: string } }
+ */
+async function readSchemaCache() {
+  try {
+    const cacheContent = await readFile(CACHE_FILE, "utf8");
+    const parsed = JSON.parse(cacheContent);
+    if (parsed && typeof parsed === "object" && parsed.schemas) {
+      return {
+        schemas: parsed.schemas || {},
+        params: parsed.params || {},
+        formBodies: parsed.formBodies || {},
+      };
+    }
+    // Old flat cache: treat everything as schemas
+    return {
+      schemas: parsed || {},
+      params: {},
+      formBodies: {},
+    };
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.warn(`⚠️  Could not read cache file: ${err.message}`);
+    }
+    return { schemas: {}, params: {}, formBodies: {} };
+  }
+}
+
+async function writeSchemaCache(cache) {
+  const next = {
+    schemas: cache?.schemas || {},
+    params: cache?.params || {},
+    formBodies: cache?.formBodies || {},
+  };
+  await writeFile(CACHE_FILE, JSON.stringify(next, null, 2), "utf8");
+}
 
 // ============================================
 // Generic Resource Mapping Utilities
@@ -405,15 +459,8 @@ async function generateCompatLayer(openApiContent) {
     }
   }
 
-  let prevCache = {};
-  try {
-    const cacheContent = await readFile(CACHE_FILE, "utf8");
-    prevCache = JSON.parse(cacheContent);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.warn(`⚠️  Could not read cache file: ${err.message}`);
-    }
-  }
+  const cache = await readSchemaCache();
+  const prevSchemasCache = cache.schemas || {};
 
   const lines = [];
   lines.push(`/* AUTO-GENERATED FILE. DO NOT EDIT. */`);
@@ -453,7 +500,7 @@ async function generateCompatLayer(openApiContent) {
   const modified = [];
   for (const key of existing) {
     const current = currentSchemas.get(key);
-    const prev = prevCache[key];
+    const prev = prevSchemasCache[key];
     if (current && prev && current.hash !== prev.hash) {
       modified.push(key);
     }
@@ -473,11 +520,12 @@ async function generateCompatLayer(openApiContent) {
     console.log("  ✓ No changes detected");
   }
 
-  const newCache = {};
+  const newSchemasCache = {};
   for (const [key, value] of currentSchemas.entries()) {
-    newCache[key] = { hash: value.hash };
+    newSchemasCache[key] = { hash: value.hash };
   }
-  await writeFile(CACHE_FILE, JSON.stringify(newCache, null, 2), "utf8");
+  cache.schemas = newSchemasCache;
+  await writeSchemaCache(cache);
 
   await writeFile(COMPAT_FILE, lines.join("\n"), "utf8");
   console.log(`✅ Generated ${COMPAT_FILE.replace(rootDir + "/", "")}`);
@@ -564,6 +612,72 @@ async function generateParamsSchemas(endpoints) {
     a.name.localeCompare(b.name)
   );
 
+  // Detect params schema changes (added/removed/modified) using a cache
+  // Keyed by exported schema constant name: `${ParamName}Schema`
+  const currentParamsCache = {};
+  for (const param of sortedParams) {
+    const hasPageNumber = param.queryParams.some(
+      (p) => p.name === "pageNumber" || p.name === "PageNumber"
+    );
+    const hasPageSize = param.queryParams.some(
+      (p) => p.name === "pageSize" || p.name === "PageSize"
+    );
+    const hasPagination = hasPageNumber && hasPageSize;
+
+    const normalizedQueryParams = [...param.queryParams]
+      .filter((p) => p.name !== "pageNumber" && p.name !== "PageNumber")
+      .filter((p) => p.name !== "pageSize" && p.name !== "PageSize")
+      .map((p) => ({
+        name: p.name,
+        schema: convertZodSchemaToParams(p.schema),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const hashInput = JSON.stringify({
+      hasPagination,
+      queryParams: normalizedQueryParams,
+    });
+    currentParamsCache[`${param.name}Schema`] = { hash: hashString(hashInput) };
+  }
+
+  const cache = await readSchemaCache();
+  const prevParamsCache = cache.params || {};
+  const prevParamKeys = Object.keys(prevParamsCache);
+  const nextParamKeys = Object.keys(currentParamsCache);
+
+  const paramsAdded = nextParamKeys.filter((k) => !prevParamsCache[k]);
+  const paramsRemoved = prevParamKeys.filter((k) => !currentParamsCache[k]);
+  const paramsModified = nextParamKeys.filter(
+    (k) =>
+      prevParamsCache[k] &&
+      currentParamsCache[k] &&
+      prevParamsCache[k].hash !== currentParamsCache[k].hash
+  );
+
+  console.log("\n🔍 Params schema changes detected:");
+  if (paramsAdded.length > 0) {
+    console.log(`  ➕ Added (${paramsAdded.length}):`, paramsAdded.join(", "));
+  }
+  if (paramsRemoved.length > 0) {
+    console.log(
+      `  ➖ Removed (${paramsRemoved.length}):`,
+      paramsRemoved.join(", ")
+    );
+  }
+  if (paramsModified.length > 0) {
+    console.log(
+      `  🔄 Modified (${paramsModified.length}):`,
+      paramsModified.join(", ")
+    );
+  }
+  if (
+    paramsAdded.length === 0 &&
+    paramsRemoved.length === 0 &&
+    paramsModified.length === 0
+  ) {
+    console.log("  ✓ No params changes detected");
+  }
+
   for (const param of sortedParams) {
     const hasPageNumber = param.queryParams.some(
       (p) => p.name === "pageNumber" || p.name === "PageNumber"
@@ -611,7 +725,117 @@ async function generateParamsSchemas(endpoints) {
   );
   console.log(`   Exported ${paramsMap.size} params schemas`);
 
-  return paramsMap.size;
+  // Persist params cache after file generation (so cache reflects actual output)
+  cache.params = currentParamsCache;
+  await writeSchemaCache(cache);
+
+  return {
+    count: paramsMap.size,
+    changes: {
+      added: paramsAdded,
+      removed: paramsRemoved,
+      modified: paramsModified,
+    },
+  };
+}
+
+// ============================================
+// Step 3.6: Generate Form Body Schemas (multipart/form-data bodies)
+// ============================================
+function hasFileUploadInSchemaDefinition(definition) {
+  if (!definition) return false;
+  // openapi-zod-client uses z.instanceof(File) for file uploads
+  return definition.includes("instanceof(File)");
+}
+
+async function generateFormBodySchemas(openApiContent, endpoints) {
+  console.log("🧾 Generating form body schemas...");
+
+  // Collect body schema names used by endpoints
+  const bodySchemaNames = Array.from(
+    new Set(
+      endpoints
+        .map((e) => e.requestSchema)
+        .filter((x) => typeof x === "string" && x.length > 0)
+    )
+  );
+
+  const fileUploadBodySchemas = [];
+  for (const schemaName of bodySchemaNames) {
+    const definition = extractSchemaDefinition(openApiContent, schemaName);
+    if (hasFileUploadInSchemaDefinition(definition)) {
+      fileUploadBodySchemas.push(schemaName);
+    }
+  }
+
+  fileUploadBodySchemas.sort();
+
+  const lines = [];
+  lines.push(`/* AUTO-GENERATED FILE. DO NOT EDIT. */`);
+  lines.push(`/* Source: src/generated/openapi.zod.ts */`);
+  lines.push(`/* Generated at: ${new Date().toISOString()} */\n`);
+  lines.push(`import { z } from "zod";`);
+  lines.push(`import { schemas } from "./generated";\n`);
+  lines.push(`// ===== Generated Form Body Schemas (file uploads) =====`);
+  lines.push(
+    `// These schemas are request bodies that include File fields (multipart/form-data).\n`
+  );
+
+  for (const key of fileUploadBodySchemas) {
+    lines.push(`export const ${key}Schema = schemas.${key};`);
+    lines.push(`export type ${key} = z.infer<typeof ${key}Schema>;\n`);
+  }
+
+  await writeFile(GENERATED_FORM_BODY_FILE, lines.join("\n"), "utf8");
+  console.log(
+    `✅ Generated ${GENERATED_FORM_BODY_FILE.replace(rootDir + "/", "")}`
+  );
+  console.log(`   Exported ${fileUploadBodySchemas.length} form body schemas`);
+
+  // Detect changes for form-body schemas (multipart/form-data bodies)
+  // Keyed by exported schema constant name: `${BodySchemaName}Schema`
+  const currentFormBodiesCache = {};
+  for (const key of fileUploadBodySchemas) {
+    const definition = extractSchemaDefinition(openApiContent, key);
+    // Hash the extracted schema definition to detect changes over time
+    currentFormBodiesCache[`${key}Schema`] = { hash: hashString(definition) };
+  }
+
+  const cache = await readSchemaCache();
+  const prevFormBodiesCache = cache.formBodies || {};
+  const prevKeys = Object.keys(prevFormBodiesCache);
+  const nextKeys = Object.keys(currentFormBodiesCache);
+
+  const added = nextKeys.filter((k) => !prevFormBodiesCache[k]);
+  const removed = prevKeys.filter((k) => !currentFormBodiesCache[k]);
+  const modified = nextKeys.filter(
+    (k) =>
+      prevFormBodiesCache[k] &&
+      currentFormBodiesCache[k] &&
+      prevFormBodiesCache[k].hash !== currentFormBodiesCache[k].hash
+  );
+
+  console.log("\n🔍 Form-body schema changes detected:");
+  if (added.length > 0) {
+    console.log(`  ➕ Added (${added.length}):`, added.join(", "));
+  }
+  if (removed.length > 0) {
+    console.log(`  ➖ Removed (${removed.length}):`, removed.join(", "));
+  }
+  if (modified.length > 0) {
+    console.log(`  🔄 Modified (${modified.length}):`, modified.join(", "));
+  }
+  if (added.length === 0 && removed.length === 0 && modified.length === 0) {
+    console.log("  ✓ No form-body changes detected");
+  }
+
+  cache.formBodies = currentFormBodiesCache;
+  await writeSchemaCache(cache);
+
+  return {
+    count: fileUploadBodySchemas.length,
+    changes: { added, removed, modified },
+  };
 }
 
 // ============================================
@@ -876,7 +1100,12 @@ function indexBy(list, fn) {
   return new Map(list.map((x) => [fn(x), x]));
 }
 
-async function diffEndpoints(newSnap, schemaChanges) {
+async function diffEndpoints(
+  newSnap,
+  schemaChanges,
+  paramsChanges,
+  formBodyChanges
+) {
   console.log("🔀 Comparing endpoints...");
 
   let oldSnap = [];
@@ -923,6 +1152,7 @@ async function diffEndpoints(newSnap, schemaChanges) {
   console.log(`➕ Added: ${added.length}`);
   console.log(`🔄 Modified: ${modified.length}`);
   console.log(`➖ Removed: ${removed.length}`);
+  console.log(`   (Missing hooks will be detected by validate-hooks.mjs)`);
 
   if (added.length === 0 && modified.length === 0 && removed.length === 0) {
     console.log("✓ No endpoint changes detected");
@@ -931,10 +1161,13 @@ async function diffEndpoints(newSnap, schemaChanges) {
   const result = {
     generatedAt: new Date().toISOString(),
     schemas: schemaChanges,
+    params: paramsChanges || { added: [], removed: [], modified: [] },
+    formBodies: formBodyChanges || { added: [], removed: [], modified: [] },
     endpoints: {
       added,
       modified,
       removed,
+      missingHooks: [], // Will be populated by validate-hooks
     },
   };
 
@@ -1050,10 +1283,99 @@ async function main() {
     const endpointsSnapshot = await extractEndpointsSnapshot(openApiContent);
 
     // Step 3.5: Generate Params Schemas
-    await generateParamsSchemas(endpointsSnapshot);
+    const paramsResult = await generateParamsSchemas(endpointsSnapshot);
+    const paramsChanges = paramsResult?.changes || {
+      added: [],
+      removed: [],
+      modified: [],
+    };
+
+    // Step 3.6: Generate Form Body Schemas (file uploads)
+    const formBodyResult = await generateFormBodySchemas(
+      openApiContent,
+      endpointsSnapshot
+    );
+    const formBodyChanges = formBodyResult?.changes || {
+      added: [],
+      removed: [],
+      modified: [],
+    };
 
     // Step 4: Diff Endpoints (MUST do this BEFORE copying snapshot to prev)
-    const changes = await diffEndpoints(endpointsSnapshot, schemaChanges);
+    const changes = await diffEndpoints(
+      endpointsSnapshot,
+      schemaChanges,
+      paramsChanges,
+      formBodyChanges
+    );
+
+    // Step 4.5: Run validate-hooks to detect ALL missing hooks (including existing endpoints)
+    console.log("\n🔍 Running hook validation to detect missing hooks...");
+    let missingHooksFromValidation = [];
+    try {
+      const { stdout } = await execAsync(
+        `node scripts/validate-hooks.mjs --json`,
+        { cwd: rootDir }
+      );
+      // validate-hooks --json must output clean JSON ONLY
+      const validationResult = JSON.parse(stdout.trim());
+      missingHooksFromValidation = validationResult.missingHooks || [];
+
+      if (missingHooksFromValidation.length > 0) {
+        console.log(
+          `   ⚠️  Found ${missingHooksFromValidation.length} missing hooks (including existing endpoints)`
+        );
+      } else {
+        console.log("   ✅ All endpoints have corresponding hooks");
+      }
+    } catch (err) {
+      // If validate-hooks fails, continue anyway (might be first run)
+      console.warn(`   ⚠️  Could not run validate-hooks: ${err.message}`);
+    }
+
+    // Merge missing hooks from validation into changes
+    // Add endpoints that are missing hooks but not in "added" (they're existing endpoints)
+    const addedEndpointKeys = new Set(
+      changes.endpoints.added.map((e) => `${e.httpMethod} ${e.path}`)
+    );
+
+    for (const missing of missingHooksFromValidation) {
+      const key = `${missing.method} ${missing.path}`;
+      if (!addedEndpointKeys.has(key)) {
+        // This is an existing endpoint that's missing a hook
+        // Add it to a new "missingHooks" array in changes
+        if (!changes.endpoints.missingHooks) {
+          changes.endpoints.missingHooks = [];
+        }
+        // Find full endpoint details from snapshot
+        const fullEndpoint = endpointsSnapshot.find(
+          (e) => e.httpMethod === missing.method && e.path === missing.path
+        );
+        if (fullEndpoint) {
+          changes.endpoints.missingHooks.push({
+            ...fullEndpoint,
+            missingReason: missing.issue,
+            expectedSuffix: missing.suffix,
+          });
+        }
+      }
+    }
+
+    // Persist merged missingHooks back to schema-route-changes.json
+    try {
+      await writeFile(
+        SCHEMA_CHANGES_FILE,
+        JSON.stringify(changes, null, 2),
+        "utf8"
+      );
+      console.log(
+        `✅ Updated ${SCHEMA_CHANGES_FILE.replace(rootDir + "/", "")} with endpoints.missingHooks (${changes.endpoints.missingHooks?.length ?? 0})`
+      );
+    } catch (err) {
+      console.warn(
+        `⚠️  Could not update ${SCHEMA_CHANGES_FILE}: ${err.message}`
+      );
+    }
 
     // Step 5: Copy snapshot to previous (local dev only) - AFTER diff is done
     if (!process.env.CI) {

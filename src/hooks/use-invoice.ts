@@ -14,17 +14,16 @@ import type {
   IssueInvoiceRequest,
   UpdateEInvoiceInfoRequest,
 } from "@/Schema/invoice.schema";
+import type {
+  InvoicListParams,
+  InvoicByOrderParams,
+  InvoicBillableItemsParams,
+  InvoicesVoidParams,
+} from "@/Schema";
 
 // ================== GET INVOICES ==================
 // GET /invoices
-export interface InvoicesParams {
-  pageNumber?: number;
-  pageSize?: number;
-  status?: string;
-  search?: string;
-}
-
-export const useInvoices = (params?: InvoicesParams) => {
+export const useInvoices = (params?: InvoicListParams) => {
   return useQuery({
     queryKey: ["invoices", params],
     queryFn: async () => {
@@ -60,14 +59,9 @@ export const useInvoice = (id: number | null, enabled: boolean = true) => {
 
 // ================== GET INVOICES BY ORDER ==================
 // GET /invoices/by-order/{orderId}
-export interface InvoicesByOrderParams {
-  pageNumber?: number;
-  pageSize?: number;
-}
-
 export const useInvoicesByOrder = (
   orderId: number | null,
-  params?: InvoicesByOrderParams,
+  params?: InvoicByOrderParams,
   enabled: boolean = true
 ) => {
   return useQuery({
@@ -229,11 +223,7 @@ export const useCreateInvoiceFromOrder = () => {
 
 // ================== GET BILLABLE ITEMS ==================
 // GET /invoices/billable-items
-export interface BillableItemsParams {
-  customerId?: number;
-}
-
-export const useBillableItems = (params?: BillableItemsParams) => {
+export const useBillableItems = (params?: InvoicBillableItemsParams) => {
   return useQuery({
     queryKey: ["billable-items", params],
     queryFn: async () => {
@@ -341,12 +331,15 @@ export const useVoidInvoice = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, reason }: { id: number; reason?: string }) => {
-      const params = reason ? { params: { reason } } : {};
+    mutationFn: async ({
+      id,
+      ...params
+    }: { id: number } & InvoicesVoidParams) => {
+      const queryParams = params.reason ? { params } : {};
       const res = await apiRequest.put<InvoiceResponse>(
         API_SUFFIX.INVOICE_VOID(id),
         {},
-        params
+        queryParams
       );
       return res.data;
     },

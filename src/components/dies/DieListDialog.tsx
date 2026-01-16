@@ -25,6 +25,7 @@ import { useDebounce } from "use-debounce";
 import { useSearchDies } from "@/hooks/use-die";
 import { formatDieSize } from "@/utils/format-die-size";
 import type { DieResponse } from "@/Schema";
+import { dieStatusLabels } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
@@ -41,6 +42,9 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [copiedDieId, setCopiedDieId] = useState<number | null>(null);
+  const [copiedProofingOrderCode, setCopiedProofingOrderCode] = useState<
+    string | null
+  >(null);
 
   const [debouncedDesignCode] = useDebounce(designCode, 300);
   const [debouncedCustomerName] = useDebounce(customerName, 300);
@@ -88,6 +92,23 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
       }, 2000);
     } catch (error) {
       toast.error("Không thể sao chép mã khuôn", {
+        description: "Đã xảy ra lỗi khi sao chép vào clipboard",
+      });
+    }
+  };
+
+  const handleCopyProofingOrderCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedProofingOrderCode(code);
+      toast.success("Đã sao chép mã bài", {
+        description: `Mã bài "${code}" đã được sao chép vào clipboard`,
+      });
+      setTimeout(() => {
+        setCopiedProofingOrderCode(null);
+      }, 2000);
+    } catch (error) {
+      toast.error("Không thể sao chép mã bài", {
         description: "Đã xảy ra lỗi khi sao chép vào clipboard",
       });
     }
@@ -309,14 +330,18 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
                                   variant="secondary"
                                   className="bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800 text-xs font-semibold"
                                 >
-                                  Sẵn sàng
+                                  {die.status && dieStatusLabels[die.status]
+                                    ? dieStatusLabels[die.status]
+                                    : "Sử dụng được"}
                                 </Badge>
                               ) : (
                                 <Badge
                                   variant="secondary"
                                   className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800 text-xs font-semibold"
                                 >
-                                  Không dùng được
+                                  {die.status && dieStatusLabels[die.status]
+                                    ? dieStatusLabels[die.status]
+                                    : "Không sử dụng được"}
                                 </Badge>
                               )}
                             </div>
@@ -397,8 +422,39 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
                                   Trạng thái:
                                 </span>
                                 <Badge variant="outline" className="text-xs">
-                                  {die.status}
+                                  {dieStatusLabels[die.status] || die.status}
                                 </Badge>
+                              </div>
+                            )}
+
+                            {/* First Proofing Order Code */}
+                            {die.firstProofingOrderCode && (
+                              <div className="flex items-center gap-1.5 col-span-full">
+                                <span className="text-muted-foreground whitespace-nowrap">
+                                  Được sử dụng trong mã bài:
+                                </span>
+                                <span className="font-medium text-foreground">
+                                  {die.firstProofingOrderCode}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 w-5 p-0 hover:bg-primary/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCopyProofingOrderCode(
+                                      die.firstProofingOrderCode || ""
+                                    );
+                                  }}
+                                  title="Sao chép mã bài"
+                                >
+                                  {copiedProofingOrderCode ===
+                                  die.firstProofingOrderCode ? (
+                                    <Check className="h-3 w-3 text-green-600" />
+                                  ) : (
+                                    <Copy className="h-3 w-3 text-muted-foreground" />
+                                  )}
+                                </Button>
                               </div>
                             )}
                           </div>

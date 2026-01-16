@@ -57,7 +57,6 @@ export default function ReturnsDiscountsPage() {
       ? dateRange.from.toISOString()
       : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
   });
 
   const totalReturns = data?.items?.reduce((sum, item) => sum + (item.adjustmentValue || 0), 0) || 0;

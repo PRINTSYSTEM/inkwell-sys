@@ -132,6 +132,7 @@ export default function AccountingOrderDetail() {
     isLoading,
     isError,
     error,
+    refetch: refetchOrder,
   } = useOrder(Number(id || "0"));
 
   // Fetch invoices for this order
@@ -428,7 +429,7 @@ export default function AccountingOrderDetail() {
       setDepositAmount("");
       setIsDepositDialogOpen(true);
     } else {
-      // Khách công ty: duyệt công nợ
+      // Khách công ty: cộng công nợ
       approveDebtMutation.mutate(order.id);
     }
   };
@@ -458,7 +459,7 @@ export default function AccountingOrderDetail() {
         paymentMethodId: 2,
       } as UpdateOrderForAccountingRequest);
 
-      // Bước 2: Duyệt công nợ để cộng công nợ vào hệ thống
+      // Bước 2: Cộng công nợ vào hệ thống
       await approveDebtMutation.mutate(order.id);
 
       setIsDepositDialogOpen(false);
@@ -570,7 +571,9 @@ export default function AccountingOrderDetail() {
     ? new Date(order.paymentDueDate) < now
     : false;
   const isDeliveryDatePassed =
-    order.deliveryDate && order.status !== "completed" && order.status !== "delivered"
+    order.deliveryDate &&
+    order.status !== "completed" &&
+    order.status !== "delivered"
       ? new Date(order.deliveryDate) < now
       : false;
   const isDebtOverLimit =
@@ -646,7 +649,14 @@ export default function AccountingOrderDetail() {
                 </Button>
                 {/* {remainingAmount > 0 && ( */}
                 {order.customer?.type === "company" &&
-                  order.status === "confirmed_for_printing" && (
+                  [
+                    "confirmed_for_printing",
+                    "waiting_for_proofing",
+                    "waiting_for_production",
+                    "in_production",
+                    "production_completed",
+                  ].includes(order.status || "") &&
+                  !order.isDebtApproved && (
                     <Button
                       size="sm"
                       onClick={handleUpdatePayment}
@@ -661,7 +671,7 @@ export default function AccountingOrderDetail() {
                       ) : (
                         <CreditCard className="h-4 w-4 mr-2" />
                       )}
-                      Duyệt công nợ
+                      Cộng công nợ
                     </Button>
                   )}
                 {order.customer?.type === "retail" &&
@@ -872,28 +882,34 @@ export default function AccountingOrderDetail() {
                             {formatCurrency(order.depositAmount)}
                           </p>
                         </div>
-                        <div className={`text-center p-4 rounded-lg ${
-                          remainingAmount > 0 && isPaymentDueOverdue
-                            ? "bg-red-100 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700"
-                            : remainingAmount > 0
-                            ? "bg-destructive/10"
-                            : "bg-success/10"
-                        }`}>
-                          <p className={`text-sm mb-1 ${
+                        <div
+                          className={`text-center p-4 rounded-lg ${
                             remainingAmount > 0 && isPaymentDueOverdue
-                              ? "text-red-700 dark:text-red-300 font-semibold"
-                              : "text-muted-foreground"
-                          }`}>
+                              ? "bg-red-100 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700"
+                              : remainingAmount > 0
+                                ? "bg-destructive/10"
+                                : "bg-success/10"
+                          }`}
+                        >
+                          <p
+                            className={`text-sm mb-1 ${
+                              remainingAmount > 0 && isPaymentDueOverdue
+                                ? "text-red-700 dark:text-red-300 font-semibold"
+                                : "text-muted-foreground"
+                            }`}
+                          >
                             Còn lại
-                            {remainingAmount > 0 && isPaymentDueOverdue && " (Quá hạn)"}
+                            {remainingAmount > 0 &&
+                              isPaymentDueOverdue &&
+                              " (Quá hạn)"}
                           </p>
                           <p
                             className={`text-xl font-bold tabular-nums ${
                               remainingAmount > 0 && isPaymentDueOverdue
                                 ? "text-red-700 dark:text-red-400"
                                 : remainingAmount > 0
-                                ? "text-destructive"
-                                : "text-success"
+                                  ? "text-destructive"
+                                  : "text-success"
                             }`}
                           >
                             {formatCurrency(remainingAmount)}
@@ -919,26 +935,34 @@ export default function AccountingOrderDetail() {
                       </div>
 
                       {order.paymentDueDate && (
-                        <div className={`pt-2 border-t ${isPaymentDueOverdue ? "bg-red-50 dark:bg-red-950/20 -mx-4 px-4 py-2 rounded" : ""}`}>
+                        <div
+                          className={`pt-2 border-t ${isPaymentDueOverdue ? "bg-red-50 dark:bg-red-950/20 -mx-4 px-4 py-2 rounded" : ""}`}
+                        >
                           <div className="flex items-center gap-2">
-                            <Calendar className={`h-4 w-4 flex-shrink-0 ${
-                              isPaymentDueOverdue
-                                ? "text-red-600 dark:text-red-400"
-                                : "text-muted-foreground"
-                            }`} />
-                            <div className="flex-1">
-                              <span className={`text-xs ${
+                            <Calendar
+                              className={`h-4 w-4 flex-shrink-0 ${
                                 isPaymentDueOverdue
-                                  ? "text-red-700 dark:text-red-300 font-semibold"
+                                  ? "text-red-600 dark:text-red-400"
                                   : "text-muted-foreground"
-                              }`}>
+                              }`}
+                            />
+                            <div className="flex-1">
+                              <span
+                                className={`text-xs ${
+                                  isPaymentDueOverdue
+                                    ? "text-red-700 dark:text-red-300 font-semibold"
+                                    : "text-muted-foreground"
+                                }`}
+                              >
                                 Hạn thanh toán:{" "}
                               </span>
-                              <span className={`text-sm font-medium ${
-                                isPaymentDueOverdue
-                                  ? "text-red-900 dark:text-red-100"
-                                  : ""
-                              }`}>
+                              <span
+                                className={`text-sm font-medium ${
+                                  isPaymentDueOverdue
+                                    ? "text-red-900 dark:text-red-100"
+                                    : ""
+                                }`}
+                              >
                                 {formatDateTime(order.paymentDueDate)}
                                 {isPaymentDueOverdue && (
                                   <span className="ml-2 text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2 py-0.5 rounded font-semibold">
@@ -961,7 +985,8 @@ export default function AccountingOrderDetail() {
                                 ⚠️ Đã quá ngày giao hàng dự kiến
                               </p>
                               <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
-                                Ngày giao: {formatDateTime(order.deliveryDate)} - Cần xử lý gấp
+                                Ngày giao: {formatDateTime(order.deliveryDate)}{" "}
+                                - Cần xử lý gấp
                               </p>
                             </div>
                           </div>
@@ -1445,18 +1470,25 @@ export default function AccountingOrderDetail() {
                                 🚨 Công nợ vượt hạn mức
                               </p>
                               <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                                Khách hàng đang nợ {formatCurrency(order.customer?.currentDebt || 0)}, vượt quá hạn mức cho phép {formatCurrency(order.customer?.maxDebt || 0)}
+                                Khách hàng đang nợ{" "}
+                                {formatCurrency(
+                                  order.customer?.currentDebt || 0
+                                )}
+                                , vượt quá hạn mức cho phép{" "}
+                                {formatCurrency(order.customer?.maxDebt || 0)}
                               </p>
                             </div>
                           </div>
                         </div>
                       )}
 
-                      <div className={`p-3 rounded-lg space-y-2 ${
-                        isDebtOverLimit
-                          ? "bg-red-50/50 dark:bg-red-950/10 border-2 border-red-200 dark:border-red-900"
-                          : "bg-muted/50"
-                      }`}>
+                      <div
+                        className={`p-3 rounded-lg space-y-2 ${
+                          isDebtOverLimit
+                            ? "bg-red-50/50 dark:bg-red-950/10 border-2 border-red-200 dark:border-red-900"
+                            : "bg-muted/50"
+                        }`}
+                      >
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">
                             Trạng thái nợ
@@ -1470,11 +1502,13 @@ export default function AccountingOrderDetail() {
                           <span className="text-muted-foreground">
                             Nợ hiện tại
                           </span>
-                          <span className={`font-medium tabular-nums ${
-                            isDebtOverLimit
-                              ? "text-red-700 dark:text-red-400 font-bold"
-                              : ""
-                          }`}>
+                          <span
+                            className={`font-medium tabular-nums ${
+                              isDebtOverLimit
+                                ? "text-red-700 dark:text-red-400 font-bold"
+                                : ""
+                            }`}
+                          >
                             {formatCurrency(order.customer?.currentDebt || 0)}
                           </span>
                         </div>
@@ -1596,25 +1630,31 @@ export default function AccountingOrderDetail() {
                     /* View Mode */
                     <>
                       <div className="flex items-start gap-3">
-                        <Calendar className={`h-4 w-4 mt-0.5 ${
-                          isDeliveryDatePassed
-                            ? "text-orange-600 dark:text-orange-400"
-                            : "text-muted-foreground"
-                        }`} />
-                        <div>
-                          <p className={`text-sm ${
+                        <Calendar
+                          className={`h-4 w-4 mt-0.5 ${
                             isDeliveryDatePassed
-                              ? "text-orange-700 dark:text-orange-300 font-semibold"
+                              ? "text-orange-600 dark:text-orange-400"
                               : "text-muted-foreground"
-                          }`}>
+                          }`}
+                        />
+                        <div>
+                          <p
+                            className={`text-sm ${
+                              isDeliveryDatePassed
+                                ? "text-orange-700 dark:text-orange-300 font-semibold"
+                                : "text-muted-foreground"
+                            }`}
+                          >
                             Ngày giao dự kiến
                             {isDeliveryDatePassed && " (Đã quá hạn)"}
                           </p>
-                          <p className={`font-medium ${
-                            isDeliveryDatePassed
-                              ? "text-orange-900 dark:text-orange-100"
-                              : ""
-                          }`}>
+                          <p
+                            className={`font-medium ${
+                              isDeliveryDatePassed
+                                ? "text-orange-900 dark:text-orange-100"
+                                : ""
+                            }`}
+                          >
                             {formatDateTime(order.deliveryDate)}
                           </p>
                         </div>
@@ -1703,11 +1743,13 @@ export default function AccountingOrderDetail() {
                     !order.recipientPhone ||
                     !order.recipientAddress) &&
                     editingCard !== "recipientInfo" && (
-                      <div className={`rounded-lg p-3 border-2 ${
-                        isDeliveryDatePassed
-                          ? "bg-red-50 dark:bg-red-950/30 border-red-400 dark:border-red-700"
-                          : "bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700"
-                      }`}>
+                      <div
+                        className={`rounded-lg p-3 border-2 ${
+                          isDeliveryDatePassed
+                            ? "bg-red-50 dark:bg-red-950/30 border-red-400 dark:border-red-700"
+                            : "bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700"
+                        }`}
+                      >
                         <div className="flex items-start gap-2">
                           {isDeliveryDatePassed ? (
                             <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
@@ -1715,20 +1757,24 @@ export default function AccountingOrderDetail() {
                             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                           )}
                           <div className="flex-1">
-                            <p className={`text-xs font-semibold ${
-                              isDeliveryDatePassed
-                                ? "text-red-900 dark:text-red-100"
-                                : "text-amber-900 dark:text-amber-100"
-                            }`}>
+                            <p
+                              className={`text-xs font-semibold ${
+                                isDeliveryDatePassed
+                                  ? "text-red-900 dark:text-red-100"
+                                  : "text-amber-900 dark:text-amber-100"
+                              }`}
+                            >
                               {isDeliveryDatePassed ? "🚨 " : "⚠️ "}
                               Thiếu thông tin người nhận
                               {isDeliveryDatePassed && " - Đã quá ngày giao!"}
                             </p>
-                            <ul className={`text-xs mt-1 list-disc list-inside space-y-0.5 ${
-                              isDeliveryDatePassed
-                                ? "text-red-700 dark:text-red-300"
-                                : "text-amber-700 dark:text-amber-300"
-                            }`}>
+                            <ul
+                              className={`text-xs mt-1 list-disc list-inside space-y-0.5 ${
+                                isDeliveryDatePassed
+                                  ? "text-red-700 dark:text-red-300"
+                                  : "text-amber-700 dark:text-amber-300"
+                              }`}
+                            >
                               {!order.recipientName && <li>Tên người nhận</li>}
                               {!order.recipientPhone && <li>Số điện thoại</li>}
                               {!order.recipientAddress && <li>Địa chỉ</li>}

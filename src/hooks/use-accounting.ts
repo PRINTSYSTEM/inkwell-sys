@@ -10,6 +10,10 @@ import type {
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
 import { orderKeys } from "@/hooks/use-order";
+import {
+  OrdersForAccountingListParams,
+  AccountingOrderConfirmDepositParams,
+} from "@/Schema";
 
 // ===== Query Keys =====
 
@@ -19,7 +23,7 @@ export const accountingKeys = {
     ["accounting", "order", orderId] as const,
 };
 
-// ===== GET /accountings/order/{orderId} =====
+// ===== GET /accounting/order/{orderId} =====
 // Lấy thông tin kế toán theo đơn hàng
 
 export const useAccountingByOrder = (
@@ -29,9 +33,10 @@ export const useAccountingByOrder = (
   return useQuery({
     queryKey: accountingKeys.byOrder(orderId),
     enabled: enabled && !!orderId,
-    queryFn: async () => {
+    queryFn: async (params?: OrdersForAccountingListParams) => {
       const res = await apiRequest.get<AccountingResponse>(
-        API_SUFFIX.ACCOUNTING_BY_ORDER(orderId as number)
+        API_SUFFIX.ACCOUNTING_BY_ORDER(orderId as number),
+        { params }
       );
       return res.data;
     },
@@ -39,7 +44,7 @@ export const useAccountingByOrder = (
   });
 };
 
-// ===== POST /accountings/order/{orderId} =====
+// ===== POST /accounting/order/{orderId} =====
 // Tạo bản ghi kế toán cho đơn hàng
 
 export const useCreateAccountingForOrder = () => {
@@ -59,7 +64,7 @@ export const useCreateAccountingForOrder = () => {
     try {
       const result = await execute(orderId);
 
-      // Refresh lại GET /accountings/order/{orderId}
+      // Refresh lại GET /accounting/order/{orderId}
       queryClient.invalidateQueries({
         queryKey: accountingKeys.byOrder(orderId),
       });
@@ -101,7 +106,7 @@ export const useCreateAccountingForOrder = () => {
   };
 };
 
-// ===== POST /accountings/{accountingId}/confirm-payment =====
+// ===== POST /accounting/{accountingId}/confirm-payment =====
 // Xác nhận thanh toán
 
 export const useConfirmPayment = () => {
@@ -172,9 +177,9 @@ export const useConfirmPayment = () => {
   };
 };
 
-// ===== POST /accountings/order/{orderId}/confirm-deposit =====
+// ===== POST /accounting/order/{orderId}/confirm-deposit =====
 // Xác nhận cọc
-// NOTE: Endpoint exists in OpenAPI (/api/accountings/order/:orderId/confirm-deposit)
+// NOTE: Endpoint exists in OpenAPI (/api/accounting/order/:orderId/confirm-deposit)
 // but validation script cannot extract path from function body in API_SUFFIX
 
 export const useConfirmDeposit = () => {
@@ -182,17 +187,25 @@ export const useConfirmDeposit = () => {
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     AccountingResponse,
-    [number, number?]
-  >(async (orderId: number, depositAmount?: number) => {
+    [number, AccountingOrderConfirmDepositParams?]
+  >(async (orderId: number, params?: AccountingOrderConfirmDepositParams) => {
+    const depositAmount = params?.depositAmount;
+    const config =
+      depositAmount != null ? { params: { depositAmount } } : undefined;
     const res = await apiRequest.post<AccountingResponse>(
-      API_SUFFIX.ACCOUNTING_CONFIRM_DEPOSIT(orderId, depositAmount)
+      API_SUFFIX.ACCOUNTING_CONFIRM_DEPOSIT(orderId),
+      null,
+      config
     );
     return res.data;
   });
 
-  const mutate = async (orderId: number, depositAmount?: number) => {
+  const mutate = async (
+    orderId: number,
+    params?: AccountingOrderConfirmDepositParams
+  ) => {
     try {
-      const result = await execute(orderId, depositAmount);
+      const result = await execute(orderId, params);
 
       queryClient.invalidateQueries({
         queryKey: accountingKeys.all,
@@ -238,8 +251,8 @@ export const useConfirmDeposit = () => {
   };
 };
 
-// ===== POST /accountings/order/{orderId}/approve-debt =====
-// Duyệt công nợ
+// ===== POST /accounting/order/{orderId}/approve-debt =====
+// Cộng công nợ
 
 export const useApproveDebt = () => {
   const queryClient = useQueryClient();
@@ -263,8 +276,13 @@ export const useApproveDebt = () => {
         queryKey: accountingKeys.byOrder(orderId),
       });
 
-      // Invalidate order detail query
+      // Invalidate order detail query để cập nhật trạng thái nợ
       queryClient.invalidateQueries({
+        queryKey: orderKeys.detail(orderId),
+      });
+
+      // Refetch order detail ngay lập tức để cập nhật customer.currentDebt
+      await queryClient.refetchQueries({
         queryKey: orderKeys.detail(orderId),
       });
 
@@ -277,7 +295,7 @@ export const useApproveDebt = () => {
       });
 
       toast.success("Thành công", {
-        description: "Đã duyệt công nợ",
+        description: "Đã cộng công nợ",
       });
     } catch (err: unknown) {
       const error = err as {
@@ -287,7 +305,7 @@ export const useApproveDebt = () => {
       const message =
         error?.response?.data?.message ||
         error?.message ||
-        "Không thể duyệt công nợ";
+        "Không thể cộng công nợ";
 
       toast.error("Lỗi", {
         description: message,
@@ -306,7 +324,7 @@ export const useApproveDebt = () => {
   };
 };
 
-// ===== POST /accountings/export-debt =====
+// ===== POST /accounting/export-debt =====
 // Xuất báo cáo công nợ
 
 export const useExportDebt = () => {
@@ -332,14 +350,14 @@ export const useExportDebt = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      
+
       // Generate filename based on payload
       const filename = payload.customerId
         ? `debt-report-customer-${payload.customerId}.xlsx`
         : payload.year && payload.month
-        ? `debt-report-${payload.year}-${payload.month}.xlsx`
-        : `debt-report.xlsx`;
-      
+          ? `debt-report-${payload.year}-${payload.month}.xlsx`
+          : `debt-report.xlsx`;
+
       link.download = filename;
       document.body.appendChild(link);
       link.click();

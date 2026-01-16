@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDies, useDeleteDie, useUpdateDie } from "@/hooks/use-die";
 import { DieDialog } from "@/components/dies/DieDialog";
 import type { DieResponse } from "@/Schema";
+import { dieStatusLabels } from "@/lib/status-utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
@@ -37,6 +38,8 @@ import {
   Trash2,
   Edit,
   Image as ImageIcon,
+  Copy,
+  Check,
 } from "lucide-react";
 
 export default function DieListPage() {
@@ -50,6 +53,9 @@ export default function DieListPage() {
   >("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDie, setSelectedDie] = useState<DieResponse | null>(null);
+  const [copiedProofingOrderCode, setCopiedProofingOrderCode] = useState<
+    string | null
+  >(null);
 
   // Combine dieName and sizeFilter for search
   const searchTerm = [dieName, sizeFilter].filter(Boolean).join(" ");
@@ -125,6 +131,23 @@ export default function DieListPage() {
 
   const handleDialogSuccess = () => {
     refetch();
+  };
+
+  const handleCopyProofingOrderCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedProofingOrderCode(code);
+      toast.success("Đã sao chép mã bài", {
+        description: `Mã bài "${code}" đã được sao chép vào clipboard`,
+      });
+      setTimeout(() => {
+        setCopiedProofingOrderCode(null);
+      }, 2000);
+    } catch (error) {
+      toast.error("Không thể sao chép mã bài", {
+        description: "Đã xảy ra lỗi khi sao chép vào clipboard",
+      });
+    }
   };
 
   return (
@@ -257,7 +280,7 @@ export default function DieListPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                    <SelectItem value="usable">Đang sử dụng được</SelectItem>
+                    <SelectItem value="usable">Sử dụng được</SelectItem>
                     <SelectItem value="unusable">Không sử dụng được</SelectItem>
                   </SelectContent>
                 </Select>
@@ -294,6 +317,7 @@ export default function DieListPage() {
                         <TableHead>Nhà cung cấp</TableHead>
                         <TableHead>Vị trí</TableHead>
                         <TableHead>Trạng thái</TableHead>
+                        <TableHead>Mã bài</TableHead>
                         <TableHead>Ngày tạo</TableHead>
                         <TableHead className="text-right">Thao tác</TableHead>
                       </TableRow>
@@ -328,8 +352,42 @@ export default function DieListPage() {
                             >
                               {die.isUsable
                                 ? "Sử dụng được"
-                                : "Cần kiểm tra / hỏng"}
+                                : die.status && dieStatusLabels[die.status]
+                                  ? dieStatusLabels[die.status]
+                                  : "Không sử dụng được"}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {die.firstProofingOrderCode ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">
+                                  Được sử dụng trong mã bài:{" "}
+                                  <span className="font-medium text-foreground">
+                                    {die.firstProofingOrderCode}
+                                  </span>
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 hover:bg-primary/10"
+                                  onClick={() =>
+                                    handleCopyProofingOrderCode(
+                                      die.firstProofingOrderCode || ""
+                                    )
+                                  }
+                                  title="Sao chép mã bài"
+                                >
+                                  {copiedProofingOrderCode ===
+                                  die.firstProofingOrderCode ? (
+                                    <Check className="h-3.5 w-3.5 text-green-600" />
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                                  )}
+                                </Button>
+                              </div>
+                            ) : (
+                              "—"
+                            )}
                           </TableCell>
                           <TableCell>
                             {die.createdAt

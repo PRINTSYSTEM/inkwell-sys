@@ -53,7 +53,6 @@ export default function SalesByCustomerPage() {
       ? dateRange.from.toISOString()
       : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
   });
 
   const totalRevenue = salesData?.items?.reduce((sum, item) => sum + (item.netRevenue || 0), 0) || 0;

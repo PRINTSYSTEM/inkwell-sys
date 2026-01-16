@@ -66,6 +66,7 @@ import {
   orderDetailItemStatusLabels,
   productionStatusLabels,
 } from "@/lib/status-utils";
+import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
 export default function ProductionListPage() {
   const navigate = useNavigate();
@@ -83,6 +84,8 @@ export default function ProductionListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("1");
   const [itemsPerPage] = useState(10);
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const queryParams = useMemo<ProductionListParams>(() => {
@@ -93,8 +96,12 @@ export default function ProductionListPage() {
     if (selectedStatus !== "all") {
       params.status = selectedStatus;
     }
+    if (sortColumn.trim()) {
+      params.sortColumn = sortColumn.trim();
+      params.sortOrder = sortOrder;
+    }
     return params;
-  }, [currentPage, itemsPerPage, selectedStatus]);
+  }, [currentPage, itemsPerPage, selectedStatus, sortColumn, sortOrder]);
 
   const {
     data: productionsResp,
@@ -187,7 +194,7 @@ export default function ProductionListPage() {
   useEffect(() => {
     setCurrentPage(1);
     setPageInput("1");
-  }, [selectedStatus]);
+  }, [selectedStatus, sortColumn, sortOrder]);
 
   const { mutate: createProduction, isPending: creating } =
     useCreateProductionOrder();
@@ -454,19 +461,20 @@ export default function ProductionListPage() {
         {/* Filter Bar */}
         <Card className="border-0 shadow-sm mb-4 shrink-0">
           <CardContent className="p-3">
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+              <div className="relative flex-1 min-w-0 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Tìm theo ID hoặc người phụ trách..."
-                  className="pl-10 h-9 bg-muted/50 border-0 focus-visible:ring-1"
+                  className="pl-10 h-10 sm:h-9 text-sm bg-muted/50 border-0 focus-visible:ring-1"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-40 h-9 bg-muted/50 border-0">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="w-full sm:w-40 h-10 sm:h-9 text-sm bg-muted/50 border-0">
                   <SelectValue placeholder="Trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
@@ -478,6 +486,29 @@ export default function ProductionListPage() {
                   <SelectItem value="Completed">Hoàn thành</SelectItem>
                 </SelectContent>
               </Select>
+
+              <div className="w-full lg:w-[360px] min-w-0">
+                <SortControls
+                  sortColumn={sortColumn}
+                  sortOrder={sortOrder}
+                  onSortColumnChange={(v) => setSortColumn(v)}
+                  onSortOrderChange={(v) => setSortOrder(v)}
+                  onClear={() => {
+                    setSortColumn("");
+                    setSortOrder("desc");
+                  }}
+                  options={[
+                    { value: "createdAt", label: "Ngày tạo" },
+                    { value: "startedAt", label: "Ngày bắt đầu" },
+                    { value: "completedAt", label: "Ngày hoàn thành" },
+                    { value: "status", label: "Trạng thái" },
+                    { value: "progressPercent", label: "Tiến độ (%)" },
+                    { value: "id", label: "ID" },
+                  ]}
+                  placeholder="Sắp xếp theo"
+                />
+              </div>
+              </div>
             </div>
           </CardContent>
         </Card>

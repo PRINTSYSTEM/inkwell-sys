@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { ENTITY_CONFIG } from "@/config/entities.config";
+import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
 type DesignWithSearch = DesignResponse & {
   designerFullName: string;
@@ -71,11 +72,19 @@ export default function AllDesignsPage() {
         : {}),
       ...(selectedMonth ? { month: selectedMonth } : {}),
       ...(selectedYear ? { year: selectedYear } : {}),
+      ...(filterState.sortBy
+        ? {
+            sortColumn: filterState.sortBy,
+            sortOrder: filterState.sortOrder,
+          }
+        : {}),
     }),
     [
       currentPage,
       itemsPerPage,
       filterState.filters,
+      filterState.sortBy,
+      filterState.sortOrder,
       selectedMonth,
       selectedYear,
     ]
@@ -207,6 +216,22 @@ export default function AllDesignsPage() {
     setCurrentPage(1);
   };
 
+  const handleSortColumnChange = (value: string) => {
+    const next = value.trim();
+    if (!next) {
+      filterActions.clearSort();
+    } else {
+      filterActions.setSort(next, filterState.sortOrder);
+    }
+    setCurrentPage(1);
+  };
+
+  const handleSortOrderChange = (value: SortOrder) => {
+    if (!filterState.sortBy) return;
+    filterActions.setSort(filterState.sortBy, value);
+    setCurrentPage(1);
+  };
+
   // giá trị đang chọn cho Select (đọc từ filterState)
   const statusFilterValue =
     (filterState.filters["status"]?.value as string | undefined) ?? "all";
@@ -249,7 +274,7 @@ export default function AllDesignsPage() {
       {/* Filters */}
       <Card className="p-3 mb-3 shrink-0">
         <CardContent className="p-0">
-          <div className="grid gap-3 md:grid-cols-5">
+          <div className="grid gap-3 md:grid-cols-6">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -347,6 +372,25 @@ export default function AllDesignsPage() {
                 })}
               </SelectContent>
             </Select>
+
+            {/* Sort (server-side) */}
+            <SortControls
+              sortColumn={filterState.sortBy ?? ""}
+              sortOrder={filterState.sortOrder}
+              onSortColumnChange={handleSortColumnChange}
+              onSortOrderChange={handleSortOrderChange}
+              onClear={() => {
+                filterActions.clearSort();
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: "createdAt", label: "Ngày tạo" },
+                { value: "code", label: "Mã thiết kế" },
+                { value: "status", label: "Trạng thái" },
+                { value: "designTypeId", label: "Loại thiết kế" },
+              ]}
+              placeholder="Sắp xếp theo"
+            />
           </div>
         </CardContent>
       </Card>

@@ -39,6 +39,7 @@ import {
   Check,
   ChevronsUpDown,
   Plus,
+  Copy,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ import { toast } from "sonner";
 import { useActiveDieVendors, useCreateVendor } from "@/hooks/use-vendor";
 import { useCreateDie, useUpdateDie, useUploadDieImage } from "@/hooks/use-die";
 import type { DieResponse } from "@/Schema";
+import { dieUsageTypeLabels } from "@/lib/status-utils";
 
 interface DieDialogProps {
   open: boolean;
@@ -448,6 +450,40 @@ export function DieDialog({
             </div>
           )}
 
+          {/* Mã bài đầu tiên - chỉ hiển thị khi edit và có giá trị */}
+          {isEdit && die?.firstProofingOrderCode && (
+            <div className="space-y-2">
+              <Label>Được sử dụng trong mã bài</Label>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground flex-1">
+                  {die.firstProofingOrderCode}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 hover:bg-primary/10"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(
+                        die.firstProofingOrderCode || ""
+                      );
+                      toast.success("Đã sao chép mã bài", {
+                        description: `Mã bài "${die.firstProofingOrderCode}" đã được sao chép vào clipboard`,
+                      });
+                    } catch (error) {
+                      toast.error("Không thể sao chép mã bài", {
+                        description: "Đã xảy ra lỗi khi sao chép vào clipboard",
+                      });
+                    }
+                  }}
+                  title="Sao chép mã bài"
+                >
+                  <Copy className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Giá - chỉ hiển thị khi tạo mới */}
           {!isEdit && (
             <div className="space-y-2">
@@ -531,10 +567,14 @@ export function DieDialog({
               <div className="flex items-center justify-between gap-3 py-2 rounded-md border bg-muted/30 px-3">
                 <div className="space-y-0.5">
                   <Label htmlFor="isReusable" className="text-sm font-medium">
-                    Khuôn tái sử dụng
+                    {isReusable
+                      ? dieUsageTypeLabels.reusable
+                      : dieUsageTypeLabels.one_time}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Khuôn này có thể tái sử dụng cho các đơn hàng khác
+                    {isReusable
+                      ? "Khuôn này có thể tái sử dụng cho các đơn hàng khác"
+                      : "Khuôn này chỉ dùng 1 lần"}
                   </p>
                 </div>
                 <Switch

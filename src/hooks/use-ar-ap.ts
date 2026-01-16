@@ -19,19 +19,19 @@ import type {
   CollectionScheduleResponse,
   CollectionScheduleResponseIPaginate,
 } from "@/Schema/accounting.schema";
+import type {
+  DebtReportArSummaryParams,
+  DebtReportArDetailParams,
+  DebtReportArAgingParams,
+  DebtReportApSummaryParams,
+  DebtReportApDetailParams,
+  DebtReportApAgingParams,
+  DebtReportCollectionScheduleParams,
+} from "@/Schema";
 
 // ================== AR (Accounts Receivable) ==================
 
-export interface ARSummaryParams {
-  pageNumber?: number;
-  pageSize?: number;
-  fromDate?: string;
-  toDate?: string;
-  customerId?: number;
-  search?: string;
-}
-
-export const useARSummary = (params?: ARSummaryParams) => {
+export const useARSummary = (params?: DebtReportArSummaryParams) => {
   return useQuery({
     queryKey: ["ar-summary", params],
     queryFn: async () => {
@@ -47,17 +47,7 @@ export const useARSummary = (params?: ARSummaryParams) => {
   });
 };
 
-export interface ARDetailParams {
-  pageNumber?: number;
-  pageSize?: number;
-  fromDate?: string;
-  toDate?: string;
-  customerId?: number;
-  orderId?: number;
-  search?: string;
-}
-
-export const useARDetail = (params?: ARDetailParams) => {
+export const useARDetail = (params?: DebtReportArDetailParams) => {
   return useQuery({
     queryKey: ["ar-detail", params],
     queryFn: async () => {
@@ -73,15 +63,7 @@ export const useARDetail = (params?: ARDetailParams) => {
   });
 };
 
-export interface ARAgingParams {
-  pageNumber?: number;
-  pageSize?: number;
-  asOfDate?: string;
-  customerId?: number;
-  search?: string;
-}
-
-export const useARAging = (params?: ARAgingParams) => {
+export const useARAging = (params?: DebtReportArAgingParams) => {
   return useQuery({
     queryKey: ["ar-aging", params],
     queryFn: async () => {
@@ -97,7 +79,7 @@ export const useARAging = (params?: ARAgingParams) => {
   });
 };
 
-export const useExportARAging = (params?: ARAgingParams) => {
+export const useExportARAging = (params?: DebtReportArAgingParams) => {
   return useQuery({
     queryKey: ["ar-aging-export", params],
     enabled: false,
@@ -116,16 +98,7 @@ export const useExportARAging = (params?: ARAgingParams) => {
 
 // ================== AP (Accounts Payable) ==================
 
-export interface APSummaryParams {
-  pageNumber?: number;
-  pageSize?: number;
-  fromDate?: string;
-  toDate?: string;
-  vendorId?: number;
-  search?: string;
-}
-
-export const useAPSummary = (params?: APSummaryParams) => {
+export const useAPSummary = (params?: DebtReportApSummaryParams) => {
   return useQuery({
     queryKey: ["ap-summary", params],
     queryFn: async () => {
@@ -141,17 +114,7 @@ export const useAPSummary = (params?: APSummaryParams) => {
   });
 };
 
-export interface APDetailParams {
-  pageNumber?: number;
-  pageSize?: number;
-  fromDate?: string;
-  toDate?: string;
-  vendorId?: number;
-  orderId?: number;
-  search?: string;
-}
-
-export const useAPDetail = (params?: APDetailParams) => {
+export const useAPDetail = (params?: DebtReportApDetailParams) => {
   return useQuery({
     queryKey: ["ap-detail", params],
     queryFn: async () => {
@@ -167,15 +130,7 @@ export const useAPDetail = (params?: APDetailParams) => {
   });
 };
 
-export interface APAgingParams {
-  pageNumber?: number;
-  pageSize?: number;
-  asOfDate?: string;
-  vendorId?: number;
-  search?: string;
-}
-
-export const useAPAging = (params?: APAgingParams) => {
+export const useAPAging = (params?: DebtReportApAgingParams) => {
   return useQuery({
     queryKey: ["ap-aging", params],
     queryFn: async () => {
@@ -193,16 +148,7 @@ export const useAPAging = (params?: APAgingParams) => {
 
 // ================== COLLECTION SCHEDULE ==================
 
-export interface CollectionScheduleParams {
-  pageNumber?: number;
-  pageSize?: number;
-  fromDate?: string;
-  toDate?: string;
-  customerId?: number;
-  search?: string;
-}
-
-export const useCollectionSchedule = (params?: CollectionScheduleParams) => {
+export const useCollectionSchedule = (params?: DebtReportCollectionScheduleParams) => {
   return useQuery({
     queryKey: ["collection-schedule", params],
     queryFn: async () => {

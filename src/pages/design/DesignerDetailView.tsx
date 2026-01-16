@@ -129,12 +129,14 @@ export default function DesignerDetailPage() {
   // Fetch KPI data
   const { data: kpiData, isLoading: loadingKpi } = useUserKpi(
     designerId,
-    kpiDateRange?.from
-      ? format(kpiDateRange.from, "yyyy-MM-dd'T'00:00:00.000'Z'")
-      : undefined,
-    kpiDateRange?.to
-      ? format(kpiDateRange.to, "yyyy-MM-dd'T'23:59:59.999'Z'")
-      : undefined,
+    {
+      fromDate: kpiDateRange?.from
+        ? format(kpiDateRange.from, "yyyy-MM-dd'T'00:00:00.000'Z'")
+        : undefined,
+      toDate: kpiDateRange?.to
+        ? format(kpiDateRange.to, "yyyy-MM-dd'T'23:59:59.999'Z'")
+        : undefined,
+    },
     !!designerId && !!kpiDateRange?.from && !!kpiDateRange?.to
   );
 

@@ -193,6 +193,16 @@ const UpdateCashPaymentRequest = z.object({
   bankAccountId: z.number().int().nullish(),
   notes: z.string().min(0).max(1000).nullish(),
 });
+const ProblemDetails = z
+  .object({
+    type: z.string().nullable(),
+    title: z.string().nullable(),
+    status: z.number().int().nullable(),
+    detail: z.string().nullable(),
+    instance: z.string().nullable(),
+  })
+  .partial()
+  .passthrough();
 const CreateCashReceiptRequest = z.object({
   voucherDate: z.string().datetime({ offset: true }),
   postingDate: z.string().datetime({ offset: true }),
@@ -454,6 +464,13 @@ const ConstantsResponse = z
     stockOutPurposes: ConstantGroup,
     stockOutItemTypes: ConstantGroup,
     stockOutStatuses: ConstantGroup,
+    dieSearchRelevances: ConstantGroup,
+    deliveryFailureTypes: ConstantGroup,
+    invoiceStatuses: ConstantGroup,
+    paymentTypes: ConstantGroup,
+    debtChangeTypes: ConstantGroup,
+    dieUsageTypes: ConstantGroup,
+    dieStatuses: ConstantGroup,
   })
   .partial();
 const CreateCustomerRequest = z.object({
@@ -1167,6 +1184,8 @@ const DieResponse = z
     receivedAt: z.string().datetime({ offset: true }).nullable(),
     createdAt: z.string().datetime({ offset: true }),
     createdBy: UserInfo,
+    firstProofingOrderId: z.number().int().nullable(),
+    firstProofingOrderCode: z.string().nullable(),
     usageHistory: z.array(DieUsageHistoryItem).nullable(),
   })
   .partial();
@@ -1181,12 +1200,14 @@ const DieResponseIPaginate = z
   .partial();
 const postApidies_Body = z
   .object({
+    Size: z.string(),
     Price: z.number(),
     VendorId: z.number().int(),
     Notes: z.string(),
     EstimatedReceiveAt: z.string().datetime({ offset: true }),
     ReceivedAt: z.string().datetime({ offset: true }),
     IsReusable: z.boolean(),
+    FirstProofingOrderId: z.number().int(),
     image: z.instanceof(File),
   })
   .partial()
@@ -1227,12 +1248,14 @@ const ReplaceDieRequest = z
   .partial();
 const CreateDieRequest = z
   .object({
+    size: z.string().nullable(),
     price: z.number().nullable(),
     vendorId: z.number().int().nullable(),
     notes: z.string().nullable(),
     estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
     receivedAt: z.string().datetime({ offset: true }).nullable(),
     isReusable: z.boolean(),
+    firstProofingOrderId: z.number().int().nullable(),
   })
   .partial();
 const UpdateDieStatusRequest = z.object({ status: z.string().min(1) });
@@ -1704,6 +1727,7 @@ const OrderResponse = z
     paidAmount: z.number(),
     remainingAmount: z.number(),
     paymentDueDate: z.string().datetime({ offset: true }).nullable(),
+    isDebtApproved: z.boolean(),
     isComplete: z.boolean(),
     missingFields: z.array(z.string()).nullable(),
     orderDetails: z.array(OrderDetailResponse).nullable(),
@@ -1897,16 +1921,6 @@ const CreatePaperSizeRequest = z
     isCustom: z.boolean(),
   })
   .partial();
-const ProblemDetails = z
-  .object({
-    type: z.string().nullable(),
-    title: z.string().nullable(),
-    status: z.number().int().nullable(),
-    detail: z.string().nullable(),
-    instance: z.string().nullable(),
-  })
-  .partial()
-  .passthrough();
 const UpdatePaperSizeRequest = z
   .object({
     name: z.string().nullable(),
@@ -2087,7 +2101,6 @@ const ProofingOrderResponse = z
     laminationType: z.string().nullable(),
     laminationTypeName: z.string().nullable(),
     isPlateExported: z.boolean(),
-    isDieExported: z.boolean(),
     plateExport: PlateExportResponse,
     dieExports: z.array(DieExportResponse).nullable(),
     createdAt: z.string().datetime({ offset: true }),
@@ -2113,12 +2126,6 @@ const AddProofingOrderDetailItem = z.object({
 const AddDesignsToProofingOrderRequest = z.object({
   materialTypeId: z.number().int(),
   items: z.array(AddProofingOrderDetailItem),
-  totalQuantity: z.number().int().nullish(),
-  paperSizeId: z.number().int().nullish(),
-  customPaperSize: z.string().nullish(),
-  processClassification: z.string().nullish(),
-  laminationType: z.string().nullish(),
-  notes: z.string().nullish(),
 });
 const UpdateProofingDesignItem = z.object({
   proofingOrderDesignId: z.number().int(),
@@ -2145,6 +2152,14 @@ const OrderDetailResponsePaginate = z
     total: z.number().int(),
     totalPages: z.number().int(),
     items: z.array(OrderDetailResponse).nullable(),
+  })
+  .partial();
+const DesignTypeCountResponse = z
+  .object({
+    designTypeId: z.number().int(),
+    designTypeName: z.string().nullable(),
+    designTypeCode: z.string().nullable(),
+    count: z.number().int(),
   })
   .partial();
 const RecordPlateExportRequest = z
@@ -2587,6 +2602,7 @@ export const schemas = {
   CashPaymentResponse,
   CashPaymentResponseIPaginate,
   UpdateCashPaymentRequest,
+  ProblemDetails,
   CreateCashReceiptRequest,
   CashReceiptResponse,
   CashReceiptResponseIPaginate,
@@ -2721,7 +2737,6 @@ export const schemas = {
   PaperSizeResponse,
   PaperSizeResponseIPaginate,
   CreatePaperSizeRequest,
-  ProblemDetails,
   UpdatePaperSizeRequest,
   CreatePaymentRequest,
   PaymentResponse,
@@ -2744,6 +2759,7 @@ export const schemas = {
   UpdateProofingOrderRequest,
   RejectDesignRequest,
   OrderDetailResponsePaginate,
+  DesignTypeCountResponse,
   RecordPlateExportRequest,
   RecordDieExportRequest,
   ReportExportResponse,
@@ -2792,8 +2808,8 @@ export const schemas = {
 const endpoints = makeApi([
   {
     method: "post",
-    path: "/api/accountings/:accountingId/confirm-payment",
-    alias: "postApiaccountingsAccountingIdconfirmPayment",
+    path: "/api/accounting/:accountingId/confirm-payment",
+    alias: "postApiaccountingAccountingIdconfirmPayment",
     requestFormat: "json",
     parameters: [
       {
@@ -2811,8 +2827,8 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/accountings/export-debt",
-    alias: "postApiaccountingsexportDebt",
+    path: "/api/accounting/export-debt",
+    alias: "postApiaccountingexportDebt",
     requestFormat: "json",
     parameters: [
       {
@@ -2825,8 +2841,8 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/accountings/order/:orderId",
-    alias: "postApiaccountingsorderOrderId",
+    path: "/api/accounting/order/:orderId",
+    alias: "postApiaccountingorderOrderId",
     requestFormat: "json",
     parameters: [
       {
@@ -2839,8 +2855,8 @@ const endpoints = makeApi([
   },
   {
     method: "get",
-    path: "/api/accountings/order/:orderId",
-    alias: "getApiaccountingsorderOrderId",
+    path: "/api/accounting/order/:orderId",
+    alias: "getApiaccountingorderOrderId",
     requestFormat: "json",
     parameters: [
       {
@@ -2853,8 +2869,8 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/accountings/order/:orderId/approve-debt",
-    alias: "postApiaccountingsorderOrderIdapproveDebt",
+    path: "/api/accounting/order/:orderId/approve-debt",
+    alias: "postApiaccountingorderOrderIdapproveDebt",
     requestFormat: "json",
     parameters: [
       {
@@ -2867,8 +2883,8 @@ const endpoints = makeApi([
   },
   {
     method: "post",
-    path: "/api/accountings/order/:orderId/confirm-deposit",
-    alias: "postApiaccountingsorderOrderIdconfirmDeposit",
+    path: "/api/accounting/order/:orderId/confirm-deposit",
+    alias: "postApiaccountingorderOrderIdconfirmDeposit",
     requestFormat: "json",
     parameters: [
       {
@@ -3030,6 +3046,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: CashPaymentResponseIPaginate,
   },
@@ -3109,6 +3135,36 @@ const endpoints = makeApi([
     response: CashPaymentResponse,
   },
   {
+    method: "get",
+    path: "/api/cash-payments/:id/export-pdf",
+    alias: "getApicashPaymentsIdexportPdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.instanceof(File),
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
     method: "post",
     path: "/api/cash-payments/:id/post",
     alias: "postApicashPaymentsIdpost",
@@ -3179,6 +3235,16 @@ const endpoints = makeApi([
       },
       {
         name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -3261,6 +3327,36 @@ const endpoints = makeApi([
     response: CashReceiptResponse,
   },
   {
+    method: "get",
+    path: "/api/cash-receipts/:id/export-pdf",
+    alias: "getApicashReceiptsIdexportPdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.instanceof(File),
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
     method: "post",
     path: "/api/cash-receipts/:id/post",
     alias: "postApicashReceiptsIdpost",
@@ -3297,6 +3393,16 @@ const endpoints = makeApi([
       },
       {
         name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -3387,6 +3493,16 @@ const endpoints = makeApi([
       },
       {
         name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -3485,6 +3601,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: ExpenseCategoryResponseIPaginate,
   },
@@ -3572,6 +3698,16 @@ const endpoints = makeApi([
       },
       {
         name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -3686,6 +3822,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: CustomerSummaryResponsePaginate,
   },
@@ -3752,6 +3898,16 @@ const endpoints = makeApi([
         name: "pageSize",
         type: "Query",
         schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: CustomerDebtHistoryResponsePaginate,
@@ -3839,6 +3995,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: CustomerOrderHistoryResponsePaginate,
   },
@@ -3881,6 +4047,16 @@ const endpoints = makeApi([
         name: "vendorId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: APAgingResponseIPaginate,
@@ -3940,6 +4116,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: APDetailResponseIPaginate,
   },
@@ -3973,6 +4159,16 @@ const endpoints = makeApi([
         name: "vendorId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: APSummaryResponseIPaginate,
@@ -4032,6 +4228,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: ARAgingResponseIPaginate,
   },
@@ -4090,6 +4296,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: ARDetailResponseIPaginate,
   },
@@ -4126,6 +4342,16 @@ const endpoints = makeApi([
       },
       {
         name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -4192,6 +4418,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: CollectionScheduleResponseIPaginate,
   },
@@ -4227,6 +4463,16 @@ const endpoints = makeApi([
       },
       {
         name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -4387,6 +4633,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: DesignResponsePaginate,
   },
@@ -4496,6 +4752,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: DesignTimelineEntryResponsePaginate,
   },
@@ -4563,6 +4829,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: DesignResponsePaginate,
   },
@@ -4598,6 +4874,16 @@ const endpoints = makeApi([
       },
       {
         name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -4691,6 +4977,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: MaterialTypeResponsePaginate,
   },
@@ -4735,6 +5031,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: DesignResponsePaginate,
   },
@@ -4770,6 +5076,16 @@ const endpoints = makeApi([
       },
       {
         name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -4859,6 +5175,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: DesignResponsePaginate,
   },
@@ -4902,6 +5228,16 @@ const endpoints = makeApi([
         name: "pageSize",
         type: "Query",
         schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: DieResponseIPaginate,
@@ -5147,6 +5483,30 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/dies/related/proofing-order/:proofingOrderId",
+    alias: "getApidiesrelatedproofingOrderProofingOrderId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "proofingOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "relevance",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customer",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.array(DieResponse),
+  },
+  {
+    method: "get",
     path: "/api/inventory-reports/current-stock",
     alias: "getApiinventoryReportscurrentStock",
     requestFormat: "json",
@@ -5173,6 +5533,16 @@ const endpoints = makeApi([
       },
       {
         name: "itemGroup",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -5205,6 +5575,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: LowStockResponseIPaginate,
   },
@@ -5233,6 +5613,16 @@ const endpoints = makeApi([
         name: "daysThreshold",
         type: "Query",
         schema: z.number().int().optional().default(90),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: SlowMovingResponseIPaginate,
@@ -5307,6 +5697,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: InventorySummaryItemResponseIPaginate,
   },
@@ -5364,6 +5764,16 @@ const endpoints = makeApi([
         name: "PageSize",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "SortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "SortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: InvoiceResponsePaginate,
@@ -5507,6 +5917,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: InvoiceResponsePaginate,
   },
@@ -5577,6 +5997,16 @@ const endpoints = makeApi([
         name: "materialTypeId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: MaterialResponseIPaginate,
@@ -5691,6 +6121,16 @@ const endpoints = makeApi([
         name: "endDate",
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: OrderResponsePaginate,
@@ -5909,6 +6349,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: OrderResponsePaginate,
   },
@@ -5930,6 +6380,16 @@ const endpoints = makeApi([
       },
       {
         name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -5967,6 +6427,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: OrderResponsePaginate,
   },
@@ -5995,6 +6465,16 @@ const endpoints = makeApi([
         name: "isCustom",
         type: "Query",
         schema: z.boolean().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: PaperSizeResponseIPaginate,
@@ -6215,6 +6695,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: PaymentResponsePaginate,
   },
@@ -6238,6 +6728,16 @@ const endpoints = makeApi([
         name: "pageSize",
         type: "Query",
         schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: PaymentResponsePaginate,
@@ -6277,6 +6777,16 @@ const endpoints = makeApi([
         name: "toDate",
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: PlateExportResponsePaginate,
@@ -6334,6 +6844,16 @@ const endpoints = makeApi([
         name: "proofingOrderId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: ProductionOrderResponsePaginate,
@@ -6441,6 +6961,16 @@ const endpoints = makeApi([
       },
       {
         name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -6736,6 +7266,25 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/proofing-orders/available-order-details/design-type-summary",
+    alias: "getApiproofingOrdersavailableOrderDetailsdesignTypeSummary",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "materialTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "designCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.array(DesignTypeCountResponse),
+  },
+  {
+    method: "get",
     path: "/api/proofing-orders/available-quantity/:designId",
     alias: "getApiproofingOrdersavailableQuantityDesignId",
     requestFormat: "json",
@@ -6769,6 +7318,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: ProofingOrderResponsePaginate,
   },
@@ -6801,6 +7360,16 @@ const endpoints = makeApi([
         name: "pageSize",
         type: "Query",
         schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: ProofingOrderResponsePaginate,
@@ -6840,6 +7409,16 @@ const endpoints = makeApi([
         name: "exportedById",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: ReportExportResponseIPaginate,
@@ -6965,6 +7544,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: SalesByCustomerResponseIPaginate,
   },
@@ -6998,6 +7587,16 @@ const endpoints = makeApi([
         name: "dimension",
         type: "Query",
         schema: z.string().optional().default("salesperson"),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: SalesByDimensionResponseIPaginate,
@@ -7040,6 +7639,16 @@ const endpoints = makeApi([
       },
       {
         name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -7116,6 +7725,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: OrderDrillDownResponseIPaginate,
   },
@@ -7155,6 +7774,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: OrderDrillDownResponseIPaginate,
   },
@@ -7188,6 +7817,16 @@ const endpoints = makeApi([
         name: "groupBy",
         type: "Query",
         schema: z.string().optional().default("month"),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: ReturnsDiscountsResponseIPaginate,
@@ -7225,6 +7864,16 @@ const endpoints = makeApi([
       },
       {
         name: "itemGroup",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -7290,6 +7939,16 @@ const endpoints = makeApi([
         name: "toDate",
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: z.void(),
@@ -7532,6 +8191,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: z.void(),
   },
@@ -7765,6 +8434,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.boolean().optional(),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: UserResponsePaginate,
   },
@@ -7996,6 +8675,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.number().int().optional().default(10),
       },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
     ],
     response: UserResponsePaginate,
   },
@@ -8123,6 +8812,16 @@ const endpoints = makeApi([
         name: "isActive",
         type: "Query",
         schema: z.boolean().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: VendorResponsePaginate,
