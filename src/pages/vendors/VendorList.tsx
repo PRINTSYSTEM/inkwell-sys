@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Eye, Edit, Trash2 } from "lucide-react";
 import { useVendors, useDeleteVendor } from "@/hooks/use-vendor";
 import { vendorTypeLabels } from "@/lib/status-utils";
+import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
 export default function VendorListPage() {
   const navigate = useNavigate();
@@ -29,12 +30,17 @@ export default function VendorListPage() {
   const [pageSize] = useState(10);
   const [search, setSearch] = useState("");
   const [vendorTypeFilter, setVendorTypeFilter] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   const { data, isLoading } = useVendors({
     pageNumber: page,
     pageSize,
     search: search || "",
     vendorType: vendorTypeFilter || "",
+    ...(sortColumn.trim()
+      ? { sortColumn: sortColumn.trim(), sortOrder: sortOrder }
+      : {}),
   });
 
   const { mutate: deleteVendor } = useDeleteVendor();
@@ -65,20 +71,21 @@ export default function VendorListPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+            <div className="flex-1 min-w-0 w-full">
               <Input
                 placeholder="Tìm kiếm nhà cung cấp..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="max-w-sm"
+                className="w-full lg:max-w-sm h-10 sm:h-9 text-sm"
               />
             </div>
-            <Select
-              value={vendorTypeFilter || "all"}
-              onValueChange={(v) => setVendorTypeFilter(v === "all" ? "" : v)}
-            >
-              <SelectTrigger className="w-[180px]">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
+              <Select
+                value={vendorTypeFilter || "all"}
+                onValueChange={(v) => setVendorTypeFilter(v === "all" ? "" : v)}
+              >
+                <SelectTrigger className="w-full sm:w-[180px] h-10 sm:h-9 text-sm">
                 <SelectValue placeholder="Loại nhà cung cấp" />
               </SelectTrigger>
               <SelectContent>
@@ -90,6 +97,32 @@ export default function VendorListPage() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="w-full lg:w-[420px] min-w-0">
+              <SortControls
+                sortColumn={sortColumn}
+                sortOrder={sortOrder}
+                onSortColumnChange={(v) => {
+                  setSortColumn(v);
+                  setPage(1);
+                }}
+                onSortOrderChange={(v) => {
+                  setSortOrder(v);
+                  setPage(1);
+                }}
+                onClear={() => {
+                  setSortColumn("");
+                  setSortOrder("asc");
+                  setPage(1);
+                }}
+                options={[
+                  { value: "name", label: "Tên nhà cung cấp" },
+                  { value: "vendorType", label: "Loại" },
+                  { value: "isActive", label: "Trạng thái" },
+                ]}
+                placeholder="Sắp xếp theo"
+              />
+            </div>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

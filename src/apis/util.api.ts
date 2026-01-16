@@ -34,21 +34,8 @@ export const API_SUFFIX = {
   USER_DEPARTMENT_RESET_PASSWORD: (id: number) =>
     `/users/${id}/department-reset-password`,
   USERS_DESIGNERS: "/users/designers",
-  USER_KPI: (id: number, fromDate?: string, toDate?: string) => {
-    const base = `/users/${id}/kpi`;
-    const params = new URLSearchParams();
-    if (fromDate) params.append("fromDate", fromDate);
-    if (toDate) params.append("toDate", toDate);
-    return params.toString() ? `${base}?${params.toString()}` : base;
-  },
-  USER_KPI_TEAM: (fromDate?: string, toDate?: string, role?: string) => {
-    const base = "/users/kpi/team";
-    const params = new URLSearchParams();
-    if (fromDate) params.append("fromDate", fromDate);
-    if (toDate) params.append("toDate", toDate);
-    if (role) params.append("role", role);
-    return params.toString() ? `${base}?${params.toString()}` : base;
-  },
+  USER_KPI: (id: number) => `/users/${id}/kpi`,
+  USER_KPI_TEAM: "/users/kpi/team",
 
   // ========== ORDERS ==========
   ORDERS: "/orders",
@@ -89,18 +76,14 @@ export const API_SUFFIX = {
     `/customers/${id}/export-debt-comparison`,
 
   // ========== ACCOUNTING ==========
-  ACCOUNTING_BY_ORDER: (orderId: number) => `/accountings/order/${orderId}`,
+  ACCOUNTING_BY_ORDER: (orderId: number) => `/accounting/order/${orderId}`,
   ACCOUNTING_CONFIRM_PAYMENT: (accountingId: number) =>
-    `/accountings/${accountingId}/confirm-payment`,
-  ACCOUNTING_CONFIRM_DEPOSIT: (orderId: number, depositAmount?: number) => {
-    const base = `/accountings/order/${orderId}/confirm-deposit`;
-    return depositAmount != null
-      ? `${base}?depositAmount=${depositAmount}`
-      : base;
-  },
+    `/accounting/${accountingId}/confirm-payment`,
+  ACCOUNTING_CONFIRM_DEPOSIT: (orderId: number) =>
+    `/accounting/order/${orderId}/confirm-deposit`,
   ACCOUNTING_APPROVE_DEBT: (orderId: number) =>
-    `/accountings/order/${orderId}/approve-debt`,
-  ACCOUNTING_EXPORT_DEBT: "/accountings/export-debt",
+    `/accounting/order/${orderId}/approve-debt`,
+  ACCOUNTING_EXPORT_DEBT: "/accounting/export-debt",
 
   // ========== CUSTOMERS ==========
   CUSTOMERS: "/customers",
@@ -172,6 +155,8 @@ export const API_SUFFIX = {
   PROOFING_ADD_DESIGNS: (id: number) => `/proofing-orders/${id}/designs`,
   PROOFING_REMOVE_DESIGN: (id: number, designId: number) =>
     `/proofing-orders/${id}/designs/${designId}`,
+  PROOFING_DESIGN_TYPE_SUMMARY:
+    "/proofing-orders/available-order-details/design-type-summary",
   PROOFING_REJECT_DESIGN: "/proofing-orders/designs/reject",
 
   // ========== VENDORS ==========
@@ -304,11 +289,15 @@ export const API_SUFFIX = {
   SALES_BY_DIMENSION: "/sales-reports/by-dimension",
   TOP_PRODUCTS: "/sales-reports/top-products",
   RETURNS_DISCOUNTS: "/sales-reports/returns-discounts",
-  ORDER_DRILL_DOWN: "/sales-reports/orders-by-customer",
+  ORDER_DRILL_DOWN: (customerId: number) =>
+    `/sales-reports/orders-by-customer/${customerId}`,
   ORDER_DRILL_DOWN_BY_PERIOD: "/sales-reports/orders-by-period",
 
   // ========== REPORT EXPORTS ==========
   REPORT_EXPORTS: "/report-exports",
   REPORT_EXPORT_BY_ID: (id: number) => `/report-exports/${id}`,
   REPORT_EXPORT_DOWNLOAD: (id: number) => `/report-exports/${id}/download`,
+
+  // ========== VENDORS (EXTRA) ==========
+  VENDORS_PLATE_COUNT_OPTIONS: "/vendors/plate-count-options",
 };

@@ -47,7 +47,6 @@ export default function TopProductsPage() {
     pageSize: itemsPerPage,
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
   });
 
   return (

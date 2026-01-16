@@ -38,6 +38,7 @@ const formatDate = (dateStr: string | null | undefined) => {
 
 export default function OrderDrillDownPage() {
   const navigate = useNavigate();
+  const [customerIdText, setCustomerIdText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
@@ -46,21 +47,26 @@ export default function OrderDrillDownPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const customerIdValue = Number(customerIdText);
+  const customerIdValid =
+    customerIdText.trim().length > 0 && !Number.isNaN(customerIdValue);
+
   const {
     data: ordersData,
     isLoading,
     isError,
     error,
     refetch,
-  } = useOrderDrillDown({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    fromDate: dateRange?.from
-      ? dateRange.from.toISOString()
-      : undefined,
-    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
-  });
+  } = useOrderDrillDown(
+    customerIdValid ? customerIdValue : null,
+    {
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+      toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    },
+    customerIdValid
+  );
 
   const totalRevenue = ordersData?.items?.reduce((sum, item) => sum + (item.netAmount || 0), 0) || 0;
   const totalOrders = ordersData?.items?.length || 0;
@@ -113,6 +119,17 @@ export default function OrderDrillDownPage() {
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
+          <div className="w-full sm:w-[180px]">
+            <Input
+              placeholder="Customer ID"
+              value={customerIdText}
+              onChange={(e) => {
+                setCustomerIdText(e.target.value);
+                setCurrentPage(1);
+              }}
+              inputMode="numeric"
+            />
+          </div>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input

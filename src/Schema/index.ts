@@ -24,6 +24,7 @@ export * from "./die.schema";
 export * from "./vendor.schema";
 export * from "./stock.schema";
 export * from "./report.schema";
+export * from "./generated-form-body";
 
 // Re-export zod for convenience
 import { z } from "zod";

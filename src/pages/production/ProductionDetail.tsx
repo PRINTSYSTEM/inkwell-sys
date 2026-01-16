@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useDebounce } from "use-debounce";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -295,6 +295,16 @@ export default function ProductionDetailPage() {
     return currentActiveStep?.stepType === "material_export";
   }, [currentActiveStep]);
 
+  // Prevent auto-open from immediately reopening after the user closes the dialog
+  const suppressMaterialExportAutoOpenRef = useRef(false);
+
+  useEffect(() => {
+    // Reset suppression when there's no active material_export step in progress anymore
+    if (!shouldShowMaterialExportDialogForActiveStep) {
+      suppressMaterialExportAutoOpenRef.current = false;
+    }
+  }, [shouldShowMaterialExportDialogForActiveStep]);
+
   // Auto-open MaterialExportDialog when step is in_progress and type is material_export
   useEffect(() => {
     if (
@@ -303,6 +313,9 @@ export default function ProductionDetailPage() {
       production?.id &&
       !isMaterialExportDialogOpen
     ) {
+      if (suppressMaterialExportAutoOpenRef.current) {
+        return;
+      }
       setIsMaterialExportDialogOpen(true);
     }
   }, [
@@ -313,18 +326,14 @@ export default function ProductionDetailPage() {
   ]);
 
   const shouldShowDieCutStartDialog = useMemo(() => {
-    return (
-      firstReadyStep?.stepType === "die_cut" ||
-      firstReadyStep?.stepType === "cut"
-    );
+    // Only die_cut uses dies. "cut" should follow normal flow like other steps.
+    return firstReadyStep?.stepType === "die_cut";
   }, [firstReadyStep]);
 
   // Determine which complete dialog to open based on step type
   const shouldShowDieCutCompleteDialog = useMemo(() => {
-    return (
-      stepToComplete?.stepType === "die_cut" ||
-      stepToComplete?.stepType === "cut"
-    );
+    // Only die_cut uses dies. "cut" should follow normal flow like other steps.
+    return stepToComplete?.stepType === "die_cut";
   }, [stepToComplete]);
 
   const shouldShowCompletionDialog = useMemo(() => {
@@ -347,6 +356,7 @@ export default function ProductionDetailPage() {
 
     // For material_export step, update step status first, then open dialog
     if (shouldShowMaterialExportDialog && production?.id) {
+      suppressMaterialExportAutoOpenRef.current = false;
       // Update step to IN_PROGRESS first, then open dialog
       updateStep({
         stepId: firstReadyStep.id!,
@@ -562,16 +572,21 @@ export default function ProductionDetailPage() {
     }
   };
 
-  const formatDateTime = (dateStr?: string | null) =>
-    dateStr
-      ? new Date(dateStr).toLocaleString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "Chưa cập nhật";
+  const formatDateTime = (dateStr?: string | null) => {
+    if (!dateStr) return "Chưa cập nhật";
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return "Chưa cập nhật";
+    return date.toLocaleString("vi-VN", {
+      // Use local VN timezone explicitly to avoid UTC / environment timezone drift
+      timeZone: "Asia/Ho_Chi_Minh",
+      hour12: false,
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   if (isLoading) {
     return (
@@ -2193,7 +2208,12 @@ export default function ProductionDetailPage() {
         {(firstReadyStep || currentActiveStep) && production && (
           <MaterialExportDialog
             open={isMaterialExportDialogOpen}
-            onOpenChange={setIsMaterialExportDialogOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                suppressMaterialExportAutoOpenRef.current = true;
+              }
+              setIsMaterialExportDialogOpen(open);
+            }}
             step={(currentActiveStep || firstReadyStep)!}
             productionOrder={production}
             proofingOrder={proofingOrder || null}

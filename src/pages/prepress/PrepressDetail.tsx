@@ -52,6 +52,7 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
+  Box,
 } from "lucide-react";
 import {
   Tooltip,
@@ -77,6 +78,7 @@ import {
   useRemoveDesignFromProofingOrder,
   useCreatePaperSize,
   useAvailableQuantity,
+  useProofingAvailableOrderDetailsDesignTypeSummary,
 } from "@/hooks/use-proofing-order";
 import { useAvailableOrderDetailsForProofing } from "@/hooks";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
@@ -119,6 +121,7 @@ import type {
   ReplaceDieRequest,
   AssignDieToProofingOrderRequest,
 } from "@/Schema";
+import { DieListDialog } from "@/components/dies/DieListDialog";
 
 // Component for inline quantity editing with API available quantity
 function QuantityCell({
@@ -367,6 +370,15 @@ export default function ProofingOrderDetailPage() {
   // Form state cho từng card
   const [isQuantityEditOpen, setIsQuantityEditOpen] = useState(false);
 
+  // Confirm remove design dialog
+  const [isConfirmRemoveDesignDialogOpen, setIsConfirmRemoveDesignDialogOpen] =
+    useState(false);
+  const [removeDesignTarget, setRemoveDesignTarget] = useState<{
+    proofingOrderDesignId: number;
+    designCode?: string;
+    designName?: string;
+  } | null>(null);
+
   // Form state for update info (Bình Bài)
   const [updateStatus, setUpdateStatus] = useState<string>("");
   const [updateNotes, setUpdateNotes] = useState<string>("");
@@ -437,6 +449,36 @@ export default function ProofingOrderDetailPage() {
     return Array.from(classifications);
   }, [orderDesigns]);
 
+  // ===== Completion readiness (for "Hoàn thành") =====
+  const completionMissingItems = useMemo(() => {
+    const missing: string[] = [];
+    if (!order) return missing;
+
+    if (!order.proofingFileUrl) missing.push("Chưa upload file bình bài");
+    if (!order.imageUrl) missing.push("Chưa upload ảnh bình bài");
+
+    const totalQty = order.totalQuantity ?? 0;
+    if (!Number.isFinite(totalQty) || totalQty < 1)
+      missing.push("Chưa nhập số lượng giấy in");
+
+    const hasPaperSize = !!order.paperSizeId || !!order.customPaperSize?.trim();
+    if (!hasPaperSize) missing.push("Chưa chọn khổ giấy in");
+
+    if (!order.isPlateExported) missing.push("Chưa ghi nhận xuất kẽm");
+    if (hasDieCutDesigns && !order.isDieExported)
+      missing.push("Chưa ghi nhận xuất khuôn bế");
+
+    const hasInvalidItemQty = orderDesigns.some((pod) => {
+      const q = pod.quantity ?? 0;
+      return !Number.isFinite(q) || q < 1;
+    });
+    if (hasInvalidItemQty) missing.push("Có mã hàng chưa có số lượng hợp lệ");
+
+    return missing;
+  }, [order, hasDieCutDesigns, orderDesigns]);
+
+  const canMarkCompleted = completionMissingItems.length === 0;
+
   const { mutate: updateProofing } = useUpdateProofingOrder();
   const { mutate: uploadProofing, loading: isUploadingFile } =
     useUploadProofingFile();
@@ -500,6 +542,10 @@ export default function ProofingOrderDetailPage() {
   // Check if order is empty (no designs)
   const isEmptyOrder = orderDesigns.length === 0;
 
+  // Server-provided design type counts for available order details (used in empty-order filter UI)
+  const { data: designTypesCount = [] } =
+    useProofingAvailableOrderDetailsDesignTypeSummary(isEmptyOrder);
+
   // Selection state for adding designs (when order is empty)
   const {
     selectedDesigns,
@@ -535,7 +581,7 @@ export default function ProofingOrderDetailPage() {
   >({});
   const [paperSizeId, setPaperSizeId] = useState<string>("custom");
   const [customPaperSize, setCustomPaperSize] = useState("");
-
+  const [isDieListDialogOpen, setIsDieListDialogOpen] = useState(false);
   const materialTypeId = isEmptyOrder
     ? (currentMaterialTypeId ?? null)
     : (order.materialTypeId ?? null);
@@ -588,7 +634,8 @@ export default function ProofingOrderDetailPage() {
       createdAt: firstDesign.createdAt || "",
       designId: firstDesign.id,
       laminationType: firstDesign.laminationType ?? undefined,
-      processClassificationOptionName: firstDesign.processClassification ?? undefined,
+      processClassificationOptionName:
+        firstDesign.processClassification ?? undefined,
       sidesClassification: firstDesign.sidesClassification ?? undefined,
     };
   }, [order?.proofingOrderDesigns]);
@@ -603,7 +650,7 @@ export default function ProofingOrderDetailPage() {
 
   // Transform design types to FilterOption format with count
   const designTypeOptions = useMemo(() => {
-    if (!designTypesData || !availableDesignsData?.designs) return [];
+    if (!designTypesData) return [];
 
     const designTypeItems = Array.isArray(designTypesData)
       ? designTypesData
@@ -611,17 +658,26 @@ export default function ProofingOrderDetailPage() {
 
     // Count designs by designTypeId
     const countMap = new Map<number, number>();
-    availableDesignsData.designs.forEach((design) => {
-      const count = countMap.get(design.designTypeId) || 0;
-      countMap.set(design.designTypeId, count + 1);
-    });
+    if (Array.isArray(designTypesCount) && designTypesCount.length > 0) {
+      designTypesCount.forEach((row) => {
+        const id = row?.designTypeId;
+        if (typeof id === "number") {
+          countMap.set(id, row?.count ?? 0);
+        }
+      });
+    } else if (availableDesignsData?.designs) {
+      availableDesignsData.designs.forEach((design) => {
+        const count = countMap.get(design.designTypeId) || 0;
+        countMap.set(design.designTypeId, count + 1);
+      });
+    }
 
     return designTypeItems.map((dt) => ({
       id: dt.id,
       name: dt.name || "",
       count: countMap.get(dt.id) || 0,
     }));
-  }, [designTypesData, availableDesignsData?.designs]);
+  }, [designTypesData, availableDesignsData?.designs, designTypesCount]);
 
   // Helper functions to check design type
   const isNhanDesignType = (designTypeName: string): boolean => {
@@ -1229,6 +1285,7 @@ export default function ProofingOrderDetailPage() {
       order.paperSizeId ? order.paperSizeId.toString() : "custom"
     );
     setUpdateCustomPaperSize(order.customPaperSize || "");
+    setUpdateTotalQuantity((order.totalQuantity ?? 0).toString());
 
     // Không động tới file/ảnh và số lượng ở đây, flow này chỉ lo ghi chú + khổ giấy
     setIsUpdateInfoDialogOpen(true);
@@ -1785,62 +1842,111 @@ export default function ProofingOrderDetailPage() {
             <p className="text-xs text-muted-foreground">Chi tiết mã bài</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Trạng thái hiện tại:
-          </span>{" "}
-          <StatusBadge
-            status={order.status ?? undefined}
-            label={
-              proofingStatusLabels[order.status ?? ""] ?? order.status ?? ""
-            }
-          />
-          {nextStatusInfo && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 h-8 text-xs"
-              onClick={handleStatusChangeClick}
-            >
-              <Edit className="h-3.5 w-3.5" />
-              {nextStatusInfo.buttonLabel}
-            </Button>
-          )}
-          {order.status === "waiting_for_file" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 h-8 text-xs"
-              onClick={handleOldStatusChangeClick}
-              disabled={!order.proofingFileUrl}
-              title={
-                !order.proofingFileUrl
-                  ? "Vui lòng tải lên file bình bài trước"
-                  : "Chuyển sang chờ sản xuất"
-              }
-            >
-              <Edit className="h-3.5 w-3.5" />
-              Chuyển trạng thái
-            </Button>
-          )}
-          {order.status !== "completed" && (
-            <Button
-              size="sm"
-              className="gap-1.5 h-8 text-xs"
-              onClick={() => setIsUploadDialogOpen(true)}
-            >
-              <Upload className="h-3.5 w-3.5" />
-              {order.proofingFileUrl ? "Thay đổi file " : "Tải lên file"}
-            </Button>
-          )}
-          {order.isPlateExported && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <AlertCircle className="h-3.5 w-3.5 text-yellow-600" />
-              <span>Đã xuất kẽm</span>
+        {!isEmptyOrder && (
+          <>
+            {hasDieCutDesigns && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setIsDieListDialogOpen(true)}
+              >
+                <Box className="h-4 w-4" />
+                Danh sách khuôn bế
+              </Button>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Trạng thái hiện tại:
+              </span>{" "}
+              <StatusBadge
+                status={order.status ?? undefined}
+                label={
+                  proofingStatusLabels[order.status ?? ""] ?? order.status ?? ""
+                }
+              />
+              {nextStatusInfo && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className={cn(
+                          "inline-block",
+                          order?.status === "not_completed" &&
+                            !canMarkCompleted &&
+                            "cursor-not-allowed"
+                        )}
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-8 text-xs"
+                          onClick={handleStatusChangeClick}
+                          disabled={
+                            order?.status === "not_completed" &&
+                            !canMarkCompleted
+                          }
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          {nextStatusInfo.buttonLabel}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {order?.status === "not_completed" && !canMarkCompleted && (
+                      <TooltipContent className="max-w-xs">
+                        <div className="space-y-1">
+                          <p className="font-semibold">
+                            Chưa thể hoàn thành vì còn thiếu:
+                          </p>
+                          <ul className="list-disc pl-4 space-y-0.5">
+                            {completionMissingItems.map((item) => (
+                              <li key={item} className="text-sm">
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {order.status === "waiting_for_file" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs"
+                  onClick={handleOldStatusChangeClick}
+                  disabled={!order.proofingFileUrl}
+                  title={
+                    !order.proofingFileUrl
+                      ? "Vui lòng tải lên file bình bài trước"
+                      : "Chuyển sang chờ sản xuất"
+                  }
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                  Chuyển trạng thái
+                </Button>
+              )}
+              {order.status !== "completed" && (
+                <Button
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs"
+                  onClick={() => setIsUploadDialogOpen(true)}
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {order.proofingFileUrl ? "Thay đổi file " : "Tải lên file"}
+                </Button>
+              )}
+              {order.isPlateExported && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <AlertCircle className="h-3.5 w-3.5 text-yellow-600" />
+                  <span>Đã xuất kẽm</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -2514,6 +2620,7 @@ export default function ProofingOrderDetailPage() {
             {/* Left Column - Main Info */}
             <div className="lg:col-span-2 space-y-4">
               {/* Compact Order Info Card (moved to right column) */}
+              {/* eslint-disable-next-line no-constant-binary-expression */}
               {false && (
                 <Card>
                   <CardHeader className="pb-3">
@@ -3323,16 +3430,15 @@ export default function ProofingOrderDetailPage() {
                                           className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            if (
-                                              confirm(
-                                                "Bạn có chắc chắn muốn xóa design này khỏi bình bài?"
-                                              )
-                                            ) {
-                                              removeDesignMutate({
-                                                proofingOrderId: order.id,
-                                                proofingOrderDesignId: pod.id!,
-                                              });
-                                            }
+                                            setRemoveDesignTarget({
+                                              proofingOrderDesignId: pod.id!,
+                                              designCode: pod.design?.code,
+                                              designName:
+                                                pod.design?.designName,
+                                            });
+                                            setIsConfirmRemoveDesignDialogOpen(
+                                              true
+                                            );
                                           }}
                                           disabled={isRemovingDesign}
                                         >
@@ -3783,113 +3889,26 @@ export default function ProofingOrderDetailPage() {
                             </div>
                           )}
 
-                          {/* Proofing File Upload */}
-                          <div className="space-y-2">
-                            <Label htmlFor="update-proofing-file">
-                              File bình bài
-                            </Label>
-                            <Input
-                              id="update-proofing-file"
-                              type="file"
-                              accept=".pdf,.ai,.psd,.jpg,.png"
-                              onChange={(e) =>
-                                setUpdateProofingFile(
-                                  e.target.files?.[0] || null
-                                )
-                              }
-                            />
-                            {updateProofingFile && (
-                              <div className="mt-2">
-                                <p className="text-sm text-muted-foreground">
-                                  Đã chọn: {updateProofingFile.name} (
-                                  {(
-                                    updateProofingFile.size /
-                                    1024 /
-                                    1024
-                                  ).toFixed(2)}{" "}
-                                  MB)
-                                </p>
-                              </div>
-                            )}
-                            {order.proofingFileUrl && !updateProofingFile && (
-                              <div className="mt-2">
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  File hiện tại:
-                                </p>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="gap-2 text-xs"
-                                  onClick={() => {
-                                    if (order.proofingFileUrl) {
-                                      downloadFile(
-                                        order.proofingFileUrl,
-                                        order.code ?? `BB-${order.id ?? ""}`
-                                      );
-                                    }
-                                  }}
-                                >
-                                  <Download className="h-3 w-3" />
-                                  Tải xuống file hiện tại
-                                </Button>
-                              </div>
-                            )}
-                            <p className="text-xs text-muted-foreground">
-                              Chọn file mới để thay thế file hiện tại
-                            </p>
-                          </div>
-
-                          {/* Proofing Image Upload */}
-                          <div className="space-y-2">
-                            <Label htmlFor="update-image-file">
-                              Ảnh bình bài
-                            </Label>
-                            <Input
-                              id="update-image-file"
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) =>
-                                setUpdateImageFile(e.target.files?.[0] || null)
-                              }
-                            />
-                            {updateImageFile && (
-                              <div className="mt-2">
-                                <p className="text-sm text-muted-foreground mb-2">
-                                  Đã chọn: {updateImageFile.name} (
-                                  {(updateImageFile.size / 1024 / 1024).toFixed(
-                                    2
-                                  )}{" "}
-                                  MB)
-                                </p>
-                                <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
-                                  <img
-                                    src={URL.createObjectURL(updateImageFile)}
-                                    alt="Preview"
-                                    className="w-full h-full object-contain"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            {order.imageUrl && !updateImageFile && (
-                              <div className="mt-2">
-                                <p className="text-xs text-muted-foreground mb-2">
-                                  Ảnh hiện tại:
-                                </p>
-                                <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
-                                  <img
-                                    src={order.imageUrl}
-                                    alt="Current preview"
-                                    className="w-full h-full object-contain"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            <p className="text-xs text-muted-foreground">
-                              Chọn ảnh mới để thay thế ảnh hiện tại
-                            </p>
-                          </div>
-
                           <Separator />
+
+                          {/* Total Quantity */}
+                          <div className="space-y-2">
+                            <Label htmlFor="update-total-quantity">
+                              Số lượng giấy in
+                            </Label>
+                            <Input
+                              id="update-total-quantity"
+                              type="number"
+                              min="1"
+                              max="2147483647"
+                              step="1"
+                              value={updateTotalQuantity}
+                              onChange={(e) =>
+                                setUpdateTotalQuantity(e.target.value)
+                              }
+                              placeholder="Nhập số lượng giấy in..."
+                            />
+                          </div>
 
                           <div className="flex justify-end gap-2 pt-2 border-t mt-2">
                             <Button
@@ -4309,6 +4328,75 @@ export default function ProofingOrderDetailPage() {
               disabled={!order?.proofingFileUrl}
             >
               Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Remove Design Dialog */}
+      <Dialog
+        open={isConfirmRemoveDesignDialogOpen}
+        onOpenChange={(open) => {
+          setIsConfirmRemoveDesignDialogOpen(open);
+          if (!open) setRemoveDesignTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa mã hàng khỏi bình bài</DialogTitle>
+            <DialogDescription className="space-y-2">
+              <p>
+                Bạn có chắc chắn muốn xóa mã hàng này khỏi bình bài không? Thao
+                tác này không thể hoàn tác.
+              </p>
+              {removeDesignTarget?.designCode && (
+                <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Mã hàng:</span>{" "}
+                  <span className="font-semibold">
+                    {removeDesignTarget.designCode}
+                  </span>
+                  {removeDesignTarget.designName && (
+                    <>
+                      <span className="text-muted-foreground"> — </span>
+                      <span className="text-foreground">
+                        {removeDesignTarget.designName}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmRemoveDesignDialogOpen(false)}
+              disabled={isRemovingDesign}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isRemovingDesign || !order || !removeDesignTarget}
+              onClick={() => {
+                if (!order || !removeDesignTarget) return;
+                removeDesignMutate(
+                  {
+                    proofingOrderId: order.id,
+                    proofingOrderDesignId:
+                      removeDesignTarget.proofingOrderDesignId,
+                  },
+                  {
+                    onSuccess: () => {
+                      setIsConfirmRemoveDesignDialogOpen(false);
+                      setRemoveDesignTarget(null);
+                    },
+                  }
+                );
+              }}
+            >
+              {isRemovingDesign ? "Đang xóa..." : "Xóa"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -4790,20 +4878,16 @@ export default function ProofingOrderDetailPage() {
               return;
             }
 
-            try {
-              await addDesignsMutate({
-                id: order.id,
-                request: {
-                  materialTypeId: order.materialTypeId,
-                  items: items,
-                },
-              });
-              // Query invalidation happens in the hook's onSuccess callback
-              // The dialog will close automatically via the component's handleSubmit
-            } catch (error) {
-              // Error is already handled by the hook
-              throw error;
-            }
+            // Errors are handled by the hook's onError.
+            await addDesignsMutate({
+              id: order.id,
+              request: {
+                materialTypeId: order.materialTypeId,
+                items: items,
+              },
+            });
+            // Query invalidation happens in the hook's onSuccess callback
+            // The dialog will close automatically via the component's handleSubmit
           }}
           isSubmitting={isAddingDesigns}
         />
@@ -5183,6 +5267,10 @@ export default function ProofingOrderDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DieListDialog
+        open={isDieListDialogOpen}
+        onOpenChange={setIsDieListDialogOpen}
+      />
     </div>
   );
 }

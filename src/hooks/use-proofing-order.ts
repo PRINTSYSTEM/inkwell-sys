@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
+import { DesignTypeCountResponseSchema } from "@/Schema/generated";
 
 // Error type for API responses
 type ApiError = {
@@ -32,12 +33,17 @@ import type {
   RecordDieExportRequest,
   AddDesignsToProofingOrderRequest,
   RejectDesignRequest,
+  ProofingOrderForProductionListParams,
+  ProofingOrdersPauseParams,
+  ProofingOrderAvailableOrderDetailsParams,
 } from "@/Schema";
 import { RecordDieExportRequestSchema } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
 import { normalizeParams } from "@/apis/util.api";
+
+type DesignTypeCountResponse = z.infer<typeof DesignTypeCountResponseSchema>;
 
 const {
   api: proofingCrudApi,
@@ -48,7 +54,7 @@ const {
   useUpdate: useUpdateProofingOrderBase,
 } = createCrudHooks<
   ProofingOrderResponse,
-  {},
+  unknown,
   UpdateProofingOrderRequest,
   number,
   ProofingOrderListParams,
@@ -78,15 +84,18 @@ export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();
 // 2. Add designs with useAddDesignsToProofingOrder
 
 // GET /proofing-orders/available-order-details
-export const useAvailableOrderDetailsForProofing = (params?: {
-  materialTypeId?: number | null;
-}) => {
+export const useAvailableOrderDetailsForProofing = (
+  params?: ProofingOrderAvailableOrderDetailsParams
+) => {
   return useQuery({
     // Use specific value in queryKey instead of object to ensure proper refetch
     queryKey: [
       proofingKeys.all[0],
       "available-order-details",
       params?.materialTypeId ?? null,
+      params?.designCode ?? null,
+      params?.pageNumber ?? 1,
+      params?.pageSize ?? 10,
     ],
     queryFn: async () => {
       const normalizedParams = normalizeParams(params ?? {});
@@ -96,13 +105,6 @@ export const useAvailableOrderDetailsForProofing = (params?: {
         API_SUFFIX.PROOFING_AVAILABLE_ORDER_DETAILS,
         { params: normalizedParams }
       );
-
-      // Debug: Log response structure
-      console.log("📦 Proofing API Response:", {
-        total: res.data.total,
-        itemsCount: res.data.items?.length ?? 0,
-        firstItem: res.data.items?.[0],
-      });
 
       // Extract items from paginate response
       const orderDetails = res.data.items ?? [];
@@ -193,13 +195,38 @@ export const useAvailableOrderDetailsForProofing = (params?: {
       });
 
       return {
+        // Pagination meta (from API)
+        size: res.data.size ?? params?.pageSize ?? designs.length,
+        page: res.data.page ?? params?.pageNumber ?? 1,
+        total: res.data.total ?? designs.length,
+        totalPages:
+          res.data.totalPages ??
+          Math.max(1, Math.ceil((res.data.total ?? designs.length) / (res.data.size ?? params?.pageSize ?? 10))),
         designs,
         designTypeOptions: Array.from(designTypeMap.values()),
         materialTypeOptions: Array.from(materialTypeMap.values()),
-        totalCount: designs.length,
+        // Keep old field name for backward compatibility
+        totalCount: res.data.total ?? designs.length,
       };
     },
     staleTime: 2 * 60 * 1000,
+  });
+};
+
+// GET /proofing-orders/available-order-details/design-type-summary
+export const useProofingAvailableOrderDetailsDesignTypeSummary = (
+  enabled: boolean = true
+) => {
+  return useQuery<DesignTypeCountResponse[]>({
+    queryKey: [proofingKeys.all[0], "available-order-details", "design-type-summary"],
+    enabled,
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignTypeCountResponse[]>(
+        API_SUFFIX.PROOFING_DESIGN_TYPE_SUMMARY
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -233,10 +260,9 @@ export const useProofingOrdersByOrder = (
 // ================== PROOFING FOR PRODUCTION ==================
 // GET /proofing-orders/for-production
 
-export const useProofingOrdersForProduction = (params?: {
-  pageNumber?: number;
-  pageSize?: number;
-}) => {
+export const useProofingOrdersForProduction = (
+  params?: ProofingOrderForProductionListParams
+) => {
   return useQuery<ProofingOrderResponsePaginate>({
     queryKey: [proofingKeys.all[0], "for-production", params],
     queryFn: async () => {
@@ -564,16 +590,16 @@ export const usePauseProofingOrder = () => {
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
-    [{ id: number; reason?: string }]
-  >(async ({ id, reason }) => {
-    const url = reason
-      ? `${API_SUFFIX.PROOFING_PAUSE(id)}?reason=${encodeURIComponent(reason)}`
+    [{ id: number } & ProofingOrdersPauseParams]
+  >(async ({ id, ...params }) => {
+    const url = params.reason
+      ? `${API_SUFFIX.PROOFING_PAUSE(id)}?reason=${encodeURIComponent(params.reason)}`
       : API_SUFFIX.PROOFING_PAUSE(id);
     const res = await apiRequest.put<ProofingOrderResponse>(url);
     return res.data;
   });
 
-  const mutate = async (args: { id: number; reason?: string }) => {
+  const mutate = async (args: { id: number } & ProofingOrdersPauseParams) => {
     try {
       const result = await execute(args);
 
@@ -946,10 +972,10 @@ export const useRejectDesignFromProofingOrder = () => {
       orderDetailId: number;
       reason?: string | null;
     }) => {
-      await apiRequest.post<void>(
-        API_SUFFIX.PROOFING_REJECT_DESIGN,
-        { orderDetailId, reason: reason ?? null } as RejectDesignRequest
-      );
+      await apiRequest.post<void>(API_SUFFIX.PROOFING_REJECT_DESIGN, {
+        orderDetailId,
+        reason: reason ?? null,
+      } as RejectDesignRequest);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });

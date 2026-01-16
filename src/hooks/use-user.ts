@@ -12,6 +12,9 @@ import type {
   UserResponse,
   UserResponsePaginate,
   UserListParams,
+  UserDesignersListParams,
+  UserKpiParams,
+  UserKpiTeamParams,
   CreateUserRequest,
   UpdateUserRequest,
   UpdateMyProfileRequest,
@@ -56,6 +59,25 @@ const {
 
 export const useUsers = (params?: UserListParams) =>
   useUserListBase(params ?? ({} as UserListParams));
+
+// GET /users/designers
+export const useDesigners = (
+  params?: UserDesignersListParams,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: [rootKey, "designers", params],
+    enabled,
+    queryFn: async () => {
+      const res = await apiRequest.get<UserResponsePaginate>(
+        API_SUFFIX.USERS_DESIGNERS,
+        { params }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
 
 export const useUser = (id: number | null, enabled = true) =>
   useUserDetailBase(id, enabled);
@@ -106,7 +128,7 @@ export const useUpdateMyProfile = () => {
   const mutate = async (payload: UpdateMyProfileRequest) => {
     try {
       const result = await execute(payload);
-      
+
       // Invalidate user queries
       queryClient.invalidateQueries({ queryKey: [rootKey, "me"] });
       queryClient.invalidateQueries({ queryKey: [rootKey] });
@@ -114,7 +136,7 @@ export const useUpdateMyProfile = () => {
       toast.success("Thành công", {
         description: "Đã cập nhật thông tin cá nhân thành công",
       });
-      
+
       return result;
     } catch (err: unknown) {
       const error = err as ApiError;
@@ -264,16 +286,16 @@ export const useDepartmentResetPassword = () => {
 // but validation script cannot extract path from function body in API_SUFFIX
 export const useUserKpi = (
   userId: number | null,
-  fromDate?: string,
-  toDate?: string,
+  params?: UserKpiParams,
   enabled: boolean = true
 ) => {
   return useQuery({
-    queryKey: [rootKey, "kpi", userId, fromDate, toDate],
+    queryKey: [rootKey, "kpi", userId, params],
     enabled: enabled && !!userId,
     queryFn: async () => {
       const res = await apiRequest.get<UserKpiResponse>(
-        API_SUFFIX.USER_KPI(userId as number, fromDate, toDate)
+        API_SUFFIX.USER_KPI(userId as number),
+        { params }
       );
       return res.data;
     },
@@ -285,17 +307,16 @@ export const useUserKpi = (
 // NOTE: Endpoint exists in OpenAPI (/api/users/kpi/team)
 // but validation script cannot extract path from function body in API_SUFFIX
 export const useTeamKpi = (
-  fromDate?: string,
-  toDate?: string,
-  role?: string,
+  params?: UserKpiTeamParams,
   enabled: boolean = true
 ) => {
   return useQuery({
-    queryKey: [rootKey, "kpi", "team", fromDate, toDate, role],
+    queryKey: [rootKey, "kpi", "team", params],
     enabled,
     queryFn: async () => {
       const res = await apiRequest.get<TeamKpiSummaryResponse>(
-        API_SUFFIX.USER_KPI_TEAM(fromDate, toDate, role)
+        API_SUFFIX.USER_KPI_TEAM,
+        { params }
       );
       return res.data;
     },

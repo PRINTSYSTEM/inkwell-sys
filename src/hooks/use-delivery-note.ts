@@ -15,16 +15,15 @@ import type {
   DeliveryNoteLineResponse,
   UpdateDeliveryLineResultRequest,
 } from "@/Schema/delivery-note.schema";
+import type {
+  DeliveryNoteListParams,
+  DeliveryNoteAvailableOrdersListParams,
+  DeliveryNoteFailureReasonsListParams,
+} from "@/Schema";
 
 // ================== GET DELIVERY NOTES ==================
 // GET /delivery-notes
-export interface DeliveryNotesParams {
-  pageNumber?: number;
-  pageSize?: number;
-  status?: string;
-}
-
-export const useDeliveryNotes = (params?: DeliveryNotesParams) => {
+export const useDeliveryNotes = (params?: DeliveryNoteListParams) => {
   return useQuery({
     queryKey: ["deliveryNotes", params],
     queryFn: async () => {
@@ -75,7 +74,9 @@ export const useUpdateDeliveryNoteStatus = () => {
       return res.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["deliveryNote", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["deliveryNote", variables.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
       toast.success("Cập nhật trạng thái phiếu giao hàng thành công");
     },
@@ -163,12 +164,8 @@ export const useRecreateDeliveryNote = () => {
 
 // ================== GET AVAILABLE ORDERS FOR DELIVERY ==================
 // GET /delivery-notes/available-orders
-export interface AvailableOrdersForDeliveryParams {
-  customerId?: number;
-}
-
 export const useAvailableOrdersForDelivery = (
-  params?: AvailableOrdersForDeliveryParams
+  params?: DeliveryNoteAvailableOrdersListParams
 ) => {
   return useQuery({
     queryKey: ["availableOrdersForDelivery", params],
@@ -187,11 +184,9 @@ export const useAvailableOrdersForDelivery = (
 
 // ================== GET FAILURE REASONS ==================
 // GET /delivery-notes/failure-reasons
-export interface FailureReasonsParams {
-  allowRedeliveryOnly?: boolean;
-}
-
-export const useFailureReasons = (params?: FailureReasonsParams) => {
+export const useFailureReasons = (
+  params?: DeliveryNoteFailureReasonsListParams
+) => {
   return useQuery({
     queryKey: ["failureReasons", params],
     queryFn: async () => {
@@ -236,4 +231,3 @@ export const useUpdateDeliveryLineResult = () => {
     },
   });
 };
-
