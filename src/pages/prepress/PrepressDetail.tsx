@@ -94,7 +94,11 @@ import { AddDesignToProofingDialog } from "@/components/proofing/AddDesignToProo
 import { PlateExportDialog } from "@/components/proofing/PlateExportDialog";
 import { DieExportDialog } from "@/components/proofing/DieExportDialog";
 import { IdSchema } from "@/Schema";
-import type { PlateExportResponse, DieExportResponse } from "@/Schema";
+import type {
+  PlateExportResponse,
+  DieExportResponse,
+  ProofingOrderResponse,
+} from "@/Schema";
 import type { DesignItem } from "@/types/proofing";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -413,10 +417,23 @@ export default function ProofingOrderDetailPage() {
   // Use raw response directly instead of strict schema parsing
   // Schema validation is too strict for API responses with nullable fields
   // For display-only detail view, we can safely use raw data
-  type ProofingOrderResponse =
-    import("@/Schema/proofing-order.schema").ProofingOrderResponse;
-  const order = orderResp as ProofingOrderResponse | null;
+  const order = (orderResp as ProofingOrderResponse | undefined) ?? null;
   const orderDesigns = order?.proofingOrderDesigns ?? [];
+
+  // Compute isDieExported from dieExports array (if not provided by API)
+  // Schema has dieExports but may not have isDieExported field
+  const isDieExported = useMemo(() => {
+    if (!order) return false;
+    // Check if API provides isDieExported field (may be in response but not in schema)
+    if (
+      "isDieExported" in order &&
+      typeof (order as any).isDieExported === "boolean"
+    ) {
+      return (order as any).isDieExported;
+    }
+    // Fallback: compute from dieExports array
+    return (order.dieExports?.length ?? 0) > 0;
+  }, [order]);
 
   // Check if any design has processClassification === "die_cut" (Bế)
   const hasDieCutDesigns = useMemo(() => {
@@ -465,7 +482,7 @@ export default function ProofingOrderDetailPage() {
     if (!hasPaperSize) missing.push("Chưa chọn khổ giấy in");
 
     if (!order.isPlateExported) missing.push("Chưa ghi nhận xuất kẽm");
-    if (hasDieCutDesigns && !order.isDieExported)
+    if (hasDieCutDesigns && !isDieExported)
       missing.push("Chưa ghi nhận xuất khuôn bế");
 
     const hasInvalidItemQty = orderDesigns.some((pod) => {
@@ -475,7 +492,7 @@ export default function ProofingOrderDetailPage() {
     if (hasInvalidItemQty) missing.push("Có mã hàng chưa có số lượng hợp lệ");
 
     return missing;
-  }, [order, hasDieCutDesigns, orderDesigns]);
+  }, [order, hasDieCutDesigns, orderDesigns, isDieExported]);
 
   const canMarkCompleted = completionMissingItems.length === 0;
 
@@ -574,21 +591,31 @@ export default function ProofingOrderDetailPage() {
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Inline proofing order configuration state
-  const [notes, setNotes] = useState("");
-  const [proofingSheetQuantity, setProofingSheetQuantity] = useState<number>(1);
   const [designQuantities, setDesignQuantities] = useState<
     Record<number, number>
   >({});
-  const [paperSizeId, setPaperSizeId] = useState<string>("custom");
-  const [customPaperSize, setCustomPaperSize] = useState("");
   const [isDieListDialogOpen, setIsDieListDialogOpen] = useState(false);
   const materialTypeId = isEmptyOrder
     ? (currentMaterialTypeId ?? null)
     : (order.materialTypeId ?? null);
   // Get available designs for adding (when order is empty, no material type filter)
+  // Pass designTypeId from selectedDesignTypes (only first one if selected) to API filter
+  const selectedDesignTypeId =
+    isEmptyOrder && selectedDesignTypes.length > 0
+      ? selectedDesignTypes[0]
+      : null;
+  // Pass designCode (search term) to API filter when searching
+  const designCodeForApi =
+    isEmptyOrder && debouncedSearch.trim().length > 0
+      ? debouncedSearch.trim()
+      : null;
   const { data: availableDesignsData, isLoading: isLoadingDesigns } =
     useAvailableOrderDetailsForProofing({
       materialTypeId,
+      designTypeId: selectedDesignTypeId,
+      designCode: designCodeForApi,
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
     });
 
   // Get available designs for adding (same material type, exclude already added designs) - for non-empty orders
@@ -709,19 +736,14 @@ export default function ProofingOrderDetailPage() {
   }, [selectedDesigns]);
 
   // Apply client-side filters (for empty order)
+  // Note: designTypeId and designCode are now filtered by API
+  // Only apply material type and lamination type filters client-side if needed
   const filteredAndSortedDesigns = useMemo(() => {
     if (!availableDesignsData || !availableDesignsData.designs) return [];
 
     let result = [...availableDesignsData.designs];
 
-    // Filter by design type
-    if (selectedDesignTypes.length > 0) {
-      result = result.filter((d) =>
-        selectedDesignTypes.includes(d.designTypeId)
-      );
-    }
-
-    // Filter by material type (only when no design is selected)
+    // Filter by material type (only when no design is selected and not filtered by API)
     if (!currentMaterialTypeId && selectedMaterialTypes.length > 0) {
       result = result.filter((d) =>
         selectedMaterialTypes.includes(d.materialTypeId)
@@ -748,22 +770,14 @@ export default function ProofingOrderDetailPage() {
       });
     }
 
-    // Filter by search term (code)
-    if (debouncedSearch.trim().length > 0) {
-      const searchLower = debouncedSearch.trim().toLowerCase();
-      result = result.filter((d) => d.code.toLowerCase().includes(searchLower));
-    }
-
     return result;
   }, [
     availableDesignsData,
-    selectedDesignTypes,
     selectedMaterialTypes,
     currentMaterialTypeId,
     selectedLaminationType,
     selectedDesigns.length,
     areAllSelectedDesignsNhanOrDecal,
-    debouncedSearch,
   ]);
 
   // Group by order if enabled
@@ -787,17 +801,17 @@ export default function ProofingOrderDetailPage() {
     }));
   }, [filteredAndSortedDesigns, groupByOrder]);
 
-  // Pagination for left list
-  const totalCount = filteredAndSortedDesigns.length;
-  const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
-  const paginatedDesigns = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredAndSortedDesigns.slice(start, start + itemsPerPage);
-  }, [filteredAndSortedDesigns, currentPage, itemsPerPage]);
+  // Pagination from API response (server-side pagination)
+  const totalCount = availableDesignsData?.total ?? 0;
+  const totalPages = availableDesignsData?.totalPages ?? 1;
 
-  // Reset pagination when filter changes
+  // Use designs directly from API (already paginated, then apply client-side filters if needed)
+  const paginatedDesigns = filteredAndSortedDesigns;
+
+  // Reset pagination when filter changes (but not when page changes from API)
   useEffect(() => {
     if (isEmptyOrder) {
+      // Only reset if filters changed, not if page changed
       setCurrentPage(1);
       setPageInput("1");
     }
@@ -807,6 +821,7 @@ export default function ProofingOrderDetailPage() {
     selectedDesignTypes,
     selectedMaterialTypes,
     debouncedSearch,
+    // Note: Don't include currentPage in dependencies to avoid reset loop
   ]);
 
   // Sync pageInput with currentPage
@@ -930,10 +945,6 @@ export default function ProofingOrderDetailPage() {
     }
   };
 
-  const totalSelectedQuantity = useMemo(() => {
-    return Object.values(designQuantities).reduce((sum, qty) => sum + qty, 0);
-  }, [designQuantities]);
-
   const hasValidQuantities = useMemo(() => {
     return selectedDesigns.some((design) => {
       const qty = designQuantities[design.id] || 0;
@@ -944,86 +955,6 @@ export default function ProofingOrderDetailPage() {
   const selectedCount = useMemo(() => {
     return Object.values(designQuantities).filter((qty) => qty > 0).length;
   }, [designQuantities]);
-
-  // Parse custom paper size input
-  const parsedCustomPaperSize = useMemo(() => {
-    if (!customPaperSize || paperSizeId !== "custom") {
-      return null;
-    }
-    const trimmed = customPaperSize.trim();
-    // Support multiple formats: 31×43, 31x43, 31 X 43, 31 x 43, etc.
-    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
-    if (match) {
-      const width = parseInt(match[1], 10);
-      const height = parseInt(match[2], 10);
-      if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
-        return { width, height };
-      }
-    }
-    return null;
-  }, [customPaperSize, paperSizeId]);
-
-  const existingPaperSize = useMemo(() => {
-    if (!parsedCustomPaperSize || !paperSizes) {
-      return null;
-    }
-    // Fix: Check by width and height instead of name to handle different formats (15x15 vs 15×15)
-    const found = paperSizes.find(
-      (ps) =>
-        ps.width === parsedCustomPaperSize.width &&
-        ps.height === parsedCustomPaperSize.height
-    );
-    // Fix: Return null instead of undefined to match condition check
-    return found ?? null;
-  }, [parsedCustomPaperSize, paperSizes]);
-
-  // Helper function to create paper size if needed
-  const ensurePaperSizeExists = async (
-    customSize: string,
-    currentPaperSizeId: string
-  ): Promise<number | null> => {
-    if (currentPaperSizeId !== "custom" || !customSize?.trim()) {
-      return currentPaperSizeId === "none" || currentPaperSizeId === "custom"
-        ? null
-        : Number(currentPaperSizeId);
-    }
-
-    // Parse custom paper size
-    const trimmed = customSize.trim();
-    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
-    if (!match) {
-      return null;
-    }
-
-    const width = parseInt(match[1], 10);
-    const height = parseInt(match[2], 10);
-    if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
-      return null;
-    }
-
-    // Check if paper size already exists
-    const existing = paperSizes.find(
-      (ps) => ps.width === width && ps.height === height
-    );
-
-    if (existing) {
-      return existing.id;
-    }
-
-    // Create new paper size
-    try {
-      const newPaperSize = await createPaperSize({
-        name: `${width}×${height}`,
-        width: width,
-        height: height,
-        isCustom: true,
-      });
-      return newPaperSize?.id || null;
-    } catch (error) {
-      console.error("Failed to create paper size:", error);
-      throw error;
-    }
-  };
 
   // Parse custom paper size for update dialog
   const parsedUpdateCustomPaperSize = useMemo(() => {
@@ -1106,19 +1037,6 @@ export default function ProofingOrderDetailPage() {
     if (!order?.id) return;
 
     try {
-      if (
-        !proofingSheetQuantity ||
-        proofingSheetQuantity < 1 ||
-        !Number.isInteger(proofingSheetQuantity) ||
-        proofingSheetQuantity > 2147483647
-      ) {
-        toast.error("Lỗi", {
-          description:
-            "Số lượng giấy in phải là số nguyên từ 1 đến 2,147,483,647",
-        });
-        return;
-      }
-
       const invalidDesigns = selectedDesigns.filter((design) => {
         const qty = designQuantities[design.id] || 0;
         if (qty <= 0) return false;
@@ -1185,44 +1103,10 @@ export default function ProofingOrderDetailPage() {
         return;
       }
 
-      // Create paper size if needed (for custom paper size)
-      let finalPaperSizeId: number | null = null;
-      let finalCustomPaperSize: string | null = null;
-
-      if (paperSizeId === "custom" && customPaperSize?.trim()) {
-        try {
-          const createdPaperSizeId = await ensurePaperSizeExists(
-            customPaperSize,
-            paperSizeId
-          );
-          if (createdPaperSizeId) {
-            finalPaperSizeId = createdPaperSizeId;
-            finalCustomPaperSize = null;
-          } else {
-            finalPaperSizeId = null;
-            finalCustomPaperSize = customPaperSize.trim();
-          }
-        } catch (error) {
-          toast.error("Lỗi", {
-            description: "Không thể tạo khổ giấy mới",
-          });
-          return;
-        }
-      } else if (paperSizeId !== "none" && paperSizeId !== "custom") {
-        finalPaperSizeId = Number(paperSizeId);
-        finalCustomPaperSize = null;
-      } else {
-        finalPaperSizeId = null;
-        finalCustomPaperSize = null;
-      }
-
+      // According to schema: AddDesignsToProofingOrderRequest only has materialTypeId and items
       const addDesignsPayload = {
         materialTypeId: currentMaterialTypeId,
         items: items,
-        totalQuantity: proofingSheetQuantity,
-        paperSizeId: finalPaperSizeId,
-        customPaperSize: finalCustomPaperSize,
-        notes: notes?.trim() || null,
       };
 
       // Add designs to proofing order
@@ -1234,10 +1118,6 @@ export default function ProofingOrderDetailPage() {
       // On success: reset and the page will automatically refresh
       clearSelection();
       setDesignQuantities({});
-      setNotes("");
-      setProofingSheetQuantity(1);
-      setPaperSizeId("custom");
-      setCustomPaperSize("");
     } catch (error) {
       console.error("Failed to add designs to proofing order:", error);
       // Error is already handled by the hooks via toast
@@ -1557,9 +1437,9 @@ export default function ProofingOrderDetailPage() {
     const needsDieExport =
       orderDesigns.some(
         (pod) => pod.design?.processClassification === "die_cut"
-      ) && !order.isDieExported;
+      ) && !isDieExported;
 
-    if (!order.isPlateExported || needsDieExport) {
+    if (!order.isPlateExported || (needsDieExport && !isDieExported)) {
       toast.error("Lỗi", {
         description: needsDieExport
           ? "Cần hoàn thành xuất kẽm và khuôn bế trước khi chuyển xuống sản xuất"
@@ -2044,13 +1924,15 @@ export default function ProofingOrderDetailPage() {
                 </div>
               </div>
 
-              {/* Pagination (left list) */}
+              {/* Pagination (left list) - Server-side pagination */}
               {totalCount > 0 && (
                 <div className="shrink-0 border-t px-4 py-2 flex items-center justify-between gap-3 text-sm text-muted-foreground bg-background">
                   <div className="text-sm font-medium text-muted-foreground">
                     Hiển thị{" "}
                     <span className="font-bold text-foreground">
-                      {(currentPage - 1) * itemsPerPage + 1}
+                      {totalCount > 0
+                        ? (currentPage - 1) * itemsPerPage + 1
+                        : 0}
                     </span>
                     {" - "}
                     <span className="font-bold text-foreground">
@@ -2101,7 +1983,7 @@ export default function ProofingOrderDetailPage() {
                       size="sm"
                       className="h-8"
                       onClick={handleNextPage}
-                      disabled={currentPage === totalPages || isLoadingDesigns}
+                      disabled={currentPage >= totalPages || isLoadingDesigns}
                     >
                       <span className="hidden sm:inline">Trang sau</span>
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -2421,194 +2303,29 @@ export default function ProofingOrderDetailPage() {
                     </ScrollArea>
                   </div>
 
-                  {/* Bottom: Config panel */}
-                  <div className="flex-[3] border-t bg-muted/20 flex flex-col min-h-0">
-                    <div className="p-2 space-y-2 overflow-y-auto flex-1">
-                      {/* Row 1: Config items in one row */}
-                      <div className="grid grid-cols-3 gap-2">
-                        {/* Proofing Sheet Quantity */}
-                        <div className="space-y-1">
-                          <Label
-                            htmlFor="proofingSheetQuantity"
-                            className="text-xs font-bold"
-                          >
-                            Số lượng giấy in
-                            <span className="text-destructive"> *</span>
-                          </Label>
-                          <div className="relative">
-                            <Hash className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                            <Input
-                              id="proofingSheetQuantity"
-                              type="number"
-                              min="1"
-                              max="2147483647"
-                              step="1"
-                              className="pl-7 h-7 text-xs font-semibold"
-                              placeholder="Nhập số lượng"
-                              value={proofingSheetQuantity || ""}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === "") {
-                                  setProofingSheetQuantity(0);
-                                } else {
-                                  const numValue = parseInt(value, 10);
-                                  if (
-                                    !isNaN(numValue) &&
-                                    numValue > 0 &&
-                                    numValue <= 2147483647
-                                  ) {
-                                    setProofingSheetQuantity(numValue);
-                                  } else if (numValue > 2147483647) {
-                                    setProofingSheetQuantity(2147483647);
-                                  }
-                                }
-                              }}
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        {/* Paper Size */}
-                        <div className="space-y-1">
-                          <Label
-                            htmlFor="paperSizeId"
-                            className="text-xs font-bold"
-                          >
-                            Khổ giấy in
-                          </Label>
-                          <Select
-                            value={paperSizeId}
-                            onValueChange={setPaperSizeId}
-                          >
-                            <SelectTrigger
-                              id="paperSizeId"
-                              className="h-7 text-xs"
-                            >
-                              <Maximize2 className="h-3 w-3 mr-1.5 text-muted-foreground" />
-                              <SelectValue
-                                defaultValue="custom"
-                                placeholder="Chọn khổ giấy"
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="custom">
-                                -- Nhập thủ công --
-                              </SelectItem>
-                              {paperSizes?.map((ps) => (
-                                <SelectItem
-                                  key={ps.id}
-                                  value={ps.id.toString()}
-                                >
-                                  {ps.name}
-                                  {ps.width && ps.height
-                                    ? ` (${ps.width}×${ps.height})`
-                                    : ""}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Custom Paper Size or Size Display */}
-                        {paperSizeId === "custom" ? (
-                          <div className="space-y-1">
-                            <Label
-                              htmlFor="customPaperSize"
-                              className="text-xs font-bold"
-                            >
-                              Khổ giấy tùy chỉnh
-                            </Label>
-                            <div className="flex gap-1.5">
-                              <Input
-                                id="customPaperSize"
-                                className="h-7 text-xs flex-1"
-                                placeholder="31×43, 65×86..."
-                                value={customPaperSize}
-                                onChange={(e) =>
-                                  setCustomPaperSize(e.target.value)
-                                }
-                              />
-                            </div>
-                            {existingPaperSize && (
-                              <p className="text-[10px] font-medium text-muted-foreground">
-                                Đã tồn tại:{" "}
-                                {existingPaperSize.name ||
-                                  `${existingPaperSize.width}×${existingPaperSize.height}`}
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <Label className="text-xs font-bold text-muted-foreground">
-                              Kích thước
-                            </Label>
-                            <div className="h-7 flex items-center px-2 rounded-md border bg-background text-xs font-semibold text-muted-foreground">
-                              {paperSizeId !== "none" &&
-                              paperSizes?.find(
-                                (ps) => ps.id.toString() === paperSizeId
-                              ) ? (
-                                <span>
-                                  {
-                                    paperSizes.find(
-                                      (ps) => ps.id.toString() === paperSizeId
-                                    )?.width
-                                  }{" "}
-                                  ×{" "}
-                                  {
-                                    paperSizes.find(
-                                      (ps) => ps.id.toString() === paperSizeId
-                                    )?.height
-                                  }
-                                </span>
-                              ) : (
-                                <span className="italic">Chưa chọn</span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Row 2: Notes */}
-                      <div className="space-y-1">
-                        <Label className="text-xs font-bold flex items-center gap-1">
-                          <MessageSquare className="h-3 w-3 text-primary" />
-                          Ghi chú
-                        </Label>
-                        <Textarea
-                          id="notes"
-                          className="min-h-[50px] text-xs resize-none"
-                          placeholder="Nhập ghi chú (tùy chọn)..."
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="shrink-0 border-t px-3 py-2 bg-background">
-                      <Button
-                        onClick={handleSubmitDesigns}
-                        disabled={
-                          selectedDesigns.length === 0 ||
-                          !hasValidQuantities ||
-                          proofingSheetQuantity < 1 ||
-                          isAddingDesigns
-                        }
-                        className="w-full gap-1.5 h-8 text-xs"
-                      >
-                        {isAddingDesigns ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Đang thêm...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="h-4 w-4" />
-                            Thêm mã hàng vào bình bài
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                  {/* Bottom: Submit Button */}
+                  <div className="shrink-0 border-t px-3 py-2 bg-background">
+                    <Button
+                      onClick={handleSubmitDesigns}
+                      disabled={
+                        selectedDesigns.length === 0 ||
+                        !hasValidQuantities ||
+                        isAddingDesigns
+                      }
+                      className="w-full gap-1.5 h-8 text-xs"
+                    >
+                      {isAddingDesigns ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Đang thêm...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          Thêm mã hàng vào bình bài
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
               )}
@@ -4029,9 +3746,7 @@ export default function ProofingOrderDetailPage() {
                       <div className="flex items-center gap-1.5">
                         <div
                           className={`w-1.5 h-1.5 rounded-full ${
-                            order.isDieExported
-                              ? "bg-green-500"
-                              : "bg-yellow-500"
+                            isDieExported ? "bg-green-500" : "bg-yellow-500"
                           }`}
                         />
                         <span className="font-medium text-xs">
@@ -4056,7 +3771,7 @@ export default function ProofingOrderDetailPage() {
                                 Thêm
                               </Button>
                             )}
-                          {!order.isDieExported && (
+                          {!isDieExported && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -4239,7 +3954,7 @@ export default function ProofingOrderDetailPage() {
                         className="w-full gap-1.5 h-8 text-xs"
                         disabled={
                           !order.isPlateExported ||
-                          (hasDieCutDesigns && !order.isDieExported) ||
+                          (hasDieCutDesigns && !isDieExported) ||
                           isHandingToProduction
                         }
                         onClick={handleHandToProduction}
@@ -4248,7 +3963,7 @@ export default function ProofingOrderDetailPage() {
                         Bàn giao sản xuất
                       </Button>
                       {(!order.isPlateExported ||
-                        (hasDieCutDesigns && !order.isDieExported)) && (
+                        (hasDieCutDesigns && !isDieExported)) && (
                         <p className="text-[10px] text-destructive mt-1 text-center">
                           * Cần hoàn thành xuất kẽm
                           {hasDieCutDesigns && " và khuôn bế"}
@@ -4795,13 +4510,13 @@ export default function ProofingOrderDetailPage() {
                 </div>
                 {hasDieCutDesigns && (
                   <div className="flex items-center gap-2">
-                    {order?.isDieExported ? (
+                    {isDieExported ? (
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                     ) : (
                       <AlertCircle className="h-4 w-4 text-yellow-600" />
                     )}
                     <span className="text-sm">
-                      {order?.isDieExported
+                      {isDieExported
                         ? "Đã xuất khuôn bế"
                         : "Chưa xuất khuôn bế"}
                     </span>
@@ -4809,7 +4524,7 @@ export default function ProofingOrderDetailPage() {
                 )}
               </div>
               {(!order?.isPlateExported ||
-                (hasDieCutDesigns && !order?.isDieExported)) && (
+                (hasDieCutDesigns && !isDieExported)) && (
                 <p className="text-xs text-destructive mt-2">
                   * Cần hoàn thành tất cả các điều kiện trên để chuyển xuống sản
                   xuất
@@ -4833,7 +4548,7 @@ export default function ProofingOrderDetailPage() {
               disabled={
                 isHandingToProduction ||
                 !order?.isPlateExported ||
-                (hasDieCutDesigns && !order?.isDieExported)
+                (hasDieCutDesigns && !isDieExported)
               }
             >
               {isHandingToProduction ? (
