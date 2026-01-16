@@ -152,6 +152,8 @@ export function MaterialExportDialog({
     }
   }, [open]);
 
+  const isCancellationLocked = hasStockOutCreated || !!existingStockOut;
+
   // Load existing stock-out data into form when dialog opens
   useEffect(() => {
     if (open && stockOutDetail) {
@@ -289,8 +291,8 @@ export function MaterialExportDialog({
       .replace(/\s+/g, " ")
       .trim();
     code = code
-      .replace(/[\s_\-]+/g, "-")
-      .replace(/[^A-Za-z0-9\-xX]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/[^A-Za-z0-9xX-]/g, "")
       .replace(/-+/g, "-")
       .toUpperCase()
       .replace(/^-+|-+$/g, "");
@@ -302,6 +304,8 @@ export function MaterialExportDialog({
       open={open}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
+          // Once stock-out is created (or auto-created exists), don't allow cancel/close.
+          if (isCancellationLocked) return;
           handleClose();
         }
       }}
@@ -620,13 +624,15 @@ export function MaterialExportDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t pt-4 mt-4">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={isProcessing}
-          >
-            Hủy
-          </Button>
+          {!isCancellationLocked && (
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              disabled={isProcessing}
+            >
+              Hủy
+            </Button>
+          )}
           {/* Show "Hoàn thành" button if stock out has been created or exists */}
           {(hasStockOutCreated || existingStockOut) && onComplete ? (
             <Button

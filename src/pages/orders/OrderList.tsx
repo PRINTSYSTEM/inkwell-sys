@@ -54,6 +54,7 @@ import type {
 import { useAuth } from "@/hooks";
 import { useOrdersByRole } from "@/hooks/use-order";
 import { ROLE } from "@/constants";
+import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
 export default function OrderList() {
   const { user } = useAuth();
@@ -66,6 +67,8 @@ export default function OrderList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
   const [pageInput, setPageInput] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -100,8 +103,13 @@ export default function OrderList() {
       params.endDate = endDate.toISOString();
     }
 
+    if (sortColumn.trim()) {
+      params.sortColumn = sortColumn.trim();
+      params.sortOrder = sortOrder;
+    }
+
     return params;
-  }, [statusFilter, dateRange, currentPage, pageSize]);
+  }, [statusFilter, dateRange, currentPage, pageSize, sortColumn, sortOrder]);
 
   // Call API
   const { data, isLoading, isError, error } = useOrdersByRole(role, listParams);
@@ -271,7 +279,7 @@ export default function OrderList() {
                   placeholder="Tìm theo mã đơn, tên khách hàng..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 bg-muted/50 border-0 focus-visible:ring-1"
+                  className="pl-9 h-10 sm:h-9 text-sm bg-muted/50 border-0 focus-visible:ring-1"
                 />
               </div>
               <div className="flex items-center gap-3">
@@ -282,7 +290,7 @@ export default function OrderList() {
                     handleFilterChange();
                   }}
                 >
-                  <SelectTrigger className="w-[180px] bg-muted/50 border-0">
+                  <SelectTrigger className="w-full sm:w-[180px] h-10 sm:h-9 text-sm bg-muted/50 border-0">
                     <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
                     <SelectValue placeholder="Trạng thái" />
                   </SelectTrigger>
@@ -303,8 +311,35 @@ export default function OrderList() {
                   }}
                   placeholder="Chọn khoảng thời gian"
                   showClear
-                  className="w-[240px]"
+                  className="w-full sm:w-[240px] h-10 sm:h-9"
                 />
+                <div className="w-full lg:w-[360px] min-w-0">
+                  <SortControls
+                    sortColumn={sortColumn}
+                    sortOrder={sortOrder}
+                    onSortColumnChange={(v) => {
+                      setSortColumn(v);
+                      handleFilterChange();
+                    }}
+                    onSortOrderChange={(v) => {
+                      setSortOrder(v);
+                      handleFilterChange();
+                    }}
+                    onClear={() => {
+                      setSortColumn("");
+                      setSortOrder("desc");
+                      handleFilterChange();
+                    }}
+                    options={[
+                      { value: "createdAt", label: "Ngày tạo" },
+                      { value: "deliveryDate", label: "Ngày giao" },
+                      { value: "code", label: "Mã đơn" },
+                      { value: "status", label: "Trạng thái" },
+                      { value: "totalAmount", label: "Tổng tiền" },
+                    ]}
+                    placeholder="Sắp xếp theo"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>

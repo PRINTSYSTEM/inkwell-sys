@@ -87,7 +87,16 @@ export function FilterSection({
                 className="h-8 text-xs"
                 onClick={() => toggleDesignType(option.id)}
               >
-                {option.name}
+                <span className="truncate">{option.name}</span>
+                <Badge
+                  variant={option.count > 0 ? "secondary" : "outline"}
+                  className={cn(
+                    "ml-2 h-5 px-1.5 text-[10px]",
+                    isSelected && "bg-background/20 text-primary-foreground"
+                  )}
+                >
+                  {option.count}
+                </Badge>
               </Button>
             );
           })}

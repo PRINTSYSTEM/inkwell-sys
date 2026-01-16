@@ -260,6 +260,34 @@ export const stockOutItemTypeLabels: Record<string, string> =
 export const stockOutStatusLabels: Record<string, string> =
   ENTITY_CONFIG.stockOutStatuses.values;
 
+// Loại tìm kiếm khuôn (DieSearchRelevance)
+export const dieSearchRelevanceLabels: Record<string, string> =
+  ENTITY_CONFIG.dieSearchRelevances.values;
+
+// Loại lý do giao hàng thất bại (DeliveryFailureType)
+export const deliveryFailureTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.deliveryFailureTypes.values;
+
+// Trạng thái hóa đơn VAT (InvoiceStatus)
+export const invoiceStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.invoiceStatuses.values;
+
+// Loại thanh toán (PaymentType)
+export const paymentTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.paymentTypes.values;
+
+// Loại thay đổi công nợ (DebtChangeType)
+export const debtChangeTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.debtChangeTypes.values;
+
+// Loại sử dụng khuôn bế (DieUsageType)
+export const dieUsageTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.dieUsageTypes.values;
+
+// Trạng thái khuôn bế (DieStatus)
+export const dieStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.dieStatuses.values;
+
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
 
@@ -425,6 +453,7 @@ export const statusColorMap: Record<string, string> = {
   // ===== LAMINATION TYPES =====
   glossy: "bg-blue-50 text-blue-700 border-blue-200",
   matte: "bg-slate-50 text-slate-700 border-slate-200",
+  none: "bg-gray-50 text-gray-700 border-gray-200",
 
   // ===== SIDES CLASSIFICATION =====
   one_side: "bg-indigo-50 text-indigo-700 border-indigo-200",
@@ -470,8 +499,8 @@ export const statusColorMap: Record<string, string> = {
 
   // ===== PRODUCTION STEP STATUSES =====
   // pending đã được định nghĩa ở ORDER STATUSES ở trên
-  // in_progress đã được định nghĩa ở ORDER STATUSES ở trên
   ready: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  in_progress: "bg-cyan-50 text-cyan-700 border-cyan-200",
   done: "bg-green-50 text-green-700 border-green-200", // tương tự completed
   blocked: "bg-red-50 text-red-700 border-red-200",
 
@@ -486,6 +515,40 @@ export const statusColorMap: Record<string, string> = {
   // returned đã được định nghĩa ở DELIVERY LINE STATUSES ở trên
   partially_returned: "bg-amber-50 text-amber-700 border-amber-200",
   // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
+
+  // ===== DELIVERY FAILURE TYPES =====
+  customer_refused: "bg-red-50 text-red-700 border-red-200",
+  company_issue: "bg-orange-50 text-orange-700 border-orange-200",
+
+  // ===== INVOICE STATUSES =====
+  pending_issue: "bg-amber-50 text-amber-700 border-amber-200",
+  rejected: "bg-red-50 text-red-700 border-red-200",
+  voided: "bg-slate-100 text-slate-800 border-slate-200",
+  adjusted: "bg-blue-50 text-blue-700 border-blue-200",
+  replaced: "bg-purple-50 text-purple-700 border-purple-200",
+  // draft đã được định nghĩa ở DELIVERY NOTE STATUSES ở trên
+  // issued đã được định nghĩa ở INVOICE ở trên
+
+  // ===== PAYMENT TYPES =====
+  deposit: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  payment: "bg-green-50 text-green-700 border-green-200",
+
+  // ===== DEBT CHANGE TYPES =====
+  order_created: "bg-blue-50 text-blue-700 border-blue-200",
+  payment_received: "bg-green-50 text-green-700 border-green-200",
+  // deposit_received đã được định nghĩa ở ORDER STATUSES ở trên
+  debt_adjustment: "bg-amber-50 text-amber-700 border-amber-200",
+
+  // ===== DIE USAGE TYPES =====
+  one_time: "bg-orange-50 text-orange-700 border-orange-200",
+  reusable: "bg-green-50 text-green-700 border-green-200",
+
+  // ===== DIE STATUSES =====
+  new: "bg-blue-50 text-blue-700 border-blue-200",
+  // ready đã được định nghĩa ở PRODUCTION STEP STATUSES ở trên
+  // in_production đã được định nghĩa ở ORDER STATUSES ở trên
+  broken: "bg-red-50 text-red-700 border-red-200",
+  disposed: "bg-slate-100 text-slate-800 border-slate-200",
 };
 
 // Hàm helper: trả về class tailwind cho badge

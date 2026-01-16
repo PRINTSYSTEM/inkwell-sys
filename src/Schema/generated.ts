@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-14T05:33:57.850Z */
+/* Generated at: 2026-01-16T08:47:49.442Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -96,6 +96,7 @@ export const DesignResponseSchema = schemas.DesignResponse;
 export const DesignResponsePaginateSchema = schemas.DesignResponsePaginate;
 export const DesignTimelineEntryResponseSchema = schemas.DesignTimelineEntryResponse;
 export const DesignTimelineEntryResponsePaginateSchema = schemas.DesignTimelineEntryResponsePaginate;
+export const DesignTypeCountResponseSchema = schemas.DesignTypeCountResponse;
 export const DesignTypeResponseSchema = schemas.DesignTypeResponse;
 export const DesignTypeResponsePaginateSchema = schemas.DesignTypeResponsePaginate;
 export const DieExportResponseSchema = schemas.DieExportResponse;

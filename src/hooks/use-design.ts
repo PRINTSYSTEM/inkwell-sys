@@ -11,6 +11,7 @@ import type {
   UpdateDesignRequest,
   DesignByCustomerParams,
   RevertDesignRequest,
+  DesignUserParams,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -70,13 +71,7 @@ export const useMyDesigns = (params?: MyDesignListParams) => {
 // GET /api/designs/user/{userId}
 export const useDesignsByUser = (
   userId: number | null,
-  params?: {
-    status?: string;
-    pageNumber?: number;
-    pageSize?: number;
-    month?: number;
-    year?: number;
-  },
+  params?: DesignUserParams,
   enabled = true
 ) => {
   return useQuery({

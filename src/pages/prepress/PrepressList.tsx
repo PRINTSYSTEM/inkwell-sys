@@ -189,7 +189,7 @@ export default function ProofingOrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">mã bài</h1>
+          <h1 className="text-2xl font-bold text-foreground">Mã bài</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Quản lý và theo dõi các mã bài
           </p>

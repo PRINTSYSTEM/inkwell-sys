@@ -13,6 +13,7 @@ import type {
   DieExportResponse,
   UpdateDieStatusRequest,
 } from "@/Schema";
+import type { postApidies_Body } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
@@ -64,70 +65,82 @@ export const useDeleteDie = () => useDeleteDieBase();
 // Official schema fields (postApidies_Body): Price, VendorId, Notes, EstimatedReceiveAt, ReceivedAt, IsReusable, image
 // Additional fields (via .passthrough()): Name, Code, Type, Size, Length, Width, Height
 // Note: Code and Type are required by the UI but not in the official schema - API accepts them via passthrough
-export type CreateDieFormData = {
-  name?: string;
-  code?: string; // Optional - not required by official schema, sent via passthrough
-  type?: string; // Optional - not required by official schema, sent via passthrough
-  size?: string; // Sent via passthrough
-  length?: number; // Sent via passthrough
-  width?: number; // Sent via passthrough
-  height?: number; // Sent via passthrough
-  price?: number; // Official schema field
-  vendorId?: number; // Official schema field
-  notes?: string; // Official schema field
-  estimatedReceiveAt?: string; // Official schema field
-  receivedAt?: string; // Official schema field
-  isReusable?: boolean; // Official schema field
-  image?: File; // Official schema field
-};
 
 export const useCreateDie = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateDieFormData) => {
+    mutationFn: async (data: postApidies_Body) => {
       const formData = new FormData();
-      if (data.name != null) {
-        formData.append("Name", data.name as string);
+
+      const d = data as Record<string, unknown>;
+
+      const name = (d.Name ?? d.name) as string | undefined;
+      if (name != null && name !== "") {
+        formData.append("Name", name);
       }
-      if (data.code != null && data.code !== "") {
-        formData.append("Code", data.code as string);
+      const code = (d.Code ?? d.code) as string | undefined;
+      if (code != null && code !== "") {
+        formData.append("Code", code);
       }
-      if (data.type != null && data.type !== "") {
-        formData.append("Type", data.type as string);
+      const type = (d.Type ?? d.type) as string | undefined;
+      if (type != null && type !== "") {
+        formData.append("Type", type);
       }
-      if (data.length != null) {
-        formData.append("Length", data.length.toString());
+      const length = (d.Length ?? d.length) as number | undefined;
+      if (length != null) {
+        formData.append("Length", length.toString());
       }
-      if (data.width != null) {
-        formData.append("Width", data.width.toString());
+      const width = (d.Width ?? d.width) as number | undefined;
+      if (width != null) {
+        formData.append("Width", width.toString());
       }
-      if (data.height != null) {
-        formData.append("Height", data.height.toString());
+      const height = (d.Height ?? d.height) as number | undefined;
+      if (height != null) {
+        formData.append("Height", height.toString());
       }
-      if (data.size != null && data.size !== "") {
-        formData.append("Size", data.size as string);
+
+      const size = (d.Size ?? d.size) as string | undefined;
+      if (size != null && size !== "") {
+        formData.append("Size", size);
       }
-      if (data.price != null) {
-        formData.append("Price", data.price.toString());
+      const price = (d.Price ?? d.price) as number | undefined;
+      if (price != null) {
+        formData.append("Price", price.toString());
       }
-      if (data.vendorId != null) {
-        formData.append("VendorId", data.vendorId.toString());
+      const vendorId = (d.VendorId ?? d.vendorId) as number | undefined;
+      if (vendorId != null) {
+        formData.append("VendorId", vendorId.toString());
       }
-      if (data.notes != null && data.notes !== "") {
-        formData.append("Notes", data.notes as string);
+      const notes = (d.Notes ?? d.notes) as string | undefined;
+      if (notes != null && notes !== "") {
+        formData.append("Notes", notes);
       }
-      if (data.estimatedReceiveAt) {
-        formData.append("EstimatedReceiveAt", data.estimatedReceiveAt);
+      const estimatedReceiveAt = (d.EstimatedReceiveAt ??
+        d.estimatedReceiveAt) as string | undefined;
+      if (estimatedReceiveAt) {
+        formData.append("EstimatedReceiveAt", estimatedReceiveAt);
       }
-      if (data.receivedAt) {
-        formData.append("ReceivedAt", data.receivedAt);
+      const receivedAt = (d.ReceivedAt ?? d.receivedAt) as string | undefined;
+      if (receivedAt) {
+        formData.append("ReceivedAt", receivedAt);
       }
-      if (data.isReusable !== undefined) {
-        formData.append("IsReusable", data.isReusable.toString());
+      const isReusable = (d.IsReusable ?? d.isReusable) as boolean | undefined;
+      if (isReusable !== undefined) {
+        formData.append("IsReusable", isReusable.toString());
       }
-      if (data.image) {
-        formData.append("image", data.image as File);
+      const firstProofingOrderId = (d.FirstProofingOrderId ??
+        d.firstProofingOrderId) as number | undefined;
+      if (firstProofingOrderId != null) {
+        formData.append(
+          "FirstProofingOrderId",
+          firstProofingOrderId.toString()
+        );
+      }
+
+      const image = (d.image ?? d.Image) as File | undefined;
+      if (image) {
+        formData.append("image", image);
       }
 
       const response = await apiRequest.post<DieResponse>(

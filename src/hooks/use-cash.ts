@@ -29,17 +29,16 @@ import type {
   UpdateCashReceiptRequest,
   CashBookResponse,
 } from "@/Schema/accounting.schema";
+import type {
+  CashFundsListParams,
+  CashPaymentListParams,
+  CashReceiptListParams,
+  CashBookListParams,
+} from "@/Schema";
 
 // ================== CASH FUND ==================
 
-export interface CashFundsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  isActive?: boolean;
-  search?: string;
-}
-
-export const useCashFunds = (params?: CashFundsParams) => {
+export const useCashFunds = (params?: CashFundsListParams) => {
   return useQuery({
     queryKey: ["cash-funds", params],
     queryFn: createMockQueryFn(
@@ -139,19 +138,7 @@ export const useDeleteCashFund = () => {
 
 // ================== CASH PAYMENT ==================
 
-export interface CashPaymentsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  fromDate?: string;
-  toDate?: string;
-  status?: string;
-  vendorId?: number;
-  paymentMethodId?: number;
-  expenseCategoryId?: number;
-  search?: string;
-}
-
-export const useCashPayments = (params?: CashPaymentsParams) => {
+export const useCashPayments = (params?: CashPaymentListParams) => {
   return useQuery({
     queryKey: ["cash-payments", params],
     queryFn: createMockQueryFn(
@@ -317,18 +304,7 @@ export const usePostCashPayment = () => {
 
 // ================== CASH RECEIPT ==================
 
-export interface CashReceiptsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  fromDate?: string;
-  toDate?: string;
-  status?: string;
-  customerId?: number;
-  paymentMethodId?: number;
-  search?: string;
-}
-
-export const useCashReceipts = (params?: CashReceiptsParams) => {
+export const useCashReceipts = (params?: CashReceiptListParams) => {
   return useQuery({
     queryKey: ["cash-receipts", params],
     queryFn: createMockQueryFn(
@@ -494,13 +470,7 @@ export const usePostCashReceipt = () => {
 
 // ================== CASH BOOK ==================
 
-export interface CashBookParams {
-  fromDate?: string;
-  toDate?: string;
-  cashFundId?: number;
-}
-
-export const useCashBook = (params?: CashBookParams) => {
+export const useCashBook = (params?: CashBookListParams) => {
   return useQuery({
     queryKey: ["cash-book", params],
     queryFn: createMockQueryFn(

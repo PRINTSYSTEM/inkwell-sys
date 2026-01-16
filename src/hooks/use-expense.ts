@@ -14,18 +14,14 @@ import type {
   CreatePaymentMethodRequest,
   UpdatePaymentMethodRequest,
 } from "@/Schema/accounting.schema";
+import type {
+  ExpenseCategoriesListParams,
+  PaymentMethodsListParams,
+} from "@/Schema";
 
 // ================== EXPENSE CATEGORY ==================
 
-export interface ExpenseCategoriesParams {
-  pageNumber?: number;
-  pageSize?: number;
-  type?: string;
-  isActive?: boolean;
-  search?: string;
-}
-
-export const useExpenseCategories = (params?: ExpenseCategoriesParams) => {
+export const useExpenseCategories = (params?: ExpenseCategoriesListParams) => {
   return useQuery({
     queryKey: ["expense-categories", params],
     queryFn: async () => {
@@ -124,14 +120,7 @@ export const useDeleteExpenseCategory = () => {
 
 // ================== PAYMENT METHOD ==================
 
-export interface PaymentMethodsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  isActive?: boolean;
-  search?: string;
-}
-
-export const usePaymentMethods = (params?: PaymentMethodsParams) => {
+export const usePaymentMethods = (params?: PaymentMethodsListParams) => {
   return useQuery({
     queryKey: ["payment-methods", params],
     queryFn: async () => {

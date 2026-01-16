@@ -12,6 +12,7 @@ type ApiError = {
 import type {
   VendorResponse,
   VendorResponsePaginate,
+  VendorCountOptionResponsePaginate,
   CreateVendorRequest,
   UpdateVendorRequest,
 } from "@/Schema/vendor.schema";
@@ -103,6 +104,21 @@ export const useActivePlateVendors = () => useActiveVendors("plate");
 
 // Alias for die vendors
 export const useActiveDieVendors = () => useActiveVendors("die");
+
+// GET /vendors/plate-count-options
+export const usePlateCountOptions = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: [vendorKeys.all[0], "plate-count-options"],
+    enabled,
+    queryFn: async () => {
+      const res = await apiRequest.get<VendorCountOptionResponsePaginate>(
+        API_SUFFIX.VENDORS_PLATE_COUNT_OPTIONS
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
 
 // Export for custom usage
 export { vendorCrudApi, vendorKeys };

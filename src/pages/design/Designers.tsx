@@ -65,8 +65,7 @@ function DesignerKpiCell({
 }) {
   const { data: kpiData, isLoading } = useUserKpi(
     designerId,
-    fromDate,
-    toDate,
+    { fromDate, toDate },
     !!designerId
   );
 
@@ -127,9 +126,7 @@ export default function DesignersPage() {
 
   // Fetch team KPI
   const { data: teamKpi, isLoading: loadingTeamKpi } = useTeamKpi(
-    monthDateRange.from,
-    monthDateRange.to,
-    "design"
+    { fromDate: monthDateRange.from, toDate: monthDateRange.to, role: "design" }
   );
 
   const designers: Designer[] = data?.items ?? [];
