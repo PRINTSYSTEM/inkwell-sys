@@ -797,104 +797,225 @@ function OrdersView({
         </Card>
       )}
 
-      {/* Orders Grid */}
-      {ordersLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="border-slate-200 dark:border-slate-800">
-              <CardContent className="p-5">
-                <Skeleton className="h-6 w-32 mb-3" />
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredOrders.length === 0 ? (
-        <Card className="border-slate-200 dark:border-slate-800">
-          <CardContent className="p-12 text-center">
-            <Package className="h-16 w-16 mx-auto text-slate-300 dark:text-slate-700 mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-2">
-              Không tìm thấy đơn hàng nào
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredOrders.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                isSelected={order.id ? selectedOrderIds.has(order.id) : false}
-                onToggle={() => order.id && handleToggleOrder(order.id)}
-                onClick={() =>
-                  order.id && navigate(`/accounting/orders/${order.id}`)
-                }
-              />
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {ordersDataTyped &&
-            ordersDataTyped.totalPages &&
-            ordersDataTyped.totalPages > 0 && (
-              <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-                      Trang {currentPage} / {ordersDataTyped.totalPages} •{" "}
-                      <span className="text-slate-900 dark:text-slate-50">
-                        {ordersDataTyped.total}
-                      </span>{" "}
-                      đơn hàng
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newPage = Math.max(1, currentPage - 1);
-                          setCurrentPage(newPage);
-                        }}
-                        disabled={currentPage === 1 || ordersLoading}
-                        className="h-9"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-md">
-                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                          {currentPage} / {ordersDataTyped.totalPages}
-                        </span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newPage = Math.min(
-                            ordersDataTyped.totalPages || 1,
-                            currentPage + 1
-                          );
-                          setCurrentPage(newPage);
-                        }}
-                        disabled={
-                          currentPage === (ordersDataTyped.totalPages || 1) ||
-                          ordersLoading
-                        }
-                        className="h-9"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
+      {/* Orders Table */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="overflow-auto">
+          <Table>
+            <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-800">
+              <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={
+                      filteredOrders.length > 0 &&
+                      selectedOrderIds.size === filteredOrders.length
+                    }
+                    onCheckedChange={handleSelectAll}
+                    className="border-slate-300 dark:border-slate-700"
+                  />
+                </TableHead>
+                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+                  Mã đơn hàng
+                </TableHead>
+                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+                  Khách hàng
+                </TableHead>
+                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+                  Địa chỉ giao hàng
+                </TableHead>
+                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+                  Ngày giao
+                </TableHead>
+                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">
+                  Trạng thái
+                </TableHead>
+                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">
+                  Số SP
+                </TableHead>
+                <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300">
+                  Tổng tiền
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {ordersLoading ? (
+                Array.from({ length: 10 }).map((_, i) => (
+                  <TableRow
+                    key={i}
+                    className="border-slate-200 dark:border-slate-800"
+                  >
+                    {Array.from({ length: 8 }).map((_, j) => (
+                      <TableCell key={j}>
+                        <Skeleton className="h-10 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : filteredOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    className="h-32 text-center border-slate-200 dark:border-slate-800"
+                  >
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Package className="h-12 w-12 text-slate-300 dark:text-slate-700" />
+                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                        Không tìm thấy đơn hàng nào
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc
+                      </p>
                     </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredOrders.map((order) => {
+                  const isSelected = order.id
+                    ? selectedOrderIds.has(order.id)
+                    : false;
+                  const itemCount = order.orderDetails?.length || 0;
+
+                  return (
+                    <TableRow
+                      key={order.id}
+                      className={`cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/50 ${
+                        isSelected ? "bg-primary/5 border-primary/20" : ""
+                      }`}
+                      onClick={() =>
+                        order.id && navigate(`/accounting/orders/${order.id}`)
+                      }
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked !== isSelected && order.id) {
+                              handleToggleOrder(order.id);
+                            }
+                          }}
+                          className="border-slate-300 dark:border-slate-700"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-mono font-semibold text-sm text-slate-900 dark:text-slate-50">
+                          {order.code || `#${order.id}`}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                            {order.customer?.companyName ||
+                              order.customer?.name ||
+                              "—"}
+                          </div>
+                          {order.customer?.phone && (
+                            <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {order.customer.phone}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-slate-700 dark:text-slate-300 max-w-xs">
+                          {order.deliveryAddress ||
+                            order.recipientAddress ||
+                            "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-slate-400" />
+                          {formatDate(order.deliveryDate)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <StatusBadge
+                          status={order.status || ""}
+                          label={orderStatusLabels[order.status || ""]}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant="secondary"
+                          className="font-semibold bg-slate-100 dark:bg-slate-800"
+                        >
+                          <Package className="h-3 w-3 mr-1" />
+                          {itemCount}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="text-sm font-bold text-primary">
+                          {order.totalAmount
+                            ? formatCurrency(order.totalAmount)
+                            : "—"}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+
+      {/* Pagination */}
+      {!ordersLoading &&
+        filteredOrders.length > 0 &&
+        ordersDataTyped &&
+        ordersDataTyped.totalPages &&
+        ordersDataTyped.totalPages > 0 && (
+          <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                  Trang {currentPage} / {ordersDataTyped.totalPages} •{" "}
+                  <span className="text-slate-900 dark:text-slate-50">
+                    {ordersDataTyped.total}
+                  </span>{" "}
+                  đơn hàng
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newPage = Math.max(1, currentPage - 1);
+                      setCurrentPage(newPage);
+                    }}
+                    disabled={currentPage === 1 || ordersLoading}
+                    className="h-9"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-md">
+                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                      {currentPage} / {ordersDataTyped.totalPages}
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-        </>
-      )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newPage = Math.min(
+                        ordersDataTyped.totalPages || 1,
+                        currentPage + 1
+                      );
+                      setCurrentPage(newPage);
+                    }}
+                    disabled={
+                      currentPage === (ordersDataTyped.totalPages || 1) ||
+                      ordersLoading
+                    }
+                    className="h-9"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
     </div>
   );
 }

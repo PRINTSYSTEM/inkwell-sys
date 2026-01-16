@@ -7247,6 +7247,11 @@ const endpoints = makeApi([
         schema: z.number().int().optional(),
       },
       {
+        name: "designTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
         name: "designCode",
         type: "Query",
         schema: z.string().optional(),

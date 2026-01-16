@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-16T08:47:49.480Z */
+/* Generated at: 2026-01-16T15:33:45.029Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -533,6 +533,7 @@ export type ProofingOrderAvailableOrderDetailsDesignTypeSummaryParams = z.infer<
 // ==== ProofingOrderAvailableOrderDetailsParams (GET /api/proofing-orders/available-order-details) ====
 export const ProofingOrderAvailableOrderDetailsParamsSchema = PagedParamsSchema.extend({
   materialTypeId: z.number().int().nullable().optional(),
+  designTypeId: z.number().int().nullable().optional(),
   designCode: z.string().nullable().optional(),
 });
 export type ProofingOrderAvailableOrderDetailsParams = z.infer<typeof ProofingOrderAvailableOrderDetailsParamsSchema>;
