@@ -47,7 +47,7 @@ import { toast } from "sonner";
 import { useActiveDieVendors, useCreateVendor } from "@/hooks/use-vendor";
 import { useCreateDie, useUpdateDie, useUploadDieImage } from "@/hooks/use-die";
 import type { DieResponse } from "@/Schema";
-import { dieUsageTypeLabels } from "@/lib/status-utils";
+import { dieUsageTypeLabels, dieStatusLabels } from "@/lib/status-utils";
 
 interface DieDialogProps {
   open: boolean;
@@ -63,9 +63,7 @@ export function DieDialog({
   onSuccess,
 }: DieDialogProps) {
   const isEdit = !!die;
-  const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [type, setType] = useState("");
   const [size, setSize] = useState("");
   const [price, setPrice] = useState<number | undefined>(0);
   const [location, setLocation] = useState("");
@@ -91,9 +89,7 @@ export function DieDialog({
   useEffect(() => {
     if (open) {
       if (die) {
-        setName(die.name || "");
         setCode(die.code || "");
-        setType(die.type || "");
         setSize(die.size || "");
         setPrice(die.price ?? 0);
         setLocation(die.location || "");
@@ -103,9 +99,7 @@ export function DieDialog({
         setImagePreview(die.imageUrl || null);
         setImage(null);
       } else {
-        setName("");
         setCode("");
-        setType("");
         setSize("");
         setPrice(0);
         setLocation("");
@@ -192,9 +186,7 @@ export function DieDialog({
         {
           id: die.id,
           data: {
-            name: name.trim() || null,
             code: code.trim() || null,
-            type: type.trim() || null,
             size: size.trim() || null,
             price: price ?? null,
             location: location.trim() || null,
@@ -256,6 +248,7 @@ export function DieDialog({
         {
           price: price ?? undefined,
           vendorId,
+          size: size.trim() || undefined,
           estimatedReceiveAt: estimatedReceiveAtISO,
           isReusable: isReusable,
           image: image,
@@ -440,11 +433,27 @@ export function DieDialog({
                 onValueChange={(value) => setIsUsable(value === "usable")}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {isUsable
+                      ? die.status && dieStatusLabels[die.status]
+                        ? dieStatusLabels[die.status]
+                        : "Sử dụng được"
+                      : die.status && dieStatusLabels[die.status]
+                        ? dieStatusLabels[die.status]
+                        : "Không sử dụng được"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="usable">Sử dụng được</SelectItem>
-                  <SelectItem value="unusable">Không sử dụng được</SelectItem>
+                  <SelectItem value="usable">
+                    {die.status && dieStatusLabels[die.status]
+                      ? dieStatusLabels[die.status]
+                      : "Sử dụng được"}
+                  </SelectItem>
+                  <SelectItem value="unusable">
+                    {die.status && dieStatusLabels[die.status]
+                      ? dieStatusLabels[die.status]
+                      : "Không sử dụng được"}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -484,22 +493,33 @@ export function DieDialog({
             </div>
           )}
 
-          {/* Giá - chỉ hiển thị khi tạo mới */}
+          {/* Kích thước và Giá - chỉ hiển thị khi tạo mới */}
           {!isEdit && (
-            <div className="space-y-2">
-              <Label htmlFor="price">Giá khuôn bế</Label>
-              <Input
-                id="price"
-                type="number"
-                min={0}
-                step="0.01"
-                value={price ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setPrice(value ? Number(value) : undefined);
-                }}
-                placeholder="Nhập giá khuôn bế..."
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="size">Kích thước</Label>
+                <Input
+                  id="size"
+                  value={size}
+                  onChange={(e) => setSize(e.target.value)}
+                  placeholder="Nhập kích thước..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Giá khuôn bế</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={price ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPrice(value ? Number(value) : undefined);
+                  }}
+                  placeholder="Nhập giá khuôn bế..."
+                />
+              </div>
             </div>
           )}
 

@@ -527,5 +527,39 @@ export const useRelatedDies = (
   });
 };
 
+// ===== Get Related Dies by Proofing Order =====
+// GET /api/dies/related/proofing-order/:proofingOrderId
+export const useRelatedDiesByProofingOrder = (
+  proofingOrderId: number | null,
+  params?: {
+    relevance?: string;
+    customer?: string;
+  },
+  enabled: boolean = true
+) => {
+  return useQuery<DieResponse[]>({
+    queryKey: [
+      dieKeys.all[0],
+      "related-proofing-order",
+      proofingOrderId,
+      params,
+    ],
+    enabled: enabled && !!proofingOrderId,
+    queryFn: async () => {
+      const res = await apiRequest.get<DieResponse[]>(
+        API_SUFFIX.DIES_RELATED_BY_PROOFING_ORDER(proofingOrderId as number),
+        {
+          params: {
+            relevance: params?.relevance,
+            customer: params?.customer,
+          },
+        }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 // Export for custom usage
 export { dieCrudApi, dieKeys };

@@ -471,6 +471,7 @@ const ConstantsResponse = z
     debtChangeTypes: ConstantGroup,
     dieUsageTypes: ConstantGroup,
     dieStatuses: ConstantGroup,
+    dieLocations: ConstantGroup,
   })
   .partial();
 const CreateCustomerRequest = z.object({
@@ -1162,12 +1163,7 @@ const DieUsageHistoryItem = z
 const DieResponse = z
   .object({
     id: z.number().int(),
-    name: z.string().nullable(),
     code: z.string().nullable(),
-    type: z.string().nullable(),
-    length: z.number(),
-    width: z.number(),
-    height: z.number().nullable(),
     size: z.string().nullable(),
     price: z.number().nullable(),
     imageUrl: z.string().nullable(),

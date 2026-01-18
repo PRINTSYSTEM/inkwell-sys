@@ -68,7 +68,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDieSize } from "@/utils/format-die-size";
-import { dieUsageTypeLabels } from "@/lib/status-utils";
+import {
+  dieUsageTypeLabels,
+  dieStatusLabels,
+  dieLocationLabels,
+} from "@/lib/status-utils";
 
 interface DieExportDialogProps {
   open: boolean;
@@ -286,17 +290,9 @@ export function DieExportDialog({
       (die) => die.id && !assignedDieIds.has(die.id)
     );
 
-    // Sort dies: prioritize dies that match design type and dimensions
-    if (designTypes.length > 0 || designDimensions.length > 0) {
+    // Sort dies: prioritize dies that match design dimensions
+    if (designDimensions.length > 0) {
       filtered = filtered.sort((a, b) => {
-        const aMatchesType =
-          designTypes.length > 0
-            ? matchesDesignType(a.name, a.type, designTypes)
-            : false;
-        const bMatchesType =
-          designTypes.length > 0
-            ? matchesDesignType(b.name, b.type, designTypes)
-            : false;
         const aMatchesDim =
           designDimensions.length > 0
             ? matchesDimensions(a.size, designDimensions)
@@ -306,23 +302,9 @@ export function DieExportDialog({
             ? matchesDimensions(b.size, designDimensions)
             : false;
 
-        // Prioritize: matches both > matches type > matches dim > no match
-        const aScore =
-          aMatchesType && aMatchesDim
-            ? 3
-            : aMatchesType
-              ? 2
-              : aMatchesDim
-                ? 1
-                : 0;
-        const bScore =
-          bMatchesType && bMatchesDim
-            ? 3
-            : bMatchesType
-              ? 2
-              : bMatchesDim
-                ? 1
-                : 0;
+        // Prioritize: matches dim > no match
+        const aScore = aMatchesDim ? 1 : 0;
+        const bScore = bMatchesDim ? 1 : 0;
         return bScore - aScore;
       });
     }
@@ -900,20 +882,12 @@ export function DieExportDialog({
                               ? selectedDieIds.indexOf(die.id!) + 1
                               : null;
 
-                            // Check if die matches design type/dimensions for highlighting
-                            const matchesType =
-                              designTypes.length > 0
-                                ? matchesDesignType(
-                                    die.name,
-                                    die.type,
-                                    designTypes
-                                  )
-                                : false;
+                            // Check if die matches design dimensions for highlighting
                             const matchesDim =
                               designDimensions.length > 0
                                 ? matchesDimensions(die.size, designDimensions)
                                 : false;
-                            const isRecommended = matchesType || matchesDim;
+                            const isRecommended = matchesDim;
 
                             return (
                               <div
@@ -955,7 +929,7 @@ export function DieExportDialog({
                                   {die.imageUrl ? (
                                     <img
                                       src={die.imageUrl}
-                                      alt={die.name || "Khuôn bế"}
+                                      alt={die.code || "Khuôn bế"}
                                       className="w-full h-full object-contain cursor-zoom-in"
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -976,13 +950,8 @@ export function DieExportDialog({
                                   <div className="flex items-start justify-between gap-2 mb-1">
                                     <div className="flex-1 min-w-0">
                                       <h4 className="font-semibold text-sm truncate">
-                                        {die.code || die.name || "—"}
+                                        {die.code || "—"}
                                       </h4>
-                                      {die.name && die.name !== die.code && (
-                                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                          {die.name}
-                                        </p>
-                                      )}
                                     </div>
                                   </div>
 
@@ -995,16 +964,6 @@ export function DieExportDialog({
                                         {formatDieSize(die) || "—"}
                                       </span>
                                     </div>
-                                    {die.type && (
-                                      <div className="flex items-center gap-1">
-                                        <span className="font-medium">
-                                          Loại:
-                                        </span>
-                                        <span className="text-foreground truncate max-w-[100px]">
-                                          {die.type}
-                                        </span>
-                                      </div>
-                                    )}
                                   </div>
 
                                   {die.vendorName && (
@@ -1087,7 +1046,7 @@ export function DieExportDialog({
                               className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px]"
                             >
                               <span>
-                                {die?.code || die?.name || `Khuôn #${dieId}`}
+                                {die?.code || `Khuôn #${dieId}`}
                               </span>
                               <button
                                 type="button"

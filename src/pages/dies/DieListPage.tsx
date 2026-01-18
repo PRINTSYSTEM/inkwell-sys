@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDies, useDeleteDie, useUpdateDie } from "@/hooks/use-die";
 import { DieDialog } from "@/components/dies/DieDialog";
 import type { DieResponse } from "@/Schema";
-import { dieStatusLabels } from "@/lib/status-utils";
+import { dieStatusLabels, dieLocationLabels } from "@/lib/status-utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
@@ -280,8 +280,12 @@ export default function DieListPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                    <SelectItem value="usable">Sử dụng được</SelectItem>
-                    <SelectItem value="unusable">Không sử dụng được</SelectItem>
+                    <SelectItem value="usable">
+                      {dieStatusLabels.ready || "Sử dụng được"}
+                    </SelectItem>
+                    <SelectItem value="unusable">
+                      {dieStatusLabels.broken || "Không sử dụng được"}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -330,7 +334,7 @@ export default function DieListPage() {
                               <div className="w-16 h-16 rounded border overflow-hidden bg-muted flex items-center justify-center">
                                 <img
                                   src={die.imageUrl}
-                                  alt={die.name || "Khuôn bế"}
+                                  alt={die.code || "Khuôn bế"}
                                   className="w-full h-full object-contain"
                                 />
                               </div>
@@ -341,19 +345,23 @@ export default function DieListPage() {
                             )}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {die.name || "—"}
+                            {die.code || "—"}
                           </TableCell>
                           <TableCell>{die.size || "—"}</TableCell>
                           <TableCell>{die.vendorName || "—"}</TableCell>
-                          <TableCell>{die.location || "—"}</TableCell>
+                          <TableCell>
+                            {die.location
+                              ? dieLocationLabels[die.location] || die.location
+                              : "—"}
+                          </TableCell>
                           <TableCell>
                             <Badge
                               variant={die.isUsable ? "default" : "destructive"}
                             >
-                              {die.isUsable
-                                ? "Sử dụng được"
-                                : die.status && dieStatusLabels[die.status]
-                                  ? dieStatusLabels[die.status]
+                              {die.status && dieStatusLabels[die.status]
+                                ? dieStatusLabels[die.status]
+                                : die.isUsable
+                                  ? "Sử dụng được"
                                   : "Không sử dụng được"}
                             </Badge>
                           </TableCell>

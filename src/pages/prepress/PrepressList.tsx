@@ -459,15 +459,11 @@ export default function ProofingOrdersPage() {
                         <TableCell className="py-3">
                           <StatusBadge
                             status={
-                              order.isPlateExported
-                                ? "exported"
-                                : "not_exported"
+                              order.plateExport ? "exported" : "not_exported"
                             }
-                            label={
-                              order.isPlateExported ? "Đã xuất" : "Chưa xuất"
-                            }
+                            label={order.plateExport ? "Đã xuất" : "Chưa xuất"}
                             className={
-                              order.isPlateExported
+                              order.plateExport
                                 ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800 text-xs font-semibold"
                                 : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800 text-xs font-semibold"
                             }
@@ -480,15 +476,17 @@ export default function ProofingOrdersPage() {
                           ) ? (
                             <StatusBadge
                               status={
-                                order.isDieExported
+                                order.dieExports?.length > 0
                                   ? "exported"
                                   : "not_exported"
                               }
                               label={
-                                order.isDieExported ? "Đã xuất" : "Chưa xuất"
+                                order.dieExports?.length > 0
+                                  ? "Đã xuất"
+                                  : "Chưa xuất"
                               }
                               className={
-                                order.isDieExported
+                                order.dieExports?.length > 0
                                   ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800 text-xs font-semibold"
                                   : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800 text-xs font-semibold"
                               }

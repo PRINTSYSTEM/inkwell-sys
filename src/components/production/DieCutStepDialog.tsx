@@ -41,6 +41,7 @@ import type {
 } from "@/Schema";
 import { formatDieSize } from "@/utils/format-die-size";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { dieStatusLabels, dieLocationLabels } from "@/lib/status-utils";
 
 interface DieCutStepDialogProps {
   open: boolean;
@@ -405,11 +406,6 @@ export function DieCutStepDialog({
                                           </Badge>
                                         )}
                                       </div>
-                                      {die.name && (
-                                        <p className="text-sm text-muted-foreground">
-                                          {die.name}
-                                        </p>
-                                      )}
                                     </div>
                                     {isSelected && (
                                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shrink-0">
@@ -429,23 +425,14 @@ export function DieCutStepDialog({
                                         </span>
                                       </div>
                                     )}
-                                    {die.type && (
-                                      <div>
-                                        <span className="text-muted-foreground">
-                                          Loại:
-                                        </span>{" "}
-                                        <span className="font-medium">
-                                          {die.type}
-                                        </span>
-                                      </div>
-                                    )}
                                     {die.location && (
                                       <div>
                                         <span className="text-muted-foreground">
                                           Vị trí:
                                         </span>{" "}
                                         <span className="font-medium">
-                                          {die.location}
+                                          {dieLocationLabels[die.location] ||
+                                            die.location}
                                         </span>
                                       </div>
                                     )}
@@ -519,14 +506,12 @@ export function DieCutStepDialog({
                                       <p className="text-sm font-semibold font-mono">
                                         {die.code || `Khuôn #${die.id}`}
                                       </p>
-                                      {die.name && (
-                                        <p className="text-xs text-muted-foreground">
-                                          {die.name}
-                                        </p>
-                                      )}
                                     </div>
                                     <Badge variant="outline" className="text-xs">
-                                      {die.location || "Chưa có vị trí"}
+                                      {die.location
+                                        ? dieLocationLabels[die.location] ||
+                                          die.location
+                                        : "Chưa có vị trí"}
                                     </Badge>
                                   </div>
                                 </div>
@@ -569,11 +554,6 @@ export function DieCutStepDialog({
                             <p className="text-sm font-semibold font-mono">
                               {die.code || `Khuôn #${die.id}`}
                             </p>
-                            {die.name && (
-                              <p className="text-xs text-muted-foreground">
-                                {die.name}
-                              </p>
-                            )}
                           </div>
                         </div>
                       );

@@ -123,8 +123,8 @@ export default function StockInCreatePage() {
       name: "",
       materialTypeId: 0,
       length: 0,
-      width: 0,
-      height: undefined,
+      width: undefined,
+      height: 0,
       quantity: undefined,
     }
   );
@@ -641,8 +641,8 @@ export default function StockInCreatePage() {
                             name: "",
                             materialTypeId: 0,
                             length: 0,
-                            width: 0,
-                            height: undefined,
+                            width: undefined,
+                            height: 0,
                             quantity: undefined,
                           });
                           setIsCreateMaterialDialogOpen(true);
@@ -1076,9 +1076,7 @@ export default function StockInCreatePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="materialWidth">
-                  Chiều rộng (m) <span className="text-red-500">*</span>
-                </Label>
+                <Label htmlFor="materialWidth">Chiều rộng (m)</Label>
                 <Input
                   id="materialWidth"
                   type="number"
@@ -1088,14 +1086,19 @@ export default function StockInCreatePage() {
                   onChange={(e) =>
                     setNewMaterialData({
                       ...newMaterialData,
-                      width: parseFloat(e.target.value) || 0,
+                      width:
+                        e.target.value === ""
+                          ? undefined
+                          : parseFloat(e.target.value) || undefined,
                     })
                   }
-                  placeholder="0"
+                  placeholder="0 (tùy chọn)"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="materialHeight">Chiều cao (m)</Label>
+                <Label htmlFor="materialHeight">
+                  Chiều cao (m) <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="materialHeight"
                   type="number"
@@ -1105,13 +1108,10 @@ export default function StockInCreatePage() {
                   onChange={(e) =>
                     setNewMaterialData({
                       ...newMaterialData,
-                      height:
-                        e.target.value === ""
-                          ? undefined
-                          : parseFloat(e.target.value) || undefined,
+                      height: parseFloat(e.target.value) || 0,
                     })
                   }
-                  placeholder="0 (tùy chọn)"
+                  placeholder="0"
                 />
               </div>
             </div>
@@ -1146,8 +1146,8 @@ export default function StockInCreatePage() {
                   name: "",
                   materialTypeId: 0,
                   length: 0,
-                  width: 0,
-                  height: undefined,
+                  width: undefined,
+                  height: 0,
                   quantity: undefined,
                 });
               }}
@@ -1173,8 +1173,8 @@ export default function StockInCreatePage() {
                   toast.error("Vui lòng nhập chiều dài lớn hơn 0");
                   return;
                 }
-                if (newMaterialData.width <= 0) {
-                  toast.error("Vui lòng nhập chiều rộng lớn hơn 0");
+                if (!newMaterialData.height || newMaterialData.height <= 0) {
+                  toast.error("Vui lòng nhập chiều cao lớn hơn 0");
                   return;
                 }
                 createMaterial(
@@ -1200,8 +1200,8 @@ export default function StockInCreatePage() {
                         name: "",
                         materialTypeId: 0,
                         length: 0,
-                        width: 0,
-                        height: undefined,
+                        width: undefined,
+                        height: 0,
                         quantity: undefined,
                       });
                       setCreatingMaterialIndex(null);
