@@ -59,7 +59,7 @@ export function formatDieSize(die: DieResponse): string {
     typeof die.length === "number" &&
     typeof die.height === "number"
   ) {
-    const width = die.width;
+    const width = typeof die.width === "number" ? die.width : undefined;
     return formatDimensions(die.length, width, die.height);
   }
   // Fallback to die.size if available

@@ -3826,11 +3826,6 @@ export default function ProofingOrderDetailPage() {
                                       {dieExport.die?.code ||
                                         `Khuôn #${dieExport.dieId}`}
                                     </div>
-                                    {dieExport.die?.name && (
-                                      <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
-                                        {dieExport.die.name}
-                                      </div>
-                                    )}
                                   </div>
 
                                   {/* Details Grid */}
@@ -3843,18 +3838,6 @@ export default function ProofingOrderDetailPage() {
                                         </span>
                                         <span className="font-medium text-foreground">
                                           {formatDieSize(dieExport.die)}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {/* Loại */}
-                                    {dieExport.die?.type && (
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-muted-foreground">
-                                          Loại:
-                                        </span>
-                                        <span className="font-medium text-foreground truncate">
-                                          {dieExport.die.type}
                                         </span>
                                       </div>
                                     )}
@@ -4649,11 +4632,6 @@ export default function ProofingOrderDetailPage() {
                       {replacingDieExport.die?.code ||
                         `Khuôn #${replacingDieExport.dieId}`}
                     </div>
-                    {replacingDieExport.die?.name && (
-                      <div className="text-xs text-muted-foreground">
-                        {replacingDieExport.die.name}
-                      </div>
-                    )}
                     {replacingDieExport.die && (
                       <div className="text-xs text-muted-foreground mt-1">
                         KT: {formatDieSize(replacingDieExport.die)}
@@ -4734,14 +4712,8 @@ export default function ProofingOrderDetailPage() {
                               <div className="font-semibold text-sm truncate">
                                 {die.code || `Khuôn #${die.id}`}
                               </div>
-                              {die.name && (
-                                <div className="text-xs text-muted-foreground line-clamp-1">
-                                  {die.name}
-                                </div>
-                              )}
                               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                                 <span>KT: {formatDieSize(die)}</span>
-                                {die.type && <span>• {die.type}</span>}
                                 {die.vendorName && (
                                   <span>• NCC: {die.vendorName}</span>
                                 )}
@@ -4906,14 +4878,8 @@ export default function ProofingOrderDetailPage() {
                               <div className="font-semibold text-sm truncate">
                                 {die.code || `Khuôn #${die.id}`}
                               </div>
-                              {die.name && (
-                                <div className="text-xs text-muted-foreground line-clamp-1">
-                                  {die.name}
-                                </div>
-                              )}
                               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                                 <span>KT: {formatDieSize(die)}</span>
-                                {die.type && <span>• {die.type}</span>}
                                 {die.vendorName && (
                                   <span>• NCC: {die.vendorName}</span>
                                 )}
