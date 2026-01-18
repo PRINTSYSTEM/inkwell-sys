@@ -93,6 +93,7 @@ export const useAvailableOrderDetailsForProofing = (
       proofingKeys.all[0],
       "available-order-details",
       params?.materialTypeId ?? null,
+      params?.designTypeId ?? null,
       params?.designCode ?? null,
       params?.pageNumber ?? 1,
       params?.pageSize ?? 10,

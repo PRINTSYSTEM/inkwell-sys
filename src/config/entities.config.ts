@@ -348,4 +348,12 @@ export const ENTITY_CONFIG = {
       disposed: "Đã hủy",
     },
   },
+  dieLocations: {
+    entityType: "Die",
+    description: "Vị trí khuôn bế",
+    values: {
+      InStock: "Trong kho",
+      InUse: "Đang sử dụng",
+    },
+  },
 };

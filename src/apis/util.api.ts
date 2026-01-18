@@ -170,6 +170,8 @@ export const API_SUFFIX = {
   DIE_IMAGE: (id: number) => `/dies/${id}/image`,
   DIE_UPDATE_STATUS: (id: number) => `/dies/${id}/status`,
   DIES_RELATED: "/dies/related",
+  DIES_RELATED_BY_PROOFING_ORDER: (proofingOrderId: number) =>
+    `/dies/related/proofing-order/${proofingOrderId}`,
   DIE_FROM_DIE_EXPORT: (dieExportId: number) =>
     `/dies/from-die-export/${dieExportId}`,
   // DIE_SEARCH: "/dies/search", // Endpoint removed - use regular DIES endpoint with q parameter

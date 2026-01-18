@@ -288,6 +288,10 @@ export const dieUsageTypeLabels: Record<string, string> =
 export const dieStatusLabels: Record<string, string> =
   ENTITY_CONFIG.dieStatuses.values;
 
+// Vị trí khuôn bế (DieLocation)
+export const dieLocationLabels: Record<string, string> =
+  ENTITY_CONFIG.dieLocations.values;
+
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
 
@@ -549,6 +553,10 @@ export const statusColorMap: Record<string, string> = {
   // in_production đã được định nghĩa ở ORDER STATUSES ở trên
   broken: "bg-red-50 text-red-700 border-red-200",
   disposed: "bg-slate-100 text-slate-800 border-slate-200",
+
+  // ===== DIE LOCATIONS =====
+  InStock: "bg-green-50 text-green-700 border-green-200",
+  InUse: "bg-blue-50 text-blue-700 border-blue-200",
 };
 
 // Hàm helper: trả về class tailwind cho badge
