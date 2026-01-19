@@ -5,6 +5,7 @@ import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
 import { toast } from "sonner";
 import { createMockQueryFn } from "@/lib/mock-utils";
+import { useAsyncCallback } from "@/hooks/use-async";
 import {
   mockCashFundsPaginate,
   mockCashFunds,
@@ -466,6 +467,57 @@ export const usePostCashReceipt = () => {
       toast.error(`Lỗi: ${error.message}`);
     },
   });
+};
+
+// ================== CASH RECEIPT: EXPORT PDF ==================
+
+export const useExportCashReceiptPDF = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
+    async (id: number) => {
+      const res = await apiRequest.get<ArrayBuffer>(
+        API_SUFFIX.CASH_RECEIPT_EXPORT_PDF(id),
+        {
+          responseType: "arraybuffer",
+        }
+      );
+
+      const blob = new Blob([res.data], {
+        type: "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cash-receipt-${id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    }
+  );
+
+  const mutate = async (id: number) => {
+    try {
+      await execute(id);
+      toast.success("Thành công", {
+        description: "Đã xuất PDF phiếu thu",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể xuất PDF phiếu thu",
+      });
+      throw err;
+    }
+  };
+
+  return { loading, error, mutate, reset };
 };
 
 // ================== CASH BOOK ==================

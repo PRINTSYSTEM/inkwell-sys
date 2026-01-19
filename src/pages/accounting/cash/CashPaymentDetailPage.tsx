@@ -495,7 +495,7 @@ export default function CashPaymentDetailPage() {
                           key={fund.id}
                           value={fund.id?.toString() || ""}
                         >
-                          {fund.name}
+                          {fund.code ? `${fund.code} - ${fund.name}` : fund.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -878,13 +878,24 @@ export default function CashPaymentDetailPage() {
                           key={fund.id}
                           value={fund.id?.toString() || ""}
                         >
-                          {fund.name}
+                          {fund.code ? `${fund.code} - ${fund.name}` : fund.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <div className="text-sm">{payment.cashFundName || "—"}</div>
+                  <div className="text-sm">
+                    {payment.cashFundId && cashFundsData?.items
+                      ? (() => {
+                          const fund = cashFundsData.items.find(
+                            (f) => f.id === payment.cashFundId
+                          );
+                          return fund?.code
+                            ? `${fund.code} - ${fund.name || payment.cashFundName || ""}`
+                            : payment.cashFundName || "—";
+                        })()
+                      : payment.cashFundName || "—"}
+                  </div>
                 )}
               </div>
             </div>

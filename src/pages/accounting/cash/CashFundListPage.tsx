@@ -6,9 +6,8 @@ import {
   Plus,
   Loader2,
   AlertCircle,
-  Edit,
-  Trash2,
-  Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { CashFundModal } from "@/components/accounting/cash/CashFundModal";
@@ -30,13 +29,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +67,10 @@ export default function CashFundListPage() {
 
   const deleteFundMutation = useDeleteCashFund();
 
-  const handleDelete = async (id: number | undefined) => {
+  const handleDelete = async (id: number | undefined, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     if (!id) return;
     if (window.confirm("Bạn có chắc chắn muốn xóa quỹ tiền mặt này?")) {
       try {
@@ -83,6 +78,16 @@ export default function CashFundListPage() {
       } catch (error) {
         // Error is handled by the hook
       }
+    }
+  };
+
+  const handleEdit = (id: number | undefined, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    if (id) {
+      setEditingFundId(id);
+      setModalOpen(true);
     }
   };
 
@@ -96,207 +101,203 @@ export default function CashFundListPage() {
         />
       </Helmet>
 
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Quỹ tiền mặt</h1>
-            <p className="text-muted-foreground">
-              Quản lý và theo dõi các quỹ tiền mặt
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              setEditingFundId(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Tạo quỹ mới
-          </Button>
-        </div>
-
-        {/* Error Alert */}
-        {isError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Lỗi kết nối</AlertTitle>
-            <AlertDescription>
-              {error instanceof Error
-                ? error.message
-                : "Không thể tải dữ liệu. Vui lòng thử lại."}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Tìm kiếm theo mã, tên quỹ..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Select value={isActiveFilter} onValueChange={setIsActiveFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="active">Đang hoạt động</SelectItem>
-                <SelectItem value="inactive">Ngừng hoạt động</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="h-screen flex flex-col overflow-hidden">
+        {/* Header - Compact */}
+        <div className="flex-shrink-0 px-6 py-3 border-b bg-background">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Quỹ tiền mặt</h1>
+              <p className="text-xs text-muted-foreground">
+                Quản lý và theo dõi các quỹ tiền mặt
+              </p>
+            </div>
             <Button
-              variant="outline"
-              size="icon"
-              onClick={() => refetch()}
-              disabled={isLoading}
+              size="sm"
+              onClick={() => {
+                setEditingFundId(null);
+                setModalOpen(true);
+              }}
             >
-              <RefreshCw
-                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-              />
+              <Plus className="h-4 w-4 mr-2" />
+              Tạo quỹ mới
             </Button>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã quỹ</TableHead>
-                <TableHead>Tên quỹ</TableHead>
-                <TableHead>Mô tả</TableHead>
-                <TableHead className="text-right">Số dư đầu kỳ</TableHead>
-                <TableHead className="text-center">Trạng thái</TableHead>
-                <TableHead className="text-center">Ngày tạo</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-5 w-full" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : !fundsData?.items || fundsData.items.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    Không tìm thấy quỹ tiền mặt nào.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                fundsData.items.map((fund) => (
-                  <TableRow key={fund.id} className="group">
-                    <TableCell className="font-medium font-mono text-sm">
-                      {fund.code || `#${fund.id}`}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {fund.name || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-muted-foreground max-w-md truncate">
-                        {fund.description || "—"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {fund.openingBalance !== undefined
-                        ? formatCurrency(fund.openingBalance)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {fund.isActive ? (
-                        <Badge variant="default">Đang hoạt động</Badge>
-                      ) : (
-                        <Badge variant="secondary">Ngừng hoạt động</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {fund.createdAt ? formatDate(fund.createdAt) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditingFundId(fund.id || null);
-                              setModalOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Chỉnh sửa
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(fund.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Xóa
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        {/* Error Alert */}
+        {isError && (
+          <div className="flex-shrink-0 px-6 py-2">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Lỗi kết nối</AlertTitle>
+              <AlertDescription>
+                {error instanceof Error
+                  ? error.message
+                  : "Không thể tải dữ liệu. Vui lòng thử lại."}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
 
-        {/* Pagination */}
-        {fundsData && fundsData.totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Trang {currentPage} / {fundsData.totalPages} ({fundsData.total}{" "}
-              quỹ)
-            </p>
-            <div className="flex items-center gap-2">
+        {/* Filters - Compact */}
+        <div className="flex-shrink-0 px-6 py-2 border-b bg-background">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm kiếm theo mã, tên quỹ..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-9 text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Select value={isActiveFilter} onValueChange={setIsActiveFilter}>
+                <SelectTrigger className="w-[160px] h-9 text-sm">
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="active">Đang hoạt động</SelectItem>
+                  <SelectItem value="inactive">Ngừng hoạt động</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1 || isLoading}
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => refetch()}
+                disabled={isLoading}
               >
-                <RefreshCw className="h-4 w-4 rotate-180" />
-              </Button>
-              <span className="text-sm font-medium px-2">
-                {currentPage} / {fundsData.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(fundsData.totalPages, p + 1))
-                }
-                disabled={currentPage === fundsData.totalPages || isLoading}
-              >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw
+                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                />
               </Button>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Table - Expanded to fill space */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-auto border-t">
+            <Table className="min-w-full">
+              <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                <TableRow>
+                  <TableHead className="w-[140px] font-semibold">
+                    Mã quỹ
+                  </TableHead>
+                  <TableHead className="font-semibold">Tên quỹ</TableHead>
+                  <TableHead className="font-semibold">Mô tả</TableHead>
+                  <TableHead className="text-right font-semibold">
+                    Số dư đầu kỳ
+                  </TableHead>
+                  <TableHead className="text-center font-semibold">
+                    Trạng thái
+                  </TableHead>
+                  <TableHead className="text-center font-semibold">
+                    Ngày tạo
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 6 }).map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-6 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : !fundsData?.items || fundsData.items.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      Không tìm thấy quỹ tiền mặt nào.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  fundsData.items.map((fund) => (
+                    <TableRow
+                      key={fund.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleEdit(fund.id)}
+                    >
+                      <TableCell className="font-semibold font-mono text-sm">
+                        {fund.code || `#${fund.id}`}
+                      </TableCell>
+                      <TableCell className="font-semibold text-sm">
+                        {fund.name || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-medium text-muted-foreground max-w-md truncate">
+                          {fund.description || "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums text-sm">
+                        {fund.openingBalance !== undefined
+                          ? formatCurrency(fund.openingBalance)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {fund.isActive ? (
+                          <Badge variant="default" className="font-medium">
+                            Đang hoạt động
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="font-medium">
+                            Ngừng hoạt động
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center text-sm font-medium text-muted-foreground">
+                        {fund.createdAt ? formatDate(fund.createdAt) : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination - Compact */}
+          {fundsData && fundsData.totalPages > 1 && (
+            <div className="flex-shrink-0 flex items-center justify-between px-6 py-2 border-t bg-background">
+              <p className="text-xs text-muted-foreground">
+                Trang {currentPage} / {fundsData.totalPages} ({fundsData.total}{" "}
+                quỹ)
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || isLoading}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs font-medium px-2">
+                  {currentPage} / {fundsData.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(fundsData.totalPages, p + 1))
+                  }
+                  disabled={currentPage === fundsData.totalPages || isLoading}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Cash Fund Modal */}
         <CashFundModal
