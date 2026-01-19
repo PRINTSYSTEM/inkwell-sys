@@ -130,7 +130,6 @@ const CashBook = lazy(() => import("@/pages/accounting/cash/CashBookPage"));
 const BankAccountList = lazy(
   () => import("@/pages/accounting/bank/BankAccountListPage")
 );
-const BankLedger = lazy(() => import("@/pages/accounting/bank/BankLedgerPage"));
 
 // AR/AP
 const AR = lazy(() => import("@/pages/accounting/ar/ARPage"));
@@ -754,14 +753,6 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <BankAccountList />
-              </Suspense>
-            ),
-          },
-          {
-            path: "bank-ledger",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <BankLedger />
               </Suspense>
             ),
           },

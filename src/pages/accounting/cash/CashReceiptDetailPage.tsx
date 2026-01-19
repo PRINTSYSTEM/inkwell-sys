@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -20,6 +21,7 @@ import {
   Trash2,
   Download,
   Printer,
+  Search,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
@@ -155,10 +157,16 @@ export default function CashReceiptDetailPage() {
     isActive: true,
   });
 
-  const { data: cashFundsData } = useCashFunds({
+  // Cash fund search state
+  const [cashFundSearchQuery, setCashFundSearchQuery] = useState("");
+  const [debouncedCashFundSearch] = useDebounce(cashFundSearchQuery, 300);
+  const [isCashFundSelectOpen, setIsCashFundSelectOpen] = useState(false);
+
+  const { data: cashFundsData, isLoading: isLoadingCashFunds } = useCashFunds({
     pageNumber: 1,
     pageSize: 100,
     isActive: true,
+    search: debouncedCashFundSearch.trim() || null,
   });
 
   const createMutation = useCreateCashReceipt();
@@ -440,29 +448,66 @@ export default function CashReceiptDetailPage() {
                   <Label htmlFor="cashFundId">Quỹ tiền mặt</Label>
                   <Select
                     value={createFormValues.cashFundId?.toString() || "all"}
-                    onValueChange={(value) =>
+                    onValueChange={(value) => {
                       setCreateFormValues({
                         ...createFormValues,
                         cashFundId:
                           value === "all" ? null : Number.parseInt(value, 10),
-                      })
-                    }
+                      });
+                      setCashFundSearchQuery(""); // Reset search when selecting
+                    }}
+                    onOpenChange={(open) => {
+                      setIsCashFundSelectOpen(open);
+                      if (!open) {
+                        setCashFundSearchQuery(""); // Reset search when closing
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Chọn quỹ" />
                     </SelectTrigger>
                     <SelectContent>
+                      {isCashFundSelectOpen && (
+                        <div className="p-2 border-b">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Tìm kiếm tài khoản..."
+                              value={cashFundSearchQuery}
+                              onChange={(e) =>
+                                setCashFundSearchQuery(e.target.value)
+                              }
+                              className="pl-8"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                        </div>
+                      )}
                       <SelectItem value="all">Không chọn</SelectItem>
-                      {cashFundsData?.items?.map((fund) => (
-                        <SelectItem
-                          key={fund.id}
-                          value={fund.id?.toString() || ""}
-                        >
-                          {fund.code
-                            ? `${fund.code} - ${fund.name}`
-                            : fund.name}
+                      {isLoadingCashFunds ? (
+                        <SelectItem value="loading" disabled>
+                          Đang tải...
                         </SelectItem>
-                      ))}
+                      ) : cashFundsData?.items &&
+                        cashFundsData.items.length > 0 ? (
+                        cashFundsData.items.map((fund) => (
+                          <SelectItem
+                            key={fund.id}
+                            value={fund.id?.toString() || ""}
+                          >
+                            {fund.code
+                              ? `${fund.code} - ${fund.name}`
+                              : fund.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-results" disabled>
+                          {debouncedCashFundSearch.trim()
+                            ? "Không tìm thấy tài khoản"
+                            : "Không có dữ liệu"}
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -817,27 +862,64 @@ export default function CashReceiptDetailPage() {
                     value={
                       (cardEditValues.cashFundId as number)?.toString() || ""
                     }
-                    onValueChange={(value) =>
+                    onValueChange={(value) => {
                       setCardEditValues({
                         ...cardEditValues,
                         cashFundId: value ? Number.parseInt(value, 10) : null,
-                      })
-                    }
+                      });
+                      setCashFundSearchQuery(""); // Reset search when selecting
+                    }}
+                    onOpenChange={(open) => {
+                      setIsCashFundSelectOpen(open);
+                      if (!open) {
+                        setCashFundSearchQuery(""); // Reset search when closing
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Chọn quỹ" />
                     </SelectTrigger>
                     <SelectContent>
-                      {cashFundsData?.items?.map((fund) => (
-                        <SelectItem
-                          key={fund.id}
-                          value={fund.id?.toString() || ""}
-                        >
-                          {fund.code
-                            ? `${fund.code} - ${fund.name}`
-                            : fund.name}
+                      {isCashFundSelectOpen && (
+                        <div className="p-2 border-b">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Tìm kiếm tài khoản..."
+                              value={cashFundSearchQuery}
+                              onChange={(e) =>
+                                setCashFundSearchQuery(e.target.value)
+                              }
+                              className="pl-8"
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {isLoadingCashFunds ? (
+                        <SelectItem value="loading" disabled>
+                          Đang tải...
                         </SelectItem>
-                      ))}
+                      ) : cashFundsData?.items &&
+                        cashFundsData.items.length > 0 ? (
+                        cashFundsData.items.map((fund) => (
+                          <SelectItem
+                            key={fund.id}
+                            value={fund.id?.toString() || ""}
+                          >
+                            {fund.code
+                              ? `${fund.code} - ${fund.name}`
+                              : fund.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-results" disabled>
+                          {debouncedCashFundSearch.trim()
+                            ? "Không tìm thấy tài khoản"
+                            : "Không có dữ liệu"}
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 ) : (
@@ -915,7 +997,7 @@ export default function CashReceiptDetailPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() =>
-                          navigate(`/invoices/${receipt.invoiceId}`)
+                          navigate(`/accounting/invoice/${receipt.invoiceId}`)
                         }
                       >
                         Xem chi tiết
