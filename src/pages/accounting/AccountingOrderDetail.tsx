@@ -78,6 +78,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -132,6 +138,32 @@ function deriveInvoiceStatus(order: {
     return "issued";
   }
   return "not_issued";
+}
+
+// Helper to check if customer information is complete for invoice
+function isCustomerInfoComplete(order: {
+  customerName?: string | null;
+  customerTaxCode?: string | null;
+  customerAddress?: string | null;
+}): { isValid: boolean; missingFields: string[] } {
+  const missingFields: string[] = [];
+
+  if (!order.customerName || order.customerName.trim() === "") {
+    missingFields.push("Tên khách hàng");
+  }
+
+  if (!order.customerTaxCode || order.customerTaxCode.trim() === "") {
+    missingFields.push("Mã số thuế");
+  }
+
+  if (!order.customerAddress || order.customerAddress.trim() === "") {
+    missingFields.push("Địa chỉ");
+  }
+
+  return {
+    isValid: missingFields.length === 0,
+    missingFields,
+  };
 }
 
 export default function AccountingOrderDetail() {
@@ -804,20 +836,49 @@ export default function AccountingOrderDetail() {
                   )}
                 {/* )} */}
                 {invoiceStatus === "not_issued" &&
-                  hasBeenDelivered(order.status) && (
-                    <Button
-                      size="sm"
-                      onClick={handleExportInvoice}
-                      disabled={exportInvoiceMutation.loading}
-                    >
-                      {exportInvoiceMutation.loading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <FileText className="h-4 w-4 mr-2" />
-                      )}
-                      Xuất hóa đơn
-                    </Button>
-                  )}
+                  hasBeenDelivered(order.status) && (() => {
+                    const customerInfoCheck = isCustomerInfoComplete(order);
+                    const isDisabled =
+                      !customerInfoCheck.isValid ||
+                      exportInvoiceMutation.loading;
+                    const disableReason = customerInfoCheck.missingFields.length > 0
+                      ? `Vui lòng điền đầy đủ thông tin khách hàng: ${customerInfoCheck.missingFields.join(", ")}`
+                      : "";
+
+                    const button = (
+                      <Button
+                        size="sm"
+                        onClick={handleExportInvoice}
+                        disabled={isDisabled}
+                      >
+                        {exportInvoiceMutation.loading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <FileText className="h-4 w-4 mr-2" />
+                        )}
+                        Xuất hóa đơn
+                      </Button>
+                    );
+
+                    if (isDisabled && disableReason) {
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-block">
+                                {button}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">{disableReason}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    }
+
+                    return button;
+                  })()}
                 {invoiceStatus === "issued" && (
                   <Button
                     variant="outline"
