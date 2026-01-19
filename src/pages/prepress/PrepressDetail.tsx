@@ -405,6 +405,16 @@ export default function ProofingOrderDetailPage() {
     null
   );
 
+  // Inline editing state for order info
+  const [editingField, setEditingField] = useState<
+    "totalQuantity" | "paperSize" | "notes" | null
+  >(null);
+  const [inlineTotalQuantity, setInlineTotalQuantity] = useState<string>("");
+  const [inlinePaperSizeId, setInlinePaperSizeId] = useState<string>("custom");
+  const [inlineCustomPaperSize, setInlineCustomPaperSize] =
+    useState<string>("");
+  const [inlineNotes, setInlineNotes] = useState<string>("");
+
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
 
@@ -507,8 +517,11 @@ export default function ProofingOrderDetailPage() {
     useUpdateProofingImage();
   const { mutate: handToProductionMutate, isPending: isHandingToProduction } =
     useHandToProduction();
-  const { mutate: updateProofingOrder, isPending: isUpdatingInfo } =
-    useUpdateProofingOrder();
+  const {
+    mutate: updateProofingOrder,
+    mutateAsync: updateProofingOrderAsync,
+    isPending: isUpdatingInfo,
+  } = useUpdateProofingOrder();
   const { data: paperSizesData } = usePaperSizes();
   const paperSizes = paperSizesData || [];
   const { mutateAsync: addDesignsMutate, isPending: isAddingDesigns } =
@@ -595,6 +608,12 @@ export default function ProofingOrderDetailPage() {
     Record<number, number>
   >({});
   const [isDieListDialogOpen, setIsDieListDialogOpen] = useState(false);
+
+  // Config state for empty order (when adding designs for the first time)
+  const [proofingSheetQuantity, setProofingSheetQuantity] = useState<number>(0);
+  const [paperSizeId, setPaperSizeId] = useState<string>("custom");
+  const [customPaperSize, setCustomPaperSize] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
   const materialTypeId = isEmptyOrder
     ? (currentMaterialTypeId ?? null)
     : (order.materialTypeId ?? null);
@@ -956,6 +975,78 @@ export default function ProofingOrderDetailPage() {
     return Object.values(designQuantities).filter((qty) => qty > 0).length;
   }, [designQuantities]);
 
+  // Parse custom paper size for empty order config
+  const parsedCustomPaperSize = useMemo(() => {
+    if (!customPaperSize || paperSizeId !== "custom") return null;
+    const trimmed = customPaperSize.trim();
+    // Support multiple formats: 31×43, 31x43, 31 X 43, 31 x 43, etc.
+    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    if (match) {
+      const width = parseInt(match[1], 10);
+      const height = parseInt(match[2], 10);
+      if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
+        return { width, height };
+      }
+    }
+    return null;
+  }, [customPaperSize, paperSizeId]);
+
+  const existingPaperSize = useMemo(() => {
+    if (!parsedCustomPaperSize || !paperSizes) return null;
+    const found = paperSizes.find(
+      (ps) =>
+        ps.width === parsedCustomPaperSize.width &&
+        ps.height === parsedCustomPaperSize.height
+    );
+    return found ?? null;
+  }, [parsedCustomPaperSize, paperSizes]);
+
+  const showCreateButton = useMemo(() => {
+    return (
+      paperSizeId === "custom" &&
+      !!parsedCustomPaperSize &&
+      !existingPaperSize &&
+      customPaperSize.trim().length > 0
+    );
+  }, [paperSizeId, parsedCustomPaperSize, existingPaperSize, customPaperSize]);
+
+  // Handler to create paper size for empty order config
+  const handleCreatePaperSize = async () => {
+    if (!parsedCustomPaperSize) {
+      toast.error("Lỗi", {
+        description: "Vui lòng nhập khổ giấy hợp lệ (ví dụ: 31×43)",
+      });
+      return;
+    }
+
+    if (existingPaperSize) {
+      setPaperSizeId(existingPaperSize.id.toString());
+      return;
+    }
+
+    try {
+      const newPaperSize = await createPaperSize({
+        name: `${parsedCustomPaperSize.width}×${parsedCustomPaperSize.height}`,
+        width: parsedCustomPaperSize.width,
+        height: parsedCustomPaperSize.height,
+        isCustom: true,
+      });
+
+      if (newPaperSize?.id) {
+        setPaperSizeId(newPaperSize.id.toString());
+        setCustomPaperSize("");
+        toast.success("Thành công", {
+          description: "Đã tạo khổ giấy mới",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create paper size:", error);
+      toast.error("Lỗi", {
+        description: "Không thể tạo khổ giấy mới",
+      });
+    }
+  };
+
   // Parse custom paper size for update dialog
   const parsedUpdateCustomPaperSize = useMemo(() => {
     if (!updateCustomPaperSize || updatePaperSizeId !== "custom") return null;
@@ -1115,9 +1206,75 @@ export default function ProofingOrderDetailPage() {
         request: addDesignsPayload,
       });
 
+      // If this is an empty order (first time adding designs), also update config
+      if (isEmptyOrder) {
+        const updateData: UpdateProofingOrderRequest = {};
+
+        // Update notes if provided
+        if (notes?.trim()) {
+          updateData.notes = notes.trim() || null;
+        }
+
+        // Handle paper size
+        if (paperSizeId === "custom" && customPaperSize?.trim()) {
+          try {
+            const createdPaperSizeId = await ensurePaperSizeExistsForUpdate(
+              customPaperSize,
+              paperSizeId
+            );
+            if (createdPaperSizeId) {
+              updateData.paperSizeId = createdPaperSizeId;
+              updateData.customPaperSize = null;
+            } else {
+              updateData.paperSizeId = null;
+              updateData.customPaperSize = customPaperSize || null;
+            }
+          } catch (error) {
+            console.error("Failed to create paper size:", error);
+            // Continue with update even if paper size creation fails
+            updateData.paperSizeId = null;
+            updateData.customPaperSize = customPaperSize || null;
+          }
+        } else if (paperSizeId !== "none" && paperSizeId !== "custom") {
+          const paperSizeIdNum = parseInt(paperSizeId, 10);
+          if (!isNaN(paperSizeIdNum)) {
+            updateData.paperSizeId = paperSizeIdNum;
+            updateData.customPaperSize = null;
+          }
+        } else {
+          updateData.paperSizeId = null;
+          updateData.customPaperSize = null;
+        }
+
+        // Handle totalQuantity (proofingSheetQuantity)
+        if (proofingSheetQuantity > 0) {
+          updateData.totalQuantity = proofingSheetQuantity;
+        }
+
+        // Only call update API if there are changes
+        const hasChanges = Object.keys(updateData).length > 0;
+        if (hasChanges) {
+          try {
+            await updateProofingOrderAsync({
+              id: order.id,
+              data: updateData,
+            });
+            // Query will be automatically invalidated by the hook's onSuccess
+          } catch (error) {
+            console.error("Failed to update proofing order config:", error);
+            // Error is handled by the hook, but don't fail the whole operation
+          }
+        }
+      }
+
       // On success: reset and the page will automatically refresh
       clearSelection();
       setDesignQuantities({});
+      // Reset config state when order is no longer empty
+      setProofingSheetQuantity(0);
+      setPaperSizeId("custom");
+      setCustomPaperSize("");
+      setNotes("");
     } catch (error) {
       console.error("Failed to add designs to proofing order:", error);
       // Error is already handled by the hooks via toast
@@ -1155,6 +1312,111 @@ export default function ProofingOrderDetailPage() {
   const handleHandToProduction = async () => {
     if (!order?.id) return;
     handToProductionMutate(order.id);
+  };
+
+  // Inline editing handlers
+  const handleStartEditField = (
+    field: "totalQuantity" | "paperSize" | "notes"
+  ) => {
+    if (!order || order.status === "completed") return;
+    // If another field is being edited, cancel it first
+    if (editingField && editingField !== field) {
+      handleCancelEditField();
+    }
+    setEditingField(field);
+    if (field === "totalQuantity") {
+      setInlineTotalQuantity((order.totalQuantity ?? 0).toString());
+    } else if (field === "paperSize") {
+      setInlinePaperSizeId(
+        order.paperSizeId ? order.paperSizeId.toString() : "custom"
+      );
+      setInlineCustomPaperSize(order.customPaperSize || "");
+    } else if (field === "notes") {
+      setInlineNotes(order.notes || "");
+    }
+  };
+
+  const handleCancelEditField = () => {
+    setEditingField(null);
+    setInlineTotalQuantity("");
+    setInlinePaperSizeId("custom");
+    setInlineCustomPaperSize("");
+    setInlineNotes("");
+  };
+
+  const handleSaveField = async () => {
+    if (!order?.id || !editingField) return;
+
+    const updateData: UpdateProofingOrderRequest = {};
+
+    if (editingField === "totalQuantity") {
+      const qty = parseInt(inlineTotalQuantity, 10);
+      if (isNaN(qty) || qty < 1) {
+        toast.error("Lỗi", {
+          description: "Số giấy in phải là số nguyên lớn hơn 0",
+        });
+        return;
+      }
+      if (qty !== order.totalQuantity) {
+        updateData.totalQuantity = qty;
+      }
+    } else if (editingField === "paperSize") {
+      // Handle paper size
+      if (inlinePaperSizeId === "custom" && inlineCustomPaperSize?.trim()) {
+        try {
+          const createdPaperSizeId = await ensurePaperSizeExistsForUpdate(
+            inlineCustomPaperSize,
+            inlinePaperSizeId
+          );
+          if (createdPaperSizeId) {
+            updateData.paperSizeId = createdPaperSizeId;
+            updateData.customPaperSize = null;
+          } else {
+            updateData.paperSizeId = null;
+            updateData.customPaperSize = inlineCustomPaperSize || null;
+          }
+        } catch (error) {
+          toast.error("Lỗi", {
+            description: "Không thể tạo khổ giấy mới",
+          });
+          return;
+        }
+      } else if (
+        inlinePaperSizeId !== "none" &&
+        inlinePaperSizeId !== "custom"
+      ) {
+        const paperSizeIdNum = parseInt(inlinePaperSizeId, 10);
+        if (!isNaN(paperSizeIdNum)) {
+          updateData.paperSizeId = paperSizeIdNum;
+          updateData.customPaperSize = null;
+        }
+      } else {
+        updateData.paperSizeId = null;
+        updateData.customPaperSize = null;
+      }
+    } else if (editingField === "notes") {
+      if (inlineNotes !== order.notes) {
+        updateData.notes = inlineNotes || null;
+      }
+    }
+
+    // Only update if there are changes
+    if (Object.keys(updateData).length > 0) {
+      try {
+        await updateProofingOrderAsync({
+          id: order.id,
+          data: updateData,
+        });
+        // Query will be automatically invalidated by the hook's onSuccess
+        setEditingField(null);
+        // Toast is already shown by the hook
+      } catch (error) {
+        // Error is handled by the hook
+        // Don't close editing mode on error
+      }
+    } else {
+      setEditingField(null);
+    }
   };
 
   const handleOpenUpdateInfoDialog = () => {
@@ -1247,10 +1509,11 @@ export default function ProofingOrderDetailPage() {
     const hasChanges = Object.keys(updateData).length > 0;
     if (hasChanges) {
       try {
-        await updateProofingOrder({
+        await updateProofingOrderAsync({
           id: order.id,
           data: updateData,
         });
+        // Query will be automatically invalidated by the hook's onSuccess
       } catch (error) {
         // Error is handled by the hook
         return;
@@ -1321,10 +1584,11 @@ export default function ProofingOrderDetailPage() {
         ],
       };
 
-      await updateProofingOrder({
+      await updateProofingOrderAsync({
         id: order.id,
         data: updateData,
       });
+      // Query will be automatically invalidated by the hook's onSuccess
 
       // Clear the input and exit editing mode after successful update
       if (editingQuantityDesignId === designId) {
@@ -2303,29 +2567,213 @@ export default function ProofingOrderDetailPage() {
                     </ScrollArea>
                   </div>
 
-                  {/* Bottom: Submit Button */}
-                  <div className="shrink-0 border-t px-3 py-2 bg-background">
-                    <Button
-                      onClick={handleSubmitDesigns}
-                      disabled={
-                        selectedDesigns.length === 0 ||
-                        !hasValidQuantities ||
-                        isAddingDesigns
-                      }
-                      className="w-full gap-1.5 h-8 text-xs"
-                    >
-                      {isAddingDesigns ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Đang thêm...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="h-4 w-4" />
-                          Thêm mã hàng vào bình bài
-                        </>
-                      )}
-                    </Button>
+                  {/* Bottom: Config panel */}
+                  <div className="flex-[3] border-t bg-muted/20 flex flex-col min-h-0">
+                    <div className="p-2 space-y-2 overflow-y-auto flex-1">
+                      {/* Row 1: Config items in one row */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {/* Proofing Sheet Quantity */}
+                        <div className="space-y-1">
+                          <Label
+                            htmlFor="proofingSheetQuantity"
+                            className="text-xs font-bold"
+                          >
+                            Số lượng giấy in
+                            <span className="text-destructive"> *</span>
+                          </Label>
+                          <div className="relative">
+                            <Hash className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                            <Input
+                              id="proofingSheetQuantity"
+                              type="number"
+                              min="1"
+                              max="2147483647"
+                              step="1"
+                              className="pl-7 h-7 text-xs font-semibold"
+                              placeholder="Nhập số lượng"
+                              value={proofingSheetQuantity || ""}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === "") {
+                                  setProofingSheetQuantity(0);
+                                } else {
+                                  const numValue = parseInt(value, 10);
+                                  if (
+                                    !isNaN(numValue) &&
+                                    numValue > 0 &&
+                                    numValue <= 2147483647
+                                  ) {
+                                    setProofingSheetQuantity(numValue);
+                                  } else if (numValue > 2147483647) {
+                                    setProofingSheetQuantity(2147483647);
+                                  }
+                                }
+                              }}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        {/* Paper Size */}
+                        <div className="space-y-1">
+                          <Label
+                            htmlFor="paperSizeId"
+                            className="text-xs font-bold"
+                          >
+                            Khổ giấy in
+                          </Label>
+                          <Select
+                            value={paperSizeId}
+                            onValueChange={setPaperSizeId}
+                          >
+                            <SelectTrigger
+                              id="paperSizeId"
+                              className="h-7 text-xs"
+                            >
+                              <Maximize2 className="h-3 w-3 mr-1.5 text-muted-foreground" />
+                              <SelectValue
+                                defaultValue="custom"
+                                placeholder="Chọn khổ giấy"
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="custom">
+                                -- Nhập thủ công --
+                              </SelectItem>
+                              {paperSizes?.map((ps) => (
+                                <SelectItem
+                                  key={ps.id}
+                                  value={ps.id.toString()}
+                                >
+                                  {ps.name}
+                                  {ps.width && ps.height
+                                    ? ` (${ps.width}×${ps.height})`
+                                    : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Custom Paper Size or Size Display */}
+                        {paperSizeId === "custom" ? (
+                          <div className="space-y-1">
+                            <Label
+                              htmlFor="customPaperSize"
+                              className="text-xs font-bold"
+                            >
+                              Khổ giấy tùy chỉnh
+                            </Label>
+                            <div className="flex gap-1.5">
+                              <Input
+                                id="customPaperSize"
+                                className="h-7 text-xs flex-1"
+                                placeholder="31×43, 65×86..."
+                                value={customPaperSize}
+                                onChange={(e) =>
+                                  setCustomPaperSize(e.target.value)
+                                }
+                                disabled={isCreatingPaperSize}
+                              />
+                              {showCreateButton && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 shrink-0"
+                                  onClick={handleCreatePaperSize}
+                                  disabled={isCreatingPaperSize}
+                                >
+                                  {isCreatingPaperSize ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Plus className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                            {existingPaperSize && (
+                              <p className="text-[10px] font-medium text-muted-foreground">
+                                Đã tồn tại:{" "}
+                                {existingPaperSize.name ||
+                                  `${existingPaperSize.width}×${existingPaperSize.height}`}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <Label className="text-xs font-bold text-muted-foreground">
+                              Kích thước
+                            </Label>
+                            <div className="h-7 flex items-center px-2 rounded-md border bg-background text-xs font-semibold text-muted-foreground">
+                              {paperSizeId !== "none" &&
+                              paperSizes?.find(
+                                (ps) => ps.id.toString() === paperSizeId
+                              ) ? (
+                                <span>
+                                  {
+                                    paperSizes.find(
+                                      (ps) => ps.id.toString() === paperSizeId
+                                    )?.width
+                                  }{" "}
+                                  ×{" "}
+                                  {
+                                    paperSizes.find(
+                                      (ps) => ps.id.toString() === paperSizeId
+                                    )?.height
+                                  }
+                                </span>
+                              ) : (
+                                <span className="italic">Chưa chọn</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Row 2: Notes */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-bold flex items-center gap-1">
+                          <MessageSquare className="h-3 w-3 text-primary" />
+                          Ghi chú
+                        </Label>
+                        <Textarea
+                          id="notes"
+                          className="min-h-[50px] text-xs resize-none"
+                          placeholder="Nhập ghi chú (tùy chọn)..."
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="shrink-0 border-t px-3 py-2 bg-background">
+                      <Button
+                        onClick={handleSubmitDesigns}
+                        disabled={
+                          selectedDesigns.length === 0 ||
+                          !hasValidQuantities ||
+                          (isEmptyOrder
+                            ? proofingSheetQuantity < 1
+                            : order.totalQuantity < 1) ||
+                          isAddingDesigns
+                        }
+                        className="w-full gap-1.5 h-8 text-xs"
+                      >
+                        {isAddingDesigns ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Đang thêm...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-4 w-4" />
+                            Thêm mã hàng vào bình bài
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2333,482 +2781,435 @@ export default function ProofingOrderDetailPage() {
           </div>
         ) : (
           // Render normal detail view when order has designs
-          <div className="flex-1 grid gap-4 lg:grid-cols-3 overflow-auto">
-            {/* Left Column - Main Info */}
-            <div className="lg:col-span-2 space-y-4">
-              {/* Compact Order Info Card (moved to right column) */}
-              {/* eslint-disable-next-line no-constant-binary-expression */}
-              {false && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Thông tin lệnh
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-4 gap-3">
-                      <div className="space-y-0.5">
-                        <Label className="text-muted-foreground text-[10px] font-normal">
-                          Mã lệnh
-                        </Label>
-                        <p className="font-semibold text-sm">
-                          {order.code ?? ""}
-                        </p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <Label className="text-muted-foreground text-[10px] font-normal">
-                          Số giấy in
-                        </Label>
-                        <p className="font-semibold text-sm">
-                          {(order.totalQuantity ?? 0).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <Label className="text-muted-foreground text-[10px] font-normal">
-                          Số lượng hàng
-                        </Label>
-                        <p className="font-semibold text-sm">
-                          {order.proofingOrderDesigns?.length ?? 0}
-                        </p>
-                      </div>
-                      <div className="space-y-0.5">
-                        <Label className="text-muted-foreground text-[10px] font-normal">
-                          Khổ giấy
-                        </Label>
-                        <p className="font-semibold text-sm text-xs">
-                          {order.paperSize?.name ||
-                            order.customPaperSize ||
-                            "Chưa xác định"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                      <div className="space-y-0.5">
-                        <Label className="text-muted-foreground text-[10px] font-normal">
-                          Chất liệu
-                        </Label>
-                        <div>
-                          <p className="font-medium text-sm">
-                            {order.materialType?.name || "—"}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {order.materialType?.code || "—"}
-                          </p>
+          <div
+            className={`flex-1 grid gap-4 overflow-auto ${
+              hasDieCutDesigns
+                ? "lg:grid-cols-[300px_1fr_240px_300px]"
+                : "lg:grid-cols-[300px_1fr_240px]"
+            }`}
+          >
+            {/* Column 1: Thông tin lệnh bình bài */}
+            <div className="space-y-4">
+              {/* Compact Order Info Card */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Thông tin lệnh
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Preview ảnh - đầu tiên */}
+                  {order.imageUrl ? (
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-[10px] font-normal">
+                        Xem trước ảnh
+                      </Label>
+                      <div
+                        className="relative group h-20 rounded border overflow-hidden bg-muted cursor-pointer"
+                        onClick={() => {
+                          setViewingImageUrl(order.imageUrl!);
+                          setImageViewerOpen(true);
+                        }}
+                      >
+                        <img
+                          src={order.imageUrl}
+                          alt="Proofing Preview"
+                          className="w-full h-full object-contain"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Eye className="h-4 w-4 text-white" />
                         </div>
                       </div>
-                      {order.imageUrl && (
-                        <div className="space-y-1">
-                          <Label className="text-muted-foreground text-[10px] font-normal">
-                            Preview ảnh
-                          </Label>
-                          <div
-                            className="relative group h-20 rounded border overflow-hidden bg-muted cursor-pointer"
-                            onClick={() => {
-                              setViewingImageUrl(order.imageUrl!);
-                              setImageViewerOpen(true);
+                      {!order.isPlateExported && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[10px] px-2"
+                          onClick={() => setIsImageUploadDialogOpen(true)}
+                        >
+                          Thay đổi
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-[10px] font-normal">
+                        Xem trước ảnh
+                      </Label>
+                      <div className="h-20 rounded border bg-muted flex items-center justify-center">
+                        <FileImage className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Số giấy - SL hàng (cùng một dòng) */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-0.5">
+                      <Label className="text-muted-foreground text-[10px] font-normal">
+                        Số giấy in
+                      </Label>
+                      {editingField === "totalQuantity" ? (
+                        <div className="space-y-1.5">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={inlineTotalQuantity}
+                            onChange={(e) =>
+                              setInlineTotalQuantity(e.target.value)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleSaveField();
+                              } else if (e.key === "Escape") {
+                                handleCancelEditField();
+                              }
                             }}
-                          >
-                            <img
-                              src={order.imageUrl}
-                              alt="Proofing Preview"
-                              className="w-full h-full object-contain"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Eye className="h-4 w-4 text-white" />
-                            </div>
-                          </div>
-                          {!order.isPlateExported && (
+                            className="h-7 text-sm font-bold"
+                            autoFocus
+                          />
+                          <div className="flex gap-1">
                             <Button
-                              variant="ghost"
                               size="sm"
-                              className="h-6 text-[10px] px-2"
-                              onClick={() => setIsImageUploadDialogOpen(true)}
+                              variant="outline"
+                              className="h-6 px-2 text-[10px]"
+                              onClick={handleSaveField}
+                              disabled={isUpdatingInfo}
                             >
-                              Thay đổi
+                              Lưu
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-[10px]"
+                              onClick={handleCancelEditField}
+                              disabled={isUpdatingInfo}
+                            >
+                              Hủy
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className="flex items-center gap-1.5 group cursor-pointer"
+                          onClick={() =>
+                            order.status !== "completed" &&
+                            handleStartEditField("totalQuantity")
+                          }
+                        >
+                          <p
+                            className={`font-bold text-sm ${
+                              order.status !== "completed"
+                                ? "group-hover:text-primary transition-colors"
+                                : ""
+                            }`}
+                          >
+                            {(order.totalQuantity ?? 0).toLocaleString()}
+                          </p>
+                          {order.status !== "completed" && (
+                            <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                           )}
                         </div>
                       )}
                     </div>
+                    <div className="space-y-0.5">
+                      <Label className="text-muted-foreground text-[10px] font-normal">
+                        SL hàng
+                      </Label>
+                      <p className="font-bold text-sm">
+                        {order.proofingOrderDesigns?.length ?? 0}
+                      </p>
+                    </div>
+                  </div>
 
-                    {order.notes && (
-                      <div className="p-2 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded text-xs">
-                        <div className="flex items-start gap-1.5">
-                          <FileText className="h-3 w-3 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-amber-900 dark:text-amber-100 mb-0.5 text-[10px]">
-                              Ghi chú
-                            </p>
-                            <p className="text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed text-xs">
-                              {order.notes}
-                            </p>
-                          </div>
+                  {/* Khổ giấy */}
+                  <div className="space-y-0.5">
+                    <Label className="text-muted-foreground text-[10px] font-normal">
+                      Khổ giấy
+                    </Label>
+                    {editingField === "paperSize" ? (
+                      <div className="space-y-1.5">
+                        <Select
+                          value={inlinePaperSizeId}
+                          onValueChange={setInlinePaperSizeId}
+                        >
+                          <SelectTrigger className="h-7 text-xs">
+                            <SelectValue placeholder="Chọn khổ giấy" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="custom">
+                              -- Nhập thủ công --
+                            </SelectItem>
+                            {paperSizes.map((ps) => (
+                              <SelectItem key={ps.id} value={ps.id.toString()}>
+                                {ps.name}
+                                {ps.width && ps.height
+                                  ? ` (${ps.width}×${ps.height})`
+                                  : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {inlinePaperSizeId === "custom" && (
+                          <Input
+                            value={inlineCustomPaperSize}
+                            onChange={(e) =>
+                              setInlineCustomPaperSize(e.target.value)
+                            }
+                            placeholder="Ví dụ: 60×60, 31×43..."
+                            className="h-7 text-xs"
+                          />
+                        )}
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={handleSaveField}
+                            disabled={isUpdatingInfo}
+                          >
+                            Lưu
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={handleCancelEditField}
+                            disabled={isUpdatingInfo}
+                          >
+                            Hủy
+                          </Button>
                         </div>
                       </div>
-                    )}
-
-                    {order.proofingFileUrl && (
-                      <div className="flex items-center gap-2 pt-2 border-t">
-                        <Label className="text-muted-foreground text-[10px] font-normal">
-                          File:
-                        </Label>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 h-7 text-xs"
-                          onClick={() => {
-                            if (order.proofingFileUrl) {
-                              downloadFile(
-                                order.proofingFileUrl,
-                                order.code ?? `BB-${order.id ?? ""}`
-                              );
-                            }
-                          }}
+                    ) : (
+                      <div
+                        className="flex items-center gap-1.5 group cursor-pointer"
+                        onClick={() =>
+                          order.status !== "completed" &&
+                          handleStartEditField("paperSize")
+                        }
+                      >
+                        <p
+                          className={`font-bold text-sm text-xs ${
+                            order.status !== "completed"
+                              ? "group-hover:text-primary transition-colors"
+                              : ""
+                          }`}
                         >
-                          <Download className="h-3 w-3" />
-                          Tải xuống
-                        </Button>
+                          {order.paperSize?.name ||
+                            order.customPaperSize ||
+                            "Chưa xác định"}
+                        </p>
+                        {order.status !== "completed" && (
+                          <Edit className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        )}
                       </div>
                     )}
+                  </div>
 
-                    {order.status !== "completed" && (
-                      <div className="pt-2 border-t space-y-3">
-                        {!isUpdateInfoDialogOpen && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 h-7 text-xs w-full"
-                            onClick={handleOpenUpdateInfoDialog}
-                          >
-                            <Edit className="h-3 w-3" />
-                            Cập nhật thông tin bình bài
-                          </Button>
+                  {/* Chất liệu */}
+                  <div className="space-y-0.5">
+                    <Label className="text-muted-foreground text-[10px] font-normal">
+                      Chất liệu
+                    </Label>
+                    <div>
+                      <p className="font-bold text-sm">
+                        {order.materialType?.name || "—"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-medium">
+                        {order.materialType?.code || "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Quy cách - Cán màng (cùng một dòng) */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-[10px] font-bold flex items-center gap-1.5">
+                        <Settings2 className="h-3 w-3" />
+                        Quy cách
+                      </Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {uniqueProcessClassifications.length > 0 ? (
+                          uniqueProcessClassifications.map((classification) => (
+                            <Badge
+                              key={classification}
+                              variant="secondary"
+                              className="text-xs font-bold px-2 py-0.5 bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 transition-colors"
+                            >
+                              {processClassificationLabels[classification] ||
+                                classification}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            ---
+                          </span>
                         )}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-muted-foreground text-[10px] font-bold flex items-center gap-1.5">
+                        <Layers className="h-3 w-3" />
+                        Cán màng
+                      </Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {uniqueLaminationTypes.length > 0 ? (
+                          uniqueLaminationTypes.map((laminationType) => (
+                            <Badge
+                              key={laminationType}
+                              variant="secondary"
+                              className="text-xs font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+                            >
+                              {laminationTypeLabels[laminationType] ||
+                                laminationType}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            ---
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                        {isUpdateInfoDialogOpen && (
-                          <div className="rounded-md bg-muted/30 border px-3 py-3 space-y-3">
-                            {/* Notes */}
-                            <div className="space-y-2">
-                              <Label htmlFor="update-notes">Ghi chú</Label>
-                              <Textarea
-                                id="update-notes"
-                                value={updateNotes}
-                                onChange={(e) => setUpdateNotes(e.target.value)}
-                                placeholder="Nhập ghi chú..."
-                                rows={3}
-                              />
-                            </div>
-
-                            {/* Paper Size */}
-                            <div className="space-y-2">
-                              <Label htmlFor="update-paper-size">
-                                Khổ giấy
-                              </Label>
-                              <Select
-                                value={updatePaperSizeId}
-                                onValueChange={setUpdatePaperSizeId}
-                              >
-                                <SelectTrigger id="update-paper-size">
-                                  <SelectValue
-                                    defaultValue="custom"
-                                    placeholder="Chọn khổ giấy"
-                                  />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="custom">
-                                    {" "}
-                                    -- Nhập thủ công --{" "}
-                                  </SelectItem>
-                                  {paperSizes.map((ps) => (
-                                    <SelectItem
-                                      key={ps.id}
-                                      value={ps.id.toString()}
-                                    >
-                                      {ps.name}
-                                      {ps.width && ps.height
-                                        ? ` (${ps.width}×${ps.height})`
-                                        : ""}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Custom Paper Size */}
-                            {updatePaperSizeId === "custom" && (
-                              <div className="space-y-2">
-                                <Label htmlFor="update-custom-paper-size">
-                                  Khổ giấy tùy chỉnh
-                                </Label>
-                                <div className="flex gap-1.5">
-                                  <Input
-                                    id="update-custom-paper-size"
-                                    value={updateCustomPaperSize}
-                                    onChange={(e) =>
-                                      setUpdateCustomPaperSize(e.target.value)
-                                    }
-                                    placeholder="Ví dụ: 60×60, 31×43..."
-                                    className="flex-1"
-                                  />
-                                </div>
-                                {existingUpdatePaperSize && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Đã tồn tại:{" "}
-                                    {existingUpdatePaperSize.name ||
-                                      `${existingUpdatePaperSize.width}×${existingUpdatePaperSize.height}`}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Proofing File Upload */}
-                            <div className="space-y-2">
-                              <Label htmlFor="update-proofing-file">
-                                File bình bài
-                              </Label>
-                              <Input
-                                id="update-proofing-file"
-                                type="file"
-                                accept=".pdf,.ai,.psd,.jpg,.png"
-                                onChange={(e) =>
-                                  setUpdateProofingFile(
-                                    e.target.files?.[0] || null
-                                  )
-                                }
-                              />
-                              {updateProofingFile && (
-                                <div className="mt-2">
-                                  <p className="text-sm text-muted-foreground">
-                                    Đã chọn: {updateProofingFile.name} (
-                                    {(
-                                      updateProofingFile.size /
-                                      1024 /
-                                      1024
-                                    ).toFixed(2)}{" "}
-                                    MB)
-                                  </p>
-                                </div>
-                              )}
-                              {order.proofingFileUrl && !updateProofingFile && (
-                                <div className="mt-2">
-                                  <p className="text-xs text-muted-foreground mb-2">
-                                    File hiện tại:
-                                  </p>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-2 text-xs"
-                                    onClick={() => {
-                                      if (order.proofingFileUrl) {
-                                        downloadFile(
-                                          order.proofingFileUrl,
-                                          order.code ?? `BB-${order.id ?? ""}`
-                                        );
-                                      }
-                                    }}
-                                  >
-                                    <Download className="h-3 w-3" />
-                                    Tải xuống file hiện tại
-                                  </Button>
-                                </div>
-                              )}
-                              <p className="text-xs text-muted-foreground">
-                                Chọn file mới để thay thế file hiện tại
-                              </p>
-                            </div>
-
-                            {/* Proofing Image Upload */}
-                            <div className="space-y-2">
-                              <Label htmlFor="update-image-file">
-                                Ảnh bình bài
-                              </Label>
-                              <Input
-                                id="update-image-file"
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) =>
-                                  setUpdateImageFile(
-                                    e.target.files?.[0] || null
-                                  )
-                                }
-                              />
-                              {updateImageFile && (
-                                <div className="mt-2">
-                                  <p className="text-sm text-muted-foreground mb-2">
-                                    Đã chọn: {updateImageFile.name} (
-                                    {(
-                                      updateImageFile.size /
-                                      1024 /
-                                      1024
-                                    ).toFixed(2)}{" "}
-                                    MB)
-                                  </p>
-                                  <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
-                                    <img
-                                      src={URL.createObjectURL(updateImageFile)}
-                                      alt="Preview"
-                                      className="w-full h-full object-contain"
-                                    />
-                                  </div>
-                                </div>
-                              )}
-                              {order.imageUrl && !updateImageFile && (
-                                <div className="mt-2">
-                                  <p className="text-xs text-muted-foreground mb-2">
-                                    Ảnh hiện tại:
-                                  </p>
-                                  <div className="relative aspect-video rounded-lg overflow-hidden border bg-muted">
-                                    <img
-                                      src={order.imageUrl}
-                                      alt="Current preview"
-                                      className="w-full h-full object-contain"
-                                    />
-                                  </div>
-                                </div>
-                              )}
-                              <p className="text-xs text-muted-foreground">
-                                Chọn ảnh mới để thay thế ảnh hiện tại
-                              </p>
-                            </div>
-
-                            <Separator />
-
-                            {/* Total Quantity */}
-                            <div className="space-y-2">
-                              <Label htmlFor="update-total-quantity">
-                                Số giấy in
-                              </Label>
-                              <Input
-                                id="update-total-quantity"
-                                type="number"
-                                min="1"
-                                value={updateTotalQuantity}
-                                onChange={(e) =>
-                                  setUpdateTotalQuantity(e.target.value)
-                                }
-                                placeholder="Nhập số giấy in..."
-                              />
-                            </div>
-
-                            {/* Design Updates */}
-                            {orderDesigns.length > 0 && (
-                              <div className="space-y-2">
-                                <Label>Cập nhật số lượng theo design</Label>
-                                <div className="space-y-2 max-h-56 overflow-y-auto border rounded-lg p-3 bg-background/40">
-                                  {orderDesigns.map((pod) => {
-                                    const designId = pod.id;
-                                    if (!designId) return null;
-
-                                    return (
-                                      <div
-                                        key={designId}
-                                        className="flex items-center gap-3 p-2 rounded border bg-muted/30"
-                                      >
-                                        <div className="flex-1 min-w-0">
-                                          <div className="font-medium text-sm truncate">
-                                            {pod.design?.code ||
-                                              `Design #${designId}`}
-                                          </div>
-                                          <div className="text-xs text-muted-foreground truncate">
-                                            {pod.design?.designName || "—"}
-                                          </div>
-                                          <div className="text-xs text-muted-foreground">
-                                            Hiện tại:{" "}
-                                            {pod.quantity?.toLocaleString() ||
-                                              0}
-                                          </div>
-                                        </div>
-                                        <div className="w-24">
-                                          <Input
-                                            type="number"
-                                            min="1"
-                                            value={
-                                              updateDesignQuantities[
-                                                designId
-                                              ] || ""
-                                            }
-                                            onChange={(e) => {
-                                              const value = e.target.value;
-                                              setUpdateDesignQuantities(
-                                                (prev) => ({
-                                                  ...prev,
-                                                  [designId]: value,
-                                                })
-                                              );
-                                            }}
-                                            placeholder="Số lượng"
-                                            className="text-sm"
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                  Chỉ cập nhật các design có thay đổi số lượng
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Actions */}
-                            <div className="flex justify-end gap-2 pt-2 border-t mt-2">
+                  <div className="p-2 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded text-xs">
+                    <div className="flex items-start gap-1.5">
+                      <FileText className="h-3 w-3 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <p className="font-semibold text-amber-900 dark:text-amber-100 text-[10px]">
+                            Ghi chú
+                          </p>
+                          {order.status !== "completed" &&
+                            editingField !== "notes" && (
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
-                                onClick={() => setIsUpdateInfoDialogOpen(false)}
-                                disabled={
-                                  isUpdatingInfo ||
-                                  isUpdatingImage ||
-                                  isUpdatingFile ||
-                                  isUploadingImage ||
-                                  isUploadingFile
+                                className="h-5 px-1.5 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleStartEditField("notes")}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            )}
+                        </div>
+                        {editingField === "notes" ? (
+                          <div className="space-y-1.5">
+                            <Textarea
+                              value={inlineNotes}
+                              onChange={(e) => setInlineNotes(e.target.value)}
+                              placeholder="Nhập ghi chú..."
+                              rows={3}
+                              className="text-xs resize-none"
+                              onKeyDown={(e) => {
+                                if (
+                                  e.key === "Escape" &&
+                                  !e.shiftKey &&
+                                  !e.ctrlKey &&
+                                  !e.metaKey
+                                ) {
+                                  handleCancelEditField();
                                 }
+                              }}
+                              autoFocus
+                            />
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 px-2 text-[10px]"
+                                onClick={handleSaveField}
+                                disabled={isUpdatingInfo}
+                              >
+                                Lưu
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[10px]"
+                                onClick={handleCancelEditField}
+                                disabled={isUpdatingInfo}
                               >
                                 Hủy
                               </Button>
-                              <Button
-                                size="sm"
-                                onClick={handleUpdateInfo}
-                                disabled={
-                                  isUpdatingInfo ||
-                                  isUpdatingImage ||
-                                  isUpdatingFile ||
-                                  isUploadingImage ||
-                                  isUploadingFile
-                                }
-                              >
-                                {isUpdatingInfo ||
-                                isUpdatingImage ||
-                                isUpdatingFile ||
-                                isUploadingImage ||
-                                isUploadingFile ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    {isUpdatingFile
-                                      ? "Đang cập nhật file..."
-                                      : isUpdatingImage
-                                        ? "Đang cập nhật ảnh..."
-                                        : isUploadingFile
-                                          ? "Đang tải lên file..."
-                                          : isUploadingImage
-                                            ? "Đang tải lên ảnh..."
-                                            : "Đang cập nhật..."}
-                                  </>
-                                ) : (
-                                  "Lưu thay đổi"
-                                )}
-                              </Button>
                             </div>
+                          </div>
+                        ) : (
+                          <div
+                            className={`group ${
+                              order.status !== "completed"
+                                ? "cursor-pointer"
+                                : ""
+                            }`}
+                            onClick={() =>
+                              order.status !== "completed" &&
+                              handleStartEditField("notes")
+                            }
+                          >
+                            <p
+                              className={`text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed text-xs ${
+                                order.status !== "completed"
+                                  ? "group-hover:text-amber-900 dark:group-hover:text-amber-100 transition-colors"
+                                  : ""
+                              }`}
+                            >
+                              {order.notes || "---"}
+                            </p>
                           </div>
                         )}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                    </div>
+                  </div>
 
+                  {order.proofingFileUrl && (
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <Label className="text-muted-foreground text-[10px] font-normal">
+                        File:
+                      </Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 h-7 text-xs"
+                        onClick={() => {
+                          if (order.proofingFileUrl) {
+                            downloadFile(
+                              order.proofingFileUrl,
+                              order.code ?? `BB-${order.id ?? ""}`
+                            );
+                          }
+                        }}
+                      >
+                        <Download className="h-3 w-3" />
+                        Tải xuống
+                      </Button>
+                    </div>
+                  )}
+
+                  {order.status !== "completed" && (
+                    <div className="pt-2 border-t space-y-3">
+                      {/* File upload section */}
+                      {!order.proofingFileUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-7 text-xs w-full"
+                          onClick={() => setIsUploadDialogOpen(true)}
+                        >
+                          <Upload className="h-3 w-3" />
+                          Tải lên file bình bài
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Column 2: Thông tin mã hàng */}
+            <div className="space-y-4">
               {/* Compact Designs List */}
               <Card>
                 <CardHeader className="pb-3">
@@ -2843,9 +3244,6 @@ export default function ProofingOrderDetailPage() {
                           </TableHead>
                           <TableHead className="h-9 px-2 text-[10px]">
                             Mã hàng
-                          </TableHead>
-                          <TableHead className="h-9 px-2 text-[10px]">
-                            Tên
                           </TableHead>
                           <TableHead className="h-9 px-2 text-[10px]">
                             Kích thước
@@ -2981,6 +3379,26 @@ export default function ProofingOrderDetailPage() {
                                   )}
                                 </div>
                               )}
+
+                              {/* Yêu cầu */}
+                              <div className="pt-2 border-t space-y-1">
+                                <div className="font-semibold text-xs text-muted-foreground">
+                                  Yêu cầu:
+                                </div>
+                                <div className="text-xs text-foreground whitespace-pre-wrap leading-relaxed bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded p-2">
+                                  {pod.design?.latestRequirements || "---"}
+                                </div>
+                              </div>
+
+                              {/* Ghi chú */}
+                              <div className="pt-2 border-t space-y-1">
+                                <div className="font-semibold text-xs text-muted-foreground">
+                                  Ghi chú:
+                                </div>
+                                <div className="text-xs text-foreground whitespace-pre-wrap leading-relaxed bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded p-2">
+                                  {pod.design?.notes || "---"}
+                                </div>
+                              </div>
                             </div>
                           );
 
@@ -3025,16 +3443,7 @@ export default function ProofingOrderDetailPage() {
                                     {pod.design.code}
                                   </p>
                                 </TableCell>
-                                <TableCell className="px-2 py-1">
-                                  <div>
-                                    <p className="font-medium text-xs line-clamp-1">
-                                      {pod.design.designName}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground">
-                                      {pod.design.designType.name}
-                                    </p>
-                                  </div>
-                                </TableCell>
+
                                 <TableCell className="px-2 py-1">
                                   <div className="text-xs">
                                     <p>
@@ -3332,362 +3741,14 @@ export default function ProofingOrderDetailPage() {
               </Card>
             </div>
 
-            {/* Right Column - Compact Sidebar */}
+            {/* Column 3: Thông tin xuất kẽm */}
             <div className="space-y-4">
-              {/* Compact Order Info Card */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Thông tin lệnh
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-4 gap-3">
-                    <div className="space-y-0.5">
-                      <Label className="text-muted-foreground text-[10px] font-normal">
-                        Mã lệnh
-                      </Label>
-                      <p className="font-semibold text-sm">
-                        {order.code ?? ""}
-                      </p>
-                    </div>
-                    <div className="space-y-0.5">
-                      <Label className="text-muted-foreground text-[10px] font-normal">
-                        Số giấy in
-                      </Label>
-                      <p className="font-semibold text-sm">
-                        {(order.totalQuantity ?? 0).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="space-y-0.5">
-                      <Label className="text-muted-foreground text-[10px] font-normal">
-                        Số lượng hàng
-                      </Label>
-                      <p className="font-semibold text-sm">
-                        {order.proofingOrderDesigns?.length ?? 0}
-                      </p>
-                    </div>
-                    <div className="space-y-0.5">
-                      <Label className="text-muted-foreground text-[10px] font-normal">
-                        Khổ giấy
-                      </Label>
-                      <p className="font-semibold text-sm text-xs">
-                        {order.paperSize?.name ||
-                          order.customPaperSize ||
-                          "Chưa xác định"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                    <div className="space-y-0.5">
-                      <Label className="text-muted-foreground text-[10px] font-normal">
-                        Chất liệu
-                      </Label>
-                      <div>
-                        <p className="font-medium text-sm">
-                          {order.materialType?.name || "—"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {order.materialType?.code || "—"}
-                        </p>
-                      </div>
-                    </div>
-                    {order.imageUrl && (
-                      <div className="space-y-1">
-                        <Label className="text-muted-foreground text-[10px] font-normal">
-                          Preview ảnh
-                        </Label>
-                        <div
-                          className="relative group h-20 rounded border overflow-hidden bg-muted cursor-pointer"
-                          onClick={() => {
-                            setViewingImageUrl(order.imageUrl!);
-                            setImageViewerOpen(true);
-                          }}
-                        >
-                          <img
-                            src={order.imageUrl}
-                            alt="Proofing Preview"
-                            className="w-full h-full object-contain"
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <Eye className="h-4 w-4 text-white" />
-                          </div>
-                        </div>
-                        {!order.isPlateExported && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-[10px] px-2"
-                            onClick={() => setIsImageUploadDialogOpen(true)}
-                          >
-                            Thay đổi
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Process Classification & Lamination Type */}
-                  {(uniqueProcessClassifications.length > 0 ||
-                    uniqueLaminationTypes.length > 0) && (
-                    <div className="pt-2 border-t">
-                      <div className="flex justify-around gap-3">
-                        {uniqueProcessClassifications.length > 0 && (
-                          <div className="space-y-1.5 flex-1">
-                            <Label className="text-muted-foreground text-[10px] font-bold flex items-center gap-1.5">
-                              <Settings2 className="h-3 w-3" />
-                              Quy cách
-                            </Label>
-                            <div className="flex flex-wrap gap-1.5">
-                              {uniqueProcessClassifications.map(
-                                (classification) => (
-                                  <Badge
-                                    key={classification}
-                                    variant="secondary"
-                                    className="text-xs font-bold px-2 py-0.5 bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 transition-colors"
-                                  >
-                                    {processClassificationLabels[
-                                      classification
-                                    ] || classification}
-                                  </Badge>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        {uniqueLaminationTypes.length > 0 && (
-                          <div className="space-y-1.5 flex-1">
-                            <Label className="text-muted-foreground text-[10px] font-bold flex items-center gap-1.5">
-                              <Layers className="h-3 w-3" />
-                              Cán màng
-                            </Label>
-                            <div className="flex flex-wrap gap-1.5">
-                              {uniqueLaminationTypes.map((laminationType) => (
-                                <Badge
-                                  key={laminationType}
-                                  variant="secondary"
-                                  className="text-xs font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
-                                >
-                                  {laminationTypeLabels[laminationType] ||
-                                    laminationType}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {order.notes && (
-                    <div className="p-2 bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded text-xs">
-                      <div className="flex items-start gap-1.5">
-                        <FileText className="h-3 w-3 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-amber-900 dark:text-amber-100 mb-0.5 text-[10px]">
-                            Ghi chú
-                          </p>
-                          <p className="text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed text-xs">
-                            {order.notes}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {order.proofingFileUrl && (
-                    <div className="flex items-center gap-2 pt-2 border-t">
-                      <Label className="text-muted-foreground text-[10px] font-normal">
-                        File:
-                      </Label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 h-7 text-xs"
-                        onClick={() => {
-                          if (order.proofingFileUrl) {
-                            downloadFile(
-                              order.proofingFileUrl,
-                              order.code || `BB-${order.id}`
-                            );
-                          }
-                        }}
-                      >
-                        <Download className="h-3 w-3" />
-                        Tải xuống
-                      </Button>
-                    </div>
-                  )}
-
-                  {order.status !== "completed" && (
-                    <div className="pt-2 border-t space-y-3">
-                      {!isUpdateInfoDialogOpen && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 h-7 text-xs w-full"
-                          onClick={handleOpenUpdateInfoDialog}
-                        >
-                          <Edit className="h-3 w-3" />
-                          Cập nhật thông tin bình bài
-                        </Button>
-                      )}
-
-                      {isUpdateInfoDialogOpen && (
-                        <div className="rounded-md bg-muted/30 border px-3 py-3 space-y-3">
-                          {/* Notes */}
-                          <div className="space-y-2">
-                            <Label htmlFor="update-notes">Ghi chú</Label>
-                            <Textarea
-                              id="update-notes"
-                              value={updateNotes}
-                              onChange={(e) => setUpdateNotes(e.target.value)}
-                              placeholder="Nhập ghi chú..."
-                              rows={3}
-                            />
-                          </div>
-
-                          {/* Paper Size */}
-                          <div className="space-y-2">
-                            <Label htmlFor="update-paper-size">Khổ giấy</Label>
-                            <Select
-                              value={updatePaperSizeId}
-                              onValueChange={setUpdatePaperSizeId}
-                              defaultValue="custom"
-                            >
-                              <SelectTrigger id="update-paper-size">
-                                <SelectValue placeholder="Chọn khổ giấy" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="custom">
-                                  -- Nhập thủ công --
-                                </SelectItem>
-                                {paperSizes.map((ps) => (
-                                  <SelectItem
-                                    key={ps.id}
-                                    value={ps.id.toString()}
-                                  >
-                                    {ps.name}
-                                    {ps.width && ps.height
-                                      ? ` (${ps.width}×${ps.height})`
-                                      : ""}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {/* Custom Paper Size */}
-                          {updatePaperSizeId === "custom" && (
-                            <div className="space-y-2">
-                              <Label htmlFor="update-custom-paper-size">
-                                Khổ giấy tùy chỉnh
-                              </Label>
-                              <div className="flex gap-1.5">
-                                <Input
-                                  id="update-custom-paper-size"
-                                  value={updateCustomPaperSize}
-                                  onChange={(e) =>
-                                    setUpdateCustomPaperSize(e.target.value)
-                                  }
-                                  placeholder="Ví dụ: 60×60, 31×43..."
-                                  className="flex-1"
-                                />
-                              </div>
-                              {existingUpdatePaperSize && (
-                                <p className="text-xs text-muted-foreground">
-                                  Đã tồn tại:{" "}
-                                  {existingUpdatePaperSize.name ||
-                                    `${existingUpdatePaperSize.width}×${existingUpdatePaperSize.height}`}
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          <Separator />
-
-                          {/* Total Quantity */}
-                          <div className="space-y-2">
-                            <Label htmlFor="update-total-quantity">
-                              Số lượng giấy in
-                            </Label>
-                            <Input
-                              id="update-total-quantity"
-                              type="number"
-                              min="1"
-                              max="2147483647"
-                              step="1"
-                              value={updateTotalQuantity}
-                              onChange={(e) =>
-                                setUpdateTotalQuantity(e.target.value)
-                              }
-                              placeholder="Nhập số lượng giấy in..."
-                            />
-                          </div>
-
-                          <div className="flex justify-end gap-2 pt-2 border-t mt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setIsUpdateInfoDialogOpen(false)}
-                              disabled={
-                                isUpdatingInfo ||
-                                isUpdatingImage ||
-                                isUpdatingFile ||
-                                isUploadingImage ||
-                                isUploadingFile
-                              }
-                            >
-                              Hủy
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={handleUpdateInfo}
-                              disabled={
-                                isUpdatingInfo ||
-                                isUpdatingImage ||
-                                isUpdatingFile ||
-                                isUploadingImage ||
-                                isUploadingFile
-                              }
-                            >
-                              {isUpdatingInfo ||
-                              isUpdatingImage ||
-                              isUpdatingFile ||
-                              isUploadingImage ||
-                              isUploadingFile ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  {isUpdatingFile
-                                    ? "Đang cập nhật file..."
-                                    : isUpdatingImage
-                                      ? "Đang cập nhật ảnh..."
-                                      : isUploadingFile
-                                        ? "Đang tải lên file..."
-                                        : isUploadingImage
-                                          ? "Đang tải lên ảnh..."
-                                          : "Đang cập nhật..."}
-                                </>
-                              ) : (
-                                "Lưu thay đổi"
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Compact Prepress Card */}
+              {/* Plate Export Card */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Settings2 className="h-4 w-4" />
-                    Bình Bài
+                    Xuất bản kẽm
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -3702,9 +3763,7 @@ export default function ProofingOrderDetailPage() {
                               : "bg-yellow-500"
                           }`}
                         />
-                        <span className="font-medium text-xs">
-                          Xuất bản kẽm
-                        </span>
+                        <span className="font-bold text-xs">Xuất bản kẽm</span>
                       </div>
                       <Button
                         variant="ghost"
@@ -3716,20 +3775,85 @@ export default function ProofingOrderDetailPage() {
                       </Button>
                     </div>
                     {order.plateExport ? (
-                      <div className="bg-muted/30 rounded p-2 text-xs space-y-0.5">
-                        <p className="truncate">
-                          <span className="text-muted-foreground">Đơn vị:</span>{" "}
-                          {order.plateExport.vendorName || "—"}
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">Có kẽm:</span>{" "}
-                          {order.plateExport.receivedAt
-                            ? format(
-                                new Date(order.plateExport.receivedAt),
-                                "dd/MM HH:mm"
-                              )
-                            : "Đang chờ"}
-                        </p>
+                      <div className="bg-muted/30 rounded p-2.5 text-xs space-y-2">
+                        {/* Đơn vị */}
+                        <div className="space-y-0.5">
+                          <span className="text-muted-foreground text-[10px]">
+                            Đơn vị:
+                          </span>
+                          <p className="font-bold text-foreground">
+                            {order.plateExport.vendorName || "—"}
+                          </p>
+                        </div>
+
+                        {/* Số lượng kẽm */}
+                        {order.plateExport.plateCount != null && (
+                          <div className="space-y-0.5">
+                            <span className="text-muted-foreground text-[10px]">
+                              Số lượng kẽm:
+                            </span>
+                            <p className="font-bold text-foreground">
+                              {order.plateExport.plateCount} kẽm
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Ngày gửi */}
+                        {order.plateExport.sentAt && (
+                          <div className="space-y-0.5">
+                            <span className="text-muted-foreground text-[10px]">
+                              Ngày gửi:
+                            </span>
+                            <p className="font-bold text-foreground">
+                              {format(
+                                new Date(order.plateExport.sentAt),
+                                "dd/MM/yyyy HH:mm"
+                              )}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Ngày dự kiến nhận */}
+                        {order.plateExport.estimatedReceiveAt && (
+                          <div className="space-y-0.5">
+                            <span className="text-muted-foreground text-[10px]">
+                              Dự kiến nhận:
+                            </span>
+                            <p className="font-bold text-foreground">
+                              {format(
+                                new Date(order.plateExport.estimatedReceiveAt),
+                                "dd/MM/yyyy HH:mm"
+                              )}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Ngày nhận kẽm */}
+                        <div className="space-y-0.5">
+                          <span className="text-muted-foreground text-[10px]">
+                            Có kẽm:
+                          </span>
+                          <p className="font-bold text-foreground">
+                            {order.plateExport.receivedAt
+                              ? format(
+                                  new Date(order.plateExport.receivedAt),
+                                  "dd/MM/yyyy HH:mm"
+                                )
+                              : "Đang chờ"}
+                          </p>
+                        </div>
+
+                        {/* Ghi chú */}
+                        {order.plateExport.notes && (
+                          <div className="space-y-0.5 pt-1 border-t border-border/30">
+                            <span className="text-muted-foreground text-[10px]">
+                              Ghi chú:
+                            </span>
+                            <p className="text-foreground italic whitespace-pre-wrap line-clamp-3">
+                              {order.plateExport.notes}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-[10px] text-muted-foreground italic pl-3.5">
@@ -3738,201 +3862,8 @@ export default function ProofingOrderDetailPage() {
                     )}
                   </div>
 
-                  <Separator className="my-2" />
-
-                  {/* Die Export Info - Only show if has die_cut designs */}
-                  {hasDieCutDesigns && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            isDieExported ? "bg-green-500" : "bg-yellow-500"
-                          }`}
-                        />
-                        <span className="font-medium text-xs">
-                          Xuất khuôn bế
-                          {order.dieExports && order.dieExports.length > 0 && (
-                            <span className="ml-1.5 text-muted-foreground font-normal">
-                              ({order.dieExports.length})
-                            </span>
-                          )}
-                        </span>
-                        <div className="flex items-center gap-1 ml-auto">
-                          {order.status !== "completed" &&
-                            order.dieExports &&
-                            order.dieExports.length > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs"
-                                onClick={handleOpenAddDieDialog}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Thêm
-                              </Button>
-                            )}
-                          {!isDieExported && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => setIsDieExportDialogOpen(true)}
-                            >
-                              Ghi nhận
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      {order.dieExports && order.dieExports.length > 0 ? (
-                        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                          {order.dieExports.map((dieExport, index) => (
-                            <div
-                              key={dieExport.id}
-                              className="bg-muted/40 rounded-lg p-2.5 border border-border/50 hover:bg-muted/60 transition-colors"
-                            >
-                              {/* Main Content Row */}
-                              <div className="flex items-start gap-2.5">
-                                {/* Image */}
-                                {dieExport.die?.imageUrl ? (
-                                  <div
-                                    className="relative w-16 h-16 rounded-md border overflow-hidden bg-background cursor-pointer hover:opacity-90 transition-opacity shrink-0 group"
-                                    onClick={() => {
-                                      setViewingImageUrl(
-                                        dieExport.die?.imageUrl || null
-                                      );
-                                      setImageViewerOpen(true);
-                                    }}
-                                  >
-                                    <img
-                                      src={dieExport.die.imageUrl}
-                                      alt={`Khuôn ${dieExport.die?.code || index + 1}`}
-                                      className="w-full h-full object-contain"
-                                    />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                      <Eye className="h-3.5 w-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="w-16 h-16 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
-                                    <Package className="h-5 w-5 text-muted-foreground" />
-                                  </div>
-                                )}
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0 space-y-1">
-                                  {/* Code & Name */}
-                                  <div>
-                                    <div className="font-semibold text-xs text-foreground truncate">
-                                      {dieExport.die?.code ||
-                                        `Khuôn #${dieExport.dieId}`}
-                                    </div>
-                                  </div>
-
-                                  {/* Details Grid */}
-                                  <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px]">
-                                    {/* Kích thước */}
-                                    {dieExport.die && (
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-muted-foreground">
-                                          KT:
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {formatDieSize(dieExport.die)}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {/* Nhà cung cấp */}
-                                    {dieExport.die?.vendorName && (
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-muted-foreground">
-                                          NCC:
-                                        </span>
-                                        <span className="font-medium text-foreground truncate">
-                                          {dieExport.die.vendorName}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {/* Vị trí */}
-                                    {dieExport.die?.location && (
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-muted-foreground">
-                                          Vị trí:
-                                        </span>
-                                        <span className="font-medium text-foreground">
-                                          {dieExport.die.location}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Ngày xuất */}
-                                  {dieExport.createdAt && (
-                                    <div className="text-[10px] text-muted-foreground pt-0.5 border-t border-border/30">
-                                      Xuất:{" "}
-                                      {format(
-                                        new Date(dieExport.createdAt),
-                                        "dd/MM/yyyy HH:mm"
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Notes */}
-                                  {dieExport.notes && (
-                                    <div className="text-[10px] italic text-muted-foreground pt-0.5 border-t border-border/30 line-clamp-2">
-                                      {dieExport.notes}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex items-start gap-1 shrink-0">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2 text-xs"
-                                    onClick={() =>
-                                      handleOpenReplaceDieDialog(dieExport)
-                                    }
-                                    disabled={
-                                      !order || order.status === "completed"
-                                    }
-                                  >
-                                    <Edit className="h-3 w-3 mr-1" />
-                                    Sửa
-                                  </Button>
-                                  {order &&
-                                    order.status !== "completed" &&
-                                    dieExport.dieId && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                                        onClick={() =>
-                                          handleRemoveDie(dieExport.dieId!)
-                                        }
-                                        disabled={isRemovingDie}
-                                      >
-                                        <Trash2 className="h-3 w-3 mr-1" />
-                                        Xóa
-                                      </Button>
-                                    )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-muted-foreground italic pl-3.5 py-2">
-                          Chưa có thông tin
-                        </p>
-                      )}
-                    </div>
-                  )}
-
                   {order.status === "waiting_for_production" && (
-                    <div className="pt-2">
+                    <div className="pt-2 border-t">
                       <Button
                         className="w-full gap-1.5 h-8 text-xs"
                         disabled={
@@ -3957,6 +3888,214 @@ export default function ProofingOrderDetailPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Column 4: Thông tin xuất bế - chỉ hiển thị khi có xuất bế */}
+            {hasDieCutDesigns && (
+              <div className="space-y-4">
+                {/* Die Export Card */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Box className="h-4 w-4" />
+                      Xuất khuôn bế
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Die Export Info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              isDieExported ? "bg-green-500" : "bg-yellow-500"
+                            }`}
+                          />
+                          <span className="font-bold text-xs">
+                            Xuất khuôn bế
+                            {order.dieExports &&
+                              order.dieExports.length > 0 && (
+                                <span className="ml-1.5 text-muted-foreground font-normal">
+                                  ({order.dieExports.length})
+                                </span>
+                              )}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {order.status !== "completed" &&
+                            order.dieExports &&
+                            order.dieExports.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs shrink-0"
+                                onClick={handleOpenAddDieDialog}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Thêm
+                              </Button>
+                            )}
+                          {!isDieExported && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs shrink-0"
+                              onClick={() => setIsDieExportDialogOpen(true)}
+                            >
+                              Ghi nhận
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {order.dieExports && order.dieExports.length > 0 ? (
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {order.dieExports.map((dieExport, index) => (
+                            <div
+                              key={dieExport.id}
+                              className="bg-muted/40 rounded-lg p-2.5 border border-border/50 hover:bg-muted/60 transition-colors"
+                            >
+                              {/* Main Content Row */}
+                              <div className="flex items-start gap-2.5">
+                                {/* Image */}
+                                {dieExport.die?.imageUrl ? (
+                                  <div
+                                    className="relative w-14 h-14 rounded-md border overflow-hidden bg-background cursor-pointer hover:opacity-90 transition-opacity shrink-0 group"
+                                    onClick={() => {
+                                      setViewingImageUrl(
+                                        dieExport.die?.imageUrl || null
+                                      );
+                                      setImageViewerOpen(true);
+                                    }}
+                                  >
+                                    <img
+                                      src={dieExport.die.imageUrl}
+                                      alt={`Khuôn ${dieExport.die?.code || index + 1}`}
+                                      className="w-full h-full object-contain"
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                      <Eye className="h-3.5 w-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="w-14 h-14 rounded-md border bg-muted/50 flex items-center justify-center shrink-0">
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                )}
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0 space-y-1">
+                                  {/* Code & Name */}
+                                  <div>
+                                    <div className="font-bold text-xs text-foreground truncate">
+                                      {dieExport.die?.code ||
+                                        `Khuôn #${dieExport.dieId}`}
+                                    </div>
+                                  </div>
+
+                                  {/* Details - Vertical layout to prevent break */}
+                                  <div className="space-y-0.5 text-[10px]">
+                                    {/* Kích thước */}
+                                    {dieExport.die && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-muted-foreground font-medium">
+                                          KT:
+                                        </span>
+                                        <span className="font-bold text-foreground">
+                                          {formatDieSize(dieExport.die)}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {/* Nhà cung cấp */}
+                                    {dieExport.die?.vendorName && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-muted-foreground font-medium">
+                                          NCC:
+                                        </span>
+                                        <span className="font-bold text-foreground truncate">
+                                          {dieExport.die.vendorName}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {/* Vị trí */}
+                                    {dieExport.die?.location && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-muted-foreground font-medium">
+                                          Vị trí:
+                                        </span>
+                                        <span className="font-bold text-foreground">
+                                          {dieExport.die.location}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Ngày xuất */}
+                                  {dieExport.createdAt && (
+                                    <div className="text-[10px] text-muted-foreground font-medium pt-0.5 border-t border-border/30">
+                                      Xuất:{" "}
+                                      <span className="font-bold">
+                                        {format(
+                                          new Date(dieExport.createdAt),
+                                          "dd/MM/yyyy HH:mm"
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Notes */}
+                                  {dieExport.notes && (
+                                    <div className="text-[10px] italic text-muted-foreground font-medium pt-0.5 border-t border-border/30 line-clamp-2">
+                                      {dieExport.notes}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Actions - Vertical stack */}
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() =>
+                                      handleOpenReplaceDieDialog(dieExport)
+                                    }
+                                    disabled={
+                                      !order || order.status === "completed"
+                                    }
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  {order &&
+                                    order.status !== "completed" &&
+                                    dieExport.dieId && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() =>
+                                          handleRemoveDie(dieExport.dieId!)
+                                        }
+                                        disabled={isRemovingDie}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground italic pl-3.5 py-2">
+                          Chưa có thông tin
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
       </div>

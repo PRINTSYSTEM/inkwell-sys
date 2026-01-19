@@ -149,13 +149,6 @@ export const MENU_ITEMS: MenuItem[] = [
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
       },
       {
-        id: "proofing-waiting-designs",
-        title: "Thiết kế chờ bình bài",
-        icon: Layers,
-        path: ROUTE_PATHS.PROOFING.WAITING_DESIGNS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      },
-      {
         id: "dies-management",
         title: "Quản lý khuôn bế",
         icon: Layers,
