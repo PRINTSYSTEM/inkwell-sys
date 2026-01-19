@@ -40,10 +40,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  useCashFunds,
-  useDeleteCashFund,
-} from "@/hooks/use-cash";
+import { useCashFunds, useDeleteCashFund } from "@/hooks/use-cash";
 import { formatCurrency } from "@/lib/status-utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -71,7 +68,8 @@ export default function CashFundListPage() {
   } = useCashFunds({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    isActive: isActiveFilter === "all" ? undefined : isActiveFilter === "active",
+    isActive:
+      isActiveFilter === "all" ? undefined : isActiveFilter === "active",
     search: searchQuery || undefined,
   });
 
@@ -271,8 +269,8 @@ export default function CashFundListPage() {
         {fundsData && fundsData.totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Trang {currentPage} / {fundsData.totalPages} (
-              {fundsData.total} quỹ)
+              Trang {currentPage} / {fundsData.totalPages} ({fundsData.total}{" "}
+              quỹ)
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -318,4 +316,3 @@ export default function CashFundListPage() {
     </>
   );
 }
-

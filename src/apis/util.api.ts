@@ -10,8 +10,14 @@ export const normalizeParams = (filters: Record<string, unknown>) => {
     }
   }
 
+  // Remove null, undefined, and empty string values
+  // Note: Empty strings are removed to avoid sending empty query params
   const removeEmptyValueParams = Object.fromEntries(
-    Object.entries(normalized).filter(([_, v]) => v != null)
+    Object.entries(normalized).filter(([_, v]) => {
+      // Keep non-null, non-undefined values
+      // Remove empty strings (they will be sent as empty query params which may not be desired)
+      return v != null && v !== "";
+    })
   );
   return removeEmptyValueParams;
 };
@@ -142,6 +148,11 @@ export const API_SUFFIX = {
   PAPER_SIZES: "/paper-sizes",
   PROOFING_RECORD_PLATE: (id: number) => `/proofing-orders/${id}/plate-export`,
   PROOFING_RECORD_DIE: (id: number) => `/proofing-orders/${id}/die-export`,
+
+  // ========== PLATE EXPORTS ==========
+  PLATE_EXPORTS: "/plate-exports",
+  PLATE_EXPORT_BY_ID: (id: number) => `/plate-exports/${id}`,
+  PLATE_EXPORT_UPDATE: (id: number) => `/plate-exports/${id}`,
   PROOFING_UPDATE_FILE: (id: number) => `/proofing-orders/${id}/update-file`,
   PROOFING_UPDATE_IMAGE: (id: number) => `/proofing-orders/${id}/update-image`,
   PROOFING_DOWNLOAD_FILE: (id: number) =>

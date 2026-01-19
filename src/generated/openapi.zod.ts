@@ -1976,6 +1976,7 @@ const PlateExportResponse = z
     vendorName: z.string().nullable(),
     plateVendor: VendorResponse,
     plateCount: z.number().int(),
+    isActive: z.boolean(),
     sentAt: z.string().datetime({ offset: true }).nullable(),
     estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
     receivedAt: z.string().datetime({ offset: true }).nullable(),
@@ -1991,6 +1992,13 @@ const PlateExportResponsePaginate = z
     total: z.number().int(),
     totalPages: z.number().int(),
     items: z.array(PlateExportResponse).nullable(),
+  })
+  .partial();
+const UpdatePlateExportRequest = z
+  .object({
+    plateCount: z.number().int().gte(1).lte(6).nullable(),
+    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
+    receivedAt: z.string().datetime({ offset: true }).nullable(),
   })
   .partial();
 const CreateProductionOrderRequest = z.object({
@@ -2742,6 +2750,7 @@ export const schemas = {
   PaymentResponsePaginate,
   PlateExportResponse,
   PlateExportResponsePaginate,
+  UpdatePlateExportRequest,
   CreateProductionOrderRequest,
   ProductionStepResponse,
   ProductionOrderResponse,
@@ -6851,6 +6860,25 @@ const endpoints = makeApi([
     alias: "getApiplateExportsId",
     requestFormat: "json",
     parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: PlateExportResponse,
+  },
+  {
+    method: "put",
+    path: "/api/plate-exports/:id",
+    alias: "putApiplateExportsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdatePlateExportRequest,
+      },
       {
         name: "id",
         type: "Path",

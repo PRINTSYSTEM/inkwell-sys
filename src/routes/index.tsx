@@ -51,6 +51,14 @@ const ProofingCreatePrintOrder = lazy(
 //die management
 const DieManagement = lazy(() => import("@/pages/dies/DieListPage"));
 
+// Plate Exports
+const PlateExportList = lazy(
+  () => import("@/pages/plate-exports/PlateExportListPage")
+);
+const PlateExportDetail = lazy(
+  () => import("@/pages/plate-exports/PlateExportDetailPage")
+);
+
 // Proofing
 const ProofingDetail = lazy(() => import("@/pages/prepress/PrepressDetail"));
 
@@ -462,6 +470,29 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <ProductionDetailPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
+      // ===== PLATE EXPORTS =====
+      {
+        path: lastSegment(ROUTE_PATHS.PLATE_EXPORTS.ROOT), // "plate-exports"
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PlateExportList />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PlateExportDetail />
               </Suspense>
             ),
           },
