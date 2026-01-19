@@ -155,6 +155,13 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.DIES.ROOT,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
       },
+      {
+        id: "plate-exports",
+        title: "Danh sách xuất kẽm",
+        icon: Package,
+        path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
     ],
   },
   {

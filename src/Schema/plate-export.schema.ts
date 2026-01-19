@@ -6,6 +6,7 @@ import {
   PlateExportResponseSchema as GenPlateExportResponseSchema,
   PlateExportResponsePaginateSchema as GenPlateExportResponsePaginateSchema,
   RecordPlateExportRequestSchema as GenRecordPlateExportRequestSchema,
+  UpdatePlateExportRequestSchema as GenUpdatePlateExportRequestSchema,
 } from "./generated";
 
 // ===== PlateExportResponse =====
@@ -37,4 +38,11 @@ export const RecordPlateExportRequestSchema =
   }).passthrough();
 export type RecordPlateExportRequest = z.infer<
   typeof RecordPlateExportRequestSchema
+>;
+
+// ===== UpdatePlateExportRequest =====
+export const UpdatePlateExportRequestSchema =
+  GenUpdatePlateExportRequestSchema.passthrough();
+export type UpdatePlateExportRequest = z.infer<
+  typeof UpdatePlateExportRequestSchema
 >;

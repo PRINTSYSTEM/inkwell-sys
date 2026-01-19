@@ -351,7 +351,7 @@ export default function DieListPage() {
                           <TableCell>{die.vendorName || "—"}</TableCell>
                           <TableCell>
                             {die.location
-                              ? dieLocationLabels[die.location] || die.location
+                              ? dieLocationLabels[die.location]
                               : "—"}
                           </TableCell>
                           <TableCell>
