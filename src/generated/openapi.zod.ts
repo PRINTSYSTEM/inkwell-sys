@@ -1654,6 +1654,8 @@ const OrderDetailResponse = z
     totalPrice: z.number().nullable(),
     requirements: z.string().nullable(),
     additionalNotes: z.string().nullable(),
+    lastUpdatedByAccountantId: z.number().int().nullable(),
+    lastUpdatedByAccountant: UserInfo,
     orderTotalAmount: z.number(),
     orderDepositAmount: z.number(),
     derivedStatus: z.string().nullable(),
@@ -1782,6 +1784,7 @@ const OrderDetailResponseForDesigner = z
     additionalNotes: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }).nullable(),
+    lastUpdatedByAccountant: UserInfo,
     design: DesignResponse,
   })
   .partial();
@@ -5076,6 +5079,11 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
       {
+        name: "searchQuery",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -5192,6 +5200,56 @@ const endpoints = makeApi([
     parameters: [
       {
         name: "q",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "code",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "size",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customerName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customerCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "designName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "designCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "designTypeName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "proofingOrderCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "vendorName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "notes",
         type: "Query",
         schema: z.string().optional(),
       },

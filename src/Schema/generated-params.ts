@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-18T11:21:04.513Z */
+/* Generated at: 2026-01-19T03:51:21.196Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -275,6 +275,7 @@ export type DesignTimelineParams = z.infer<typeof DesignTimelineParamsSchema>;
 // ==== DesignTypeListParams (GET /api/designs/types) ====
 export const DesignTypeListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
+  searchQuery: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -293,6 +294,16 @@ export type DesignUserParams = z.infer<typeof DesignUserParamsSchema>;
 // ==== DieListParams (GET /api/dies) ====
 export const DieListParamsSchema = PagedParamsSchema.extend({
   q: z.string().nullable().optional(),
+  code: z.string().nullable().optional(),
+  size: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
+  customerCode: z.string().nullable().optional(),
+  designName: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  designTypeName: z.string().nullable().optional(),
+  proofingOrderCode: z.string().nullable().optional(),
+  vendorName: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   isUsable: z.boolean().nullable().optional(),
   location: z.string().nullable().optional(),
   designId: z.number().int().nullable().optional(),
