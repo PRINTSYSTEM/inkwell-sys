@@ -261,6 +261,7 @@ export const API_SUFFIX = {
   CASH_RECEIPT_APPROVE: (id: number) => `/cash-receipts/${id}/approve`,
   CASH_RECEIPT_CANCEL: (id: number) => `/cash-receipts/${id}/cancel`,
   CASH_RECEIPT_POST: (id: number) => `/cash-receipts/${id}/post`,
+  CASH_RECEIPT_EXPORT_PDF: (id: number) => `/cash-receipts/${id}/export-pdf`,
   CASH_BOOK: "/cash-book",
 
   // ========== BANK MANAGEMENT ==========

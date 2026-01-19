@@ -5,9 +5,6 @@ import { vi } from "date-fns/locale";
 import {
   Search,
   Filter,
-  MoreHorizontal,
-  Eye,
-  FileText,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -15,9 +12,6 @@ import {
   Plus,
   Loader2,
   AlertCircle,
-  CheckCircle2,
-  XCircle,
-  Clock,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
@@ -41,41 +35,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
-import {
-  useCashPayments,
-  useDeleteCashPayment,
-  useApproveCashPayment,
-  useCancelCashPayment,
-  usePostCashPayment,
-} from "@/hooks/use-cash";
+import { useCashPayments, useCashFunds } from "@/hooks/use-cash";
 import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
 import { useActiveVendors } from "@/hooks/use-vendor";
 import {
   formatCurrency,
   getPaymentMethodLabel,
-  getCashTransactionStatusLabel,
 } from "@/lib/status-utils";
 import { toast } from "sonner";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
   return format(new Date(dateStr), "dd/MM/yyyy", { locale: vi });
-};
-
-const formatDateTime = (dateStr: string | null | undefined) => {
-  if (!dateStr) return "—";
-  return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
 };
 
 const getStatusBadge = (status: string | null | undefined) => {
@@ -126,6 +101,20 @@ export default function CashPaymentListPage() {
 
   const { data: vendorsData } = useActiveVendors();
 
+  const { data: cashFundsData } = useCashFunds({
+    pageNumber: 1,
+    pageSize: 1000,
+    isActive: true,
+  });
+
+  // Create map for cash fund ID -> code
+  const cashFundMap = new Map<number, string>();
+  cashFundsData?.items?.forEach((fund) => {
+    if (fund.id && fund.code) {
+      cashFundMap.set(fund.id, fund.code);
+    }
+  });
+
   const {
     data: paymentsData,
     isLoading,
@@ -150,13 +139,7 @@ export default function CashPaymentListPage() {
         : undefined,
   });
 
-  const deletePaymentMutation = useDeleteCashPayment();
-  const approvePaymentMutation = useApproveCashPayment();
-  const cancelPaymentMutation = useCancelCashPayment();
-  const postPaymentMutation = usePostCashPayment();
-
   const handleExportExcel = async () => {
-    // TODO: Implement export Excel when API endpoint is available
     toast.info("Chức năng xuất Excel đang được phát triển");
   };
 
@@ -166,73 +149,6 @@ export default function CashPaymentListPage() {
     }
   };
 
-  const handleApprove = async (id: number | undefined) => {
-    if (!id) return;
-    try {
-      await approvePaymentMutation.mutateAsync(id);
-    } catch (error) {
-      // Error is handled by the hook
-    }
-  };
-
-  const handleCancel = async (id: number | undefined) => {
-    if (!id) return;
-    try {
-      await cancelPaymentMutation.mutateAsync(id);
-    } catch (error) {
-      // Error is handled by the hook
-    }
-  };
-
-  const handlePost = async (id: number | undefined) => {
-    if (!id) return;
-    try {
-      await postPaymentMutation.mutateAsync(id);
-    } catch (error) {
-      // Error is handled by the hook
-    }
-  };
-
-  const handleDelete = async (id: number | undefined) => {
-    if (!id) return;
-    if (window.confirm("Bạn có chắc chắn muốn xóa phiếu chi này?")) {
-      try {
-        await deletePaymentMutation.mutateAsync(id);
-      } catch (error) {
-        // Error is handled by the hook
-      }
-    }
-  };
-
-  const canEdit = (status: string | null | undefined) => {
-    if (!status) return true;
-    const statusLower = status.toLowerCase();
-    return statusLower === "draft" || statusLower.includes("draft");
-  };
-
-  const canApprove = (status: string | null | undefined) => {
-    if (!status) return false;
-    const statusLower = status.toLowerCase();
-    return statusLower === "draft" || statusLower.includes("draft");
-  };
-
-  const canPost = (status: string | null | undefined) => {
-    if (!status) return false;
-    const statusLower = status.toLowerCase();
-    return statusLower === "approved" || statusLower.includes("approved");
-  };
-
-  const canCancel = (status: string | null | undefined) => {
-    if (!status) return false;
-    const statusLower = status.toLowerCase();
-    return (
-      statusLower === "draft" ||
-      statusLower === "approved" ||
-      statusLower.includes("draft") ||
-      statusLower.includes("approved")
-    );
-  };
-
   return (
     <>
       <Helmet>
@@ -240,46 +156,53 @@ export default function CashPaymentListPage() {
         <meta name="description" content="Quản lý phiếu chi trong hệ thống" />
       </Helmet>
 
-      <div className="container mx-auto py-6 space-y-6 max-w-full">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Phiếu chi</h1>
-            <p className="text-muted-foreground">
-              Quản lý và theo dõi các phiếu chi
-            </p>
+      <div className="h-screen flex flex-col overflow-hidden">
+        {/* Header - Compact */}
+        <div className="flex-shrink-0 px-6 py-3 border-b bg-background">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Phiếu chi</h1>
+              <p className="text-xs text-muted-foreground">
+                Quản lý và theo dõi các phiếu chi
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => navigate("/accounting/cash-payments/new")}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Tạo phiếu chi
+            </Button>
           </div>
-          <Button onClick={() => navigate("/accounting/cash-payments/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Tạo phiếu chi
-          </Button>
         </div>
 
         {/* Error Alert */}
         {isError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Lỗi kết nối</AlertTitle>
-            <AlertDescription>
-              {error instanceof Error
-                ? error.message
-                : "Không thể tải dữ liệu. Vui lòng thử lại."}
-            </AlertDescription>
-          </Alert>
+          <div className="flex-shrink-0 px-6 py-2">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Lỗi kết nối</AlertTitle>
+              <AlertDescription>
+                {error instanceof Error
+                  ? error.message
+                  : "Không thể tải dữ liệu. Vui lòng thử lại."}
+              </AlertDescription>
+            </Alert>
+          </div>
         )}
 
-        {/* Filters */}
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3">
+        {/* Filters - Compact */}
+        <div className="flex-shrink-0 px-6 py-2 space-y-2 border-b bg-background">
+          <div className="flex flex-col gap-2">
             {/* First row: Search and Date Range */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Tìm kiếm theo mã phiếu, người nhận, lý do..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-8 h-9 text-sm"
                 />
               </div>
               <div className="flex-shrink-0">
@@ -290,10 +213,10 @@ export default function CashPaymentListPage() {
               </div>
             </div>
             {/* Second row: Filters */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[160px]">
-                  <Filter className="h-4 w-4 mr-2" />
+                <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+                  <Filter className="h-3 w-3 mr-2" />
                   <SelectValue placeholder="Trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
@@ -308,7 +231,7 @@ export default function CashPaymentListPage() {
                 value={paymentMethodFilter}
                 onValueChange={setPaymentMethodFilter}
               >
-                <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
                   <SelectValue placeholder="Phương thức" />
                 </SelectTrigger>
                 <SelectContent>
@@ -329,7 +252,7 @@ export default function CashPaymentListPage() {
                   setVendorFilter(value === "all" ? "" : value)
                 }
               >
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full sm:w-[160px] h-9 text-sm">
                   <SelectValue placeholder="Nhà cung cấp" />
                 </SelectTrigger>
                 <SelectContent>
@@ -345,7 +268,7 @@ export default function CashPaymentListPage() {
                 value={expenseCategoryFilter}
                 onValueChange={setExpenseCategoryFilter}
               >
-                <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
                   <SelectValue placeholder="Khoản mục" />
                 </SelectTrigger>
                 <SelectContent>
@@ -361,6 +284,7 @@ export default function CashPaymentListPage() {
                 <Button
                   variant="outline"
                   size="icon"
+                  className="h-9 w-9"
                   onClick={() => refetch()}
                   disabled={isLoading}
                 >
@@ -371,6 +295,7 @@ export default function CashPaymentListPage() {
                 <Button
                   variant="outline"
                   size="icon"
+                  className="h-9 w-9"
                   title="Xuất Excel"
                   onClick={handleExportExcel}
                 >
@@ -381,255 +306,172 @@ export default function CashPaymentListPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-lg border overflow-x-auto">
-          <Table className="min-w-[1000px]">
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Số phiếu</TableHead>
-                <TableHead className="w-[120px]">Ngày chứng từ</TableHead>
-                <TableHead className="w-[120px]">Ngày hạch toán</TableHead>
-                <TableHead>Người nhận</TableHead>
-                <TableHead>Khoản mục chi</TableHead>
-                <TableHead className="text-right">Số tiền</TableHead>
-                <TableHead>Phương thức</TableHead>
-                <TableHead>Tham chiếu</TableHead>
-                <TableHead className="text-center">Trạng thái</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 10 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-5 w-full" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : !paymentsData?.items || paymentsData.items.length === 0 ? (
+        {/* Table - Expanded to fill space */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-auto border-t">
+            <Table className="min-w-full">
+              <TableHeader className="sticky top-0 bg-muted/50 z-10">
                 <TableRow>
-                  <TableCell
-                    colSpan={10}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    Không tìm thấy phiếu chi nào.
-                  </TableCell>
+                  <TableHead className="w-[140px] font-semibold">Số phiếu</TableHead>
+                  <TableHead className="w-[120px] font-semibold">Ngày chứng từ</TableHead>
+                  <TableHead className="w-[120px] font-semibold">Ngày hạch toán</TableHead>
+                  <TableHead className="font-semibold">Người nhận</TableHead>
+                  <TableHead className="font-semibold">Khoản mục chi</TableHead>
+                  <TableHead className="text-right font-semibold">Số tiền</TableHead>
+                  <TableHead className="font-semibold">Phương thức</TableHead>
+                  <TableHead className="font-semibold">Mã tài khoản</TableHead>
+                  <TableHead className="font-semibold">Tham chiếu</TableHead>
+                  <TableHead className="text-center font-semibold">Trạng thái</TableHead>
                 </TableRow>
-              ) : (
-                paymentsData.items.map((payment) => (
-                  <TableRow
-                    key={payment.id}
-                    className="group cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleViewDetails(payment.id)}
-                  >
-                    <TableCell className="font-medium font-mono text-sm">
-                      {payment.code || `#${payment.id}`}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {payment.voucherDate
-                        ? formatDate(payment.voucherDate)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {payment.postingDate
-                        ? formatDate(payment.postingDate)
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="font-medium text-sm">
-                          {payment.receiverName || "—"}
-                        </div>
-                        {payment.vendorName && (
-                          <div className="text-xs text-muted-foreground">
-                            NCC: {payment.vendorName}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {payment.expenseCategoryName || "—"}
-                      </div>
-                      {payment.reason && (
-                        <div className="text-xs text-muted-foreground">
-                          {payment.reason}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {payment.amount ? formatCurrency(payment.amount) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {payment.paymentMethodName || payment.paymentMethodId ? (
-                        <Badge variant="secondary" className="text-xs">
-                          {getPaymentMethodLabel(
-                            payment.paymentMethodName,
-                            payment.paymentMethodName
-                          )}
-                        </Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {payment.orderCode && (
-                          <div className="text-xs">
-                            <span className="text-muted-foreground">Đơn:</span>{" "}
-                            <span className="font-mono">
-                              {payment.orderCode}
-                            </span>
-                          </div>
-                        )}
-                        {payment.vendorName && (
-                          <div className="text-xs">
-                            <span className="text-muted-foreground">NCC:</span>{" "}
-                            {payment.vendorName}
-                          </div>
-                        )}
-                        {!payment.orderCode && !payment.vendorName && "—"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {getStatusBadge(payment.status)}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleViewDetails(payment.id)}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Xem chi tiết
-                          </DropdownMenuItem>
-                          {canEdit(payment.status) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  navigate(
-                                    `/accounting/cash-payments/${payment.id}/edit`
-                                  )
-                                }
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Chỉnh sửa
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(payment.id)}
-                                className="text-destructive"
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Xóa
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {canApprove(payment.status) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleApprove(payment.id)}
-                                disabled={approvePaymentMutation.isPending}
-                              >
-                                {approvePaymentMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                                )}
-                                Duyệt
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {canPost(payment.status) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handlePost(payment.id)}
-                                disabled={postPaymentMutation.isPending}
-                              >
-                                {postPaymentMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Clock className="h-4 w-4 mr-2" />
-                                )}
-                                Hạch toán
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {canCancel(payment.status) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleCancel(payment.id)}
-                                disabled={cancelPaymentMutation.isPending}
-                                className="text-destructive"
-                              >
-                                {cancelPaymentMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <XCircle className="h-4 w-4 mr-2" />
-                                )}
-                                Hủy
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 10 }).map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-6 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : !paymentsData?.items || paymentsData.items.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={10}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      Không tìm thấy phiếu chi nào.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination */}
-        {paymentsData && paymentsData.totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Trang {currentPage} / {paymentsData.totalPages} (
-              {paymentsData.total} phiếu chi)
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1 || isLoading}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm font-medium px-2">
-                {currentPage} / {paymentsData.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((p) =>
-                    Math.min(paymentsData.totalPages, p + 1)
-                  )
-                }
-                disabled={currentPage === paymentsData.totalPages || isLoading}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+                ) : (
+                  paymentsData.items.map((payment) => (
+                    <TableRow
+                      key={payment.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleViewDetails(payment.id)}
+                    >
+                      <TableCell className="font-semibold font-mono text-sm">
+                        {payment.code || `#${payment.id}`}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {payment.voucherDate
+                          ? formatDate(payment.voucherDate)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {payment.postingDate
+                          ? formatDate(payment.postingDate)
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          <div className="font-semibold text-sm">
+                            {payment.receiverName || "—"}
+                          </div>
+                          {payment.vendorName && (
+                            <div className="text-xs text-muted-foreground">
+                              NCC: {payment.vendorName}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-medium">
+                          {payment.expenseCategoryName || "—"}
+                        </div>
+                        {payment.reason && (
+                          <div className="text-xs text-muted-foreground">
+                            {payment.reason}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums text-sm">
+                        {payment.amount ? formatCurrency(payment.amount) : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {payment.paymentMethodName || payment.paymentMethodId ? (
+                          <Badge variant="secondary" className="text-xs font-medium">
+                            {getPaymentMethodLabel(
+                              payment.paymentMethodName,
+                              payment.paymentMethodName
+                            )}
+                          </Badge>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium text-sm">
+                        {payment.cashFundId && cashFundMap.has(payment.cashFundId)
+                          ? cashFundMap.get(payment.cashFundId)
+                          : payment.cashFundName || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          {payment.orderCode && (
+                            <div className="text-xs font-medium">
+                              <span className="text-muted-foreground">Đơn:</span>{" "}
+                              <span className="font-mono">
+                                {payment.orderCode}
+                              </span>
+                            </div>
+                          )}
+                          {payment.vendorName && (
+                            <div className="text-xs font-medium">
+                              <span className="text-muted-foreground">NCC:</span>{" "}
+                              {payment.vendorName}
+                            </div>
+                          )}
+                          {!payment.orderCode && !payment.vendorName && "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {getStatusBadge(payment.status)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-        )}
+
+          {/* Pagination - Compact */}
+          {paymentsData && paymentsData.totalPages > 1 && (
+            <div className="flex-shrink-0 flex items-center justify-between px-6 py-2 border-t bg-background">
+              <p className="text-xs text-muted-foreground">
+                Trang {currentPage} / {paymentsData.totalPages} (
+                {paymentsData.total} phiếu chi)
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || isLoading}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs font-medium px-2">
+                  {currentPage} / {paymentsData.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() =>
+                    setCurrentPage((p) =>
+                      Math.min(paymentsData.totalPages, p + 1)
+                    )
+                  }
+                  disabled={currentPage === paymentsData.totalPages || isLoading}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

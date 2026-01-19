@@ -56,6 +56,7 @@ import {
   useApproveCashReceipt,
   useCancelCashReceipt,
   usePostCashReceipt,
+  useExportCashReceiptPDF,
 } from "@/hooks/use-cash";
 import { usePaymentMethods } from "@/hooks/use-expense";
 import { useCashFunds } from "@/hooks/use-cash";
@@ -166,6 +167,7 @@ export default function CashReceiptDetailPage() {
   const approveMutation = useApproveCashReceipt();
   const cancelMutation = useCancelCashReceipt();
   const postMutation = usePostCashReceipt();
+  const exportPDFMutation = useExportCashReceiptPDF();
 
   const isDraft = receipt?.status?.toLowerCase() === "draft";
   const isApproved = receipt?.status?.toLowerCase() === "approved";
@@ -456,7 +458,9 @@ export default function CashReceiptDetailPage() {
                           key={fund.id}
                           value={fund.id?.toString() || ""}
                         >
-                          {fund.name}
+                          {fund.code
+                            ? `${fund.code} - ${fund.name}`
+                            : fund.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -606,9 +610,21 @@ export default function CashReceiptDetailPage() {
                 Xóa
               </Button>
             )}
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Xuất Excel
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (receipt?.id) {
+                  exportPDFMutation.mutate(receipt.id);
+                }
+              }}
+              disabled={exportPDFMutation.loading}
+            >
+              {exportPDFMutation.loading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Xuất PDF
             </Button>
             <Button variant="outline">
               <Printer className="h-4 w-4 mr-2" />
@@ -817,13 +833,26 @@ export default function CashReceiptDetailPage() {
                           key={fund.id}
                           value={fund.id?.toString() || ""}
                         >
-                          {fund.name}
+                          {fund.code
+                            ? `${fund.code} - ${fund.name}`
+                            : fund.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <div className="text-sm">{receipt.cashFundName || "—"}</div>
+                  <div className="text-sm">
+                    {receipt.cashFundId && cashFundsData?.items
+                      ? (() => {
+                          const fund = cashFundsData.items.find(
+                            (f) => f.id === receipt.cashFundId
+                          );
+                          return fund?.code
+                            ? `${fund.code} - ${fund.name || receipt.cashFundName || ""}`
+                            : receipt.cashFundName || "—";
+                        })()
+                      : receipt.cashFundName || "—"}
+                  </div>
                 )}
               </div>
             </div>
