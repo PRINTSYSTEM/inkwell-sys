@@ -63,7 +63,7 @@ export default function DieListPage() {
   const { data, isLoading, isFetching, refetch } = useDies({
     pageNumber: page,
     pageSize,
-    dieName: searchTerm || "",
+    q: searchTerm || "",
     location: location || "",
     isUsable:
       usableFilter === "all" ? null : usableFilter === "usable" ? true : false,

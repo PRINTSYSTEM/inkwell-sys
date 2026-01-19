@@ -47,9 +47,6 @@ const ProofingList = lazy(() => import("@/pages/prepress/PrepressList"));
 const ProofingCreatePrintOrder = lazy(
   () => import("@/pages/prepress/CreatePrintOrder")
 );
-const WaitingDesignsPage = lazy(
-  () => import("@/pages/prepress/WaitingDesignsPage")
-);
 
 //die management
 const DieManagement = lazy(() => import("@/pages/dies/DieListPage"));
@@ -402,14 +399,6 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <ProofingList />
-              </Suspense>
-            ),
-          },
-          {
-            path: lastSegment(ROUTE_PATHS.PROOFING.WAITING_DESIGNS),
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <WaitingDesignsPage />
               </Suspense>
             ),
           },
