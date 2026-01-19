@@ -36,12 +36,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRecordPlateExport } from "@/hooks/use-proofing-order";
 import { useActivePlateVendors, useCreateVendor } from "@/hooks/use-vendor";
-import type { RecordPlateExportRequest } from "@/Schema";
+import type { RecordPlateExportRequest, PlateExportResponse } from "@/Schema";
 
 interface PlateExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   proofingOrderId: number;
+  plateExport?: PlateExportResponse | null;
   onSuccess?: () => void;
 }
 
@@ -49,6 +50,7 @@ export function PlateExportDialog({
   open,
   onOpenChange,
   proofingOrderId,
+  plateExport,
   onSuccess,
 }: PlateExportDialogProps) {
   const [plateCount, setPlateCount] = useState<number>(1);
@@ -63,19 +65,6 @@ export function PlateExportDialog({
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordPlate, isPending: recordingPlate } =
     useRecordPlateExport();
-
-  // Reset form when dialog opens
-  useEffect(() => {
-    if (open) {
-      setPlateCount(1);
-      setVendorId(null);
-      setVendorName("");
-      setIsCreatingVendor(false);
-      setVendorSearchOpen(false);
-      setReceivedAtManual("");
-      setNotes("");
-    }
-  }, [open]);
 
   // Helper function to format local datetime with timezone offset
   // Returns format: "YYYY-MM-DDTHH:mm:ss+HH:mm" (e.g., "2025-01-01T10:00:00+07:00")
@@ -108,6 +97,52 @@ export function PlateExportDialog({
     },
     [formatLocalDateTimeWithOffset]
   );
+
+  // Helper function to convert ISO datetime string to datetime-local format
+  const convertISOToLocalDateTime = useCallback((isoString: string | null | undefined): string => {
+    if (!isoString) return "";
+    try {
+      const date = new Date(isoString);
+      // Format as "YYYY-MM-DDTHH:mm" for datetime-local input
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const year = date.getFullYear();
+      const month = pad(date.getMonth() + 1);
+      const day = pad(date.getDate());
+      const hours = pad(date.getHours());
+      const minutes = pad(date.getMinutes());
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch {
+      return "";
+    }
+  }, []);
+
+  // Reset or map form data when dialog opens
+  useEffect(() => {
+    if (open) {
+      if (plateExport) {
+        // Map existing data when editing
+        setPlateCount(plateExport.plateCount ?? 1);
+        setVendorId(plateExport.plateVendorId ?? null);
+        setVendorName(plateExport.vendorName ?? "");
+        setIsCreatingVendor(!plateExport.plateVendorId && !!plateExport.vendorName);
+        setVendorSearchOpen(false);
+        // Use receivedAt or estimatedReceiveAt for the datetime input
+        setReceivedAtManual(
+          convertISOToLocalDateTime(plateExport.receivedAt ?? plateExport.estimatedReceiveAt)
+        );
+        setNotes(plateExport.notes ?? "");
+      } else {
+        // Reset to default when creating new
+        setPlateCount(1);
+        setVendorId(null);
+        setVendorName("");
+        setIsCreatingVendor(false);
+        setVendorSearchOpen(false);
+        setReceivedAtManual("");
+        setNotes("");
+      }
+    }
+  }, [open, plateExport, convertISOToLocalDateTime]);
 
   // Calculate receivedAt from manual input
   const receivedAt = useMemo(() => {
@@ -191,9 +226,13 @@ export function PlateExportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Xuất bản kẽm</DialogTitle>
+          <DialogTitle>
+            {plateExport ? "Sửa bản kẽm" : "Xuất bản kẽm"}
+          </DialogTitle>
           <DialogDescription>
-            Ghi nhận thông tin xuất bản kẽm cho mã bài này.
+            {plateExport
+              ? "Cập nhật thông tin xuất bản kẽm cho mã bài này."
+              : "Ghi nhận thông tin xuất bản kẽm cho mã bài này."}
           </DialogDescription>
         </DialogHeader>
 

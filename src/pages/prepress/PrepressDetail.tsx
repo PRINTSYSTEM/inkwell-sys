@@ -107,6 +107,7 @@ import {
   processClassificationLabels,
   sidesClassificationLabels,
   laminationTypeLabels,
+  dieLocationLabels,
 } from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { downloadFile } from "@/lib/download-utils";
@@ -339,6 +340,8 @@ export default function ProofingOrderDetailPage() {
     );
   };
   const [isPlateExportDialogOpen, setIsPlateExportDialogOpen] = useState(false);
+  const [editingPlateExport, setEditingPlateExport] =
+    useState<PlateExportResponse | null>(null);
   const [isDieExportDialogOpen, setIsDieExportDialogOpen] = useState(false);
   const [isConfirmStatusDialogOpen, setIsConfirmStatusDialogOpen] =
     useState(false);
@@ -3746,10 +3749,25 @@ export default function ProofingOrderDetailPage() {
               {/* Plate Export Card */}
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Settings2 className="h-4 w-4" />
-                    Xuất bản kẽm
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Settings2 className="h-4 w-4" />
+                      Xuất bản kẽm
+                    </CardTitle>
+                    {order.isPlateExported && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          setEditingPlateExport(null);
+                          setIsPlateExportDialogOpen(true);
+                        }}
+                      >
+                        Xuất kẽm lại
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {/* Plate Export Info */}
@@ -3769,7 +3787,10 @@ export default function ProofingOrderDetailPage() {
                         variant="ghost"
                         size="sm"
                         className="h-7 px-2 text-xs"
-                        onClick={() => setIsPlateExportDialogOpen(true)}
+                        onClick={() => {
+                          setEditingPlateExport(order.plateExport ?? null);
+                          setIsPlateExportDialogOpen(true);
+                        }}
                       >
                         {order.isPlateExported ? "Sửa" : "Ghi nhận"}
                       </Button>
@@ -4024,7 +4045,11 @@ export default function ProofingOrderDetailPage() {
                                           Vị trí:
                                         </span>
                                         <span className="font-bold text-foreground">
-                                          {dieExport.die.location}
+                                          {
+                                            dieLocationLabels[
+                                              dieExport.die.location
+                                            ]
+                                          }
                                         </span>
                                       </div>
                                     )}
@@ -4511,8 +4536,14 @@ export default function ProofingOrderDetailPage() {
       {order && (
         <PlateExportDialog
           open={isPlateExportDialogOpen}
-          onOpenChange={setIsPlateExportDialogOpen}
+          onOpenChange={(open) => {
+            setIsPlateExportDialogOpen(open);
+            if (!open) {
+              setEditingPlateExport(null);
+            }
+          }}
           proofingOrderId={order.id}
+          plateExport={editingPlateExport}
           onSuccess={handlePlateExportSuccess}
         />
       )}

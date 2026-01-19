@@ -268,7 +268,7 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
                   Vị trí:
                 </span>
                 <span className="font-medium text-foreground">
-                  {dieLocationLabels[die.location] || die.location}
+                  {dieLocationLabels[die.location]}
                 </span>
               </div>
             )}

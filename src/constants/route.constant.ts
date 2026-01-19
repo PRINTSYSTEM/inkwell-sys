@@ -43,6 +43,10 @@ export const ROUTE_PATHS = {
   DIES: {
     ROOT: "/proofing/dies" as const,
   },
+  PLATE_EXPORTS: {
+    ROOT: "/plate-exports" as const,
+    DETAIL_BASE: "/plate-exports" as const, // prefix cho /plate-exports/:id
+  },
   PRODUCTION: {
     ROOT: "/productions" as const,
     DETAIL: "/productions/:id" as const,

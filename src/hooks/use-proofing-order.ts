@@ -36,6 +36,8 @@ import type {
   ProofingOrderForProductionListParams,
   ProofingOrdersPauseParams,
   ProofingOrderAvailableOrderDetailsParams,
+  UpdatePlateExportRequest,
+  PlateExportResponse,
 } from "@/Schema";
 import { RecordDieExportRequestSchema } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
@@ -202,7 +204,13 @@ export const useAvailableOrderDetailsForProofing = (
         total: res.data.total ?? designs.length,
         totalPages:
           res.data.totalPages ??
-          Math.max(1, Math.ceil((res.data.total ?? designs.length) / (res.data.size ?? params?.pageSize ?? 10))),
+          Math.max(
+            1,
+            Math.ceil(
+              (res.data.total ?? designs.length) /
+                (res.data.size ?? params?.pageSize ?? 10)
+            )
+          ),
         designs,
         designTypeOptions: Array.from(designTypeMap.values()),
         materialTypeOptions: Array.from(materialTypeMap.values()),
@@ -219,7 +227,11 @@ export const useProofingAvailableOrderDetailsDesignTypeSummary = (
   enabled: boolean = true
 ) => {
   return useQuery<DesignTypeCountResponse[]>({
-    queryKey: [proofingKeys.all[0], "available-order-details", "design-type-summary"],
+    queryKey: [
+      proofingKeys.all[0],
+      "available-order-details",
+      "design-type-summary",
+    ],
     enabled,
     queryFn: async () => {
       const res = await apiRequest.get<DesignTypeCountResponse[]>(
@@ -729,6 +741,66 @@ export const useRecordPlateExport = () => {
       });
     },
   });
+};
+
+// ===== Update Plate Export =====
+// PUT /api/plate-exports/:id
+export const useUpdatePlateExport = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    PlateExportResponse,
+    [{ id: number; request: UpdatePlateExportRequest }]
+  >(async ({ id, request }) => {
+    const res = await apiRequest.put<PlateExportResponse>(
+      API_SUFFIX.PLATE_EXPORT_UPDATE(id),
+      request
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number, request: UpdatePlateExportRequest) => {
+    try {
+      const result = await execute({ id, request });
+
+      // Invalidate related queries
+      queryClient.invalidateQueries({
+        queryKey: ["proofing-orders"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["plate-exports"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật thông tin xuất kẽm",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể cập nhật thông tin xuất kẽm";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
 
 // Record die export - API expects: dieIds (array), notes
