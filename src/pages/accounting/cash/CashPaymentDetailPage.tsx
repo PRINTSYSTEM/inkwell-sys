@@ -58,7 +58,6 @@ import {
   usePostCashPayment,
 } from "@/hooks/use-cash";
 import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
-import { useCashFunds } from "@/hooks/use-cash";
 import {
   formatCurrency,
   getPaymentMethodLabel,
@@ -161,11 +160,6 @@ export default function CashPaymentDetailPage() {
     isActive: true,
   });
 
-  const { data: cashFundsData } = useCashFunds({
-    pageNumber: 1,
-    pageSize: 100,
-    isActive: true,
-  });
 
   const createMutation = useCreateCashPayment();
   const updateMutation = useUpdateCashPayment();
@@ -196,7 +190,7 @@ export default function CashPaymentDetailPage() {
       notes: payment.notes || "",
       paymentMethodId: payment.paymentMethodId || null,
       expenseCategoryId: payment.expenseCategoryId || null,
-      cashFundId: payment.cashFundId || null,
+      cashFundId: (payment.cashFundId as number | null) || null,
     });
   };
 
@@ -468,34 +462,6 @@ export default function CashPaymentDetailPage() {
                           value={category.id?.toString() || ""}
                         >
                           {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cashFundId">Quỹ tiền mặt</Label>
-                  <Select
-                    value={createFormValues.cashFundId?.toString() || "all"}
-                    onValueChange={(value) =>
-                      setCreateFormValues({
-                        ...createFormValues,
-                        cashFundId:
-                          value === "all" ? null : Number.parseInt(value, 10),
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn quỹ" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Không chọn</SelectItem>
-                      {cashFundsData?.items?.map((fund) => (
-                        <SelectItem
-                          key={fund.id}
-                          value={fund.id?.toString() || ""}
-                        >
-                          {fund.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -857,35 +823,7 @@ export default function CashPaymentDetailPage() {
               </div>
               <div className="space-y-2">
                 <Label>Quỹ tiền mặt</Label>
-                {editingCard === "main" ? (
-                  <Select
-                    value={
-                      (cardEditValues.cashFundId as number)?.toString() || ""
-                    }
-                    onValueChange={(value) =>
-                      setCardEditValues({
-                        ...cardEditValues,
-                        cashFundId: value ? Number.parseInt(value, 10) : null,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn quỹ" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cashFundsData?.items?.map((fund) => (
-                        <SelectItem
-                          key={fund.id}
-                          value={fund.id?.toString() || ""}
-                        >
-                          {fund.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="text-sm">{payment.cashFundName || "—"}</div>
-                )}
+                <div className="text-sm">{(payment.cashFundName as string | null) || "—"}</div>
               </div>
             </div>
             <Separator />

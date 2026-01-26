@@ -104,7 +104,7 @@ export function DieCutStepDialog({
   const dieSearchParams = useMemo(() => {
     if (!open || !debouncedDieSearch.trim()) return undefined;
     return {
-      dieName: debouncedDieSearch.trim(),
+      dieName: debouncedDieSearch.trim() || "",
       isUsable: true,
       pageSize: 20,
     };

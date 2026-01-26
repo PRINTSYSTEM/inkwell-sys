@@ -68,6 +68,7 @@ export default function AccountingDebtReport() {
   const pageSize = 10;
   const [exportingId, setExportingId] = useState<number | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const previousTotalPagesRef = useRef<number | null>(null);
 
   // Debt history dialog state
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
@@ -171,11 +172,29 @@ export default function AccountingDebtReport() {
   }, [pageNumber]);
 
   // Auto-adjust pageNumber if it exceeds totalPages
+  // Only adjust when we have valid data (not loading) and totalPages actually decreased
   useEffect(() => {
-    if (pageNumber > totalPages && totalPages > 0) {
+    // Only adjust if:
+    // 1. Not loading (we have valid data)
+    // 2. Data exists
+    // 3. Current page exceeds total pages
+    // 4. Total pages is valid (> 0)
+    // 5. Total pages actually decreased from previous value (not just during initial load)
+    if (
+      !isLoading &&
+      !!customersData &&
+      pageNumber > totalPages &&
+      totalPages > 0 &&
+      (previousTotalPagesRef.current === null || totalPages < previousTotalPagesRef.current)
+    ) {
       setPageNumber(totalPages);
     }
-  }, [pageNumber, totalPages]);
+    
+    // Update previous totalPages ref only when we have valid data
+    if (!isLoading && !!customersData && totalPages > 0) {
+      previousTotalPagesRef.current = totalPages;
+    }
+  }, [pageNumber, totalPages, isLoading, customersData]);
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -889,7 +908,7 @@ export default function AccountingDebtReport() {
                             Công nợ đầu kỳ
                           </p>
                           <p className="text-xl font-bold">
-                            {formatCurrency(debtSummary.openingDebt ?? 0)}
+                            {formatCurrency((debtSummary.openingDebt as number | undefined) ?? 0)}
                           </p>
                         </div>
                         <div>
@@ -897,7 +916,7 @@ export default function AccountingDebtReport() {
                             Tổng phát sinh
                           </p>
                           <p className="text-xl font-bold text-red-600">
-                            {formatCurrency(debtSummary.totalDebtIncurred ?? 0)}
+                            {formatCurrency((debtSummary.totalDebtIncurred as number | undefined) ?? 0)}
                           </p>
                         </div>
                         <div>
@@ -906,7 +925,7 @@ export default function AccountingDebtReport() {
                           </p>
                           <p className="text-xl font-bold text-green-600">
                             {formatCurrency(
-                              debtSummary.totalPaymentReceived ?? 0
+                              (debtSummary.totalPaymentReceived as number | undefined) ?? 0
                             )}
                           </p>
                         </div>
@@ -915,7 +934,7 @@ export default function AccountingDebtReport() {
                             Công nợ cuối kỳ
                           </p>
                           <p className="text-xl font-bold">
-                            {formatCurrency(debtSummary.closingDebt ?? 0)}
+                            {formatCurrency((debtSummary.closingDebt as number | undefined) ?? 0)}
                           </p>
                         </div>
                       </div>
@@ -976,9 +995,7 @@ export default function AccountingDebtReport() {
                                       : "secondary"
                                   }
                                 >
-                                  {item.changeTypeDisplay ||
-                                    item.changeType ||
-                                    "—"}
+                                  {(item.changeType as string | null) || "—"}
                                 </Badge>
                               </TableCell>
                               <TableCell>{item.orderCode || "—"}</TableCell>

@@ -29,13 +29,24 @@ const calculateDeliveryStats = (orders: OrderResponse[]) => {
 };
 
 export default function DeliveryPage() {
+  // Build params for API
+  const ordersParams = useMemo(() => {
+    return {
+      pageNumber: 1,
+      pageSize: 100, // Reduced from 1000 - enough for stats calculation
+      filterType: "delivery",
+      status: "",
+      orderCode: "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, []);
+
   // Fetch orders with reasonable page size for stats calculation
   // We only need enough data to get accurate stats, not all orders
-  const { data: allOrdersData } = useOrdersForAccounting({
-    pageNumber: 1,
-    pageSize: 100, // Reduced from 1000 - enough for stats calculation
-    filterType: "delivery",
-  });
+  const { data: allOrdersData } = useOrdersForAccounting(ordersParams);
 
   // Calculate summary stats from orders
   const summaryStats = useMemo(() => {

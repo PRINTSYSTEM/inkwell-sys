@@ -49,9 +49,9 @@ export function DesignTable({
               <TableHead className="w-16 h-10 text-sm font-bold">Ảnh</TableHead>
               <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
-              <TableHead className="h-10 text-sm font-bold">Tên</TableHead>
+              <TableHead className="h-10 text-sm font-bold">Chất liệu</TableHead>
               <TableHead className="h-10 text-sm font-bold">
-                Quy trình sản xuất
+                Quy cách
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -241,7 +241,7 @@ export function DesignTable({
                     </TableCell>
                     <TableCell className="py-3 max-w-[200px]">
                       <div title={design.name} className="truncate">
-                        {design.name}
+                        {design.materialTypeName}
                       </div>
                     </TableCell>
                     <TableCell>

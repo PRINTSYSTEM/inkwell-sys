@@ -2,46 +2,12 @@
 // Mock data for Cash Management APIs
 
 import type {
-  CashFundResponse,
-  CashFundResponseIPaginate,
   CashPaymentResponse,
   CashPaymentResponseIPaginate,
   CashReceiptResponse,
   CashReceiptResponseIPaginate,
   CashBookResponse,
 } from "@/Schema/accounting.schema";
-
-// Mock Cash Funds
-export const mockCashFunds: CashFundResponse[] = [
-  {
-    id: 1,
-    code: "CF001",
-    name: "Quỹ tiền mặt chính",
-    description: "Quỹ tiền mặt chính của công ty",
-    openingBalance: 50000000,
-    isActive: true,
-    createdAt: "2025-01-01T00:00:00+07:00",
-    updatedAt: null,
-  },
-  {
-    id: 2,
-    code: "CF002",
-    name: "Quỹ tiền mặt phụ",
-    description: "Quỹ tiền mặt phụ",
-    openingBalance: 10000000,
-    isActive: true,
-    createdAt: "2025-01-01T00:00:00+07:00",
-    updatedAt: null,
-  },
-];
-
-export const mockCashFundsPaginate: CashFundResponseIPaginate = {
-  size: 10,
-  page: 1,
-  total: 2,
-  totalPages: 1,
-  items: mockCashFunds,
-};
 
 // Mock Cash Payments
 export const mockCashPayments: CashPaymentResponse[] = [
