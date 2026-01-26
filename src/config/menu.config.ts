@@ -369,18 +369,19 @@ export const MENU_ITEMS: MenuItem[] = [
         ],
       },
       // Cash Management
-      {
-        id: "cash-funds",
-        title: "Quỹ tiền mặt",
-        icon: Wallet,
-        path: ROUTE_PATHS.ACCOUNTING.CASH_FUNDS,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
+      // Cash fund endpoints removed from API
+      // {
+      //   id: "cash-funds",
+      //   title: "Quỹ tiền mặt",
+      //   icon: Wallet,
+      //   path: ROUTE_PATHS.ACCOUNTING.CASH_FUNDS,
+      //   allowedRoles: [
+      //     ROLE.ADMIN,
+      //     ROLE.MANAGER,
+      //     ROLE.ACCOUNTING,
+      //     ROLE.ACCOUNTING_LEAD,
+      //   ],
+      // },
       {
         id: "cash-payments",
         title: "Phiếu chi",
@@ -423,18 +424,6 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Tài khoản ngân hàng",
         icon: Landmark,
         path: ROUTE_PATHS.ACCOUNTING.BANK_ACCOUNTS,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "bank-ledger",
-        title: "Sổ ngân hàng",
-        icon: BookOpen,
-        path: ROUTE_PATHS.ACCOUNTING.BANK_LEDGER,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,

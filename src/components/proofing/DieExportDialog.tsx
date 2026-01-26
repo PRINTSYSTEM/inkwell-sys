@@ -117,7 +117,6 @@ export function DieExportDialog({
   const [dieCode, setDieCode] = useState<string>("");
   const [dieType, setDieType] = useState<string>("");
   const [dieSize, setDieSize] = useState<string>("");
-  const [diePrice, setDiePrice] = useState<number | undefined>(undefined);
   const [dieLength, setDieLength] = useState<number | undefined>(undefined);
   const [dieWidth, setDieWidth] = useState<number | undefined>(undefined);
   const [dieHeight, setDieHeight] = useState<number | undefined>(undefined);
@@ -138,7 +137,7 @@ export function DieExportDialog({
   const searchParams =
     open && dieSearchTerm.trim()
       ? {
-          dieName: dieSearchTerm.trim(),
+          dieName: dieSearchTerm.trim() || "",
           isUsable: true,
           pageSize: 100,
         }
@@ -378,7 +377,6 @@ export function DieExportDialog({
       setDieSearchTerm("");
       setDieName("");
       setDieSize("");
-      setDiePrice(undefined);
       setDieLength(undefined);
       setDieWidth(undefined);
       setDieHeight(undefined);
@@ -639,7 +637,6 @@ export function DieExportDialog({
 
           createDie(
             {
-              price: diePrice ?? undefined,
               vendorId: finalVendorId || undefined,
               estimatedReceiveAt: estimatedReceiveAt,
               isReusable: isReusable,
@@ -825,7 +822,7 @@ export function DieExportDialog({
                     setSelectedDieIds([]);
                   }}
                 >
-                  Chọn khuôn có sẵn
+                  Chọn khuôn cũ
                 </Button>
                 <Button
                   variant={dieAction === "create" ? "default" : "outline"}
@@ -835,7 +832,7 @@ export function DieExportDialog({
                     setSelectedDieIds([]);
                   }}
                 >
-                  Tạo khuôn mới
+                  Đặt khuôn mới
                 </Button>
               </div>
             </div>
@@ -1315,7 +1312,7 @@ export function DieExportDialog({
                           </div>
                           <p className="text-[11px] text-muted-foreground">
                             Sau khi tạo, nhà cung cấp sẽ xuất hiện trong danh
-                            sách để tái sử dụng.
+                            sách.
                           </p>
                         </div>
                       )}
@@ -1419,31 +1416,6 @@ export function DieExportDialog({
                     </div>
                   </div>
 
-                  {/* Price */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b">
-                      <h4 className="text-sm font-semibold">Giá</h4>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="diePrice" className="text-xs">
-                        Giá khuôn bế
-                      </Label>
-                      <Input
-                        id="diePrice"
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={diePrice ?? ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setDiePrice(value ? Number(value) : undefined);
-                        }}
-                        className="h-9 text-sm"
-                        placeholder="Nhập giá khuôn bế"
-                      />
-                    </div>
-                  </div>
-
                   {/* Estimated Receive At & Is Reusable */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 pb-1 border-b">
@@ -1488,7 +1460,7 @@ export function DieExportDialog({
                           </Label>
                           <p className="text-[11px] text-muted-foreground">
                             {isReusable
-                              ? "Khuôn này có thể tái sử dụng cho các đơn hàng khác"
+                              ? "Khuôn này có thể dùng lại cho các đơn hàng khác"
                               : "Khuôn này chỉ dùng 1 lần"}
                           </p>
                         </div>

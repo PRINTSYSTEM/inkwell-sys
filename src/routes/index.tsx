@@ -115,9 +115,10 @@ const CashPaymentList = lazy(
 const CashPaymentDetail = lazy(
   () => import("@/pages/accounting/cash/CashPaymentDetailPage")
 );
-const CashFundList = lazy(
-  () => import("@/pages/accounting/cash/CashFundListPage")
-);
+// Cash fund endpoints removed from API
+// const CashFundList = lazy(
+//   () => import("@/pages/accounting/cash/CashFundListPage")
+// );
 const CashReceiptList = lazy(
   () => import("@/pages/accounting/cash/CashReceiptListPage")
 );
@@ -130,7 +131,6 @@ const CashBook = lazy(() => import("@/pages/accounting/cash/CashBookPage"));
 const BankAccountList = lazy(
   () => import("@/pages/accounting/bank/BankAccountListPage")
 );
-const BankLedger = lazy(() => import("@/pages/accounting/bank/BankLedgerPage"));
 
 // AR/AP
 const AR = lazy(() => import("@/pages/accounting/ar/ARPage"));
@@ -716,14 +716,15 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          {
-            path: "cash-funds",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <CashFundList />
-              </Suspense>
-            ),
-          },
+          // Cash fund endpoints removed from API
+          // {
+          //   path: "cash-funds",
+          //   element: (
+          //     <Suspense fallback={<PageLoadingFallback />}>
+          //       <CashFundList />
+          //     </Suspense>
+          //   ),
+          // },
           {
             path: "cash-receipts",
             element: (
@@ -754,14 +755,6 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <BankAccountList />
-              </Suspense>
-            ),
-          },
-          {
-            path: "bank-ledger",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <BankLedger />
               </Suspense>
             ),
           },

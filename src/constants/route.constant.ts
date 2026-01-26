@@ -92,7 +92,6 @@ export const ROUTE_PATHS = {
     CASH_BOOK: "/accounting/cash-book" as const,
     // Bank Management
     BANK_ACCOUNTS: "/accounting/bank-accounts" as const,
-    BANK_LEDGER: "/accounting/bank-ledger" as const,
     // AR/AP
     AR: "/accounting/ar" as const,
     AP: "/accounting/ap" as const,

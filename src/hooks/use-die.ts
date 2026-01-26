@@ -234,46 +234,75 @@ export const useCreateDieFromDieExport = () => {
 
 // ===== Search Dies =====
 // GET /api/dies
-// Endpoint supports: q (general search), isUsable, location, designId, designTypeId, pageNumber, pageSize
-export const useSearchDies = (params?: {
+// Uses DieListParams schema with fields: designCode, size, customerName, designName, q, code, etc.
+// Supports both DieListParams schema and legacy format (dieName maps to q or code)
+export const useSearchDies = (
+  params?: DieListParams | {
+    dieName?: string;
+    designName?: string;
+    customerName?: string;
   proofingOrderCode?: string;
-  customerName?: string;
-  designName?: string;
-  dieName?: string;
   designId?: number;
   designTypeId?: number;
   isUsable?: boolean;
   location?: string;
   pageNumber?: number;
   pageSize?: number;
-}) => {
+  }
+) => {
   return useQuery<DieResponsePaginate>({
     queryKey: [dieKeys.all[0], "search", params],
     queryFn: async () => {
-      // Combine multiple search terms into q parameter for general search
+      // Convert legacy format to DieListParams if needed
+      let searchQuery: DieListParams;
+      
+      if (params && "dieName" in params) {
+        // Legacy format - convert to schema format
+        const legacyParams = params as {
+          dieName?: string;
+          designName?: string;
+          customerName?: string;
+          proofingOrderCode?: string;
+          designId?: number;
+          designTypeId?: number;
+          isUsable?: boolean;
+          location?: string;
+          pageNumber?: number;
+          pageSize?: number;
+        };
+        
+        // Combine search terms into q parameter (general search)
       const searchTerms: string[] = [];
-      if (params?.dieName?.trim()) {
-        searchTerms.push(params.dieName.trim());
+        if (legacyParams.dieName?.trim()) {
+          searchTerms.push(legacyParams.dieName.trim());
       }
-      if (params?.designName?.trim()) {
-        searchTerms.push(params.designName.trim());
+        if (legacyParams.designName?.trim()) {
+          searchTerms.push(legacyParams.designName.trim());
       }
-      if (params?.customerName?.trim()) {
-        searchTerms.push(params.customerName.trim());
+        if (legacyParams.customerName?.trim()) {
+          searchTerms.push(legacyParams.customerName.trim());
       }
-      if (params?.proofingOrderCode?.trim()) {
-        searchTerms.push(params.proofingOrderCode.trim());
+        if (legacyParams.proofingOrderCode?.trim()) {
+          searchTerms.push(legacyParams.proofingOrderCode.trim());
       }
 
-      const searchQuery: DieListParams = {
-        q: searchTerms.length > 0 ? searchTerms.join(" ") : undefined, // Use q parameter for general search
-        isUsable: params?.isUsable ?? undefined,
-        location: params?.location || undefined,
-        designId: params?.designId ?? undefined,
-        designTypeId: params?.designTypeId ?? undefined,
-        pageNumber: params?.pageNumber || 1,
-        pageSize: params?.pageSize || 10,
-      };
+        searchQuery = {
+          q: searchTerms.length > 0 ? searchTerms.join(" ") : "",
+          isUsable: legacyParams.isUsable ?? undefined,
+          location: legacyParams.location || "",
+          designId: legacyParams.designId ?? undefined,
+          designTypeId: legacyParams.designTypeId ?? undefined,
+          pageNumber: legacyParams.pageNumber ?? 1,
+          pageSize: legacyParams.pageSize ?? 10,
+        };
+      } else {
+        // Already in DieListParams format
+        searchQuery = {
+          ...params,
+          pageNumber: params?.pageNumber ?? 1,
+          pageSize: params?.pageSize ?? 10,
+        } as DieListParams;
+      }
 
       const normalizedParams = normalizeParams(searchQuery);
       const res = await apiRequest.get<DieResponsePaginate>(API_SUFFIX.DIES, {

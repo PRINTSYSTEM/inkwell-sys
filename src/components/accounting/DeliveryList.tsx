@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { useDebounce } from "use-debounce";
 import { vi } from "date-fns/locale";
 import {
   Search,
@@ -77,6 +78,7 @@ function hasDeliveryNote(order: OrderResponse): boolean {
 export function DeliveryList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [deliveryStatusFilter, setDeliveryStatusFilter] =
     useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,19 +89,32 @@ export function DeliveryList() {
   const [isCreateDeliveryDialogOpen, setIsCreateDeliveryDialogOpen] =
     useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const previousTotalPagesRef = useRef<number | null>(null);
 
   const itemsPerPage = 10;
 
+  // Build params for API
+  const listParams = useMemo(() => {
+    return {
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      filterType: "delivery",
+      status: deliveryStatusFilter === "all" ? "" : deliveryStatusFilter || "",
+      orderCode: debouncedSearchQuery || "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, [currentPage, itemsPerPage, deliveryStatusFilter, debouncedSearchQuery]);
+
   // Fetch orders from API - filter for production completed orders
-  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    filterType: "delivery", // Assuming this filter exists, or we'll filter client-side
-  });
+  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting(listParams);
 
   const createDeliveryNoteMutation = useCreateDeliveryNote();
 
-  // Filter orders client-side - only show production_completed orders
+  // Orders are already filtered by API (search is handled server-side)
+  // But we still need to filter for delivery-ready status client-side
   const filteredOrders = useMemo(() => {
     if (!data?.items) return [];
 
@@ -111,28 +126,15 @@ export function DeliveryList() {
 
       if (!isReady && !hasDelivery) return false;
 
-      const matchesSearch =
-        !searchQuery ||
-        order.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.companyName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.phone?.includes(searchQuery);
-
       // Filter by delivery status
       const matchesStatus =
         deliveryStatusFilter === "all" ||
-        (deliveryStatusFilter === "ready" && isReady) ||
-        (deliveryStatusFilter === "delivering" &&
-          order.status === "delivering") ||
-        (deliveryStatusFilter === "delivered" && order.status === "completed");
+        (deliveryStatusFilter === "ready" && isReady && !hasDelivery) ||
+        (deliveryStatusFilter === "delivered" && hasDelivery);
 
-      return matchesSearch && matchesStatus;
+      return matchesStatus;
     });
-  }, [data?.items, searchQuery, deliveryStatusFilter]);
+  }, [data?.items, deliveryStatusFilter]);
 
   const totalPages = data?.totalPages || 1;
   const totalItems = data?.total || 0;
@@ -149,11 +151,29 @@ export function DeliveryList() {
   }, [searchQuery, deliveryStatusFilter]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when we have valid data (not loading) and totalPages actually decreased
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
+    // Only adjust if:
+    // 1. Not loading (we have valid data)
+    // 2. Data exists
+    // 3. Current page exceeds total pages
+    // 4. Total pages is valid (> 0)
+    // 5. Total pages actually decreased from previous value (not just during initial load)
+    if (
+      !isLoading &&
+      !!data &&
+      currentPage > totalPages &&
+      totalPages > 0 &&
+      (previousTotalPagesRef.current === null || totalPages < previousTotalPagesRef.current)
+    ) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages]);
+    
+    // Update previous totalPages ref only when we have valid data
+    if (!isLoading && !!data && totalPages > 0) {
+      previousTotalPagesRef.current = totalPages;
+    }
+  }, [currentPage, totalPages, isLoading, data]);
 
   // Scroll to top when page changes
   useEffect(() => {

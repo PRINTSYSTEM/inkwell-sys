@@ -249,8 +249,6 @@ export const API_SUFFIX = {
     `/delivery-notes/lines/${lineId}/result`,
 
   // ========== CASH MANAGEMENT ==========
-  CASH_FUNDS: "/categories/cash-funds",
-  CASH_FUND_BY_ID: (id: number) => `/categories/cash-funds/${id}`,
   CASH_PAYMENTS: "/cash-payments",
   CASH_PAYMENT_BY_ID: (id: number) => `/cash-payments/${id}`,
   CASH_PAYMENT_APPROVE: (id: number) => `/cash-payments/${id}/approve`,
@@ -261,6 +259,7 @@ export const API_SUFFIX = {
   CASH_RECEIPT_APPROVE: (id: number) => `/cash-receipts/${id}/approve`,
   CASH_RECEIPT_CANCEL: (id: number) => `/cash-receipts/${id}/cancel`,
   CASH_RECEIPT_POST: (id: number) => `/cash-receipts/${id}/post`,
+  CASH_RECEIPT_EXPORT_PDF: (id: number) => `/cash-receipts/${id}/export-pdf`,
   CASH_BOOK: "/cash-book",
 
   // ========== BANK MANAGEMENT ==========

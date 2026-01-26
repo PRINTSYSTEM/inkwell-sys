@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -58,10 +59,12 @@ import {
 } from "@/hooks/use-order";
 import { useConfirmDeposit, useApproveDebt } from "@/hooks/use-accounting";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
+import { useCreateCashReceipt, useCashReceipts } from "@/hooks/use-cash";
 import type {
   UpdateOrderForAccountingRequest,
   UpdateOrderDetailForAccountingRequest,
   CreateInvoiceRequest,
+  CreateCashReceiptRequest,
 } from "@/Schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,10 +77,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertTriangle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AlertTriangle, Search } from "lucide-react";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
+import { usePaymentMethods } from "@/hooks/use-expense";
+import { useCashFunds } from "@/hooks/use-cash";
 
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
@@ -122,6 +140,32 @@ function deriveInvoiceStatus(order: {
   return "not_issued";
 }
 
+// Helper to check if customer information is complete for invoice
+function isCustomerInfoComplete(order: {
+  customerName?: string | null;
+  customerTaxCode?: string | null;
+  customerAddress?: string | null;
+}): { isValid: boolean; missingFields: string[] } {
+  const missingFields: string[] = [];
+
+  if (!order.customerName || order.customerName.trim() === "") {
+    missingFields.push("Tên khách hàng");
+  }
+
+  if (!order.customerTaxCode || order.customerTaxCode.trim() === "") {
+    missingFields.push("Mã số thuế");
+  }
+
+  if (!order.customerAddress || order.customerAddress.trim() === "") {
+    missingFields.push("Địa chỉ");
+  }
+
+  return {
+    isValid: missingFields.length === 0,
+    missingFields,
+  };
+}
+
 export default function AccountingOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -141,6 +185,42 @@ export default function AccountingOrderDetail() {
     undefined,
     !!order?.id
   );
+
+  // Fetch cash receipts for this order's customer to check if receipt exists
+  const { data: cashReceiptsData } = useCashReceipts(
+    order?.customerId
+      ? {
+          pageNumber: 1,
+          pageSize: 100,
+          customerId: order.customerId,
+        }
+      : undefined
+  );
+
+  // Check if order has cash receipt
+  const hasCashReceipt =
+    cashReceiptsData?.items?.some((receipt) => receipt.orderId === order?.id) ||
+    false;
+
+  // Fetch payment methods
+  const { data: paymentMethodsData } = usePaymentMethods({
+    pageNumber: 1,
+    pageSize: 100,
+    isActive: true,
+  });
+
+  // Cash fund search state
+  const [cashFundSearchQuery, setCashFundSearchQuery] = useState("");
+  const [debouncedCashFundSearch] = useDebounce(cashFundSearchQuery, 300);
+  const [isCashFundSelectOpen, setIsCashFundSelectOpen] = useState(false);
+
+  // Fetch cash funds with search param
+  const { data: cashFundsData, isLoading: isLoadingCashFunds } = useCashFunds({
+    pageNumber: 1,
+    pageSize: 100,
+    isActive: true,
+    search: debouncedCashFundSearch.trim() || null,
+  });
 
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
@@ -168,6 +248,7 @@ export default function AccountingOrderDetail() {
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const createInvoiceMutation = useCreateInvoice();
+  const createCashReceiptMutation = useCreateCashReceipt();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -334,13 +415,15 @@ export default function AccountingOrderDetail() {
         cardEditValues.paymentDueDate === null
           ? null
           : new Date(cardEditValues.paymentDueDate).toISOString();
-      // Khi sửa cọc tiền, truyền paymentMethodId = 2
-      if (
-        cardEditValues.depositAmount !== "" &&
-        cardEditValues.depositAmount !== null
-      ) {
-        payload.paymentMethodId = 2;
-      }
+      // Phương thức thanh toán
+      payload.paymentMethodId =
+        cardEditValues.paymentMethodId === "" ||
+        cardEditValues.paymentMethodId === null
+          ? null
+          : Number(cardEditValues.paymentMethodId);
+      // Note: cashFundId không có trong UpdateOrderForAccountingRequest schema
+      // Nếu cần thêm vào schema sau này, uncomment dòng dưới:
+      // payload.cashFundId = cardEditValues.cashFundId === "" || cardEditValues.cashFundId === null ? null : Number(cardEditValues.cashFundId);
     } else if (cardName === "recipientInfo") {
       payload.recipientName =
         cardEditValues.recipientName === "" ||
@@ -364,6 +447,63 @@ export default function AccountingOrderDetail() {
         order.id,
         payload as UpdateOrderForAccountingRequest
       );
+
+      // Nếu là paymentInfo và có số tiền cọc, tự động tạo phiếu thu
+      if (cardName === "paymentInfo") {
+        const depositAmount =
+          cardEditValues.depositAmount === "" ||
+          cardEditValues.depositAmount === null
+            ? null
+            : Number(cardEditValues.depositAmount);
+        const paymentMethodId =
+          cardEditValues.paymentMethodId === "" ||
+          cardEditValues.paymentMethodId === null
+            ? null
+            : Number(cardEditValues.paymentMethodId);
+        const cashFundId =
+          cardEditValues.cashFundId === "" || cardEditValues.cashFundId === null
+            ? null
+            : Number(cardEditValues.cashFundId);
+
+        // Chỉ tạo phiếu thu nếu có số tiền (không cần đủ số tiền) và phương thức thanh toán
+        if (depositAmount && depositAmount > 0 && paymentMethodId) {
+          const now = new Date();
+          const voucherDate = now.toISOString();
+          const postingDate = now.toISOString();
+
+          // Xác định payerName: ưu tiên customerCompanyName, nếu không có thì dùng customerName
+          const payerName =
+            order.customerCompanyName?.trim() ||
+            order.customerName?.trim() ||
+            "";
+
+          if (payerName) {
+            const cashReceiptRequest: CreateCashReceiptRequest = {
+              voucherDate,
+              postingDate,
+              payerName,
+              amount: depositAmount,
+              paymentMethodId,
+              orderId: order.id,
+              customerId: order.customerId || null,
+              cashFundId: cashFundId || null,
+              expenseCategoryId: null,
+              reason: null,
+              notes: order.note || null,
+            };
+
+            try {
+              await createCashReceiptMutation.mutateAsync(cashReceiptRequest);
+              // Refetch order và cash receipts để cập nhật UI (ẩn nút sửa)
+              await refetchOrder();
+            } catch (error) {
+              // Error is handled by the hook, nhưng không block việc đóng edit mode
+              console.error("Error creating cash receipt:", error);
+            }
+          }
+        }
+      }
+
       setEditingCard(null);
       setCardEditValues({});
     } catch (error) {
@@ -696,20 +836,49 @@ export default function AccountingOrderDetail() {
                   )}
                 {/* )} */}
                 {invoiceStatus === "not_issued" &&
-                  hasBeenDelivered(order.status) && (
-                    <Button
-                      size="sm"
-                      onClick={handleExportInvoice}
-                      disabled={exportInvoiceMutation.loading}
-                    >
-                      {exportInvoiceMutation.loading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <FileText className="h-4 w-4 mr-2" />
-                      )}
-                      Xuất hóa đơn
-                    </Button>
-                  )}
+                  hasBeenDelivered(order.status) && (() => {
+                    const customerInfoCheck = isCustomerInfoComplete(order);
+                    const isDisabled =
+                      !customerInfoCheck.isValid ||
+                      exportInvoiceMutation.loading;
+                    const disableReason = customerInfoCheck.missingFields.length > 0
+                      ? `Vui lòng điền đầy đủ thông tin khách hàng: ${customerInfoCheck.missingFields.join(", ")}`
+                      : "";
+
+                    const button = (
+                      <Button
+                        size="sm"
+                        onClick={handleExportInvoice}
+                        disabled={isDisabled}
+                      >
+                        {exportInvoiceMutation.loading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <FileText className="h-4 w-4 mr-2" />
+                        )}
+                        Xuất hóa đơn
+                      </Button>
+                    );
+
+                    if (isDisabled && disableReason) {
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-block">
+                                {button}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">{disableReason}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    }
+
+                    return button;
+                  })()}
                 {invoiceStatus === "issued" && (
                   <Button
                     variant="outline"
@@ -801,7 +970,7 @@ export default function AccountingOrderDetail() {
                             Hủy
                           </Button>
                         </div>
-                      ) : (
+                      ) : !hasCashReceipt ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -813,13 +982,16 @@ export default function AccountingOrderDetail() {
                               paymentDueDate: formatDateTimeForInput(
                                 order.paymentDueDate
                               ),
+                              paymentMethodId:
+                                order.paymentMethodId?.toString() || "",
+                              cashFundId: "", // Note: cashFundId không có trong OrderResponse schema
                             })
                           }
                         >
                           <Edit className="h-3 w-3 mr-1" />
                           Sửa
                         </Button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </CardHeader>
@@ -828,24 +1000,9 @@ export default function AccountingOrderDetail() {
                     /* Edit Mode */
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label>Tổng tiền</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1000"
-                          value={cardEditValues.totalAmount || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              totalAmount: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập tổng tiền"
-                          className="text-lg font-medium"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Đã cọc</Label>
+                        <Label>
+                          Số tiền <span className="text-destructive">*</span>
+                        </Label>
                         <Input
                           type="number"
                           min="0"
@@ -857,9 +1014,107 @@ export default function AccountingOrderDetail() {
                               depositAmount: e.target.value,
                             })
                           }
-                          placeholder="Nhập số tiền đã cọc"
+                          placeholder="Nhập số tiền"
                           className="text-lg font-medium"
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>
+                          Phương thức thanh toán{" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Select
+                          value={
+                            cardEditValues.paymentMethodId?.toString() || "all"
+                          }
+                          onValueChange={(value) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              paymentMethodId: value === "all" ? "" : value,
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn phương thức thanh toán" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Không chọn</SelectItem>
+                            {paymentMethodsData?.items?.map((method) => (
+                              <SelectItem
+                                key={method.id}
+                                value={method.id?.toString() || ""}
+                              >
+                                {method.description ||
+                                  method.name ||
+                                  method.code}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tài khoản thanh toán</Label>
+                        <Select
+                          value={cardEditValues.cashFundId?.toString() || "all"}
+                          onValueChange={(value) => {
+                            setCardEditValues({
+                              ...cardEditValues,
+                              cashFundId: value === "all" ? "" : value,
+                            });
+                            setCashFundSearchQuery(""); // Reset search when selecting
+                          }}
+                          onOpenChange={(open) => {
+                            setIsCashFundSelectOpen(open);
+                            if (!open) {
+                              setCashFundSearchQuery(""); // Reset search when closing
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn tài khoản thanh toán" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {isCashFundSelectOpen && (
+                              <div className="p-2 border-b">
+                                <div className="relative">
+                                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                  <Input
+                                    placeholder="Tìm kiếm tài khoản..."
+                                    value={cashFundSearchQuery}
+                                    onChange={(e) =>
+                                      setCashFundSearchQuery(e.target.value)
+                                    }
+                                    className="pl-8"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => e.stopPropagation()}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            <SelectItem value="all">Không chọn</SelectItem>
+                            {isLoadingCashFunds ? (
+                              <SelectItem value="loading" disabled>
+                                Đang tải...
+                              </SelectItem>
+                            ) : cashFundsData?.items &&
+                              cashFundsData.items.length > 0 ? (
+                              cashFundsData.items.map((fund) => (
+                                <SelectItem
+                                  key={fund.id}
+                                  value={fund.id?.toString() || ""}
+                                >
+                                  {fund.code} - {fund.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-results" disabled>
+                                {debouncedCashFundSearch.trim()
+                                  ? "Không tìm thấy tài khoản"
+                                  : "Không có dữ liệu"}
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   ) : (

@@ -458,12 +458,23 @@ function CreatedInvoicesTab() {
 export default function InvoicePage() {
   const [activeTab, setActiveTab] = useState("orders");
 
+  // Build params for API
+  const ordersParams = useMemo(() => {
+    return {
+      pageNumber: 1,
+      pageSize: 100, // Get all orders for stats calculation
+      filterType: "invoice",
+      status: "",
+      orderCode: "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, []);
+
   // Fetch all orders for accounting to calculate summary stats
-  const { data: allOrdersData } = useOrdersForAccounting({
-    pageNumber: 1,
-    pageSize: 100, // Get all orders for stats calculation
-    filterType: "invoice",
-  });
+  const { data: allOrdersData } = useOrdersForAccounting(ordersParams);
 
   // Calculate summary stats from orders
   const summaryStats = useMemo(() => {

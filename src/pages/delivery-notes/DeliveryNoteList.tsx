@@ -382,6 +382,21 @@ export default function DeliveryNoteListPage() {
 
   const itemsPerPage = 10;
 
+  // Build params for orders API
+  const ordersParams = useMemo(() => {
+    return {
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      filterType: "delivery",
+      status: "",
+      orderCode: "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, [currentPage, itemsPerPage]);
+
   // Data fetching
   const {
     data: ordersData,
@@ -389,11 +404,7 @@ export default function DeliveryNoteListPage() {
     isError: ordersError,
     error: ordersErrorObj,
     refetch: refetchOrders,
-  } = useOrdersForAccounting({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    filterType: "delivery",
-  });
+  } = useOrdersForAccounting(ordersParams);
 
   const {
     data: deliveryNotesData,
