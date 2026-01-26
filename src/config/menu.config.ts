@@ -431,18 +431,6 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
-      {
-        id: "bank-ledger",
-        title: "Sổ ngân hàng",
-        icon: BookOpen,
-        path: ROUTE_PATHS.ACCOUNTING.BANK_LEDGER,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
       // AR
       {
         id: "ar",

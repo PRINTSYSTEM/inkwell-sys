@@ -6,12 +6,13 @@ import {
   Search,
   RefreshCw,
   Download,
-  Eye,
-  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { Helmet } from "react-helmet-async";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { addDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -29,7 +30,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useARSummary } from "@/hooks/use-ar-ap";
+import { useARSummary, useARDetail } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -47,6 +48,9 @@ export default function ARSummaryPage() {
     to: new Date(),
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<number>>(
+    new Set()
+  );
   const itemsPerPage = 10;
 
   const {
@@ -58,46 +62,39 @@ export default function ARSummaryPage() {
   } = useARSummary({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    fromDate: dateRange?.from
-      ? dateRange.from.toISOString()
-      : undefined,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     search: searchQuery || undefined,
   });
 
-  const totalClosingBalance = arData?.items?.reduce((sum, item) => sum + (item.closingBalance || 0), 0) || 0;
-  const totalIncrease = arData?.items?.reduce((sum, item) => sum + (item.increase || 0), 0) || 0;
-  const totalOverdue = arData?.items?.reduce((sum, item) => sum + (item.overdue || 0), 0) || 0;
+  const totalClosingBalance =
+    arData?.items?.reduce((sum, item) => sum + (item.closingBalance || 0), 0) ||
+    0;
+  const totalIncrease =
+    arData?.items?.reduce((sum, item) => sum + (item.increase || 0), 0) || 0;
+  const totalOverdue =
+    arData?.items?.reduce((sum, item) => sum + (item.overdue || 0), 0) || 0;
 
   const handleExportExcel = async () => {
-    // TODO: Implement export Excel when API endpoint is available
     toast.info("Chức năng xuất Excel đang được phát triển");
   };
 
-  const handleCustomerClick = (customerId: number | null | undefined) => {
-    if (customerId) {
-      navigate(`/accounting/ar?tab=detail&customerId=${customerId}`);
+  const toggleExpand = (customerId: number | null | undefined) => {
+    if (!customerId) return;
+    const newExpanded = new Set(expandedCustomers);
+    if (newExpanded.has(customerId)) {
+      newExpanded.delete(customerId);
+    } else {
+      newExpanded.add(customerId);
     }
+    setExpandedCustomers(newExpanded);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
-          </Button>
-          <Button variant="outline" onClick={handleExportExcel}>
-            <Download className="h-4 w-4 mr-2" />
-            Xuất Excel
-          </Button>
-        </div>
-      </div>
-
-        {/* Error Alert */}
-        {isError && (
+    <div className="h-auto flex flex-col overflow-hidden">
+      {/* Error Alert */}
+      {isError && (
+        <div className="flex-shrink-0 px-6 py-2">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Lỗi kết nối</AlertTitle>
@@ -107,100 +104,140 @@ export default function ARSummaryPage() {
                 : "Không thể tải dữ liệu. Vui lòng thử lại."}
             </AlertDescription>
           </Alert>
-        )}
+        </div>
+      )}
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
+      {/* Filters - Compact */}
+      <div className="flex-shrink-0 px-6 py-2 space-y-2 border-b bg-background">
+        <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Tìm kiếm theo mã, tên khách hàng..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-8 h-9 text-sm"
             />
           </div>
-          <div className="flex-1">
+          <div className="flex-shrink-0">
             <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={handleExportExcel}
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+      {/* Summary Cards - Compact */}
+      <div className="flex-shrink-0 px-6 py-2 border-b bg-background">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Số dư cuối kỳ
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold">
                 {formatCurrency(totalClosingBalance)}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Tăng trong kỳ
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold text-green-600">
                 {formatCurrency(totalIncrease)}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Giảm trong kỳ
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold text-blue-600">
                 {formatCurrency(
-                  arData?.items?.reduce((sum, item) => sum + (item.decrease || 0), 0) || 0
+                  arData?.items?.reduce(
+                    (sum, item) => sum + (item.decrease || 0),
+                    0
+                  ) || 0
                 )}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Công nợ quá hạn
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold text-destructive">
                 {formatCurrency(totalOverdue)}
               </div>
             </CardContent>
           </Card>
         </div>
+      </div>
 
-        {/* Table */}
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã KH</TableHead>
-                <TableHead>Tên khách hàng</TableHead>
-                <TableHead className="text-right">Số dư đầu kỳ</TableHead>
-                <TableHead className="text-right">Tăng</TableHead>
-                <TableHead className="text-right">Giảm</TableHead>
-                <TableHead className="text-right">Số dư cuối kỳ</TableHead>
-                <TableHead className="text-right">Quá hạn</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
+      {/* Table - Expanded to fill space */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-auto border-t">
+          <Table className="min-w-full">
+            <TableHeader className="sticky top-0 bg-muted/50 z-10">
+              <TableRow>
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[140px] font-semibold">Mã KH</TableHead>
+                <TableHead className="font-semibold">Tên khách hàng</TableHead>
+                <TableHead className="text-right font-semibold">
+                  Số dư đầu kỳ
+                </TableHead>
+                <TableHead className="text-right font-semibold">
+                  Phát sinh
+                </TableHead>
+                <TableHead className="text-right font-semibold">
+                  Thanh toán
+                </TableHead>
+                <TableHead className="text-right font-semibold">
+                  Số dư cuối kỳ
+                </TableHead>
+                <TableHead className="text-right font-semibold">
+                  Quá hạn
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
+                Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i}>
                     {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
-                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-6 w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -215,100 +252,248 @@ export default function ARSummaryPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                arData.items.map((item) => (
-                  <TableRow
-                    key={item.customerId}
-                    className="group cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleCustomerClick(item.customerId)}
-                  >
-                    <TableCell className="font-medium font-mono text-sm">
-                      {item.customerCode || "—"}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {item.customerName || item.companyName || "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.openingBalance !== undefined
-                        ? formatCurrency(item.openingBalance)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {item.increase !== undefined
-                        ? formatCurrency(item.increase)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-blue-600">
-                      {item.decrease !== undefined
-                        ? formatCurrency(item.decrease)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.closingBalance !== undefined
-                        ? formatCurrency(item.closingBalance)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.overdue !== undefined && item.overdue > 0 ? (
-                        <Badge variant="destructive">
-                          {formatCurrency(item.overdue)}
-                        </Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCustomerClick(item.customerId);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                arData.items.map((item) => {
+                  const isExpanded = expandedCustomers.has(
+                    item.customerId || 0
+                  );
+                  return (
+                    <>
+                      <TableRow
+                        key={item.customerId}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => toggleExpand(item.customerId)}
                       >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpand(item.customerId);
+                            }}
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                        <TableCell className="font-semibold font-mono text-sm">
+                          {item.customerCode || "—"}
+                        </TableCell>
+                        <TableCell className="font-semibold text-sm">
+                          {item.customerName || item.companyName || "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums text-sm">
+                          {item.openingBalance !== undefined
+                            ? formatCurrency(item.openingBalance)
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums text-sm text-green-600">
+                          {item.increase !== undefined
+                            ? formatCurrency(item.increase)
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums text-sm text-blue-600">
+                          {item.decrease !== undefined
+                            ? formatCurrency(item.decrease)
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums text-sm">
+                          {item.closingBalance !== undefined
+                            ? formatCurrency(item.closingBalance)
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.overdue !== undefined && item.overdue > 0 ? (
+                            <Badge
+                              variant="destructive"
+                              className="font-medium"
+                            >
+                              {formatCurrency(item.overdue)}
+                            </Badge>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && item.customerId && (
+                        <>
+                          {/* Header row for detail columns */}
+                          <TableRow className="bg-muted/30">
+                            <TableHead></TableHead>
+                            <TableHead
+                              colSpan={2}
+                              className="pl-8 font-semibold text-xs"
+                            >
+                              Số chứng từ
+                            </TableHead>
+                            <TableHead className="text-center font-semibold text-xs">
+                              Ngày chứng từ
+                            </TableHead>
+                            <TableHead className="text-center font-semibold text-xs">
+                              Hạn thanh toán
+                            </TableHead>
+                            <TableHead className="text-right font-semibold text-xs">
+                              Số tiền phải thu
+                            </TableHead>
+                            <TableHead className="text-right font-semibold text-xs">
+                              Đã thanh toán
+                            </TableHead>
+                            <TableHead className="text-right font-semibold text-xs">
+                              Còn lại
+                            </TableHead>
+                          </TableRow>
+                          <CustomerDetailRow
+                            customerId={item.customerId}
+                            dateRange={dateRange}
+                          />
+                        </>
+                      )}
+                    </>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination - Compact */}
         {arData && arData.totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Trang {currentPage} / {arData.totalPages} (
-              {arData.total} khách hàng)
+          <div className="flex-shrink-0 flex items-center justify-between px-6 py-2 border-t bg-background">
+            <p className="text-xs text-muted-foreground">
+              Trang {currentPage} / {arData.totalPages} ({arData.total} khách
+              hàng)
             </p>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1 || isLoading}
               >
-                <RefreshCw className="h-4 w-4 rotate-180" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-medium px-2">
+              <span className="text-xs font-medium px-2">
                 {currentPage} / {arData.totalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8"
                 onClick={() =>
                   setCurrentPage((p) => Math.min(arData.totalPages, p + 1))
                 }
                 disabled={currentPage === arData.totalPages || isLoading}
               >
-                <RefreshCw className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
+      </div>
     </div>
   );
 }
 
+// Component to render expanded customer detail
+function CustomerDetailRow({
+  customerId,
+  dateRange,
+}: {
+  customerId: number;
+  dateRange: DateRange | undefined;
+}) {
+  const navigate = useNavigate();
+
+  const { data: detailData, isLoading: isLoadingDetail } = useARDetail({
+    customerId: customerId,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+  });
+
+  const handleOrderClick = (documentId: number | null | undefined) => {
+    if (documentId) {
+      navigate(`/accounting/orders/${documentId}`);
+    }
+  };
+
+  if (isLoadingDetail) {
+    return (
+      <TableRow>
+        <TableCell colSpan={8} className="bg-muted/20">
+          <div className="flex items-center gap-2 px-4 py-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm text-muted-foreground">
+              Đang tải chi tiết công nợ...
+            </span>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  if (!detailData?.items || detailData.items.length === 0) {
+    return (
+      <TableRow>
+        <TableCell colSpan={8} className="bg-muted/20">
+          <div className="px-4 py-2 text-sm text-muted-foreground">
+            Không có chi tiết công nợ
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  return (
+    <>
+      {detailData.items.map((detail, index) => (
+        <TableRow
+          key={detail.documentId || index}
+          className="bg-muted/20 hover:bg-muted/30 cursor-pointer"
+          onClick={() => handleOrderClick(detail.documentId)}
+        >
+          <TableCell></TableCell>
+          <TableCell colSpan={2} className="pl-8">
+            <div className="space-y-1">
+              <div className="font-semibold text-sm">
+                {detail.documentNumber || "—"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {detail.documentType || "—"}
+              </div>
+            </div>
+          </TableCell>
+          <TableCell className="text-center text-sm font-medium">
+            {detail.documentDate ? formatDate(detail.documentDate) : "—"}
+          </TableCell>
+          <TableCell className="text-center text-sm font-medium">
+            {detail.dueDate ? formatDate(detail.dueDate) : "—"}
+          </TableCell>
+          <TableCell className="text-right font-semibold tabular-nums text-sm">
+            {detail.amountDue !== undefined
+              ? formatCurrency(detail.amountDue)
+              : "—"}
+          </TableCell>
+          <TableCell className="text-right font-semibold tabular-nums text-sm text-green-600">
+            {detail.amountPaid !== undefined
+              ? formatCurrency(detail.amountPaid)
+              : "—"}
+          </TableCell>
+          <TableCell className="text-right">
+            {detail.outstanding !== undefined && detail.outstanding > 0 ? (
+              <Badge variant="outline" className="font-medium">
+                {formatCurrency(detail.outstanding)}
+              </Badge>
+            ) : (
+              "—"
+            )}
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}

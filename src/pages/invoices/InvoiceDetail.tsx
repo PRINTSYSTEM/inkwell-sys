@@ -131,7 +131,7 @@ export default function InvoiceDetailPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <Link to="/invoices" className="w-fit">
+        <Link to="/accounting/invoice" className="w-fit">
           <Button
             variant="ghost"
             size="sm"
