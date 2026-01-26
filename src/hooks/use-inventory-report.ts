@@ -14,18 +14,11 @@ import type {
   SlowMovingResponseIPaginate,
   StockCardResponse,
 } from "@/Schema/stock.schema";
+import type { InventoryReportCurrentStockParams } from "@/Schema";
 
 // ================== CURRENT STOCK ==================
 
-export interface CurrentStockParams {
-  pageNumber?: number;
-  pageSize?: number;
-  materialTypeId?: number;
-  designTypeId?: number;
-  search?: string;
-}
-
-export const useCurrentStock = (params?: CurrentStockParams) => {
+export const useCurrentStock = (params?: InventoryReportCurrentStockParams) => {
   return useQuery({
     queryKey: ["current-stock", params],
     queryFn: async () => {

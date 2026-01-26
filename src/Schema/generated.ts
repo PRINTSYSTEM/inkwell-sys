@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-19T06:02:05.481Z */
+/* Generated at: 2026-01-26T14:30:36.554Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -35,8 +35,6 @@ export const BillableItemResponseSchema = schemas.BillableItemResponse;
 export const BulkCreateMaterialTypeRequestSchema = schemas.BulkCreateMaterialTypeRequest;
 export const CashBookEntryResponseSchema = schemas.CashBookEntryResponse;
 export const CashBookResponseSchema = schemas.CashBookResponse;
-export const CashFundResponseSchema = schemas.CashFundResponse;
-export const CashFundResponseIPaginateSchema = schemas.CashFundResponseIPaginate;
 export const CashPaymentResponseSchema = schemas.CashPaymentResponse;
 export const CashPaymentResponseIPaginateSchema = schemas.CashPaymentResponseIPaginate;
 export const CashReceiptResponseSchema = schemas.CashReceiptResponse;
@@ -48,7 +46,6 @@ export const ConfirmPaymentRequestSchema = schemas.ConfirmPaymentRequest;
 export const ConstantGroupSchema = schemas.ConstantGroup;
 export const ConstantsResponseSchema = schemas.ConstantsResponse;
 export const CreateBankAccountRequestSchema = schemas.CreateBankAccountRequest;
-export const CreateCashFundRequestSchema = schemas.CreateCashFundRequest;
 export const CreateCashPaymentRequestSchema = schemas.CreateCashPaymentRequest;
 export const CreateCashReceiptRequestSchema = schemas.CreateCashReceiptRequest;
 export const CreateCustomerRequestSchema = schemas.CreateCustomerRequest;
@@ -108,6 +105,8 @@ export const ExpenseCategoryResponseSchema = schemas.ExpenseCategoryResponse;
 export const ExpenseCategoryResponseIPaginateSchema = schemas.ExpenseCategoryResponseIPaginate;
 export const ExportDebtRequestSchema = schemas.ExportDebtRequest;
 export const FailureReasonResponseSchema = schemas.FailureReasonResponse;
+export const FinanceAccountFlatResponseSchema = schemas.FinanceAccountFlatResponse;
+export const FinanceAccountNodeResponseSchema = schemas.FinanceAccountNodeResponse;
 export const FrequentProductResponseSchema = schemas.FrequentProductResponse;
 export const InventorySummaryItemResponseSchema = schemas.InventorySummaryItemResponse;
 export const InventorySummaryItemResponseIPaginateSchema = schemas.InventorySummaryItemResponseIPaginate;
@@ -189,7 +188,6 @@ export const TeamKpiSummaryResponseSchema = schemas.TeamKpiSummaryResponse;
 export const TopProductResponseSchema = schemas.TopProductResponse;
 export const TopProductResponseIPaginateSchema = schemas.TopProductResponseIPaginate;
 export const UpdateBankAccountRequestSchema = schemas.UpdateBankAccountRequest;
-export const UpdateCashFundRequestSchema = schemas.UpdateCashFundRequest;
 export const UpdateCashPaymentRequestSchema = schemas.UpdateCashPaymentRequest;
 export const UpdateCashReceiptRequestSchema = schemas.UpdateCashReceiptRequest;
 export const UpdateCustomerRequestSchema = schemas.UpdateCustomerRequest;

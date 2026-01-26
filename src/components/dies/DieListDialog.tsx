@@ -26,7 +26,7 @@ import {
 import { useDebounce } from "use-debounce";
 import { useSearchDies, useRelatedDiesByProofingOrder } from "@/hooks/use-die";
 import { formatDieSize } from "@/utils/format-die-size";
-import type { DieResponse } from "@/Schema";
+import type { DieResponse, DieListParams } from "@/Schema";
 import { dieStatusLabels, dieLocationLabels } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -55,8 +55,9 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
   const [debouncedSize] = useDebounce(size, 300);
 
   // Search dies with design code, size, and customer name
-  // Hook uses 'q' parameter internally for general search, combining designName, size, and customerName
-  const searchParams = useMemo(() => {
+  // Use DieListParams schema with proper fields (designCode, size, customerName)
+  // IMPORTANT: All string params use empty string ("") instead of undefined per rule
+  const searchParams = useMemo((): DieListParams | undefined => {
     if (!open) return undefined;
     const hasSearch =
       debouncedDesignCode.trim() ||
@@ -64,19 +65,17 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
       debouncedSize.trim();
     if (!hasSearch) return undefined;
 
-    // Combine designCode and size into designName (they both search through 'q' parameter)
-    const combinedDesignName =
-      [debouncedDesignCode.trim(), debouncedSize.trim()]
-        .filter(Boolean)
-        .join(" ")
-        .trim() || "";
-
-    return {
-      designName: combinedDesignName || "",
+    // Always set string fields to empty string, never undefined
+    const params: DieListParams = {
+      designCode: debouncedDesignCode.trim() || "",
+      size: debouncedSize.trim() || "",
       customerName: debouncedCustomerName.trim() || "",
       isUsable: true,
       pageSize: 100,
+      pageNumber: 1,
     };
+
+    return params;
   }, [open, debouncedDesignCode, debouncedCustomerName, debouncedSize]);
 
   const {
@@ -273,18 +272,7 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
               </div>
             )}
 
-            {/* Price */}
-            {die.price != null && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground whitespace-nowrap">
-                  Giá:
-                </span>
-                <span className="font-medium text-foreground">
-                  {die.price.toLocaleString("vi-VN")} đ
-                </span>
-              </div>
-            )}
-
+            
             {/* Status */}
             {die.status && (
               <div className="flex items-center gap-1.5">
@@ -354,7 +342,7 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
               Danh sách khuôn bế
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              Tìm kiếm khuôn bế theo mã thiết kế, kích thước hoặc tên khách hàng
+              Tìm kiếm khuôn bế theo mã hàng, kích thước hoặc tên khách hàng
             </DialogDescription>
           </DialogHeader>
 
@@ -367,13 +355,13 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
                   htmlFor="design-code-search"
                   className="text-sm font-medium"
                 >
-                  Mã thiết kế
+                  Mã hàng
                 </Label>
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="design-code-search"
-                    placeholder="Nhập mã thiết kế..."
+                    placeholder="Nhập mã hàng..."
                     value={designCode}
                     onChange={(e) => setDesignCode(e.target.value)}
                     className="pl-9 h-10 text-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/20"

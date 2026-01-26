@@ -334,7 +334,7 @@ export const ENTITY_CONFIG = {
     description: "Loại sử dụng khuôn bế",
     values: {
       one_time: "Dùng 1 lần",
-      reusable: "Tái sử dụng",
+      reusable: "Lưu khuôn",
     },
   },
   dieStatuses: {

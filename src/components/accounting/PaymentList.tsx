@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { useDebounce } from "use-debounce";
 import { vi } from "date-fns/locale";
 import {
   Search,
@@ -58,21 +59,34 @@ function deriveCustomerType(
 export function PaymentList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("1");
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const previousTotalPagesRef = useRef<number | null>(null);
 
   const itemsPerPage = 10;
 
-  // Fetch orders from API
-  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    filterType: "payment",
-  });
+  // Build params for API
+  const listParams = useMemo(() => {
+    return {
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      filterType: "payment",
+      status: "",
+      orderCode: debouncedSearchQuery || "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, [currentPage, itemsPerPage, debouncedSearchQuery]);
 
-  // Filter orders client-side (search and payment status)
+  // Fetch orders from API
+  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting(listParams);
+
+  // Filter orders client-side (payment status - API doesn't support payment status filter)
   const filteredOrders = useMemo(() => {
     if (!data?.items) return [];
 
@@ -82,23 +96,12 @@ export function PaymentList() {
         order.depositAmount
       );
 
-      const matchesSearch =
-        !searchQuery ||
-        order.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.companyName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.phone?.includes(searchQuery);
-
       const matchesPaymentStatus =
         paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
 
-      return matchesSearch && matchesPaymentStatus;
+      return matchesPaymentStatus;
     });
-  }, [data?.items, searchQuery, paymentStatusFilter]);
+  }, [data?.items, paymentStatusFilter]);
 
   const totalPages = data?.totalPages || 1;
   const totalItems = data?.total || 0;
@@ -109,11 +112,29 @@ export function PaymentList() {
   }, [currentPage]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when we have valid data (not loading) and totalPages actually decreased
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
+    // Only adjust if:
+    // 1. Not loading (we have valid data)
+    // 2. Data exists
+    // 3. Current page exceeds total pages
+    // 4. Total pages is valid (> 0)
+    // 5. Total pages actually decreased from previous value (not just during initial load)
+    if (
+      !isLoading &&
+      !!data &&
+      currentPage > totalPages &&
+      totalPages > 0 &&
+      (previousTotalPagesRef.current === null || totalPages < previousTotalPagesRef.current)
+    ) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages]);
+    
+    // Update previous totalPages ref only when we have valid data
+    if (!isLoading && !!data && totalPages > 0) {
+      previousTotalPagesRef.current = totalPages;
+    }
+  }, [currentPage, totalPages, isLoading, data]);
 
   // Reset to page 1 when filters change
   useEffect(() => {

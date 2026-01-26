@@ -39,7 +39,7 @@ export default function CurrentStockPage() {
   } = useCurrentStock({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    search: searchQuery || undefined,
+    search: searchQuery || "",
   });
 
   const totalItems = stockData?.items?.length || 0;

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -200,6 +201,7 @@ function generateInvoiceNumber(
 export function InvoiceList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("1");
@@ -213,40 +215,37 @@ export function InvoiceList() {
   const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] =
     useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const previousTotalPagesRef = useRef<number | null>(null);
 
   const itemsPerPage = 10;
 
+  // Build params for API
+  const listParams = useMemo(() => {
+    return {
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      filterType: "invoice",
+      status: invoiceStatusFilter === "all" ? "" : invoiceStatusFilter || "",
+      orderCode: debouncedSearchQuery || "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, [currentPage, itemsPerPage, invoiceStatusFilter, debouncedSearchQuery]);
+
   // Fetch orders from API - filter for invoice orders
-  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    filterType: "invoice",
-  });
+  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting(listParams);
 
   const exportInvoiceMutation = useExportOrderInvoice();
   const exportDeliveryNoteMutation = useExportOrderDeliveryNote();
   const createAccountingMutation = useCreateAccountingForOrder();
   const createInvoiceMutation = useCreateInvoice();
 
-  // Filter orders client-side
+  // Orders are already filtered by API, no need for client-side filtering
   const filteredOrders = useMemo(() => {
-    if (!data?.items) return [];
-
-    // Filter only orders that can have invoices (fully paid)
-    return data.items.filter((order) => {
-      const matchesSearch =
-        !searchQuery ||
-        order.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customerCompanyName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customerPhone?.includes(searchQuery);
-
-      // For demo purposes, we'll show all orders but highlight which can have invoices
-      return matchesSearch;
-    });
-  }, [data?.items, searchQuery]);
+    return data?.items ?? [];
+  }, [data?.items]);
 
   const totalPages = data?.totalPages || 1;
   const totalItems = data?.total || 0;
@@ -257,11 +256,29 @@ export function InvoiceList() {
   }, [currentPage]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when we have valid data (not loading) and totalPages actually decreased
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
+    // Only adjust if:
+    // 1. Not loading (we have valid data)
+    // 2. Data exists
+    // 3. Current page exceeds total pages
+    // 4. Total pages is valid (> 0)
+    // 5. Total pages actually decreased from previous value (not just during initial load)
+    if (
+      !isLoading &&
+      !!data &&
+      currentPage > totalPages &&
+      totalPages > 0 &&
+      (previousTotalPagesRef.current === null || totalPages < previousTotalPagesRef.current)
+    ) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages]);
+    
+    // Update previous totalPages ref only when we have valid data
+    if (!isLoading && !!data && totalPages > 0) {
+      previousTotalPagesRef.current = totalPages;
+    }
+  }, [currentPage, totalPages, isLoading, data]);
 
   // Scroll to top when page changes
   useEffect(() => {

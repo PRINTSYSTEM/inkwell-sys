@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCashBook, useCashFunds } from "@/hooks/use-cash";
+import { useCashBook } from "@/hooks/use-cash";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 
@@ -47,9 +47,6 @@ export default function CashBookPage() {
     from: addDays(new Date(), -30),
     to: new Date(),
   });
-  const [cashFundId, setCashFundId] = useState<number | undefined>(undefined);
-
-  const { data: fundsData } = useCashFunds({ isActive: true });
   const {
     data: cashBookData,
     isLoading,
@@ -59,7 +56,6 @@ export default function CashBookPage() {
   } = useCashBook({
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    cashFundId: cashFundId,
   });
 
   const handleVoucherClick = (
@@ -133,26 +129,6 @@ export default function CashBookPage() {
           <div className="flex-1">
             <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
-          <Select
-            value={cashFundId?.toString() || "all"}
-            onValueChange={(value) =>
-              setCashFundId(value === "all" ? undefined : Number(value))
-            }
-          >
-            <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="Chọn quỹ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả quỹ</SelectItem>
-              {fundsData?.items
-                ?.filter((fund) => fund.id !== undefined && fund.id !== null)
-                .map((fund) => (
-                  <SelectItem key={fund.id} value={fund.id!.toString()}>
-                    {fund.name} ({fund.code})
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Summary Cards */}

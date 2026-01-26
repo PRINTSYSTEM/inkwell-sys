@@ -249,8 +249,6 @@ export const API_SUFFIX = {
     `/delivery-notes/lines/${lineId}/result`,
 
   // ========== CASH MANAGEMENT ==========
-  CASH_FUNDS: "/categories/cash-funds",
-  CASH_FUND_BY_ID: (id: number) => `/categories/cash-funds/${id}`,
   CASH_PAYMENTS: "/cash-payments",
   CASH_PAYMENT_BY_ID: (id: number) => `/cash-payments/${id}`,
   CASH_PAYMENT_APPROVE: (id: number) => `/cash-payments/${id}/approve`,

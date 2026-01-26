@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-19T06:02:05.511Z */
+/* Generated at: 2026-01-26T14:30:36.583Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -34,18 +34,8 @@ export type BankLedgerListParams = z.infer<typeof BankLedgerListParamsSchema>;
 export const CashBookListParamsSchema = z.object({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
-  cashFundId: z.number().int().nullable().optional(),
 }).passthrough();
 export type CashBookListParams = z.infer<typeof CashBookListParamsSchema>;
-
-// ==== CashFundsListParams (GET /api/categories/cash-funds) ====
-export const CashFundsListParamsSchema = PagedParamsSchema.extend({
-  isActive: z.boolean().nullable().optional(),
-  search: z.string().nullable().optional(),
-  sortColumn: z.string().nullable().optional(),
-  sortOrder: z.string().nullable().optional(),
-});
-export type CashFundsListParams = z.infer<typeof CashFundsListParamsSchema>;
 
 // ==== CashPaymentListParams (GET /api/cash-payments) ====
 export const CashPaymentListParamsSchema = PagedParamsSchema.extend({
@@ -117,6 +107,7 @@ export type CustomerOrdersParams = z.infer<typeof CustomerOrdersParamsSchema>;
 export const DebtReportApAgingParamsSchema = PagedParamsSchema.extend({
   asOfDate: z.string().datetime({ offset: true }).nullable().optional(),
   vendorId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -127,6 +118,7 @@ export const DebtReportApDetailParamsSchema = PagedParamsSchema.extend({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   vendorId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -137,6 +129,7 @@ export const DebtReportApSummaryParamsSchema = PagedParamsSchema.extend({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   vendorId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -146,6 +139,7 @@ export type DebtReportApSummaryParams = z.infer<typeof DebtReportApSummaryParams
 export const DebtReportArAgingParamsSchema = PagedParamsSchema.extend({
   asOfDate: z.string().datetime({ offset: true }).nullable().optional(),
   customerId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -156,6 +150,7 @@ export const DebtReportArDetailParamsSchema = PagedParamsSchema.extend({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   customerId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -167,6 +162,7 @@ export const DebtReportArSummaryParamsSchema = PagedParamsSchema.extend({
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   customerId: z.number().int().nullable().optional(),
   status: z.string().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -176,6 +172,7 @@ export type DebtReportArSummaryParams = z.infer<typeof DebtReportArSummaryParams
 export const DebtReportCollectionScheduleParamsSchema = PagedParamsSchema.extend({
   dueDateFrom: z.string().datetime({ offset: true }).nullable().optional(),
   dueDateTo: z.string().datetime({ offset: true }).nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -185,6 +182,7 @@ export type DebtReportCollectionScheduleParams = z.infer<typeof DebtReportCollec
 export const DebtReportsApAgingExportParamsSchema = z.object({
   asOfDate: z.string().datetime({ offset: true }).nullable().optional(),
   vendorId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   saveHistory: z.boolean().nullable().optional(),
 }).passthrough();
 export type DebtReportsApAgingExportParams = z.infer<typeof DebtReportsApAgingExportParamsSchema>;
@@ -194,6 +192,7 @@ export const DebtReportsApSummaryExportParamsSchema = z.object({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   vendorId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   saveHistory: z.boolean().nullable().optional(),
 }).passthrough();
 export type DebtReportsApSummaryExportParams = z.infer<typeof DebtReportsApSummaryExportParamsSchema>;
@@ -202,6 +201,7 @@ export type DebtReportsApSummaryExportParams = z.infer<typeof DebtReportsApSumma
 export const DebtReportsArAgingExportParamsSchema = z.object({
   asOfDate: z.string().datetime({ offset: true }).nullable().optional(),
   customerId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   saveHistory: z.boolean().nullable().optional(),
 }).passthrough();
 export type DebtReportsArAgingExportParams = z.infer<typeof DebtReportsArAgingExportParamsSchema>;
@@ -212,6 +212,7 @@ export const DebtReportsArSummaryExportParamsSchema = z.object({
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   customerId: z.number().int().nullable().optional(),
   status: z.string().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   saveHistory: z.boolean().nullable().optional(),
 }).passthrough();
 export type DebtReportsArSummaryExportParams = z.infer<typeof DebtReportsArSummaryExportParamsSchema>;
@@ -336,11 +337,29 @@ export const ExpenseCategoriesListParamsSchema = PagedParamsSchema.extend({
 });
 export type ExpenseCategoriesListParams = z.infer<typeof ExpenseCategoriesListParamsSchema>;
 
+// ==== FinanceAccountSearchParams (GET /api/finance-accounts/search) ====
+export const FinanceAccountSearchParamsSchema = z.object({
+  q: z.string().nullable().optional(),
+}).passthrough();
+export type FinanceAccountSearchParams = z.infer<typeof FinanceAccountSearchParamsSchema>;
+
+// ==== FinanceAccountTreeParams (GET /api/finance-accounts/tree) ====
+export const FinanceAccountTreeParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+}).passthrough();
+export type FinanceAccountTreeParams = z.infer<typeof FinanceAccountTreeParamsSchema>;
+
 // ==== InventoryReportCurrentStockParams (GET /api/inventory-reports/current-stock) ====
 export const InventoryReportCurrentStockParamsSchema = PagedParamsSchema.extend({
   asOfDate: z.string().datetime({ offset: true }).nullable().optional(),
   warehouse: z.string().nullable().optional(),
   itemGroup: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
+  designTypeId: z.number().int().nullable().optional(),
+  materialTypeId: z.number().int().nullable().optional(),
+  length: z.number().nullable().optional(),
+  width: z.number().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -448,6 +467,9 @@ export type MyDesignListParams = z.infer<typeof MyDesignListParamsSchema>;
 export const OrderListParamsSchema = PagedParamsSchema.extend({
   customerId: z.number().int().nullable().optional(),
   status: z.string().nullable().optional(),
+  orderCode: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
   startDate: z.string().datetime({ offset: true }).nullable().optional(),
   endDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),
@@ -459,6 +481,9 @@ export type OrderListParams = z.infer<typeof OrderListParamsSchema>;
 export const OrdersForAccountingListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
   filterType: z.string().nullable().optional(),
+  orderCode: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -467,6 +492,9 @@ export type OrdersForAccountingListParams = z.infer<typeof OrdersForAccountingLi
 // ==== OrdersForDesignerListParams (GET /api/orders/for-designer) ====
 export const OrdersForDesignerListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
+  orderCode: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -475,6 +503,9 @@ export type OrdersForDesignerListParams = z.infer<typeof OrdersForDesignerListPa
 // ==== OrdersMyListParams (GET /api/orders/my) ====
 export const OrdersMyListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
+  orderCode: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
   startDate: z.string().datetime({ offset: true }).nullable().optional(),
   endDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),

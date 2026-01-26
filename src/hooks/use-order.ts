@@ -47,8 +47,16 @@ const {
   },
 });
 
-export const useOrders = (params?: OrderListParams) =>
-  useOrderListBase(params ?? ({} as OrderListParams));
+export const useOrders = (params?: OrderListParams) => {
+  // IMPORTANT: normalizeParams handles empty strings correctly
+  // String params should already be "" not undefined when passed to hook
+  // Note: useOrderListBase uses crudApi.list which doesn't normalize,
+  // so we normalize here before passing to the base hook
+  const normalizedParams = params
+    ? (normalizeParams(params as Record<string, unknown>) as OrderListParams)
+    : ({} as OrderListParams);
+  return useOrderListBase(normalizedParams);
+};
 
 // Wrapper for admin/base list with enabled parameter
 const useOrderListBaseWithEnabled = (
@@ -59,7 +67,14 @@ const useOrderListBaseWithEnabled = (
     queryKey: orderKeys.list(params ?? ({} as OrderListParams)),
     enabled,
     queryFn: async () => {
-      const res = await orderCrudApi.list(params ?? ({} as OrderListParams));
+      // IMPORTANT: normalizeParams handles empty strings correctly
+      // String params should already be "" not undefined when passed to hook
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await orderCrudApi.list(
+        normalizedParams as OrderListParams
+      );
       return res;
     },
     staleTime: 5 * 60 * 1000, // 5 phút
@@ -262,12 +277,18 @@ const useOrdersForDesigner = (
     queryKey: [orderKeys.all[0], "for-designer", params],
     enabled,
     queryFn: async () => {
+      // IMPORTANT: normalizeParams handles empty strings correctly
+      // String params should already be "" not undefined when passed to hook
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
       const res = await apiRequest.get<OrderResponseForDesignerPaginate>(
         API_SUFFIX.ORDERS_FOR_DESIGNER,
-        { params }
+        { params: normalizedParams }
       );
       return res.data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -282,12 +303,18 @@ export const useOrdersForAccounting = (
     queryKey: [orderKeys.all[0], "for-accounting", params],
     enabled,
     queryFn: async () => {
+      // IMPORTANT: normalizeParams handles empty strings correctly
+      // String params should already be "" not undefined when passed to hook
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
       const res = await apiRequest.get<OrderResponsePaginate>(
         API_SUFFIX.ORDERS_FOR_ACCOUNTING,
-        { params }
+        { params: normalizedParams }
       );
       return res.data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -636,12 +663,18 @@ export const useMyOrders = (
     queryKey: [orderKeys.all[0], "my", params ?? {}],
     enabled,
     queryFn: async () => {
+      // IMPORTANT: normalizeParams handles empty strings correctly
+      // String params should already be "" not undefined when passed to hook
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
       const res = await apiRequest.get<OrderResponsePaginate>(
         API_SUFFIX.ORDERS_MY,
-        { params }
+        { params: normalizedParams }
       );
       return res.data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -658,20 +691,50 @@ export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
   const isDesignerRole = role === ROLE.DESIGN;
   const isDesignerLeadRole = role === ROLE.DESIGN_LEAD;
 
-  // Normalize and convert params based on role
-  const adminParams = normalizeParams(params ?? ({} as OrderListParams));
+  // Convert params based on role - ensure string params use empty strings, not undefined
+  // normalizeParams will be called inside each hook
+  const adminParams: OrderListParams = {
+    pageNumber: params?.pageNumber,
+    pageSize: params?.pageSize,
+    customerId: params?.customerId,
+    status: params?.status || "",
+    orderCode: params?.orderCode || "",
+    designCode: params?.designCode || "",
+    customerName: params?.customerName || "",
+    startDate: params?.startDate || "",
+    endDate: params?.endDate || "",
+    sortColumn: params?.sortColumn || "",
+    sortOrder: params?.sortOrder || "",
+  };
+
   const designerParams: OrdersForDesignerListParams = {
     pageNumber: params?.pageNumber,
     pageSize: params?.pageSize,
-    status: params?.status,
-    startDate: params?.startDate,
-    endDate: params?.endDate,
+    status: params?.status || "",
+    orderCode: params?.orderCode || "",
+    designCode: params?.designCode || "",
+    customerName: params?.customerName || "",
+    sortColumn: params?.sortColumn || "",
+    sortOrder: params?.sortOrder || "",
+  };
+
+  const myOrdersParams: OrdersMyListParams = {
+    pageNumber: params?.pageNumber,
+    pageSize: params?.pageSize,
+    status: params?.status || "",
+    orderCode: params?.orderCode || "",
+    designCode: params?.designCode || "",
+    customerName: params?.customerName || "",
+    startDate: params?.startDate || "",
+    endDate: params?.endDate || "",
+    sortColumn: params?.sortColumn || "",
+    sortOrder: params?.sortOrder || "",
   };
 
   // Call all hooks unconditionally to satisfy Rules of Hooks
   // But only enable the query for the current role to optimize performance
   const adminResult = useOrderListBaseWithEnabled(adminParams, isAdminRole);
-  const designerResult = useMyOrders(designerParams, isDesignerRole);
+  const designerResult = useMyOrders(myOrdersParams, isDesignerRole);
 
   const designerLeadResult = useOrdersForDesigner(
     designerParams,

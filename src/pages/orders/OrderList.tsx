@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { DateRange } from "react-day-picker";
+import { useDebounce } from "use-debounce";
 import {
   Plus,
   Search,
@@ -62,6 +63,7 @@ export default function OrderList() {
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,20 +74,37 @@ export default function OrderList() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  // Reset to page 1 when filters change
+  // Handle filter changes - reset to page 1
   const handleFilterChange = () => {
     setCurrentPage(1);
     setPageInput("1");
   };
 
+  // Reset to page 1 when filters change (except pagination)
+  useEffect(() => {
+    setCurrentPage(1);
+    setPageInput("1");
+  }, [statusFilter, dateRange, debouncedSearchTerm, sortColumn, sortOrder]);
+
   // Build params for API
   const listParams: OrderListParams = useMemo(() => {
+    const searchValue = debouncedSearchTerm.trim();
+    
     const params: OrderListParams = {
       pageNumber: currentPage,
       pageSize: pageSize,
-      status: statusFilter === "all" ? "" : statusFilter,
+      status: statusFilter === "all" ? "" : statusFilter || "",
+      // Search by orderCode (mã đơn hàng) - primary search field
+      orderCode: searchValue || "",
+      // Also search by designCode and customerName for broader search
+      // API should handle OR logic, but orderCode takes priority
+      designCode: searchValue || "",
+      customerName: searchValue || "",
+      customerId: undefined,
       startDate: "",
       endDate: "",
+      sortColumn: "",
+      sortOrder: "",
     };
 
     // Add date range if selected
@@ -105,11 +124,11 @@ export default function OrderList() {
 
     if (sortColumn.trim()) {
       params.sortColumn = sortColumn.trim();
-      params.sortOrder = sortOrder;
+      params.sortOrder = sortOrder || "";
     }
 
     return params;
-  }, [statusFilter, dateRange, currentPage, pageSize, sortColumn, sortOrder]);
+  }, [statusFilter, dateRange, currentPage, pageSize, sortColumn, sortOrder, debouncedSearchTerm]);
 
   // Call API
   const { data, isLoading, isError, error } = useOrdersByRole(role, listParams);
@@ -139,26 +158,8 @@ export default function OrderList() {
     }
   }, [totalPages, currentPage, data]);
 
-  // Client-side search filter (since API doesn't support search parameter)
-  const filteredOrders = useMemo(() => {
-    if (!searchTerm.trim()) return orders;
-    const searchLower = searchTerm.toLowerCase();
-    return orders.filter((order) => {
-      // Use nested customer object if available, otherwise fall back to flat fields
-      const orderResponse = order as OrderResponse;
-      const customerName =
-        orderResponse.customer?.name || orderResponse.customerName || "";
-      const customerCompanyName =
-        orderResponse.customer?.companyName ||
-        orderResponse.customerCompanyName ||
-        "";
-      return (
-        order.code?.toLowerCase().includes(searchLower) ||
-        customerName.toLowerCase().includes(searchLower) ||
-        customerCompanyName.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [orders, searchTerm]);
+  // Orders are already filtered by API, no need for client-side filtering
+  // Use orders directly from API response
 
   // Calculate stats from orders
   const stats = useMemo(() => {
@@ -407,7 +408,7 @@ export default function OrderList() {
                 {/* Data */}
                 {!isLoading &&
                   !isError &&
-                  filteredOrders.map((order) => {
+                  orders.map((order) => {
                     // Use OrderResponse type which includes customer object
                     const orderResponse = order as OrderResponse;
 
@@ -612,7 +613,7 @@ export default function OrderList() {
                   })}
 
                 {/* Empty */}
-                {!isLoading && !isError && filteredOrders.length === 0 && (
+                {!isLoading && !isError && orders.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={canViewPrice ? 7 : 5}
@@ -621,7 +622,7 @@ export default function OrderList() {
                       <div className="flex flex-col items-center gap-2">
                         <AlertCircle className="h-8 w-8 text-muted-foreground/50" />
                         <p className="text-muted-foreground">
-                          {searchTerm.trim()
+                          {debouncedSearchTerm.trim()
                             ? "Không tìm thấy đơn hàng phù hợp với từ khóa tìm kiếm"
                             : "Không có đơn hàng nào"}
                         </p>
@@ -637,10 +638,10 @@ export default function OrderList() {
           {!isLoading && !isError && totalOrders > 0 && (
             <div className="flex items-center justify-between border-t px-4 py-3 shrink-0 bg-background">
               <div className="text-sm font-medium text-muted-foreground">
-                {searchTerm.trim() ? (
+                {debouncedSearchTerm.trim() ? (
                   <>
-                    Hiển thị {filteredOrders.length} / {totalOrders} đơn hàng
-                    (đã lọc theo từ khóa)
+                    Hiển thị {orders.length} / {totalOrders} đơn hàng
+                    {orders.length < totalOrders && " (đã lọc theo từ khóa)"}
                   </>
                 ) : (
                   <>

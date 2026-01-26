@@ -53,6 +53,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Box,
+  Building2,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   Tooltip,
@@ -108,6 +111,7 @@ import {
   sidesClassificationLabels,
   laminationTypeLabels,
   dieLocationLabels,
+  dieStatusLabels,
 } from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { downloadFile } from "@/lib/download-utils";
@@ -120,6 +124,7 @@ import {
   useSearchDies,
   useAssignDieToProofingOrder,
   useRemoveDieFromProofingOrder,
+  useRelatedDies,
 } from "@/hooks/use-die";
 import type {
   DieResponse,
@@ -418,6 +423,15 @@ export default function ProofingOrderDetailPage() {
     useState<string>("");
   const [inlineNotes, setInlineNotes] = useState<string>("");
 
+  // Related dies dialog state
+  const [isRelatedDiesDialogOpen, setIsRelatedDiesDialogOpen] = useState(false);
+  const [selectedDesignForRelatedDies, setSelectedDesignForRelatedDies] =
+    useState<{
+      designId: number;
+      designCode?: string;
+      designName?: string;
+    } | null>(null);
+
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
 
@@ -547,7 +561,7 @@ export default function ProofingOrderDetailPage() {
   const dieSearchParams = useMemo(() => {
     if (!isReplaceDieDialogOpen) return undefined;
     return {
-      dieName: debouncedDieSearch.trim() || undefined,
+      dieName: debouncedDieSearch.trim() || "",
       isUsable: true,
       pageSize: 50,
     };
@@ -558,7 +572,7 @@ export default function ProofingOrderDetailPage() {
   const addDieSearchParams = useMemo(() => {
     if (!isAddDieDialogOpen) return undefined;
     return {
-      dieName: debouncedAddDieSearch.trim() || undefined,
+      dieName: debouncedAddDieSearch.trim() || "",
       isUsable: true,
       pageSize: 50,
     };
@@ -3507,6 +3521,25 @@ export default function ProofingOrderDetailPage() {
                                 </TableCell>
                                 <TableCell className="px-2 py-1 text-right">
                                   <div className="flex items-center justify-end gap-1">
+                                    {pod.design?.id && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedDesignForRelatedDies({
+                                            designId: pod.design.id!,
+                                            designCode: pod.design?.code,
+                                            designName: pod.design?.designName,
+                                          });
+                                          setIsRelatedDiesDialogOpen(true);
+                                        }}
+                                        title="Tìm khuôn liên quan"
+                                      >
+                                        <Search className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
                                     {order &&
                                       order.status !== "completed" &&
                                       pod.id && (
@@ -5122,6 +5155,314 @@ export default function ProofingOrderDetailPage() {
         open={isDieListDialogOpen}
         onOpenChange={setIsDieListDialogOpen}
       />
+
+      {/* Related Dies Dialog */}
+      <Dialog
+        open={isRelatedDiesDialogOpen}
+        onOpenChange={(open) => {
+          setIsRelatedDiesDialogOpen(open);
+          if (!open) {
+            setSelectedDesignForRelatedDies(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Search className="h-5 w-5" />
+              </div>
+              Khuôn liên quan
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {selectedDesignForRelatedDies?.designCode && (
+                <>
+                  Khuôn phù hợp cho mã hàng:{" "}
+                  <span className="font-semibold text-foreground">
+                    {selectedDesignForRelatedDies.designCode}
+                  </span>
+                  {selectedDesignForRelatedDies.designName && (
+                    <>
+                      {" - "}
+                      <span className="text-foreground">
+                        {selectedDesignForRelatedDies.designName}
+                      </span>
+                    </>
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <RelatedDiesContent
+            designId={selectedDesignForRelatedDies?.designId ?? null}
+            designCode={selectedDesignForRelatedDies?.designCode}
+            designName={selectedDesignForRelatedDies?.designName}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// Component to display related dies
+function RelatedDiesContent({
+  designId,
+  designCode,
+  designName,
+}: {
+  designId: number | null;
+  designCode?: string;
+  designName?: string;
+}) {
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [copiedDieId, setCopiedDieId] = useState<number | null>(null);
+
+  const {
+    data: relatedDies = [],
+    isLoading,
+    error,
+  } = useRelatedDies(designId, !!designId);
+
+  const handleCopyDieCode = async (dieCode: string, dieId: number) => {
+    try {
+      await navigator.clipboard.writeText(dieCode);
+      setCopiedDieId(dieId);
+      toast.success("Đã sao chép mã khuôn", {
+        description: `Mã khuôn "${dieCode}" đã được sao chép vào clipboard`,
+      });
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedDieId(null);
+      }, 2000);
+    } catch (error) {
+      toast.error("Không thể sao chép mã khuôn", {
+        description: "Đã xảy ra lỗi khi sao chép vào clipboard",
+      });
+    }
+  };
+
+  // Helper function to render die item (similar to DieListDialog)
+  const renderDieItem = (die: DieResponse) => (
+    <div
+      key={die.id}
+      className="group rounded-lg border border-border/60 bg-card p-4 transition-all duration-200 hover:border-primary/50 hover:shadow-md"
+    >
+      <div className="flex items-start gap-4">
+        {/* Die Image */}
+        <div
+          className="relative w-20 h-20 rounded-lg border bg-muted overflow-hidden shrink-0 cursor-pointer group/image"
+          onClick={() => {
+            if (die.imageUrl) {
+              setViewingImageUrl(die.imageUrl);
+              setImageViewerOpen(true);
+            }
+          }}
+        >
+          {die.imageUrl ? (
+            <>
+              <img
+                src={die.imageUrl}
+                alt={die.code || `Die ${die.id}`}
+                className="w-full h-full object-contain"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 transition-colors flex items-center justify-center">
+                <Eye className="h-4 w-4 text-white opacity-0 group-hover/image:opacity-100 transition-opacity" />
+              </div>
+            </>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+
+        {/* Die Info */}
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Header: Code & Name */}
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-semibold text-base text-foreground font-mono">
+                {die.code || `Khuôn #${die.id}`}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-primary/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyDieCode(die.code || `Khuôn #${die.id}`, die.id);
+                }}
+                title="Sao chép mã khuôn"
+              >
+                {copiedDieId === die.id ? (
+                  <Check className="h-3.5 w-3.5 text-green-600" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+              </Button>
+              {die.isUsable ? (
+                <Badge
+                  variant="secondary"
+                  className="bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800 text-xs font-semibold"
+                >
+                  {die.status && dieStatusLabels[die.status]
+                    ? dieStatusLabels[die.status]
+                    : die.status === "ready"
+                      ? dieStatusLabels.ready
+                      : "Sử dụng được"}
+                </Badge>
+              ) : (
+                <Badge
+                  variant="secondary"
+                  className="bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800 text-xs font-semibold"
+                >
+                  {die.status && dieStatusLabels[die.status]
+                    ? dieStatusLabels[die.status]
+                    : "Không sử dụng được"}
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Details Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1.5 text-xs">
+            {/* Size */}
+            {(die.length != null || die.height != null || die.size) && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground whitespace-nowrap">
+                  Kích thước:
+                </span>
+                <span className="font-medium text-foreground">
+                  {formatDieSize(die)}
+                </span>
+              </div>
+            )}
+
+            {/* Vendor */}
+            {die.vendorName && (
+              <div className="flex items-center gap-1.5">
+                <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground whitespace-nowrap">
+                  NCC:
+                </span>
+                <span className="font-medium text-foreground truncate">
+                  {die.vendorName}
+                </span>
+              </div>
+            )}
+
+            {/* Location */}
+            {die.location && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground whitespace-nowrap">
+                  Vị trí:
+                </span>
+                <span className="font-medium text-foreground">
+                  {dieLocationLabels[die.location]}
+                </span>
+              </div>
+            )}
+
+            {/* Status */}
+            {die.status && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground whitespace-nowrap">
+                  Trạng thái:
+                </span>
+                <Badge variant="outline" className="text-xs">
+                  {dieStatusLabels[die.status] || die.status}
+                </Badge>
+              </div>
+            )}
+
+            {/* First Proofing Order Code */}
+            {die.firstProofingOrderCode && (
+              <div className="flex items-center gap-1.5 col-span-full">
+                <span className="text-muted-foreground whitespace-nowrap">
+                  Được sử dụng trong mã bài:
+                </span>
+                <span className="font-medium text-foreground">
+                  {die.firstProofingOrderCode}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          {die.notes && (
+            <div className="pt-2 border-t border-border/60">
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                <span className="font-medium">Ghi chú: </span>
+                {die.notes}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="flex-1 min-h-0 flex flex-col">
+        {isLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+            <p className="text-sm font-medium text-foreground">
+              Đang tải khuôn liên quan...
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Vui lòng đợi trong giây lát
+            </p>
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-4">
+              <Package className="h-8 w-8" />
+            </div>
+            <p className="text-sm font-semibold text-foreground mb-1">
+              Đã xảy ra lỗi
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Không thể tải khuôn liên quan. Vui lòng thử lại sau.
+            </p>
+          </div>
+        ) : relatedDies.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-semibold text-foreground mb-1">
+              Không tìm thấy khuôn liên quan
+            </p>
+            <p className="text-xs text-muted-foreground max-w-sm">
+              Không có khuôn nào phù hợp với mã hàng này
+            </p>
+          </div>
+        ) : (
+          <ScrollArea className="flex-1">
+            <div className="space-y-3 pr-4">
+              {relatedDies.map((die: DieResponse) => renderDieItem(die))}
+            </div>
+          </ScrollArea>
+        )}
+      </div>
+
+      {/* Image Viewer Dialog */}
+      {viewingImageUrl && (
+        <ImageViewerDialog
+          imageUrl={viewingImageUrl}
+          open={imageViewerOpen}
+          onOpenChange={(open) => {
+            setImageViewerOpen(open);
+            if (!open) {
+              setViewingImageUrl(null);
+            }
+          }}
+        />
+      )}
+    </>
   );
 }

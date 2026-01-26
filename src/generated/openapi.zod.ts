@@ -1,6 +1,17 @@
 import { makeApi, Zodios, type ZodiosOptions } from "@zodios/core";
 import { z } from "zod";
 
+type FinanceAccountNodeResponse = Partial<{
+  id: number;
+  code: string | null;
+  name: string | null;
+  parentId: number | null;
+  totalReceipt: number;
+  totalPayment: number;
+  balance: number;
+  children: Array<FinanceAccountNodeResponse> | null;
+}>;
+
 const AccountingResponse = z
   .object({
     id: z.number().int(),
@@ -130,8 +141,8 @@ const CreateCashPaymentRequest = z.object({
   paymentMethodId: z.number().int(),
   orderId: z.number().int().nullish(),
   vendorId: z.number().int().nullish(),
-  cashFundId: z.number().int().nullish(),
   bankAccountId: z.number().int().nullish(),
+  financeAccountId: z.number().int().nullish(),
   notes: z.string().min(0).max(1000).nullish(),
 });
 const CashPaymentResponse = z
@@ -157,11 +168,11 @@ const CashPaymentResponse = z
     orderCode: z.string().nullable(),
     vendorId: z.number().int().nullable(),
     vendorName: z.string().nullable(),
-    cashFundId: z.number().int().nullable(),
-    cashFundName: z.string().nullable(),
     bankAccountId: z.number().int().nullable(),
     bankAccountNumber: z.string().nullable(),
     bankName: z.string().nullable(),
+    financeAccountId: z.number().int().nullable(),
+    financeAccountCode: z.string().nullable(),
     createdById: z.number().int(),
     createdByName: z.string().nullable(),
     approvedById: z.number().int().nullable(),
@@ -189,8 +200,8 @@ const UpdateCashPaymentRequest = z.object({
   paymentMethodId: z.number().int(),
   orderId: z.number().int().nullish(),
   vendorId: z.number().int().nullish(),
-  cashFundId: z.number().int().nullish(),
   bankAccountId: z.number().int().nullish(),
+  financeAccountId: z.number().int().nullish(),
   notes: z.string().min(0).max(1000).nullish(),
 });
 const ProblemDetails = z
@@ -214,8 +225,8 @@ const CreateCashReceiptRequest = z.object({
   orderId: z.number().int().nullish(),
   invoiceId: z.number().int().nullish(),
   customerId: z.number().int().nullish(),
-  cashFundId: z.number().int().nullish(),
   bankAccountId: z.number().int().nullish(),
+  financeAccountId: z.number().int().nullish(),
   notes: z.string().min(0).max(1000).nullish(),
 });
 const CashReceiptResponse = z
@@ -243,11 +254,11 @@ const CashReceiptResponse = z
     invoiceNumber: z.string().nullable(),
     customerId: z.number().int().nullable(),
     customerName: z.string().nullable(),
-    cashFundId: z.number().int().nullable(),
-    cashFundName: z.string().nullable(),
     bankAccountId: z.number().int().nullable(),
     bankAccountNumber: z.string().nullable(),
     bankName: z.string().nullable(),
+    financeAccountId: z.number().int().nullable(),
+    financeAccountCode: z.string().nullable(),
     createdById: z.number().int(),
     createdByName: z.string().nullable(),
     approvedById: z.number().int().nullable(),
@@ -276,8 +287,8 @@ const UpdateCashReceiptRequest = z.object({
   orderId: z.number().int().nullish(),
   invoiceId: z.number().int().nullish(),
   customerId: z.number().int().nullish(),
-  cashFundId: z.number().int().nullish(),
   bankAccountId: z.number().int().nullish(),
+  financeAccountId: z.number().int().nullish(),
   notes: z.string().min(0).max(1000).nullish(),
 });
 const ExpenseCategoryResponse = z
@@ -351,41 +362,6 @@ const UpdatePaymentMethodRequest = z.object({
   code: z.string().min(0).max(50),
   name: z.string().min(0).max(200),
   description: z.string().min(0).max(500).nullish(),
-  isActive: z.boolean().optional(),
-});
-const CashFundResponse = z
-  .object({
-    id: z.number().int(),
-    code: z.string().nullable(),
-    name: z.string().nullable(),
-    description: z.string().nullable(),
-    openingBalance: z.number(),
-    isActive: z.boolean(),
-    createdAt: z.string().datetime({ offset: true }),
-    updatedAt: z.string().datetime({ offset: true }).nullable(),
-  })
-  .partial();
-const CashFundResponseIPaginate = z
-  .object({
-    size: z.number().int(),
-    page: z.number().int(),
-    total: z.number().int(),
-    totalPages: z.number().int(),
-    items: z.array(CashFundResponse).nullable(),
-  })
-  .partial();
-const CreateCashFundRequest = z.object({
-  code: z.string().min(0).max(50),
-  name: z.string().min(0).max(200),
-  description: z.string().min(0).max(500).nullish(),
-  openingBalance: z.number().gte(0).optional(),
-  isActive: z.boolean().optional(),
-});
-const UpdateCashFundRequest = z.object({
-  code: z.string().min(0).max(50),
-  name: z.string().min(0).max(200),
-  description: z.string().min(0).max(500).nullish(),
-  openingBalance: z.number().gte(0).optional(),
   isActive: z.boolean().optional(),
 });
 const BankAccountResponse = z
@@ -555,20 +531,20 @@ const UpdateCustomerRequest = z
 const CustomerDebtHistoryResponse = z
   .object({
     id: z.number().int(),
-    customerId: z.number().int(),
-    customerName: z.string().nullable(),
-    orderId: z.number().int().nullable(),
-    orderCode: z.string().nullable(),
-    paymentId: z.number().int().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
     previousDebt: z.number(),
     changeAmount: z.number(),
     newDebt: z.number(),
     changeType: z.string().nullable(),
-    changeTypeDisplay: z.string().nullable(),
     note: z.string().nullable(),
-    createdById: z.number().int().nullable(),
+    orderId: z.number().int().nullable(),
+    orderCode: z.string().nullable(),
+    paymentId: z.number().int().nullable(),
+    paymentCode: z.string().nullable(),
+    cashReceiptId: z.number().int().nullable(),
+    cashReceiptCode: z.string().nullable(),
+    createdById: z.number().int(),
     createdByName: z.string().nullable(),
-    createdAt: z.string().datetime({ offset: true }),
   })
   .partial();
 const CustomerDebtHistoryResponsePaginate = z
@@ -596,18 +572,20 @@ const CustomerMonthlyDebtResponse = z
   .partial();
 const CustomerDebtSummaryResponse = z
   .object({
-    customerId: z.number().int(),
-    customerName: z.string().nullable(),
-    customerType: z.string().nullable(),
-    startDate: z.string().datetime({ offset: true }),
-    endDate: z.string().datetime({ offset: true }),
-    openingDebt: z.number(),
-    totalDebtIncurred: z.number(),
-    totalPaymentReceived: z.number(),
-    closingDebt: z.number(),
-    orderCount: z.number().int(),
-    paymentCount: z.number().int(),
-    details: z.array(CustomerDebtHistoryResponse).nullable(),
+    id: z.number().int(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    companyName: z.string().nullable(),
+    taxCode: z.string().nullable(),
+    phone: z.string().nullable(),
+    email: z.string().nullable(),
+    address: z.string().nullable(),
+    type: z.string().nullable(),
+    debtStatus: z.string().nullable(),
+    scrapRate: z.number().nullable(),
+    currentDebt: z.number(),
+    maxDebt: z.number(),
+    isComplete: z.boolean(),
   })
   .partial();
 const FrequentProductResponse = z
@@ -707,7 +685,7 @@ const ARDetailResponse = z
     customerName: z.string().nullable(),
     documentNumber: z.string().nullable(),
     documentType: z.string().nullable(),
-    documentId: z.number().int().nullable(),
+    documentId: z.number().int(),
     documentDate: z.string().datetime({ offset: true }),
     dueDate: z.string().datetime({ offset: true }).nullable(),
     amountDue: z.number(),
@@ -755,7 +733,7 @@ const CollectionScheduleResponse = z
     customerName: z.string().nullable(),
     documentNumber: z.string().nullable(),
     documentType: z.string().nullable(),
-    documentId: z.number().int().nullable(),
+    documentId: z.number().int(),
     amountDue: z.number(),
     notes: z.string().nullable(),
   })
@@ -796,9 +774,9 @@ const APDetailResponse = z
     vendorName: z.string().nullable(),
     documentNumber: z.string().nullable(),
     documentType: z.string().nullable(),
-    documentId: z.number().int().nullable(),
+    documentId: z.number().int(),
     documentDate: z.string().datetime({ offset: true }),
-    dueDate: z.string().datetime({ offset: true }).nullable(),
+    dueDate: z.string().datetime({ offset: true }),
     amountDue: z.number(),
     amountPaid: z.number(),
     outstanding: z.number(),
@@ -1147,6 +1125,7 @@ const VendorResponse = z
     vendorType: z.string().nullable(),
     vendorTypeName: z.string().nullable(),
     isActive: z.boolean(),
+    currentDebt: z.number(),
     createdById: z.number().int(),
     createdByName: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
@@ -1255,6 +1234,29 @@ const CreateDieRequest = z
   })
   .partial();
 const UpdateDieStatusRequest = z.object({ status: z.string().min(1) });
+const FinanceAccountFlatResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    parentId: z.number().int().nullable(),
+  })
+  .partial();
+const FinanceAccountNodeResponse: z.ZodType<FinanceAccountNodeResponse> =
+  z.lazy(() =>
+    z
+      .object({
+        id: z.number().int(),
+        code: z.string().nullable(),
+        name: z.string().nullable(),
+        parentId: z.number().int().nullable(),
+        totalReceipt: z.number(),
+        totalPayment: z.number(),
+        balance: z.number(),
+        children: z.array(FinanceAccountNodeResponse).nullable(),
+      })
+      .partial(),
+  );
 const InventorySummaryItemResponse = z
   .object({
     itemCode: z.string().nullable(),
@@ -2108,6 +2110,7 @@ const ProofingOrderResponse = z
     laminationType: z.string().nullable(),
     laminationTypeName: z.string().nullable(),
     isPlateExported: z.boolean(),
+    plateOutputCount: z.number().int(),
     plateExport: PlateExportResponse,
     dieExports: z.array(DieExportResponse).nullable(),
     createdAt: z.string().datetime({ offset: true }),
@@ -2622,10 +2625,6 @@ export const schemas = {
   PaymentMethodResponseIPaginate,
   CreatePaymentMethodRequest,
   UpdatePaymentMethodRequest,
-  CashFundResponse,
-  CashFundResponseIPaginate,
-  CreateCashFundRequest,
-  UpdateCashFundRequest,
   BankAccountResponse,
   BankAccountResponseIPaginate,
   CreateBankAccountRequest,
@@ -2695,6 +2694,8 @@ export const schemas = {
   ReplaceDieRequest,
   CreateDieRequest,
   UpdateDieStatusRequest,
+  FinanceAccountFlatResponse,
+  FinanceAccountNodeResponse,
   InventorySummaryItemResponse,
   InventorySummaryItemResponseIPaginate,
   StockCardEntryResponse,
@@ -2980,11 +2981,6 @@ const endpoints = makeApi([
         name: "toDate",
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
-      },
-      {
-        name: "cashFundId",
-        type: "Query",
-        schema: z.number().int().optional(),
       },
     ],
     response: CashBookResponse,
@@ -3480,106 +3476,6 @@ const endpoints = makeApi([
   },
   {
     method: "get",
-    path: "/api/categories/cash-funds",
-    alias: "getApicategoriescashFunds",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "pageNumber",
-        type: "Query",
-        schema: z.number().int().optional().default(1),
-      },
-      {
-        name: "pageSize",
-        type: "Query",
-        schema: z.number().int().optional().default(10),
-      },
-      {
-        name: "isActive",
-        type: "Query",
-        schema: z.boolean().optional(),
-      },
-      {
-        name: "search",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
-        name: "sortColumn",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
-        name: "sortOrder",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-    ],
-    response: CashFundResponseIPaginate,
-  },
-  {
-    method: "post",
-    path: "/api/categories/cash-funds",
-    alias: "postApicategoriescashFunds",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: CreateCashFundRequest,
-      },
-    ],
-    response: CashFundResponse,
-  },
-  {
-    method: "get",
-    path: "/api/categories/cash-funds/:id",
-    alias: "getApicategoriescashFundsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "id",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: CashFundResponse,
-  },
-  {
-    method: "put",
-    path: "/api/categories/cash-funds/:id",
-    alias: "putApicategoriescashFundsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: UpdateCashFundRequest,
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: CashFundResponse,
-  },
-  {
-    method: "delete",
-    path: "/api/categories/cash-funds/:id",
-    alias: "deleteApicategoriescashFundsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "id",
-        type: "Path",
-        schema: z.number().int(),
-      },
-    ],
-    response: z.void(),
-  },
-  {
-    method: "get",
     path: "/api/categories/expense-categories",
     alias: "getApicategoriesexpenseCategories",
     requestFormat: "json",
@@ -4057,6 +3953,11 @@ const endpoints = makeApi([
         schema: z.number().int().optional(),
       },
       {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -4084,6 +3985,11 @@ const endpoints = makeApi([
         name: "vendorId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
       },
       {
         name: "saveHistory",
@@ -4123,6 +4029,11 @@ const endpoints = makeApi([
         name: "vendorId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
       },
       {
         name: "sortColumn",
@@ -4169,6 +4080,11 @@ const endpoints = makeApi([
         schema: z.number().int().optional(),
       },
       {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -4201,6 +4117,11 @@ const endpoints = makeApi([
         name: "vendorId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
       },
       {
         name: "saveHistory",
@@ -4237,6 +4158,11 @@ const endpoints = makeApi([
         schema: z.number().int().optional(),
       },
       {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -4264,6 +4190,11 @@ const endpoints = makeApi([
         name: "customerId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
       },
       {
         name: "saveHistory",
@@ -4303,6 +4234,11 @@ const endpoints = makeApi([
         name: "customerId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
       },
       {
         name: "sortColumn",
@@ -4354,6 +4290,11 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
       {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -4393,6 +4334,11 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
       {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "saveHistory",
         type: "Query",
         schema: z.boolean().optional().default(true),
@@ -4425,6 +4371,11 @@ const endpoints = makeApi([
         name: "dueDateTo",
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
       },
       {
         name: "sortColumn",
@@ -5570,6 +5521,39 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/finance-accounts/search",
+    alias: "getApifinanceAccountssearch",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "q",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.array(FinanceAccountFlatResponse),
+  },
+  {
+    method: "get",
+    path: "/api/finance-accounts/tree",
+    alias: "getApifinanceAccountstree",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: z.array(FinanceAccountNodeResponse),
+  },
+  {
+    method: "get",
     path: "/api/inventory-reports/current-stock",
     alias: "getApiinventoryReportscurrentStock",
     requestFormat: "json",
@@ -5598,6 +5582,31 @@ const endpoints = makeApi([
         name: "itemGroup",
         type: "Query",
         schema: z.string().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "designTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "materialTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "length",
+        type: "Query",
+        schema: z.number().optional(),
+      },
+      {
+        name: "width",
+        type: "Query",
+        schema: z.number().optional(),
       },
       {
         name: "sortColumn",
@@ -6176,6 +6185,21 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
       {
+        name: "orderCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "designCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customerName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "startDate",
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
@@ -6413,6 +6437,21 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
       {
+        name: "orderCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "designCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customerName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -6447,6 +6486,21 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
       {
+        name: "orderCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "designCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customerName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -6477,6 +6531,21 @@ const endpoints = makeApi([
       },
       {
         name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "orderCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "designCode",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customerName",
         type: "Query",
         schema: z.string().optional(),
       },

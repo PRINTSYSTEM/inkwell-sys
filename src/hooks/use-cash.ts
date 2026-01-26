@@ -7,8 +7,6 @@ import { toast } from "sonner";
 import { createMockQueryFn } from "@/lib/mock-utils";
 import { useAsyncCallback } from "@/hooks/use-async";
 import {
-  mockCashFundsPaginate,
-  mockCashFunds,
   mockCashPaymentsPaginate,
   mockCashPayments,
   mockCashReceiptsPaginate,
@@ -16,10 +14,6 @@ import {
   mockCashBook,
 } from "@/mocks/cash.mock";
 import type {
-  CashFundResponse,
-  CashFundResponseIPaginate,
-  CreateCashFundRequest,
-  UpdateCashFundRequest,
   CashPaymentResponse,
   CashPaymentResponseIPaginate,
   CreateCashPaymentRequest,
@@ -31,111 +25,10 @@ import type {
   CashBookResponse,
 } from "@/Schema/accounting.schema";
 import type {
-  CashFundsListParams,
   CashPaymentListParams,
   CashReceiptListParams,
   CashBookListParams,
 } from "@/Schema";
-
-// ================== CASH FUND ==================
-
-export const useCashFunds = (params?: CashFundsListParams) => {
-  return useQuery({
-    queryKey: ["cash-funds", params],
-    queryFn: createMockQueryFn(
-      async () => {
-        const normalizedParams = normalizeParams(
-          (params ?? {}) as Record<string, unknown>
-        );
-        const res = await apiRequest.get<CashFundResponseIPaginate>(
-          API_SUFFIX.CASH_FUNDS,
-          { params: normalizedParams }
-        );
-        return res.data;
-      },
-      mockCashFundsPaginate
-    ),
-  });
-};
-
-export const useCashFund = (id: number | null, enabled: boolean = true) => {
-  return useQuery({
-    queryKey: ["cash-fund", id],
-    enabled: enabled && !!id,
-    queryFn: createMockQueryFn(
-      async () => {
-        const res = await apiRequest.get<CashFundResponse>(
-          API_SUFFIX.CASH_FUND_BY_ID(id as number)
-        );
-        return res.data;
-      },
-      mockCashFunds.find((f) => f.id === id) || mockCashFunds[0]
-    ),
-  });
-};
-
-export const useCreateCashFund = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: CreateCashFundRequest) => {
-      const res = await apiRequest.post<CashFundResponse>(
-        API_SUFFIX.CASH_FUNDS,
-        data
-      );
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cash-funds"] });
-      toast.success("Tạo quỹ tiền mặt thành công");
-    },
-    onError: (error: Error) => {
-      toast.error(`Lỗi: ${error.message}`);
-    },
-  });
-};
-
-export const useUpdateCashFund = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: UpdateCashFundRequest;
-    }) => {
-      const res = await apiRequest.put<CashFundResponse>(
-        API_SUFFIX.CASH_FUND_BY_ID(id),
-        data
-      );
-      return res.data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["cash-fund", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["cash-funds"] });
-      toast.success("Cập nhật quỹ tiền mặt thành công");
-    },
-    onError: (error: Error) => {
-      toast.error(`Lỗi: ${error.message}`);
-    },
-  });
-};
-
-export const useDeleteCashFund = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest.delete(API_SUFFIX.CASH_FUND_BY_ID(id));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cash-funds"] });
-      toast.success("Xóa quỹ tiền mặt thành công");
-    },
-    onError: (error: Error) => {
-      toast.error(`Lỗi: ${error.message}`);
-    },
-  });
-};
 
 // ================== CASH PAYMENT ==================
 

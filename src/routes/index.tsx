@@ -115,9 +115,10 @@ const CashPaymentList = lazy(
 const CashPaymentDetail = lazy(
   () => import("@/pages/accounting/cash/CashPaymentDetailPage")
 );
-const CashFundList = lazy(
-  () => import("@/pages/accounting/cash/CashFundListPage")
-);
+// Cash fund endpoints removed from API
+// const CashFundList = lazy(
+//   () => import("@/pages/accounting/cash/CashFundListPage")
+// );
 const CashReceiptList = lazy(
   () => import("@/pages/accounting/cash/CashReceiptListPage")
 );
@@ -715,14 +716,15 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          {
-            path: "cash-funds",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <CashFundList />
-              </Suspense>
-            ),
-          },
+          // Cash fund endpoints removed from API
+          // {
+          //   path: "cash-funds",
+          //   element: (
+          //     <Suspense fallback={<PageLoadingFallback />}>
+          //       <CashFundList />
+          //     </Suspense>
+          //   ),
+          // },
           {
             path: "cash-receipts",
             element: (

@@ -25,8 +25,6 @@ import {
   BankLedgerResponseSchema as GenBankLedgerResponseSchema,
   CashBookEntryResponseSchema as GenCashBookEntryResponseSchema,
   CashBookResponseSchema as GenCashBookResponseSchema,
-  CashFundResponseSchema as GenCashFundResponseSchema,
-  CashFundResponseIPaginateSchema as GenCashFundResponseIPaginateSchema,
   CashPaymentResponseSchema as GenCashPaymentResponseSchema,
   CashPaymentResponseIPaginateSchema as GenCashPaymentResponseIPaginateSchema,
   CashReceiptResponseSchema as GenCashReceiptResponseSchema,
@@ -38,13 +36,11 @@ import {
   PaymentMethodResponseSchema as GenPaymentMethodResponseSchema,
   PaymentMethodResponseIPaginateSchema as GenPaymentMethodResponseIPaginateSchema,
   CreateBankAccountRequestSchema as GenCreateBankAccountRequestSchema,
-  CreateCashFundRequestSchema as GenCreateCashFundRequestSchema,
   CreateCashPaymentRequestSchema as GenCreateCashPaymentRequestSchema,
   CreateCashReceiptRequestSchema as GenCreateCashReceiptRequestSchema,
   CreateExpenseCategoryRequestSchema as GenCreateExpenseCategoryRequestSchema,
   CreatePaymentMethodRequestSchema as GenCreatePaymentMethodRequestSchema,
   UpdateBankAccountRequestSchema as GenUpdateBankAccountRequestSchema,
-  UpdateCashFundRequestSchema as GenUpdateCashFundRequestSchema,
   UpdateCashPaymentRequestSchema as GenUpdateCashPaymentRequestSchema,
   UpdateCashReceiptRequestSchema as GenUpdateCashReceiptRequestSchema,
   UpdateExpenseCategoryRequestSchema as GenUpdateExpenseCategoryRequestSchema,
@@ -135,12 +131,6 @@ export type CashBookEntryResponse = z.infer<typeof CashBookEntryResponseSchema>;
 export const CashBookResponseSchema = GenCashBookResponseSchema.passthrough();
 export type CashBookResponse = z.infer<typeof CashBookResponseSchema>;
 
-// Cash Fund Schemas
-export const CashFundResponseSchema = GenCashFundResponseSchema.passthrough();
-export type CashFundResponse = z.infer<typeof CashFundResponseSchema>;
-export const CashFundResponseIPaginateSchema = GenCashFundResponseIPaginateSchema.passthrough();
-export type CashFundResponseIPaginate = z.infer<typeof CashFundResponseIPaginateSchema>;
-
 // Cash Payment Schemas
 export const CashPaymentResponseSchema = GenCashPaymentResponseSchema.passthrough();
 export type CashPaymentResponse = z.infer<typeof CashPaymentResponseSchema>;
@@ -174,8 +164,6 @@ export type PaymentMethodResponseIPaginate = z.infer<typeof PaymentMethodRespons
 // Request Schemas
 export const CreateBankAccountRequestSchema = GenCreateBankAccountRequestSchema.passthrough();
 export type CreateBankAccountRequest = z.infer<typeof CreateBankAccountRequestSchema>;
-export const CreateCashFundRequestSchema = GenCreateCashFundRequestSchema.passthrough();
-export type CreateCashFundRequest = z.infer<typeof CreateCashFundRequestSchema>;
 export const CreateCashPaymentRequestSchema = GenCreateCashPaymentRequestSchema.passthrough();
 export type CreateCashPaymentRequest = z.infer<typeof CreateCashPaymentRequestSchema>;
 export const CreateCashReceiptRequestSchema = GenCreateCashReceiptRequestSchema.passthrough();
@@ -187,8 +175,6 @@ export type CreatePaymentMethodRequest = z.infer<typeof CreatePaymentMethodReque
 
 export const UpdateBankAccountRequestSchema = GenUpdateBankAccountRequestSchema.passthrough();
 export type UpdateBankAccountRequest = z.infer<typeof UpdateBankAccountRequestSchema>;
-export const UpdateCashFundRequestSchema = GenUpdateCashFundRequestSchema.passthrough();
-export type UpdateCashFundRequest = z.infer<typeof UpdateCashFundRequestSchema>;
 export const UpdateCashPaymentRequestSchema = GenUpdateCashPaymentRequestSchema.passthrough();
 export type UpdateCashPaymentRequest = z.infer<typeof UpdateCashPaymentRequestSchema>;
 export const UpdateCashReceiptRequestSchema = GenUpdateCashReceiptRequestSchema.passthrough();

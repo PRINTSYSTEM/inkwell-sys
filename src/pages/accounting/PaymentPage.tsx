@@ -43,12 +43,23 @@ const calculateSummaryStats = (orders: OrderResponse[]) => {
 };
 
 export default function PaymentPage() {
+  // Build params for API
+  const ordersParams = useMemo(() => {
+    return {
+      pageNumber: 1,
+      pageSize: 100, // Get all orders for stats calculation
+      filterType: "payment",
+      status: "",
+      orderCode: "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, []);
+
   // Fetch all orders for accounting to calculate summary stats
-  const { data: allOrdersData } = useOrdersForAccounting({
-    pageNumber: 1,
-    pageSize: 100, // Get all orders for stats calculation
-    filterType: "payment",
-  });
+  const { data: allOrdersData } = useOrdersForAccounting(ordersParams);
 
   // Calculate summary stats from orders
   const summaryStats = useMemo(() => {
