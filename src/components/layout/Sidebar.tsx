@@ -169,7 +169,7 @@ export function Sidebar({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex h-full w-64 flex-col bg-background border-r",
+        "flex h-full w-80 flex-col bg-background border-r",
         className
       )}
     >

@@ -39,7 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { useCashPayments, useCashFunds } from "@/hooks/use-cash";
+import { useCashPayments } from "@/hooks/use-cash";
 import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
 import { useActiveVendors } from "@/hooks/use-vendor";
 import {
@@ -101,19 +101,7 @@ export default function CashPaymentListPage() {
 
   const { data: vendorsData } = useActiveVendors();
 
-  const { data: cashFundsData } = useCashFunds({
-    pageNumber: 1,
-    pageSize: 1000,
-    isActive: true,
-  });
-
-  // Create map for cash fund ID -> code
-  const cashFundMap = new Map<number, string>();
-  cashFundsData?.items?.forEach((fund) => {
-    if (fund.id && fund.code) {
-      cashFundMap.set(fund.id, fund.code);
-    }
-  });
+  // Cash fund functionality removed - field no longer exists in schema
 
   const {
     data: paymentsData,
@@ -402,9 +390,7 @@ export default function CashPaymentListPage() {
                         )}
                       </TableCell>
                       <TableCell className="font-medium text-sm">
-                        {payment.cashFundId && cashFundMap.has(payment.cashFundId)
-                          ? cashFundMap.get(payment.cashFundId)
-                          : payment.cashFundName || "—"}
+                        {"—"}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-0.5">

@@ -134,9 +134,32 @@ const BankAccountList = lazy(
 
 // AR/AP
 const AR = lazy(() => import("@/pages/accounting/ar/ARPage"));
+const ARByItem = lazy(() => import("@/pages/accounting/ar/ARByItemPage"));
+const ARUnderdue = lazy(() => import("@/pages/accounting/ar/ARUnderduePage"));
+const ARSummaryByCustomerGroup = lazy(
+  () => import("@/pages/accounting/ar/ARSummaryByCustomerGroupPage")
+);
+const ARSummaryByBranch = lazy(
+  () => import("@/pages/accounting/ar/ARSummaryByBranchPage")
+);
 const AP = lazy(() => import("@/pages/accounting/ap/APPage"));
+const APByPurchaseInvoice = lazy(
+  () => import("@/pages/accounting/ap/APByPurchaseInvoicePage")
+);
+const APOverdue = lazy(() => import("@/pages/accounting/ap/APOverduePage"));
 const CollectionSchedule = lazy(
   () => import("@/pages/accounting/CollectionSchedulePage")
+);
+
+// Debt Notifications & Reconciliations
+const DebtNotificationList = lazy(
+  () => import("@/pages/accounting/debt-notifications/DebtNotificationListPage")
+);
+const DebtReconciliationAR = lazy(
+  () => import("@/pages/accounting/debt-reconciliations/DebtReconciliationARPage")
+);
+const DebtReconciliationAP = lazy(
+  () => import("@/pages/accounting/debt-reconciliations/DebtReconciliationAPPage")
 );
 
 // Expense & Payment Method
@@ -247,7 +270,7 @@ export const router = createBrowserRouter([
       // redirect "/" -> "/dashboard"
       {
         index: true,
-        element: <Navigate to={ROUTE_PATHS.AUTH.LOGIN} replace />,
+        element: <Navigate to={ROUTE_PATHS.DASHBOARD} replace />,
       },
 
       // ===== DASHBOARD =====
@@ -758,7 +781,7 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          // AR
+          // AR - Công nợ phải thu
           {
             path: "ar",
             element: (
@@ -767,7 +790,39 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          // AP
+          {
+            path: "ar/by-item",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ARByItem />
+              </Suspense>
+            ),
+          },
+          {
+            path: "ar/underdue",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ARUnderdue />
+              </Suspense>
+            ),
+          },
+          {
+            path: "ar/summary-by-customer-group",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ARSummaryByCustomerGroup />
+              </Suspense>
+            ),
+          },
+          {
+            path: "ar/summary-by-branch",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ARSummaryByBranch />
+              </Suspense>
+            ),
+          },
+          // AP - Công nợ phải trả
           {
             path: "ap",
             element: (
@@ -777,10 +832,51 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "ap/by-purchase-invoice",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <APByPurchaseInvoice />
+              </Suspense>
+            ),
+          },
+          {
+            path: "ap/overdue",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <APOverdue />
+              </Suspense>
+            ),
+          },
+          {
             path: "collection-schedule",
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <CollectionSchedule />
+              </Suspense>
+            ),
+          },
+          // Debt Notifications & Reconciliations
+          {
+            path: "debt-notifications",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DebtNotificationList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "debt-reconciliations/ar",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DebtReconciliationAR />
+              </Suspense>
+            ),
+          },
+          {
+            path: "debt-reconciliations/ap",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DebtReconciliationAP />
               </Suspense>
             ),
           },

@@ -254,12 +254,14 @@ export const API_SUFFIX = {
   CASH_PAYMENT_APPROVE: (id: number) => `/cash-payments/${id}/approve`,
   CASH_PAYMENT_CANCEL: (id: number) => `/cash-payments/${id}/cancel`,
   CASH_PAYMENT_POST: (id: number) => `/cash-payments/${id}/post`,
+  CASH_PAYMENT_EXPORT: "/cash-payments/export",
   CASH_RECEIPTS: "/cash-receipts",
   CASH_RECEIPT_BY_ID: (id: number) => `/cash-receipts/${id}`,
   CASH_RECEIPT_APPROVE: (id: number) => `/cash-receipts/${id}/approve`,
   CASH_RECEIPT_CANCEL: (id: number) => `/cash-receipts/${id}/cancel`,
   CASH_RECEIPT_POST: (id: number) => `/cash-receipts/${id}/post`,
   CASH_RECEIPT_EXPORT_PDF: (id: number) => `/cash-receipts/${id}/export-pdf`,
+  CASH_RECEIPT_EXPORT: "/cash-receipts/export",
   CASH_BOOK: "/cash-book",
 
   // ========== BANK MANAGEMENT ==========
@@ -274,17 +276,54 @@ export const API_SUFFIX = {
   PAYMENT_METHODS: "/categories/payment-methods",
   PAYMENT_METHOD_BY_ID: (id: number) => `/categories/payment-methods/${id}`,
 
+  // ========== DEBT NOTIFICATIONS ==========
+  DEBT_NOTIFICATIONS: "/debt-notifications",
+  DEBT_NOTIFICATION_BY_ID: (id: number) => `/debt-notifications/${id}`,
+  DEBT_NOTIFICATION_PREVIEW: (id: number) => `/debt-notifications/${id}/preview`,
+
+  // ========== DEBT RECONCILIATIONS ==========
+  DEBT_RECONCILIATION_AP: "/debt-reconciliations/ap",
+  DEBT_RECONCILIATION_AP_DOWNLOAD: (id: number) =>
+    `/debt-reconciliations/ap/${id}/download`,
+  DEBT_RECONCILIATION_AR: "/debt-reconciliations/ar",
+  DEBT_RECONCILIATION_AR_DOWNLOAD: (id: number) =>
+    `/debt-reconciliations/ar/${id}/download`,
+
   // ========== AR/AP REPORTS ==========
   AR_SUMMARY: "/debt-reports/ar-summary",
   AR_SUMMARY_EXPORT: "/debt-reports/ar-summary/export",
   AR_DETAIL: "/debt-reports/ar-detail",
   AR_AGING: "/debt-reports/ar-aging",
   AR_AGING_EXPORT: "/debt-reports/ar-aging/export",
+  AR_AGING_EXPORT_PDF: "/debt-reports/ar-aging/export-pdf",
+  AR_BY_ITEM: "/debt-reports/ar-by-item",
+  AR_DETAIL_BY_INVOICE: "/debt-reports/ar-detail-by-invoice",
+  AR_DETAIL_LEDGER: (customerId: number) =>
+    `/debt-reports/ar-detail-ledger/${customerId}`,
+  AR_DETAIL_LEDGER_EXPORT: (customerId: number) =>
+    `/debt-reports/ar-detail-ledger/${customerId}/export`,
+  AR_OVERDUE: "/debt-reports/ar-overdue",
+  AR_OVERDUE_EXPORT: "/debt-reports/ar-overdue/export",
+  AR_SUMMARY_BY_BRANCH: "/debt-reports/ar-summary-by-branch",
+  AR_SUMMARY_BY_CUSTOMER_GROUP: "/debt-reports/ar-summary-by-customer-group",
+  AR_SUMMARY_EXPORT_PDF: "/debt-reports/ar-summary/export-pdf",
+  AR_UNDERDUE: "/debt-reports/ar-underdue",
   AP_SUMMARY: "/debt-reports/ap-summary",
   AP_SUMMARY_EXPORT: "/debt-reports/ap-summary/export",
   AP_DETAIL: "/debt-reports/ap-detail",
   AP_AGING: "/debt-reports/ap-aging",
   AP_AGING_EXPORT: "/debt-reports/ap-aging/export",
+  AP_BY_PURCHASE_INVOICE: "/debt-reports/ap-by-purchase-invoice",
+  AP_DETAIL_LEDGER: (vendorId: number) =>
+    `/debt-reports/ap-detail-ledger/${vendorId}`,
+  AP_DETAIL_LEDGER_EXPORT: (vendorId: number) =>
+    `/debt-reports/ap-detail-ledger/${vendorId}/export`,
+  AP_OVERDUE: "/debt-reports/ap-overdue",
+  CUSTOMER_RECONCILIATION_EXPORT: "/debt-reports/customer-reconciliation/export",
+  CUSTOMER_RECONCILIATION_EXPORT_PDF:
+    "/debt-reports/customer-reconciliation/export-pdf",
+  CUSTOMER_RECONCILIATION_EXPORT_WORD:
+    "/debt-reports/customer-reconciliation/export-word",
   COLLECTION_SCHEDULE: "/debt-reports/collection-schedule",
 
   // ========== INVENTORY REPORTS ==========
@@ -304,6 +343,15 @@ export const API_SUFFIX = {
   ORDER_DRILL_DOWN: (customerId: number) =>
     `/sales-reports/orders-by-customer/${customerId}`,
   ORDER_DRILL_DOWN_BY_PERIOD: "/sales-reports/orders-by-period",
+  SALES_INVOICE_LIST_EXPORT: "/sales-reports/invoice-list/export",
+  SALES_INVOICE_LIST_EXPORT_PDF: "/sales-reports/invoice-list/export-pdf",
+  SALES_DETAIL_LEDGER: "/sales-reports/sales-detail-ledger",
+  SALES_DETAIL_LEDGER_EXPORT: "/sales-reports/sales-detail-ledger/export",
+  SALES_DETAIL_LEDGER_EXPORT_PDF:
+    "/sales-reports/sales-detail-ledger/export-pdf",
+  SALES_SUMMARY: "/sales-reports/sales-summary",
+  SALES_SUMMARY_EXPORT: "/sales-reports/sales-summary/export",
+  SALES_SUMMARY_EXPORT_PDF: "/sales-reports/sales-summary/export-pdf",
 
   // ========== REPORT EXPORTS ==========
   REPORT_EXPORTS: "/report-exports",

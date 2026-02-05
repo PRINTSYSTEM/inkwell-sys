@@ -95,7 +95,6 @@ import { ENTITY_CONFIG } from "@/config/entities.config";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { usePaymentMethods } from "@/hooks/use-expense";
-import { useCashFunds } from "@/hooks/use-cash";
 
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
@@ -209,18 +208,12 @@ export default function AccountingOrderDetail() {
     isActive: true,
   });
 
-  // Cash fund search state
-  const [cashFundSearchQuery, setCashFundSearchQuery] = useState("");
-  const [debouncedCashFundSearch] = useDebounce(cashFundSearchQuery, 300);
+  // Cash fund functionality removed - field no longer exists in schema
+  // const [cashFundSearchQuery, setCashFundSearchQuery] = useState("");
+  // const [debouncedCashFundSearch] = useDebounce(cashFundSearchQuery, 300);
   const [isCashFundSelectOpen, setIsCashFundSelectOpen] = useState(false);
-
-  // Fetch cash funds with search param
-  const { data: cashFundsData, isLoading: isLoadingCashFunds } = useCashFunds({
-    pageNumber: 1,
-    pageSize: 100,
-    isActive: true,
-    search: debouncedCashFundSearch.trim() || null,
-  });
+  const cashFundsData = null;
+  const isLoadingCashFunds = false;
 
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
@@ -460,10 +453,8 @@ export default function AccountingOrderDetail() {
           cardEditValues.paymentMethodId === null
             ? null
             : Number(cardEditValues.paymentMethodId);
-        const cashFundId =
-          cardEditValues.cashFundId === "" || cardEditValues.cashFundId === null
-            ? null
-            : Number(cardEditValues.cashFundId);
+        // cashFundId removed from schema
+        const cashFundId = null;
 
         // Chỉ tạo phiếu thu nếu có số tiền (không cần đủ số tiền) và phương thức thanh toán
         if (depositAmount && depositAmount > 0 && paymentMethodId) {
@@ -984,7 +975,7 @@ export default function AccountingOrderDetail() {
                               ),
                               paymentMethodId:
                                 order.paymentMethodId?.toString() || "",
-                              cashFundId: "", // Note: cashFundId không có trong OrderResponse schema
+                              // cashFundId: "", // Removed - field no longer exists in schema
                             })
                           }
                         >
@@ -1054,67 +1045,9 @@ export default function AccountingOrderDetail() {
                       </div>
                       <div className="space-y-2">
                         <Label>Tài khoản thanh toán</Label>
-                        <Select
-                          value={cardEditValues.cashFundId?.toString() || "all"}
-                          onValueChange={(value) => {
-                            setCardEditValues({
-                              ...cardEditValues,
-                              cashFundId: value === "all" ? "" : value,
-                            });
-                            setCashFundSearchQuery(""); // Reset search when selecting
-                          }}
-                          onOpenChange={(open) => {
-                            setIsCashFundSelectOpen(open);
-                            if (!open) {
-                              setCashFundSearchQuery(""); // Reset search when closing
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Chọn tài khoản thanh toán" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {isCashFundSelectOpen && (
-                              <div className="p-2 border-b">
-                                <div className="relative">
-                                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                  <Input
-                                    placeholder="Tìm kiếm tài khoản..."
-                                    value={cashFundSearchQuery}
-                                    onChange={(e) =>
-                                      setCashFundSearchQuery(e.target.value)
-                                    }
-                                    className="pl-8"
-                                    onClick={(e) => e.stopPropagation()}
-                                    onKeyDown={(e) => e.stopPropagation()}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                            <SelectItem value="all">Không chọn</SelectItem>
-                            {isLoadingCashFunds ? (
-                              <SelectItem value="loading" disabled>
-                                Đang tải...
-                              </SelectItem>
-                            ) : cashFundsData?.items &&
-                              cashFundsData.items.length > 0 ? (
-                              cashFundsData.items.map((fund) => (
-                                <SelectItem
-                                  key={fund.id}
-                                  value={fund.id?.toString() || ""}
-                                >
-                                  {fund.code} - {fund.name}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-results" disabled>
-                                {debouncedCashFundSearch.trim()
-                                  ? "Không tìm thấy tài khoản"
-                                  : "Không có dữ liệu"}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
+                        <div className="text-sm text-muted-foreground">
+                          Chức năng này đã được gỡ bỏ
+                        </div>
                       </div>
                     </div>
                   ) : (

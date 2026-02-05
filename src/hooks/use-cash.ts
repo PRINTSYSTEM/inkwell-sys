@@ -28,6 +28,8 @@ import type {
   CashPaymentListParams,
   CashReceiptListParams,
   CashBookListParams,
+  CashPaymentExportParams,
+  CashReceiptExportParams,
 } from "@/Schema";
 
 // ================== CASH PAYMENT ==================
@@ -434,3 +436,116 @@ export const useCashBook = (params?: CashBookListParams) => {
   });
 };
 
+// ================== EXPORT CASH PAYMENTS ==================
+// GET /api/cash-payments/export
+
+export const useExportCashPayments = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<
+    ArrayBuffer,
+    [CashPaymentExportParams]
+  >(async (params: CashPaymentExportParams) => {
+    const normalizedParams = normalizeParams(
+      (params ?? {}) as Record<string, unknown>
+    );
+    const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.CASH_PAYMENT_EXPORT, {
+      params: normalizedParams,
+      responseType: "arraybuffer",
+    });
+    return res.data;
+  });
+
+  const mutate = async (params: CashPaymentExportParams) => {
+    try {
+      const blob = await execute(params);
+      const fileBlob = new Blob([blob], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cash-payments-export.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Thành công", {
+        description: "Đã xuất danh sách phiếu chi",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể xuất danh sách phiếu chi";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return { loading, error, mutate, reset };
+};
+
+// ================== EXPORT CASH RECEIPTS ==================
+// GET /api/cash-receipts/export
+
+export const useExportCashReceipts = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<
+    ArrayBuffer,
+    [CashReceiptExportParams]
+  >(async (params: CashReceiptExportParams) => {
+    const normalizedParams = normalizeParams(
+      (params ?? {}) as Record<string, unknown>
+    );
+    const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.CASH_RECEIPT_EXPORT, {
+      params: normalizedParams,
+      responseType: "arraybuffer",
+    });
+    return res.data;
+  });
+
+  const mutate = async (params: CashReceiptExportParams) => {
+    try {
+      const blob = await execute(params);
+      const fileBlob = new Blob([blob], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cash-receipts-export.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Thành công", {
+        description: "Đã xuất danh sách phiếu thu",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể xuất danh sách phiếu thu";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return { loading, error, mutate, reset };
+};

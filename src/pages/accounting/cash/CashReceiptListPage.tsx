@@ -39,7 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { useCashReceipts, useCashFunds } from "@/hooks/use-cash";
+import { useCashReceipts } from "@/hooks/use-cash";
 import { usePaymentMethods } from "@/hooks/use-expense";
 import { useCustomers } from "@/hooks/use-customer";
 import { formatCurrency, getPaymentMethodLabel } from "@/lib/status-utils";
@@ -93,19 +93,7 @@ export default function CashReceiptListPage() {
     size: 1000,
   });
 
-  const { data: cashFundsData } = useCashFunds({
-    pageNumber: 1,
-    pageSize: 1000,
-    isActive: true,
-  });
-
-  // Create map for cash fund ID -> code
-  const cashFundMap = new Map<number, string>();
-  cashFundsData?.items?.forEach((fund) => {
-    if (fund.id && fund.code) {
-      cashFundMap.set(fund.id, fund.code);
-    }
-  });
+  // Cash fund functionality removed - field no longer exists in schema
 
   const {
     data: receiptsData,
@@ -396,10 +384,7 @@ export default function CashReceiptListPage() {
                         )}
                       </TableCell>
                       <TableCell className="font-medium text-sm">
-                        {receipt.cashFundId &&
-                        cashFundMap.has(receipt.cashFundId)
-                          ? cashFundMap.get(receipt.cashFundId)
-                          : receipt.cashFundName || "—"}
+                        {"—"}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-0.5">
