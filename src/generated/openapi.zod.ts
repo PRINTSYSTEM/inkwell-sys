@@ -657,6 +657,65 @@ const CustomerOrderHistoryResponsePaginate = z
     items: z.array(CustomerOrderHistoryResponse).nullable(),
   })
   .partial();
+const CreateDebtNotificationRequest = z
+  .object({
+    type: z.string().nullable(),
+    subject: z.string().nullable(),
+    body: z.string().nullable(),
+    customerIds: z.array(z.number().int()).nullable(),
+  })
+  .partial();
+const DebtNotificationResponse = z
+  .object({
+    id: z.number().int(),
+    type: z.string().nullable(),
+    subject: z.string().nullable(),
+    body: z.string().nullable(),
+    sentAt: z.string().datetime({ offset: true }).nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const DebtNotificationResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(DebtNotificationResponse).nullable(),
+  })
+  .partial();
+const DebtNotificationPreviewResponse = z
+  .object({
+    id: z.number().int(),
+    subject: z.string().nullable(),
+    body: z.string().nullable(),
+  })
+  .partial();
+const DebtReconciliationARRequest = z
+  .object({
+    customerId: z.number().int(),
+    fromDate: z.string().datetime({ offset: true }),
+    toDate: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const DebtReconciliationResponse = z
+  .object({
+    id: z.number().int(),
+    type: z.string().nullable(),
+    customerId: z.number().int().nullable(),
+    vendorId: z.number().int().nullable(),
+    fromDate: z.string().datetime({ offset: true }),
+    toDate: z.string().datetime({ offset: true }),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const DebtReconciliationAPRequest = z
+  .object({
+    vendorId: z.number().int(),
+    fromDate: z.string().datetime({ offset: true }),
+    toDate: z.string().datetime({ offset: true }),
+  })
+  .partial();
 const ARSummaryResponse = z
   .object({
     customerId: z.number().int(),
@@ -677,6 +736,48 @@ const ARSummaryResponseIPaginate = z
     total: z.number().int(),
     totalPages: z.number().int(),
     items: z.array(ARSummaryResponse).nullable(),
+  })
+  .partial();
+const ARDetailLedgerRow = z
+  .object({
+    date: z.string().datetime({ offset: true }),
+    documentNumber: z.string().nullable(),
+    documentType: z.string().nullable(),
+    debit: z.number(),
+    credit: z.number(),
+    balanceAfter: z.number(),
+  })
+  .partial();
+const ARDetailLedgerRowIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ARDetailLedgerRow).nullable(),
+  })
+  .partial();
+const ARDetailByInvoiceResponse = z
+  .object({
+    invoiceId: z.number().int(),
+    invoiceNumber: z.string().nullable(),
+    invoiceDate: z.string().datetime({ offset: true }),
+    customerId: z.number().int().nullable(),
+    customerName: z.string().nullable(),
+    totalAmount: z.number(),
+    paidAmount: z.number(),
+    remainingAmount: z.number(),
+    dueDate: z.string().datetime({ offset: true }).nullable(),
+    paymentStatus: z.string().nullable(),
+  })
+  .partial();
+const ARDetailByInvoiceResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ARDetailByInvoiceResponse).nullable(),
   })
   .partial();
 const ARDetailResponse = z
@@ -747,6 +848,144 @@ const CollectionScheduleResponseIPaginate = z
     items: z.array(CollectionScheduleResponse).nullable(),
   })
   .partial();
+const ARByItemResponse = z
+  .object({
+    itemDescription: z.string().nullable(),
+    totalInvoiced: z.number(),
+    totalOutstanding: z.number(),
+    invoiceCount: z.number().int(),
+    customerCount: z.number().int(),
+  })
+  .partial();
+const ARByItemResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ARByItemResponse).nullable(),
+  })
+  .partial();
+const ARUnderdueResponse = z
+  .object({
+    invoiceId: z.number().int(),
+    invoiceNumber: z.string().nullable(),
+    customerId: z.number().int().nullable(),
+    customerName: z.string().nullable(),
+    dueDate: z.string().datetime({ offset: true }).nullable(),
+    daysUntilDue: z.number().int(),
+    outstandingAmount: z.number(),
+  })
+  .partial();
+const ARUnderdueResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ARUnderdueResponse).nullable(),
+  })
+  .partial();
+const ARSummaryByCustomerGroupResponse = z
+  .object({
+    groupName: z.string().nullable(),
+    customerCount: z.number().int(),
+    openingBalance: z.number(),
+    increase: z.number(),
+    decrease: z.number(),
+    closingBalance: z.number(),
+  })
+  .partial();
+const ARSummaryByCustomerGroupResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ARSummaryByCustomerGroupResponse).nullable(),
+  })
+  .partial();
+const ARSummaryByBranchResponse = z
+  .object({
+    branchId: z.number().int(),
+    branchName: z.string().nullable(),
+    openingBalance: z.number(),
+    increase: z.number(),
+    decrease: z.number(),
+    closingBalance: z.number(),
+  })
+  .partial();
+const ARSummaryByBranchResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ARSummaryByBranchResponse).nullable(),
+  })
+  .partial();
+const AROverdueResponse = z
+  .object({
+    invoiceId: z.number().int(),
+    invoiceNumber: z.string().nullable(),
+    customerId: z.number().int().nullable(),
+    customerName: z.string().nullable(),
+    dueDate: z.string().datetime({ offset: true }).nullable(),
+    overdueDays: z.number().int(),
+    overdueAmount: z.number(),
+  })
+  .partial();
+const AROverdueResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(AROverdueResponse).nullable(),
+  })
+  .partial();
+const APByPurchaseInvoiceResponse = z
+  .object({
+    stockInId: z.number().int(),
+    code: z.string().nullable(),
+    vendorId: z.number().int(),
+    vendorName: z.string().nullable(),
+    stockInDate: z.string().datetime({ offset: true }),
+    totalAmount: z.number(),
+    paidAmount: z.number(),
+    remainingAmount: z.number(),
+    dueDate: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const APByPurchaseInvoiceResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(APByPurchaseInvoiceResponse).nullable(),
+  })
+  .partial();
+const APOverdueResponse = z
+  .object({
+    stockInId: z.number().int(),
+    code: z.string().nullable(),
+    vendorId: z.number().int().nullable(),
+    vendorName: z.string().nullable(),
+    dueDate: z.string().datetime({ offset: true }).nullable(),
+    overdueDays: z.number().int(),
+    overdueAmount: z.number(),
+  })
+  .partial();
+const APOverdueResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(APOverdueResponse).nullable(),
+  })
+  .partial();
 const APSummaryResponse = z
   .object({
     vendorId: z.number().int(),
@@ -766,6 +1005,25 @@ const APSummaryResponseIPaginate = z
     total: z.number().int(),
     totalPages: z.number().int(),
     items: z.array(APSummaryResponse).nullable(),
+  })
+  .partial();
+const APDetailLedgerRow = z
+  .object({
+    date: z.string().datetime({ offset: true }),
+    documentNumber: z.string().nullable(),
+    documentType: z.string().nullable(),
+    debit: z.number(),
+    credit: z.number(),
+    balanceAfter: z.number(),
+  })
+  .partial();
+const APDetailLedgerRowIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(APDetailLedgerRow).nullable(),
   })
   .partial();
 const APDetailResponse = z
@@ -1412,8 +1670,11 @@ const InvoiceResponse = z
     taxRate: z.number(),
     vatAmount: z.number(),
     grandTotal: z.number(),
+    paidAmount: z.number(),
+    remainingDebt: z.number(),
     totalAmount: z.number(),
     taxAmount: z.number(),
+    customerDisplayName: z.string().nullable(),
     eInvoiceNumber: z.string().nullable(),
     eInvoiceSerial: z.string().nullable(),
     taxAuthorityCode: z.string().nullable(),
@@ -2328,6 +2589,43 @@ const OrderDrillDownResponseIPaginate = z
     items: z.array(OrderDrillDownResponse).nullable(),
   })
   .partial();
+const SalesDetailLedgerRow = z
+  .object({
+    date: z.string().datetime({ offset: true }),
+    documentNumber: z.string().nullable(),
+    description: z.string().nullable(),
+    revenue: z.number(),
+    tax: z.number(),
+    total: z.number(),
+  })
+  .partial();
+const SalesDetailLedgerRowIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(SalesDetailLedgerRow).nullable(),
+  })
+  .partial();
+const SalesSummaryRow = z
+  .object({
+    period: z.string().nullable(),
+    invoiceCount: z.number().int(),
+    revenue: z.number(),
+    tax: z.number(),
+    total: z.number(),
+  })
+  .partial();
+const SalesSummaryRowIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(SalesSummaryRow).nullable(),
+  })
+  .partial();
 const StockInItemRequest = z.object({
   itemName: z.string().min(1),
   itemCode: z.string().nullish(),
@@ -2645,16 +2943,43 @@ export const schemas = {
   OrderHistoryDetailResponse,
   CustomerOrderHistoryResponse,
   CustomerOrderHistoryResponsePaginate,
+  CreateDebtNotificationRequest,
+  DebtNotificationResponse,
+  DebtNotificationResponseIPaginate,
+  DebtNotificationPreviewResponse,
+  DebtReconciliationARRequest,
+  DebtReconciliationResponse,
+  DebtReconciliationAPRequest,
   ARSummaryResponse,
   ARSummaryResponseIPaginate,
+  ARDetailLedgerRow,
+  ARDetailLedgerRowIPaginate,
+  ARDetailByInvoiceResponse,
+  ARDetailByInvoiceResponseIPaginate,
   ARDetailResponse,
   ARDetailResponseIPaginate,
   ARAgingResponse,
   ARAgingResponseIPaginate,
   CollectionScheduleResponse,
   CollectionScheduleResponseIPaginate,
+  ARByItemResponse,
+  ARByItemResponseIPaginate,
+  ARUnderdueResponse,
+  ARUnderdueResponseIPaginate,
+  ARSummaryByCustomerGroupResponse,
+  ARSummaryByCustomerGroupResponseIPaginate,
+  ARSummaryByBranchResponse,
+  ARSummaryByBranchResponseIPaginate,
+  AROverdueResponse,
+  AROverdueResponseIPaginate,
+  APByPurchaseInvoiceResponse,
+  APByPurchaseInvoiceResponseIPaginate,
+  APOverdueResponse,
+  APOverdueResponseIPaginate,
   APSummaryResponse,
   APSummaryResponseIPaginate,
+  APDetailLedgerRow,
+  APDetailLedgerRowIPaginate,
   APDetailResponse,
   APDetailResponseIPaginate,
   APAgingResponse,
@@ -2785,6 +3110,10 @@ export const schemas = {
   ReturnsDiscountsResponseIPaginate,
   OrderDrillDownResponse,
   OrderDrillDownResponseIPaginate,
+  SalesDetailLedgerRow,
+  SalesDetailLedgerRowIPaginate,
+  SalesSummaryRow,
+  SalesSummaryRowIPaginate,
   StockInItemRequest,
   CreateStockInRequest,
   CreateStockInFromVendorRequest,
@@ -3183,6 +3512,45 @@ const endpoints = makeApi([
     response: CashPaymentResponse,
   },
   {
+    method: "get",
+    path: "/api/cash-payments/export",
+    alias: "getApicashPaymentsexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "paymentMethodId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "expenseCategoryId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
     method: "post",
     path: "/api/cash-receipts",
     alias: "postApicashReceipts",
@@ -3373,6 +3741,40 @@ const endpoints = makeApi([
       },
     ],
     response: CashReceiptResponse,
+  },
+  {
+    method: "get",
+    path: "/api/cash-receipts/export",
+    alias: "getApicashReceiptsexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "paymentMethodId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.instanceof(File),
   },
   {
     method: "get",
@@ -3927,6 +4329,140 @@ const endpoints = makeApi([
     response: CustomerStatisticsResponse,
   },
   {
+    method: "post",
+    path: "/api/debt-notifications",
+    alias: "postApidebtNotifications",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateDebtNotificationRequest,
+      },
+    ],
+    response: DebtNotificationResponse,
+  },
+  {
+    method: "get",
+    path: "/api/debt-notifications",
+    alias: "getApidebtNotifications",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "type",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: DebtNotificationResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-notifications/:id/preview",
+    alias: "getApidebtNotificationsIdpreview",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DebtNotificationPreviewResponse,
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/debt-reconciliations/ap",
+    alias: "postApidebtReconciliationsap",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: DebtReconciliationAPRequest,
+      },
+    ],
+    response: DebtReconciliationResponse,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reconciliations/ap/:id/download",
+    alias: "getApidebtReconciliationsapIddownload",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "format",
+        type: "Query",
+        schema: z.string().optional().default("pdf"),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "post",
+    path: "/api/debt-reconciliations/ar",
+    alias: "postApidebtReconciliationsar",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: DebtReconciliationARRequest,
+      },
+    ],
+    response: DebtReconciliationResponse,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reconciliations/ar/:id/download",
+    alias: "getApidebtReconciliationsarIddownload",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "format",
+        type: "Query",
+        schema: z.string().optional().default("pdf"),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
     method: "get",
     path: "/api/debt-reports/ap-aging",
     alias: "getApidebtReportsapAging",
@@ -4001,6 +4537,50 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/debt-reports/ap-by-purchase-invoice",
+    alias: "getApidebtReportsapByPurchaseInvoice",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: APByPurchaseInvoiceResponseIPaginate,
+  },
+  {
+    method: "get",
     path: "/api/debt-reports/ap-detail",
     alias: "getApidebtReportsapDetail",
     requestFormat: "json",
@@ -4047,6 +4627,118 @@ const endpoints = makeApi([
       },
     ],
     response: APDetailResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-detail-ledger/:vendorId",
+    alias: "getApidebtReportsapDetailLedgerVendorId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "vendorId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: APDetailLedgerRowIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-detail-ledger/:vendorId/export",
+    alias: "getApidebtReportsapDetailLedgerVendorIdexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "vendorId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-overdue",
+    alias: "getApidebtReportsapOverdue",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: APOverdueResponseIPaginate,
   },
   {
     method: "get",
@@ -4206,6 +4898,79 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/debt-reports/ar-aging/export-pdf",
+    alias: "getApidebtReportsarAgingexportPdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "asOfDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-by-item",
+    alias: "getApidebtReportsarByItem",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: ARByItemResponseIPaginate,
+  },
+  {
+    method: "get",
     path: "/api/debt-reports/ar-detail",
     alias: "getApidebtReportsarDetail",
     requestFormat: "json",
@@ -4252,6 +5017,167 @@ const endpoints = makeApi([
       },
     ],
     response: ARDetailResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-detail-by-invoice",
+    alias: "getApidebtReportsarDetailByInvoice",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "paymentStatus",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: ARDetailByInvoiceResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-detail-ledger/:customerId",
+    alias: "getApidebtReportsarDetailLedgerCustomerId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: ARDetailLedgerRowIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-overdue",
+    alias: "getApidebtReportsarOverdue",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: AROverdueResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-overdue/export",
+    alias: "getApidebtReportsarOverdueexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.instanceof(File),
   },
   {
     method: "get",
@@ -4309,6 +5235,84 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/debt-reports/ar-summary-by-branch",
+    alias: "getApidebtReportsarSummaryByBranch",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: ARSummaryByBranchResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-summary-by-customer-group",
+    alias: "getApidebtReportsarSummaryByCustomerGroup",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: ARSummaryByCustomerGroupResponseIPaginate,
+  },
+  {
+    method: "get",
     path: "/api/debt-reports/ar-summary/export",
     alias: "getApidebtReportsarSummaryexport",
     requestFormat: "json",
@@ -4345,6 +5349,84 @@ const endpoints = makeApi([
       },
     ],
     response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-summary/export-pdf",
+    alias: "getApidebtReportsarSummaryexportPdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ar-underdue",
+    alias: "getApidebtReportsarUnderdue",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: ARUnderdueResponseIPaginate,
   },
   {
     method: "get",
@@ -4389,6 +5471,78 @@ const endpoints = makeApi([
       },
     ],
     response: CollectionScheduleResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/customer-reconciliation/export",
+    alias: "getApidebtReportscustomerReconciliationexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/customer-reconciliation/export-pdf",
+    alias: "getApidebtReportscustomerReconciliationexportPdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/customer-reconciliation/export-word",
+    alias: "getApidebtReportscustomerReconciliationexportWord",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: z.instanceof(File),
   },
   {
     method: "post",
@@ -5804,6 +6958,11 @@ const endpoints = makeApi([
     parameters: [
       {
         name: "CustomerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "SalespersonId",
         type: "Query",
         schema: z.number().int().optional(),
       },
@@ -7852,6 +9011,104 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/sales-reports/invoice-list/export",
+    alias: "getApisalesReportsinvoiceListexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "salespersonId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/invoice-list/export-pdf",
+    alias: "getApisalesReportsinvoiceListexportPdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "salespersonId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
     path: "/api/sales-reports/orders-by-customer/:customerId",
     alias: "getApisalesReportsordersByCustomerCustomerId",
     requestFormat: "json",
@@ -7986,6 +9243,190 @@ const endpoints = makeApi([
       },
     ],
     response: ReturnsDiscountsResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/sales-detail-ledger",
+    alias: "getApisalesReportssalesDetailLedger",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: SalesDetailLedgerRowIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/sales-detail-ledger/export",
+    alias: "getApisalesReportssalesDetailLedgerexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/sales-detail-ledger/export-pdf",
+    alias: "getApisalesReportssalesDetailLedgerexportPdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/sales-summary",
+    alias: "getApisalesReportssalesSummary",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "groupBy",
+        type: "Query",
+        schema: z.string().optional().default("month"),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: SalesSummaryRowIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/sales-summary/export",
+    alias: "getApisalesReportssalesSummaryexport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "groupBy",
+        type: "Query",
+        schema: z.string().optional().default("month"),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/sales-reports/sales-summary/export-pdf",
+    alias: "getApisalesReportssalesSummaryexportPdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "groupBy",
+        type: "Query",
+        schema: z.string().optional().default("month"),
+      },
+    ],
+    response: z.instanceof(File),
   },
   {
     method: "get",

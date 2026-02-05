@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-26T14:30:36.554Z */
+/* Generated at: 2026-01-30T13:22:30.801Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -11,16 +11,36 @@ export { api, createApiClient, schemas };
 
 export const APAgingResponseSchema = schemas.APAgingResponse;
 export const APAgingResponseIPaginateSchema = schemas.APAgingResponseIPaginate;
+export const APByPurchaseInvoiceResponseSchema = schemas.APByPurchaseInvoiceResponse;
+export const APByPurchaseInvoiceResponseIPaginateSchema = schemas.APByPurchaseInvoiceResponseIPaginate;
+export const APDetailLedgerRowSchema = schemas.APDetailLedgerRow;
+export const APDetailLedgerRowIPaginateSchema = schemas.APDetailLedgerRowIPaginate;
 export const APDetailResponseSchema = schemas.APDetailResponse;
 export const APDetailResponseIPaginateSchema = schemas.APDetailResponseIPaginate;
+export const APOverdueResponseSchema = schemas.APOverdueResponse;
+export const APOverdueResponseIPaginateSchema = schemas.APOverdueResponseIPaginate;
 export const APSummaryResponseSchema = schemas.APSummaryResponse;
 export const APSummaryResponseIPaginateSchema = schemas.APSummaryResponseIPaginate;
 export const ARAgingResponseSchema = schemas.ARAgingResponse;
 export const ARAgingResponseIPaginateSchema = schemas.ARAgingResponseIPaginate;
+export const ARByItemResponseSchema = schemas.ARByItemResponse;
+export const ARByItemResponseIPaginateSchema = schemas.ARByItemResponseIPaginate;
+export const ARDetailByInvoiceResponseSchema = schemas.ARDetailByInvoiceResponse;
+export const ARDetailByInvoiceResponseIPaginateSchema = schemas.ARDetailByInvoiceResponseIPaginate;
+export const ARDetailLedgerRowSchema = schemas.ARDetailLedgerRow;
+export const ARDetailLedgerRowIPaginateSchema = schemas.ARDetailLedgerRowIPaginate;
 export const ARDetailResponseSchema = schemas.ARDetailResponse;
 export const ARDetailResponseIPaginateSchema = schemas.ARDetailResponseIPaginate;
+export const AROverdueResponseSchema = schemas.AROverdueResponse;
+export const AROverdueResponseIPaginateSchema = schemas.AROverdueResponseIPaginate;
+export const ARSummaryByBranchResponseSchema = schemas.ARSummaryByBranchResponse;
+export const ARSummaryByBranchResponseIPaginateSchema = schemas.ARSummaryByBranchResponseIPaginate;
+export const ARSummaryByCustomerGroupResponseSchema = schemas.ARSummaryByCustomerGroupResponse;
+export const ARSummaryByCustomerGroupResponseIPaginateSchema = schemas.ARSummaryByCustomerGroupResponseIPaginate;
 export const ARSummaryResponseSchema = schemas.ARSummaryResponse;
 export const ARSummaryResponseIPaginateSchema = schemas.ARSummaryResponseIPaginate;
+export const ARUnderdueResponseSchema = schemas.ARUnderdueResponse;
+export const ARUnderdueResponseIPaginateSchema = schemas.ARUnderdueResponseIPaginate;
 export const AccountingResponseSchema = schemas.AccountingResponse;
 export const AddDesignToOrderRequestSchema = schemas.AddDesignToOrderRequest;
 export const AddDesignsToProofingOrderRequestSchema = schemas.AddDesignsToProofingOrderRequest;
@@ -49,6 +69,7 @@ export const CreateBankAccountRequestSchema = schemas.CreateBankAccountRequest;
 export const CreateCashPaymentRequestSchema = schemas.CreateCashPaymentRequest;
 export const CreateCashReceiptRequestSchema = schemas.CreateCashReceiptRequest;
 export const CreateCustomerRequestSchema = schemas.CreateCustomerRequest;
+export const CreateDebtNotificationRequestSchema = schemas.CreateDebtNotificationRequest;
 export const CreateDeliveryNoteRequestSchema = schemas.CreateDeliveryNoteRequest;
 export const CreateDesignRequestSchema = schemas.CreateDesignRequest;
 export const CreateDesignTypeRequestSchema = schemas.CreateDesignTypeRequest;
@@ -84,6 +105,12 @@ export const CustomerResponseSchema = schemas.CustomerResponse;
 export const CustomerStatisticsResponseSchema = schemas.CustomerStatisticsResponse;
 export const CustomerSummaryResponseSchema = schemas.CustomerSummaryResponse;
 export const CustomerSummaryResponsePaginateSchema = schemas.CustomerSummaryResponsePaginate;
+export const DebtNotificationPreviewResponseSchema = schemas.DebtNotificationPreviewResponse;
+export const DebtNotificationResponseSchema = schemas.DebtNotificationResponse;
+export const DebtNotificationResponseIPaginateSchema = schemas.DebtNotificationResponseIPaginate;
+export const DebtReconciliationAPRequestSchema = schemas.DebtReconciliationAPRequest;
+export const DebtReconciliationARRequestSchema = schemas.DebtReconciliationARRequest;
+export const DebtReconciliationResponseSchema = schemas.DebtReconciliationResponse;
 export const DeliveryLineRequestSchema = schemas.DeliveryLineRequest;
 export const DeliveryNoteLineResponseSchema = schemas.DeliveryNoteLineResponse;
 export const DeliveryNoteOrderResponseSchema = schemas.DeliveryNoteOrderResponse;
@@ -178,6 +205,10 @@ export const SalesByDimensionResponseSchema = schemas.SalesByDimensionResponse;
 export const SalesByDimensionResponseIPaginateSchema = schemas.SalesByDimensionResponseIPaginate;
 export const SalesByPeriodResponseSchema = schemas.SalesByPeriodResponse;
 export const SalesByPeriodResponseIPaginateSchema = schemas.SalesByPeriodResponseIPaginate;
+export const SalesDetailLedgerRowSchema = schemas.SalesDetailLedgerRow;
+export const SalesDetailLedgerRowIPaginateSchema = schemas.SalesDetailLedgerRowIPaginate;
+export const SalesSummaryRowSchema = schemas.SalesSummaryRow;
+export const SalesSummaryRowIPaginateSchema = schemas.SalesSummaryRowIPaginate;
 export const SlowMovingResponseSchema = schemas.SlowMovingResponse;
 export const SlowMovingResponseIPaginateSchema = schemas.SlowMovingResponseIPaginate;
 export const StockCardEntryResponseSchema = schemas.StockCardEntryResponse;

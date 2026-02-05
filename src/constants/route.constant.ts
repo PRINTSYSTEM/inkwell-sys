@@ -94,8 +94,18 @@ export const ROUTE_PATHS = {
     BANK_ACCOUNTS: "/accounting/bank-accounts" as const,
     // AR/AP
     AR: "/accounting/ar" as const,
+    AR_BY_ITEM: "/accounting/ar/by-item" as const,
+    AR_UNDERDUE: "/accounting/ar/underdue" as const,
+    AR_SUMMARY_BY_CUSTOMER_GROUP: "/accounting/ar/summary-by-customer-group" as const,
+    AR_SUMMARY_BY_BRANCH: "/accounting/ar/summary-by-branch" as const,
     AP: "/accounting/ap" as const,
+    AP_BY_PURCHASE_INVOICE: "/accounting/ap/by-purchase-invoice" as const,
+    AP_OVERDUE: "/accounting/ap/overdue" as const,
     COLLECTION_SCHEDULE: "/accounting/collection-schedule" as const,
+    // Debt Notifications & Reconciliations
+    DEBT_NOTIFICATIONS: "/accounting/debt-notifications" as const,
+    DEBT_RECONCILIATION_AR: "/accounting/debt-reconciliations/ar" as const,
+    DEBT_RECONCILIATION_AP: "/accounting/debt-reconciliations/ap" as const,
     // Expense & Payment Method
     EXPENSE_CATEGORIES: "/accounting/expense-categories" as const,
     PAYMENT_METHODS: "/accounting/payment-methods" as const,
