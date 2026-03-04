@@ -285,35 +285,41 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
               </div>
             )}
 
-            {/* First Proofing Order Code */}
-            {die.firstProofingOrderCode && (
-              <div className="flex items-center gap-1.5 col-span-full">
-                <span className="text-muted-foreground whitespace-nowrap">
-                  Được sử dụng trong mã bài:
-                </span>
-                <span className="font-medium text-foreground">
-                  {die.firstProofingOrderCode}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 w-5 p-0 hover:bg-primary/10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCopyProofingOrderCode(
-                      die.firstProofingOrderCode || ""
-                    );
-                  }}
-                  title="Sao chép mã bài"
-                >
-                  {copiedProofingOrderCode === die.firstProofingOrderCode ? (
-                    <Check className="h-3 w-3 text-green-600" />
-                  ) : (
-                    <Copy className="h-3 w-3 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
-            )}
+            {/* First Proofing Order Code (fallback to usageHistory when code absent) */}
+            {(() => {
+              const usageCode =
+                die.usageHistory?.find(
+                  (u: any) => u.proofingOrderId === die.firstProofingOrderId
+                )?.proofingOrderCode || die.usageHistory?.[0]?.proofingOrderCode || null;
+              const displayCode = die.firstProofingOrderCode || usageCode;
+              if (!displayCode) return null;
+              return (
+                <div className="flex items-center gap-1.5 col-span-full">
+                  <span className="text-muted-foreground whitespace-nowrap">
+                    Được sử dụng trong mã bài:
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {displayCode}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0 hover:bg-primary/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopyProofingOrderCode(displayCode || "");
+                    }}
+                    title="Sao chép mã bài"
+                  >
+                    {copiedProofingOrderCode === displayCode ? (
+                      <Check className="h-3 w-3 text-green-600" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Notes */}

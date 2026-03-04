@@ -301,6 +301,7 @@ export function AddDesignToProofingDialog({
                 </TableHead>
                 <TableHead className="w-12 text-center">#</TableHead>
                 <TableHead className="min-w-[200px]">mã hàng</TableHead>
+                <TableHead className="w-32">Kích thước</TableHead>
                 <TableHead className="w-24 text-right">Đặt hàng</TableHead>
                 <TableHead className="w-24 text-right">Còn lại</TableHead>
                 <TableHead className="w-48">Số lượng lấy</TableHead>
@@ -361,12 +362,23 @@ export function AddDesignToProofingDialog({
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium text-sm">
-                            {design.name}
-                          </div>
+                          <div className="font-medium text-sm">{design.name}</div>
                           <code className="text-xs text-muted-foreground font-mono">
                             {design.code}
                           </code>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-muted-foreground">
+                          {design.dimensions && design.dimensions.replace("x", " × ")}
+                          {!design.dimensions && design.length && design.height && (
+                            <>
+                              {`${design.length} × ${design.height} mm`}
+                            </>
+                          )}
+                          {!design.dimensions && !(design.length && design.height) && (
+                            <span className="text-xs">—</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">

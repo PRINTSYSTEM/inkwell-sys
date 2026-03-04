@@ -49,6 +49,8 @@ export function DesignTable({
               <TableHead className="w-16 h-10 text-sm font-bold">Ảnh</TableHead>
               <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
+              <TableHead className="h-10 text-sm font-bold">Kích thước</TableHead>
+              <TableHead className="h-10 text-sm font-bold">SL đặt</TableHead>
               <TableHead className="h-10 text-sm font-bold">Chất liệu</TableHead>
               <TableHead className="h-10 text-sm font-bold">
                 Quy cách
@@ -238,6 +240,22 @@ export function DesignTable({
                     </TableCell>
                     <TableCell className="py-3 font-mono text-sm font-semibold">
                       {design.code}
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="text-sm text-muted-foreground">
+                        {design.length} × {design.height}
+                        {design.width ? ` × ${design.width}` : ""} mm
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3">
+                      <div className="text-sm font-semibold">
+                        {design.quantity.toLocaleString()}
+                      </div>
+                      {design.availableQuantity !== undefined && (
+                        <div className="text-xs text-muted-foreground">
+                          Có thể: {design.availableQuantity.toLocaleString()}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="py-3 max-w-[200px]">
                       <div title={design.name} className="truncate">

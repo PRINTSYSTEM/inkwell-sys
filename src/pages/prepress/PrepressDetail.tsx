@@ -96,6 +96,7 @@ import { cn } from "@/lib/utils";
 import { AddDesignToProofingDialog } from "@/components/proofing/AddDesignToProofingDialog";
 import { PlateExportDialog } from "@/components/proofing/PlateExportDialog";
 import { DieExportDialog } from "@/components/proofing/DieExportDialog";
+import { usePlateExports } from "@/hooks/use-plate-export";
 import { IdSchema } from "@/Schema";
 import type {
   PlateExportResponse,
@@ -447,6 +448,20 @@ export default function ProofingOrderDetailPage() {
   const order = (orderResp as ProofingOrderResponse | undefined) ?? null;
   const orderDesigns = order?.proofingOrderDesigns ?? [];
 
+  // Fetch plate-export history for this proofing order (search by code)
+  const {
+    data: plateExportsData,
+    isLoading: isPlateExportsLoading,
+    isFetching: isPlateExportsFetching,
+  } = usePlateExports(
+    order?.code
+      ? { pageNumber: 1, pageSize: 20, search: order.code, sortColumn: "createdAt", sortOrder: "desc" }
+      : undefined
+  );
+
+  const plateExportsForOrder: PlateExportResponse[] =
+    (plateExportsData?.items ?? []).filter((p) => p.proofingOrderId === order?.id) ?? [];
+
   // Compute isDieExported from dieExports array (if not provided by API)
   // Schema has dieExports but may not have isDieExported field
   const isDieExported = useMemo(() => {
@@ -497,8 +512,7 @@ export default function ProofingOrderDetailPage() {
   const completionMissingItems = useMemo(() => {
     const missing: string[] = [];
     if (!order) return missing;
-
-    if (!order.proofingFileUrl) missing.push("Chưa upload file bình bài");
+    // Note: proofing file upload is no longer required for completion
     if (!order.imageUrl) missing.push("Chưa upload ảnh bình bài");
 
     const totalQty = order.totalQuantity ?? 0;
@@ -1217,11 +1231,27 @@ export default function ProofingOrderDetailPage() {
         items: items,
       };
 
-      // Add designs to proofing order
-      await addDesignsMutate({
-        id: order.id,
-        request: addDesignsPayload,
-      });
+      // Add designs to proofing order. Preserve current totalQuantity so adding
+      // designs doesn't unexpectedly change sheet count for the order.
+      const previousTotal = order.totalQuantity ?? 0;
+      try {
+        const returned = await addDesignsMutate({
+          id: order.id,
+          request: addDesignsPayload,
+        });
+
+        const returnedTotal = (returned as any)?.totalQuantity;
+        if (typeof returnedTotal === "number" && returnedTotal !== previousTotal) {
+          try {
+            await updateProofingOrderAsync({ id: order.id, data: { totalQuantity: previousTotal } });
+          } catch (err) {
+            console.warn("Failed to restore totalQuantity after add designs:", err);
+          }
+        }
+      } catch (err) {
+        // rethrow to preserve previous behaviour (hook toasts will show)
+        throw err;
+      }
 
       // If this is an empty order (first time adding designs), also update config
       if (isEmptyOrder) {
@@ -1674,10 +1704,28 @@ export default function ProofingOrderDetailPage() {
   const nextStatusInfo = getNextStatusInfo();
 
   const handleStatusChangeClick = () => {
-    if (nextStatusInfo) {
-      setPendingStatus(nextStatusInfo.nextStatus);
-      setIsConfirmStatusChangeDialogOpen(true);
+    if (!nextStatusInfo) return;
+
+    // If marking as completed from not_completed, apply directly to reduce confirmations
+    if (
+      nextStatusInfo.nextStatus === "completed" &&
+      order?.status === "not_completed"
+    ) {
+      // optimistic short-circuit: update status directly
+      try {
+        updateProofing({ id: order.id, data: { status: "completed" } });
+        toast.success("Thành công", {
+          description: `Đã cập nhật trạng thái sang ${proofingStatusLabels["completed"]}`,
+        });
+      } catch (e) {
+        console.error("Failed to mark completed:", e);
+      }
+      return;
     }
+
+    // default behavior for other transitions: show confirm dialog
+    setPendingStatus(nextStatusInfo.nextStatus);
+    setIsConfirmStatusChangeDialogOpen(true);
   };
 
   const handleConfirmStatusChange = async () => {
@@ -1885,11 +1933,9 @@ export default function ProofingOrderDetailPage() {
       } catch (error) {
         errors.push(`File bình bài "${proofingFiles[0].name}" lỗi`);
       }
-    } else {
-      errors.push("Thiếu file bình bài (.pdf, .ai, .psd)");
     }
 
-    // Upload ảnh
+    // Upload ảnh (required)
     if (imageFiles.length > 0) {
       try {
         await uploadImageMutate({
@@ -1901,6 +1947,7 @@ export default function ProofingOrderDetailPage() {
         errors.push(`Ảnh "${imageFiles[0].name}" lỗi`);
       }
     } else {
+      // Image missing is considered an error (image is required)
       errors.push("Thiếu file ảnh");
     }
 
@@ -1909,9 +1956,13 @@ export default function ProofingOrderDetailPage() {
 
     // Hiển thị thông báo kết quả
     if (errors.length === 0) {
-      toast.success("Thành công", {
-        description: "Đã upload tất cả files",
-      });
+      if (successes.length > 0) {
+        toast.success("Thành công", {
+          description: `${successes.join(", ")}`,
+        });
+      } else {
+        toast.success("Thành công", { description: "Đã upload ảnh" });
+      }
     } else if (successes.length > 0) {
       toast.warning("Một phần thành công", {
         description: `${successes.join(", ")}. Lỗi: ${errors.join(", ")}`,
@@ -2182,7 +2233,7 @@ export default function ProofingOrderDetailPage() {
                               variant="secondary"
                               className="ml-auto text-sm font-semibold"
                             >
-                              {group.designs.length} mã hàng
+                              {group.designs.length} M7ã hàng
                             </Badge>
                           </div>
                           <DesignTable
@@ -2314,7 +2365,7 @@ export default function ProofingOrderDetailPage() {
                               #
                             </TableHead>
                             <TableHead className="w-32 text-sm font-bold">
-                              mã hàng
+                              Mã hàng
                             </TableHead>
                             <TableHead className="w-32 text-sm font-bold">
                               Kích thước (mm)
@@ -3828,91 +3879,111 @@ export default function ProofingOrderDetailPage() {
                         {order.isPlateExported ? "Sửa" : "Ghi nhận"}
                       </Button>
                     </div>
-                    {order.plateExport ? (
+                    {plateExportsForOrder && plateExportsForOrder.length > 0 ? (
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {plateExportsForOrder.map((p) => (
+                          <div
+                            key={p.id}
+                            className="bg-muted/40 rounded-lg p-2.5 border border-border/50 hover:bg-muted/60 transition-colors"
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <div className="font-bold text-xs text-foreground truncate">
+                                  {p.proofingOrderCode || `Xuất kẽm #${p.id}`}
+                                </div>
+
+                                <div className="space-y-0.5 text-[10px]">
+                                  {p.vendorName && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-muted-foreground font-medium">NCC:</span>
+                                      <span className="font-bold text-foreground truncate">{p.vendorName}</span>
+                                    </div>
+                                  )}
+
+                                  {p.plateCount != null && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-muted-foreground font-medium">Số lượng:</span>
+                                      <span className="font-bold text-foreground">{p.plateCount} kẽm</span>
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-muted-foreground font-medium">Tạo:</span>
+                                    <span className="font-bold text-foreground">{p.createdAt ? format(new Date(p.createdAt), "dd/MM/yyyy HH:mm") : "—"}</span>
+                                  </div>
+
+                                  <div className="text-[10px] text-muted-foreground font-medium pt-0.5 border-t border-border/30">
+                                    Ghi chú:
+                                    <div className="text-foreground italic line-clamp-2">{p.notes || "—"}</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => {
+                                    setEditingPlateExport(p);
+                                    setIsPlateExportDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : order.plateExport ? (
                       <div className="bg-muted/30 rounded p-2.5 text-xs space-y-2">
                         {/* Đơn vị */}
                         <div className="space-y-0.5">
-                          <span className="text-muted-foreground text-[10px]">
-                            Đơn vị:
-                          </span>
-                          <p className="font-bold text-foreground">
-                            {order.plateExport.vendorName || "—"}
-                          </p>
+                          <span className="text-muted-foreground text-[10px]">Đơn vị:</span>
+                          <p className="font-bold text-foreground">{order.plateExport.vendorName || "—"}</p>
                         </div>
 
                         {/* Số lượng kẽm */}
                         {order.plateExport.plateCount != null && (
                           <div className="space-y-0.5">
-                            <span className="text-muted-foreground text-[10px]">
-                              Số lượng kẽm:
-                            </span>
-                            <p className="font-bold text-foreground">
-                              {order.plateExport.plateCount} kẽm
-                            </p>
+                            <span className="text-muted-foreground text-[10px]">Số lượng kẽm:</span>
+                            <p className="font-bold text-foreground">{order.plateExport.plateCount} kẽm</p>
                           </div>
                         )}
 
                         {/* Ngày gửi */}
                         {order.plateExport.sentAt && (
                           <div className="space-y-0.5">
-                            <span className="text-muted-foreground text-[10px]">
-                              Ngày gửi:
-                            </span>
-                            <p className="font-bold text-foreground">
-                              {format(
-                                new Date(order.plateExport.sentAt),
-                                "dd/MM/yyyy HH:mm"
-                              )}
-                            </p>
+                            <span className="text-muted-foreground text-[10px]">Ngày gửi:</span>
+                            <p className="font-bold text-foreground">{format(new Date(order.plateExport.sentAt), "dd/MM/yyyy HH:mm")}</p>
                           </div>
                         )}
 
                         {/* Ngày dự kiến nhận */}
                         {order.plateExport.estimatedReceiveAt && (
                           <div className="space-y-0.5">
-                            <span className="text-muted-foreground text-[10px]">
-                              Dự kiến nhận:
-                            </span>
-                            <p className="font-bold text-foreground">
-                              {format(
-                                new Date(order.plateExport.estimatedReceiveAt),
-                                "dd/MM/yyyy HH:mm"
-                              )}
-                            </p>
+                            <span className="text-muted-foreground text-[10px]">Dự kiến nhận:</span>
+                            <p className="font-bold text-foreground">{format(new Date(order.plateExport.estimatedReceiveAt), "dd/MM/yyyy HH:mm")}</p>
                           </div>
                         )}
 
                         {/* Ngày nhận kẽm */}
                         <div className="space-y-0.5">
-                          <span className="text-muted-foreground text-[10px]">
-                            Có kẽm:
-                          </span>
-                          <p className="font-bold text-foreground">
-                            {order.plateExport.receivedAt
-                              ? format(
-                                  new Date(order.plateExport.receivedAt),
-                                  "dd/MM/yyyy HH:mm"
-                                )
-                              : "Đang chờ"}
-                          </p>
+                          <span className="text-muted-foreground text-[10px]">Có kẽm:</span>
+                          <p className="font-bold text-foreground">{order.plateExport.receivedAt ? format(new Date(order.plateExport.receivedAt), "dd/MM/yyyy HH:mm") : "Đang chờ"}</p>
                         </div>
 
                         {/* Ghi chú */}
                         {order.plateExport.notes && (
                           <div className="space-y-0.5 pt-1 border-t border-border/30">
-                            <span className="text-muted-foreground text-[10px]">
-                              Ghi chú:
-                            </span>
-                            <p className="text-foreground italic whitespace-pre-wrap line-clamp-3">
-                              {order.plateExport.notes}
-                            </p>
+                            <span className="text-muted-foreground text-[10px]">Ghi chú:</span>
+                            <p className="text-foreground italic whitespace-pre-wrap line-clamp-3">{order.plateExport.notes}</p>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <p className="text-[10px] text-muted-foreground italic pl-3.5">
-                        Chưa có thông tin
-                      </p>
+                      <p className="text-[10px] text-muted-foreground italic pl-3.5">Chưa có thông tin</p>
                     )}
                   </div>
 
@@ -4276,6 +4347,8 @@ export default function ProofingOrderDetailPage() {
               disabled={isRemovingDesign || !order || !removeDesignTarget}
               onClick={() => {
                 if (!order || !removeDesignTarget) return;
+                // Preserve current totalQuantity and restore if API changes it
+                const previousTotal = order.totalQuantity ?? 0;
                 removeDesignMutate(
                   {
                     proofingOrderId: order.id,
@@ -4283,9 +4356,28 @@ export default function ProofingOrderDetailPage() {
                       removeDesignTarget.proofingOrderDesignId,
                   },
                   {
-                    onSuccess: () => {
+                    onSuccess: (returned) => {
                       setIsConfirmRemoveDesignDialogOpen(false);
                       setRemoveDesignTarget(null);
+
+                      try {
+                        const returnedTotal =
+                          (returned as any)?.totalQuantity;
+                        if (
+                          typeof returnedTotal === "number" &&
+                          returnedTotal !== previousTotal
+                        ) {
+                          // Restore the previous totalQuantity so removing a design
+                          // doesn't unexpectedly reset the sheet count in the UI.
+                          updateProofingOrder({
+                            id: order.id,
+                            data: { totalQuantity: previousTotal },
+                          });
+                        }
+                      } catch (err) {
+                        // Non-fatal: don't block the UI if restore fails
+                        console.warn("Unable to restore totalQuantity:", err);
+                      }
                     },
                   }
                 );
@@ -4309,9 +4401,9 @@ export default function ProofingOrderDetailPage() {
       >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Tải lên file bình bài và ảnh</DialogTitle>
+            <DialogTitle>Tải lên ảnh bình bài (file bình bài tùy chọn)</DialogTitle>
             <DialogDescription>
-              Chọn 1 file bình bài (.pdf, .ai, .psd) và 1 file ảnh cùng lúc
+              Chọn 1 file ảnh (JPG, PNG, ...) — có thể kèm 1 file bình bài (.pdf, .ai, .psd)
             </DialogDescription>
           </DialogHeader>
 
@@ -4319,7 +4411,7 @@ export default function ProofingOrderDetailPage() {
             {/* Chọn nhiều file cùng lúc */}
             <div className="space-y-2 flex-shrink-0">
               <Label htmlFor="upload-files" className="text-sm font-medium">
-                Chọn file bình bài và ảnh{" "}
+                Chọn ảnh (có thể kèm file bình bài)
                 <span className="text-red-500">*</span>
               </Label>
               <div className="border-2 border-dashed rounded-lg p-4 hover:border-primary/50 transition-colors">
@@ -4389,8 +4481,7 @@ export default function ProofingOrderDetailPage() {
                   className="cursor-pointer"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
-                  Chọn 1 file bình bài (.pdf, .ai, .psd) và 1 file ảnh (JPG,
-                  PNG, ...)
+                  Chọn 1 file ảnh (JPG, PNG, ...). Có thể kèm 1 file bình bài (.pdf, .ai, .psd)
                 </p>
               </div>
             </div>
@@ -4459,11 +4550,10 @@ export default function ProofingOrderDetailPage() {
                     );
                   })}
                 </div>
-                {(!uploadFiles.find((f) => isProofingFile(f)) ||
-                  !uploadFiles.find((f) => isImageFile(f))) && (
+                {!uploadFiles.find((f) => isImageFile(f)) && (
                   <p className="text-xs text-amber-600 flex items-center gap-1 flex-shrink-0 mt-2">
                     <AlertCircle className="h-3 w-3" />
-                    Cần có ít nhất 1 file bình bài và 1 file ảnh
+                    Cần có ít nhất 1 file ảnh (file bình bài là tùy chọn)
                   </p>
                 )}
               </div>
@@ -4482,10 +4572,7 @@ export default function ProofingOrderDetailPage() {
             </Button>
             <Button
               onClick={() => handleUploadFiles(uploadFiles)}
-              disabled={
-                !uploadFiles.find((f) => isProofingFile(f)) ||
-                !uploadFiles.find((f) => isImageFile(f))
-              }
+              disabled={!uploadFiles.find((f) => isImageFile(f))}
             >
               <Upload className="h-4 w-4 mr-2" />
               Tải file lên
@@ -4780,13 +4867,23 @@ export default function ProofingOrderDetailPage() {
             }
 
             // Errors are handled by the hook's onError.
-            await addDesignsMutate({
+            // Preserve totalQuantity for the same reason as above.
+            const previousTotal = order.totalQuantity ?? 0;
+            const returned = await addDesignsMutate({
               id: order.id,
               request: {
                 materialTypeId: order.materialTypeId,
                 items: items,
               },
             });
+            const returnedTotal = (returned as any)?.totalQuantity;
+            if (typeof returnedTotal === "number" && returnedTotal !== previousTotal) {
+              try {
+                await updateProofingOrderAsync({ id: order.id, data: { totalQuantity: previousTotal } });
+              } catch (err) {
+                console.warn("Failed to restore totalQuantity after add designs:", err);
+              }
+            }
             // Query invalidation happens in the hook's onSuccess callback
             // The dialog will close automatically via the component's handleSubmit
           }}

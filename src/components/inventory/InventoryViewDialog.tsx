@@ -172,9 +172,6 @@ export function InventoryViewDialog({
                       <TableHead className="h-10 text-sm font-bold">
                         Đơn vị
                       </TableHead>
-                      <TableHead className="h-10 text-sm font-bold text-right">
-                        Giá trị tồn kho
-                      </TableHead>
                       <TableHead className="h-10 text-sm font-bold">
                         Trạng thái
                       </TableHead>
@@ -244,11 +241,6 @@ export function InventoryViewDialog({
                             </TableCell>
                             <TableCell className="py-3 text-sm text-muted-foreground">
                               {item.unit || "—"}
-                            </TableCell>
-                            <TableCell className="py-3 text-right text-sm">
-                              {item.stockValue != null
-                                ? `${item.stockValue.toLocaleString("vi-VN")} đ`
-                                : "—"}
                             </TableCell>
                             <TableCell className="py-3">
                               {item.status === "out" ? (
