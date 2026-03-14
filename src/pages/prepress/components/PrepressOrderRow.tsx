@@ -60,119 +60,205 @@ export function PrepressOrderRow({
     );
   };
 
+  const firstDesign = designs[0]?.design;
+  const tooltipContent = (
+    <div className="w-[350px] space-y-4 p-1">
+      <div className="w-full">
+        {firstDesign?.designImageUrl ? (
+          <img
+            src={firstDesign.designImageUrl}
+            alt={firstDesign.code}
+            className="w-full aspect-video object-cover rounded-lg border shadow-sm"
+          />
+        ) : (
+          <div className="w-full aspect-video bg-muted rounded-lg border flex items-center justify-center">
+            <FileImage className="h-10 w-10 text-muted-foreground opacity-40" />
+          </div>
+        )}
+      </div>
+      <div className="space-y-3">
+        <div className="border-b pb-2">
+          <h4 className="font-bold text-base text-foreground leading-tight">
+            {order.code}
+          </h4>
+          <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-tighter">
+            Ngày tạo: {order.createdAt ? new Date(order.createdAt).toLocaleDateString("vi-VN") : "—"}
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              Thông tin thiết kế
+            </p>
+            <div className="bg-muted/30 rounded-md p-2.5 space-y-2 border">
+              <div className="flex justify-between text-xs items-center">
+                <span className="text-muted-foreground">Mã hàng:</span>
+                <span className="font-mono font-bold bg-muted px-1.5 py-0.5 rounded">{firstDesign?.code || "—"}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Đơn hàng:</span>
+                <span className="font-semibold">{firstDesign?.orderCode || "—"}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Chất liệu:</span>
+                <span className="font-medium">{firstDesign?.materialType?.name || "—"}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Quy cách:</span>
+                <span className="font-medium text-right">
+                  {firstDesign?.processClassification
+                    ? processClassificationLabels[firstDesign.processClassification] || firstDesign.processClassification
+                    : firstDesign?.length != null
+                      ? `${firstDesign.length}x${firstDesign.height}mm`
+                      : "—"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
+               <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+               Trạng thái bình bài
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+                <StatusBadge 
+                  status={order.status || ""} 
+                  label={proofingStatusLabels[order.status || ""] || "—"}
+                  className="text-[10px] px-2 py-0 h-5"
+                />
+                <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 whitespace-nowrap bg-background">
+                  {order.proofingOrderDesigns?.length || 0} mã hàng
+                </Badge>
+                {order.plateExport && (
+                  <Badge className="bg-green-500/10 text-green-600 border-green-200 text-[10px] px-2 py-0 h-5">
+                    Đã xuất kẽm
+                  </Badge>
+                )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
-      <TableRow
-        className="hover:bg-muted/50 cursor-pointer"
-        onClick={() => onNavigate(order.id)}
-      >
-        {shouldShowExpand && (
-          <TableCell className="py-3 w-10">
-            <div className="flex items-center justify-center">
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")} />
-            </div>
-          </TableCell>
-        )}
-        <TableCell className="py-2 w-12">
-          {designs[0]?.design?.designImageUrl ? (
-            <img
-              src={designs[0].design.designImageUrl}
-              alt={designs[0].design.code}
-              className="w-10 h-10 object-cover rounded border"
-            />
-          ) : (
-            <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
-              <FileImage className="h-4 w-4 text-muted-foreground" />
-            </div>
+      <CursorTooltip content={tooltipContent} delayDuration={1000} className="p-3 bg-popover/95 backdrop-blur-sm border-shadow shadow-xl ring-1 ring-black/5">
+        <TableRow
+          className="hover:bg-muted/50 cursor-pointer"
+          onClick={() => onNavigate(order.id)}
+        >
+          {shouldShowExpand && (
+            <TableCell className="py-3 w-10">
+              <div className="flex items-center justify-center">
+                <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")} />
+              </div>
+            </TableCell>
           )}
-        </TableCell>
-        <TableCell className="relative py-3 font-semibold">
-          <div className="absolute -top-1 left-0 bg-slate-500 text-white text-[8px] px-1 rounded shadow-sm opacity-50 font-mono pointer-events-none">
-            PrepressOrderRow.tsx
-          </div>
-          {shouldShowExpand && orderCodeMatches
-            ? highlightText(order.code || "", debouncedSearchTerm.trim())
-            : order.code}
-        </TableCell>
-        <TableCell className="py-3 font-semibold text-xs text-primary">
-          {designs[0]?.design?.orderCode || "—"}
-        </TableCell>
-        <TableCell className="py-3 font-mono text-sm font-semibold">
-          {designs[0]?.design?.code || "—"}
-        </TableCell>
-        <TableCell className="py-3 font-semibold text-center">
-          {order.proofingOrderDesigns?.length ?? 0}
-        </TableCell>
-        <TableCell className="py-3 font-semibold text-xs">
-          {designs[0]?.design?.materialType?.name || "—"}
-        </TableCell>
-        <TableCell className="py-3 text-xs">
-          {designs[0]?.design?.processClassification
-            ? processClassificationLabels[designs[0].design.processClassification] || designs[0].design.processClassification
-            : designs[0]?.design?.length != null
-            ? `${designs[0].design.length}x${designs[0].design.height}mm`
-            : "—"}
-        </TableCell>
-        <TableCell className="py-3">
-          <StatusBadge
-            status={order.status || ""}
-            label={
-              proofingStatusLabels[order.status || ""] ||
-              order.status ||
-              "Không xác định"
-            }
-            className={cn(
-              "text-xs font-semibold",
-              order.status === "completed"
-                ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
-                : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800",
+          <TableCell className="py-2 w-12">
+            {designs[0]?.design?.designImageUrl ? (
+              <img
+                src={designs[0].design.designImageUrl}
+                alt={designs[0].design.code}
+                className="w-10 h-10 object-cover rounded border"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
+                <FileImage className="h-4 w-4 text-muted-foreground" />
+              </div>
             )}
-          />
-        </TableCell>
-        <TableCell className="py-3">
-          <StatusBadge
-            status={order.plateExport ? "exported" : "not_exported"}
-            label={order.plateExport ? "Đã xuất" : "Chưa xuất"}
-            className={cn(
-              "text-xs font-semibold",
-              order.plateExport
-                ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
-                : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800",
-            )}
-          />
-        </TableCell>
-        <TableCell className="py-3">
-          {order.proofingOrderDesigns?.some(
-            (pod: any) => pod.design?.processClassification === "die_cut",
-          ) ? (
+          </TableCell>
+          <TableCell className="relative py-3 font-semibold">
+            <div className="absolute -top-1 left-0 bg-slate-500 text-white text-[8px] px-1 rounded shadow-sm opacity-50 font-mono pointer-events-none">
+              PrepressOrderRow.tsx
+            </div>
+            {shouldShowExpand && orderCodeMatches
+              ? highlightText(order.code || "", debouncedSearchTerm.trim())
+              : order.code}
+          </TableCell>
+          <TableCell className="py-3 font-semibold text-xs text-primary">
+            {designs[0]?.design?.orderCode || "—"}
+          </TableCell>
+          <TableCell className="py-3 font-mono text-sm font-semibold">
+            {designs[0]?.design?.code || "—"}
+          </TableCell>
+          <TableCell className="py-3 font-semibold text-center">
+            {order.proofingOrderDesigns?.length ?? 0}
+          </TableCell>
+          <TableCell className="py-3 font-semibold text-xs">
+            {designs[0]?.design?.materialType?.name || "—"}
+          </TableCell>
+          <TableCell className="py-3 text-xs">
+            {designs[0]?.design?.processClassification
+              ? processClassificationLabels[designs[0].design.processClassification] || designs[0].design.processClassification
+              : designs[0]?.design?.length != null
+              ? `${designs[0].design.length}x${designs[0].design.height}mm`
+              : "—"}
+          </TableCell>
+          <TableCell className="py-3">
             <StatusBadge
-              status={
-                (order.dieExports?.length ?? 0) > 0
-                  ? "exported"
-                  : "not_exported"
-              }
+              status={order.status || ""}
               label={
-                (order.dieExports?.length ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"
+                proofingStatusLabels[order.status || ""] ||
+                order.status ||
+                "Không xác định"
               }
               className={cn(
                 "text-xs font-semibold",
-                (order.dieExports?.length ?? 0) > 0
+                order.status === "completed"
                   ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
                   : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800",
               )}
             />
-          ) : (
-            <span className="text-xs font-semibold text-muted-foreground">
-              Không có
-            </span>
-          )}
-        </TableCell>
-        <TableCell className="py-3 font-semibold">
-          {order.createdAt
-            ? new Date(order.createdAt).toLocaleDateString("vi-VN")
-            : "—"}
-        </TableCell>
-      </TableRow>
+          </TableCell>
+          <TableCell className="py-3">
+            <StatusBadge
+              status={order.plateExport ? "exported" : "not_exported"}
+              label={order.plateExport ? "Đã xuất" : "Chưa xuất"}
+              className={cn(
+                "text-xs font-semibold",
+                order.plateExport
+                  ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
+                  : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800",
+              )}
+            />
+          </TableCell>
+          <TableCell className="py-3">
+            {order.proofingOrderDesigns?.some(
+              (pod: any) => pod.design?.processClassification === "die_cut",
+            ) ? (
+              <StatusBadge
+                status={
+                  (order.dieExports?.length ?? 0) > 0
+                    ? "exported"
+                    : "not_exported"
+                }
+                label={
+                  (order.dieExports?.length ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"
+                }
+                className={cn(
+                  "text-xs font-semibold",
+                  (order.dieExports?.length ?? 0) > 0
+                    ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
+                    : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800",
+                )}
+              />
+            ) : (
+              <span className="text-xs font-semibold text-muted-foreground">
+                Không có
+              </span>
+            )}
+          </TableCell>
+          <TableCell className="py-3 font-semibold">
+            {order.createdAt
+              ? new Date(order.createdAt).toLocaleDateString("vi-VN")
+              : "—"}
+          </TableCell>
+        </TableRow>
+      </CursorTooltip>
       {shouldShowExpand && isExpanded && designs.length > 0 && (
         <TableRow>
           <TableCell

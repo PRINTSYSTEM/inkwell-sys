@@ -153,7 +153,7 @@ export default function PrepressList() {
   const [completedOrdersPageInput, setCompletedOrdersPageInput] = useState<string>("");
   const ordersTableRef = useRef<HTMLDivElement>(null);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 30;
 
   const incompleteQueryParams = useMemo(() => {
     const raw = {
@@ -695,44 +695,44 @@ export default function PrepressList() {
                           }}
                         >
                           <X className="h-3.5 w-3.5" />
-                          Xóa bộ lọc
-                        </Button>
+                          Xóa b�                  {/* Orders list components are now inside PrepressOrdersHeader if !hasActiveFilters */}
+         </Button>
                       </div>
-                    )}
-                  </header>
-
-                  {/* Orders list components are now inside PrepressOrdersHeader if !hasActiveFilters */}
+                    </div>
+                  )}
+                  </>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Right panel: config panel when creating new order */}
-            {newOrderId && (
-              <div className="basis-2/5 min-w-0 shrink-0">
-                <DetailEmptyOrderView
-                  selectedDesigns={selectedDesigns}
-                  selectedCount={configSelectedCount}
-                  materialTypeName={configMaterialTypeName}
-                  designQuantities={designQuantities}
-                  setDesignQuantities={setDesignQuantities}
-                  toggleSelection={toggleSelection}
-                  proofingSheetQuantity={proofingSheetQuantity}
-                  setProofingSheetQuantity={setProofingSheetQuantity}
-                  paperSizeId={paperSizeId}
-                  setPaperSizeId={setPaperSizeId}
-                  customPaperSize={customPaperSize}
-                  setCustomPaperSize={setCustomPaperSize}
-                  notes={configNotes}
-                  setNotes={setConfigNotes}
-                  paperSizes={paperSizes}
-                  showCreateButton={showCreateButton}
-                  isCreatingPaperSize={isCreatingPaperSize}
-                  handleCreatePaperSize={handleCreatePaperSize}
-                  handleSubmitDesigns={handleConfigSubmitDesigns}
-                  isAddingDesigns={isAddingDesigns}
-                />
-              </div>
-            )}
+            </CardContent>
+          </Card>
+                          Xóa bộ lọc
+          {/* Right panel: config panel when creating new order */}
+          {newOrderId && (
+            <div className="basis-2/5 min-w-0 shrink-0">
+              <DetailEmptyOrderView
+                selectedDesigns={selectedDesigns}
+                selectedCount={configSelectedCount}
+                materialTypeName={configMaterialTypeName}
+                designQuantities={designQuantities}
+                setDesignQuantities={setDesignQuantities}
+                toggleSelection={toggleSelection}
+                proofingSheetQuantity={proofingSheetQuantity}
+                setProofingSheetQuantity={setProofingSheetQuantity}
+                paperSizeId={paperSizeId}
+                setPaperSizeId={setPaperSizeId}
+                customPaperSize={customPaperSize}
+                setCustomPaperSize={setCustomPaperSize}
+                notes={configNotes}
+                setNotes={setConfigNotes}
+                paperSizes={paperSizes}
+                showCreateButton={showCreateButton}
+                isCreatingPaperSize={isCreatingPaperSize}
+                handleCreatePaperSize={handleCreatePaperSize}
+                handleSubmitDesigns={handleConfigSubmitDesigns}
+                isAddingDesigns={isAddingDesigns}
+              />
+            </div>
+          )}
           </div>
         </main>
 

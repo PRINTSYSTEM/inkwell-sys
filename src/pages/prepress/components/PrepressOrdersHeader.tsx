@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, ChevronsUpDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,12 +18,12 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { FilterSection } from "@/components/proofing/FilterSection";
 import { DesignTable } from "@/components/proofing/DesignTable";
+import { PrepressOrdersTable } from "./PrepressOrdersTable";
 import type { FilterOption, DesignItem } from "@/types/proofing";
 
 interface PrepressOrdersHeaderProps {
   designCode: string;
   setDesignCode: (code: string) => void;
-  setOrdersPage: (page: number) => void;
   selectedMaterialTypeId: number | null;
   setSelectedMaterialTypeId: (id: number | null) => void;
   materialTypeOptionsForOrders: { id: number; name: string }[];
@@ -44,12 +44,39 @@ interface PrepressOrdersHeaderProps {
   canSelect: (design: DesignItem) => boolean;
   onToggle: (design: DesignItem) => void;
   isLoadingDesigns?: boolean;
+
+  // New props for split orders
+  hasActiveFilters: boolean;
+  incompleteOrders: any[];
+  completedOrders: any[];
+  loadingIncomplete: boolean;
+  loadingCompleted: boolean;
+  incompletePage: number;
+  setIncompletePage: (page: number) => void;
+  completedPage: number;
+  setCompletedPage: (page: number) => void;
+  incompleteTotalPages: number;
+  completedTotalPages: number;
+  incompleteOrdersPageInput: string;
+  setIncompleteOrdersPageInput: (val: string) => void;
+  handleIncompletePageInputBlur: () => void;
+  completedOrdersPageInput: string;
+  setCompletedOrdersPageInput: (val: string) => void;
+  handleCompletedPageInputBlur: () => void;
+  incompleteTotalCount: number;
+  completedTotalCount: number;
+  itemsPerPage: number;
+  shouldShowExpand: boolean;
+  expandedOrderIds: Set<number>;
+  searchTermLower: string;
+  debouncedDesignCode: string;
+  onNavigate: (id: number) => void;
+  ordersTableRef: React.RefObject<HTMLDivElement>;
 }
 
 export function PrepressOrdersHeader({
   designCode,
   setDesignCode,
-  setOrdersPage,
   selectedMaterialTypeId,
   setSelectedMaterialTypeId,
   materialTypeOptionsForOrders,
@@ -68,11 +95,34 @@ export function PrepressOrdersHeader({
   canSelect,
   onToggle,
   isLoadingDesigns,
+  // New props
+  hasActiveFilters,
+  incompleteOrders,
+  completedOrders,
+  loadingIncomplete,
+  loadingCompleted,
+  incompletePage,
+  setIncompletePage,
+  completedPage,
+  setCompletedPage,
+  incompleteTotalPages,
+  completedTotalPages,
+  incompleteOrdersPageInput,
+  setIncompleteOrdersPageInput,
+  handleIncompletePageInputBlur,
+  completedOrdersPageInput,
+  setCompletedOrdersPageInput,
+  handleCompletedPageInputBlur,
+  incompleteTotalCount,
+  completedTotalCount,
+  itemsPerPage,
+  shouldShowExpand,
+  expandedOrderIds,
+  searchTermLower,
+  debouncedDesignCode,
+  onNavigate,
+  ordersTableRef,
 }: PrepressOrdersHeaderProps) {
-  const hasActiveFilters =
-    selectedDesignTypes.length > 0 ||
-    selectedMaterialTypes.length > 0 ||
-    searchTerm.trim().length > 0;
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
   return (
@@ -89,7 +139,8 @@ export function PrepressOrdersHeader({
             value={designCode}
             onChange={(e) => {
               setDesignCode(e.target.value);
-              setOrdersPage(1);
+              setIncompletePage(1);
+              setCompletedPage(1);
             }}
           />
         </div>
@@ -122,7 +173,8 @@ export function PrepressOrdersHeader({
                     onSelect={() => {
                       setSelectedMaterialTypeId(null);
                       setMaterialTypeSearchOpen(false);
-                      setOrdersPage(1);
+                      setIncompletePage(1);
+                      setCompletedPage(1);
                     }}
                   >
                     <Check
@@ -142,7 +194,8 @@ export function PrepressOrdersHeader({
                       onSelect={() => {
                         setSelectedMaterialTypeId(mt.id);
                         setMaterialTypeSearchOpen(false);
-                        setOrdersPage(1);
+                        setIncompletePage(1);
+                        setCompletedPage(1);
                       }}
                     >
                       <Check
@@ -169,7 +222,8 @@ export function PrepressOrdersHeader({
             onClick={() => {
               setDesignCode("");
               setSelectedMaterialTypeId(null);
-              setOrdersPage(1);
+              setIncompletePage(1);
+              setCompletedPage(1);
             }}
           >
             <X className="h-4 w-4" />
@@ -207,6 +261,140 @@ export function PrepressOrdersHeader({
           ) : (
             <div className="text-center py-8 text-muted-foreground text-sm">Không tìm thấy thiết kế nào</div>
           )}
+        </div>
+      )}
+
+      {/* Split lists shown when filters NOT active */}
+      {!hasActiveFilters && (
+        <div className="mt-4 space-y-8">
+          {/* Incomplete Orders Section */}
+          <div className="space-y-4">
+            <PrepressOrdersTable
+              title="Mã bài chưa hoàn thành"
+              count={incompleteTotalCount}
+              orders={incompleteOrders}
+              loading={loadingIncomplete}
+              shouldShowExpand={shouldShowExpand}
+              expandedOrderIds={expandedOrderIds}
+              searchTermLower={searchTermLower}
+              debouncedSearchTerm={debouncedDesignCode}
+              onNavigate={onNavigate}
+              tableRef={ordersTableRef}
+            />
+            {incompleteTotalCount > itemsPerPage && (
+              <div className="flex items-center justify-between gap-3 bg-background px-1 py-1 border rounded-lg shadow-sm">
+                <div className="text-xs text-muted-foreground ml-2">
+                  Hiển thị{" "}
+                  <span className="font-semibold text-foreground">
+                    {(incompletePage - 1) * itemsPerPage + 1}
+                  </span>
+                  {" - "}
+                  <span className="font-semibold text-foreground">
+                    {Math.min(incompletePage * itemsPerPage, incompleteTotalCount)}
+                  </span>{" "}
+                  /{" "}
+                  <span className="font-semibold text-foreground">{incompleteTotalCount}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setIncompletePage(Math.max(1, incompletePage - 1))}
+                    disabled={incompletePage === 1 || loadingIncomplete}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={incompleteTotalPages}
+                      value={incompleteOrdersPageInput}
+                      onChange={(e) => setIncompleteOrdersPageInput(e.target.value)}
+                      onBlur={handleIncompletePageInputBlur}
+                      className="h-8 w-12 text-center text-xs"
+                      disabled={loadingIncomplete}
+                    />
+                    <span className="text-xs text-muted-foreground">/ {incompleteTotalPages}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setIncompletePage(Math.min(incompleteTotalPages, incompletePage + 1))}
+                    disabled={incompletePage >= incompleteTotalPages || loadingIncomplete}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Completed Orders Section */}
+          <div className="space-y-4">
+            <PrepressOrdersTable
+              title="Mã bài đã hoàn thành"
+              count={completedTotalCount}
+              orders={completedOrders}
+              loading={loadingCompleted}
+              shouldShowExpand={shouldShowExpand}
+              expandedOrderIds={expandedOrderIds}
+              searchTermLower={searchTermLower}
+              debouncedSearchTerm={debouncedDesignCode}
+              onNavigate={onNavigate}
+            />
+            {completedTotalCount > itemsPerPage && (
+              <div className="flex items-center justify-between gap-3 bg-background px-1 py-1 border rounded-lg shadow-sm">
+                <div className="text-xs text-muted-foreground ml-2">
+                  Hiển thị{" "}
+                  <span className="font-semibold text-foreground">
+                    {(completedPage - 1) * itemsPerPage + 1}
+                  </span>
+                  {" - "}
+                  <span className="font-semibold text-foreground">
+                    {Math.min(completedPage * itemsPerPage, completedTotalCount)}
+                  </span>{" "}
+                  /{" "}
+                  <span className="font-semibold text-foreground">{completedTotalCount}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCompletedPage(Math.max(1, completedPage - 1))}
+                    disabled={completedPage === 1 || loadingCompleted}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={completedTotalPages}
+                      value={completedOrdersPageInput}
+                      onChange={(e) => setCompletedOrdersPageInput(e.target.value)}
+                      onBlur={handleCompletedPageInputBlur}
+                      className="h-8 w-12 text-center text-xs"
+                      disabled={loadingCompleted}
+                    />
+                    <span className="text-xs text-muted-foreground">/ {completedTotalPages}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => setCompletedPage(Math.min(completedTotalPages, completedPage + 1))}
+                    disabled={completedPage >= completedTotalPages || loadingCompleted}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
