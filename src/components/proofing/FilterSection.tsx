@@ -67,7 +67,10 @@ export function FilterSection({
     : selectedMaterialTypes;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
+      <div className="absolute -top-1 right-0 bg-indigo-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
+        FilterSection.tsx
+      </div>
       {/* Filter Controls */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Design Type Button Group */}

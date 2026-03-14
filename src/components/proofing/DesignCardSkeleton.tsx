@@ -3,7 +3,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function DesignCardSkeleton() {
   return (
-    <Card>
+    <Card className="relative">
+      <div className="absolute top-1 right-1 bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
+        DesignCardSkeleton.tsx
+      </div>
       <Skeleton className="aspect-square rounded-t-lg" />
       <CardContent className="p-4 space-y-2">
         <Skeleton className="h-3 w-3/4" />

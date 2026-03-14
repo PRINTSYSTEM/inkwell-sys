@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -758,6 +758,9 @@ export function DieExportDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[80vh] flex flex-col overflow-hidden">
+        <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-lime-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
+          DieExportDialog.tsx
+        </div>
         <DialogHeader className="pb-2">
           <DialogTitle>Xuất khuôn bế</DialogTitle>
         </DialogHeader>
