@@ -2068,7 +2068,7 @@ export default function ProofingOrderDetailPage() {
           />
         ) : (
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.8fr_2.2fr_0.5fr_0.5fr] gap-4 items-start w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.7fr_1.9fr_0.7fr_0.7fr] gap-4 w-full">
               <DetailOrderInfoCard
                 order={order}
                 editingField={editingField}
@@ -2120,9 +2120,8 @@ export default function ProofingOrderDetailPage() {
                 order={order}
                 setIsPlateExportDialogOpen={setIsPlateExportDialogOpen}
                 setEditingPlateExport={setEditingPlateExport}
-                setIsHandToProductionDialogOpen={setIsHandToProductionDialogOpen}
-                setImageViewerOpen={setImageViewerOpen}
-                setViewingImageUrl={setViewingImageUrl}
+                handleHandToProduction={handleConfirmHandToProduction}
+                isHandingToProduction={isHandingToProduction}
               />
 
               {hasDieCutDesigns ? (
@@ -2131,11 +2130,10 @@ export default function ProofingOrderDetailPage() {
                   hasDieCutDesigns={hasDieCutDesigns}
                   isDieExported={isDieExported}
                   setIsDieExportDialogOpen={setIsDieExportDialogOpen}
-                  setIsReplaceDieDialogOpen={setIsReplaceDieDialogOpen}
-                  setReplacingDieExport={setReplacingDieExport}
-                  setIsAddDieDialogOpen={setIsAddDieDialogOpen}
+                  handleOpenReplaceDieDialog={handleOpenReplaceDieDialog}
                   handleRemoveDie={handleRemoveDie}
                   isRemovingDie={isRemovingDie}
+                  setIsDieListDialogOpen={setIsDieListDialogOpen}
                 />
               ) : (
                 <div /> /* Empty div to maintain grid if no die cut designs */

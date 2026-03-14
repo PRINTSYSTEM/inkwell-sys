@@ -434,3 +434,25 @@ export const useCashBook = (params?: CashBookListParams) => {
   });
 };
 
+// ================== CASH FUND (DUMMY/LEGACY) ==================
+
+export const useCashFunds = (params?: any) => {
+  return useQuery({
+    queryKey: ["cash-funds", params],
+    queryFn: async () => {
+      // If the endpoint was removed, we return a mock or empty list to prevent crashes
+      // Based on usage, it expects { items: [] }
+      return {
+        items: [
+          { id: 1, code: "CASH_MAIN", name: "Quỹ tiền mặt chính", isActive: true },
+          { id: 2, code: "CASH_PETTY", name: "Quỹ tiền lẻ", isActive: true },
+        ],
+        total: 2,
+        page: 1,
+        size: 1000,
+        totalPages: 1,
+      };
+    },
+  });
+};
+
