@@ -86,9 +86,9 @@ import {
 import { useAvailableOrderDetailsForProofing } from "@/hooks";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
 import { useDesignTypeList } from "@/hooks/use-design-type";
-import { DesignTable } from "@/components/proofing/DesignTable";
+// DesignTable removed - now rendered in PrepressOrdersHeader
 import { DesignCardSkeleton } from "@/components/proofing/DesignCardSkeleton";
-import { FilterSection } from "@/components/proofing/FilterSection";
+// FilterSection removed - now in PrepressList
 import { FilterNoticeBanner } from "@/components/proofing/FilterNoticeBanner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDebounce } from "use-debounce";
@@ -2045,48 +2045,18 @@ export default function ProofingOrderDetailPage() {
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {isEmptyOrder ? (
           <DetailEmptyOrderView
-            order={order}
-            designTypeOptions={designTypeOptions}
-            availableDesignsData={availableDesignsData}
-            selectedDesignTypes={selectedDesignTypes}
-            selectedMaterialTypes={selectedMaterialTypes}
-            currentMaterialTypeId={currentMaterialTypeId}
-            currentMaterialTypeName={currentMaterialTypeName}
-            searchTerm={searchTerm}
-            setSelectedDesignTypes={setSelectedDesignTypes}
-            setSelectedMaterialTypes={setSelectedMaterialTypes}
-            setSearchTerm={setSearchTerm}
-            handleClearFilters={handleClearFilters}
-            handleClearSelection={handleClearSelection}
-            isLoadingDesigns={isLoadingDesigns}
-            paginatedDesigns={paginatedDesigns}
-            groupByOrder={groupByOrder}
-            groupedByOrder={groupedByOrder}
-            selectedIds={selectedIds}
-            canSelect={canSelect}
             toggleSelection={toggleSelection}
-            totalCount={totalCount}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageInput={pageInput}
-            itemsPerPage={itemsPerPage}
-            handlePreviousPage={handlePreviousPage}
-            handleNextPage={handleNextPage}
-            handlePageInputChange={handlePageInputChange}
-            handlePageInputBlur={handlePageInputBlur}
-            tableContainerRef={tableContainerRef}
             selectedDesigns={selectedDesigns}
             selectedCount={selectedCount}
             materialTypeName={materialTypeName}
             designQuantities={designQuantities}
-            handleQuantityChange={handleQuantityChange}
+            setDesignQuantities={setDesignQuantities}
             paperSizes={paperSizes}
             paperSizeId={paperSizeId}
             setPaperSizeId={setPaperSizeId}
             customPaperSize={customPaperSize}
             setCustomPaperSize={setCustomPaperSize}
             showCreateButton={showCreateButton}
-            existingPaperSize={existingPaperSize}
             handleCreatePaperSize={handleCreatePaperSize}
             isCreatingPaperSize={isCreatingPaperSize}
             proofingSheetQuantity={proofingSheetQuantity}
@@ -2095,84 +2065,82 @@ export default function ProofingOrderDetailPage() {
             setNotes={setNotes}
             handleSubmitDesigns={handleSubmitDesigns}
             isAddingDesigns={isAddingDesigns}
-            hasValidQuantities={hasValidQuantities}
           />
         ) : (
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pb-4">
-            <DetailOrderInfoCard
-              order={order}
-              paperSizes={paperSizes}
-              updatePaperSizeId={updatePaperSizeId}
-              setUpdatePaperSizeId={setUpdatePaperSizeId}
-              updateCustomPaperSize={updateCustomPaperSize}
-              setUpdateCustomPaperSize={setUpdateCustomPaperSize}
-              existingUpdatePaperSize={existingUpdatePaperSize}
-              parsedUpdateCustomPaperSize={parsedUpdateCustomPaperSize}
-              isCreatingPaperSize={isCreatingPaperSize}
-              handleCreatePaperSize={handleCreatePaperSize}
-              isQuantityEditOpen={isQuantityEditOpen}
-              setIsQuantityEditOpen={setIsQuantityEditOpen}
-              updateStatus={updateStatus}
-              setUpdateStatus={setUpdateStatus}
-              updateNotes={updateNotes}
-              setUpdateNotes={setUpdateNotes}
-              updateProofingFileUrl={updateProofingFileUrl}
-              setUpdateProofingFileUrl={setUpdateProofingFileUrl}
-              handleUpdateOrderInfo={handleUpdateOrderInfo}
-              isUpdatingOrder={isUpdatingOrder}
-              setIsImageUploadDialogOpen={setIsImageUploadDialogOpen}
-              setImageViewerOpen={setImageViewerOpen}
-              setViewingImageUrl={setViewingImageUrl}
-            />
-
-            <DetailDesignsListCard
-              order={order}
-              orderDesigns={orderDesigns}
-              editingQuantityDesignId={editingQuantityDesignId}
-              setEditingQuantityDesignId={setEditingQuantityDesignId}
-              inlineQuantityValue={inlineQuantityValue}
-              setInlineQuantityValue={setInlineQuantityValue}
-              handleUpdateDesignQuantity={handleUpdateDesignQuantity}
-              updatingDesignId={updatingDesignId}
-              setIsAddDesignDialogOpen={setIsAddDesignDialogOpen}
-              setRemoveDesignTarget={setRemoveDesignTarget}
-              setIsConfirmRemoveDesignDialogOpen={setIsConfirmRemoveDesignDialogOpen}
-              isRemovingDesign={isRemovingDesign}
-              setImageViewerOpen={setImageViewerOpen}
-              setViewingImageUrl={setViewingImageUrl}
-              setSelectedDesignForRelatedDies={setSelectedDesignForRelatedDies}
-              setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
-              isQuantityEditOpen={isQuantityEditOpen}
-              handleOpenQuantityEdit={handleOpenQuantityEdit}
-              setIsQuantityEditOpen={setIsQuantityEditOpen}
-              updateTotalQuantity={updateTotalQuantity}
-              setUpdateTotalQuantity={setUpdateTotalQuantity}
-              updateDesignQuantities={updateDesignQuantities}
-              setUpdateDesignQuantities={setUpdateDesignQuantities}
-            />
-
-            <DetailPlateExportCard
-              order={order}
-              setIsPlateExportDialogOpen={setIsPlateExportDialogOpen}
-              setEditingPlateExport={setEditingPlateExport}
-              setIsHandToProductionDialogOpen={setIsHandToProductionDialogOpen}
-              setImageViewerOpen={setImageViewerOpen}
-              setViewingImageUrl={setViewingImageUrl}
-            />
-
-            {hasDieCutDesigns && (
-              <DetailDieExportCard
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.8fr_2.2fr_0.5fr_0.5fr] gap-4 items-start w-full">
+              <DetailOrderInfoCard
                 order={order}
-                hasDieCutDesigns={hasDieCutDesigns}
-                isDieExported={isDieExported}
-                setIsDieExportDialogOpen={setIsDieExportDialogOpen}
-                setIsReplaceDieDialogOpen={setIsReplaceDieDialogOpen}
-                setReplacingDieExport={setReplacingDieExport}
-                setIsAddDieDialogOpen={setIsAddDieDialogOpen}
-                handleRemoveDie={handleRemoveDie}
-                isRemovingDie={isRemovingDie}
+                editingField={editingField}
+                inlineTotalQuantity={inlineTotalQuantity}
+                setInlineTotalQuantity={setInlineTotalQuantity}
+                inlinePaperSizeId={inlinePaperSizeId}
+                setInlinePaperSizeId={setInlinePaperSizeId}
+                inlineCustomPaperSize={inlineCustomPaperSize}
+                setInlineCustomPaperSize={setInlineCustomPaperSize}
+                inlineNotes={inlineNotes}
+                setInlineNotes={setInlineNotes}
+                paperSizes={paperSizes}
+                uniqueProcessClassifications={uniqueProcessClassifications}
+                uniqueLaminationTypes={uniqueLaminationTypes}
+                isUpdatingInfo={isUpdatingInfo}
+                handleStartEditField={handleStartEditField}
+                handleCancelEditField={handleCancelEditField}
+                handleSaveField={handleSaveField}
+                setIsUploadDialogOpen={setIsUploadDialogOpen}
               />
-            )}
+
+              <DetailDesignsListCard
+                order={order}
+                orderDesigns={orderDesigns}
+                editingQuantityDesignId={editingQuantityDesignId}
+                setEditingQuantityDesignId={setEditingQuantityDesignId}
+                inlineQuantityValue={inlineQuantityValue}
+                setInlineQuantityValue={setInlineQuantityValue}
+                handleUpdateDesignQuantity={handleUpdateDesignQuantity}
+                updatingDesignId={updatingDesignId}
+                setIsAddDesignDialogOpen={setIsAddDesignDialogOpen}
+                setRemoveDesignTarget={setRemoveDesignTarget}
+                setIsConfirmRemoveDesignDialogOpen={setIsConfirmRemoveDesignDialogOpen}
+                isRemovingDesign={isRemovingDesign}
+                setImageViewerOpen={setImageViewerOpen}
+                setViewingImageUrl={setViewingImageUrl}
+                setSelectedDesignForRelatedDies={setSelectedDesignForRelatedDies}
+                setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
+                isQuantityEditOpen={isQuantityEditOpen}
+                handleOpenQuantityEdit={handleOpenQuantityEdit}
+                setIsQuantityEditOpen={setIsQuantityEditOpen}
+                updateTotalQuantity={updateTotalQuantity}
+                setUpdateTotalQuantity={setUpdateTotalQuantity}
+                updateDesignQuantities={updateDesignQuantities}
+                setUpdateDesignQuantities={setUpdateDesignQuantities}
+              />
+
+              <DetailPlateExportCard
+                order={order}
+                setIsPlateExportDialogOpen={setIsPlateExportDialogOpen}
+                setEditingPlateExport={setEditingPlateExport}
+                setIsHandToProductionDialogOpen={setIsHandToProductionDialogOpen}
+                setImageViewerOpen={setImageViewerOpen}
+                setViewingImageUrl={setViewingImageUrl}
+              />
+
+              {hasDieCutDesigns ? (
+                <DetailDieExportCard
+                  order={order}
+                  hasDieCutDesigns={hasDieCutDesigns}
+                  isDieExported={isDieExported}
+                  setIsDieExportDialogOpen={setIsDieExportDialogOpen}
+                  setIsReplaceDieDialogOpen={setIsReplaceDieDialogOpen}
+                  setReplacingDieExport={setReplacingDieExport}
+                  setIsAddDieDialogOpen={setIsAddDieDialogOpen}
+                  handleRemoveDie={handleRemoveDie}
+                  isRemovingDie={isRemovingDie}
+                />
+              ) : (
+                <div /> /* Empty div to maintain grid if no die cut designs */
+              )}
+            </div>
           </div>
         )}
       </div>

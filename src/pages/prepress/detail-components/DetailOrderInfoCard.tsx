@@ -129,7 +129,7 @@ export function DetailOrderInfoCard({
                 }
               >
                 <p
-                  className={`font-bold text-sm ${
+                  className={`font-bold text-[15px] ${
                     order.status !== "completed"
                       ? "group-hover:text-primary transition-colors"
                       : ""
@@ -147,7 +147,7 @@ export function DetailOrderInfoCard({
             <Label className="text-muted-foreground text-[10px] font-normal">
               SL hàng
             </Label>
-            <p className="font-bold text-sm">
+            <p className="font-bold text-[15px]">
               {order.proofingOrderDesigns?.length ?? 0}
             </p>
           </div>
@@ -185,6 +185,7 @@ export function DetailOrderInfoCard({
                   onChange={(e) => setInlineCustomPaperSize(e.target.value)}
                   placeholder="Ví dụ: 60×60, 31×43..."
                   className="h-7 text-xs"
+                  autoFocus
                 />
               )}
               <div className="flex gap-1">
@@ -217,7 +218,7 @@ export function DetailOrderInfoCard({
               }
             >
               <p
-                className={`font-bold text-sm text-xs ${
+                className={`font-bold text-[15px] ${
                   order.status !== "completed"
                     ? "group-hover:text-primary transition-colors"
                     : ""
@@ -240,10 +241,10 @@ export function DetailOrderInfoCard({
             Chất liệu
           </Label>
           <div>
-            <p className="font-bold text-sm">
+            <p className="font-bold text-[15px] leading-tight">
               {order.materialType?.name || "—"}
             </p>
-            <p className="text-[10px] text-muted-foreground font-medium">
+            <p className="text-[10px] text-muted-foreground font-medium mt-1 leading-relaxed">
               {order.materialType?.code || "—"}
             </p>
           </div>
@@ -368,7 +369,7 @@ export function DetailOrderInfoCard({
                   }
                 >
                   <p
-                    className={`text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed text-xs ${
+                    className={`text-amber-800 dark:text-amber-200 whitespace-pre-wrap leading-relaxed text-[14px] ${
                       order.status !== "completed"
                         ? "group-hover:text-amber-900 dark:group-hover:text-amber-100 transition-colors"
                         : ""

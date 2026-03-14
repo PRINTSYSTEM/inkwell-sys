@@ -56,25 +56,29 @@ export function PrepressOrdersTable({
                     {shouldShowExpand && (
                       <TableHead className="h-10 text-sm font-bold w-12"></TableHead>
                     )}
+                    <TableHead className="h-10 text-sm font-bold w-12">Ảnh</TableHead>
                     <TableHead className="h-10 text-sm font-bold">Mã bài</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">SL mã hàng</TableHead>
+                    <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
+                    <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
+                    <TableHead className="h-10 text-sm font-bold text-center">SL mã hàng</TableHead>
+                    <TableHead className="h-10 text-sm font-bold">Chất liệu</TableHead>
+                    <TableHead className="h-10 text-sm font-bold">Quy cách</TableHead>
                     <TableHead className="h-10 text-sm font-bold">Trạng thái</TableHead>
                     <TableHead className="h-10 text-sm font-bold">Xuất kẽm</TableHead>
                     <TableHead className="h-10 text-sm font-bold">Xuất khuôn</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">Loại chất liệu</TableHead>
                     <TableHead className="h-10 text-sm font-bold">Ngày tạo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableSkeleton
-                      cols={shouldShowExpand ? 8 : 7}
+                      cols={shouldShowExpand ? 12 : 11}
                       rows={5}
                       rowHeight="h-14"
                     />
                   ) : orders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={shouldShowExpand ? 8 : 7} className="py-10">
+                      <TableCell colSpan={shouldShowExpand ? 12 : 11} className="py-10">
                         <div className="flex flex-col items-center justify-center gap-2 text-center">
                           <FileText className="h-10 w-10 text-muted-foreground opacity-60" />
                           <p className="text-sm font-semibold text-muted-foreground">

@@ -17,7 +17,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { FilterSection } from "@/components/proofing/FilterSection";
-import type { FilterOption } from "@/types/proofing";
+import { DesignTable } from "@/components/proofing/DesignTable";
+import type { FilterOption, DesignItem } from "@/types/proofing";
 
 interface PrepressOrdersHeaderProps {
   designCode: string;
@@ -37,6 +38,12 @@ interface PrepressOrdersHeaderProps {
   onMaterialTypeChange: (ids: number[]) => void;
   onSearchChange: (search: string) => void;
   onClearFilters: () => void;
+  // DesignTable props
+  designs: DesignItem[];
+  selectedIds: Set<number>;
+  canSelect: (design: DesignItem) => boolean;
+  onToggle: (design: DesignItem) => void;
+  isLoadingDesigns?: boolean;
 }
 
 export function PrepressOrdersHeader({
@@ -56,7 +63,16 @@ export function PrepressOrdersHeader({
   onMaterialTypeChange,
   onSearchChange,
   onClearFilters,
+  designs,
+  selectedIds,
+  canSelect,
+  onToggle,
+  isLoadingDesigns,
 }: PrepressOrdersHeaderProps) {
+  const hasActiveFilters =
+    selectedDesignTypes.length > 0 ||
+    selectedMaterialTypes.length > 0 ||
+    searchTerm.trim().length > 0;
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
   return (
@@ -175,6 +191,24 @@ export function PrepressOrdersHeader({
         onSearchChange={onSearchChange}
         onClearFilters={onClearFilters}
       />
+
+      {/* DesignTable - shown when filters are active */}
+      {hasActiveFilters && (
+        <div className="mt-4">
+          {isLoadingDesigns ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">Đang tải thiết kế...</div>
+          ) : designs.length > 0 ? (
+            <DesignTable
+              designs={designs}
+              selectedIds={selectedIds}
+              canSelect={canSelect}
+              onToggle={onToggle}
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-sm">Không tìm thấy thiết kế nào</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

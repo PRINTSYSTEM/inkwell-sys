@@ -1,7 +1,3 @@
-import { FilterSection } from "@/components/proofing/FilterSection";
-import { FilterNoticeBanner } from "@/components/proofing/FilterNoticeBanner";
-import { DesignCardSkeleton } from "@/components/proofing/DesignCardSkeleton";
-import { DesignTable } from "@/components/proofing/DesignTable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +13,6 @@ import {
 } from "@/components/ui/select";
 import {
   Plus,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   Calculator,
   AlertTriangle,
@@ -26,43 +20,15 @@ import {
   CheckCircle2,
   Package,
   Box,
-  IdCard,
 } from "lucide-react";
 
 interface DetailEmptyOrderViewProps {
-  designTypeOptions: any[];
-  availableDesignsData: any;
-  selectedDesignTypes: number[];
-  setSelectedDesignTypes: (ids: number[]) => void;
-  selectedMaterialTypes: number[];
-  setSelectedMaterialTypes: (ids: number[]) => void;
-  currentMaterialTypeId: number | null;
-  currentMaterialTypeName: string | null;
-  searchTerm: string;
-  onSearchChange: (val: string) => void;
-  handleClearFilters: () => void;
-  handleClearSelection: () => void;
-  isLoadingDesigns: boolean;
-  paginatedDesigns: any[];
-  groupByOrder: boolean;
-  groupedByOrder: any[] | null;
-  selectedIds: Set<number>;
-  canSelect: (design: any) => boolean;
-  toggleSelection: (design: any) => void;
-  totalCount: number;
-  currentPage: number;
-  itemsPerPage: number;
-  handlePreviousPage: () => void;
-  handleNextPage: () => void;
-  totalPages: number;
-  pageInput: string;
-  handlePageInputChange: (e: any) => void;
-  handlePageInputBlur: () => void;
   selectedDesigns: any[];
   selectedCount: number;
   materialTypeName: string | null;
   designQuantities: Record<number, number>;
   setDesignQuantities: (val: (prev: any) => any) => void;
+  toggleSelection: (design: any) => void;
   proofingSheetQuantity: number;
   setProofingSheetQuantity: (val: number) => void;
   paperSizeId: string;
@@ -77,43 +43,15 @@ interface DetailEmptyOrderViewProps {
   handleCreatePaperSize: () => void;
   handleSubmitDesigns: () => void;
   isAddingDesigns: boolean;
-  tableContainerRef: any;
 }
 
 export function DetailEmptyOrderView({
-  designTypeOptions,
-  availableDesignsData,
-  selectedDesignTypes,
-  setSelectedDesignTypes,
-  selectedMaterialTypes,
-  setSelectedMaterialTypes,
-  currentMaterialTypeId,
-  currentMaterialTypeName,
-  searchTerm,
-  onSearchChange,
-  handleClearFilters,
-  handleClearSelection,
-  isLoadingDesigns,
-  paginatedDesigns,
-  groupByOrder,
-  groupedByOrder,
-  selectedIds,
-  canSelect,
-  toggleSelection,
-  totalCount,
-  currentPage,
-  itemsPerPage,
-  handlePreviousPage,
-  handleNextPage,
-  totalPages,
-  pageInput,
-  handlePageInputChange,
-  handlePageInputBlur,
   selectedDesigns,
   selectedCount,
   materialTypeName,
   designQuantities,
   setDesignQuantities,
+  toggleSelection,
   proofingSheetQuantity,
   setProofingSheetQuantity,
   paperSizeId,
@@ -128,175 +66,15 @@ export function DetailEmptyOrderView({
   handleCreatePaperSize,
   handleSubmitDesigns,
   isAddingDesigns,
-  tableContainerRef,
 }: DetailEmptyOrderViewProps) {
   return (
     <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm relative">
       <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
         DetailEmptyOrderView.tsx
       </div>
-      {/* LEFT: DESIGN LIST + FILTERS */}
-      <div className="basis-3/5 min-w-0 border-r flex flex-col min-h-0 bg-card/30">
-        <div className="p-4 border-b">
-          <FilterSection
-            designTypeOptions={designTypeOptions}
-            materialTypeOptions={
-              availableDesignsData?.materialTypeOptions || []
-            }
-            selectedDesignTypes={selectedDesignTypes}
-            selectedMaterialTypes={selectedMaterialTypes}
-            currentMaterialTypeId={currentMaterialTypeId}
-            searchTerm={searchTerm}
-            onDesignTypeChange={setSelectedDesignTypes}
-            onMaterialTypeChange={setSelectedMaterialTypes}
-            onSearchChange={onSearchChange}
-            onClearFilters={handleClearFilters}
-          />
 
-          {currentMaterialTypeId && currentMaterialTypeName && (
-            <div className="mt-3">
-              <FilterNoticeBanner
-                materialTypeName={currentMaterialTypeName}
-                onClear={handleClearSelection}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div
-            ref={tableContainerRef}
-            className="flex-1 overflow-auto p-4"
-          >
-            {isLoadingDesigns ? (
-              <div className="flex flex-col gap-2 text-sm font-medium text-muted-foreground">
-                <span>Đang tải danh sách mã hàng...</span>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <DesignCardSkeleton key={i} />
-                  ))}
-                </div>
-              </div>
-            ) : paginatedDesigns.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-base font-semibold text-muted-foreground">
-                Không có mã hàng nào phù hợp.
-              </div>
-            ) : groupByOrder && groupedByOrder ? (
-              <div className="space-y-6">
-                {groupedByOrder.map((group) => (
-                  <div key={group.orderCode} className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-bold text-base">
-                          {group.orderCode}
-                        </p>
-                        {(group.customerName ||
-                          group.customerCompanyName) && (
-                          <p className="text-sm font-medium text-muted-foreground">
-                            {group.customerCompanyName ||
-                              group.customerName}
-                          </p>
-                        )}
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="ml-auto text-sm font-semibold"
-                      >
-                        {group.designs.length} mã hàng
-                      </Badge>
-                    </div>
-                    <DesignTable
-                      designs={group.designs}
-                      selectedIds={selectedIds}
-                      canSelect={canSelect}
-                      onToggle={toggleSelection}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <DesignTable
-                designs={paginatedDesigns}
-                selectedIds={selectedIds}
-                canSelect={canSelect}
-                onToggle={toggleSelection}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Pagination (left list) - Server-side pagination */}
-        {totalCount > 0 && (
-          <div className="shrink-0 border-t px-4 py-2 flex items-center justify-between gap-3 text-sm text-muted-foreground bg-background">
-            <div className="text-sm font-medium text-muted-foreground">
-              Hiển thị{" "}
-              <span className="font-bold text-foreground">
-                {totalCount > 0
-                  ? (currentPage - 1) * itemsPerPage + 1
-                  : 0}
-              </span>
-              {" - "}
-              <span className="font-bold text-foreground">
-                {Math.min(currentPage * itemsPerPage, totalCount)}
-              </span>{" "}
-              trong tổng số{" "}
-              <span className="font-bold text-foreground">
-                {totalCount}
-              </span>{" "}
-              mã hàng
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8"
-                onClick={handlePreviousPage}
-                disabled={currentPage === 1 || isLoadingDesigns}
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Trang trước</span>
-              </Button>
-              <div className="flex items-center space-x-1">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Trang
-                </span>
-                <Input
-                  type="number"
-                  min="1"
-                  max={totalPages}
-                  value={pageInput}
-                  onChange={handlePageInputChange}
-                  onBlur={handlePageInputBlur}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  className="w-14 h-8 text-center text-sm font-semibold"
-                  disabled={isLoadingDesigns}
-                />
-                <span className="text-sm font-medium text-muted-foreground">
-                  / {totalPages}
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8"
-                onClick={handleNextPage}
-                disabled={currentPage >= totalPages || isLoadingDesigns}
-              >
-                <span className="hidden sm:inline">Trang sau</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* RIGHT: INLINE PROOFING ORDER CONFIG */}
-      <div className="basis-2/5 min-w-0 flex flex-col min-h-0 bg-background">
+      {/* PROOFING ORDER CONFIG */}
+      <div className="flex-1 flex flex-col min-h-0 bg-background">
         {/* Right header */}
         <div className="shrink-0 border-b bg-card/50 px-4 py-3 flex items-center justify-between gap-2">
           <div>
@@ -513,6 +291,7 @@ export function DetailEmptyOrderView({
                               setCustomPaperSize(e.target.value)
                             }
                             className="h-10 text-sm border-primary/30 focus:border-primary shadow-sm"
+                            autoFocus
                           />
                           {!customPaperSize && (
                             <div className="absolute right-3 top-2.5 opacity-40 group-hover:opacity-100 transition-opacity">

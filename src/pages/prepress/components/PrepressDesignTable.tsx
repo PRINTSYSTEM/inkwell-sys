@@ -55,7 +55,7 @@ export function PrepressDesignTable({
       <div className="absolute top-0 right-0 bg-purple-600 text-white text-[9px] px-1.5 py-0.5 rounded-bl shadow-sm z-10 font-mono pointer-events-none opacity-80">
         PrepressDesignTable.tsx
       </div>
-       <div className="shrink-0 border-b p-4 flex items-center justify-between gap-3">
+      <div className="shrink-0 border-b p-4 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-foreground">
             Thiết kế chờ bình bài ({designs.length})
@@ -66,40 +66,42 @@ export function PrepressDesignTable({
         </div>
 
         <div className="flex items-center gap-2">
-            {/* Pagination Controls */}
-            <div className="flex items-center gap-2 mr-4 border-r pr-4">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => setDesignsPage((p) => Math.max(1, p - 1))}
-                    disabled={designsPage === 1 || isLoading}
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="text-xs font-medium">
-                    Trang {designsPage} / {designsTotalPages}
-                </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => setDesignsPage((p) => Math.min(designsTotalPages, p + 1))}
-                    disabled={designsPage === designsTotalPages || isLoading}
-                >
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
-            </div>
-
+          {/* Pagination Controls */}
+          <div className="flex items-center gap-2 mr-4 border-r pr-4">
             <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={onOpenInventoryView}
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setDesignsPage((p) => Math.max(1, p - 1))}
+              disabled={designsPage === 1 || isLoading}
             >
-                <span className="h-4 w-4">📦</span>
-                Xem kho hàng
+              <ChevronLeft className="h-4 w-4" />
             </Button>
+            <div className="text-xs font-medium">
+              Trang {designsPage} / {designsTotalPages}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() =>
+                setDesignsPage((p) => Math.min(designsTotalPages, p + 1))
+              }
+              disabled={designsPage === designsTotalPages || isLoading}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={onOpenInventoryView}
+          >
+            <span className="h-4 w-4">📦</span>
+            Xem kho hàng
+          </Button>
         </div>
       </div>
 
@@ -110,25 +112,41 @@ export function PrepressDesignTable({
               <Table className="min-w-[980px]">
                 <TableHeader className="bg-muted/20">
                   <TableRow>
-                    <TableHead className="text-sm font-bold">Đơn hàng</TableHead>
+                    <TableHead className="text-sm font-bold">
+                      Đơn hàng
+                    </TableHead>
                     <TableHead className="text-sm font-bold">Mã hàng</TableHead>
-                    <TableHead className="text-sm font-bold">Số lượng</TableHead>
-                    <TableHead className="text-sm font-bold">Quy cách</TableHead>
-                    <TableHead className="text-sm font-bold">Chất liệu</TableHead>
+                    <TableHead className="text-sm font-bold">
+                      Số lượng
+                    </TableHead>
+                    <TableHead className="text-sm font-bold">
+                      Quy cách
+                    </TableHead>
+                    <TableHead className="text-sm font-bold">
+                      Chất liệu
+                    </TableHead>
                     <TableHead className="text-sm font-bold">Loại</TableHead>
-                    <TableHead className="w-[120px] text-right text-sm font-bold">Thao tác</TableHead>
+                    <TableHead className="w-[120px] text-right text-sm font-bold">
+                      Thao tác
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                      <TableCell
+                        colSpan={7}
+                        className="h-32 text-center text-muted-foreground"
+                      >
                         Đang tải dữ liệu...
                       </TableCell>
                     </TableRow>
                   ) : designs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                      <TableCell
+                        colSpan={7}
+                        className="h-32 text-center text-muted-foreground"
+                      >
                         Không tìm thấy thiết kế nào.
                       </TableCell>
                     </TableRow>
@@ -146,10 +164,11 @@ export function PrepressDesignTable({
                                 className={cn(
                                   "cursor-pointer",
                                   isSelected && "bg-primary/5",
-                                  !selectable && !isSelected && "opacity-50"
+                                  !selectable && !isSelected && "opacity-50",
                                 )}
                                 onClick={() => {
-                                  if (selectable || isSelected) onToggleSelection(design);
+                                  if (selectable || isSelected)
+                                    onToggleSelection(design);
                                 }}
                               >
                                 <TableCell className="py-3">
@@ -163,21 +182,33 @@ export function PrepressDesignTable({
                                 <TableCell className="py-3">
                                   <span className="text-sm font-semibold">
                                     {design.availableQuantity != null
-                                      ? design.availableQuantity.toLocaleString("vi-VN")
+                                      ? design.availableQuantity.toLocaleString(
+                                          "vi-VN",
+                                        )
                                       : design.quantity.toLocaleString("vi-VN")}
                                   </span>
                                 </TableCell>
                                 <TableCell className="py-3">
                                   <span className="text-sm font-medium">
-                                    {formatDesignDimensions(design.length, design.width, design.height, 1, " × ")}{" "}
+                                    {formatDesignDimensions(
+                                      design.length,
+                                      design.width,
+                                      design.height,
+                                      1,
+                                      " × ",
+                                    )}{" "}
                                     {design.unit}
                                   </span>
                                 </TableCell>
                                 <TableCell className="py-3">
-                                  <span className="text-sm font-medium">{design.materialTypeName}</span>
+                                  <span className="text-sm font-medium">
+                                    {design.materialTypeName}
+                                  </span>
                                 </TableCell>
                                 <TableCell className="py-3">
-                                  <span className="text-sm font-medium">{design.designTypeName}</span>
+                                  <span className="text-sm font-medium">
+                                    {design.designTypeName}
+                                  </span>
                                 </TableCell>
                                 <TableCell className="py-2 text-right">
                                   <Button
@@ -194,7 +225,10 @@ export function PrepressDesignTable({
                                 </TableCell>
                               </TableRow>
                             </TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-xs whitespace-pre-line">
+                            <TooltipContent
+                              side="right"
+                              className="max-w-xs whitespace-pre-line"
+                            >
                               {tooltipContent}
                             </TooltipContent>
                           </Tooltip>

@@ -75,6 +75,8 @@ import {
   useProofingAvailableOrderDetailsDesignTypeSummary,
   useProofingOrders,
   useRejectDesignFromProofingOrder,
+  usePaperSizes,
+  useCreatePaperSize,
 } from "@/hooks/use-proofing-order";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
@@ -89,6 +91,7 @@ import { PrepressOrdersHeader } from "./components/PrepressOrdersHeader";
 import { PrepressOrdersTable } from "./components/PrepressOrdersTable";
 import { PrepressDesignTable } from "./components/PrepressDesignTable";
 import { PrepressOrderRow } from "./components/PrepressOrderRow";
+import { DetailEmptyOrderView } from "./detail-components/DetailEmptyOrderView";
 import { DieListDialog } from "@/components/dies/DieListDialog";
 import { InventoryViewDialog } from "@/components/inventory/InventoryViewDialog";
 
@@ -331,6 +334,129 @@ export default function PrepressList() {
   const [rejectTarget, setRejectTarget] = useState<DesignItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // ===== Config Panel State (inline DetailEmptyOrderView) =====
+  const [newOrderId, setNewOrderId] = useState<number | null>(null);
+  const [designQuantities, setDesignQuantities] = useState<Record<number, number>>({});
+  const [proofingSheetQuantity, setProofingSheetQuantity] = useState(0);
+  const [paperSizeId, setPaperSizeId] = useState("custom");
+  const [customPaperSize, setCustomPaperSize] = useState("");
+  const [configNotes, setConfigNotes] = useState("");
+  const { data: paperSizesData } = usePaperSizes();
+  const paperSizes = paperSizesData || [];
+  const { mutate: createPaperSizeMutate, loading: isCreatingPaperSize } = useCreatePaperSize();
+
+  const configSelectedCount = useMemo(() => {
+    return Object.values(designQuantities).filter((qty) => qty > 0).length;
+  }, [designQuantities]);
+
+  const configMaterialTypeName = useMemo(() => {
+    if (!currentMaterialTypeId || !materialTypeOptions.length) return null;
+    const found = materialTypeOptions.find((m: any) => m.id === currentMaterialTypeId);
+    return found?.name || null;
+  }, [currentMaterialTypeId, materialTypeOptions]);
+
+  const parsedCustomPaperSize = useMemo(() => {
+    if (!customPaperSize || paperSizeId !== "custom") return null;
+    const trimmed = customPaperSize.trim();
+    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    if (match) {
+      const width = parseInt(match[1], 10);
+      const height = parseInt(match[2], 10);
+      if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
+        return { width, height };
+      }
+    }
+    return null;
+  }, [customPaperSize, paperSizeId]);
+
+  const existingPaperSize = useMemo(() => {
+    if (!parsedCustomPaperSize || !paperSizes) return null;
+    return paperSizes.find(
+      (ps) => ps.width === parsedCustomPaperSize.width && ps.height === parsedCustomPaperSize.height
+    ) ?? null;
+  }, [parsedCustomPaperSize, paperSizes]);
+
+  const showCreateButton = useMemo(() => {
+    return paperSizeId === "custom" && !!parsedCustomPaperSize && !existingPaperSize && customPaperSize.trim().length > 0;
+  }, [paperSizeId, parsedCustomPaperSize, existingPaperSize, customPaperSize]);
+
+  const handleCreatePaperSize = async () => {
+    if (!parsedCustomPaperSize) {
+      toast.error("Lỗi", { description: "Vui lòng nhập khổ giấy hợp lệ (ví dụ: 31×43)" });
+      return;
+    }
+    if (existingPaperSize) {
+      setPaperSizeId(existingPaperSize.id.toString());
+      return;
+    }
+    try {
+      const newPaperSize = await createPaperSizeMutate({
+        name: `${parsedCustomPaperSize.width}×${parsedCustomPaperSize.height}`,
+        width: parsedCustomPaperSize.width,
+        height: parsedCustomPaperSize.height,
+        isCustom: true,
+      });
+      if (newPaperSize?.id) {
+        setPaperSizeId(newPaperSize.id.toString());
+        setCustomPaperSize("");
+        toast.success("Thành công", { description: "Đã tạo khổ giấy mới" });
+      }
+    } catch (error) {
+      console.error("Failed to create paper size:", error);
+      toast.error("Lỗi", { description: "Không thể tạo khổ giấy mới" });
+    }
+  };
+
+  const handleConfigSubmitDesigns = async () => {
+    if (!newOrderId) return;
+    try {
+      if (!currentMaterialTypeId || selectedDesigns.length === 0) {
+        toast.error("Lỗi", { description: "Vui lòng chọn mã hàng để thêm vào bình bài" });
+        return;
+      }
+      const items = Object.entries(designQuantities)
+        .filter(([_, qty]) => qty > 0)
+        .map(([id, qty]) => {
+          const design = selectedDesigns.find((d) => d.id === parseInt(id, 10));
+          if (!design) return null;
+          return { orderDetailId: design.id, quantity: Math.floor(qty) };
+        })
+        .filter((item): item is { orderDetailId: number; quantity: number } => item !== null);
+
+      if (items.length === 0) {
+        toast.error("Lỗi", { description: "Vui lòng nhập số lượng cho ít nhất một mã hàng" });
+        return;
+      }
+
+      await addDesignsMutate({
+        id: newOrderId,
+        request: { materialTypeId: currentMaterialTypeId, items },
+      });
+
+      toast.success("Thành công", { description: `Đã thêm ${items.length} mã hàng vào bình bài.` });
+      setNewOrderId(null);
+      setDesignQuantities({});
+      setProofingSheetQuantity(0);
+      setPaperSizeId("custom");
+      setCustomPaperSize("");
+      setConfigNotes("");
+      clearSelection();
+      navigate(`/proofing/${newOrderId}`);
+    } catch (e) {
+      console.error("Submit designs failed:", e);
+    }
+  };
+
+  const handleCancelCreateOrder = () => {
+    setNewOrderId(null);
+    setDesignQuantities({});
+    setProofingSheetQuantity(0);
+    setPaperSizeId("custom");
+    setCustomPaperSize("");
+    setConfigNotes("");
+    clearSelection();
+  };
+
   const handleClearFilters = () => {
     setSelectedDesignTypes([]);
     setSelectedMaterialTypes([]);
@@ -391,45 +517,62 @@ export default function PrepressList() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                className="gap-2"
-                disabled={isCreating}
-                onClick={async () => {
-                  try {
-                    const result = await createProofingOrder({} as any);
-                    if (result?.id) {
-                      navigate(`/proofing/${result.id}`);
-                    } else {
-                      toast.error("Không thể tạo lệnh");
+              {newOrderId ? (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="gap-2"
+                  onClick={handleCancelCreateOrder}
+                >
+                  <X className="h-4 w-4" />
+                  Hủy Tạo lệnh
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  disabled={isCreating}
+                  onClick={async () => {
+                    try {
+                      const result = await createProofingOrder({} as any);
+                      if (result?.id) {
+                        setNewOrderId(result.id);
+                        setDesignQuantities({});
+                        setProofingSheetQuantity(0);
+                        setPaperSizeId("custom");
+                        setCustomPaperSize("");
+                        setConfigNotes("");
+                      } else {
+                        toast.error("Không thể tạo lệnh");
+                      }
+                    } catch (e) {
+                      console.error(e);
                     }
-                  } catch (e) {
-                    console.error(e);
-                  }
-                }}
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Đang tạo...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4" />
-                    Tạo lệnh mới
-                  </>
-                )}
-              </Button>
+                  }}
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang tạo...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Tạo lệnh mới
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </header>
 
         {/* Main content */}
         <main className="min-h-0 flex-1 overflow-hidden">
-          <Card className="h-full overflow-hidden">
+          <div className={cn("h-full flex gap-4")}>
+          <Card className={cn("h-full overflow-hidden", newOrderId ? "flex-1 min-w-0" : "w-full")}>
             <CardContent className="h-full p-0">
-              {!hasActiveFilters ? (
-                <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+              <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
                   <header className="shrink-0 space-y-4">
                     <div className="flex items-center gap-3">
                       <Button
@@ -469,6 +612,11 @@ export default function PrepressList() {
                       onMaterialTypeChange={setSelectedMaterialTypes}
                       onSearchChange={setSearchTerm}
                       onClearFilters={handleClearFilters}
+                      designs={availableDesignsData?.designs || []}
+                      selectedIds={selectedIds}
+                      canSelect={canSelect}
+                      onToggle={toggleSelection}
+                      isLoadingDesigns={isLoadingDesigns}
                     />
 
                     {(selectedMaterialTypeId || designCode.trim()) && (
@@ -490,6 +638,8 @@ export default function PrepressList() {
                     )}
                   </header>
 
+                  {!hasActiveFilters && (
+                  <>
                   <PrepressOrdersTable
                     title="Mã bài chưa hoàn thành"
                     count={incompleteOrders.length}
@@ -583,135 +733,40 @@ export default function PrepressList() {
                       </div>
                     </div>
                   )}
+                  </>
+                  )}
                 </div>
-              ) : (
-                <div className="flex h-full flex-col">
-                  <PrepressDesignFilter
-                    hasActiveFilters={hasActiveFilters}
-                    designTypeOptions={designTypeOptions}
-                    materialTypeOptions={materialTypeOptions}
-                    selectedDesignTypes={selectedDesignTypes}
-                    selectedMaterialTypes={selectedMaterialTypes}
-                    currentMaterialTypeId={currentMaterialTypeId}
-                    searchTerm={searchTerm}
-                    onDesignTypeChange={setSelectedDesignTypes}
-                    onMaterialTypeChange={setSelectedMaterialTypes}
-                    onSearchChange={setSearchTerm}
-                    onClearFilters={handleClearFilters}
-                    onClearSelection={clearSelection}
-                  />
-
-                  <PrepressDesignTable
-                    designs={availableDesignsData?.designs || []}
-                    isLoading={isLoadingDesigns}
-                    selectedIds={selectedIds}
-                    onToggleSelection={toggleSelection}
-                    canSelect={canSelect}
-                    onReject={openRejectDialog}
-                    isRejecting={isRejecting}
-                    designsPage={designsPage}
-                    setDesignsPage={setDesignsPage}
-                    designsTotalPages={designsTotalPages}
-                    selectedDesignsCount={selectedDesigns.length}
-                    onOpenInventoryView={() => setIsInventoryViewDialogOpen(true)}
-                  />
-
-                  <div className="shrink-0 border-t p-4 flex items-center justify-between gap-3 bg-muted/20">
-                    <div className="flex items-center gap-2">
-                       <Button
-                        variant="default"
-                        size="sm"
-                        className="gap-2 font-semibold"
-                        disabled={
-                          selectedDesigns.length === 0 ||
-                          isCreating ||
-                          isAddingDesigns ||
-                          currentMaterialTypeId == null
-                        }
-                        onClick={async () => {
-                          try {
-                            if (selectedDesigns.length === 0) return;
-                            if (currentMaterialTypeId == null) {
-                              toast.error("Lỗi", {
-                                description:
-                                  "Vui lòng chọn ít nhất 1 thiết kế để xác định chất liệu.",
-                              });
-                              return;
-                            }
-
-                            // 1) Create empty proofing order
-                            const order = await createProofingOrder({} as any);
-                            if (!order?.id) {
-                              toast.error("Lỗi", {
-                                description: "Không thể tạo lệnh bình bài mới.",
-                              });
-                              return;
-                            }
-
-                            // 2) Add selected designs
-                            const items = selectedDesigns
-                              .map((d) => {
-                                const qtyBase =
-                                  d.availableQuantity != null
-                                    ? d.availableQuantity
-                                    : d.quantity;
-                                const qty = Math.max(
-                                  1,
-                                  Math.floor(qtyBase || 0)
-                                );
-                                return {
-                                  orderDetailId: d.id,
-                                  quantity: qty,
-                                };
-                              })
-                              .filter((x) => x.quantity > 0);
-
-                            if (items.length === 0) {
-                              toast.error("Lỗi", {
-                                description:
-                                  "Không tìm thấy thiết kế hợp lệ để thêm vào bình bài.",
-                              });
-                              return;
-                            }
-
-                            await addDesignsMutate({
-                              id: order.id,
-                              request: {
-                                materialTypeId: currentMaterialTypeId,
-                                items,
-                              },
-                            });
-
-                            toast.success("Thành công", {
-                                description: `Đã tạo lệnh bình bài ${order.orderCode} và thêm ${selectedDesigns.length} mã hàng.`,
-                            });
-
-                            clearSelection();
-                            navigate(`/proofing/${order.id}`);
-                          } catch (e) {
-                            console.error("Create proofing from designs failed:", e);
-                          }
-                        }}
-                      >
-                        {(isCreating || isAddingDesigns) && (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        )}
-                        Tạo bình bài ({selectedDesigns.length})
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={selectedDesigns.length === 0}
-                        onClick={clearSelection}
-                      >
-                        Bỏ chọn tất cả
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
+
+          {/* Right panel: config panel when creating new order */}
+          {newOrderId && (
+            <div className="basis-2/5 min-w-0 shrink-0">
+              <DetailEmptyOrderView
+                selectedDesigns={selectedDesigns}
+                selectedCount={configSelectedCount}
+                materialTypeName={configMaterialTypeName}
+                designQuantities={designQuantities}
+                setDesignQuantities={setDesignQuantities}
+                toggleSelection={toggleSelection}
+                proofingSheetQuantity={proofingSheetQuantity}
+                setProofingSheetQuantity={setProofingSheetQuantity}
+                paperSizeId={paperSizeId}
+                setPaperSizeId={setPaperSizeId}
+                customPaperSize={customPaperSize}
+                setCustomPaperSize={setCustomPaperSize}
+                notes={configNotes}
+                setNotes={setConfigNotes}
+                paperSizes={paperSizes}
+                showCreateButton={showCreateButton}
+                isCreatingPaperSize={isCreatingPaperSize}
+                handleCreatePaperSize={handleCreatePaperSize}
+                handleSubmitDesigns={handleConfigSubmitDesigns}
+                isAddingDesigns={isAddingDesigns}
+              />
+            </div>
+          )}
+          </div>
         </main>
 
         <DieListDialog

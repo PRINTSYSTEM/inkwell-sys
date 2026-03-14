@@ -49,17 +49,15 @@ export function DetailDieExportCard({
   if (!hasDieCutDesigns) return null;
 
   return (
-    <Card className="h-full border-2 border-primary/10 shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden mt-4 relative">
+    <Card className="border-2 border-primary/10 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden relative">
       <div className="absolute top-1 right-1 bg-teal-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
         DetailDieExportCard.tsx
       </div>
       <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
-      <CardHeader className="pb-4 px-6 relative">
+      <CardHeader className="pb-2 px-4 pt-4 relative">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold flex items-center gap-2.5 text-blue-600 dark:text-blue-400">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Settings2 className="h-5 w-5" />
-            </div>
+          <CardTitle className="text-sm font-bold flex items-center gap-2 text-muted-foreground">
+            <Settings2 className="h-4 w-4" />
             Khuôn bế
           </CardTitle>
           {isDieExported && (
@@ -88,25 +86,29 @@ export function DetailDieExportCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="px-6 pb-6 pt-2 h-[calc(100%-80px)] flex flex-col justify-between relative">
+      <CardContent className="px-4 pb-4 pt-1 flex flex-col relative">
         <div className="space-y-4">
           {!isDieExported ? (
-            <div className="flex flex-col items-center justify-center py-10 bg-muted/30 rounded-xl border border-dashed border-muted-foreground/20 group hover:border-blue-500/30 transition-colors">
-              <div className="p-4 bg-muted/50 rounded-full mb-4 group-hover:bg-blue-500/5 transition-colors">
-                <Settings2 className="h-10 w-10 text-muted-foreground/40 group-hover:text-blue-500/40 transition-colors" />
-              </div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Chưa có khuôn bế được gán cho bài này
-              </p>
-              {order.status !== "completed" && (
-                <div className="flex gap-2 mt-6">
-                  <Button
-                    className="gap-2 font-bold px-6 shadow-sm hover:shadow-md transition-all active:scale-95 bg-blue-600 hover:bg-blue-700"
-                    onClick={() => setIsDieExportDialogOpen(true)}
-                  >
-                    Ghi nhận khuôn bế
-                  </Button>
+            <div className="flex flex-col items-center py-2 space-y-4">
+              <div className="flex flex-col items-center gap-1 w-full">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.4)]" />
+                  <span className="font-bold text-[13px] text-muted-foreground uppercase tracking-tight">Xuất khuôn bế</span>
                 </div>
+                <p className="text-[11px] italic text-muted-foreground font-medium">
+                  Chưa ghi nhận thông tin khuôn bế
+                </p>
+              </div>
+              
+              {order.status !== "completed" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-4 text-xs font-bold border-muted-foreground/20 hover:bg-muted/50 text-muted-foreground transition-all rounded-full"
+                  onClick={() => setIsDieExportDialogOpen(true)}
+                >
+                  Ghi nhận
+                </Button>
               )}
             </div>
           ) : (
