@@ -23,6 +23,9 @@ export function DetailPlateExportCard({
   if (!order) return null;
 
   const plateExport = order.plateExport;
+  const plateExportsList = order.plateExports?.length > 0 
+    ? order.plateExports 
+    : (plateExport ? [plateExport] : []);
 
   return (
     <Card className="relative h-full flex flex-col">
@@ -34,7 +37,7 @@ export function DetailPlateExportCard({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
             <Package className="h-3.5 w-3.5" />
-            Xuất bản kẽm
+            Xuất bản kẽm {plateExportsList.length > 0 ? `(${plateExportsList.length})` : ""}
           </CardTitle>
         </div>
       </CardHeader>
@@ -64,45 +67,75 @@ export function DetailPlateExportCard({
               <span className="font-bold text-green-600 uppercase tracking-tight text-[10px]">Đã xuất kẽm</span>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">NCC</Label>
-                <p className="font-bold text-[12px] truncate">
-                  {plateExport?.vendorName || plateExport?.plateVendor?.name || "Tâm An"}
-                </p>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">Số lượng</Label>
-                <div className="flex items-center gap-1">
-                  <p className="font-bold text-[12px]">
-                    {plateExport?.plateCount || 0}
-                  </p>
-                  <span className="text-[10px] text-muted-foreground font-medium">bản</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">Ngày tạo</Label>
-                <p className="font-bold text-[11px]">
-                  {plateExport?.createdAt || plateExport?.exportedAt
-                    ? format(new Date(plateExport.createdAt || plateExport.exportedAt), "dd/MM/yyyy HH:mm")
-                    : "—"}
-                </p>
-              </div>
-            </div>
+            {/* Scrollable list of exports */}
+            <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-4 max-h-[400px]">
+              {plateExportsList.map((exportItem: any, index: number) => (
+                <div 
+                  key={exportItem.id || index}
+                  className="space-y-1 relative group text-[11px] leading-tight"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      {exportItem.isActive && (
+                        <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1 py-0.5 rounded uppercase tracking-tighter">
+                          Mới nhất
+                        </span>
+                      )}
+                    </div>
+                    {order.status !== "completed" && exportItem.isActive && (
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 text-primary hover:bg-primary/5"
+                          onClick={() => {
+                            setEditingPlateExport(exportItem);
+                            setIsPlateExportDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
 
-            {/* Ghi chú */}
-            <div className="p-2 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded text-xs mt-0.5">
-              <div className="flex items-start gap-1.5">
-                <Info className="h-3 w-3 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-blue-900 dark:text-blue-100 text-[10px] mb-0.5 uppercase tracking-wider">
-                    Ghi chú
-                  </p>
-                  <p className="text-foreground/80 leading-relaxed text-[12px] italic">
-                    {plateExport?.notes || "Không có ghi chú"}
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">NCC:</span>
+                    <span className="font-medium text-foreground">
+                      {exportItem?.vendorName || exportItem?.plateVendor?.name || "Tâm An"}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Số lượng:</span>
+                    <span className="font-medium text-foreground">
+                      {exportItem?.plateCount || 0} bản
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Ngày tạo:</span>
+                    <span className="font-medium text-foreground">
+                      {exportItem?.createdAt || exportItem?.exportedAt
+                        ? format(new Date(exportItem.createdAt || exportItem.exportedAt), "dd/MM/yyyy HH:mm")
+                        : "—"}
+                    </span>
+                  </div>
+
+                  {exportItem?.notes && (
+                    <div className="flex items-start gap-1">
+                      <span className="text-muted-foreground shrink-0 mt-[1px]">Ghi chú:</span>
+                      <span className="italic text-foreground/80 break-words">
+                        {exportItem.notes}
+                      </span>
+                    </div>
+                  )}
+
+                  {index < plateExportsList.length - 1 && (
+                    <div className="h-px bg-muted-foreground/10 my-2" />
+                  )}
                 </div>
-              </div>
+              ))}
             </div>
 
             {/* Centered Action Buttons at bottom */}
@@ -117,28 +150,12 @@ export function DetailPlateExportCard({
                   <History className="h-3 w-3" />
                   Xuất kẽm lại
                 </Button>
-                {order.status !== "completed" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
-                    onClick={() => {
-                      if (plateExport) {
-                        setEditingPlateExport(plateExport);
-                        setIsPlateExportDialogOpen(true);
-                      }
-                    }}
-                  >
-                    <Edit className="h-3 w-3" />
-                    Sửa thông tin
-                  </Button>
-                )}
               </div>
             )}
           </div>
         )}
 
-        {order.isPlateExported &&
+        {/* order.isPlateExported &&
           order.status === "completed" &&
           !order.isHandedToProduction && (
             <div className="pt-2 border-t mt-auto">
@@ -155,7 +172,7 @@ export function DetailPlateExportCard({
                 Chuyển xuống sản xuất
               </Button>
             </div>
-          )}
+          ) */}
 
         {order.isHandedToProduction && (
           <div className="pt-2 border-t mt-auto">
