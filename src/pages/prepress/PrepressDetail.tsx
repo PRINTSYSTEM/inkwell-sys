@@ -2022,10 +2022,6 @@ export default function ProofingOrderDetailPage() {
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden bg-background p-4">
-      {/* File Label for Debugging */}
-      <div className="absolute top-1 right-4 bg-rose-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-        PrepressDetail.tsx
-      </div>
 
       {/* Header */}
       <DetailHeader

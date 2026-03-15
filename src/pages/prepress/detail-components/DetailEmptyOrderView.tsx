@@ -69,9 +69,6 @@ export function DetailEmptyOrderView({
 }: DetailEmptyOrderViewProps) {
   return (
     <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm relative">
-      <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-amber-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-        DetailEmptyOrderView.tsx
-      </div>
 
       {/* PROOFING ORDER CONFIG */}
       <div className="flex-1 flex flex-col min-h-0 bg-background">

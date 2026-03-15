@@ -225,9 +225,6 @@ export function PlateExportDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-sky-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-          PlateExportDialog.tsx
-        </div>
         <DialogHeader>
           <DialogTitle>
             {plateExport ? "Sửa bản kẽm" : "Xuất bản kẽm"}

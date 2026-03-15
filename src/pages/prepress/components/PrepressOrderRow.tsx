@@ -172,9 +172,6 @@ export function PrepressOrderRow({
             )}
           </TableCell>
           <TableCell className="relative py-3 font-semibold">
-            <div className="absolute -top-1 left-0 bg-slate-500 text-white text-[8px] px-1 rounded shadow-sm opacity-50 font-mono pointer-events-none">
-              PrepressOrderRow.tsx
-            </div>
             {shouldShowExpand && orderCodeMatches
               ? highlightText(order.code || "", debouncedSearchTerm.trim())
               : order.code}

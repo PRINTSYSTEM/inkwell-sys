@@ -4,9 +4,6 @@ import { FileCheck, AlertTriangle, CheckCircle } from 'lucide-react';
 export default function PrepressCheck() {
   return (
     <div className="relative space-y-6 p-6">
-      <div className="absolute top-1 right-1 bg-teal-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-50 font-mono pointer-events-none opacity-80">
-        PrepressCheck.tsx
-      </div>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Kiểm tra file</h1>

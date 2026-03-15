@@ -86,9 +86,6 @@ export function DetailDesignsListCard({
 
   return (
     <Card className="relative">
-      <div className="absolute top-1 right-1 bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-        DetailDesignsListCard.tsx
-      </div>
       <CardHeader className="pb-3 px-6">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">

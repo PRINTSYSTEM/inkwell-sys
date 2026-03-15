@@ -51,9 +51,6 @@ export function DesignCard({
       )}
       onClick={handleClick}
     >
-      <div className="absolute top-1 right-1 bg-violet-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-        DesignCard.tsx
-      </div>
       {/* Checkbox */}
       <div className="absolute top-3 left-3 z-10">
         <Checkbox

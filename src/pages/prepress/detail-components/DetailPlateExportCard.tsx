@@ -29,9 +29,6 @@ export function DetailPlateExportCard({
 
   return (
     <Card className="relative h-full flex flex-col">
-      <div className="absolute top-1 right-1 bg-orange-600 text-white text-[11px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-        DetailPlateExportCard.tsx
-      </div>
 
       <CardHeader className="pb-1.5 px-4">
         <div className="flex items-center justify-between">

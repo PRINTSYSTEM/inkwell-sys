@@ -73,9 +73,6 @@ export function DetailOrderInfoCard({
 
   return (
     <Card className="relative h-full flex flex-col">
-      <div className="absolute top-1 right-1 bg-green-600 text-white text-[11px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-        DetailOrderInfoCard.tsx
-      </div>
       <CardHeader className="pb-1.5 px-4">
         <CardTitle className="text-sm flex items-center gap-2">
           <FileText className="h-3.5 w-3.5" />

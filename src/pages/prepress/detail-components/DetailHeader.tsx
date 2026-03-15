@@ -45,9 +45,6 @@ export function DetailHeader({
 
   return (
     <div className="flex items-center justify-between shrink-0 mb-4 relative">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-        DetailHeader.tsx
-      </div>
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"

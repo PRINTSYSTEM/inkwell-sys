@@ -42,9 +42,6 @@ export function DesignTable({
   return (
     <>
       <div className="rounded-md border relative">
-        <div className="absolute -top-2 right-1 bg-cyan-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-          DesignTable.tsx
-        </div>
         <Table>
           <TableHeader>
             <TableRow>

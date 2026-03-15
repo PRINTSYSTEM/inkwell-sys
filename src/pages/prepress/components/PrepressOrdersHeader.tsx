@@ -127,11 +127,8 @@ export function PrepressOrdersHeader({
 
   return (
     <div className="relative shrink-0">
-      <div className="absolute -top-4 right-0 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded-t shadow-sm z-10 font-mono pointer-events-none opacity-70">
-        PrepressOrdersHeader.tsx
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="relative w-full sm:w-72">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative flex-1 min-w-[280px] max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Tìm theo mã hàng..."

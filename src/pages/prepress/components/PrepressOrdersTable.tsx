@@ -38,9 +38,6 @@ export function PrepressOrdersTable({
 }: PrepressOrdersTableProps) {
   return (
     <div className="relative flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
-      <div className="absolute top-0 right-0 bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded-bl shadow-sm z-10 font-mono pointer-events-none opacity-80">
-        PrepressOrdersTable.tsx
-      </div>
       <div className="shrink-0 border-b bg-muted/30 px-4 py-2">
         <h3 className="text-sm font-semibold text-foreground">
           {title} ({count})

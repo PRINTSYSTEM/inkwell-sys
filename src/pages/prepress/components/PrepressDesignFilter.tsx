@@ -35,9 +35,6 @@ export function PrepressDesignFilter({
 }: PrepressDesignFilterProps) {
   return (
     <Card className="relative shrink-0">
-      <div className="absolute -top-2 -right-2 bg-amber-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-10 font-mono pointer-events-none">
-        PrepressDesignFilter.tsx
-      </div>
       <CardContent className="p-4">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">

@@ -283,9 +283,6 @@ export function CreateProofingOrderModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-rose-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-sm z-[100] font-mono pointer-events-none opacity-80">
-          CreateProofingOrderModal.tsx
-        </div>
         {/* Compact Header */}
         <DialogHeader className="px-5 py-3 border-b shrink-0">
           <div className="flex items-center justify-between">

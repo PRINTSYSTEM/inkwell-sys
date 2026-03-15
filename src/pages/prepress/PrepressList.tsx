@@ -82,7 +82,12 @@ import { useDesignTypeList } from "@/hooks/use-design-type";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
 
 import { ProofingOrderListParamsSchema } from "@/Schema/params.schema";
-import { laminationTypeLabels, processClassificationLabels, proofingStatusLabels, sidesClassificationLabels } from "@/lib/status-utils";
+import {
+  laminationTypeLabels,
+  processClassificationLabels,
+  proofingStatusLabels,
+  sidesClassificationLabels,
+} from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
 import { formatDesignDimensions } from "@/utils/format-die-size";
 
@@ -113,14 +118,13 @@ function useHasActiveProofingFilters(args: {
   );
 }
 
-
 export default function PrepressList() {
   const navigate = useNavigate();
 
   // ===== Mode: Orders list (default) vs Waiting designs (when filters active) =====
   const [selectedDesignTypes, setSelectedDesignTypes] = useState<number[]>([]);
   const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<number[]>(
-    []
+    [],
   );
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [debouncedSearch] = useDebounce(searchTerm, 300);
@@ -149,8 +153,10 @@ export default function PrepressList() {
   >(null);
   const [incompleteOrdersPage, setIncompleteOrdersPage] = useState(1);
   const [completedOrdersPage, setCompletedOrdersPage] = useState(1);
-  const [incompleteOrdersPageInput, setIncompleteOrdersPageInput] = useState<string>("");
-  const [completedOrdersPageInput, setCompletedOrdersPageInput] = useState<string>("");
+  const [incompleteOrdersPageInput, setIncompleteOrdersPageInput] =
+    useState<string>("");
+  const [completedOrdersPageInput, setCompletedOrdersPageInput] =
+    useState<string>("");
   const ordersTableRef = useRef<HTMLDivElement>(null);
 
   const itemsPerPage = 10;
@@ -179,15 +185,11 @@ export default function PrepressList() {
     return parsed.success ? parsed.data : {};
   }, [debouncedDesignCode, selectedMaterialTypeId, completedOrdersPage]);
 
-  const {
-    data: incompleteOrdersResp,
-    isLoading: loadingIncompleteOrders,
-  } = useProofingOrders(incompleteQueryParams);
+  const { data: incompleteOrdersResp, isLoading: loadingIncompleteOrders } =
+    useProofingOrders(incompleteQueryParams);
 
-  const {
-    data: completedOrdersResp,
-    isLoading: loadingCompletedOrders,
-  } = useProofingOrders(completedQueryParams);
+  const { data: completedOrdersResp, isLoading: loadingCompletedOrders } =
+    useProofingOrders(completedQueryParams);
 
   const incompleteOrders = useMemo<ProofingOrder[]>(() => {
     const items = incompleteOrdersResp?.items;
@@ -202,10 +204,12 @@ export default function PrepressList() {
   }, [completedOrdersResp?.items]);
 
   const incompleteTotalCount = incompleteOrdersResp?.total ?? 0;
-  const incompleteTotalPages = Math.ceil(incompleteTotalCount / itemsPerPage) || 1;
+  const incompleteTotalPages =
+    Math.ceil(incompleteTotalCount / itemsPerPage) || 1;
 
   const completedTotalCount = completedOrdersResp?.total ?? 0;
-  const completedTotalPages = Math.ceil(completedTotalCount / itemsPerPage) || 1;
+  const completedTotalPages =
+    Math.ceil(completedTotalCount / itemsPerPage) || 1;
 
   useEffect(() => {
     setIncompleteOrdersPageInput(incompleteOrdersPage.toString());
@@ -273,7 +277,7 @@ export default function PrepressList() {
             pageNumber: designsPage,
             pageSize: designsPageSize,
           }
-        : undefined
+        : undefined,
     );
 
   const [materialSelected, setMaterialSelected] = useState<number | null>(null);
@@ -360,7 +364,7 @@ export default function PrepressList() {
   const [isInventoryViewDialogOpen, setIsInventoryViewDialogOpen] =
     useState(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<number>>(
-    new Set()
+    new Set(),
   );
 
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
@@ -369,14 +373,17 @@ export default function PrepressList() {
 
   // ===== Config Panel State (inline DetailEmptyOrderView) =====
   const [newOrderId, setNewOrderId] = useState<number | null>(null);
-  const [designQuantities, setDesignQuantities] = useState<Record<number, number>>({});
+  const [designQuantities, setDesignQuantities] = useState<
+    Record<number, number>
+  >({});
   const [proofingSheetQuantity, setProofingSheetQuantity] = useState(0);
   const [paperSizeId, setPaperSizeId] = useState("custom");
   const [customPaperSize, setCustomPaperSize] = useState("");
   const [configNotes, setConfigNotes] = useState("");
   const { data: paperSizesData } = usePaperSizes();
   const paperSizes = paperSizesData || [];
-  const { mutate: createPaperSizeMutate, loading: isCreatingPaperSize } = useCreatePaperSize();
+  const { mutate: createPaperSizeMutate, loading: isCreatingPaperSize } =
+    useCreatePaperSize();
 
   const configSelectedCount = useMemo(() => {
     return Object.values(designQuantities).filter((qty) => qty > 0).length;
@@ -384,7 +391,9 @@ export default function PrepressList() {
 
   const configMaterialTypeName = useMemo(() => {
     if (!currentMaterialTypeId || !materialTypeOptions.length) return null;
-    const found = materialTypeOptions.find((m: any) => m.id === currentMaterialTypeId);
+    const found = materialTypeOptions.find(
+      (m: any) => m.id === currentMaterialTypeId,
+    );
     return found?.name || null;
   }, [currentMaterialTypeId, materialTypeOptions]);
 
@@ -404,18 +413,29 @@ export default function PrepressList() {
 
   const existingPaperSize = useMemo(() => {
     if (!parsedCustomPaperSize || !paperSizes) return null;
-    return paperSizes.find(
-      (ps) => ps.width === parsedCustomPaperSize.width && ps.height === parsedCustomPaperSize.height
-    ) ?? null;
+    return (
+      paperSizes.find(
+        (ps) =>
+          ps.width === parsedCustomPaperSize.width &&
+          ps.height === parsedCustomPaperSize.height,
+      ) ?? null
+    );
   }, [parsedCustomPaperSize, paperSizes]);
 
   const showCreateButton = useMemo(() => {
-    return paperSizeId === "custom" && !!parsedCustomPaperSize && !existingPaperSize && customPaperSize.trim().length > 0;
+    return (
+      paperSizeId === "custom" &&
+      !!parsedCustomPaperSize &&
+      !existingPaperSize &&
+      customPaperSize.trim().length > 0
+    );
   }, [paperSizeId, parsedCustomPaperSize, existingPaperSize, customPaperSize]);
 
   const handleCreatePaperSize = async () => {
     if (!parsedCustomPaperSize) {
-      toast.error("Lỗi", { description: "Vui lòng nhập khổ giấy hợp lệ (ví dụ: 31×43)" });
+      toast.error("Lỗi", {
+        description: "Vui lòng nhập khổ giấy hợp lệ (ví dụ: 31×43)",
+      });
       return;
     }
     if (existingPaperSize) {
@@ -444,7 +464,9 @@ export default function PrepressList() {
     if (!newOrderId) return;
     try {
       if (!currentMaterialTypeId || selectedDesigns.length === 0) {
-        toast.error("Lỗi", { description: "Vui lòng chọn mã hàng để thêm vào bình bài" });
+        toast.error("Lỗi", {
+          description: "Vui lòng chọn mã hàng để thêm vào bình bài",
+        });
         return;
       }
       const items = Object.entries(designQuantities)
@@ -454,10 +476,15 @@ export default function PrepressList() {
           if (!design) return null;
           return { orderDetailId: design.id, quantity: Math.floor(qty) };
         })
-        .filter((item): item is { orderDetailId: number; quantity: number } => item !== null);
+        .filter(
+          (item): item is { orderDetailId: number; quantity: number } =>
+            item !== null,
+        );
 
       if (items.length === 0) {
-        toast.error("Lỗi", { description: "Vui lòng nhập số lượng cho ít nhất một mã hàng" });
+        toast.error("Lỗi", {
+          description: "Vui lòng nhập số lượng cho ít nhất một mã hàng",
+        });
         return;
       }
 
@@ -466,7 +493,9 @@ export default function PrepressList() {
         request: { materialTypeId: currentMaterialTypeId, items },
       });
 
-      toast.success("Thành công", { description: `Đã thêm ${items.length} mã hàng vào bình bài.` });
+      toast.success("Thành công", {
+        description: `Đã thêm ${items.length} mã hàng vào bình bài.`,
+      });
       setNewOrderId(null);
       setDesignQuantities({});
       setProofingSheetQuantity(0);
@@ -512,10 +541,13 @@ export default function PrepressList() {
 
   // Auto-expand all orders when search is active
   useEffect(() => {
-    if (shouldShowExpand && (incompleteOrders.length > 0 || completedOrders.length > 0)) {
+    if (
+      shouldShowExpand &&
+      (incompleteOrders.length > 0 || completedOrders.length > 0)
+    ) {
       const allOrderIds = new Set([
         ...incompleteOrders.map((o) => o.id),
-        ...completedOrders.map((o) => o.id)
+        ...completedOrders.map((o) => o.id),
       ]);
       setExpandedOrderIds(allOrderIds);
     } else {
@@ -537,11 +569,7 @@ export default function PrepressList() {
 
   return (
     <div className="relative h-[calc(100vh-var(--header-height))] w-full overflow-hidden bg-background">
-      {/* File Label for Debugging */}
-      <div className="absolute top-1 right-1 bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow-md z-[100] font-mono pointer-events-none opacity-80">
-        PrepressList.tsx
-      </div>
-      <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-4 px-4 py-4 lg:px-6 lg:py-6">
+      <div className="mx-auto flex h-full w-full max-w-none flex-col gap-6 p-6">
         {/* Header */}
         <header className="shrink-0">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -606,9 +634,14 @@ export default function PrepressList() {
         {/* Main content */}
         <main className="min-h-0 flex-1 overflow-hidden">
           <div className={cn("h-full flex gap-4")}>
-          <Card className={cn("h-full overflow-hidden", newOrderId ? "flex-1 min-w-0" : "w-full")}>
-            <CardContent className="h-full p-0">
-              <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+            <Card
+              className={cn(
+                "h-full overflow-hidden",
+                newOrderId ? "flex-1 min-w-0" : "w-full",
+              )}
+            >
+              <CardContent className="h-full p-0">
+                <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
                   <header className="shrink-0 space-y-4">
                     <div className="flex items-center gap-3">
                       <Button
@@ -636,7 +669,9 @@ export default function PrepressList() {
                       setDesignCode={setDesignCode}
                       selectedMaterialTypeId={selectedMaterialTypeId}
                       setSelectedMaterialTypeId={setSelectedMaterialTypeId}
-                      materialTypeOptionsForOrders={materialTypeOptionsForOrders}
+                      materialTypeOptionsForOrders={
+                        materialTypeOptionsForOrders
+                      }
                       designTypeOptions={designTypeOptions}
                       materialTypeOptions={materialTypeOptions}
                       selectedDesignTypes={selectedDesignTypes}
@@ -665,11 +700,17 @@ export default function PrepressList() {
                       incompleteTotalPages={incompleteTotalPages}
                       completedTotalPages={completedTotalPages}
                       incompleteOrdersPageInput={incompleteOrdersPageInput}
-                      setIncompleteOrdersPageInput={setIncompleteOrdersPageInput}
-                      handleIncompletePageInputBlur={handleIncompletePageInputBlur}
+                      setIncompleteOrdersPageInput={
+                        setIncompleteOrdersPageInput
+                      }
+                      handleIncompletePageInputBlur={
+                        handleIncompletePageInputBlur
+                      }
                       completedOrdersPageInput={completedOrdersPageInput}
                       setCompletedOrdersPageInput={setCompletedOrdersPageInput}
-                      handleCompletedPageInputBlur={handleCompletedPageInputBlur}
+                      handleCompletedPageInputBlur={
+                        handleCompletedPageInputBlur
+                      }
                       incompleteTotalCount={incompleteTotalCount}
                       completedTotalCount={completedTotalCount}
                       itemsPerPage={itemsPerPage}

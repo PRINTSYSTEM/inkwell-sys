@@ -52,9 +52,6 @@ export function PrepressDesignTable({
 }: PrepressDesignTableProps) {
   return (
     <div className="relative flex-1 overflow-hidden flex flex-col">
-      <div className="absolute top-0 right-0 bg-purple-600 text-white text-[9px] px-1.5 py-0.5 rounded-bl shadow-sm z-10 font-mono pointer-events-none opacity-80">
-        PrepressDesignTable.tsx
-      </div>
       <div className="shrink-0 border-b p-4 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-foreground">
