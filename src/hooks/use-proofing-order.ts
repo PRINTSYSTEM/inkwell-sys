@@ -1069,3 +1069,29 @@ export const useRejectDesignFromProofingOrder = () => {
     },
   });
 };
+
+// ================== CANCEL PROOFING ORDER ==================
+// PUT /proofing-orders/{id}/cancel
+export const useCancelProofingOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
+      const response = await apiRequest.put<ProofingOrderResponse>(
+        API_SUFFIX.PROOFING_CANCEL(id),
+        { reason }
+      );
+      return response.data;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
+      toast.success("Hủy hình bài thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Hủy hình bài thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};

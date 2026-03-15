@@ -67,7 +67,7 @@ export function FilterSection({
     : selectedMaterialTypes;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
       {/* Filter Controls */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Design Type Button Group */}

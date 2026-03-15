@@ -41,7 +41,7 @@ export function DesignTable({
 
   return (
     <>
-      <div className="rounded-md border">
+      <div className="rounded-md border relative">
         <Table>
           <TableHeader>
             <TableRow>
@@ -64,108 +64,86 @@ export function DesignTable({
 
               // Build full info for tooltip
               const fullInfo = (
-                <div className="space-y-2 text-sm max-w-md">
-                  <div className="font-semibold text-base border-b pb-2">
-                    {design.name}
+                <div className="w-[350px] space-y-4 p-1 text-sm">
+                  <div className="w-full">
+                    {design.thumbnailUrl ? (
+                      <img
+                        src={design.thumbnailUrl}
+                        alt={design.name}
+                        className="w-full aspect-video object-cover rounded-lg border shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-full aspect-video bg-muted rounded-lg border flex items-center justify-center">
+                        <FileText className="h-10 w-10 text-muted-foreground opacity-40" />
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                    <div>
-                      <span className="text-muted-foreground">Mã hàng:</span>
-                      <span className="ml-2 font-mono">{design.code}</span>
+                  <div className="space-y-3">
+                    <div className="border-b pb-2">
+                      <h4 className="font-bold text-base text-foreground leading-tight">
+                        {design.name}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">
+                          Mã hàng: <span className="font-mono font-bold text-foreground">{design.code}</span>
+                        </span>
+                      </div>
                     </div>
 
-                    <div>
-                      <span className="text-muted-foreground">Đơn hàng:</span>
-                      <span className="ml-2 font-semibold">
-                        {design.orderCode || design.orderId}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="text-muted-foreground">Loại:</span>
-                      <span className="ml-2">{design.designTypeName}</span>
-                    </div>
-
-                    <div>
-                      <span className="text-muted-foreground">Chất liệu:</span>
-                      <span className="ml-2">{design.materialTypeName}</span>
-                    </div>
-
-                    <div>
-                      <span className="text-muted-foreground">Kích thước:</span>
-                      <span className="ml-2">
-                        {design.length} × {design.height}
-                        {design.width ? ` × ${design.width}` : ""} mm
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="text-muted-foreground">SL đặt:</span>
-                      <span className="ml-2 font-semibold">
-                        {design.quantity.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="text-muted-foreground">
-                        SL có thể bình bài:
-                      </span>
-                      <span
-                        className={`ml-2 font-semibold ${
-                          design.availableQuantity &&
-                          design.availableQuantity > 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {design.availableQuantity?.toLocaleString() || "—"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">
-                        Nhân viên thiết kế:
-                      </span>
-                      <span className="ml-2">{design.designerName}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">
-                        Nhân viên kế toán:
-                      </span>
-                      <span className="ml-2">{design.accountantName}</span>
-                    </div>
-                  </div>
-
-                  {(design.processClassificationOptionName ||
-                    design.sidesClassification ||
-                    design.laminationType) && (
-                    <div className="pt-2 border-t space-y-1">
-                      {design.processClassificationOptionName && (
-                        <div>
-                          <span className="text-muted-foreground">
-                            Quy cách:
-                          </span>
-                          <span className="ml-2">
-                            {processClassificationLabels[
-                              design.processClassificationOptionName
-                            ] || design.processClassificationOptionName}
-                          </span>
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                          Thông tin đơn hàng
+                        </p>
+                        <div className="bg-muted/30 rounded-md p-2.5 space-y-2 border">
+                          <div className="flex justify-between text-xs items-center">
+                            <span className="text-muted-foreground">Đơn hàng:</span>
+                            <span className="font-semibold text-primary">{design.orderCode || design.orderId}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Chất liệu:</span>
+                            <span className="font-medium">{design.materialTypeName}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Kích thước:</span>
+                            <span className="font-medium">
+                              {design.length} × {design.height}
+                              {design.width ? ` × ${design.width}` : ""} mm
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs pt-1 border-t">
+                            <span className="text-muted-foreground">SL có thể bình:</span>
+                            <span className={cn("font-bold", design.availableQuantity && design.availableQuantity > 0 ? "text-green-600" : "text-red-600")}>
+                                {design.availableQuantity?.toLocaleString() || "0"} / {design.quantity.toLocaleString()}
+                            </span>
+                          </div>
                         </div>
-                      )}
+                      </div>
 
-                      {design.laminationType && (
-                        <div>
-                          <span className="text-muted-foreground">
-                            Cán màng:
-                          </span>
-                          <span className="ml-2">
-                            {laminationTypeLabels[design.laminationType] ||
-                              design.laminationType}
-                          </span>
+                      {(design.processClassificationOptionName || design.laminationType) && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                            Quy cách sản xuất
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {design.processClassificationOptionName && (
+                              <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-800 border-amber-200">
+                                {processClassificationLabels[design.processClassificationOptionName] || design.processClassificationOptionName}
+                              </Badge>
+                            )}
+                            {design.laminationType && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                {laminationTypeLabels[design.laminationType] || design.laminationType}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
                 </div>
               );
 
@@ -173,8 +151,8 @@ export function DesignTable({
                 <CursorTooltip
                   key={design.id}
                   content={fullInfo}
-                  delayDuration={300}
-                  className="p-4 max-w-md"
+                  delayDuration={1000}
+                  className="p-3 bg-popover/95 backdrop-blur-sm border-shadow shadow-xl ring-1 ring-black/5"
                 >
                   <TableRow
                     className={cn(

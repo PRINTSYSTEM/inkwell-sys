@@ -562,6 +562,7 @@ export function CreateProofingOrderModal({
                           placeholder="Ví dụ: 31×43, 65×86..."
                           value={customPaperSize}
                           onChange={(e) => setCustomPaperSize(e.target.value)}
+                          autoFocus
                         />
                       </div>
                     ) : (

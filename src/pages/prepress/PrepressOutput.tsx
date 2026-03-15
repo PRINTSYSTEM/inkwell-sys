@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 
 export default function PrepressOutput() {
   return (
-    <div className="space-y-6 p-6">
+    <div className="relative space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Xuất bản in</h1>

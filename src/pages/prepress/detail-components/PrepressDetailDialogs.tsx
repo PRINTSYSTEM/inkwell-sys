@@ -1,0 +1,1182 @@
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import {
+  FileText,
+  Trash2,
+  AlertCircle,
+  Upload,
+  Edit,
+  Plus,
+  Search,
+  CheckCircle2,
+  Package,
+  Loader2,
+  Eye,
+  Check,
+  Copy,
+  Building2,
+} from "lucide-react";
+import { PlateExportDialog } from "@/components/proofing/PlateExportDialog";
+import { DieExportDialog } from "@/components/proofing/DieExportDialog";
+import { AddDesignToProofingDialog } from "@/components/proofing/AddDesignToProofingDialog";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { DieListDialog } from "@/components/dies/DieListDialog";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { proofingStatusLabels, dieStatusLabels, dieLocationLabels } from "@/lib/status-utils";
+import { cn } from "@/lib/utils";
+import { formatDieSize } from "@/utils/format-die-size";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { useRelatedDies } from "@/hooks/use-die";
+
+interface PrepressDetailDialogsProps {
+  order: any;
+  // Upload files
+  isUploadDialogOpen: boolean;
+  setIsUploadDialogOpen: (val: boolean) => void;
+  handleUploadFiles: (files: File[]) => void;
+  uploadFiles: File[];
+  setUploadFiles: (val: any) => void;
+  // Upload image
+  isImageUploadDialogOpen: boolean;
+  setIsImageUploadDialogOpen: (val: boolean) => void;
+  uploadImage: File | null;
+  setUploadImage: (val: File | null) => void;
+  handleUploadImage: () => void;
+  isUploadingImage: boolean;
+  // Image viewer
+  viewingImageUrl: string | null;
+  setViewingImageUrl: (val: string | null) => void;
+  imageViewerOpen: boolean;
+  setImageViewerOpen: (val: boolean) => void;
+  // Plate export
+  isPlateExportDialogOpen: boolean;
+  setIsPlateExportDialogOpen: (val: boolean) => void;
+  editingPlateExport: any;
+  setEditingPlateExport: (val: any) => void;
+  handlePlateExportSuccess: () => void;
+  // Die export
+  isDieExportDialogOpen: boolean;
+  setIsDieExportDialogOpen: (val: boolean) => void;
+  handleDieExportSuccess: () => void;
+  // Status change
+  isConfirmStatusChangeDialogOpen: boolean;
+  setIsConfirmStatusChangeDialogOpen: (val: boolean) => void;
+  nextStatusInfo: any;
+  pendingStatus: string | null;
+  setPendingStatus: (val: string | null) => void;
+  handleConfirmStatusChange: () => void;
+  // Hand to production
+  isHandToProductionDialogOpen: boolean;
+  setIsHandToProductionDialogOpen: (val: boolean) => void;
+  isHandingToProduction: boolean;
+  handleConfirmHandToProduction: () => void;
+  // Conditions
+  hasDieCutDesigns: boolean;
+  isDieExported: boolean;
+  // Add design
+  isAddDesignDialogOpen: boolean;
+  setIsAddDesignDialogOpen: (val: boolean) => void;
+  availableDesignsForAdding: any[];
+  currentDesignForAdding: any;
+  addDesignsMutate: any;
+  isAddingDesigns: boolean;
+  // Replace die
+  isReplaceDieDialogOpen: boolean;
+  setIsReplaceDieDialogOpen: (val: boolean) => void;
+  replacingDieExport: any;
+  setReplacingDieExport: (val: any) => void;
+  selectedNewDieId: number | null;
+  setSelectedNewDieId: (val: number | null) => void;
+  replaceDieNotes: string;
+  setReplaceDieNotes: (val: string) => void;
+  dieSearchTerm: string;
+  setDieSearchTerm: (val: string) => void;
+  isLoadingDies: boolean;
+  availableDies: any[];
+  handleReplaceDie: () => void;
+  isReplacingDie: boolean;
+  // Add die
+  isAddDieDialogOpen: boolean;
+  setIsAddDieDialogOpen: (val: boolean) => void;
+  selectedDieIdForAdd: number | null;
+  setSelectedDieIdForAdd: (val: number | null) => void;
+  addDieNotes: string;
+  setAddDieNotes: (val: string) => void;
+  addDieSearchTerm: string;
+  setAddDieSearchTerm: (val: string) => void;
+  isLoadingAddDies: boolean;
+  availableDiesForAdd: any[];
+  handleAddDie: () => void;
+  isAssigningDie: boolean;
+  // Die list
+  isDieListDialogOpen: boolean;
+  setIsDieListDialogOpen: (val: boolean) => void;
+  // Related dies
+  isRelatedDiesDialogOpen: boolean;
+  setIsRelatedDiesDialogOpen: (val: boolean) => void;
+  selectedDesignForRelatedDies: any;
+  setSelectedDesignForRelatedDies: (val: any) => void;
+  // Remove design
+  isConfirmRemoveDesignDialogOpen: boolean;
+  setIsConfirmRemoveDesignDialogOpen: (val: boolean) => void;
+  removeDesignTarget: any;
+  handleConfirmRemoveDesign: () => void;
+  isRemovingDesign: boolean;
+  // Cancellation
+  isConfirmCancelDialogOpen: boolean;
+  setIsConfirmCancelDialogOpen: (val: boolean) => void;
+  cancelReason: string;
+  setCancelReason: (val: string) => void;
+  handleConfirmCancel: () => void;
+  isCanceling: boolean;
+}
+
+export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
+  const {
+    order,
+    isUploadDialogOpen,
+    setIsUploadDialogOpen,
+    handleUploadFiles,
+    uploadFiles,
+    setUploadFiles,
+    isImageUploadDialogOpen,
+    setIsImageUploadDialogOpen,
+    uploadImage,
+    setUploadImage,
+    handleUploadImage,
+    isUploadingImage,
+    viewingImageUrl,
+    setViewingImageUrl,
+    imageViewerOpen,
+    setImageViewerOpen,
+    isPlateExportDialogOpen,
+    setIsPlateExportDialogOpen,
+    editingPlateExport,
+    setEditingPlateExport,
+    handlePlateExportSuccess,
+    isDieExportDialogOpen,
+    setIsDieExportDialogOpen,
+    handleDieExportSuccess,
+    isConfirmStatusChangeDialogOpen,
+    setIsConfirmStatusChangeDialogOpen,
+    nextStatusInfo,
+    pendingStatus,
+    setPendingStatus,
+    handleConfirmStatusChange,
+    isHandToProductionDialogOpen,
+    setIsHandToProductionDialogOpen,
+    isHandingToProduction,
+    handleConfirmHandToProduction,
+    hasDieCutDesigns,
+    isDieExported,
+    isAddDesignDialogOpen,
+    setIsAddDesignDialogOpen,
+    availableDesignsForAdding,
+    currentDesignForAdding,
+    addDesignsMutate,
+    isAddingDesigns,
+    isReplaceDieDialogOpen,
+    setIsReplaceDieDialogOpen,
+    replacingDieExport,
+    setReplacingDieExport,
+    selectedNewDieId,
+    setSelectedNewDieId,
+    replaceDieNotes,
+    setReplaceDieNotes,
+    dieSearchTerm,
+    setDieSearchTerm,
+    isLoadingDies,
+    availableDies,
+    handleReplaceDie,
+    isReplacingDie,
+    isAddDieDialogOpen,
+    setIsAddDieDialogOpen,
+    selectedDieIdForAdd,
+    setSelectedDieIdForAdd,
+    addDieNotes,
+    setAddDieNotes,
+    addDieSearchTerm,
+    setAddDieSearchTerm,
+    isLoadingAddDies,
+    availableDiesForAdd,
+    handleAddDie,
+    isAssigningDie,
+    isDieListDialogOpen,
+    setIsDieListDialogOpen,
+    isRelatedDiesDialogOpen,
+    setIsRelatedDiesDialogOpen,
+    selectedDesignForRelatedDies,
+    setSelectedDesignForRelatedDies,
+    isConfirmRemoveDesignDialogOpen,
+    setIsConfirmRemoveDesignDialogOpen,
+    removeDesignTarget,
+    handleConfirmRemoveDesign,
+    isRemovingDesign,
+    isConfirmCancelDialogOpen,
+    setIsConfirmCancelDialogOpen,
+    cancelReason,
+    setCancelReason,
+    handleConfirmCancel,
+    isCanceling,
+  } = props;
+
+  // Helper functions for file classification
+  const isImageFile = (file: File): boolean => {
+    return file.type.startsWith("image/");
+  };
+
+  const isProofingFile = (file: File): boolean => {
+    const fileName = file.name.toLowerCase();
+    return (
+      fileName.endsWith(".pdf") ||
+      fileName.endsWith(".ai") ||
+      fileName.endsWith(".psd") ||
+      file.type === "application/pdf" ||
+      file.type === "application/postscript"
+    );
+  };
+
+  if (!order) return null;
+
+  return (
+    <>
+      {/* Upload Files Dialog */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent className="max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle>Tải lên file bình bài</DialogTitle>
+            <DialogDescription>
+              Chọn file thiết kế (PDF, AI, PSD) và ảnh preview (JPG, PNG) cho bài
+              bình này.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
+            <div className="space-y-2 shrink-0">
+              <Label>Chọn files</Label>
+              <Input
+                type="file"
+                multiple
+                accept=".pdf,.ai,.psd,image/*"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  setUploadFiles((prev: File[]) => [...prev, ...files]);
+                }}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Tải lên ít nhất 1 file bình bài (*.pdf, *.ai, *.psd) và 1 ảnh
+                xem trước.
+              </p>
+            </div>
+
+            {/* Hiển thị danh sách file đã chọn */}
+            {uploadFiles.length > 0 && (
+              <div className="space-y-2 flex-1 min-h-0 flex flex-col">
+                <Label className="text-sm font-medium flex-shrink-0">
+                  Files đã chọn:
+                </Label>
+                <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-2">
+                  {uploadFiles.map((file, index) => {
+                    const isImage = isImageFile(file);
+                    const isProofing = isProofingFile(file);
+                    const fileType = isProofing
+                      ? "File bình bài"
+                      : isImage
+                        ? "Ảnh"
+                        : "File khác";
+
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 min-w-0"
+                      >
+                        {isImage ? (
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt="Preview"
+                            className="w-16 h-16 object-cover rounded border shrink-0"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded border bg-background flex items-center justify-center shrink-0">
+                            <FileText className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {fileType} • {(file.size / 1024).toFixed(2)} KB
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => {
+                            setUploadFiles((prev: File[]) => {
+                              const newFiles = prev.filter(
+                                (_, i) => i !== index
+                              );
+                              // Cleanup object URL if it's an image
+                              if (isImageFile(prev[index])) {
+                                const url = URL.createObjectURL(prev[index]);
+                                URL.revokeObjectURL(url);
+                              }
+                              return newFiles;
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(!uploadFiles.find((f) => isProofingFile(f)) ||
+                  !uploadFiles.find((f) => isImageFile(f))) && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1 flex-shrink-0 mt-2">
+                    <AlertCircle className="h-3 w-3" />
+                    Cần có ít nhất 1 file bình bài và 1 file ảnh
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsUploadDialogOpen(false);
+                setUploadFiles([]);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={() => handleUploadFiles(uploadFiles)}
+              disabled={
+                !uploadFiles.find((f) => isProofingFile(f)) ||
+                !uploadFiles.find((f) => isImageFile(f))
+              }
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Tải file lên
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Upload Dialog */}
+      <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload ảnh bình bài</DialogTitle>
+            <DialogDescription>
+              Tải lên ảnh preview của bản bình bài (JPG, PNG,...)
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Chọn ảnh</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setUploadImage(e.target.files?.[0] || null)}
+              />
+              {uploadImage && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Đã chọn: {uploadImage.name} (
+                    {(uploadImage.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                  <div className="aspect-video relative rounded-lg overflow-hidden border">
+                    <img
+                      src={URL.createObjectURL(uploadImage)}
+                      alt="Preview"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button onClick={handleUploadImage} disabled={!uploadImage || isUploadingImage}>
+              <Upload className="h-4 w-4 mr-2" />
+              {isUploadingImage ? "Đang upload..." : "Upload"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Remove Design Dialog */}
+      <Dialog
+        open={isConfirmRemoveDesignDialogOpen}
+        onOpenChange={setIsConfirmRemoveDesignDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Xác nhận xóa mã hàng
+            </DialogTitle>
+            <DialogDescription>
+              Hành động này sẽ xóa mã hàng khỏi bài bình hiện tại. Bạn có chắc
+              chắn muốn tiếp tục?
+            </DialogDescription>
+          </DialogHeader>
+
+          {removeDesignTarget && (
+            <div className="p-4 bg-muted/50 rounded-lg border space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Mã hàng:</span>
+                <span className="text-sm font-bold">
+                  {removeDesignTarget.designCode}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Tên hàng:
+                </span>
+                <span className="text-sm font-medium">
+                  {removeDesignTarget.designName}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmRemoveDesignDialogOpen(false)}
+              disabled={isRemovingDesign}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmRemoveDesign}
+              disabled={isRemovingDesign}
+            >
+              {isRemovingDesign ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xóa...
+                </>
+              ) : (
+                "Xác nhận xóa"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Viewer Dialog */}
+      {viewingImageUrl && (
+        <ImageViewerDialog
+          imageUrl={viewingImageUrl}
+          open={imageViewerOpen}
+          onOpenChange={(open) => {
+            setImageViewerOpen(open);
+            if (!open) setViewingImageUrl(null);
+          }}
+        />
+      )}
+
+      {/* Plate Export Dialog */}
+      <PlateExportDialog
+        open={isPlateExportDialogOpen}
+        onOpenChange={(open) => {
+          setIsPlateExportDialogOpen(open);
+          if (!open) setEditingPlateExport(null);
+        }}
+        proofingOrderId={order.id}
+        plateExport={editingPlateExport}
+        onSuccess={handlePlateExportSuccess}
+      />
+
+      {/* Die Export Dialog */}
+      <DieExportDialog
+        open={isDieExportDialogOpen}
+        onOpenChange={setIsDieExportDialogOpen}
+        proofingOrderId={order.id}
+        proofingOrder={order}
+        onSuccess={handleDieExportSuccess}
+      />
+
+      {/* Confirm Status Change Dialog */}
+      <Dialog open={isConfirmStatusChangeDialogOpen} onOpenChange={setIsConfirmStatusChangeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận thay đổi trạng thái</DialogTitle>
+            <DialogDescription>
+              {nextStatusInfo?.confirmMessage || "Bạn có chắc chắn muốn thay đổi trạng thái?"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Trạng thái hiện tại</Label>
+              <StatusBadge
+                status={order?.status || ""}
+                label={proofingStatusLabels[order?.status || ""] || order?.status || "—"}
+              />
+            </div>
+            {pendingStatus && (
+              <div className="space-y-2">
+                <Label>Trạng thái mới</Label>
+                <StatusBadge
+                  status={pendingStatus}
+                  label={proofingStatusLabels[pendingStatus] || pendingStatus}
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsConfirmStatusChangeDialogOpen(false);
+                setPendingStatus(null);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button onClick={handleConfirmStatusChange}>Xác nhận</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hand to Production Dialog */}
+      <Dialog open={isHandToProductionDialogOpen} onOpenChange={setIsHandToProductionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hoàn thành và chuyển xuống sản xuất</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn đánh dấu mã bài là hoàn thành và chuyển xuống sản xuất?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Trạng thái hiện tại</Label>
+              <StatusBadge
+                status={order?.status || ""}
+                label={proofingStatusLabels[order?.status || ""] || order?.status || "—"}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Trạng thái mới</Label>
+              <StatusBadge
+                status="completed"
+                label={proofingStatusLabels["completed"] || "Hoàn thành"}
+              />
+            </div>
+
+            <div className="space-y-2 pt-2 border-t">
+              <Label className="text-sm font-semibold">Điều kiện chuyển xuống sản xuất:</Label>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  {order?.isPlateExported ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  )}
+                  <span className="text-sm">{order?.isPlateExported ? "Đã xuất kẽm" : "Chưa xuất kẽm"}</span>
+                </div>
+                {hasDieCutDesigns && (
+                  <div className="flex items-center gap-2">
+                    {isDieExported ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    )}
+                    <span className="text-sm">{isDieExported ? "Đã xuất khuôn bế" : "Chưa xuất khuôn bế"}</span>
+                  </div>
+                )}
+              </div>
+              {(!order?.isPlateExported || (hasDieCutDesigns && !isDieExported)) && (
+                <p className="text-xs text-destructive mt-2">
+                  * Cần hoàn thành tất cả các điều kiện trên để chuyển xuống sản xuất
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsHandToProductionDialogOpen(false);
+                setPendingStatus(null);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleConfirmHandToProduction}
+              disabled={isHandingToProduction || !order?.isPlateExported || (hasDieCutDesigns && !isDieExported)}
+            >
+              {isHandingToProduction ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Xác nhận và chuyển xuống sản xuất"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Design Dialog */}
+      <AddDesignToProofingDialog
+        open={isAddDesignDialogOpen}
+        onOpenChange={setIsAddDesignDialogOpen}
+        availableDesigns={availableDesignsForAdding}
+        materialTypeName={order.materialType?.name}
+        currentDesign={currentDesignForAdding}
+        onSubmit={async (orderDetailItems) => {
+          if (!order?.materialTypeId) {
+            toast.error("Lỗi", { description: "Không thể lấy thông tin Chất liệu" });
+            return;
+          }
+          const items = orderDetailItems.map((item) => ({
+            orderDetailId: item.orderDetailId,
+            quantity: item.quantity,
+          }));
+          if (items.length === 0) {
+            toast.error("Lỗi", { description: "Không có chi tiết đơn hàng nào được chọn" });
+            return;
+          }
+          await addDesignsMutate({
+            id: order.id,
+            request: { materialTypeId: order.materialTypeId, items: items },
+          });
+        }}
+        isSubmitting={isAddingDesigns}
+      />
+
+      {/* Replace Die Dialog */}
+      <Dialog
+        open={isReplaceDieDialogOpen}
+        onOpenChange={(open) => {
+          setIsReplaceDieDialogOpen(open);
+          if (!open) {
+            setReplacingDieExport(null);
+            setSelectedNewDieId(null);
+            setReplaceDieNotes("");
+            setDieSearchTerm("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle>Thay thế khuôn bế</DialogTitle>
+            <DialogDescription>Chọn khuôn mới để thay thế cho khuôn hiện tại</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
+            {replacingDieExport && (
+              <div className="bg-muted/50 rounded-lg p-3 border shrink-0">
+                <Label className="text-xs font-semibold mb-2 block">Khuôn hiện tại:</Label>
+                <div className="flex items-center gap-3">
+                  {replacingDieExport.die?.imageUrl && (
+                    <img
+                      src={replacingDieExport.die.imageUrl}
+                      alt={replacingDieExport.die?.code}
+                      className="w-12 h-12 rounded border object-contain bg-background"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm">
+                      {replacingDieExport.die?.code || `Khuôn #${replacingDieExport.dieId}`}
+                    </div>
+                    {replacingDieExport.die && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        KT: {formatDieSize(replacingDieExport.die)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 shrink-0">
+              <Label htmlFor="die-search">Tìm khuôn thay thế</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="die-search"
+                  placeholder="Nhập mã hoặc tên khuôn..."
+                  value={dieSearchTerm}
+                  onChange={(e) => setDieSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 flex flex-col space-y-2">
+              <Label className="text-xs font-semibold shrink-0">Chọn khuôn mới:</Label>
+              <ScrollArea className="h-[300px] border rounded-lg">
+                {isLoadingDies ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                    Đang tải...
+                  </div>
+                ) : availableDies.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {dieSearchTerm.trim() ? "Không tìm thấy khuôn phù hợp" : "Nhập từ khóa để tìm khuôn"}
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-2">
+                    {availableDies.map((die: any) => {
+                      const isSelected = selectedNewDieId === die.id;
+                      const isCurrentDie = die.id === replacingDieExport?.dieId;
+                      return (
+                        <div
+                          key={die.id}
+                          className={cn(
+                            "p-3 rounded-lg border cursor-pointer transition-colors",
+                            isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
+                            isCurrentDie && "opacity-50 cursor-not-allowed"
+                          )}
+                          onClick={() => { if (!isCurrentDie) setSelectedNewDieId(die.id || null); }}
+                        >
+                          <div className="flex items-center gap-3">
+                            {die.imageUrl ? (
+                              <img src={die.imageUrl} alt={die.code || ""} className="w-12 h-12 rounded border object-contain bg-background shrink-0" />
+                            ) : (
+                              <div className="w-12 h-12 rounded border bg-muted/50 flex items-center justify-center shrink-0">
+                                <Package className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm truncate">{die.code || `Khuôn #${die.id}`}</div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                <span>KT: {formatDieSize(die)}</span>
+                                {die.vendorName && <span>• NCC: {die.vendorName}</span>}
+                              </div>
+                            </div>
+                            {isSelected && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
+                            {isCurrentDie && <Badge variant="secondary" className="text-xs shrink-0">Đang dùng</Badge>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+
+            <div className="space-y-2 shrink-0">
+              <Label htmlFor="replace-die-notes">Ghi chú (tùy chọn)</Label>
+              <Textarea
+                id="replace-die-notes"
+                placeholder="Nhập ghi chú cho việc thay thế khuôn..."
+                value={replaceDieNotes}
+                onChange={(e) => setReplaceDieNotes(e.target.value)}
+                rows={2}
+                className="text-sm"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="shrink-0">
+            <Button variant="outline" onClick={() => setIsReplaceDieDialogOpen(false)} disabled={isReplacingDie}>Hủy</Button>
+            <Button onClick={handleReplaceDie} disabled={!selectedNewDieId || isReplacingDie}>
+              {isReplacingDie ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : "Thay thế"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Die Dialog */}
+      <Dialog
+        open={isAddDieDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddDieDialogOpen(open);
+          if (!open) {
+            setSelectedDieIdForAdd(null);
+            setAddDieNotes("");
+            setAddDieSearchTerm("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle>Thêm khuôn bế</DialogTitle>
+            <DialogDescription>Chọn khuôn bế để thêm vào bình bài</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
+            <div className="space-y-2 shrink-0">
+              <Label htmlFor="add-die-search">Tìm khuôn bế</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="add-die-search"
+                  placeholder="Nhập mã hoặc tên khuôn..."
+                  value={addDieSearchTerm}
+                  onChange={(e) => setAddDieSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 flex flex-col space-y-2">
+              <Label className="text-xs font-semibold shrink-0">Chọn khuôn:</Label>
+              <ScrollArea className="h-[300px] border rounded-lg">
+                {isLoadingAddDies ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                    Đang tải...
+                  </div>
+                ) : availableDiesForAdd.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {addDieSearchTerm.trim() ? "Không tìm thấy khuôn phù hợp" : "Nhập từ khóa để tìm khuôn"}
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-2">
+                    {availableDiesForAdd.map((die: any) => {
+                      const isSelected = selectedDieIdForAdd === die.id;
+                      const isAlreadyAssigned = order?.dieExports?.some((de: any) => de.dieId === die.id) ?? false;
+                      return (
+                        <div
+                          key={die.id}
+                          className={cn(
+                            "p-3 rounded-lg border cursor-pointer transition-colors",
+                            isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
+                            isAlreadyAssigned && "opacity-50 cursor-not-allowed"
+                          )}
+                          onClick={() => { if (!isAlreadyAssigned) setSelectedDieIdForAdd(die.id || null); }}
+                        >
+                          <div className="flex items-center gap-3">
+                            {die.imageUrl ? (
+                              <img src={die.imageUrl} alt={die.code || ""} className="w-12 h-12 rounded border object-contain bg-background shrink-0" />
+                            ) : (
+                              <div className="w-12 h-12 rounded border bg-muted/50 flex items-center justify-center shrink-0">
+                                <Package className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm truncate">{die.code || `Khuôn #${die.id}`}</div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                <span>KT: {formatDieSize(die)}</span>
+                                {die.vendorName && <span>• NCC: {die.vendorName}</span>}
+                              </div>
+                            </div>
+                            {isSelected && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
+                            {isAlreadyAssigned && <Badge variant="secondary" className="text-xs shrink-0">Đã có</Badge>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+
+            <div className="space-y-2 shrink-0">
+              <Label htmlFor="add-die-notes">Ghi chú (tùy chọn)</Label>
+              <Textarea
+                id="add-die-notes"
+                placeholder="Nhập ghi chú cho khuôn bế..."
+                value={addDieNotes}
+                onChange={(e) => setAddDieNotes(e.target.value)}
+                rows={2}
+                className="text-sm"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="shrink-0">
+            <Button variant="outline" onClick={() => setIsAddDieDialogOpen(false)} disabled={isAssigningDie}>Hủy</Button>
+            <Button onClick={handleAddDie} disabled={!selectedDieIdForAdd || isAssigningDie}>
+              {isAssigningDie ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : "Thêm khuôn bế"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <DieListDialog open={isDieListDialogOpen} onOpenChange={setIsDieListDialogOpen} />
+
+      {/* Related Dies Dialog */}
+      <Dialog
+        open={isRelatedDiesDialogOpen}
+        onOpenChange={(open) => {
+          setIsRelatedDiesDialogOpen(open);
+          if (!open) setSelectedDesignForRelatedDies(null);
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Search className="h-5 w-5" />
+              </div>
+              Khuôn liên quan
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {selectedDesignForRelatedDies?.designCode && (
+                <>
+                  Khuôn phù hợp cho mã hàng: <span className="font-semibold text-foreground">{selectedDesignForRelatedDies.designCode}</span>
+                  {selectedDesignForRelatedDies.designName && <>{" - "}<span className="text-foreground">{selectedDesignForRelatedDies.designName}</span></>}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <RelatedDiesContent
+            designId={selectedDesignForRelatedDies?.designId ?? null}
+            designCode={selectedDesignForRelatedDies?.designCode}
+            designName={selectedDesignForRelatedDies?.designName}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Cancel Proofing Order Dialog */}
+      <Dialog
+        open={isConfirmCancelDialogOpen}
+        onOpenChange={setIsConfirmCancelDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Xác nhận hủy bài bình
+            </DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn hủy bài bình này không? Hành động này không
+              thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason" className="after:content-['*'] after:ml-0.5 after:text-destructive">
+                Lý do hủy bình bài
+              </Label>
+              <Textarea
+                id="cancel-reason"
+                placeholder="Vui lòng nhập lý do hủy bình bài..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                * Lý do hủy là bắt buộc để tiếp tục.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmCancelDialogOpen(false)}
+              disabled={isCanceling}
+            >
+              Bỏ qua
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmCancel}
+              disabled={!cancelReason.trim() || isCanceling}
+            >
+              {isCanceling ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Xác nhận hủy"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// Component to display related dies
+function RelatedDiesContent({
+  designId,
+  designCode,
+  designName,
+}: {
+  designId: number | null;
+  designCode?: string;
+  designName?: string;
+}) {
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [copiedDieId, setCopiedDieId] = useState<number | null>(null);
+
+  const {
+    data: relatedDies = [],
+    isLoading,
+    error,
+  } = useRelatedDies(designId, !!designId);
+
+  const handleCopyDieCode = async (dieCode: string, dieId: number) => {
+    try {
+      await navigator.clipboard.writeText(dieCode);
+      setCopiedDieId(dieId);
+      toast.success("Đã sao chép mã khuôn", {
+        description: `Mã khuôn "${dieCode}" đã được sao chép vào clipboard`,
+      });
+      setTimeout(() => setCopiedDieId(null), 2000);
+    } catch (error) {
+      toast.error("Không thể sao chép mã khuôn", {
+        description: "Đã xảy ra lỗi khi sao chép vào clipboard",
+      });
+    }
+  };
+
+  const renderDieItem = (die: any) => (
+    <div
+      key={die.id}
+      className="group rounded-lg border border-border/60 bg-card p-4 transition-all duration-200 hover:border-primary/50 hover:shadow-md"
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className="relative w-20 h-20 rounded-lg border bg-muted overflow-hidden shrink-0 cursor-pointer group/image"
+          onClick={() => {
+            if (die.imageUrl) {
+              setViewingImageUrl(die.imageUrl);
+              setImageViewerOpen(true);
+            }
+          }}
+        >
+          {die.imageUrl ? (
+            <>
+              <img src={die.imageUrl} alt={die.code || `Die ${die.id}`} className="w-full h-full object-contain" />
+              <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 transition-colors flex items-center justify-center">
+                <Eye className="h-4 w-4 text-white opacity-0 group-hover/image:opacity-100 transition-opacity" />
+              </div>
+            </>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 space-y-2">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-semibold text-base text-foreground font-mono">
+                {die.code || `Khuôn #${die.id}`}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-primary/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCopyDieCode(die.code || `Khuôn #${die.id}`, die.id);
+                }}
+              >
+                {copiedDieId === die.id ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+              </Button>
+              <Badge variant="secondary" className={cn("text-xs font-semibold", die.isUsable ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
+                {dieStatusLabels[die.status] || (die.isUsable ? "Sử dụng được" : "Không sử dụng được")}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1.5 text-xs">
+            {(die.length != null || die.height != null || die.size) && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Kích thước:</span>
+                <span className="font-medium text-foreground">{formatDieSize(die)}</span>
+              </div>
+            )}
+            {die.vendorName && (
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground">NCC:</span>
+                <span className="font-medium text-foreground truncate">{die.vendorName}</span>
+              </div>
+            )}
+            {die.location && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Vị trí:</span>
+                <span className="font-medium text-foreground">{dieLocationLabels[die.location]}</span>
+              </div>
+            )}
+          </div>
+          {die.notes && (
+            <div className="pt-2 border-t border-border/60">
+              <p className="text-xs text-muted-foreground line-clamp-2"><span className="font-medium">Ghi chú: </span>{die.notes}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="flex-1 min-h-0 flex flex-col">
+        {isLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+            <p className="text-sm font-medium text-foreground">Đang tải khuôn liên quan...</p>
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 text-center text-destructive">
+            <Package className="h-8 w-8 mb-4 mx-auto" />
+            <p className="text-sm font-semibold">Đã xảy ra lỗi</p>
+          </div>
+        ) : relatedDies.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+            <Package className="h-8 w-8 text-muted-foreground mb-4 mx-auto" />
+            <p className="text-sm font-semibold text-foreground">Không tìm thấy khuôn liên quan</p>
+          </div>
+        ) : (
+          <ScrollArea className="flex-1">
+            <div className="space-y-3 pr-4">
+              {relatedDies.map((die: any) => renderDieItem(die))}
+            </div>
+          </ScrollArea>
+        )}
+      </div>
+
+      {viewingImageUrl && (
+        <ImageViewerDialog
+          imageUrl={viewingImageUrl}
+          open={imageViewerOpen}
+          onOpenChange={(open) => {
+            setImageViewerOpen(open);
+            if (!open) setViewingImageUrl(null);
+          }}
+        />
+      )}
+    </>
+  );
+}

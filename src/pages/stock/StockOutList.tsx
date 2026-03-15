@@ -221,7 +221,7 @@ export default function StockOutListPage() {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/25">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#93631F] to-[#7a521a] flex items-center justify-center shadow-lg shadow-[#93631F]/25">
                     <LogOut className="h-5 w-5 text-white" />
                   </div>
                   <div>
@@ -236,7 +236,7 @@ export default function StockOutListPage() {
               </div>
               <Button
                 onClick={() => navigate("/stock/stock-outs/create")}
-                className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-lg shadow-orange-500/25"
+                className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-[#93631F] to-[#7a521a] hover:opacity-90 shadow-lg shadow-[#93631F]/25 text-white border-none"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Tạo phiếu xuất kho
@@ -248,10 +248,10 @@ export default function StockOutListPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Filters Card */}
           <Card className="mb-6 border-slate-200/60 shadow-lg shadow-slate-200/50">
-            <CardHeader className="bg-gradient-to-r from-orange-500/5 via-red-500/5 to-pink-500/5 border-b border-slate-200/60">
+            <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                  <Filter className="h-5 w-5 text-orange-600" />
+                <div className="h-10 w-10 rounded-lg bg-[#93631F]/10 flex items-center justify-center">
+                  <Filter className="h-5 w-5 text-[#93631F]" />
                 </div>
                 <CardTitle className="text-lg">Bộ lọc</CardTitle>
               </div>
@@ -331,13 +331,13 @@ export default function StockOutListPage() {
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                  <Loader2 className="h-8 w-8 animate-spin text-[#93631F]" />
                   <span className="ml-3 text-slate-600">Đang tải dữ liệu...</span>
                 </div>
               ) : stockOuts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16">
-                  <div className="h-16 w-16 rounded-full bg-orange-100 flex items-center justify-center mb-4">
-                    <LogOut className="h-8 w-8 text-orange-500" />
+                  <div className="h-16 w-16 rounded-full bg-[#93631F]/10 flex items-center justify-center mb-4">
+                    <LogOut className="h-8 w-8 text-[#93631F]" />
                   </div>
                   <p className="text-slate-600 font-medium">Không có phiếu xuất kho nào</p>
                   <p className="text-sm text-slate-400 mt-1">
@@ -349,7 +349,7 @@ export default function StockOutListPage() {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-gradient-to-r from-orange-50/50 to-red-50/50 border-b border-slate-200/60">
+                        <TableRow className="bg-[#93631F]/5 border-b border-slate-200/60">
                           <TableHead className="w-[140px] font-semibold text-slate-700">
                             Số phiếu
                           </TableHead>
@@ -384,7 +384,7 @@ export default function StockOutListPage() {
                         {stockOuts.map((stockOut) => (
                           <TableRow
                             key={stockOut.id}
-                            className="group cursor-pointer hover:bg-orange-50/30 transition-colors duration-200 border-b border-slate-100"
+                            className="group cursor-pointer hover:bg-[#93631F]/5 transition-colors duration-200 border-b border-slate-100"
                             onClick={() => handleViewDetails(stockOut.id)}
                           >
                             <TableCell className="font-medium font-mono text-sm">
@@ -572,12 +572,12 @@ export default function StockOutListPage() {
               <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
                 confirmDialog.confirmVariant === "destructive"
                   ? "bg-red-100"
-                  : "bg-orange-100"
+                  : "bg-[#93631F]/10"
               }`}>
                 {confirmDialog.confirmVariant === "destructive" ? (
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                 ) : (
-                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                  <AlertCircle className="h-5 w-5 text-[#93631F]" />
                 )}
               </div>
               <DialogTitle className="text-lg font-semibold text-slate-900">
@@ -601,10 +601,10 @@ export default function StockOutListPage() {
               type="button"
               variant={confirmDialog.confirmVariant || "default"}
               onClick={handleConfirm}
-              className={`cursor-pointer transition-colors duration-200 ${
+              className={`cursor-pointer transition-colors duration-200 text-white ${
                 confirmDialog.confirmVariant === "destructive"
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-orange-600 hover:bg-orange-700"
+                  ? "bg-red-600 hover:bg-red-700 shadow-red-500/25"
+                  : "bg-[#93631F] hover:bg-[#7a521a] shadow-[#93631F]/25"
               }`}
             >
               {confirmDialog.confirmText}
