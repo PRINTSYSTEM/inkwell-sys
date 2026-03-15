@@ -2036,6 +2036,10 @@ export default function ProofingOrderDetailPage() {
         onUploadClick={() => setIsUploadDialogOpen(true)}
         onStatusChangeClick={handleStatusChangeClick}
         onOldStatusChangeClick={handleOldStatusChangeClick}
+        onCancelClick={() => {
+          console.log("Hủy hình bài clicked - API will be provided later");
+          toast.info("Tính năng 'Hủy hình bài' sẽ sớm được cập nhật");
+        }}
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

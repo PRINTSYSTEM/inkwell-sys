@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Box, Edit, Upload, AlertCircle } from "lucide-react";
+import { ArrowLeft, Box, Edit, Upload, AlertCircle, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Tooltip,
@@ -19,6 +19,7 @@ interface DetailHeaderProps {
   onStatusChangeClick: () => void;
   onOldStatusChangeClick: () => void;
   onUploadClick: () => void;
+  onCancelClick?: () => void; // Added onCancelClick
   canMarkCompleted: boolean;
   completionMissingItems: string[];
   nextStatusInfo: {
@@ -37,6 +38,7 @@ export function DetailHeader({
   onStatusChangeClick,
   onOldStatusChangeClick,
   onUploadClick,
+  onCancelClick, // Added onCancelClick
   canMarkCompleted,
   completionMissingItems,
   nextStatusInfo,
@@ -84,48 +86,63 @@ export function DetailHeader({
             />
             {nextStatusInfo && (
               <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={cn(
-                        "inline-block",
-                        order?.status === "not_completed" &&
-                          !canMarkCompleted &&
-                          "cursor-not-allowed"
-                      )}
-                    >
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 h-8 text-xs"
-                        onClick={onStatusChangeClick}
-                        disabled={
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className={cn(
+                          "inline-block",
                           order?.status === "not_completed" &&
-                          !canMarkCompleted
-                        }
+                            !canMarkCompleted &&
+                            "cursor-not-allowed"
+                        )}
                       >
-                        <Edit className="h-3.5 w-3.5" />
-                        {nextStatusInfo.buttonLabel}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {order?.status === "not_completed" && !canMarkCompleted && (
-                    <TooltipContent className="max-w-xs">
-                      <div className="space-y-1">
-                        <p className="font-semibold">
-                          Chưa thể hoàn thành vì còn thiếu:
-                        </p>
-                        <ul className="list-disc pl-4 space-y-0.5">
-                          {completionMissingItems.map((item) => (
-                            <li key={item} className="text-sm">
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-8 text-xs"
+                          onClick={onStatusChangeClick}
+                          disabled={
+                            order?.status === "not_completed" &&
+                            !canMarkCompleted
+                          }
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          {nextStatusInfo.buttonLabel}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {order?.status === "not_completed" && !canMarkCompleted && (
+                      <TooltipContent className="max-w-xs">
+                        <div className="space-y-1">
+                          <p className="font-semibold">
+                            Chưa thể hoàn thành vì còn thiếu:
+                          </p>
+                          <ul className="list-disc pl-4 space-y-0.5">
+                            {completionMissingItems.map((item) => (
+                              <li key={item} className="text-sm">
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+
+                  {/* Add Cancel Design button here */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+                    onClick={() => {
+                      if (onCancelClick) onCancelClick();
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Hủy hình bài
+                  </Button>
+                </div>
               </TooltipProvider>
             )}
             {order.status === "waiting_for_file" && (
