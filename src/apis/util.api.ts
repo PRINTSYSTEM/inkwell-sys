@@ -158,6 +158,7 @@ export const API_SUFFIX = {
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
   PROOFING_COMPLETE: (id: number) => `/proofing-orders/${id}/complete`,
+  PROOFING_CANCEL: (id: number) => `/proofing-orders/${id}/cancel`,
   PROOFING_PAUSE: (id: number) => `/proofing-orders/${id}/pause`,
   PROOFING_HAND_TO_PRODUCTION: (id: number) =>
     `/proofing-orders/${id}/hand-to-production`,

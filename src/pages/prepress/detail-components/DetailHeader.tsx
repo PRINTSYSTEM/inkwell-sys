@@ -130,21 +130,23 @@ export function DetailHeader({
                     )}
                   </Tooltip>
 
-                  {/* Add Cancel Design button here */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
-                    onClick={() => {
-                      if (onCancelClick) onCancelClick();
-                    }}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Hủy hình bài
-                  </Button>
+                  {/* Move Cancel Button outside the Tooltip if you want it always visible or inside if it depends on status */}
                 </div>
               </TooltipProvider>
             )}
+
+            {/* Always visible "Hủy hình bài" button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+              onClick={() => {
+                if (onCancelClick) onCancelClick();
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Hủy hình bài
+            </Button>
             {order.status === "waiting_for_file" && (
               <Button
                 variant="outline"

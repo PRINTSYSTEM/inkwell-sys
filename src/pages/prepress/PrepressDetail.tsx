@@ -82,7 +82,9 @@ import {
   useCreatePaperSize,
   useAvailableQuantity,
   useProofingAvailableOrderDetailsDesignTypeSummary,
+  useCancelProofingOrder,
 } from "@/hooks/use-proofing-order";
+import { useProductionOrders } from "@/hooks/use-production";
 import { useAvailableOrderDetailsForProofing } from "@/hooks";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
 import { useDesignTypeList } from "@/hooks/use-design-type";
@@ -441,6 +443,10 @@ export default function ProofingOrderDetailPage() {
       designName?: string;
     } | null>(null);
 
+  // Cancellation state
+  const [isConfirmCancelDialogOpen, setIsConfirmCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
 
@@ -449,6 +455,13 @@ export default function ProofingOrderDetailPage() {
     isLoading,
     error,
   } = useProofingOrder(idValid ? idValue : null, idValid);
+
+  // Check for production orders for cancellation logic
+  const { data: productionOrdersData, isLoading: isLoadingProductions } = useProductionOrders({
+    proofingOrderId: idValid ? idValue : undefined,
+    pageSize: 1,
+  });
+  const hasExternalProduction = (productionOrdersData?.items?.length ?? 0) > 0;
 
   // Use raw response directly instead of strict schema parsing
   // Schema validation is too strict for API responses with nullable fields
@@ -1680,6 +1693,41 @@ export default function ProofingOrderDetailPage() {
     return null;
   };
 
+  const { mutate: cancelProofing, isPending: isCanceling } = useCancelProofingOrder();
+
+  const handleCancelProofingOrder = () => {
+    if (isLoadingProductions) {
+      toast.info("Đang kiểm tra lệnh sản xuất, vui lòng đợi...");
+      return;
+    }
+
+    const hasProduction = hasExternalProduction || (order?.productions?.length ?? 0) > 0;
+
+    if (hasProduction) {
+      toast.error(
+        "Không thể hủy bình bài đã có lệnh sản xuất."
+      );
+      return;
+    }
+    setCancelReason("");
+    setIsConfirmCancelDialogOpen(true);
+  };
+
+  const handleConfirmCancel = () => {
+    if (!order?.id || !cancelReason.trim()) return;
+
+    cancelProofing(
+      { id: order.id, reason: cancelReason },
+      {
+        onSuccess: () => {
+          setIsConfirmCancelDialogOpen(false);
+          setCancelReason("");
+          navigate("/proofing");
+        },
+      }
+    );
+  };
+
   const nextStatusInfo = getNextStatusInfo();
 
   const handleStatusChangeClick = () => {
@@ -2036,10 +2084,7 @@ export default function ProofingOrderDetailPage() {
         onUploadClick={() => setIsUploadDialogOpen(true)}
         onStatusChangeClick={handleStatusChangeClick}
         onOldStatusChangeClick={handleOldStatusChangeClick}
-        onCancelClick={() => {
-          console.log("Hủy hình bài clicked - API will be provided later");
-          toast.info("Tính năng 'Hủy hình bài' sẽ sớm được cập nhật");
-        }}
+        onCancelClick={handleCancelProofingOrder}
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -2145,6 +2190,12 @@ export default function ProofingOrderDetailPage() {
 
       <PrepressDetailDialogs
         order={order}
+        isConfirmCancelDialogOpen={isConfirmCancelDialogOpen}
+        setIsConfirmCancelDialogOpen={setIsConfirmCancelDialogOpen}
+        cancelReason={cancelReason}
+        setCancelReason={setCancelReason}
+        handleConfirmCancel={handleConfirmCancel}
+        isCanceling={isCanceling}
         isUploadDialogOpen={isUploadDialogOpen}
         setIsUploadDialogOpen={setIsUploadDialogOpen}
         uploadFiles={uploadFiles}

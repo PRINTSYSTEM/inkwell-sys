@@ -136,6 +136,13 @@ interface PrepressDetailDialogsProps {
   removeDesignTarget: any;
   handleConfirmRemoveDesign: () => void;
   isRemovingDesign: boolean;
+  // Cancellation
+  isConfirmCancelDialogOpen: boolean;
+  setIsConfirmCancelDialogOpen: (val: boolean) => void;
+  cancelReason: string;
+  setCancelReason: (val: string) => void;
+  handleConfirmCancel: () => void;
+  isCanceling: boolean;
 }
 
 export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
@@ -219,6 +226,12 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
     removeDesignTarget,
     handleConfirmRemoveDesign,
     isRemovingDesign,
+    isConfirmCancelDialogOpen,
+    setIsConfirmCancelDialogOpen,
+    cancelReason,
+    setCancelReason,
+    handleConfirmCancel,
+    isCanceling,
   } = props;
 
   // Helper functions for file classification
@@ -942,6 +955,67 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             designCode={selectedDesignForRelatedDies?.designCode}
             designName={selectedDesignForRelatedDies?.designName}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Cancel Proofing Order Dialog */}
+      <Dialog
+        open={isConfirmCancelDialogOpen}
+        onOpenChange={setIsConfirmCancelDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Xác nhận hủy bài bình
+            </DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn hủy bài bình này không? Hành động này không
+              thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason" className="after:content-['*'] after:ml-0.5 after:text-destructive">
+                Lý do hủy bình bài
+              </Label>
+              <Textarea
+                id="cancel-reason"
+                placeholder="Vui lòng nhập lý do hủy bình bài..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                * Lý do hủy là bắt buộc để tiếp tục.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmCancelDialogOpen(false)}
+              disabled={isCanceling}
+            >
+              Bỏ qua
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmCancel}
+              disabled={!cancelReason.trim() || isCanceling}
+            >
+              {isCanceling ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Xác nhận hủy"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
