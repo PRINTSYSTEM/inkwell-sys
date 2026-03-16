@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -36,9 +36,11 @@ import { toast } from "sonner";
 interface DieListDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialDesignCode?: string;
+  initialSize?: string;
 }
 
-export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
+export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSize }: DieListDialogProps) {
   const [designCode, setDesignCode] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [size, setSize] = useState("");
@@ -53,6 +55,14 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
   const [debouncedDesignCode] = useDebounce(designCode, 300);
   const [debouncedCustomerName] = useDebounce(customerName, 300);
   const [debouncedSize] = useDebounce(size, 300);
+
+  // When dialog opens and parent provides initial values, prefill fields
+  useEffect(() => {
+    if (open) {
+      if (typeof initialDesignCode === "string") setDesignCode(initialDesignCode);
+      if (typeof initialSize === "string") setSize(initialSize);
+    }
+  }, [open, initialDesignCode, initialSize]);
 
   // Search dies with design code, size, and customer name
   // Use DieListParams schema with proper fields (designCode, size, customerName)
@@ -84,7 +94,7 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
     error: searchError,
   } = useSearchDies(searchParams);
 
-  const dies = searchData?.items || [];
+  const dies = useMemo(() => searchData?.items || [], [searchData]);
   const totalCount = searchData?.total ?? 0;
 
   // Get firstProofingOrderId from first die that has it
@@ -289,7 +299,7 @@ export function DieListDialog({ open, onOpenChange }: DieListDialogProps) {
             {(() => {
               const usageCode =
                 die.usageHistory?.find(
-                  (u: any) => u.proofingOrderId === die.firstProofingOrderId
+                  (u: { proofingOrderId?: number; proofingOrderCode?: string }) => u.proofingOrderId === die.firstProofingOrderId
                 )?.proofingOrderCode || die.usageHistory?.[0]?.proofingOrderCode || null;
               const displayCode = die.firstProofingOrderCode || usageCode;
               if (!displayCode) return null;

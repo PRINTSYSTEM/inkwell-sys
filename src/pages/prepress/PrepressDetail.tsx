@@ -143,6 +143,7 @@ import { DetailPlateExportCard } from "./detail-components/DetailPlateExportCard
 import { DetailDieExportCard } from "./detail-components/DetailDieExportCard";
 import { DetailEmptyOrderView } from "./detail-components/DetailEmptyOrderView";
 import { PrepressDetailDialogs } from "./detail-components/PrepressDetailDialogs";
+import { PrepressDesignTable } from "./components/PrepressDesignTable";
 
 // Component for inline quantity editing with API available quantity
 function QuantityCell({
@@ -344,17 +345,6 @@ export default function ProofingOrderDetailPage() {
   const isImageFile = (file: File): boolean => {
     return file.type.startsWith("image/");
   };
-
-  const isProofingFile = (file: File): boolean => {
-    const fileName = file.name.toLowerCase();
-    return (
-      fileName.endsWith(".pdf") ||
-      fileName.endsWith(".ai") ||
-      fileName.endsWith(".psd") ||
-      file.type === "application/pdf" ||
-      file.type === "application/postscript"
-    );
-  };
   const [isPlateExportDialogOpen, setIsPlateExportDialogOpen] = useState(false);
   const [editingPlateExport, setEditingPlateExport] =
     useState<PlateExportResponse | null>(null);
@@ -381,6 +371,8 @@ export default function ProofingOrderDetailPage() {
   const [selectedNewDieId, setSelectedNewDieId] = useState<number | null>(null);
   const [replaceDieNotes, setReplaceDieNotes] = useState<string>("");
   const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
+  const [dieListInitialDesignCode, setDieListInitialDesignCode] = useState<string | undefined>(undefined);
+  const [dieListInitialSize, setDieListInitialSize] = useState<string | undefined>(undefined);
 
   // Add die dialog state
   const [isAddDieDialogOpen, setIsAddDieDialogOpen] = useState(false);
@@ -729,6 +721,14 @@ export default function ProofingOrderDetailPage() {
   const { data: designTypesData } = useDesignTypeList({
     status: "active",
   });
+
+  // Handler to open die-list dialog prefilled with design code and size
+  const handleFindDie = (design: any) => {
+    const sizeStr = formatDesignDimensions(design.length, design.width, design.height, 1, " × ").trim();
+    setDieListInitialDesignCode(design.code || "");
+    setDieListInitialSize(sizeStr || "");
+    setIsDieListDialogOpen(true);
+  };
 
   const { mutate: createPaperSize, loading: isCreatingPaperSize } =
     useCreatePaperSize();
@@ -1948,60 +1948,36 @@ export default function ProofingOrderDetailPage() {
 
   const handleUploadFiles = async (files: File[]) => {
     if (!order?.id) return;
-
-    // Phân loại files
-    const proofingFiles = files.filter((f) => isProofingFile(f));
+    // Only accept images now - upload each image
     const imageFiles = files.filter((f) => isImageFile(f));
 
     const errors: string[] = [];
     const successes: string[] = [];
 
-    // Upload file bình bài
-    if (proofingFiles.length > 0) {
-      try {
-        await uploadProofing({
-          proofingOrderId: order.id,
-          file: proofingFiles[0],
-        });
-        successes.push(`File bình bài: ${proofingFiles[0].name}`);
-      } catch (error) {
-        errors.push(`File bình bài "${proofingFiles[0].name}" lỗi`);
-      }
-    } else {
-      errors.push("Thiếu file bình bài (.pdf, .ai, .psd)");
+    if (imageFiles.length === 0) {
+      toast.error("Lỗi", { description: "Vui lòng chọn ít nhất 1 ảnh (JPG, PNG) để tải lên" });
+      return;
     }
 
-    // Upload ảnh
-    if (imageFiles.length > 0) {
+    for (const img of imageFiles) {
       try {
-        await uploadImageMutate({
-          proofingOrderId: order.id,
-          file: imageFiles[0],
-        });
-        successes.push(`Ảnh: ${imageFiles[0].name}`);
+        await uploadImageMutate({ proofingOrderId: order.id, file: img });
+        successes.push(img.name);
       } catch (error) {
-        errors.push(`Ảnh "${imageFiles[0].name}" lỗi`);
+        console.error("Failed to upload image", img.name, error);
+        errors.push(img.name);
       }
-    } else {
-      errors.push("Thiếu file ảnh");
     }
 
     setIsUploadDialogOpen(false);
     setUploadFiles([]);
 
-    // Hiển thị thông báo kết quả
     if (errors.length === 0) {
-      toast.success("Thành công", {
-        description: "Đã upload tất cả files",
-      });
+      toast.success("Thành công", { description: `Đã tải lên ${successes.length} ảnh` });
     } else if (successes.length > 0) {
-      toast.warning("Một phần thành công", {
-        description: `${successes.join(", ")}. Lỗi: ${errors.join(", ")}`,
-      });
+      toast.warning("Một phần thành công", { description: `Đã tải: ${successes.join(", ")}. Lỗi: ${errors.join(", ")}` });
     } else {
-      toast.error("Lỗi", {
-        description: errors.join(", "),
-      });
+      toast.error("Lỗi", { description: `Không thể tải lên ảnh: ${errors.join(", ")}` });
     }
   };
 
@@ -2089,28 +2065,65 @@ export default function ProofingOrderDetailPage() {
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {isEmptyOrder ? (
-          <DetailEmptyOrderView
-            toggleSelection={toggleSelection}
-            selectedDesigns={selectedDesigns}
-            selectedCount={selectedCount}
-            materialTypeName={materialTypeName}
-            designQuantities={designQuantities}
-            setDesignQuantities={setDesignQuantities}
-            paperSizes={paperSizes}
-            paperSizeId={paperSizeId}
-            setPaperSizeId={setPaperSizeId}
-            customPaperSize={customPaperSize}
-            setCustomPaperSize={setCustomPaperSize}
-            showCreateButton={showCreateButton}
-            handleCreatePaperSize={handleCreatePaperSize}
-            isCreatingPaperSize={isCreatingPaperSize}
-            proofingSheetQuantity={proofingSheetQuantity}
-            setProofingSheetQuantity={setProofingSheetQuantity}
-            notes={notes}
-            setNotes={setNotes}
-            handleSubmitDesigns={handleSubmitDesigns}
-            isAddingDesigns={isAddingDesigns}
-          />
+          <div className="flex-1 flex flex-row gap-4 overflow-hidden">
+            {/* Left: selectable designs */}
+            <div className="w-2/3 min-w-0 flex flex-col">
+              <PrepressDesignTable
+                designs={paginatedDesigns}
+                isLoading={isLoadingDesigns}
+                selectedIds={selectedIds}
+                onToggleSelection={toggleSelection}
+                canSelect={canSelect}
+                onReject={() => {
+                  toast.info("Tính năng hoàn hàng không không khả dụng ở đây");
+                }}
+                onFindDie={handleFindDie}
+                isRejecting={false}
+                designsPage={currentPage}
+                setDesignsPage={setCurrentPage}
+                designsTotalPages={totalPages}
+                selectedDesignsCount={selectedCount}
+                onOpenInventoryView={() => setIsDieListDialogOpen(true)}
+                // Filters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                designTypeOptions={designTypeOptions}
+                selectedDesignTypes={selectedDesignTypes}
+                setSelectedDesignTypes={setSelectedDesignTypes}
+                materialTypeOptions={availableDesignsData?.materialTypeOptions || []}
+                selectedMaterialTypes={selectedMaterialTypes}
+                setSelectedMaterialTypes={setSelectedMaterialTypes}
+                setImageViewerOpen={setImageViewerOpen}
+                setViewingImageUrl={setViewingImageUrl}
+              />
+            </div>
+
+            {/* Right: configuration panel (existing) */}
+            <div className="w-1/3 min-w-0">
+              <DetailEmptyOrderView
+                toggleSelection={toggleSelection}
+                selectedDesigns={selectedDesigns}
+                selectedCount={selectedCount}
+                materialTypeName={materialTypeName}
+                designQuantities={designQuantities}
+                setDesignQuantities={setDesignQuantities}
+                paperSizes={paperSizes}
+                paperSizeId={paperSizeId}
+                setPaperSizeId={setPaperSizeId}
+                customPaperSize={customPaperSize}
+                setCustomPaperSize={setCustomPaperSize}
+                showCreateButton={showCreateButton}
+                handleCreatePaperSize={handleCreatePaperSize}
+                isCreatingPaperSize={isCreatingPaperSize}
+                proofingSheetQuantity={proofingSheetQuantity}
+                setProofingSheetQuantity={setProofingSheetQuantity}
+                notes={notes}
+                setNotes={setNotes}
+                handleSubmitDesigns={handleSubmitDesigns}
+                isAddingDesigns={isAddingDesigns}
+              />
+            </div>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pb-4">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.7fr_1.9fr_0.7fr_0.7fr] gap-4 w-full">
@@ -2268,6 +2281,8 @@ export default function ProofingOrderDetailPage() {
         isAssigningDie={isAssigningDie}
         availableDiesForAdd={availableDiesForAdd}
         isLoadingAddDies={isLoadingAddDies}
+        dieListInitialDesignCode={dieListInitialDesignCode}
+        dieListInitialSize={dieListInitialSize}
         isDieListDialogOpen={isDieListDialogOpen}
         setIsDieListDialogOpen={setIsDieListDialogOpen}
         isRelatedDiesDialogOpen={isRelatedDiesDialogOpen}

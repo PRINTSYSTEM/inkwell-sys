@@ -153,7 +153,25 @@ export function DetailOrderInfoCard({
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button size="sm" variant="ghost" className="h-5 px-1.5 text-[10px] text-green-600" onClick={handleSaveField} disabled={isUpdatingInfo}>Lưu</Button>
+                    {/* If custom selected, show input for manual size */}
+                    {inlinePaperSizeId === "custom" ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={inlineCustomPaperSize}
+                          onChange={(e) => setInlineCustomPaperSize(e.target.value)}
+                          placeholder="ví dụ: 90×90"
+                          className="h-6 text-xs px-2 w-28"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveField();
+                            else if (e.key === "Escape") handleCancelEditField();
+                          }}
+                          autoFocus
+                        />
+                        <Button size="sm" variant="ghost" className="h-5 px-1.5 text-[10px] text-green-600" onClick={handleSaveField} disabled={isUpdatingInfo}>Lưu</Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="ghost" className="h-5 px-1.5 text-[10px] text-green-600" onClick={handleSaveField} disabled={isUpdatingInfo}>Lưu</Button>
+                    )}
                   </div>
                 ) : (
                   <>

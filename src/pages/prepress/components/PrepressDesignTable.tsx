@@ -15,25 +15,37 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { formatDesignDimensions } from "@/utils/format-die-size";
 import type { DesignItem } from "@/types/proofing";
 
 interface PrepressDesignTableProps {
-  designs: any[];
+  designs: DesignItem[];
   isLoading: boolean;
   selectedIds: Set<number>;
-  onToggleSelection: (design: any) => void;
-  canSelect: (design: any) => boolean;
-  onReject: (design: any) => void;
+  onToggleSelection: (design: DesignItem) => void;
+  canSelect: (design: DesignItem) => boolean;
+  onReject: (design: DesignItem) => void;
   isRejecting: boolean;
   designsPage: number;
   setDesignsPage: (page: number | ((p: number) => number)) => void;
   designsTotalPages: number;
   selectedDesignsCount: number;
   onOpenInventoryView: () => void;
+  onFindDie?: (design: DesignItem) => void;
+  setImageViewerOpen?: (val: boolean) => void;
+  setViewingImageUrl?: (val: string | null) => void;
+  // Filters
+  searchTerm?: string;
+  setSearchTerm?: (s: string) => void;
+  designTypeOptions?: { id: number; name: string; count?: number }[];
+  selectedDesignTypes?: number[];
+  setSelectedDesignTypes?: (ids: number[]) => void;
+  materialTypeOptions?: { id: number; name: string }[];
+  selectedMaterialTypes?: number[];
+  setSelectedMaterialTypes?: (ids: number[]) => void;
 }
 
 export function PrepressDesignTable({
@@ -49,83 +61,88 @@ export function PrepressDesignTable({
   designsTotalPages,
   selectedDesignsCount,
   onOpenInventoryView,
+  onFindDie,
+  setImageViewerOpen,
+  setViewingImageUrl,
+  searchTerm,
+  setSearchTerm,
+  designTypeOptions,
+  selectedDesignTypes,
+  setSelectedDesignTypes,
+  materialTypeOptions,
+  selectedMaterialTypes,
+  setSelectedMaterialTypes,
 }: PrepressDesignTableProps) {
   return (
     <div className="relative flex-1 overflow-hidden flex flex-col">
-      <div className="shrink-0 border-b p-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
-            Thiết kế chờ bình bài ({designs.length})
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Đã chọn: {selectedDesignsCount}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Pagination Controls */}
-          <div className="flex items-center gap-2 mr-4 border-r pr-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() => setDesignsPage((p) => Math.max(1, p - 1))}
-              disabled={designsPage === 1 || isLoading}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-xs font-medium">
-              Trang {designsPage} / {designsTotalPages}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() =>
-                setDesignsPage((p) => Math.min(designsTotalPages, p + 1))
-              }
-              disabled={designsPage === designsTotalPages || isLoading}
-            >
-              <ChevronRight className="h-4 w-4" />
+      <div className="shrink-0 border-b p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Thiết kế chờ bình bài ({designs.length})</p>
+            <p className="text-xs text-muted-foreground">Đã chọn: {selectedDesignsCount}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={onOpenInventoryView}>
+              <span className="h-4 w-4">📦</span>
+              Danh sách khuôn bế
             </Button>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={onOpenInventoryView}
-          >
-            <span className="h-4 w-4">📦</span>
-            Xem kho hàng
-          </Button>
         </div>
+
+        {/* Filters row */}
+        <div className="flex items-center gap-3 w-full">
+          <Input placeholder="Tìm theo mã hàng..." value={searchTerm || ""} onChange={(e) => setSearchTerm && setSearchTerm(e.target.value)} className="flex-1" />
+          {materialTypeOptions && setSelectedMaterialTypes && (
+            <div className="w-44">
+              <select className="w-full h-9 text-sm border rounded px-2" value={selectedMaterialTypes && selectedMaterialTypes.length === 1 ? String(selectedMaterialTypes[0]) : ""} onChange={(e) => {
+                const v = e.target.value;
+                if (!v) setSelectedMaterialTypes([]);
+                else setSelectedMaterialTypes([parseInt(v, 10)]);
+              }}>
+                <option value="">Loại chất liệu</option>
+                {materialTypeOptions.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Design type chips */}
+        {designTypeOptions && setSelectedDesignTypes && (
+          <div className="flex items-center gap-2 overflow-x-auto pt-2">
+            <button className={`text-xs px-2 py-1 rounded-full ${(!selectedDesignTypes || selectedDesignTypes.length===0) ? 'bg-primary/10 text-primary font-semibold' : 'bg-muted/10 text-muted-foreground'}`} onClick={() => setSelectedDesignTypes([])}>Tất cả</button>
+            {designTypeOptions.map((dt) => {
+              const active = selectedDesignTypes?.includes(dt.id) || false;
+              return (
+                <button key={dt.id} onClick={() => {
+                  if (!selectedDesignTypes) return;
+                  if (active) setSelectedDesignTypes(selectedDesignTypes.filter(id => id !== dt.id));
+                  else setSelectedDesignTypes([...selectedDesignTypes, dt.id]);
+                }} className={`text-xs px-2 py-1 rounded-full ${active ? 'bg-primary/10 text-primary font-semibold' : 'bg-muted/10 text-muted-foreground'}`}>
+                  {dt.name} {dt.count ? `(${dt.count})` : ""}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-4">
           <div className="rounded-lg border overflow-hidden">
-            <div className="w-full overflow-x-auto">
-              <Table className="min-w-[980px]">
+              <div className="w-full overflow-x-auto pr-12">
+              <Table className="min-w-[980px] table-fixed">
                 <TableHeader className="bg-muted/20">
-                  <TableRow>
-                    <TableHead className="text-sm font-bold">
-                      Đơn hàng
-                    </TableHead>
-                    <TableHead className="text-sm font-bold">Mã hàng</TableHead>
-                    <TableHead className="text-sm font-bold">
-                      Số lượng
-                    </TableHead>
-                    <TableHead className="text-sm font-bold">
-                      Quy cách
-                    </TableHead>
-                    <TableHead className="text-sm font-bold">
-                      Chất liệu
-                    </TableHead>
-                    <TableHead className="text-sm font-bold">Loại</TableHead>
-                    <TableHead className="w-[120px] text-right text-sm font-bold">
-                      Thao tác
-                    </TableHead>
+                  <TableRow className="h-16">
+                    <TableHead className="text-sm font-bold w-20">Ảnh</TableHead>
+                    <TableHead className="text-sm font-bold w-28">Đơn hàng</TableHead>
+                    <TableHead className="text-sm font-bold w-36">Mã hàng</TableHead>
+                    <TableHead className="text-sm font-bold w-24">Số lượng</TableHead>
+                    <TableHead className="text-sm font-bold w-36">Quy cách</TableHead>
+                    <TableHead className="text-sm font-bold w-48">Chất liệu</TableHead>
+                    <TableHead className="text-sm font-bold w-24">Loại</TableHead>
+                    <TableHead className="w-12 text-right text-sm font-bold sticky right-0 bg-muted/20 z-20">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -152,23 +169,52 @@ export function PrepressDesignTable({
                       {designs.map((design) => {
                         const isSelected = selectedIds.has(design.id);
                         const selectable = canSelect(design);
-                        const tooltipContent = `Mã hàng: ${design.code}\nTên: ${design.name}\nSố lượng: ${design.availableQuantity != null ? design.availableQuantity.toLocaleString("vi-VN") : design.quantity.toLocaleString("vi-VN")}\nQuy cách: ${formatDesignDimensions(design.length, design.width, design.height, 1, " × ")} ${design.unit}\nChất liệu: ${design.materialTypeName}\n${design.orderCode ? `\nĐơn hàng: ${design.orderCode}` : ""}`;
+                        let tooltipContent = `Mã hàng: ${design.code}\nTên: ${design.name}\nSố lượng: ${design.availableQuantity != null ? design.availableQuantity.toLocaleString("vi-VN") : design.quantity.toLocaleString("vi-VN")}\nQuy cách: ${formatDesignDimensions(design.length, design.width, design.height, 1, " × ")} ${design.unit}\nChất liệu: ${design.materialTypeName}`;
+                        if (design.orderCode) tooltipContent += `\nĐơn hàng: ${design.orderCode}`;
+                        if (design.designerName) tooltipContent += `\nNgười thiết kế: ${design.designerName}`;
+                        if (design.accountantName) tooltipContent += `\nNgười kế toán: ${design.accountantName}`;
 
                         return (
                           <Tooltip key={design.id}>
                             <TooltipTrigger asChild>
                               <TableRow
-                                className={cn(
-                                  "cursor-pointer",
-                                  isSelected && "bg-primary/5",
-                                  !selectable && !isSelected && "opacity-50",
-                                )}
-                                onClick={() => {
-                                  if (selectable || isSelected)
-                                    onToggleSelection(design);
-                                }}
+                                      className={cn(
+                                        "cursor-pointer h-16",
+                                        isSelected && "bg-green-100 ring-1 ring-green-200",
+                                        !selectable && !isSelected && "opacity-50",
+                                      )}
+                                      onClick={() => {
+                                        if (selectable || isSelected) {
+                                          onToggleSelection(design);
+                                          if (setSelectedDesignTypes && typeof design.designTypeId === 'number') {
+                                            setSelectedDesignTypes([design.designTypeId]);
+                                          }
+                                        }
+                                      }}
                               >
-                                <TableCell className="py-3">
+                                <TableCell className="py-2 px-3 w-20 align-middle">
+                                  <div className="w-12 h-10">
+                                  {design.thumbnailUrl ? (
+                                    <img
+                                      src={design.thumbnailUrl}
+                                      alt={design.code}
+                                      className="w-12 h-10 object-contain rounded cursor-zoom-in"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (setViewingImageUrl) {
+                                          setViewingImageUrl(design.thumbnailUrl || null);
+                                        }
+                                        if (setImageViewerOpen) {
+                                          setImageViewerOpen(true);
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-12 h-10 bg-muted rounded" />
+                                  )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-3 w-28 align-middle">
                                   <span className="font-semibold text-sm text-primary">
                                     {design.orderCode || design.orderId}
                                   </span>
@@ -207,7 +253,8 @@ export function PrepressDesignTable({
                                     {design.designTypeName}
                                   </span>
                                 </TableCell>
-                                <TableCell className="py-2 text-right">
+                                <TableCell className="py-2 text-right sticky right-0 bg-background z-10 flex items-center justify-end gap-2">
+                                  {/* Hoàn hàng: always available to return design to production */}
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -219,6 +266,23 @@ export function PrepressDesignTable({
                                   >
                                     Hoàn hàng
                                   </Button>
+
+                                  {/* If die-search is enabled and this is a box design, show magnifier */}
+                                  {onFindDie && (design.designTypeName || "").toLowerCase().includes("hộp") && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8"
+                                      disabled={isRejecting}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onFindDie(design);
+                                      }}
+                                      title="Tìm khuôn liên quan"
+                                    >
+                                      <Search className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             </TooltipTrigger>

@@ -84,7 +84,6 @@ interface PrepressDetailDialogsProps {
   setIsHandToProductionDialogOpen: (val: boolean) => void;
   isHandingToProduction: boolean;
   handleConfirmHandToProduction: () => void;
-  // Conditions
   hasDieCutDesigns: boolean;
   isDieExported: boolean;
   // Add design
@@ -125,6 +124,8 @@ interface PrepressDetailDialogsProps {
   // Die list
   isDieListDialogOpen: boolean;
   setIsDieListDialogOpen: (val: boolean) => void;
+  dieListInitialDesignCode?: string;
+  dieListInitialSize?: string;
   // Related dies
   isRelatedDiesDialogOpen: boolean;
   setIsRelatedDiesDialogOpen: (val: boolean) => void;
@@ -217,6 +218,8 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
     isAssigningDie,
     isDieListDialogOpen,
     setIsDieListDialogOpen,
+    dieListInitialDesignCode,
+    dieListInitialSize,
     isRelatedDiesDialogOpen,
     setIsRelatedDiesDialogOpen,
     selectedDesignForRelatedDies,
@@ -239,119 +242,73 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
     return file.type.startsWith("image/");
   };
 
-  const isProofingFile = (file: File): boolean => {
-    const fileName = file.name.toLowerCase();
-    return (
-      fileName.endsWith(".pdf") ||
-      fileName.endsWith(".ai") ||
-      fileName.endsWith(".psd") ||
-      file.type === "application/pdf" ||
-      file.type === "application/postscript"
-    );
-  };
-
   if (!order) return null;
 
   return (
     <>
-      {/* Upload Files Dialog */}
+      {/* Upload Images Dialog (only images, multiple allowed) */}
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent className="max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
-            <DialogTitle>Tải lên file bình bài</DialogTitle>
+            <DialogTitle>Tải lên ảnh bình bài</DialogTitle>
             <DialogDescription>
-              Chọn file thiết kế (PDF, AI, PSD) và ảnh preview (JPG, PNG) cho bài
-              bình này.
+              Chọn ảnh preview (JPG, PNG, ...) cho bài bình này. Có thể chọn nhiều ảnh.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
             <div className="space-y-2 shrink-0">
-              <Label>Chọn files</Label>
+              <Label>Chọn ảnh</Label>
               <Input
                 type="file"
                 multiple
-                accept=".pdf,.ai,.psd,image/*"
+                accept="image/*"
                 onChange={(e) => {
                   const files = Array.from(e.target.files || []);
-                  setUploadFiles((prev: File[]) => [...prev, ...files]);
+                  // Only keep image files
+                  const images = files.filter((f) => isImageFile(f));
+                  setUploadFiles((prev: File[]) => [...prev, ...images]);
                 }}
               />
               <p className="text-[10px] text-muted-foreground">
-                Tải lên ít nhất 1 file bình bài (*.pdf, *.ai, *.psd) và 1 ảnh
-                xem trước.
+                Tải lên 1 hoặc nhiều ảnh (JPG, PNG, ...).
               </p>
             </div>
 
-            {/* Hiển thị danh sách file đã chọn */}
+            {/* Hiển thị danh sách ảnh đã chọn */}
             {uploadFiles.length > 0 && (
               <div className="space-y-2 flex-1 min-h-0 flex flex-col">
-                <Label className="text-sm font-medium flex-shrink-0">
-                  Files đã chọn:
-                </Label>
+                <Label className="text-sm font-medium flex-shrink-0">Ảnh đã chọn:</Label>
                 <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-2">
                   {uploadFiles.map((file, index) => {
                     const isImage = isImageFile(file);
-                    const isProofing = isProofingFile(file);
-                    const fileType = isProofing
-                      ? "File bình bài"
-                      : isImage
-                        ? "Ảnh"
-                        : "File khác";
 
                     return (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 min-w-0"
-                      >
+                      <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 min-w-0">
                         {isImage ? (
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt="Preview"
-                            className="w-16 h-16 object-cover rounded border shrink-0"
-                          />
+                          <img src={URL.createObjectURL(file)} alt="Preview" className="w-16 h-16 object-cover rounded border shrink-0" />
                         ) : (
                           <div className="w-16 h-16 rounded border bg-background flex items-center justify-center shrink-0">
                             <FileText className="h-6 w-6 text-muted-foreground" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {file.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {fileType} • {(file.size / 1024).toFixed(2)} KB
-                          </p>
+                          <p className="text-sm font-medium truncate">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">Ảnh • {(file.size / 1024).toFixed(2)} KB</p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0"
-                          onClick={() => {
-                            setUploadFiles((prev: File[]) => {
-                              const newFiles = prev.filter(
-                                (_, i) => i !== index
-                              );
-                              // Cleanup object URL if it's an image
-                              if (isImageFile(prev[index])) {
-                                const url = URL.createObjectURL(prev[index]);
-                                URL.revokeObjectURL(url);
-                              }
-                              return newFiles;
-                            });
-                          }}
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => {
+                          setUploadFiles((prev: File[]) => prev.filter((_, i) => i !== index));
+                        }}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     );
                   })}
                 </div>
-                {(!uploadFiles.find((f) => isProofingFile(f)) ||
-                  !uploadFiles.find((f) => isImageFile(f))) && (
+                {!uploadFiles.find((f) => isImageFile(f)) && (
                   <p className="text-xs text-amber-600 flex items-center gap-1 flex-shrink-0 mt-2">
                     <AlertCircle className="h-3 w-3" />
-                    Cần có ít nhất 1 file bình bài và 1 file ảnh
+                    Cần có ít nhất 1 ảnh để upload
                   </p>
                 )}
               </div>
@@ -359,24 +316,12 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           </div>
 
           <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsUploadDialogOpen(false);
-                setUploadFiles([]);
-              }}
-            >
+            <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setUploadFiles([]); }}>
               Hủy
             </Button>
-            <Button
-              onClick={() => handleUploadFiles(uploadFiles)}
-              disabled={
-                !uploadFiles.find((f) => isProofingFile(f)) ||
-                !uploadFiles.find((f) => isImageFile(f))
-              }
-            >
+            <Button onClick={() => handleUploadFiles(uploadFiles)} disabled={!uploadFiles.find((f) => isImageFile(f))}>
               <Upload className="h-4 w-4 mr-2" />
-              Tải file lên
+              Tải ảnh lên
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -922,7 +867,12 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         </DialogContent>
       </Dialog>
 
-      <DieListDialog open={isDieListDialogOpen} onOpenChange={setIsDieListDialogOpen} />
+      <DieListDialog
+        open={isDieListDialogOpen}
+        onOpenChange={setIsDieListDialogOpen}
+        initialDesignCode={dieListInitialDesignCode}
+        initialSize={dieListInitialSize}
+      />
 
       {/* Related Dies Dialog */}
       <Dialog
