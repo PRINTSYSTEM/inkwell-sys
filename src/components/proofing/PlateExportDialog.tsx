@@ -34,9 +34,9 @@ import {
 import { Check, ChevronsUpDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useRecordPlateExport } from "@/hooks/use-proofing-order";
+import { useRecordPlateExport, useUpdatePlateExport } from "@/hooks/use-proofing-order";
 import { useActivePlateVendors, useCreateVendor } from "@/hooks/use-vendor";
-import type { RecordPlateExportRequest, PlateExportResponse } from "@/Schema";
+import type { RecordPlateExportRequest, PlateExportResponse, UpdatePlateExportRequest } from "@/Schema";
 
 interface PlateExportDialogProps {
   open: boolean;
@@ -65,6 +65,8 @@ export function PlateExportDialog({
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordPlate, isPending: recordingPlate } =
     useRecordPlateExport();
+  const { mutate: updatePlate, loading: updatingPlate } =
+    useUpdatePlateExport();
 
   // Helper function to format local datetime with timezone offset
   // Returns format: "YYYY-MM-DDTHH:mm:ss+HH:mm" (e.g., "2025-01-01T10:00:00+07:00")
@@ -191,33 +193,52 @@ export function PlateExportDialog({
       return;
     }
 
-    // sentAt is current local time, format with timezone offset
-    const sentAt = formatLocalDateTimeWithOffset(new Date());
     // estimatedReceiveAt is same as receivedAt for now
     const estimatedReceiveAt = receivedAt;
 
-    const request: RecordPlateExportRequest = {
-      plateCount,
-      plateVendorId: vendorId,
-      vendorName: vendorId ? undefined : vendorName.trim() || undefined,
-      sentAt,
-      estimatedReceiveAt: estimatedReceiveAt || undefined,
-      receivedAt: receivedAt || undefined,
-      notes: notes.trim() || undefined,
-    };
+    if (plateExport?.id) {
+      // UPDATE EXISTING
+      const updateRequest: UpdatePlateExportRequest = {
+        plateCount,
+        plateVendorId: vendorId || undefined,
+        vendorName: vendorId ? undefined : vendorName.trim() || undefined,
+        estimatedReceiveAt: estimatedReceiveAt || undefined,
+        receivedAt: receivedAt || undefined,
+        notes: notes.trim() || undefined,
+      };
 
-    recordPlate(
-      {
-        id: proofingOrderId,
-        request,
-      },
-      {
-        onSuccess: () => {
+      updatePlate(plateExport.id, updateRequest).then(() => {
           onSuccess?.();
           onOpenChange(false);
+      });
+    } else {
+      // RECORD NEW
+      // sentAt is current local time, format with timezone offset
+      const sentAt = formatLocalDateTimeWithOffset(new Date());
+
+      const request: RecordPlateExportRequest = {
+        plateCount,
+        plateVendorId: vendorId,
+        vendorName: vendorId ? undefined : vendorName.trim() || undefined,
+        sentAt,
+        estimatedReceiveAt: estimatedReceiveAt || undefined,
+        receivedAt: receivedAt || undefined,
+        notes: notes.trim() || undefined,
+      };
+
+      recordPlate(
+        {
+          id: proofingOrderId,
+          request,
         },
-      }
-    );
+        {
+          onSuccess: () => {
+            onSuccess?.();
+            onOpenChange(false);
+          },
+        }
+      );
+    }
   };
 
   const selectedVendor = vendors?.find((v) => v.id === vendorId);
@@ -425,8 +446,8 @@ export function PlateExportDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
-          <Button onClick={handleSubmit} disabled={recordingPlate}>
-            {recordingPlate ? (
+          <Button onClick={handleSubmit} disabled={recordingPlate || updatingPlate}>
+            {recordingPlate || updatingPlate ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Đang lưu...
