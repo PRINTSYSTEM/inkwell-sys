@@ -69,67 +69,67 @@ export function DetailPlateExportCard({
               {plateExportsList.map((exportItem: any, index: number) => (
                 <div 
                   key={exportItem.id || index}
-                  className="space-y-1 relative group text-[11px] leading-tight"
+                  className="p-2.5 bg-muted/30 rounded-md border border-muted-foreground/10 space-y-1.5 relative group text-[11px] leading-tight"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-muted-foreground uppercase tracking-widest text-[9px]">
+                        Lần {plateExportsList.length - index}
+                      </span>
                       {exportItem.isActive && (
-                        <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1 py-0.5 rounded uppercase tracking-tighter">
+                        <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1 py-0.5 rounded uppercase tracking-tighter border border-green-200">
                           Mới nhất
                         </span>
                       )}
                     </div>
-                    {order.status !== "completed" && exportItem.isActive && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 text-primary hover:bg-primary/5"
-                          onClick={() => {
-                            setEditingPlateExport(exportItem);
-                            setIsPlateExportDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                      </div>
+                    {order.status !== "completed" && (
+                      <Button
+                        variant="soft"
+                        size="sm"
+                        className="h-6 gap-1 text-primary bg-primary/10 hover:bg-primary/20 text-[10px] px-2 font-bold rounded-md border border-primary/20"
+                        onClick={() => {
+                          setEditingPlateExport(exportItem);
+                          setIsPlateExportDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="h-2.5 w-2.5" />
+                        Chỉnh sửa
+                      </Button>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">NCC:</span>
-                    <span className="font-medium text-foreground">
-                      {exportItem?.vendorName || exportItem?.plateVendor?.name || "Tâm An"}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">Số lượng:</span>
-                    <span className="font-medium text-foreground">
-                      {exportItem?.plateCount || 0} bản
-                    </span>
-                  </div>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">NCC:</span>
+                      <span className="font-semibold text-foreground truncate">
+                        {exportItem?.vendorName || exportItem?.plateVendor?.name || "Tâm An"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">Số lượng:</span>
+                      <span className="font-semibold text-foreground">
+                        {exportItem?.plateCount || 0} bản
+                      </span>
+                    </div>
 
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">Ngày tạo:</span>
-                    <span className="font-medium text-foreground">
-                      {exportItem?.createdAt || exportItem?.exportedAt
-                        ? format(new Date(exportItem.createdAt || exportItem.exportedAt), "dd/MM/yyyy HH:mm")
-                        : "—"}
-                    </span>
+                    <div className="flex items-center gap-1 col-span-2">
+                      <span className="text-muted-foreground">Ngày tạo:</span>
+                      <span className="font-medium text-foreground">
+                        {exportItem?.createdAt || exportItem?.exportedAt
+                          ? format(new Date(exportItem.createdAt || exportItem.exportedAt), "dd/MM/yyyy HH:mm")
+                          : "—"}
+                      </span>
+                    </div>
                   </div>
 
                   {exportItem?.notes && (
-                    <div className="flex items-start gap-1">
-                      <span className="text-muted-foreground shrink-0 mt-[1px]">Ghi chú:</span>
-                      <span className="italic text-foreground/80 break-words">
+                    <div className="pt-1.5 mt-1.5 border-t border-muted-foreground/5 items-start gap-1">
+                      <p className="text-muted-foreground text-[10px] mb-0.5">Ghi chú:</p>
+                      <p className="italic text-foreground/80 break-words line-clamp-2">
                         {exportItem.notes}
-                      </span>
+                      </p>
                     </div>
-                  )}
-
-                  {index < plateExportsList.length - 1 && (
-                    <div className="h-px bg-muted-foreground/10 my-2" />
                   )}
                 </div>
               ))}
@@ -138,6 +138,19 @@ export function DetailPlateExportCard({
             {/* Centered Action Buttons at bottom */}
             {order.isPlateExported && (
               <div className="flex items-center justify-center gap-2 pt-3 border-t border-muted-foreground/5 mt-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
+                  onClick={() => {
+                    const activeExport = plateExportsList.find((e: any) => e.isActive) || plateExportsList[0];
+                    setEditingPlateExport(activeExport);
+                    setIsPlateExportDialogOpen(true);
+                  }}
+                >
+                  <Edit className="h-3 w-3" />
+                  Sửa thông tin
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"

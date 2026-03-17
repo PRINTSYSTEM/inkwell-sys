@@ -11,6 +11,9 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  Building2,
+  User,
+  Hash,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
@@ -203,6 +206,7 @@ export default function OrderCreatePage() {
   const [newCustomerForm, setNewCustomerForm] = useState({
     name: "",
     representativeName: "",
+    type: "company" as "company" | "retail",
     companyName: "",
     address: "",
   });
@@ -246,7 +250,7 @@ export default function OrderCreatePage() {
         representativeName: newCustomerForm.representativeName.trim(),
         companyName: newCustomerForm.companyName.trim() || null,
         address: newCustomerForm.address.trim() || null,
-        type: newCustomerForm.companyName.trim() ? "company" : "retail",
+        type: newCustomerForm.type,
         maxDebt: 50000000,
       });
 
@@ -268,6 +272,7 @@ export default function OrderCreatePage() {
         setNewCustomerForm({
           name: "",
           representativeName: "",
+          type: "company",
           companyName: "",
           address: "",
         });
@@ -1137,9 +1142,82 @@ export default function OrderCreatePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Tên công ty</Label>
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Hash className="h-4 w-4 text-muted-foreground" />
+                Loại khách hàng
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewCustomerForm((prev) => ({ ...prev, type: "company" }))
+                  }
+                  className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center ${
+                    newCustomerForm.type === "company"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <Building2
+                    className={`h-4 w-4 mb-1 ${
+                      newCustomerForm.type === "company"
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                  <p
+                    className={`text-xs font-medium ${
+                      newCustomerForm.type === "company"
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    Khách công ty
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewCustomerForm((prev) => ({ ...prev, type: "retail" }))
+                  }
+                  className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center ${
+                    newCustomerForm.type === "retail"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <User
+                    className={`h-4 w-4 mb-1 ${
+                      newCustomerForm.type === "retail"
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                  <p
+                    className={`text-xs font-medium ${
+                      newCustomerForm.type === "retail"
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    Khách lẻ
+                  </p>
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>
+                Tên công ty{" "}
+                {newCustomerForm.type === "company" && (
+                  <span className="text-destructive">*</span>
+                )}
+              </Label>
               <Input
-                placeholder="Bỏ qua nếu là khách lẻ"
+                placeholder={
+                  newCustomerForm.type === "company"
+                    ? "Nhập tên công ty (bắt buộc)"
+                    : "Nhập tên công ty (nếu có)"
+                }
                 value={newCustomerForm.companyName}
                 onChange={(e) =>
                   setNewCustomerForm((prev) => ({
@@ -1173,6 +1251,7 @@ export default function OrderCreatePage() {
                 setNewCustomerForm({
                   name: "",
                   representativeName: "",
+                  type: "company",
                   companyName: "",
                   address: "",
                 });
