@@ -1,0 +1,31 @@
+# Danh sách API cho tính năng Xuất Kẽm (Plate Export)
+
+Tính năng quản lý "Xuất kẽm" trong Giao diện Chế bản (thuộc file [DetailPlateExportCard.tsx](file:///w:/DevPool/PrintSytem/inkwell-sys/src/pages/prepress/detail-components/DetailPlateExportCard.tsx)) không trực tiếp gọi API mà ủy quyền cho component [PlateExportDialog.tsx](file:///w:/DevPool/PrintSytem/inkwell-sys/src/components/proofing/PlateExportDialog.tsx) và [PrepressDetail.tsx](file:///w:/DevPool/PrintSytem/inkwell-sys/src/pages/prepress/PrepressDetail.tsx). Dưới đây là 5 API chính được sử dụng để duy trì tính năng này, thông qua các custom React Query Hooks:
+
+## 1. Ghi nhận Xuất kẽm (Tạo mới)
+**Hook sử dụng:** [useRecordPlateExport()](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-proofing-order.ts#701-745)
+- **Đường dẫn API tương đối:** `POST /api/proofing-orders/record-plate-export` (hoặc `/api/plate-exports` phụ thuộc vào định nghĩa OpenAPI).
+- **Mục đích:** Khi người dùng mở hộp thoại thêm mới và điền form (Số lượng, Nhà cung cấp, Ngày xuất, Ghi chú), API này lưu lại thông tin một đợt xuất kẽm mới cho bình bài hiện tại.
+
+## 2. Cập nhật bản Xuất kẽm (Chỉnh sửa)
+**Hook sử dụng:** [useUpdatePlateExport()](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-proofing-order.ts#746-805)
+- **Đường dẫn API tương đối:** `PUT /api/plate-exports/{id}`
+- **Mục đích:** Khi người dùng bấm nút "Sửa" hoặc "Chỉnh sửa" trên một thẻ lịch sử xuất kẽm cũ, hộp thoại sẽ mở ra cùng dữ liệu hiện tại. Sau khi submit, hệ thống sử dụng hook này với endpoint `PUT` để ghi đè thông tin cấu hình (như đổi ngày xuất, đổi nhận xét, hoặc sửa NCC do nhập sai).
+
+## 3. Lấy Danh sách Nhà Cung Cấp (Vendor)
+**Hook sử dụng:** `useActivePlateVendors()`
+- **Đường dẫn API tương đối:** `GET /api/vendors` (có thể kèm filter `isActive=true` và type là Plate/Chế bản).
+- **Mục đích:** API này chịu trách nhiệm hiển thị danh sách các nhà cung cấp (Tâm An, v.v.) đổ vào thanh dropdown (Select) khi người dùng chọn nhà cung cấp kẽm. Giúp người dùng chọn nhanh mà không phải gõ tay.
+
+## 4. Thêm nhanh Nhà Cung Cấp Mới
+**Hook sử dụng:** `useCreateVendor()`
+- **Đường dẫn API tương đối:** `POST /api/vendors`
+- **Mục đích:** Nếu nhà cung cấp mong muốn không có trong danh sách đổ thả (dropdown), người dùng có thể nhập tên và bấm nút "Thêm mới nhà cung cấp...". Lúc này API này sẽ chạy ngầm để khởi tạo một Vendor mới trong cơ sở dữ liệu và tự động chọn Vendor đó.
+
+## 5. Chuyển xuống Sản xuất
+**Hook sử dụng:** [useHandToProduction()](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-proofing-order.ts#867-903)
+- **Đường dẫn API tương đối:** `PUT /api/proofing-orders/{id}/hand-to-production`
+- **Mục đích:** Button "Chuyển xuống sản xuất" nằm dưới cùng thẻ Xuất Kẽm. Khi thông tin bản kẽm đã hợp lệ, người quản lý bấm vào đây. API này chuyển đổi trạng thái của bình bài từ "Prepress" (chế bản) sang "Production" (sản xuất), đồng thời đánh dấu `isHandedToProduction = true`. (Lưu ý: nút này có thể đang được cấu hình ẩn hiển thị tùy yêu cầu quy trình).
+
+---
+**Tổng kết:** Flow thao tác Xuất kẽm đi từ việc `GET` danh sách NCC -> [POST](file:///w:/DevPool/PrintSytem/inkwell-sys/src/apis/util.api.ts#257-258) ghi nhận kẽm mới -> `PUT` chỉnh sửa nếu sai -> `PUT` đẩy qua kho sản xuất sau khi xong xuôi. Tất cả state quản lý form (Form validation) được đặt bên trong con [PlateExportDialog.tsx](file:///w:/DevPool/PrintSytem/inkwell-sys/src/components/proofing/PlateExportDialog.tsx).

@@ -22,70 +22,70 @@ export function ProductionListHeader({
       <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-1.5 py-0.5 z-[9999] font-mono pointer-events-none rounded-bl">
         ProductionListHeader.tsx
       </div>
-      <div className="flex items-center justify-between mb-4 shrink-0">
+      <div className="flex items-center justify-between mb-3 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-balance">Quản lý Sản xuất</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-lg font-bold text-balance">Quản lý Sản xuất</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Theo dõi và quản lý tiến độ sản xuất
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-2" onClick={onCreateClick}>
-            <Plus className="h-4 w-4" />
+          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={onCreateClick}>
+            <Plus className="h-3.5 w-3.5" />
             Tạo đơn sản xuất
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4 shrink-0">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-medium">Tổng đơn</CardTitle>
-            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4 mb-3 shrink-0">
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
+            <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">Tổng đơn</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground/70" />
           </CardHeader>
-          <CardContent className="p-2">
-            <div className="text-lg font-bold">{stats?.total}</div>
+          <CardContent className="px-3 pb-2 pt-1">
+            <div className="text-base font-bold">{stats?.total}</div>
             <p className="text-[10px] text-muted-foreground">
               Tất cả đơn sản xuất
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-medium">
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
+            <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">
               Chờ sản xuất
             </CardTitle>
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-muted-foreground/70" />
           </CardHeader>
-          <CardContent className="p-2">
-            <div className="text-lg font-bold">{stats?.pending || 0}</div>
+          <CardContent className="px-3 pb-2 pt-1">
+            <div className="text-base font-bold">{stats?.pending || 0}</div>
             <p className="text-[10px] text-muted-foreground">Chưa bắt đầu</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-medium">
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
+            <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">
               Đang sản xuất
             </CardTitle>
-            <Factory className="h-3.5 w-3.5 text-muted-foreground" />
+            <Factory className="h-4 w-4 text-muted-foreground/70" />
           </CardHeader>
-          <CardContent className="p-2">
-            <div className="text-lg font-bold">{stats.inProgress}</div>
+          <CardContent className="px-3 pb-2 pt-1">
+            <div className="text-base font-bold">{stats.inProgress}</div>
             <p className="text-[10px] text-muted-foreground">Đang thực hiện</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-medium">
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
+            <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">
               Hoàn thành
             </CardTitle>
-            <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
+            <CheckCircle className="h-4 w-4 text-muted-foreground/70" />
           </CardHeader>
-          <CardContent className="p-2">
-            <div className="text-lg font-bold">{stats.completed}</div>
+          <CardContent className="px-3 pb-2 pt-1">
+            <div className="text-base font-bold">{stats.completed}</div>
             <p className="text-[10px] text-muted-foreground">Đã hoàn thành</p>
           </CardContent>
         </Card>
