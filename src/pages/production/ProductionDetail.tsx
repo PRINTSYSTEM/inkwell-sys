@@ -625,10 +625,7 @@ export default function ProductionDetailPage() {
   }
 
   return (
-    <div className="min-h-screen border border-pink-500 relative">
-      <span className="absolute top-0 right-0 bg-pink-500 text-white text-[10px] px-1 z-50">
-        ProductionDetail.tsx
-      </span>
+    <div className="min-h-screen">
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6">
         <div className="sticky top-0 z-20 -mx-4 bg-background/80 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">

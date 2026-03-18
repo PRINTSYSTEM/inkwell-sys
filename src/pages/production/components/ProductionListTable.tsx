@@ -713,10 +713,7 @@ export function ProductionListTable({
   onPageInputBlur,
 }: ProductionListTableProps) {
   return (
-    <div className="flex-1 flex flex-col min-h-0 border border-pink-500 relative p-1 rounded-sm">
-      <span className="absolute top-0 right-0 bg-pink-500 text-white text-[8px] px-1 z-50">
-        ProductionListTable.tsx
-      </span>
+    <div className="flex-1 flex flex-col min-h-0">
       <div ref={tableContainerRef} className="flex-1 overflow-auto [&>div]:!overflow-visible">
         {isLoading ? (
           <Table>
