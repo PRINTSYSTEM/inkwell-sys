@@ -166,9 +166,6 @@ function ProductionTableRow({
         className="flex items-center gap-1.5 h-7"
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="text-[10px] font-bold text-muted-foreground uppercase whitespace-nowrap">
-          {step.stepTypeName || step.stepType}:
-        </span>
         <Select
           value={step.status || "pending"}
           onValueChange={handleStatusChange}
