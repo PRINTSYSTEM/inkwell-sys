@@ -8,11 +8,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/ui/skeleton-components";
-import { Factory, ChevronLeft, ChevronRight, FileText, Layers, Hash, Box, Package, Save } from "lucide-react";
+import {
+  Factory,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Layers,
+  Hash,
+  Box,
+  Package,
+  Save,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { productionStepStatusLabels } from "@/lib/status-utils";
-import type { ProductionOrderResponse, ProductionStepResponse, ProofingOrderResponse } from "@/Schema";
+import type {
+  ProductionOrderResponse,
+  ProductionStepResponse,
+  ProofingOrderResponse,
+} from "@/Schema";
 import { useProofingOrder } from "@/hooks/use-proofing-order";
 import { useUpdateProductionStep } from "@/hooks/use-production";
 import {
@@ -28,7 +42,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useState } from "react";
-
 
 interface ProductionListTableProps {
   isLoading: boolean;
@@ -51,7 +64,7 @@ interface ProductionListTableProps {
 function getStepStatus(
   steps: ProductionStepResponse[] | null | undefined,
   keywords: string[],
-  stepTypeMatcher?: string
+  stepTypeMatcher?: string,
 ): ProductionStepResponse | null {
   if (!steps) return null;
   return (
@@ -98,7 +111,7 @@ function ProductionTableRow({
 
   const { data: proofingOrderData, isLoading } = useProofingOrder(
     prod.proofingOrderId || null,
-    !!prod.proofingOrderId
+    !!prod.proofingOrderId,
   );
   const proofingOrder = proofingOrderData as any;
 
@@ -107,111 +120,252 @@ function ProductionTableRow({
   const steps = prod.steps || [];
 
   // Extract steps based on requested columns
-  const laminationStep = getStepStatus(steps, ["cán màng", "cán"], "lamination");
+  const laminationStep = getStepStatus(
+    steps,
+    ["cán màng", "cán"],
+    "lamination",
+  );
   const cutStep = getStepStatus(steps, ["cắt"], "cut");
   const pasteStep = getStepStatus(steps, ["bồi"]);
   const dieCutStep = getStepStatus(steps, ["bế"], "die_cut");
   const glueStep = getStepStatus(steps, ["dán"], "glue");
   const checkStep = getStepStatus(steps, ["kiểm hàng", "kiểm tra"]);
-  const deliveryStep = getStepStatus(steps, ["giao hàng", "đóng gói", "giao"], "packaging");
+  const deliveryStep = getStepStatus(
+    steps,
+    ["giao hàng", "đóng gói", "giao"],
+    "packaging",
+  );
 
-  // Get default print qty from proofing order for auto-fill
-  const defaultPrintQty = (proofingOrder as any)?.totalProcessedQty 
-    || (proofingOrder as any)?.totalQuantity 
-    || 0;
+  const defaultPrintQty =
+    (proofingOrder as any)?.totalProcessedQty ||
+    (proofingOrder as any)?.totalQuantity ||
+    0;
 
-  const StepCell = ({ step }: { step: ProductionStepResponse | null }) => {
-    if (!step) return <TableCell className="text-center py-3 text-muted-foreground">—</TableCell>;
-    
-    // Auto-fill with proofing order qty if step qty not yet set
-    const initialInputQty = step.inputQty ? step.inputQty.toString() : (defaultPrintQty ? String(defaultPrintQty) : "");
-    const initialOutputQty = step.outputQty ? step.outputQty.toString() : (defaultPrintQty ? String(defaultPrintQty) : "");
+  const matchedStepIds = [
+    laminationStep?.id,
+    cutStep?.id,
+    pasteStep?.id,
+    dieCutStep?.id,
+    glueStep?.id,
+    checkStep?.id,
+    deliveryStep?.id,
+  ].filter(Boolean);
+
+  const otherSteps = steps
+    .filter((s) => !matchedStepIds.includes(s.id))
+    .slice(0, 1);
+
+  const InlineStepStatus = ({ step }: { step: ProductionStepResponse }) => {
+    const handleStatusChange = (newStatus: string) => {
+      updateStep({
+        stepId: step.id!,
+        data: {
+          status: newStatus,
+          inputQty: step.inputQty || defaultPrintQty || undefined,
+          outputQty: step.outputQty || defaultPrintQty || undefined,
+          defectQty: step.defectQty || undefined,
+        },
+      });
+    };
+
+    return (
+      <div
+        className="flex items-center gap-1.5 bg-muted/30 border rounded-md p-0.5 pr-1 h-7 cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1.5 whitespace-nowrap">
+          {step.stepTypeName || step.stepType}
+        </span>
+        <Select
+          value={step.status || "pending"}
+          onValueChange={handleStatusChange}
+        >
+          <SelectTrigger
+            className={`h-5 min-w-[95px] text-[9px] px-2 font-bold border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(
+              step.status || "pending",
+            )}`}
+          >
+            <SelectValue placeholder="Trạng thái" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              value="pending"
+              className="text-xs font-semibold cursor-pointer"
+            >
+              Chưa thực hiện
+            </SelectItem>
+            <SelectItem
+              value="in_progress"
+              className="text-xs font-semibold cursor-pointer"
+            >
+              Đang thực hiện
+            </SelectItem>
+            <SelectItem
+              value="done"
+              className="text-xs font-semibold cursor-pointer"
+            >
+              Đã hoàn thành
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
+
+  const StepCell = ({
+    step,
+    isCheckStep = false,
+  }: {
+    step: ProductionStepResponse | null;
+    isCheckStep?: boolean;
+  }) => {
+    if (!step)
+      return (
+        <TableCell className="text-center py-3 text-muted-foreground">
+          —
+        </TableCell>
+      );
+
+    // Auto-fill with proofing order qty if step qty not yet set (or zero)
+    const initialInputQty = step.inputQty
+      ? step.inputQty.toString()
+      : defaultPrintQty
+        ? String(defaultPrintQty)
+        : "";
+    const initialOutputQty = step.outputQty
+      ? step.outputQty.toString()
+      : defaultPrintQty
+        ? String(defaultPrintQty)
+        : "";
     const [inputQty, setInputQty] = useState(initialInputQty);
     const [outputQty, setOutputQty] = useState(initialOutputQty);
-    const [defectQty, setDefectQty] = useState(step.defectQty?.toString() || "");
+    const [defectQty, setDefectQty] = useState(
+      step.defectQty?.toString() || "",
+    );
 
     React.useEffect(() => {
-      setInputQty(step.inputQty ? step.inputQty.toString() : (defaultPrintQty ? String(defaultPrintQty) : ""));
-      setOutputQty(step.outputQty ? step.outputQty.toString() : (defaultPrintQty ? String(defaultPrintQty) : ""));
+      setInputQty(
+        step.inputQty
+          ? step.inputQty.toString()
+          : defaultPrintQty
+            ? String(defaultPrintQty)
+            : "",
+      );
+      setOutputQty(
+        step.outputQty
+          ? step.outputQty.toString()
+          : defaultPrintQty
+            ? String(defaultPrintQty)
+            : "",
+      );
       setDefectQty(step.defectQty?.toString() || "");
-    }, [step.inputQty, step.outputQty, step.defectQty]);
+    }, [step.inputQty, step.outputQty, step.defectQty, defaultPrintQty]);
 
-    const handleUpdate = (updates: Partial<{ status: any, inputQty: number, outputQty: number, defectQty: number }>) => {
+    const handleUpdate = (
+      updates: Partial<{
+        status: any;
+        inputQty: number;
+        outputQty: number;
+        defectQty: number;
+      }>,
+    ) => {
       if (step.id) {
         updateStep({
           stepId: step.id,
-          data: { 
+          data: {
             status: step.status,
             inputQty: Number(inputQty) || 0,
             outputQty: Number(outputQty) || 0,
             defectQty: Number(defectQty) || 0,
-            ...updates 
-          }
+            ...updates,
+          },
         });
       }
     };
 
     return (
-      <TableCell className="align-top py-3 px-1.5" onClick={(e) => e.stopPropagation()}>
+      <TableCell
+        className="align-top py-3 px-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex flex-col gap-1.5 w-[140px] mx-auto">
           <Select
             value={step.status || "pending"}
             onValueChange={(val: any) => handleUpdate({ status: val })}
           >
-            <SelectTrigger className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(step.status || "pending")}`}>
+            <SelectTrigger
+              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(step.status || "pending")}`}
+            >
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="pending" className="text-xs font-semibold cursor-pointer">
+              <SelectItem
+                value="pending"
+                className="text-xs font-semibold cursor-pointer"
+              >
                 Chưa thực hiện
               </SelectItem>
-              <SelectItem value="in_progress" className="text-xs font-semibold cursor-pointer">
+              <SelectItem
+                value="in_progress"
+                className="text-xs font-semibold cursor-pointer"
+              >
                 Đang thực hiện
               </SelectItem>
-              <SelectItem value="done" className="text-xs font-semibold cursor-pointer">
+              <SelectItem
+                value="done"
+                className="text-xs font-semibold cursor-pointer"
+              >
                 Đã hoàn thành
               </SelectItem>
             </SelectContent>
           </Select>
 
-          <div className="flex flex-col gap-1 mt-1">
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Vào</span>
-              <Input 
-                type="number" 
-                className="h-5 w-14 text-[10px] px-1 py-0 text-right bg-background" 
-                value={inputQty} 
-                onChange={(e) => setInputQty(e.target.value)}
-                onBlur={() => {
-                  handleUpdate({ inputQty: Number(inputQty) || 0 });
-                }}
-              />
+          {isCheckStep && (
+            <div className="flex flex-col gap-1 mt-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
+                  Vào
+                </span>
+                <Input
+                  type="number"
+                  className="h-5 w-14 text-[10px] px-1 py-0 text-right bg-background"
+                  value={inputQty}
+                  onChange={(e) => setInputQty(e.target.value)}
+                  onBlur={() => {
+                    handleUpdate({ inputQty: Number(inputQty) || 0 });
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
+                  Ra
+                </span>
+                <Input
+                  type="number"
+                  className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-emerald-700 bg-background"
+                  value={outputQty}
+                  onChange={(e) => setOutputQty(e.target.value)}
+                  onBlur={() => {
+                    handleUpdate({ outputQty: Number(outputQty) || 0 });
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-red-600 dark:text-red-400">
+                  Lỗi
+                </span>
+                <Input
+                  type="number"
+                  className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-red-600 bg-background"
+                  value={defectQty}
+                  onChange={(e) => setDefectQty(e.target.value)}
+                  onBlur={() => {
+                    handleUpdate({ defectQty: Number(defectQty) || 0 });
+                  }}
+                />
+              </div>
             </div>
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">Ra</span>
-              <Input 
-                type="number" 
-                className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-emerald-700 bg-background" 
-                value={outputQty} 
-                onChange={(e) => setOutputQty(e.target.value)}
-                onBlur={() => {
-                  handleUpdate({ outputQty: Number(outputQty) || 0 });
-                }}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-red-600 dark:text-red-400">Lỗi</span>
-              <Input 
-                type="number" 
-                className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-red-600 bg-background" 
-                value={defectQty} 
-                onChange={(e) => setDefectQty(e.target.value)}
-                onBlur={() => {
-                  handleUpdate({ defectQty: Number(defectQty) || 0 });
-                }}
-              />
-            </div>
-          </div>
+          )}
         </div>
       </TableCell>
     );
@@ -227,7 +381,7 @@ function ProductionTableRow({
         minute: "2-digit",
         day: "2-digit",
         month: "2-digit",
-        year: "numeric"
+        year: "numeric",
       }).format(date);
     } catch (e) {
       return "—";
@@ -235,7 +389,10 @@ function ProductionTableRow({
   };
 
   return (
-    <TableRow className="cursor-pointer hover:bg-muted/50 border-b" onClick={onClick}>
+    <TableRow
+      className="cursor-pointer hover:bg-muted/50 border-b"
+      onClick={onClick}
+    >
       <TableCell className="py-3 align-top min-w-[300px]">
         {isLoading ? (
           <div className="space-y-4 animate-pulse">
@@ -245,58 +402,113 @@ function ProductionTableRow({
           </div>
         ) : proofingOrder ? (
           <div className="flex flex-col gap-2.5 text-sm">
-            
             {/* 1. Header & General Info */}
             <div className="space-y-2">
               <div className="flex justify-between items-start">
-                 <h4 className="font-bold text-[15px] uppercase text-primary">Lệnh In #{(proofingOrder as any).id}</h4>
-                 <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full font-semibold border text-muted-foreground">{String(prod.code || `PROD-${prod.id}`)}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="font-bold text-[15px] uppercase text-primary">
+                    Lệnh In #{(proofingOrder as any).id}
+                  </h4>
+                  {otherSteps.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      {otherSteps.map((step) => (
+                        <InlineStepStatus key={step.id} step={step} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full font-semibold border text-muted-foreground">
+                  {String(prod.code || `PROD-${prod.id}`)}
+                </span> */}
               </div>
               <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-xs">
-                <span className="text-muted-foreground font-medium">Mã lệnh in:</span>
-                <span className="font-bold text-foreground">{(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}</span>
-                
-                <span className="text-muted-foreground font-medium">Chất liệu:</span>
-                <span className="font-bold text-foreground">{(proofingOrder as any).materialType?.name || "—"}</span>
-                
-                <span className="text-muted-foreground font-medium">Số giấy in:</span>
-                <span className="font-bold text-foreground text-blue-600">{String((proofingOrder as any).totalProcessedQty || (proofingOrder as any).totalQuantity || "0")} tờ</span>
+                <span className="text-muted-foreground font-medium">
+                  Mã lệnh in:
+                </span>
+                <span className="font-bold text-foreground">
+                  {(proofingOrder as any).code ||
+                    `BB${(proofingOrder as any).id}`}
+                </span>
+
+                <span className="text-muted-foreground font-medium">
+                  Chất liệu:
+                </span>
+                <span className="font-bold text-foreground">
+                  {(proofingOrder as any).materialType?.name || "—"}
+                </span>
+
+                <span className="text-muted-foreground font-medium">
+                  Số giấy in:
+                </span>
+                <span className="font-bold text-foreground text-blue-600">
+                  {String(
+                    (proofingOrder as any).totalProcessedQty ||
+                      (proofingOrder as any).totalQuantity ||
+                      "0",
+                  )}{" "}
+                  tờ
+                </span>
               </div>
             </div>
 
             {/* 2. Thiết kế */}
-            {(proofingOrder as any).proofingOrderDesigns && (proofingOrder as any).proofingOrderDesigns.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
-                  <Layers className="w-3.5 h-3.5" /> Thiết kế ({(proofingOrder as any).proofingOrderDesigns.length})
-                </span>
-                <div className="space-y-2">
-                  {(proofingOrder as any).proofingOrderDesigns.map((pod: any) => (
-                    <div key={pod.id} className="bg-muted/20 p-2.5 rounded-md text-xs">
-                      <p className="font-bold text-[13px] text-foreground mb-2">
-                        {pod.design?.designName || pod.design?.code || "—"}
-                      </p>
-                      <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-xs">
-                        <span className="text-muted-foreground font-medium">Số lượng:</span>
-                        <span className="font-bold text-foreground text-amber-700">{pod.quantity} sản phẩm</span>
-                        
-                        <span className="text-muted-foreground font-medium">Mã thiết kế:</span>
-                        <span className="font-bold text-foreground">{pod.design?.code || "—"}</span>
-                        
-                        <span className="text-muted-foreground font-medium">Kích thước:</span>
-                        <span className="font-bold text-foreground break-all">{pod.design?.dimensions ? String(pod.design.dimensions) : "—"}</span>
-                      </div>
-                    </div>
-                  ))}
+            {(proofingOrder as any).proofingOrderDesigns &&
+              (proofingOrder as any).proofingOrderDesigns.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
+                    <Layers className="w-3.5 h-3.5" /> Thiết kế (
+                    {(proofingOrder as any).proofingOrderDesigns.length})
+                  </span>
+                  <div className="space-y-2">
+                    {(proofingOrder as any).proofingOrderDesigns.map(
+                      (pod: any) => (
+                        <div
+                          key={pod.id}
+                          className="bg-muted/20 p-2.5 rounded-md text-xs"
+                        >
+                          <p className="font-bold text-[13px] text-foreground mb-2">
+                            {pod.design?.designName || pod.design?.code || "—"}
+                          </p>
+                          <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-xs">
+                            <span className="text-muted-foreground font-medium">
+                              Số lượng:
+                            </span>
+                            <span className="font-bold text-foreground text-amber-700">
+                              {pod.quantity} sản phẩm
+                            </span>
+
+                            <span className="text-muted-foreground font-medium">
+                              Mã thiết kế:
+                            </span>
+                            <span className="font-bold text-foreground">
+                              {pod.design?.code || "—"}
+                            </span>
+
+                            <span className="text-muted-foreground font-medium">
+                              Kích thước:
+                            </span>
+                            <span className="font-bold text-foreground break-all">
+                              {pod.design?.dimensions
+                                ? String(pod.design.dimensions)
+                                : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* 3. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
             <div className="flex flex-row gap-2 mt-1">
-              {((proofingOrder as any).dieExports?.length > 0 || (proofingOrder as any).proofingOrderDies?.length > 0) && (
+              {((proofingOrder as any).dieExports?.length > 0 ||
+                (proofingOrder as any).proofingOrderDies?.length > 0) && (
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Popover open={openDiePopover} onOpenChange={setOpenDiePopover}>
+                  <Popover
+                    open={openDiePopover}
+                    onOpenChange={setOpenDiePopover}
+                  >
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -321,28 +533,51 @@ function ProductionTableRow({
                         </span>
                       </div>
                       <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
-                        {((proofingOrder as any).dieExports || (proofingOrder as any).proofingOrderDies || []).map((dieExport: any, i: number) => (
-                          <div key={dieExport.id || i} className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2">
-                              <div className="flex flex-col">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Mã số khuôn</span>
-                                 <span className="font-bold text-foreground">{dieExport.die?.code || "—"}</span>
-                              </div>
-                              <div className="flex flex-col">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Kích thước</span>
-                                 <span className="font-semibold text-foreground">
-                                   {dieExport.die ? (dieExport.die.length && dieExport.die.width ? `${dieExport.die.length}x${dieExport.die.width}` : "—") : "—"}
-                                 </span>
-                              </div>
-                              <div className="flex flex-col">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Tình trạng khuôn</span>
-                                 <span className="font-semibold text-green-600">
-                                   {dieExport.die?.location || "Có thể sử dụng"}
-                                 </span>
-                              </div>
-                              <div className="flex flex-col">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Ngày xuất khuôn</span>
-                                 <span className="font-semibold text-foreground">{formatDate(dieExport.createdAt)}</span>
-                              </div>
+                        {(
+                          (proofingOrder as any).dieExports ||
+                          (proofingOrder as any).proofingOrderDies ||
+                          []
+                        ).map((dieExport: any, i: number) => (
+                          <div
+                            key={dieExport.id || i}
+                            className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2"
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                Mã số khuôn
+                              </span>
+                              <span className="font-bold text-foreground">
+                                {dieExport.die?.code || "—"}
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                Kích thước
+                              </span>
+                              <span className="font-semibold text-foreground">
+                                {dieExport.die
+                                  ? dieExport.die.length && dieExport.die.width
+                                    ? `${dieExport.die.length}x${dieExport.die.width}`
+                                    : "—"
+                                  : "—"}
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                Tình trạng khuôn
+                              </span>
+                              <span className="font-semibold text-green-600">
+                                {dieExport.die?.location || "Có thể sử dụng"}
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                Ngày xuất khuôn
+                              </span>
+                              <span className="font-semibold text-foreground">
+                                {formatDate(dieExport.createdAt)}
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -353,7 +588,10 @@ function ProductionTableRow({
 
               {(proofingOrder as any).plateExport && (
                 <div onClick={(e) => e.stopPropagation()}>
-                  <Popover open={openPlatePopover} onOpenChange={setOpenPlatePopover}>
+                  <Popover
+                    open={openPlatePopover}
+                    onOpenChange={setOpenPlatePopover}
+                  >
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -378,51 +616,84 @@ function ProductionTableRow({
                         </span>
                       </div>
                       <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
-                        {[(proofingOrder as any).plateExport].filter(Boolean).map((plateExport: any, i: number) => (
-                          <div key={plateExport.id || i} className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2">
+                        {[(proofingOrder as any).plateExport]
+                          .filter(Boolean)
+                          .map((plateExport: any, i: number) => (
+                            <div
+                              key={plateExport.id || i}
+                              className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2"
+                            >
                               <div className="flex flex-col col-span-2">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Mã số kẽm</span>
-                                 <span className="font-bold text-foreground">{plateExport.id ? `ZK${plateExport.id}` : "—"}</span>
-                              </div>
-                              
-                              <div className="flex flex-col">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Chất liệu (NCC)</span>
-                                 <span className="font-semibold text-foreground">{plateExport.vendorName || plateExport.plateVendor?.name || "Tâm An"}</span>
-                              </div>
-                              
-                              <div className="flex flex-col">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Số lượng / Độ dày</span>
-                                 <span className="font-bold text-amber-700">{plateExport.plateCount || "—"} bản</span>
-                              </div>
-                              
-                              <div className="flex flex-col">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Ngày xuất kẽm</span>
-                                 <span className="font-semibold text-foreground">{formatDate(plateExport.createdAt || plateExport.exportedAt)}</span>
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                  Mã số kẽm
+                                </span>
+                                <span className="font-bold text-foreground">
+                                  {plateExport.id ? `ZK${plateExport.id}` : "—"}
+                                </span>
                               </div>
 
                               <div className="flex flex-col">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Tình trạng kẽm</span>
-                                 <span className="font-semibold text-blue-600">Đã nhận</span>
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                  Chất liệu (NCC)
+                                </span>
+                                <span className="font-semibold text-foreground">
+                                  {plateExport.vendorName ||
+                                    plateExport.plateVendor?.name ||
+                                    "Tâm An"}
+                                </span>
                               </div>
-                              
+
+                              <div className="flex flex-col">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                  Số lượng / Độ dày
+                                </span>
+                                <span className="font-bold text-amber-700">
+                                  {plateExport.plateCount || "—"} bản
+                                </span>
+                              </div>
+
+                              <div className="flex flex-col">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                  Ngày xuất kẽm
+                                </span>
+                                <span className="font-semibold text-foreground">
+                                  {formatDate(
+                                    plateExport.createdAt ||
+                                      plateExport.exportedAt,
+                                  )}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-col">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                  Tình trạng kẽm
+                                </span>
+                                <span className="font-semibold text-blue-600">
+                                  Đã nhận
+                                </span>
+                              </div>
+
                               <div className="flex flex-col col-span-2 pt-1">
-                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">Ghi chú</span>
-                                 <span className="font-semibold italic text-muted-foreground">{plateExport.notes || "—"}</span>
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                  Ghi chú
+                                </span>
+                                <span className="font-semibold italic text-muted-foreground">
+                                  {plateExport.notes || "—"}
+                                </span>
                               </div>
-                          </div>
-                        ))}
+                            </div>
+                          ))}
                       </div>
                     </PopoverContent>
                   </Popover>
                 </div>
               )}
             </div>
-
           </div>
         ) : (
           <div className="text-sm font-medium text-muted-foreground flex flex-col items-center justify-center p-4 bg-muted/20 border-2 border-dashed rounded-lg">
-             <Package className="w-6 h-6 mb-2 opacity-50" />
-             Không có thông tin bình bài đính kèm
+            <Package className="w-6 h-6 mb-2 opacity-50" />
+            Không có thông tin bình bài đính kèm
           </div>
         )}
       </TableCell>
@@ -431,7 +702,7 @@ function ProductionTableRow({
       <StepCell step={pasteStep} />
       <StepCell step={dieCutStep} />
       <StepCell step={glueStep} />
-      <StepCell step={checkStep} />
+      <StepCell step={checkStep} isCheckStep={true} />
       <StepCell step={deliveryStep} />
     </TableRow>
   );
@@ -463,14 +734,30 @@ export function ProductionListTable({
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="h-10 font-bold text-sm w-[300px]">LỆNH IN</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">CÁN MÀNG</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">CẮT</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">BỒI</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">BẾ</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">DÁN</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">KIỂM HÀNG</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">GIAO HÀNG</TableHead>
+                <TableHead className="h-10 font-bold text-sm w-[300px]">
+                  LỆNH IN
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  CÁN MÀNG
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  CẮT
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  BỒI
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  BẾ
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  DÁN
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  KIỂM HÀNG
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  GIAO HÀNG
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -488,14 +775,30 @@ export function ProductionListTable({
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="h-10 font-bold text-sm w-[300px]">LỆNH IN</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">CÁN MÀNG</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">CẮT</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">BỒI</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">BẾ</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">DÁN</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">KIỂM HÀNG</TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">GIAO HÀNG</TableHead>
+                <TableHead className="h-10 font-bold text-sm w-[300px]">
+                  LỆNH IN
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  CÁN MÀNG
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  CẮT
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  BỒI
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  BẾ
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  DÁN
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  KIỂM HÀNG
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  GIAO HÀNG
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -517,8 +820,8 @@ export function ProductionListTable({
           <div className="text-sm font-medium text-muted-foreground">
             {searchTerm.trim() ? (
               <>
-                Hiển thị {productions.length} / {totalCount} đơn sản xuất (đã lọc theo
-                từ khóa)
+                Hiển thị {productions.length} / {totalCount} đơn sản xuất (đã
+                lọc theo từ khóa)
               </>
             ) : (
               <>
