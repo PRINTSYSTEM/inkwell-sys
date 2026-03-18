@@ -93,7 +93,7 @@ export function DetailPlateExportCard({
                     </div>
                     {order.status !== "completed" && (
                       <Button
-                        variant="soft"
+                        variant="ghost"
                         size="sm"
                         className="h-6 gap-1 text-primary bg-primary/10 hover:bg-primary/20 text-[10px] px-2 font-bold rounded-md border border-primary/20"
                         onClick={() => {

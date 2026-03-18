@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { DesignItem } from "@/types/proofing";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import { cn } from "@/lib/utils";
-import { FileText } from "lucide-react";
+import { Search, FileText } from "lucide-react";
 import {
   processClassificationLabels,
   sidesClassificationLabels,
@@ -20,12 +19,16 @@ import {
 } from "@/lib/status-utils";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { Button } from "@/components/ui/button";
 
 interface DesignTableProps {
   designs: DesignItem[];
   selectedIds: Set<number>;
   canSelect: (design: DesignItem) => boolean;
   onToggle: (design: DesignItem) => void;
+  onReject?: (design: DesignItem) => void;
+  isRejecting?: boolean;
+  onFindDie?: (design: DesignItem) => void;
 }
 
 export function DesignTable({
@@ -33,6 +36,9 @@ export function DesignTable({
   selectedIds,
   canSelect,
   onToggle,
+  onReject,
+  isRejecting,
+  onFindDie,
 }: DesignTableProps) {
   const [viewingImage, setViewingImage] = useState<{
     url: string;
@@ -45,7 +51,6 @@ export function DesignTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12 h-10 text-sm font-bold"></TableHead>
               <TableHead className="w-16 h-10 text-sm font-bold">Ảnh</TableHead>
               <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
@@ -54,6 +59,9 @@ export function DesignTable({
               <TableHead className="h-10 text-sm font-bold">Chất liệu</TableHead>
               <TableHead className="h-10 text-sm font-bold">
                 Quy cách
+              </TableHead>
+              <TableHead className="h-10 text-sm font-bold text-right sticky right-0 bg-background z-20">
+                Thao tác
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -156,11 +164,10 @@ export function DesignTable({
                 >
                   <TableRow
                     className={cn(
-                      "cursor-pointer h-14",
-                      isSelected && "bg-primary/5",
-                      !selectable &&
-                        !isSelected &&
-                        "opacity-50 cursor-not-allowed"
+                      "cursor-pointer h-14 transition-colors relative",
+                      isSelected && "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]",
+                      !isSelected && selectable && "hover:bg-muted/50",
+                      !selectable && !isSelected && "opacity-50 cursor-not-allowed"
                     )}
                     onClick={() => {
                       if (selectable || isSelected) {
@@ -168,18 +175,6 @@ export function DesignTable({
                       }
                     }}
                   >
-                    <TableCell>
-                      <Checkbox
-                        checked={isSelected}
-                        disabled={!selectable && !isSelected}
-                        onCheckedChange={() => {
-                          if (selectable || isSelected) {
-                            onToggle(design);
-                          }
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </TableCell>
                     <TableCell>
                       {design.thumbnailUrl ? (
                         <button
@@ -269,6 +264,39 @@ export function DesignTable({
                               —
                             </span>
                           )}
+                      </div>
+                    </TableCell>
+                    <TableCell className={cn("py-2 text-right sticky right-0 z-10 transition-colors", isSelected ? "bg-green-100/90 group-hover:bg-green-200/80 dark:bg-green-900/40" : "bg-background")}>
+                      <div className="flex items-center justify-end gap-2">
+                        {onReject && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isRejecting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onReject(design);
+                            }}
+                          >
+                            Hoàn hàng
+                          </Button>
+                        )}
+
+                        {onFindDie && (design.designTypeName || "").toLowerCase().includes("hộp") && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                            disabled={isRejecting}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onFindDie(design);
+                            }}
+                            title="Tìm khuôn liên quan"
+                          >
+                            <Search className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

@@ -88,7 +88,12 @@ import { useProductionOrders } from "@/hooks/use-production";
 import { useAvailableOrderDetailsForProofing } from "@/hooks";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
 import { useDesignTypeList } from "@/hooks/use-design-type";
-// DesignTable removed - now rendered in PrepressOrdersHeader
+import { DesignTable } from "@/components/proofing/DesignTable";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { DesignCardSkeleton } from "@/components/proofing/DesignCardSkeleton";
 // FilterSection removed - now in PrepressList
 import { FilterNoticeBanner } from "@/components/proofing/FilterNoticeBanner";
@@ -143,7 +148,7 @@ import { DetailPlateExportCard } from "./detail-components/DetailPlateExportCard
 import { DetailDieExportCard } from "./detail-components/DetailDieExportCard";
 import { DetailEmptyOrderView } from "./detail-components/DetailEmptyOrderView";
 import { PrepressDetailDialogs } from "./detail-components/PrepressDetailDialogs";
-import { PrepressDesignTable } from "./components/PrepressDesignTable";
+// PrepressDesignTable removed
 
 // Component for inline quantity editing with API available quantity
 function QuantityCell({
@@ -2077,34 +2082,130 @@ export default function ProofingOrderDetailPage() {
           <div className="flex-1 flex flex-row gap-4 overflow-hidden">
             {/* Left: selectable designs */}
             <div className="w-2/3 min-w-0 flex flex-col">
-              <PrepressDesignTable
-                designs={paginatedDesigns}
-                isLoading={isLoadingDesigns}
-                selectedIds={selectedIds}
-                onToggleSelection={toggleSelection}
-                canSelect={canSelect}
-                onReject={() => {
-                  toast.info("Tính năng hoàn hàng không không khả dụng ở đây");
-                }}
-                onFindDie={handleFindDie}
-                isRejecting={false}
-                designsPage={currentPage}
-                setDesignsPage={setCurrentPage}
-                designsTotalPages={totalPages}
-                selectedDesignsCount={selectedCount}
-                onOpenInventoryView={() => setIsDieListDialogOpen(true)}
-                // Filters
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                designTypeOptions={designTypeOptions}
-                selectedDesignTypes={selectedDesignTypes}
-                setSelectedDesignTypes={setSelectedDesignTypes}
-                materialTypeOptions={availableDesignsData?.materialTypeOptions || []}
-                selectedMaterialTypes={selectedMaterialTypes}
-                setSelectedMaterialTypes={setSelectedMaterialTypes}
-                setImageViewerOpen={setImageViewerOpen}
-                setViewingImageUrl={setViewingImageUrl}
-              />
+              <div className="flex-1 flex flex-col overflow-hidden border rounded-xl bg-card">
+                {/* Filters Header */}
+                <div className="shrink-0 p-4 border-b space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold">Thiết kế chờ bình bài ({paginatedDesigns.length})</h3>
+                      <p className="text-xs text-muted-foreground">Đã chọn: {selectedCount}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setIsDieListDialogOpen(true)} className="gap-2">
+                      <Search className="h-4 w-4" />
+                      Danh sách khuôn bế
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Tìm theo mã hàng..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 h-9"
+                      />
+                    </div>
+                    <select
+                      className="h-9 w-40 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      value={selectedMaterialTypes.length === 1 ? selectedMaterialTypes[0] : ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedMaterialTypes(val ? [parseInt(val)] : []);
+                      }}
+                    >
+                      <option value="">Loại chất liệu</option>
+                      {availableDesignsData?.materialTypeOptions?.map((m: any) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Design Type Chips */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                    <Button
+                      variant={selectedDesignTypes.length === 0 ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-7 px-3 text-xs rounded-full"
+                      onClick={() => setSelectedDesignTypes([])}
+                    >
+                      Tất cả
+                    </Button>
+                    {designTypeOptions.map((dt) => {
+                      const isActive = selectedDesignTypes.includes(dt.id);
+                      return (
+                        <Button
+                          key={dt.id}
+                          variant={isActive ? "secondary" : "ghost"}
+                          size="sm"
+                          className={cn(
+                            "h-7 px-3 text-xs rounded-full whitespace-nowrap",
+                            isActive && "bg-primary/10 text-primary hover:bg-primary/20"
+                          )}
+                          onClick={() => {
+                            if (isActive) setSelectedDesignTypes(selectedDesignTypes.filter(id => id !== dt.id));
+                            else setSelectedDesignTypes([...selectedDesignTypes, dt.id]);
+                          }}
+                        >
+                          {dt.name} {dt.count ? `(${dt.count})` : ""}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Table Area */}
+                <ScrollArea className="flex-1">
+                  <div className="p-0">
+                    <DesignTable
+                      designs={paginatedDesigns}
+                      selectedIds={selectedIds}
+                      onToggle={(design) => {
+                        toggleSelection(design);
+                        // Auto-filter by design type if selecting for the first time
+                        if (selectedIds.size === 0 && typeof design.designTypeId === 'number') {
+                          setSelectedDesignTypes([design.designTypeId]);
+                        }
+                      }}
+                      canSelect={canSelect}
+                      isLoadingDesigns={isLoadingDesigns}
+                      onReject={(design) => {
+                        toast.info("Tính năng hoàn hàng không không khả dụng ở đây");
+                      }}
+                      onFindDie={handleFindDie}
+                    />
+                  </div>
+                </ScrollArea>
+
+                {/* Pagination Footer */}
+                {totalPages > 1 && (
+                  <div className="shrink-0 p-3 border-t bg-muted/20 flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Trang {currentPage} / {totalPages}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right: configuration panel (existing) */}

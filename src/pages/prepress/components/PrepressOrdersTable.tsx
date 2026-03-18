@@ -1,4 +1,5 @@
 import { FileText } from "lucide-react";
+import type { DesignItem } from "@/types/proofing";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -53,16 +54,36 @@ export function PrepressOrdersTable({
                     {shouldShowExpand && (
                       <TableHead className="h-10 text-sm font-bold w-12"></TableHead>
                     )}
-                    <TableHead className="h-10 text-sm font-bold w-12">Ảnh</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">Mã bài</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
-                    <TableHead className="h-10 text-sm font-bold text-center">SL mã hàng</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">Chất liệu</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">Quy cách</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">Trạng thái</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">Xuất kẽm</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">Xuất khuôn</TableHead>
-                    <TableHead className="h-10 text-sm font-bold">Ngày tạo</TableHead>
+                    <TableHead className="h-10 text-sm font-bold w-12">
+                      Ảnh
+                    </TableHead>
+                    <TableHead className="h-10 text-sm font-bold">
+                      Mã bài
+                    </TableHead>
+                    <TableHead className="h-10 text-sm font-bold">
+                      Mã hàng
+                    </TableHead>
+                    <TableHead className="h-10 text-sm font-bold text-center">
+                      SL mã hàng
+                    </TableHead>
+                    <TableHead className="h-10 text-sm font-bold">
+                      Chất liệu
+                    </TableHead>
+                    <TableHead className="h-10 text-sm font-bold">
+                      Quy cách
+                    </TableHead>
+                    <TableHead className="h-10 text-sm font-bold">
+                      Trạng thái
+                    </TableHead>
+                    <TableHead className="h-10 text-sm font-bold">
+                      Xuất kẽm
+                    </TableHead>
+                    <TableHead className="h-10 text-sm font-bold">
+                      Xuất khuôn
+                    </TableHead>
+                    <TableHead className="h-10 text-sm font-bold">
+                      Ngày tạo
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -74,7 +95,10 @@ export function PrepressOrdersTable({
                     />
                   ) : orders.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={shouldShowExpand ? 11 : 10} className="py-10">
+                      <TableCell
+                        colSpan={shouldShowExpand ? 11 : 10}
+                        className="py-10"
+                      >
                         <div className="flex flex-col items-center justify-center gap-2 text-center">
                           <FileText className="h-10 w-10 text-muted-foreground opacity-60" />
                           <p className="text-sm font-semibold text-muted-foreground">
@@ -89,7 +113,6 @@ export function PrepressOrdersTable({
                         key={order.id}
                         order={order}
                         shouldShowExpand={shouldShowExpand}
-                        isExpanded={shouldShowExpand ? expandedOrderIds.has(order.id) : false}
                         searchTermLower={searchTermLower}
                         debouncedSearchTerm={debouncedSearchTerm}
                         onNavigate={onNavigate}

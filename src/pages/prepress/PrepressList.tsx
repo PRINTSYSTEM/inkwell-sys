@@ -94,7 +94,6 @@ import { formatDesignDimensions } from "@/utils/format-die-size";
 import { PrepressDesignFilter } from "./components/PrepressDesignFilter";
 import { PrepressOrdersHeader } from "./components/PrepressOrdersHeader";
 import { PrepressOrdersTable } from "./components/PrepressOrdersTable";
-import { PrepressDesignTable } from "./components/PrepressDesignTable";
 import { PrepressOrderRow } from "./components/PrepressOrderRow";
 import { DetailEmptyOrderView } from "./detail-components/DetailEmptyOrderView";
 import { DieListDialog } from "@/components/dies/DieListDialog";
@@ -733,6 +732,10 @@ export default function PrepressList() {
                       debouncedDesignCode={debouncedDesignCode}
                       onNavigate={(id) => navigate(`/proofing/${id}`)}
                       ordersTableRef={ordersTableRef}
+                      // Actions for shared DesignTable
+                      onReject={openRejectDialog}
+                      isRejecting={isRejecting}
+                      onFindDie={() => setIsDieListDialogOpen(true)}
                       // Designs Pagination props
                       designsPage={designsPage}
                       setDesignsPage={setDesignsPage}
