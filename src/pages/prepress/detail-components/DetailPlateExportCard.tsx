@@ -23,18 +23,21 @@ export function DetailPlateExportCard({
   if (!order) return null;
 
   const plateExport = order.plateExport;
-  const plateExportsList = order.plateExports?.length > 0 
-    ? order.plateExports 
-    : (plateExport ? [plateExport] : []);
+  const plateExportsList =
+    order.plateExports?.length > 0
+      ? order.plateExports
+      : plateExport
+        ? [plateExport]
+        : [];
 
   return (
     <Card className="relative h-full flex flex-col">
-
       <CardHeader className="pb-1.5 px-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
             <Package className="h-3.5 w-3.5" />
-            Xuất bản kẽm {plateExportsList.length > 0 ? `(${plateExportsList.length})` : ""}
+            Xuất bản kẽm{" "}
+            {plateExportsList.length > 0 ? `(${plateExportsList.length})` : ""}
           </CardTitle>
         </div>
       </CardHeader>
@@ -43,8 +46,12 @@ export function DetailPlateExportCard({
         {!order.isPlateExported ? (
           <div className="flex flex-col items-center py-6 space-y-4 bg-muted/20 rounded-lg border border-dashed border-muted-foreground/20">
             <div className="text-center space-y-1">
-              <p className="font-bold text-sm text-muted-foreground">Chưa có thông tin xuất kẽm</p>
-              <p className="text-[11px] text-muted-foreground/60">Ghi nhận thông tin để tiếp tục</p>
+              <p className="font-bold text-sm text-muted-foreground">
+                Chưa có thông tin xuất kẽm
+              </p>
+              <p className="text-[11px] text-muted-foreground/60">
+                Ghi nhận thông tin để tiếp tục
+              </p>
             </div>
             {order.status !== "completed" && (
               <Button
@@ -61,13 +68,15 @@ export function DetailPlateExportCard({
           <div className="space-y-2 flex-1 flex flex-col">
             <div className="flex items-center gap-2 px-1 mb-0.5">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
-              <span className="font-bold text-green-600 uppercase tracking-tight text-[10px]">Đã xuất kẽm</span>
+              <span className="font-bold text-green-600 uppercase tracking-tight text-[10px]">
+                Đã xuất kẽm
+              </span>
             </div>
 
             {/* Scrollable list of exports */}
             <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-4 max-h-[400px]">
               {plateExportsList.map((exportItem: any, index: number) => (
-                <div 
+                <div
                   key={exportItem.id || index}
                   className="p-2.5 bg-muted/30 rounded-md border border-muted-foreground/10 space-y-1.5 relative group text-[11px] leading-tight"
                 >
@@ -102,10 +111,12 @@ export function DetailPlateExportCard({
                     <div className="flex items-center gap-1">
                       <span className="text-muted-foreground">NCC:</span>
                       <span className="font-semibold text-foreground truncate">
-                        {exportItem?.vendorName || exportItem?.plateVendor?.name || "Tâm An"}
+                        {exportItem?.vendorName ||
+                          exportItem?.plateVendor?.name ||
+                          "Tâm An"}
                       </span>
                     </div>
-                    
+
                     <div className="flex items-center gap-1">
                       <span className="text-muted-foreground">Số lượng:</span>
                       <span className="font-semibold text-foreground">
@@ -117,7 +128,12 @@ export function DetailPlateExportCard({
                       <span className="text-muted-foreground">Ngày tạo:</span>
                       <span className="font-medium text-foreground">
                         {exportItem?.createdAt || exportItem?.exportedAt
-                          ? format(new Date(exportItem.createdAt || exportItem.exportedAt), "dd/MM/yyyy HH:mm")
+                          ? format(
+                              new Date(
+                                exportItem.createdAt || exportItem.exportedAt,
+                              ),
+                              "dd/MM/yyyy HH:mm",
+                            )
                           : "—"}
                       </span>
                     </div>
@@ -125,12 +141,31 @@ export function DetailPlateExportCard({
 
                   {exportItem?.notes && (
                     <div className="pt-1.5 mt-1.5 border-t border-muted-foreground/5 items-start gap-1">
-                      <p className="text-muted-foreground text-[10px] mb-0.5">Ghi chú:</p>
+                      <p className="text-muted-foreground text-[10px] mb-0.5">
+                        Ghi chú:
+                      </p>
                       <p className="italic text-foreground/80 break-words line-clamp-2">
                         {exportItem.notes}
                       </p>
                     </div>
                   )}
+                  <div className="flex justify-center pt-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
+                      onClick={() => {
+                        const activeExport =
+                          plateExportsList.find((e: any) => e.isActive) ||
+                          plateExportsList[0];
+                        setEditingPlateExport(activeExport);
+                        setIsPlateExportDialogOpen(true);
+                      }}
+                    >
+                      <Edit className="h-3 w-3" />
+                      Sửa
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -138,19 +173,6 @@ export function DetailPlateExportCard({
             {/* Centered Action Buttons at bottom */}
             {order.isPlateExported && (
               <div className="flex items-center justify-center gap-2 pt-3 border-t border-muted-foreground/5 mt-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
-                  onClick={() => {
-                    const activeExport = plateExportsList.find((e: any) => e.isActive) || plateExportsList[0];
-                    setEditingPlateExport(activeExport);
-                    setIsPlateExportDialogOpen(true);
-                  }}
-                >
-                  <Edit className="h-3 w-3" />
-                  Sửa thông tin
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -196,7 +218,10 @@ export function DetailPlateExportCard({
                 </p>
                 <p className="text-[11px] text-green-700/70 font-medium italic">
                   {order.handedToProductionAt
-                    ? format(new Date(order.handedToProductionAt), "HH:mm dd/MM/yyyy")
+                    ? format(
+                        new Date(order.handedToProductionAt),
+                        "HH:mm dd/MM/yyyy",
+                      )
                     : ""}
                 </p>
               </div>

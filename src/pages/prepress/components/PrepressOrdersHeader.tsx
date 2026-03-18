@@ -269,6 +269,7 @@ export function PrepressOrdersHeader({
         onMaterialTypeChange={onMaterialTypeChange}
         onSearchChange={onSearchChange}
         onClearFilters={onClearFilters}
+        hasActiveFilters={hasActiveFilters}
       />
 
       {/* DesignTable - shown when filters are active */}

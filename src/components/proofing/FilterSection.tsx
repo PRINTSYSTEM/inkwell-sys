@@ -22,6 +22,7 @@ interface FilterSectionProps {
   onMaterialTypeChange: (ids: number[]) => void;
   onSearchChange: (search: string) => void;
   onClearFilters: () => void;
+  hasActiveFilters?: boolean;
 }
 
 export function FilterSection({
@@ -35,8 +36,9 @@ export function FilterSection({
   onMaterialTypeChange,
   onSearchChange,
   onClearFilters,
+  hasActiveFilters = false,
 }: FilterSectionProps) {
-  const hasActiveFilters =
+  const isAnyFilterActive =
     selectedDesignTypes.length > 0 ||
     selectedMaterialTypes.length > 0 ||
     searchTerm.trim().length > 0;
@@ -76,7 +78,11 @@ export function FilterSection({
             Loại thiết kế:
           </span>
           <Button
-            variant={selectedDesignTypes.length === 0 ? "default" : "outline"}
+            variant={
+              selectedDesignTypes.length === 0 && hasActiveFilters
+                ? "default"
+                : "outline"
+            }
             size="sm"
             className="h-8 text-xs"
             onClick={() => onDesignTypeChange([])}
@@ -87,6 +93,7 @@ export function FilterSection({
               className={cn(
                 "ml-2 h-5 px-1.5 text-[10px]",
                 selectedDesignTypes.length === 0 &&
+                  hasActiveFilters &&
                   "bg-background/20 text-primary-foreground",
               )}
             >
@@ -170,7 +177,7 @@ export function FilterSection({
       </div>
 
       {/* Active Filter Tags */}
-      {hasActiveFilters && (
+      {isAnyFilterActive && (
         <div className="flex flex-wrap items-center gap-2">
           {selectedDesignTypes.map((id) => {
             const option = designTypeOptions.find((o) => o.id === id);

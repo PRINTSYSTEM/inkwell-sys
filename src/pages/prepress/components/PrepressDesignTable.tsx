@@ -136,7 +136,6 @@ export function PrepressDesignTable({
                 <TableHeader className="bg-muted/20">
                   <TableRow className="h-16">
                     <TableHead className="text-sm font-bold w-20">Ảnh</TableHead>
-                    <TableHead className="text-sm font-bold w-28">Đơn hàng</TableHead>
                     <TableHead className="text-sm font-bold w-36">Mã hàng</TableHead>
                     <TableHead className="text-sm font-bold w-24">Số lượng</TableHead>
                     <TableHead className="text-sm font-bold w-36">Quy cách</TableHead>
@@ -149,7 +148,7 @@ export function PrepressDesignTable({
                   {isLoading ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={6}
                         className="h-32 text-center text-muted-foreground"
                       >
                         Đang tải dữ liệu...
@@ -158,7 +157,7 @@ export function PrepressDesignTable({
                   ) : designs.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={6}
                         className="h-32 text-center text-muted-foreground"
                       >
                         Không tìm thấy thiết kế nào.
@@ -213,11 +212,6 @@ export function PrepressDesignTable({
                                     <div className="w-12 h-10 bg-muted rounded" />
                                   )}
                                   </div>
-                                </TableCell>
-                                <TableCell className="py-3 w-28 align-middle">
-                                  <span className="font-semibold text-sm text-primary">
-                                    {design.orderCode || design.orderId}
-                                  </span>
                                 </TableCell>
                                 <TableCell className="py-3 font-mono text-sm font-semibold">
                                   {design.code}

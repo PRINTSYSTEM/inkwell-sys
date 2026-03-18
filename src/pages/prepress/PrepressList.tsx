@@ -688,7 +688,10 @@ export default function PrepressList() {
                       selectedMaterialTypes={selectedMaterialTypes}
                       currentMaterialTypeId={currentMaterialTypeId}
                       searchTerm={searchTerm}
-                      onDesignTypeChange={setSelectedDesignTypes}
+                      onDesignTypeChange={(ids) => {
+                        setSelectedDesignTypes(ids);
+                        setViewMode("designs");
+                      }}
                       onMaterialTypeChange={setSelectedMaterialTypes}
                       onSearchChange={setSearchTerm}
                       onClearFilters={handleClearFilters}

@@ -176,9 +176,6 @@ export function PrepressOrderRow({
               ? highlightText(order.code || "", debouncedSearchTerm.trim())
               : order.code}
           </TableCell>
-          <TableCell className="py-3 font-semibold text-xs text-primary">
-            {designs[0]?.design?.orderCode || "—"}
-          </TableCell>
           <TableCell className="py-3 font-mono text-sm font-semibold">
             {designs[0]?.design?.code || "—"}
           </TableCell>
@@ -259,7 +256,7 @@ export function PrepressOrderRow({
       {shouldShowExpand && isExpanded && designs.length > 0 && (
         <TableRow>
           <TableCell
-            colSpan={shouldShowExpand ? 12 : 11}
+            colSpan={shouldShowExpand ? 11 : 10}
             className="p-0 bg-muted/20"
           >
             <div className="p-4">
@@ -269,9 +266,6 @@ export function PrepressOrderRow({
                     <TableRow className="bg-muted/40">
                       <TableHead className="h-9 text-xs font-bold w-16">
                         Ảnh
-                      </TableHead>
-                      <TableHead className="h-9 text-xs font-bold">
-                        Đơn hàng
                       </TableHead>
                       <TableHead className="h-9 text-xs font-bold">
                         Mã hàng
@@ -387,9 +381,6 @@ export function PrepressOrderRow({
                                   <FileImage className="h-5 w-5 text-muted-foreground" />
                                 </div>
                               )}
-                            </TableCell>
-                            <TableCell className="py-2 text-xs font-semibold text-primary">
-                              {pod.design?.orderCode || pod.design?.orderId || "—"}
                             </TableCell>
                             <TableCell className="py-2 font-mono text-sm font-semibold">
                               {shouldShowExpand && designCodeMatches
