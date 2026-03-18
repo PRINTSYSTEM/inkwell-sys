@@ -141,19 +141,12 @@ function ProductionTableRow({
     (proofingOrder as any)?.totalQuantity ||
     0;
 
-  const matchedStepIds = [
-    laminationStep?.id,
-    cutStep?.id,
-    pasteStep?.id,
-    dieCutStep?.id,
-    glueStep?.id,
-    checkStep?.id,
-    deliveryStep?.id,
-  ].filter(Boolean);
-
-  const otherSteps = steps
-    .filter((s) => !matchedStepIds.includes(s.id))
-    .slice(0, 1);
+  const printStep = steps.find(
+    (s) =>
+      s.stepType === "print" ||
+      s.stepTypeName?.toLowerCase() === "in" ||
+      s.stepTypeName?.toLowerCase() === "in ấn",
+  );
 
   const InlineStepStatus = ({ step }: { step: ProductionStepResponse }) => {
     const handleStatusChange = (newStatus: string) => {
@@ -170,18 +163,18 @@ function ProductionTableRow({
 
     return (
       <div
-        className="flex items-center gap-1.5 bg-muted/30 border rounded-md p-0.5 pr-1 h-7 cursor-pointer hover:bg-muted/50 transition-colors"
+        className="flex items-center gap-1.5 h-7"
         onClick={(e) => e.stopPropagation()}
       >
-        <span className="text-[10px] font-bold text-muted-foreground uppercase pl-1.5 whitespace-nowrap">
-          {step.stepTypeName || step.stepType}
+        <span className="text-[10px] font-bold text-muted-foreground uppercase whitespace-nowrap">
+          {step.stepTypeName || step.stepType}:
         </span>
         <Select
           value={step.status || "pending"}
           onValueChange={handleStatusChange}
         >
           <SelectTrigger
-            className={`h-5 min-w-[95px] text-[9px] px-2 font-bold border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(
+            className={`h-7 min-w-[105px] text-[10px] px-2 font-bold border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(
               step.status || "pending",
             )}`}
           >
@@ -409,11 +402,9 @@ function ProductionTableRow({
                   <h4 className="font-bold text-[15px] uppercase text-primary">
                     Lệnh In #{(proofingOrder as any).id}
                   </h4>
-                  {otherSteps.length > 0 && (
+                  {printStep && (
                     <div className="flex items-center gap-1.5">
-                      {otherSteps.map((step) => (
-                        <InlineStepStatus key={step.id} step={step} />
-                      ))}
+                      <InlineStepStatus step={printStep} />
                     </div>
                   )}
                 </div>
