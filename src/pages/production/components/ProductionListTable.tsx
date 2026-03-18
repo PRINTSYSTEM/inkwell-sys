@@ -717,7 +717,7 @@ export function ProductionListTable({
       <span className="absolute top-0 right-0 bg-pink-500 text-white text-[8px] px-1 z-50">
         ProductionListTable.tsx
       </span>
-      <div ref={tableContainerRef} className="flex-1 overflow-auto">
+      <div ref={tableContainerRef} className="flex-1 overflow-auto [&>div]:!overflow-visible">
         {isLoading ? (
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
