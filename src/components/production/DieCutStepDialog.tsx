@@ -280,7 +280,7 @@ export function DieCutStepDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden relative border-2 border-red-500/50">
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2 text-xl">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300">

@@ -18,7 +18,7 @@ export function ProductionListHeader({
   onCreateClick,
 }: ProductionListHeaderProps) {
   return (
-    <div className="relative border-2 border-red-500/50">
+    <div>
       <div className="flex items-center justify-between mb-3 shrink-0">
         <div>
           <h1 className="text-lg font-bold text-balance">Quản lý Sản xuất</h1>

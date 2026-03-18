@@ -310,7 +310,7 @@ export function MaterialExportDialog({
         }
       }}
     >
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden relative border-2 border-red-500/50">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
