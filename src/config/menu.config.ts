@@ -177,7 +177,7 @@ export const MENU_ITEMS: MenuItem[] = [
     children: [
       {
         id: "production",
-        title: "Danh sách sản xuất",
+        title: "Quy trình sản xuất",
         icon: Layers,
         path: ROUTE_PATHS.PRODUCTION.ROOT,
         allowedRoles: [

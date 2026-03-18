@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Check, ChevronsUpDown, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, ChevronsUpDown, Search, X, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -72,6 +72,15 @@ interface PrepressOrdersHeaderProps {
   debouncedDesignCode: string;
   onNavigate: (id: number) => void;
   ordersTableRef: React.RefObject<HTMLDivElement>;
+
+  // Pagination for designs
+  designsPage?: number;
+  setDesignsPage?: (page: number) => void;
+  designsTotalPages?: number;
+  designsPageInput?: string;
+  setDesignsPageInput?: (val: string) => void;
+  handleDesignsPageInputBlur?: () => void;
+  designsTotalCount?: number;
 }
 
 export function PrepressOrdersHeader({
@@ -122,6 +131,14 @@ export function PrepressOrdersHeader({
   debouncedDesignCode,
   onNavigate,
   ordersTableRef,
+  // Pagination for designs
+  designsPage = 1,
+  setDesignsPage,
+  designsTotalPages = 1,
+  designsPageInput = "1",
+  setDesignsPageInput,
+  handleDesignsPageInputBlur,
+  designsTotalCount = 0,
 }: PrepressOrdersHeaderProps) {
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
@@ -227,6 +244,17 @@ export function PrepressOrdersHeader({
             Xóa bộ lọc
           </Button>
         )}
+        {hasActiveFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary"
+            onClick={onClearFilters}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Quay lại danh sách lệnh
+          </Button>
+        )}
       </div>
 
       {/* FilterSection */}
@@ -245,16 +273,68 @@ export function PrepressOrdersHeader({
 
       {/* DesignTable - shown when filters are active */}
       {hasActiveFilters && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
           {isLoadingDesigns ? (
             <div className="text-center py-8 text-muted-foreground text-sm">Đang tải thiết kế...</div>
           ) : designs.length > 0 ? (
-            <DesignTable
-              designs={designs}
-              selectedIds={selectedIds}
-              canSelect={canSelect}
-              onToggle={onToggle}
-            />
+            <>
+              <DesignTable
+                designs={designs}
+                selectedIds={selectedIds}
+                canSelect={canSelect}
+                onToggle={onToggle}
+              />
+              {/* Designs Pagination */}
+              {designsTotalCount > itemsPerPage && setDesignsPage && setDesignsPageInput && (
+                <div className="flex items-center justify-between gap-3 bg-background px-1 py-1 border rounded-lg shadow-sm">
+                  <div className="text-xs text-muted-foreground ml-2">
+                    Hiển thị{" "}
+                    <span className="font-semibold text-foreground">
+                      {(designsPage - 1) * itemsPerPage + 1}
+                    </span>
+                    {" - "}
+                    <span className="font-semibold text-foreground">
+                      {Math.min(designsPage * itemsPerPage, designsTotalCount)}
+                    </span>{" "}
+                    /{" "}
+                    <span className="font-semibold text-foreground">{designsTotalCount}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => setDesignsPage(Math.max(1, designsPage - 1))}
+                      disabled={designsPage === 1 || isLoadingDesigns}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={designsTotalPages}
+                        value={designsPageInput}
+                        onChange={(e) => setDesignsPageInput(e.target.value)}
+                        onBlur={handleDesignsPageInputBlur}
+                        className="h-8 w-12 text-center text-xs"
+                        disabled={isLoadingDesigns}
+                      />
+                      <span className="text-xs text-muted-foreground">/ {designsTotalPages}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => setDesignsPage(Math.min(designsTotalPages, designsPage + 1))}
+                      disabled={designsPage >= designsTotalPages || isLoadingDesigns}
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground text-sm">Không tìm thấy thiết kế nào</div>
           )}

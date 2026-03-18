@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { useMaterialTypeList } from "@/hooks";
 import { useDesignTypeList } from "@/hooks/use-design-type";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface InventoryViewDialogProps {
   open: boolean;
@@ -49,6 +51,7 @@ export function InventoryViewDialog({
 
   const [materialTypeId, setMaterialTypeId] = useState<number | null>(null);
   const [designTypeId, setDesignTypeId] = useState<number | null>(null);
+  const [showOutOfStock, setShowOutOfStock] = useState(false);
 
   const { data: materialTypesData } = useMaterialTypeList({});
   const { data: designTypesData } = useDesignTypeList({ status: "active" });
@@ -76,6 +79,12 @@ export function InventoryViewDialog({
 
   const stockItems = data?.items || [];
   const totalCount = data?.total ?? 0;
+
+  const filteredItems = showOutOfStock
+    ? stockItems
+    : stockItems.filter((item: any) => item.status !== "out");
+
+  const displayedCount = filteredItems.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -147,6 +156,20 @@ export function InventoryViewDialog({
                   ))}
                 </SelectContent>
               </Select>
+
+              <div className="flex items-center space-x-2 px-2 border rounded-md bg-background h-10">
+                <Checkbox
+                  id="show-out-of-stock"
+                  checked={showOutOfStock}
+                  onCheckedChange={(checked) => setShowOutOfStock(!!checked)}
+                />
+                <Label
+                  htmlFor="show-out-of-stock"
+                  className="text-sm font-medium cursor-pointer whitespace-nowrap"
+                >
+                  Hiển thị hết hàng
+                </Label>
+              </div>
             </div>
           </div>
 
@@ -194,13 +217,13 @@ export function InventoryViewDialog({
                           </div>
                         </TableCell>
                       </TableRow>
-                    ) : stockItems.length === 0 ? (
+                    ) : filteredItems.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="py-10">
                           <div className="flex flex-col items-center justify-center gap-2 text-center">
                             <Package className="h-10 w-10 text-muted-foreground opacity-60" />
                             <p className="text-sm font-semibold text-muted-foreground">
-                              {searchTerm.trim()
+                              {searchTerm.trim() || !showOutOfStock
                                 ? "Không tìm thấy vật liệu phù hợp"
                                 : "Không có dữ liệu tồn kho"}
                             </p>
@@ -208,7 +231,7 @@ export function InventoryViewDialog({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      stockItems.map((item: any) => {
+                      filteredItems.map((item: any) => {
                         const isNegative = item.currentQuantity < 0;
                         const isOutOfStock = item.status === "out";
                         const isWarning = isNegative || isOutOfStock;
@@ -272,8 +295,15 @@ export function InventoryViewDialog({
 
           {/* Summary */}
           {totalCount > 0 && (
-            <div className="shrink-0 border-t px-4 py-2 text-xs text-muted-foreground">
-              Tổng số: <span className="font-semibold text-foreground">{totalCount}</span> vật liệu
+            <div className="shrink-0 border-t px-4 py-2 text-xs text-muted-foreground flex justify-between">
+              <div>
+                Tổng số: <span className="font-semibold text-foreground">{totalCount}</span> vật liệu
+              </div>
+              {displayedCount !== totalCount && (
+                <div>
+                  Đang hiển thị: <span className="font-semibold text-foreground">{displayedCount}</span> vật liệu
+                </div>
+              )}
             </div>
           )}
         </div>

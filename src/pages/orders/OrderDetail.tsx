@@ -242,7 +242,7 @@ export default function OrderDetailPage() {
   // Helper to start editing a card
   const startEditingCard = (
     cardName: string,
-    initialValues: Record<string, string | number | null>
+    initialValues: Record<string, string | number | null>,
   ) => {
     setEditingCard(cardName);
     setCardEditValues(initialValues);
@@ -257,7 +257,7 @@ export default function OrderDetailPage() {
   // Helper to start editing an orderDetail item
   const startEditingOrderDetail = (
     orderDetailId: number,
-    orderDetail: OrderDetailResponse
+    orderDetail: OrderDetailResponse,
   ) => {
     setEditingOrderDetailId(orderDetailId);
 
@@ -295,7 +295,7 @@ export default function OrderDetailPage() {
     if (!order) return;
 
     const orderDetail = order.orderDetails?.find(
-      (od) => od.id === orderDetailId
+      (od) => od.id === orderDetailId,
     );
     if (!orderDetail) return;
 
@@ -378,7 +378,7 @@ export default function OrderDetailPage() {
         });
       }
     },
-    [order, updateOrder]
+    [order, updateOrder],
   );
 
   // Helper to save card changes
@@ -479,12 +479,12 @@ export default function OrderDetailPage() {
         if (key.startsWith("orderDetail_")) {
           const [_, detailId, detailField] = key.split("_");
           const orderDetail = order.orderDetails?.find(
-            (od) => od.id === Number(detailId)
+            (od) => od.id === Number(detailId),
           );
           if (!orderDetail) continue;
 
           let existingUpdate = orderDetailsUpdates.find(
-            (u) => u.orderDetailId === orderDetail.id
+            (u) => u.orderDetailId === orderDetail.id,
           );
           if (!existingUpdate) {
             existingUpdate = { orderDetailId: orderDetail.id };
@@ -510,7 +510,7 @@ export default function OrderDetailPage() {
     try {
       await updateOrderForAccounting(
         order.id,
-        payload as UpdateOrderForAccountingRequest
+        payload as UpdateOrderForAccountingRequest,
       );
       setEditingCard(null);
       setCardEditValues({});
@@ -533,7 +533,7 @@ export default function OrderDetailPage() {
   const relatedProductions: ProductionResponse[] = relatedProofing
     .flatMap((proof) => proof.productions ?? [])
     .filter(
-      (prod): prod is ProductionResponse => prod !== null && prod !== undefined
+      (prod): prod is ProductionResponse => prod !== null && prod !== undefined,
     );
 
   // Fetch users for assignedToUserId select
@@ -549,7 +549,7 @@ export default function OrderDetailPage() {
   // Memoize designers array to prevent unnecessary re-renders
   const designers = useMemo(
     () => designersData?.items || [],
-    [designersData?.items]
+    [designersData?.items],
   );
 
   // Check if any design in order is confirmed for printing (locked)
@@ -558,7 +558,7 @@ export default function OrderDetailPage() {
       order?.orderDetails?.some(
         (od) =>
           od.design?.status === "confirmed_for_printing" ||
-          od.derivedStatus === "confirmed_for_printing"
+          od.derivedStatus === "confirmed_for_printing",
       ) || false
     );
   }, [order?.orderDetails]);
@@ -566,7 +566,7 @@ export default function OrderDetailPage() {
   // Can change designer only if no design is confirmed for printing - MEMOIZED
   const canChangeDesignerForOrder = useMemo(
     () => canChangeDesigner && !hasDesignConfirmedForPrinting,
-    [canChangeDesigner, hasDesignConfirmedForPrinting]
+    [canChangeDesigner, hasDesignConfirmedForPrinting],
   );
 
   // ===== LOADING =====
@@ -666,10 +666,11 @@ export default function OrderDetailPage() {
     order.status !== "delivered"
       ? new Date(order.deliveryDate) < now
       : false;
-  const isDebtOverLimit =
+  const isDebtOverLimit = Boolean(
     order.customer?.currentDebt &&
-    order.customer?.maxDebt &&
-    order.customer.currentDebt > order.customer.maxDebt;
+      order.customer?.maxDebt &&
+      order.customer.currentDebt > order.customer.maxDebt,
+  );
 
   return (
     <div className="space-y-6">
@@ -962,7 +963,7 @@ export default function OrderDetailPage() {
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleSaveOrderDetail(
-                                            orderDetail.id!
+                                            orderDetail.id!,
                                           );
                                         }}
                                         disabled={isUpdatingForAccounting}
@@ -997,7 +998,7 @@ export default function OrderDetailPage() {
                                           e.stopPropagation();
                                           startEditingOrderDetail(
                                             orderDetail.id!,
-                                            orderDetail
+                                            orderDetail,
                                           );
                                         }}
                                       >
@@ -1012,7 +1013,7 @@ export default function OrderDetailPage() {
                                             e.stopPropagation();
                                             if (
                                               confirm(
-                                                "Bạn có chắc chắn muốn xóa sản phẩm này khỏi đơn hàng?"
+                                                "Bạn có chắc chắn muốn xóa sản phẩm này khỏi đơn hàng?",
                                               )
                                             ) {
                                               removeOrderDetail({
@@ -1172,7 +1173,7 @@ export default function OrderDetailPage() {
                                     ) : (
                                       <p className="font-medium">
                                         {formatCurrency(
-                                          orderDetail.unitPrice || 0
+                                          orderDetail.unitPrice || 0,
                                         )}
                                       </p>
                                     )}
@@ -1183,7 +1184,7 @@ export default function OrderDetailPage() {
                                     </p>
                                     <p className="font-semibold text-primary">
                                       {formatCurrency(
-                                        orderDetail.totalPrice || 0
+                                        orderDetail.totalPrice || 0,
                                       )}
                                     </p>
                                   </div>
@@ -1884,7 +1885,7 @@ export default function OrderDetailPage() {
                       onClick={() => {
                         startEditingCard("orderInfo", {
                           deliveryDate: formatDateTimeForInput(
-                            order.deliveryDate
+                            order.deliveryDate,
                           ),
                           deliveryAddress: order.deliveryAddress || "",
                           note: order.note || "",
@@ -2313,7 +2314,7 @@ export default function OrderDetailPage() {
                             depositAmount:
                               order.depositAmount?.toString() || "",
                             paymentDueDate: formatDateTimeForInput(
-                              order.paymentDueDate
+                              order.paymentDueDate,
                             ),
                           })
                         }
@@ -2437,7 +2438,7 @@ export default function OrderDetailPage() {
                               {Math.round(
                                 ((order.depositAmount || 0) /
                                   order.totalAmount) *
-                                  100
+                                  100,
                               )}
                               %
                             </span>

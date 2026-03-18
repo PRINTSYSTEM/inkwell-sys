@@ -284,9 +284,13 @@ export function DetailEmptyOrderView({
                           <Input
                             placeholder="Nhập kích thước (ví dụ: 60×60, 31×43...)"
                             value={customPaperSize}
-                            onChange={(e) =>
-                              setCustomPaperSize(e.target.value)
-                            }
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              // Chỉ cho phép số và ký tự x, X, ×, *, . (dấu chấm cho số thập phân nếu cần)
+                              // Ở đây theo yêu cầu là 11x11 nên tôi sẽ lọc giữ lại số và x
+                              const filtered = val.replace(/[^0-9xX×*]/g, "");
+                              setCustomPaperSize(filtered.toLowerCase());
+                            }}
                             className="h-10 text-sm border-primary/30 focus:border-primary shadow-sm"
                             autoFocus
                           />
@@ -325,7 +329,7 @@ export function DetailEmptyOrderView({
                   <Button
                     className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-[0.98] bg-gradient-to-r from-primary to-primary/80"
                     onClick={handleSubmitDesigns}
-                    disabled={isAddingDesigns}
+                    disabled={isAddingDesigns || !paperSizeId || (paperSizeId === "custom" && !customPaperSize.trim())}
                   >
                     {isAddingDesigns ? (
                       <>

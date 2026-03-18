@@ -129,11 +129,20 @@ export default function PrepressList() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [debouncedSearch] = useDebounce(searchTerm, 300);
 
+  const [viewMode, setViewMode] = useState<"orders" | "designs">("orders");
+
   const hasActiveFilters = useHasActiveProofingFilters({
     selectedDesignTypes,
     selectedMaterialTypes,
     searchTerm,
   });
+
+  // Switch to designs mode when any filter becomes active
+  useEffect(() => {
+    if (hasActiveFilters) {
+      setViewMode("designs");
+    }
+  }, [hasActiveFilters]);
 
   // ===== Selection (for waiting designs) =====
   const {
@@ -269,7 +278,7 @@ export default function PrepressList() {
 
   const { data: availableDesignsData, isLoading: isLoadingDesigns } =
     useAvailableOrderDetailsForProofing(
-      hasActiveFilters
+      viewMode === "designs"
         ? {
             materialTypeId: materialTypeIdForApi,
             designTypeId: selectedDesignTypeId,
@@ -525,6 +534,7 @@ export default function PrepressList() {
     setSearchTerm("");
     setDesignsPage(1);
     setDesignsPageInput("1");
+    setViewMode("orders");
   };
 
   const handleClearSelection = () => {
@@ -688,7 +698,7 @@ export default function PrepressList() {
                       onToggle={toggleSelection}
                       isLoadingDesigns={isLoadingDesigns}
                       // New props for split orders
-                      hasActiveFilters={hasActiveFilters}
+                      hasActiveFilters={viewMode === "designs"}
                       incompleteOrders={incompleteOrders}
                       completedOrders={completedOrders}
                       loadingIncomplete={loadingIncompleteOrders}
@@ -720,6 +730,14 @@ export default function PrepressList() {
                       debouncedDesignCode={debouncedDesignCode}
                       onNavigate={(id) => navigate(`/proofing/${id}`)}
                       ordersTableRef={ordersTableRef}
+                      // Designs Pagination props
+                      designsPage={designsPage}
+                      setDesignsPage={setDesignsPage}
+                      designsTotalPages={designsTotalPages}
+                      designsPageInput={designsPageInput}
+                      setDesignsPageInput={setDesignsPageInput}
+                      handleDesignsPageInputBlur={handleDesignsPageInputBlur}
+                      designsTotalCount={designsTotalCount}
                     />
 
                     {(selectedMaterialTypeId || designCode.trim()) && (

@@ -75,6 +75,27 @@ export function FilterSection({
           <span className="text-sm font-medium text-muted-foreground">
             Loại thiết kế:
           </span>
+          <Button
+            variant={selectedDesignTypes.length === 0 ? "default" : "outline"}
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => onDesignTypeChange([])}
+          >
+            <span>Tất cả</span>
+            <Badge
+              variant="secondary"
+              className={cn(
+                "ml-2 h-5 px-1.5 text-[10px]",
+                selectedDesignTypes.length === 0 &&
+                  "bg-background/20 text-primary-foreground",
+              )}
+            >
+              {designTypeOptions.reduce(
+                (acc, opt) => acc + (opt.count || 0),
+                0,
+              )}
+            </Badge>
+          </Button>
           {designTypeOptions.map((option) => {
             const isSelected =
               selectedDesignTypes.length === 1 &&
@@ -92,7 +113,7 @@ export function FilterSection({
                   variant={option.count > 0 ? "secondary" : "outline"}
                   className={cn(
                     "ml-2 h-5 px-1.5 text-[10px]",
-                    isSelected && "bg-background/20 text-primary-foreground"
+                    isSelected && "bg-background/20 text-primary-foreground",
                   )}
                 >
                   {option.count}

@@ -1167,6 +1167,15 @@ export default function ProofingOrderDetailPage() {
     if (!order?.id) return;
 
     try {
+      // Validate paper size
+      const isPaperSizeValid = paperSizeId !== "custom" ? !!paperSizeId : !!customPaperSize?.trim();
+      if (!isPaperSizeValid) {
+        toast.error("Lỗi", {
+          description: "Vui lòng chọn hoặc nhập khổ giấy in",
+        });
+        return;
+      }
+
       const invalidDesigns = selectedDesigns.filter((design) => {
         const qty = designQuantities[design.id] || 0;
         if (qty <= 0) return false;
