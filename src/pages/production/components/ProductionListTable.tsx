@@ -383,6 +383,21 @@ function ProductionTableRow({
       className="cursor-pointer hover:bg-muted/50 border-b"
       onClick={onClick}
     >
+      <TableCell className="py-3 align-top font-bold text-base text-primary whitespace-nowrap bg-muted/20 border-r border-border/50 text-center w-[150px]">
+        {isLoading ? (
+          <div className="flex justify-center mt-2">
+            <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+          </div>
+        ) : proofingOrder ? (
+          <div className="flex flex-col items-center justify-center mt-2">
+            <span>{(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}</span>
+          </div>
+        ) : (
+          <div className="flex justify-center mt-2 text-muted-foreground font-normal">
+            —
+          </div>
+        )}
+      </TableCell>
       <TableCell className="py-3 align-top min-w-[300px]">
         {isLoading ? (
           <div className="space-y-4 animate-pulse">
@@ -396,9 +411,6 @@ function ProductionTableRow({
             <div className="space-y-2">
               <div className="flex justify-between items-start">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="font-bold text-[15px] uppercase text-primary">
-                    Lệnh In #{(proofingOrder as any).id}
-                  </h4>
                   {printStep && (
                     <div className="flex items-center gap-1.5">
                       <InlineStepStatus step={printStep} />
@@ -410,13 +422,6 @@ function ProductionTableRow({
                 </span> */}
               </div>
               <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-xs">
-                <span className="text-muted-foreground font-medium">
-                  Mã lệnh in:
-                </span>
-                <span className="font-bold text-foreground">
-                  {(proofingOrder as any).code ||
-                    `BB${(proofingOrder as any).id}`}
-                </span>
 
                 <span className="text-muted-foreground font-medium">
                   Chất liệu:
@@ -719,6 +724,9 @@ export function ProductionListTable({
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="h-10 font-bold text-sm text-center w-[150px] bg-muted/50 border-r border-border/50">
+                  MÃ BÌNH BÀI
+                </TableHead>
                 <TableHead className="h-10 font-bold text-sm w-[300px]">
                   LỆNH IN
                 </TableHead>
@@ -746,7 +754,7 @@ export function ProductionListTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableSkeleton cols={8} rows={5} rowHeight="h-32" />
+              <TableSkeleton cols={9} rows={5} rowHeight="h-32" />
             </TableBody>
           </Table>
         ) : productions.length === 0 ? (
@@ -760,6 +768,9 @@ export function ProductionListTable({
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[150px] bg-muted/50 border-r border-border/50">
+                  MÃ BÌNH BÀI
+                </TableHead>
                 <TableHead className="h-10 font-bold text-sm w-[300px]">
                   LỆNH IN
                 </TableHead>
