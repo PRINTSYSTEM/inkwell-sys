@@ -35,10 +35,7 @@ export function ProductionListFilter({
   onClearSort,
 }: ProductionListFilterProps) {
   return (
-    <div className="relative border-2 border-red-500/50 mb-4 shrink-0">
-      <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-1.5 py-0.5 z-[9999] font-mono pointer-events-none rounded-bl">
-        ProductionListFilter.tsx
-      </div>
+    <div className="mb-4 shrink-0">
       <Card className="border-0 shadow-sm">
         <CardContent className="p-3">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">

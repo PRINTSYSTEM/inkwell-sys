@@ -311,9 +311,6 @@ export function MaterialExportDialog({
       }}
     >
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden relative border-2 border-red-500/50">
-        <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-1.5 py-0.5 z-[9999] font-mono pointer-events-none rounded-bl">
-          MaterialExportDialog.tsx
-        </div>
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">

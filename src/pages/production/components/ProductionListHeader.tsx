@@ -19,9 +19,6 @@ export function ProductionListHeader({
 }: ProductionListHeaderProps) {
   return (
     <div className="relative border-2 border-red-500/50">
-      <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-1.5 py-0.5 z-[9999] font-mono pointer-events-none rounded-bl">
-        ProductionListHeader.tsx
-      </div>
       <div className="flex items-center justify-between mb-3 shrink-0">
         <div>
           <h1 className="text-lg font-bold text-balance">Quản lý Sản xuất</h1>

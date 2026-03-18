@@ -322,10 +322,7 @@ export default function ProductionListPage() {
   );
 
   return (
-    <div className="relative border-2 border-red-500/50 h-full">
-      <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-1.5 py-0.5 z-[9999] font-mono pointer-events-none rounded-bl">
-        ProductionList.tsx
-      </div>
+    <div className="h-full">
       <div className="h-full flex flex-col overflow-hidden bg-background">
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-4 py-4">
           <ProductionListHeader

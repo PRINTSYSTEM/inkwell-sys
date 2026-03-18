@@ -70,9 +70,6 @@ export function CreateProductionDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="border-2 border-red-500/50 max-w-6xl max-h-[90vh] p-0 gap-0 flex flex-col">
-        <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-1.5 py-0.5 z-[50] font-mono pointer-events-none rounded-bl">
-          CreateProductionDialog.tsx
-        </div>
         <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
           <DialogTitle className="text-2xl">
             Tạo đơn sản xuất mới
