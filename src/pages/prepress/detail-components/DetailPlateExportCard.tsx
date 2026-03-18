@@ -113,7 +113,7 @@ export function DetailPlateExportCard({
                       <span className="font-semibold text-foreground truncate">
                         {exportItem?.vendorName ||
                           exportItem?.plateVendor?.name ||
-                          "Tâm An"}
+                          "—"}
                       </span>
                     </div>
 

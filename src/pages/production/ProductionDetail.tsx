@@ -625,7 +625,11 @@ export default function ProductionDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="relative border-2 border-red-500/50 min-h-screen">
+      <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] px-1.5 py-0.5 z-[9999] font-mono pointer-events-none rounded-bl">
+        ProductionDetail.tsx
+      </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6">
         <div className="sticky top-0 z-20 -mx-4 bg-background/80 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
           <div className="flex flex-col gap-3 border-b border-border pb-3 sm:flex-row sm:items-start sm:justify-between">
@@ -2284,6 +2288,7 @@ export default function ProductionDetailPage() {
             proofingOrder={proofingOrder || null}
           />
         )}
+      </div>
       </div>
     </div>
   );
