@@ -517,7 +517,6 @@ export default function ProofingOrderDetailPage() {
     const missing: string[] = [];
     if (!order) return missing;
 
-    if (!order.proofingFileUrl) missing.push("Chưa upload file bình bài");
     if (!order.imageUrl) missing.push("Chưa upload ảnh bình bài");
 
     const totalQty = order.totalQuantity ?? 0;
