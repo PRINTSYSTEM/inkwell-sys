@@ -35,7 +35,10 @@ export function ProductionListFilter({
   onClearSort,
 }: ProductionListFilterProps) {
   return (
-    <div className="mb-4 shrink-0">
+    <div className="mb-4 shrink-0 border border-pink-500 relative p-1 rounded-sm">
+      <span className="absolute top-0 right-0 bg-pink-500 text-white text-[8px] px-1 z-50">
+        ProductionListFilter.tsx
+      </span>
       <Card className="border-0 shadow-sm">
         <CardContent className="p-3">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
@@ -57,10 +60,10 @@ export function ProductionListFilter({
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
                 <SelectItem value="WaitingForProduction">
-                  Chờ sản xuất
+                  Chưa thực hiện
                 </SelectItem>
-                <SelectItem value="InProduction">Đang sản xuất</SelectItem>
-                <SelectItem value="Completed">Hoàn thành</SelectItem>
+                <SelectItem value="InProduction">Đang thực hiện</SelectItem>
+                <SelectItem value="Completed">Đã hoàn thành</SelectItem>
               </SelectContent>
             </Select>
 

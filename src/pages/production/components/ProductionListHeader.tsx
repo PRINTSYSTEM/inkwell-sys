@@ -18,7 +18,10 @@ export function ProductionListHeader({
   onCreateClick,
 }: ProductionListHeaderProps) {
   return (
-    <div>
+    <div className="border border-pink-500 relative p-1 rounded-sm">
+      <span className="absolute top-0 right-0 bg-pink-500 text-white text-[8px] px-1 z-50">
+        ProductionListHeader.tsx
+      </span>
       <div className="flex items-center justify-between mb-3 shrink-0">
         <div>
           <h1 className="text-lg font-bold text-balance">Quản lý Sản xuất</h1>
@@ -51,7 +54,7 @@ export function ProductionListHeader({
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
             <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">
-              Chờ sản xuất
+              Chưa thực hiện
             </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground/70" />
           </CardHeader>
@@ -64,26 +67,26 @@ export function ProductionListHeader({
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
             <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">
-              Đang sản xuất
+              Đang thực hiện
             </CardTitle>
             <Factory className="h-4 w-4 text-muted-foreground/70" />
           </CardHeader>
           <CardContent className="px-3 pb-2 pt-1">
             <div className="text-base font-bold">{stats.inProgress}</div>
-            <p className="text-[10px] text-muted-foreground">Đang thực hiện</p>
+            <p className="text-[10px] text-muted-foreground">Đang sản xuất</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
             <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">
-              Hoàn thành
+              Đã hoàn thành
             </CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground/70" />
           </CardHeader>
           <CardContent className="px-3 pb-2 pt-1">
             <div className="text-base font-bold">{stats.completed}</div>
-            <p className="text-[10px] text-muted-foreground">Đã hoàn thành</p>
+            <p className="text-[10px] text-muted-foreground">Đã sản xuất xong</p>
           </CardContent>
         </Card>
       </div>

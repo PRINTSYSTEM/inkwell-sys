@@ -12,7 +12,7 @@ import { Factory, ChevronLeft, ChevronRight, FileText, Layers, Hash, Box, Packag
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { productionStepStatusLabels } from "@/lib/status-utils";
-import type { ProductionOrderResponse, ProductionStepResponse } from "@/Schema";
+import type { ProductionOrderResponse, ProductionStepResponse, ProofingOrderResponse } from "@/Schema";
 import { useProofingOrder } from "@/hooks/use-proofing-order";
 import { useUpdateProductionStep } from "@/hooks/use-production";
 import {
@@ -96,10 +96,11 @@ function ProductionTableRow({
   const [openDiePopover, setOpenDiePopover] = useState(false);
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
 
-  const { data: proofingOrder, isLoading } = useProofingOrder(
+  const { data: proofingOrderData, isLoading } = useProofingOrder(
     prod.proofingOrderId || null,
     !!prod.proofingOrderId
   );
+  const proofingOrder = proofingOrderData as any;
 
   const { mutate: updateStep } = useUpdateProductionStep();
 
@@ -114,16 +115,24 @@ function ProductionTableRow({
   const checkStep = getStepStatus(steps, ["kiểm hàng", "kiểm tra"]);
   const deliveryStep = getStepStatus(steps, ["giao hàng", "đóng gói", "giao"], "packaging");
 
+  // Get default print qty from proofing order for auto-fill
+  const defaultPrintQty = (proofingOrder as any)?.totalProcessedQty 
+    || (proofingOrder as any)?.totalQuantity 
+    || 0;
+
   const StepCell = ({ step }: { step: ProductionStepResponse | null }) => {
     if (!step) return <TableCell className="text-center py-3 text-muted-foreground">—</TableCell>;
     
-    const [inputQty, setInputQty] = useState(step.inputQty?.toString() || "");
-    const [outputQty, setOutputQty] = useState(step.outputQty?.toString() || "");
+    // Auto-fill with proofing order qty if step qty not yet set
+    const initialInputQty = step.inputQty ? step.inputQty.toString() : (defaultPrintQty ? String(defaultPrintQty) : "");
+    const initialOutputQty = step.outputQty ? step.outputQty.toString() : (defaultPrintQty ? String(defaultPrintQty) : "");
+    const [inputQty, setInputQty] = useState(initialInputQty);
+    const [outputQty, setOutputQty] = useState(initialOutputQty);
     const [defectQty, setDefectQty] = useState(step.defectQty?.toString() || "");
 
     React.useEffect(() => {
-      setInputQty(step.inputQty?.toString() || "");
-      setOutputQty(step.outputQty?.toString() || "");
+      setInputQty(step.inputQty ? step.inputQty.toString() : (defaultPrintQty ? String(defaultPrintQty) : ""));
+      setOutputQty(step.outputQty ? step.outputQty.toString() : (defaultPrintQty ? String(defaultPrintQty) : ""));
       setDefectQty(step.defectQty?.toString() || "");
     }, [step.inputQty, step.outputQty, step.defectQty]);
 
@@ -143,8 +152,8 @@ function ProductionTableRow({
     };
 
     return (
-      <TableCell className="align-middle py-3 px-1.5" onClick={(e) => e.stopPropagation()}>
-        <div className="flex flex-col gap-1.5 w-[110px] mx-auto">
+      <TableCell className="align-top py-3 px-1.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-1.5 w-[140px] mx-auto">
           <Select
             value={step.status || "pending"}
             onValueChange={(val: any) => handleUpdate({ status: val })}
@@ -153,11 +162,15 @@ function ProductionTableRow({
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(productionStepStatusLabels).map(([key, label]) => (
-                <SelectItem key={key} value={key} className="text-xs font-semibold cursor-pointer">
-                  {label}
-                </SelectItem>
-              ))}
+              <SelectItem value="pending" className="text-xs font-semibold cursor-pointer">
+                Chưa thực hiện
+              </SelectItem>
+              <SelectItem value="in_progress" className="text-xs font-semibold cursor-pointer">
+                Đang thực hiện
+              </SelectItem>
+              <SelectItem value="done" className="text-xs font-semibold cursor-pointer">
+                Đã hoàn thành
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -170,9 +183,7 @@ function ProductionTableRow({
                 value={inputQty} 
                 onChange={(e) => setInputQty(e.target.value)}
                 onBlur={() => {
-                  if (Number(inputQty) !== step.inputQty) {
-                    handleUpdate({ inputQty: Number(inputQty) || 0 });
-                  }
+                  handleUpdate({ inputQty: Number(inputQty) || 0 });
                 }}
               />
             </div>
@@ -184,9 +195,7 @@ function ProductionTableRow({
                 value={outputQty} 
                 onChange={(e) => setOutputQty(e.target.value)}
                 onBlur={() => {
-                  if (Number(outputQty) !== step.outputQty) {
-                    handleUpdate({ outputQty: Number(outputQty) || 0 });
-                  }
+                  handleUpdate({ outputQty: Number(outputQty) || 0 });
                 }}
               />
             </div>
@@ -198,28 +207,10 @@ function ProductionTableRow({
                 value={defectQty} 
                 onChange={(e) => setDefectQty(e.target.value)}
                 onBlur={() => {
-                  if (Number(defectQty) !== step.defectQty) {
-                    handleUpdate({ defectQty: Number(defectQty) || 0 });
-                  }
+                  handleUpdate({ defectQty: Number(defectQty) || 0 });
                 }}
               />
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-5 w-full text-[9px] mt-0.5 px-0 font-bold bg-primary/10 hover:bg-primary/20 text-primary uppercase"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUpdate({ 
-                  inputQty: Number(inputQty) || 0,
-                  outputQty: Number(outputQty) || 0,
-                  defectQty: Number(defectQty) || 0
-                });
-              }}
-            >
-              <Save className="w-3 h-3 mr-1" />
-              Lưu
-            </Button>
           </div>
         </div>
       </TableCell>
@@ -258,29 +249,29 @@ function ProductionTableRow({
             {/* 1. Header & General Info */}
             <div className="space-y-2">
               <div className="flex justify-between items-start">
-                 <h4 className="font-bold text-[15px] uppercase text-primary">Lệnh In #{proofingOrder.id}</h4>
-                 <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full font-semibold border text-muted-foreground">{prod.code || `PROD-${prod.id}`}</span>
+                 <h4 className="font-bold text-[15px] uppercase text-primary">Lệnh In #{(proofingOrder as any).id}</h4>
+                 <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full font-semibold border text-muted-foreground">{String(prod.code || `PROD-${prod.id}`)}</span>
               </div>
               <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-xs">
                 <span className="text-muted-foreground font-medium">Mã lệnh in:</span>
-                <span className="font-bold text-foreground">{proofingOrder.code || `BB${proofingOrder.id}`}</span>
+                <span className="font-bold text-foreground">{(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}</span>
                 
                 <span className="text-muted-foreground font-medium">Chất liệu:</span>
-                <span className="font-bold text-foreground">{proofingOrder.materialType?.name || "—"}</span>
+                <span className="font-bold text-foreground">{(proofingOrder as any).materialType?.name || "—"}</span>
                 
                 <span className="text-muted-foreground font-medium">Số giấy in:</span>
-                <span className="font-bold text-foreground text-blue-600">{String(proofingOrder.totalProcessedQty || proofingOrder.totalQuantity || "0")} tờ</span>
+                <span className="font-bold text-foreground text-blue-600">{String((proofingOrder as any).totalProcessedQty || (proofingOrder as any).totalQuantity || "0")} tờ</span>
               </div>
             </div>
 
             {/* 2. Thiết kế */}
-            {proofingOrder.proofingOrderDesigns && proofingOrder.proofingOrderDesigns.length > 0 && (
+            {(proofingOrder as any).proofingOrderDesigns && (proofingOrder as any).proofingOrderDesigns.length > 0 && (
               <div className="space-y-1.5">
                 <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
-                  <Layers className="w-3.5 h-3.5" /> Thiết kế ({proofingOrder.proofingOrderDesigns.length})
+                  <Layers className="w-3.5 h-3.5" /> Thiết kế ({(proofingOrder as any).proofingOrderDesigns.length})
                 </span>
                 <div className="space-y-2">
-                  {proofingOrder.proofingOrderDesigns.map((pod) => (
+                  {(proofingOrder as any).proofingOrderDesigns.map((pod: any) => (
                     <div key={pod.id} className="bg-muted/20 p-2.5 rounded-md text-xs">
                       <p className="font-bold text-[13px] text-foreground mb-2">
                         {pod.design?.designName || pod.design?.code || "—"}
@@ -303,7 +294,7 @@ function ProductionTableRow({
 
             {/* 3. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
             <div className="flex flex-row gap-2 mt-1">
-              {proofingOrder.dieExports && proofingOrder.dieExports.length > 0 && (
+              {((proofingOrder as any).dieExports?.length > 0 || (proofingOrder as any).proofingOrderDies?.length > 0) && (
                 <div onClick={(e) => e.stopPropagation()}>
                   <Popover open={openDiePopover} onOpenChange={setOpenDiePopover}>
                     <PopoverTrigger asChild>
@@ -330,7 +321,7 @@ function ProductionTableRow({
                         </span>
                       </div>
                       <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
-                        {proofingOrder.dieExports.map((dieExport: any, i: number) => (
+                        {((proofingOrder as any).dieExports || (proofingOrder as any).proofingOrderDies || []).map((dieExport: any, i: number) => (
                           <div key={dieExport.id || i} className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2">
                               <div className="flex flex-col">
                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Mã số khuôn</span>
@@ -360,7 +351,7 @@ function ProductionTableRow({
                 </div>
               )}
 
-              {proofingOrder.plateExports && proofingOrder.plateExports.length > 0 && (
+              {(proofingOrder as any).plateExport && (
                 <div onClick={(e) => e.stopPropagation()}>
                   <Popover open={openPlatePopover} onOpenChange={setOpenPlatePopover}>
                     <PopoverTrigger asChild>
@@ -387,7 +378,7 @@ function ProductionTableRow({
                         </span>
                       </div>
                       <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
-                        {proofingOrder.plateExports.map((plateExport: any, i: number) => (
+                        {[(proofingOrder as any).plateExport].filter(Boolean).map((plateExport: any, i: number) => (
                           <div key={plateExport.id || i} className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2">
                               <div className="flex flex-col col-span-2">
                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Mã số kẽm</span>
@@ -463,7 +454,10 @@ export function ProductionListTable({
   onPageInputBlur,
 }: ProductionListTableProps) {
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col min-h-0 border border-pink-500 relative p-1 rounded-sm">
+      <span className="absolute top-0 right-0 bg-pink-500 text-white text-[8px] px-1 z-50">
+        ProductionListTable.tsx
+      </span>
       <div ref={tableContainerRef} className="flex-1 overflow-auto">
         {isLoading ? (
           <Table>
