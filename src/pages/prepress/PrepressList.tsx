@@ -577,327 +577,332 @@ export default function PrepressList() {
   };
 
   return (
-    <div className="relative h-[calc(100vh-var(--header-height))] w-full overflow-hidden bg-background">
-      <div className="mx-auto flex h-full w-full max-w-none flex-col gap-6 p-6">
-        {/* Header */}
-        <header className="shrink-0">
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-1">
-              <h1 className="text-xl font-bold text-foreground">Bình bài</h1>
-              <p className="text-xs text-muted-foreground">
-                Danh sách mã bài & thiết kế chờ bình bài
-              </p>
+    <div className="border border-black relative">
+      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
+        PrepressList.tsx
+      </span>
+      <div className="relative h-[calc(100vh-var(--header-height))] w-full overflow-hidden bg-background">
+        <div className="mx-auto flex h-full w-full max-w-none flex-col gap-6 p-6">
+          {/* Header */}
+          <header className="shrink-0">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-1">
+                <h1 className="text-xl font-bold text-foreground">Bình bài</h1>
+                <p className="text-xs text-muted-foreground">
+                  Danh sách mã bài & thiết kế chờ bình bài
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {newOrderId ? (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="gap-2"
+                    onClick={handleCancelCreateOrder}
+                  >
+                    <X className="h-4 w-4" />
+                    Hủy Tạo lệnh
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    disabled={isCreating}
+                    onClick={async () => {
+                      try {
+                        const result = await createProofingOrder({} as any);
+                        if (result?.id) {
+                          setNewOrderId(result.id);
+                          setDesignQuantities({});
+                          setProofingSheetQuantity(0);
+                          setPaperSizeId("custom");
+                          setCustomPaperSize("");
+                          setConfigNotes("");
+                        } else {
+                          toast.error("Không thể tạo lệnh");
+                        }
+                      } catch (e) {
+                        console.error(e);
+                      }
+                    }}
+                  >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang tạo...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        Tạo lệnh mới
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
+          </header>
 
-            <div className="flex items-center gap-2">
-              {newOrderId ? (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="gap-2"
-                  onClick={handleCancelCreateOrder}
-                >
-                  <X className="h-4 w-4" />
-                  Hủy Tạo lệnh
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  className="gap-2"
-                  disabled={isCreating}
-                  onClick={async () => {
-                    try {
-                      const result = await createProofingOrder({} as any);
-                      if (result?.id) {
-                        setNewOrderId(result.id);
-                        setDesignQuantities({});
-                        setProofingSheetQuantity(0);
-                        setPaperSizeId("custom");
-                        setCustomPaperSize("");
-                        setConfigNotes("");
-                      } else {
-                        toast.error("Không thể tạo lệnh");
-                      }
-                    } catch (e) {
-                      console.error(e);
-                    }
-                  }}
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Đang tạo...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4" />
-                      Tạo lệnh mới
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          </div>
-        </header>
-
-        {/* Main content */}
-        <main className="min-h-0 flex-1 overflow-hidden">
-          <div className={cn("h-full flex gap-4")}>
-            <Card
-              className={cn(
-                "h-full overflow-hidden",
-                newOrderId ? "flex-1 min-w-0" : "w-full",
-              )}
-            >
-              <CardContent className="h-full p-0">
-                <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
-                  <header className="shrink-0 space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => setIsDieListDialogOpen(true)}
-                      >
-                        <Box className="h-4 w-4" />
-                        Danh sách khuôn bế
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => setIsInventoryViewDialogOpen(true)}
-                      >
-                        <Package className="h-4 w-4" />
-                        Xem kho hàng
-                      </Button>
-                    </div>
-
-                    <PrepressOrdersHeader
-                      designCode={designCode}
-                      setDesignCode={setDesignCode}
-                      selectedMaterialTypeId={selectedMaterialTypeId}
-                      setSelectedMaterialTypeId={setSelectedMaterialTypeId}
-                      materialTypeOptionsForOrders={
-                        materialTypeOptionsForOrders
-                      }
-                      designTypeOptions={designTypeOptions}
-                      materialTypeOptions={materialTypeOptions}
-                      selectedDesignTypes={selectedDesignTypes}
-                      selectedMaterialTypes={selectedMaterialTypes}
-                      currentMaterialTypeId={currentMaterialTypeId}
-                      searchTerm={searchTerm}
-                      onDesignTypeChange={(ids) => {
-                        setSelectedDesignTypes(ids);
-                        setViewMode("designs");
-                      }}
-                      onMaterialTypeChange={setSelectedMaterialTypes}
-                      onSearchChange={setSearchTerm}
-                      onClearFilters={handleClearFilters}
-                      designs={availableDesignsData?.designs || []}
-                      selectedIds={selectedIds}
-                      canSelect={canSelect}
-                      onToggle={toggleSelection}
-                      isLoadingDesigns={isLoadingDesigns}
-                      // New props for split orders
-                      hasActiveFilters={viewMode === "designs"}
-                      incompleteOrders={incompleteOrders}
-                      completedOrders={completedOrders}
-                      loadingIncomplete={loadingIncompleteOrders}
-                      loadingCompleted={loadingCompletedOrders}
-                      incompletePage={incompleteOrdersPage}
-                      setIncompletePage={setIncompleteOrdersPage}
-                      completedPage={completedOrdersPage}
-                      setCompletedPage={setCompletedOrdersPage}
-                      incompleteTotalPages={incompleteTotalPages}
-                      completedTotalPages={completedTotalPages}
-                      incompleteOrdersPageInput={incompleteOrdersPageInput}
-                      setIncompleteOrdersPageInput={
-                        setIncompleteOrdersPageInput
-                      }
-                      handleIncompletePageInputBlur={
-                        handleIncompletePageInputBlur
-                      }
-                      completedOrdersPageInput={completedOrdersPageInput}
-                      setCompletedOrdersPageInput={setCompletedOrdersPageInput}
-                      handleCompletedPageInputBlur={
-                        handleCompletedPageInputBlur
-                      }
-                      incompleteTotalCount={incompleteTotalCount}
-                      completedTotalCount={completedTotalCount}
-                      itemsPerPage={itemsPerPage}
-                      shouldShowExpand={shouldShowExpand}
-                      expandedOrderIds={expandedOrderIds}
-                      searchTermLower={searchTermLower}
-                      debouncedDesignCode={debouncedDesignCode}
-                      onNavigate={(id) => navigate(`/proofing/${id}`)}
-                      ordersTableRef={ordersTableRef}
-                      // Actions for shared DesignTable
-                      onReject={openRejectDialog}
-                      isRejecting={isRejecting}
-                      onFindDie={() => setIsDieListDialogOpen(true)}
-                      // Designs Pagination props
-                      designsPage={designsPage}
-                      setDesignsPage={setDesignsPage}
-                      designsTotalPages={designsTotalPages}
-                      designsPageInput={designsPageInput}
-                      setDesignsPageInput={setDesignsPageInput}
-                      handleDesignsPageInputBlur={handleDesignsPageInputBlur}
-                      designsTotalCount={designsTotalCount}
-                    />
-
-                    {(selectedMaterialTypeId || designCode.trim()) && (
-                      <div className="flex items-center gap-2 px-0 mt-[-8px]">
+          {/* Main content */}
+          <main className="min-h-0 flex-1 overflow-hidden">
+            <div className={cn("h-full flex gap-4")}>
+              <Card
+                className={cn(
+                  "h-full overflow-hidden",
+                  newOrderId ? "flex-1 min-w-0" : "w-full",
+                )}
+              >
+                <CardContent className="h-full p-0">
+                  <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
+                    <header className="shrink-0 space-y-4">
+                      <div className="flex items-center gap-3">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-2 text-xs"
-                          onClick={() => {
-                            setDesignCode("");
-                            setSelectedMaterialTypeId(null);
-                            setIncompleteOrdersPage(1);
-                            setCompletedOrdersPage(1);
-                          }}
+                          className="gap-2"
+                          onClick={() => setIsDieListDialogOpen(true)}
                         >
-                          <X className="h-3.5 w-3.5" />
-                          Xóa bộ lọc
+                          <Box className="h-4 w-4" />
+                          Danh sách khuôn bế
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setIsInventoryViewDialogOpen(true)}
+                        >
+                          <Package className="h-4 w-4" />
+                          Xem kho hàng
                         </Button>
                       </div>
-                    )}
-                  </header>
 
-                  {/* Orders list components are now inside PrepressOrdersHeader if !hasActiveFilters */}
-                </div>
-              </CardContent>
-            </Card>
+                      <PrepressOrdersHeader
+                        designCode={designCode}
+                        setDesignCode={setDesignCode}
+                        selectedMaterialTypeId={selectedMaterialTypeId}
+                        setSelectedMaterialTypeId={setSelectedMaterialTypeId}
+                        materialTypeOptionsForOrders={
+                          materialTypeOptionsForOrders
+                        }
+                        designTypeOptions={designTypeOptions}
+                        materialTypeOptions={materialTypeOptions}
+                        selectedDesignTypes={selectedDesignTypes}
+                        selectedMaterialTypes={selectedMaterialTypes}
+                        currentMaterialTypeId={currentMaterialTypeId}
+                        searchTerm={searchTerm}
+                        onDesignTypeChange={(ids) => {
+                          setSelectedDesignTypes(ids);
+                          setViewMode("designs");
+                        }}
+                        onMaterialTypeChange={setSelectedMaterialTypes}
+                        onSearchChange={setSearchTerm}
+                        onClearFilters={handleClearFilters}
+                        designs={availableDesignsData?.designs || []}
+                        selectedIds={selectedIds}
+                        canSelect={canSelect}
+                        onToggle={toggleSelection}
+                        isLoadingDesigns={isLoadingDesigns}
+                        // New props for split orders
+                        hasActiveFilters={viewMode === "designs"}
+                        incompleteOrders={incompleteOrders}
+                        completedOrders={completedOrders}
+                        loadingIncomplete={loadingIncompleteOrders}
+                        loadingCompleted={loadingCompletedOrders}
+                        incompletePage={incompleteOrdersPage}
+                        setIncompletePage={setIncompleteOrdersPage}
+                        completedPage={completedOrdersPage}
+                        setCompletedPage={setCompletedOrdersPage}
+                        incompleteTotalPages={incompleteTotalPages}
+                        completedTotalPages={completedTotalPages}
+                        incompleteOrdersPageInput={incompleteOrdersPageInput}
+                        setIncompleteOrdersPageInput={
+                          setIncompleteOrdersPageInput
+                        }
+                        handleIncompletePageInputBlur={
+                          handleIncompletePageInputBlur
+                        }
+                        completedOrdersPageInput={completedOrdersPageInput}
+                        setCompletedOrdersPageInput={setCompletedOrdersPageInput}
+                        handleCompletedPageInputBlur={
+                          handleCompletedPageInputBlur
+                        }
+                        incompleteTotalCount={incompleteTotalCount}
+                        completedTotalCount={completedTotalCount}
+                        itemsPerPage={itemsPerPage}
+                        shouldShowExpand={shouldShowExpand}
+                        expandedOrderIds={expandedOrderIds}
+                        searchTermLower={searchTermLower}
+                        debouncedDesignCode={debouncedDesignCode}
+                        onNavigate={(id) => navigate(`/proofing/${id}`)}
+                        ordersTableRef={ordersTableRef}
+                        // Actions for shared DesignTable
+                        onReject={openRejectDialog}
+                        isRejecting={isRejecting}
+                        onFindDie={() => setIsDieListDialogOpen(true)}
+                        // Designs Pagination props
+                        designsPage={designsPage}
+                        setDesignsPage={setDesignsPage}
+                        designsTotalPages={designsTotalPages}
+                        designsPageInput={designsPageInput}
+                        setDesignsPageInput={setDesignsPageInput}
+                        handleDesignsPageInputBlur={handleDesignsPageInputBlur}
+                        designsTotalCount={designsTotalCount}
+                      />
 
-            {/* Right panel: config panel when creating new order */}
-            {newOrderId && (
-              <div className="basis-2/5 min-w-0 shrink-0">
-                <DetailEmptyOrderView
-                  selectedDesigns={selectedDesigns}
-                  selectedCount={configSelectedCount}
-                  materialTypeName={configMaterialTypeName}
-                  designQuantities={designQuantities}
-                  setDesignQuantities={setDesignQuantities}
-                  toggleSelection={toggleSelection}
-                  proofingSheetQuantity={proofingSheetQuantity}
-                  setProofingSheetQuantity={setProofingSheetQuantity}
-                  paperSizeId={paperSizeId}
-                  setPaperSizeId={setPaperSizeId}
-                  customPaperSize={customPaperSize}
-                  setCustomPaperSize={setCustomPaperSize}
-                  notes={configNotes}
-                  setNotes={setConfigNotes}
-                  paperSizes={paperSizes}
-                  showCreateButton={showCreateButton}
-                  isCreatingPaperSize={isCreatingPaperSize}
-                  handleCreatePaperSize={handleCreatePaperSize}
-                  handleSubmitDesigns={handleConfigSubmitDesigns}
-                  isAddingDesigns={isAddingDesigns}
-                />
-              </div>
-            )}
-          </div>
-        </main>
+                      {(selectedMaterialTypeId || designCode.trim()) && (
+                        <div className="flex items-center gap-2 px-0 mt-[-8px]">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-2 text-xs"
+                            onClick={() => {
+                              setDesignCode("");
+                              setSelectedMaterialTypeId(null);
+                              setIncompleteOrdersPage(1);
+                              setCompletedOrdersPage(1);
+                            }}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            Xóa bộ lọc
+                          </Button>
+                        </div>
+                      )}
+                    </header>
 
-        <DieListDialog
-          open={isDieListDialogOpen}
-          onOpenChange={setIsDieListDialogOpen}
-        />
-
-        <InventoryViewDialog
-          open={isInventoryViewDialogOpen}
-          onOpenChange={setIsInventoryViewDialogOpen}
-        />
-
-        <AlertDialog
-          open={isRejectDialogOpen}
-          onOpenChange={setIsRejectDialogOpen}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Hoàn hàng về phòng thiết kế</AlertDialogTitle>
-              <AlertDialogDescription>
-                Xác nhận hoàn hàng để thiết kế được trả về phòng thiết kế xử lý
-                lại.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-
-            {rejectTarget && (
-              <div className="space-y-3">
-                <div className="rounded-lg border bg-muted/20 p-3">
-                  <div className="text-sm font-semibold text-foreground">
-                    {rejectTarget.code}
+                    {/* Orders list components are now inside PrepressOrdersHeader if !hasActiveFilters */}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {rejectTarget.name}
-                    {rejectTarget.orderCode || rejectTarget.orderId
-                      ? ` • ${rejectTarget.orderCode || rejectTarget.orderId}`
-                      : ""}
-                  </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="reject-reason">Lý do (tuỳ chọn)</Label>
-                  <Textarea
-                    id="reject-reason"
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="Ví dụ: sai thông tin, cần chỉnh file, thiếu chi tiết..."
-                    className="min-h-[90px]"
+              {/* Right panel: config panel when creating new order */}
+              {newOrderId && (
+                <div className="basis-2/5 min-w-0 shrink-0">
+                  <DetailEmptyOrderView
+                    selectedDesigns={selectedDesigns}
+                    selectedCount={configSelectedCount}
+                    materialTypeName={configMaterialTypeName}
+                    designQuantities={designQuantities}
+                    setDesignQuantities={setDesignQuantities}
+                    toggleSelection={toggleSelection}
+                    proofingSheetQuantity={proofingSheetQuantity}
+                    setProofingSheetQuantity={setProofingSheetQuantity}
+                    paperSizeId={paperSizeId}
+                    setPaperSizeId={setPaperSizeId}
+                    customPaperSize={customPaperSize}
+                    setCustomPaperSize={setCustomPaperSize}
+                    notes={configNotes}
+                    setNotes={setConfigNotes}
+                    paperSizes={paperSizes}
+                    showCreateButton={showCreateButton}
+                    isCreatingPaperSize={isCreatingPaperSize}
+                    handleCreatePaperSize={handleCreatePaperSize}
+                    handleSubmitDesigns={handleConfigSubmitDesigns}
+                    isAddingDesigns={isAddingDesigns}
                   />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          </main>
 
-            <AlertDialogFooter>
-              <AlertDialogCancel
-                onClick={() => {
-                  closeRejectDialog();
-                }}
-                disabled={isRejecting}
-              >
-                Huỷ
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={async (e) => {
-                  e.preventDefault();
-                  if (!rejectTarget) return;
-                  try {
-                    await rejectDesignMutate({
-                      orderDetailId: rejectTarget.id,
-                      reason: rejectReason.trim() || null,
-                    });
+          <DieListDialog
+            open={isDieListDialogOpen}
+            onOpenChange={setIsDieListDialogOpen}
+          />
 
-                    // If this design is currently selected, unselect it.
-                    // If it was the last selected item, also clearSelection()
-                    // to ensure currentMaterialTypeId is reset.
-                    const wasLastSelected =
-                      selectedDesigns.length === 1 &&
-                      selectedDesigns[0]?.id === rejectTarget.id;
+          <InventoryViewDialog
+            open={isInventoryViewDialogOpen}
+            onOpenChange={setIsInventoryViewDialogOpen}
+          />
 
-                    if (selectedIds.has(rejectTarget.id)) {
-                      toggleSelection(rejectTarget);
-                    }
+          <AlertDialog
+            open={isRejectDialogOpen}
+            onOpenChange={setIsRejectDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Hoàn hàng về phòng thiết kế</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Xác nhận hoàn hàng để thiết kế được trả về phòng thiết kế xử lý
+                  lại.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
 
-                    if (wasLastSelected) {
-                      clearSelection();
-                    }
+              {rejectTarget && (
+                <div className="space-y-3">
+                  <div className="rounded-lg border bg-muted/20 p-3">
+                    <div className="text-sm font-semibold text-foreground">
+                      {rejectTarget.code}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {rejectTarget.name}
+                      {rejectTarget.orderCode || rejectTarget.orderId
+                        ? ` • ${rejectTarget.orderCode || rejectTarget.orderId}`
+                        : ""}
+                    </div>
+                  </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="reject-reason">Lý do (tuỳ chọn)</Label>
+                    <Textarea
+                      id="reject-reason"
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder="Ví dụ: sai thông tin, cần chỉnh file, thiếu chi tiết..."
+                      className="min-h-[90px]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() => {
                     closeRejectDialog();
-                  } catch (err) {
-                    console.error("Reject design failed:", err);
-                    // error toast already handled by hook
-                  }
-                }}
-                disabled={isRejecting || !rejectTarget}
-              >
-                {isRejecting ? "Đang xử lý..." : "Xác nhận"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                  }}
+                  disabled={isRejecting}
+                >
+                  Huỷ
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    if (!rejectTarget) return;
+                    try {
+                      await rejectDesignMutate({
+                        orderDetailId: rejectTarget.id,
+                        reason: rejectReason.trim() || null,
+                      });
+
+                      // If this design is currently selected, unselect it.
+                      // If it was the last selected item, also clearSelection()
+                      // to ensure currentMaterialTypeId is reset.
+                      const wasLastSelected =
+                        selectedDesigns.length === 1 &&
+                        selectedDesigns[0]?.id === rejectTarget.id;
+
+                      if (selectedIds.has(rejectTarget.id)) {
+                        toggleSelection(rejectTarget);
+                      }
+
+                      if (wasLastSelected) {
+                        clearSelection();
+                      }
+
+                      closeRejectDialog();
+                    } catch (err) {
+                      console.error("Reject design failed:", err);
+                      // error toast already handled by hook
+                    }
+                  }}
+                  disabled={isRejecting || !rejectTarget}
+                >
+                  {isRejecting ? "Đang xử lý..." : "Xác nhận"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
     </div>
   );

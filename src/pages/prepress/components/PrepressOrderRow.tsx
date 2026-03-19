@@ -179,7 +179,10 @@ export function PrepressOrderRow({
   );
 
   return (
-    <>
+    <div className="border border-black relative contents">
+      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
+        PrepressOrderRow.tsx
+      </span>
       <CursorTooltip
         content={tooltipContent}
         delayDuration={1000}
@@ -229,28 +232,7 @@ export function PrepressOrderRow({
               ? highlightText(order.code || "", debouncedSearchTerm.trim())
               : order.code}
           </TableCell>
-          <TableCell className="py-3 font-mono text-sm font-semibold align-top">
-            <div className="flex flex-col gap-1">
-              {designs.map((pod: any, idx: number) => {
-                const code = pod.design?.code || "—";
-                const codeMatches =
-                  shouldShowExpand &&
-                  code.toLowerCase().includes(searchTermLower);
-                return (
-                  <span key={pod.id || idx} className="whitespace-nowrap">
-                    {codeMatches
-                      ? highlightText(code, debouncedSearchTerm.trim())
-                      : code}
-                  </span>
-                );
-              })}
-            </div>
-          </TableCell>
-          <TableCell className="py-3 font-semibold text-center align-top">
-            <Badge variant="secondary" className="font-bold">
-              {order.proofingOrderDesigns?.length ?? 0}
-            </Badge>
-          </TableCell>
+
           <TableCell className="py-3 font-semibold text-xs align-top">
             <div className="flex flex-col gap-1">
               {designs.map((pod: any, idx: number) => (
@@ -333,6 +315,6 @@ export function PrepressOrderRow({
           </TableCell>
         </TableRow>
       </CursorTooltip>
-    </>
+    </div>
   );
 }

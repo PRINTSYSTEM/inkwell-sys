@@ -2058,7 +2058,11 @@ export default function ProofingOrderDetailPage() {
 
 
   return (
-    <div className="relative h-full flex flex-col overflow-hidden bg-background p-4">
+    <div className="border border-black relative">
+      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
+        PrepressDetail.tsx
+      </span>
+      <div className="relative h-full flex flex-col overflow-hidden bg-background p-4">
 
       {/* Header */}
       <DetailHeader
@@ -2400,5 +2404,6 @@ export default function ProofingOrderDetailPage() {
         setSelectedDesignForRelatedDies={setSelectedDesignForRelatedDies}
       />
     </div>
-  );
+  </div>
+);
 }
