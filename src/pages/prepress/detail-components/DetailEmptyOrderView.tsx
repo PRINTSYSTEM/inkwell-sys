@@ -68,11 +68,7 @@ export function DetailEmptyOrderView({
   isAddingDesigns,
 }: DetailEmptyOrderViewProps) {
   return (
-    <div className="border border-black relative flex-1 flex min-h-0 w-full max-w-full overflow-hidden rounded-lg shadow-sm">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        DetailEmptyOrderView.tsx
-      </span>
-      <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm relative">
+    <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm bg-background">
         {/* PROOFING ORDER CONFIG */}
         <div className="flex-1 flex flex-col min-h-0 bg-background">
           {/* Right header */}
@@ -358,7 +354,6 @@ export function DetailEmptyOrderView({
             </ScrollArea>
           </div>
         </div>
-      </div>
     </div>
   );
 }

@@ -95,7 +95,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { DesignCardSkeleton } from "@/components/proofing/DesignCardSkeleton";
-// FilterSection removed - now in PrepressList
+import { FilterSection } from "@/components/proofing/FilterSection";
 import { FilterNoticeBanner } from "@/components/proofing/FilterNoticeBanner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDebounce } from "use-debounce";
@@ -2058,11 +2058,7 @@ export default function ProofingOrderDetailPage() {
 
 
   return (
-    <div className="border border-black relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        PrepressDetail.tsx
-      </span>
-      <div className="relative h-full flex flex-col overflow-hidden bg-background p-4">
+    <div className="relative h-full flex flex-col overflow-hidden bg-background p-4">
 
       {/* Header */}
       <DetailHeader
@@ -2099,62 +2095,23 @@ export default function ProofingOrderDetailPage() {
                     </Button>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Tìm theo mã hàng..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 h-9"
-                      />
-                    </div>
-                    <select
-                      className="h-9 w-40 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      value={selectedMaterialTypes.length === 1 ? selectedMaterialTypes[0] : ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSelectedMaterialTypes(val ? [parseInt(val)] : []);
-                      }}
-                    >
-                      <option value="">Loại chất liệu</option>
-                      {availableDesignsData?.materialTypeOptions?.map((m: any) => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Design Type Chips */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    <Button
-                      variant={selectedDesignTypes.length === 0 ? "secondary" : "ghost"}
-                      size="sm"
-                      className="h-7 px-3 text-xs rounded-full"
-                      onClick={() => setSelectedDesignTypes([])}
-                    >
-                      Tất cả
-                    </Button>
-                    {designTypeOptions.map((dt) => {
-                      const isActive = selectedDesignTypes.includes(dt.id);
-                      return (
-                        <Button
-                          key={dt.id}
-                          variant={isActive ? "secondary" : "ghost"}
-                          size="sm"
-                          className={cn(
-                            "h-7 px-3 text-xs rounded-full whitespace-nowrap",
-                            isActive && "bg-primary/10 text-primary hover:bg-primary/20"
-                          )}
-                          onClick={() => {
-                            if (isActive) setSelectedDesignTypes(selectedDesignTypes.filter(id => id !== dt.id));
-                            else setSelectedDesignTypes([...selectedDesignTypes, dt.id]);
-                          }}
-                        >
-                          {dt.name} {dt.count ? `(${dt.count})` : ""}
-                        </Button>
-                      );
-                    })}
-                  </div>
+                  <FilterSection
+                    designTypeOptions={designTypeOptions}
+                    materialTypeOptions={(availableDesignsData?.materialTypeOptions || []).map(m => ({
+                      id: m.id,
+                      name: m.name || "",
+                      count: 0
+                    }))}
+                    selectedDesignTypes={selectedDesignTypes}
+                    selectedMaterialTypes={selectedMaterialTypes}
+                    currentMaterialTypeId={currentMaterialTypeId}
+                    searchTerm={searchTerm}
+                    onDesignTypeChange={setSelectedDesignTypes}
+                    onMaterialTypeChange={setSelectedMaterialTypes}
+                    onSearchChange={setSearchTerm}
+                    onClearFilters={handleClearFilters}
+                    hasActiveFilters={selectedDesignTypes.length > 0 || selectedMaterialTypes.length > 0 || searchTerm.trim().length > 0}
+                  />
                 </div>
 
                 {/* Table Area */}
@@ -2171,7 +2128,6 @@ export default function ProofingOrderDetailPage() {
                         }
                       }}
                       canSelect={canSelect}
-                      isLoadingDesigns={isLoadingDesigns}
                       onReject={(design) => {
                         toast.info("Tính năng hoàn hàng không không khả dụng ở đây");
                       }}
@@ -2404,6 +2360,5 @@ export default function ProofingOrderDetailPage() {
         setSelectedDesignForRelatedDies={setSelectedDesignForRelatedDies}
       />
     </div>
-  </div>
-);
+  );
 }

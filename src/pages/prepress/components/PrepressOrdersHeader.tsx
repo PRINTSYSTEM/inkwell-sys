@@ -53,6 +53,11 @@ interface PrepressOrdersHeaderProps {
   onToggle: (design: DesignItem) => void;
   isLoadingDesigns?: boolean;
 
+  // Actions for shared DesignTable
+  onReject?: (design: DesignItem) => void;
+  isRejecting?: boolean;
+  onFindDie?: (design: DesignItem) => void;
+
   // New props for split orders
   hasActiveFilters: boolean;
   incompleteOrders: any[];
@@ -87,6 +92,8 @@ interface PrepressOrdersHeaderProps {
   setDesignsPageInput?: (val: string) => void;
   handleDesignsPageInputBlur?: () => void;
   designsTotalCount?: number;
+  shouldShowExpand?: boolean;
+  expandedOrderIds?: Set<number>;
 }
 
 export function PrepressOrdersHeader({
@@ -143,6 +150,12 @@ export function PrepressOrdersHeader({
   setDesignsPageInput,
   handleDesignsPageInputBlur,
   designsTotalCount = 0,
+  // Actions
+  onReject,
+  isRejecting,
+  onFindDie,
+  shouldShowExpand = false,
+  expandedOrderIds = new Set(),
 }: PrepressOrdersHeaderProps) {
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
@@ -294,9 +307,9 @@ export function PrepressOrdersHeader({
                   selectedIds={selectedIds}
                   canSelect={canSelect}
                   onToggle={onToggle}
-                  // onReject={onReject} // Removed
-                  // isRejecting={isRejecting} // Removed
-                  // onFindDie={onFindDie} // Removed
+                  onReject={onReject}
+                  isRejecting={isRejecting}
+                  onFindDie={onFindDie}
                 />
                 {/* Designs Pagination */}
                 {designsTotalCount > itemsPerPage &&

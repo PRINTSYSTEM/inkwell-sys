@@ -527,6 +527,31 @@ export default function PrepressList() {
     clearSelection();
   };
 
+  const handleToggleDesign = async (design: DesignItem) => {
+    // 1. Toggle selection immediately for responsive UI
+    toggleSelection(design);
+
+    // 2. If no order active, create one automatically
+    if (!newOrderId && !isCreating) {
+      try {
+        const result = await createProofingOrder({} as any);
+        if (result?.id) {
+          setNewOrderId(result.id);
+          // Initializing other fields
+          setDesignQuantities({});
+          setProofingSheetQuantity(0);
+          setPaperSizeId("custom");
+          setCustomPaperSize("");
+          setConfigNotes("");
+          toast.success("Đã tự động tạo lệnh bài mới");
+        }
+      } catch (e) {
+        console.error("Auto-create order failed:", e);
+        toast.error("Không thể tự động tạo lệnh");
+      }
+    }
+  };
+
   const handleClearFilters = () => {
     setSelectedDesignTypes([]);
     setSelectedMaterialTypes([]);
@@ -577,12 +602,9 @@ export default function PrepressList() {
   };
 
   return (
-    <div className="border border-black relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        PrepressList.tsx
-      </span>
+    <div className="relative">
       <div className="relative h-[calc(100vh-var(--header-height))] w-full overflow-hidden bg-background">
-        <div className="mx-auto flex h-full w-full max-w-none flex-col gap-6 p-6">
+        <div className="mx-auto flex h-full w-full max-w-none flex-col gap-4 p-4">
           {/* Header */}
           <header className="shrink-0">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -650,7 +672,7 @@ export default function PrepressList() {
               <Card
                 className={cn(
                   "h-full overflow-hidden",
-                  newOrderId ? "flex-1 min-w-0" : "w-full",
+                  newOrderId ? "w-2/3 min-w-0 flex-none" : "w-full",
                 )}
               >
                 <CardContent className="h-full p-0">
@@ -701,7 +723,7 @@ export default function PrepressList() {
                         designs={availableDesignsData?.designs || []}
                         selectedIds={selectedIds}
                         canSelect={canSelect}
-                        onToggle={toggleSelection}
+                        onToggle={handleToggleDesign}
                         isLoadingDesigns={isLoadingDesigns}
                         // New props for split orders
                         hasActiveFilters={viewMode === "designs"}
@@ -777,14 +799,14 @@ export default function PrepressList() {
 
               {/* Right panel: config panel when creating new order */}
               {newOrderId && (
-                <div className="basis-2/5 min-w-0 shrink-0">
+                <div className="w-1/3 min-w-0 shrink-0">
                   <DetailEmptyOrderView
                     selectedDesigns={selectedDesigns}
                     selectedCount={configSelectedCount}
                     materialTypeName={configMaterialTypeName}
                     designQuantities={designQuantities}
                     setDesignQuantities={setDesignQuantities}
-                    toggleSelection={toggleSelection}
+                    toggleSelection={handleToggleDesign}
                     proofingSheetQuantity={proofingSheetQuantity}
                     setProofingSheetQuantity={setProofingSheetQuantity}
                     paperSizeId={paperSizeId}
