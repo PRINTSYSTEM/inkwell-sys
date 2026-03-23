@@ -18,6 +18,7 @@ import {
   Box,
   Package,
   Save,
+  Bug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -717,6 +718,8 @@ export function ProductionListTable({
   onPageInputChange,
   onPageInputBlur,
 }: ProductionListTableProps) {
+  const [showDebug, setShowDebug] = useState(false);
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div ref={tableContainerRef} className="flex-1 overflow-auto [&>div]:!overflow-visible">
@@ -725,7 +728,18 @@ export function ProductionListTable({
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="h-10 font-bold text-sm text-center w-[150px] bg-muted/50 border-r border-border/50">
-                  MÃ BÌNH BÀI
+                  <div className="flex items-center justify-center gap-1.5">
+                    MÃ BÌNH BÀI
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6"
+                      onClick={() => setShowDebug(true)}
+                      title="Debug API Data"
+                    >
+                      <Bug className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  </div>
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm w-[300px]">
                   LỆNH IN
@@ -769,7 +783,18 @@ export function ProductionListTable({
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[150px] bg-muted/50 border-r border-border/50">
-                  MÃ BÌNH BÀI
+                  <div className="flex items-center justify-center gap-1.5">
+                    MÃ BÌNH BÀI
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6"
+                      onClick={() => setShowDebug(true)}
+                      title="Debug API Data"
+                    >
+                      <Bug className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  </div>
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm w-[300px]">
                   LỆNH IN
@@ -881,6 +906,25 @@ export function ProductionListTable({
               <span className="hidden sm:inline">Trang sau</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
+          </div>
+        </div>
+      )}
+
+      {showDebug && (
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-background w-full max-w-[90vw] h-[85vh] flex flex-col rounded-xl shadow-2xl overflow-hidden relative border">
+            <div className="flex justify-between items-center px-4 py-3 border-b bg-muted/40">
+              <h2 className="font-bold text-[15px] flex items-center gap-2">
+                <Bug className="h-4 w-4 text-emerald-600" /> 
+                Debug API Data (productions)
+              </h2>
+              <Button variant="secondary" size="sm" className="h-8 text-xs font-semibold" onClick={() => setShowDebug(false)}>
+                Đóng
+              </Button>
+            </div>
+            <div className="p-4 overflow-auto flex-1 font-mono text-xs dark:text-emerald-400 text-emerald-700 bg-slate-950">
+              <pre>{JSON.stringify(productions, null, 2)}</pre>
+            </div>
           </div>
         </div>
       )}
