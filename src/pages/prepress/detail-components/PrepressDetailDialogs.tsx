@@ -274,7 +274,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
   if (!order) return null;
 
   return (
-    <div className="border border-black relative">
+    <div >
       <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-[60]">
         PrepressDetailDialogs.tsx
       </span>

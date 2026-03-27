@@ -4,10 +4,7 @@ import { Button } from '@/components/ui/button';
 
 export default function PrepressOutput() {
   return (
-    <div className="border border-black relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        PrepressOutput.tsx
-      </span>
+    <div >
       <div className="relative space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>

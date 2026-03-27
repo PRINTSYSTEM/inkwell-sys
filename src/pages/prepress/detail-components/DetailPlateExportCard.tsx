@@ -31,10 +31,7 @@ export function DetailPlateExportCard({
         : [];
 
   return (
-    <div className="border border-black relative h-full flex flex-col">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        DetailPlateExportCard.tsx
-      </span>
+    <div className="h-full flex flex-col">
       <Card className="relative h-full flex flex-col">
         <CardHeader className="pb-1.5 px-4">
           <div className="flex items-center justify-between">

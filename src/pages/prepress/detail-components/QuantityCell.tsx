@@ -75,7 +75,7 @@ export function QuantityCell({
 
   if (isEditing) {
     return (
-      <div className="border border-black relative p-1">
+      <div className="p-1">
         <span className="absolute top-0 left-0 bg-black text-white text-[8px] px-1 z-50">
           QuantityCell.tsx
         </span>
@@ -184,7 +184,7 @@ export function QuantityCell({
   }
 
   return (
-    <div className="border border-black relative p-1">
+    <div className="p-1">
       <span className="absolute top-0 left-0 bg-black text-white text-[8px] px-1 z-50">
         QuantityCell.tsx
       </span>

@@ -69,9 +69,6 @@ export function DetailEmptyOrderView({
 }: DetailEmptyOrderViewProps) {
   return (
     <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm bg-background relative border-black">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        DetailEmptyOrderView.tsx
-      </span>
       {/* LEFT SIDE - DESIGN LIST */}
         <div className="flex-1 flex flex-col min-h-0 bg-background">
           {/* Right header */}

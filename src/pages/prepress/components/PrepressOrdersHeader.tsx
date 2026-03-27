@@ -160,10 +160,7 @@ export function PrepressOrdersHeader({
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
   return (
-    <div className="border border-black relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        PrepressOrdersHeader.tsx
-      </span>
+    <div >
       <div className="relative shrink-0">
         <div className="flex flex-wrap items-center gap-4">
           <div className="relative flex-1 min-w-[280px] max-w-md">

@@ -179,10 +179,7 @@ export function PrepressOrderRow({
   );
 
   return (
-    <div className="border border-black relative contents">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        PrepressOrderRow.tsx
-      </span>
+    <div className="contents">
       <CursorTooltip
         content={tooltipContent}
         delayDuration={1000}
