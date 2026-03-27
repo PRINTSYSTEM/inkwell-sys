@@ -2215,6 +2215,8 @@ export default function ProofingOrderDetailPage() {
                 handleCancelEditField={handleCancelEditField}
                 handleSaveField={handleSaveField}
                 setIsUploadDialogOpen={setIsUploadDialogOpen}
+                setImageViewerOpen={setImageViewerOpen}
+                setViewingImageUrl={setViewingImageUrl}
               />
 
               <DetailDesignsListCard
@@ -2261,6 +2263,8 @@ export default function ProofingOrderDetailPage() {
                   handleRemoveDie={handleRemoveDie}
                   isRemovingDie={isRemovingDie}
                   setIsDieListDialogOpen={setIsDieListDialogOpen}
+                  setImageViewerOpen={setImageViewerOpen}
+                  setViewingImageUrl={setViewingImageUrl}
                 />
               ) : (
                 <div /> /* Empty div to maintain grid if no die cut designs */

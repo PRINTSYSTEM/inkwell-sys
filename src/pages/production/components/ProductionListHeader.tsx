@@ -10,15 +10,16 @@ interface ProductionListHeaderProps {
     inProgress: number;
     completed: number;
   };
-  onCreateClick: () => void;
 }
 
 export function ProductionListHeader({
   stats,
-  onCreateClick,
 }: ProductionListHeaderProps) {
   return (
-    <div>
+    <div className="relative">
+      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
+        ProductionListHeader.tsx
+      </span>
       <div className="flex items-center justify-between mb-3 shrink-0">
         <div>
           <h1 className="text-lg font-bold text-balance">Quản lý Sản xuất</h1>
@@ -27,10 +28,6 @@ export function ProductionListHeader({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={onCreateClick}>
-            <Plus className="h-3.5 w-3.5" />
-            Tạo đơn sản xuất
-          </Button>
         </div>
       </div>
 

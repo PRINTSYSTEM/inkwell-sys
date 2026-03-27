@@ -19,6 +19,7 @@ import {
   Info,
   FileImage,
   Bug,
+  Maximize2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatDieSize } from "@/utils/format-die-size";
@@ -33,6 +34,8 @@ interface DetailDieExportCardProps {
   handleRemoveDie: (dieId: number) => void;
   isRemovingDie: boolean;
   setIsDieListDialogOpen: (val: boolean) => void;
+  setImageViewerOpen: (val: boolean) => void;
+  setViewingImageUrl: (val: string | null) => void;
 }
 
 export function DetailDieExportCard({
@@ -44,6 +47,8 @@ export function DetailDieExportCard({
   handleRemoveDie,
   isRemovingDie,
   setIsDieListDialogOpen,
+  setImageViewerOpen,
+  setViewingImageUrl,
 }: DetailDieExportCardProps) {
   const [showDebug, setShowDebug] = useState(false);
   if (!order) return null;
@@ -170,13 +175,26 @@ export function DetailDieExportCard({
                   {/* Image and Info Section */}
                   <div className="flex gap-3">
                     {/* Image Thumbnail */}
-                    <div className="w-16 h-16 shrink-0 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                    <div
+                      className="w-16 h-16 shrink-0 rounded border bg-muted flex items-center justify-center overflow-hidden relative group/img cursor-zoom-in"
+                      onClick={() => {
+                        if (dieExport.die?.imageUrl) {
+                          setViewingImageUrl(dieExport.die.imageUrl);
+                          setImageViewerOpen(true);
+                        }
+                      }}
+                    >
                       {dieExport.die?.imageUrl ? (
-                        <img
-                          src={dieExport.die.imageUrl}
-                          alt={dieExport.die?.code || "Khuôn bế"}
-                          className="w-full h-full object-cover"
-                        />
+                        <>
+                          <img
+                            src={dieExport.die.imageUrl}
+                            alt={dieExport.die?.code || "Khuôn bế"}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                            <Maximize2 className="h-4 w-4 text-white" />
+                          </div>
+                        </>
                       ) : (
                         <FileImage className="h-5 w-5 text-muted-foreground/40" />
                       )}

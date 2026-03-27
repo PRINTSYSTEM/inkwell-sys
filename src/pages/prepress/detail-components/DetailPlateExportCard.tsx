@@ -89,7 +89,7 @@ export function DetailPlateExportCard({
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-muted-foreground uppercase tracking-widest text-[9px]">
-                          Lần {plateExportsList.length - index}
+                          Lần {index + 1}
                         </span>
                         {exportItem.isActive && (
                           <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1 py-0.5 rounded uppercase tracking-tighter border border-green-200">
@@ -97,7 +97,7 @@ export function DetailPlateExportCard({
                           </span>
                         )}
                       </div>
-                      {order.status !== "completed" && (
+                      {(exportItem.isActive || index === plateExportsList.length - 1) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -136,9 +136,9 @@ export function DetailPlateExportCard({
                           {exportItem?.createdAt || exportItem?.exportedAt
                             ? format(
                                 new Date(
-                                  exportItem.createdAt || exportItem.exportedAt
+                                  exportItem.createdAt || exportItem.exportedAt,
                                 ),
-                                "dd/MM/yyyy HH:mm"
+                                "dd/MM/yyyy HH:mm",
                               )
                             : "—"}
                         </span>
@@ -155,23 +155,6 @@ export function DetailPlateExportCard({
                         </p>
                       </div>
                     )}
-                    <div className="flex justify-center pt-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
-                        onClick={() => {
-                          const activeExport =
-                            plateExportsList.find((e: any) => e.isActive) ||
-                            plateExportsList[0];
-                          setEditingPlateExport(activeExport);
-                          setIsPlateExportDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="h-3 w-3" />
-                        Sửa
-                      </Button>
-                    </div>
                   </div>
                 ))}
               </div>
@@ -226,7 +209,7 @@ export function DetailPlateExportCard({
                     {order.handedToProductionAt
                       ? format(
                           new Date(order.handedToProductionAt),
-                          "HH:mm dd/MM/yyyy"
+                          "HH:mm dd/MM/yyyy",
                         )
                       : ""}
                   </p>

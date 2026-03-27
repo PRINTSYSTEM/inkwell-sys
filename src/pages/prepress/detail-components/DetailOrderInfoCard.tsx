@@ -19,6 +19,7 @@ import {
   Settings2,
   Layers,
   Image as ImageIcon,
+  Maximize2,
 } from "lucide-react";
 import {
   processClassificationLabels,
@@ -49,6 +50,8 @@ interface DetailOrderInfoCardProps {
   handleCancelEditField: () => void;
   handleSaveField: () => void;
   setIsUploadDialogOpen: (val: boolean) => void;
+  setImageViewerOpen: (val: boolean) => void;
+  setViewingImageUrl: (val: string | null) => void;
 }
 
 export function DetailOrderInfoCard({
@@ -70,6 +73,8 @@ export function DetailOrderInfoCard({
   handleCancelEditField,
   handleSaveField,
   setIsUploadDialogOpen,
+  setImageViewerOpen,
+  setViewingImageUrl,
 }: DetailOrderInfoCardProps) {
   if (!order) return null;
 
@@ -89,12 +94,21 @@ export function DetailOrderInfoCard({
           {/* Image Display - Narrower Aspect */}
           <div className="mt-2">
             {order.imageUrl ? (
-              <div className="relative aspect-[21/9] w-full overflow-hidden rounded-md border border-muted-foreground/10 bg-muted/5 group">
+              <div
+                className="relative aspect-[21/9] w-full overflow-hidden rounded-md border border-muted-foreground/10 bg-muted/5 group cursor-zoom-in"
+                onClick={() => {
+                  setViewingImageUrl(order.imageUrl);
+                  setImageViewerOpen(true);
+                }}
+              >
                 <img
                   src={order.imageUrl}
                   alt="Bình bài"
                   className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
                 />
+                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Maximize2 className="h-6 w-6 text-white drop-shadow-md" />
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center aspect-[21/9] w-full rounded-md border border-dashed border-muted-foreground/20 bg-muted/5 group">

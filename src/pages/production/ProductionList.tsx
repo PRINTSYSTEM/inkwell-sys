@@ -28,13 +28,7 @@ export default function ProductionListPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedProofingOrderId, setSelectedProofingOrderId] = useState<
-    number | null
-  >(null);
-  const [notes, setNotes] = useState("");
-  const [proofingSearchTerm, setProofingSearchTerm] = useState("");
   const [debouncedSearch] = useDebounce(searchTerm, 300);
-  const [debouncedProofingSearch] = useDebounce(proofingSearchTerm, 300);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("1");
   const [itemsPerPage] = useState(10);
@@ -165,63 +159,39 @@ export default function ProductionListPage() {
     [proofingOrdersResp?.items]
   );
 
-  // Filter proofing orders by search term
-  const filteredProofingOrders = useMemo(() => {
-    if (!debouncedProofingSearch.trim()) {
-      return proofingOrders;
-    }
+  // Unified List: Merged ProductionOrders and filtered ProofingOrders
+  const displayProductions = useMemo<ProductionOrderResponse[]>(() => {
+    const existingPoIds = new Set(productions.map((p) => p.proofingOrderId));
+    const readyProofingAsProds: ProductionOrderResponse[] = proofingOrders
+      .filter((po) => !existingPoIds.has(po.id))
+      .map((po) => ({
+        proofingOrderId: po.id,
+        proofingOrder: po,
+        status: "Draft",
+        steps: [],
+        createdAt: po.updatedAt || po.createdAt,
+      } as unknown as ProductionOrderResponse));
 
-    const search = debouncedProofingSearch.toLowerCase().trim();
-    return proofingOrders.filter((order) => {
-      const codeMatch = order.code?.toLowerCase().includes(search);
-      const materialMatch = order.materialType?.name
-        ?.toLowerCase()
-        .includes(search);
-      const creatorMatch = order.createdBy?.fullName
-        ?.toLowerCase()
-        .includes(search);
-      const designMatch = order.proofingOrderDesigns?.some(
-        (pod) =>
-          pod.design?.designName?.toLowerCase().includes(search) ||
-          pod.design?.code?.toLowerCase().includes(search)
-      );
-      const idMatch = order.id?.toString().includes(search);
+    const merged = [...productions, ...readyProofingAsProds];
 
-      return (
-        codeMatch || materialMatch || creatorMatch || designMatch || idMatch
-      );
+    // Apply client-side search/status filter
+    return merged.filter((prod: any) => {
+      const search = debouncedSearch.toLowerCase().trim();
+      const matchSearch =
+        search.length === 0 ||
+        String(prod.id ?? "")
+          .toLowerCase()
+          .includes(search) ||
+        (prod.proofingOrder?.code ?? "").toLowerCase().includes(search) ||
+        (prod.productionLeadName ?? "").toLowerCase().includes(search);
+
+      const matchStatus =
+        selectedStatus === "all" ||
+        (prod.id ? prod.status === selectedStatus : selectedStatus === "Draft");
+
+      return matchSearch && matchStatus;
     });
-  }, [proofingOrders, debouncedProofingSearch]);
-
-  // Get selected proofing order details
-  const selectedProofingOrder = useMemo(() => {
-    if (!selectedProofingOrderId) return null;
-    return (
-      proofingOrders.find((order) => order.id === selectedProofingOrderId) ||
-      null
-    );
-  }, [proofingOrders, selectedProofingOrderId]);
-
-  // Client-side search filter (since API doesn't support search parameter)
-  const filteredProductions = useMemo(
-    () =>
-      productions?.filter((prod: ProductionOrderResponse) => {
-        const search = debouncedSearch.toLowerCase().trim();
-
-        const matchSearch =
-          search.length === 0 ||
-          String(prod.id ?? "")
-            .toLowerCase()
-            .includes(search) ||
-          (prod.productionLeadName ?? "").toLowerCase().includes(search);
-
-        const matchStatus =
-          selectedStatus === "all" || prod.status === selectedStatus;
-
-        return matchSearch && matchStatus;
-      }),
-    [productions, debouncedSearch, selectedStatus]
-  );
+  }, [productions, proofingOrders, debouncedSearch, selectedStatus]);
 
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
@@ -267,14 +237,7 @@ export default function ProductionListPage() {
     navigate(`/productions/${productionId}`);
   };
 
-  const handleCreateProduction = async () => {
-    if (!selectedProofingOrderId) {
-      toast.error("Thiếu thông tin", {
-        description: "Vui lòng chọn một bình bài để tạo lệnh sản xuất",
-      });
-      return;
-    }
-
+  const handleStartProduction = async (proofingOrderId: number) => {
     if (!user?.id) {
       toast.error("Lỗi xác thực", {
         description: "Không thể lấy thông tin người dùng",
@@ -284,13 +247,11 @@ export default function ProductionListPage() {
 
     try {
       await createProduction({
-        proofingOrderId: selectedProofingOrderId,
-        customSteps: notes ? [notes] : undefined,
+        proofingOrderId: proofingOrderId,
       });
-      setIsCreateDialogOpen(false);
-      setSelectedProofingOrderId(null);
-      setNotes("");
-      setProofingSearchTerm("");
+      toast.success("Thành công", {
+        description: "Đã tạo lệnh sản xuất mới",
+      });
     } catch (error) {
       // Error handled by hook
     }
@@ -323,11 +284,13 @@ export default function ProductionListPage() {
 
   return (
     <div className="h-full">
-      <div className="h-full flex flex-col overflow-hidden bg-background">
+      <div className="h-full flex flex-col overflow-hidden bg-background relative">
+        <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
+          ProductionList.tsx
+        </span>
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-4 py-4">
           <ProductionListHeader
             stats={stats}
-            onCreateClick={() => setIsCreateDialogOpen(true)}
           />
 
           <ProductionListFilter
@@ -347,7 +310,7 @@ export default function ProductionListPage() {
 
           <ProductionListTable
             isLoading={isLoading}
-            productions={filteredProductions}
+            productions={displayProductions}
             searchTerm={searchTerm}
             totalCount={totalCount}
             currentPage={currentPage}
@@ -360,31 +323,9 @@ export default function ProductionListPage() {
             onNextPage={handleNextPage}
             onPageInputChange={handlePageInputChange}
             onPageInputBlur={handlePageInputBlur}
+            onStartProduction={handleStartProduction}
           />
         </div>
-
-        <CreateProductionDialog
-          isOpen={isCreateDialogOpen}
-          onOpenChange={(open) => {
-            setIsCreateDialogOpen(open);
-            if (!open) {
-              setSelectedProofingOrderId(null);
-              setNotes("");
-              setProofingSearchTerm("");
-            }
-          }}
-          proofingSearchTerm={proofingSearchTerm}
-          onProofingSearchChange={setProofingSearchTerm}
-          filteredProofingOrders={filteredProofingOrders}
-          selectedProofingOrderId={selectedProofingOrderId}
-          onSelectProofingOrder={setSelectedProofingOrderId}
-          selectedProofingOrder={selectedProofingOrder}
-          notes={notes}
-          onNotesChange={setNotes}
-          isCreating={creating}
-          onCreateProduction={handleCreateProduction}
-          onFormatDateTime={formatDateTime}
-        />
       </div>
     </div>
   );

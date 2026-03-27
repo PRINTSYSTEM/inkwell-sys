@@ -19,6 +19,7 @@ import {
   Package,
   Save,
   Bug,
+  PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ interface ProductionListTableProps {
   onNextPage: () => void;
   onPageInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPageInputBlur: () => void;
+  onStartProduction: (proofingOrderId: number) => void;
 }
 
 // Helper to find a specific step
@@ -102,54 +104,88 @@ function getStatusColorClass(status: string) {
 // Inner component to render each row and fetch proofing details
 function ProductionTableRow({
   prod,
-  onClick,
+  onProductionClick,
+  onStartProduction,
 }: {
   prod: ProductionOrderResponse;
-  onClick: () => void;
+  onProductionClick: (id: number) => void;
+  onStartProduction: (proofingOrderId: number) => void;
 }) {
   const [openDiePopover, setOpenDiePopover] = useState(false);
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
 
+  const isDraft = !prod.id;
+  const isCreating = React.useRef(false);
+  
+  // Auto-start production for draft items if they have a proofingOrderId
+  React.useEffect(() => {
+    if (isDraft && prod.proofingOrderId && !isCreating.current) {
+      isCreating.current = true;
+      onStartProduction(prod.proofingOrderId);
+    }
+  }, [isDraft, prod.proofingOrderId, onStartProduction]);
+
   const { data: proofingOrderData, isLoading } = useProofingOrder(
     prod.proofingOrderId || null,
-    !!prod.proofingOrderId,
+    !!prod.proofingOrderId && !prod.proofingOrder,
   );
-  const proofingOrder = proofingOrderData as any;
+  const proofingOrder = (prod.proofingOrder || proofingOrderData) as any;
 
   const { mutate: updateStep } = useUpdateProductionStep();
 
   const steps = prod.steps || [];
 
   // Extract steps based on requested columns
+  const materialExportStep = getStepStatus(steps, ["xuất nguyên liệu"], "material_export");
+  const printStep = getStepStatus(steps, ["in"], "print");
   const laminationStep = getStepStatus(
     steps,
     ["cán màng", "cán"],
     "lamination",
   );
-  const cutStep = getStepStatus(steps, ["cắt"], "cut");
-  const pasteStep = getStepStatus(steps, ["bồi"]);
   const dieCutStep = getStepStatus(steps, ["bế"], "die_cut");
+  const cutStep = getStepStatus(steps, ["cắt"], "cut");
   const glueStep = getStepStatus(steps, ["dán"], "glue");
-  const checkStep = getStepStatus(steps, ["kiểm hàng", "kiểm tra"]);
-  const deliveryStep = getStepStatus(
+  const packagingStep = getStepStatus(
     steps,
-    ["giao hàng", "đóng gói", "giao"],
+    ["đóng gói", "giao hàng"],
     "packaging",
   );
+
+  // Dependency Logic: A step is enabled if the previous step is "done" (or doesn't exist)
+  const isMaterialExportEnabled = !isDraft;
+  const isMaterialExportDone = !materialExportStep || materialExportStep.status === "done";
+  
+  const isPrintEnabled = isMaterialExportEnabled && isMaterialExportDone;
+  const isPrintDone = !printStep || printStep.status === "done";
+  
+  const isLaminationEnabled = isPrintEnabled && isPrintDone;
+  const isLaminationDone = !laminationStep || laminationStep.status === "done";
+  
+  const isDieCutEnabled = isLaminationEnabled && isLaminationDone;
+  const isDieCutDone = !dieCutStep || dieCutStep.status === "done";
+  
+  const isCutEnabled = isDieCutEnabled && isDieCutDone;
+  const isCutDone = !cutStep || cutStep.status === "done";
+  
+  const isGlueEnabled = isCutEnabled && isCutDone;
+  const isGlueDone = !glueStep || glueStep.status === "done";
+  
+  const isPackagingEnabled = isGlueEnabled && isGlueDone;
 
   const defaultPrintQty =
     (proofingOrder as any)?.totalProcessedQty ||
     (proofingOrder as any)?.totalQuantity ||
     0;
 
-  const printStep = steps.find(
-    (s) =>
-      s.stepType === "print" ||
-      s.stepTypeName?.toLowerCase() === "in" ||
-      s.stepTypeName?.toLowerCase() === "in ấn",
-  );
 
-  const InlineStepStatus = ({ step }: { step: ProductionStepResponse }) => {
+  const InlineStepStatus = ({ 
+    step,
+    isEnabled = true 
+  }: { 
+    step: ProductionStepResponse,
+    isEnabled?: boolean
+  }) => {
     const handleStatusChange = (newStatus: string) => {
       updateStep({
         stepId: step.id!,
@@ -164,7 +200,7 @@ function ProductionTableRow({
 
     return (
       <div
-        className="flex items-center gap-1.5 h-7"
+        className={`flex items-center gap-1.5 h-7 transition-all duration-300 ${!isEnabled ? "opacity-30 grayscale pointer-events-none select-none" : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
         <Select
@@ -179,23 +215,20 @@ function ProductionTableRow({
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem
-              value="pending"
-              className="text-xs font-semibold cursor-pointer"
-            >
-              Chưa thực hiện
+            <SelectItem value="pending" className="text-xs font-semibold cursor-pointer">
+              Chờ
             </SelectItem>
-            <SelectItem
-              value="in_progress"
-              className="text-xs font-semibold cursor-pointer"
-            >
+            <SelectItem value="ready" className="text-xs font-semibold cursor-pointer">
+              Sẵn sàng
+            </SelectItem>
+            <SelectItem value="in_progress" className="text-xs font-semibold cursor-pointer">
               Đang thực hiện
             </SelectItem>
-            <SelectItem
-              value="done"
-              className="text-xs font-semibold cursor-pointer"
-            >
-              Đã hoàn thành
+            <SelectItem value="done" className="text-xs font-semibold cursor-pointer">
+              Hoàn thành
+            </SelectItem>
+            <SelectItem value="blocked" className="text-xs font-semibold cursor-pointer">
+              Bị chặn/Lỗi
             </SelectItem>
           </SelectContent>
         </Select>
@@ -206,9 +239,11 @@ function ProductionTableRow({
   const StepCell = ({
     step,
     isCheckStep = false,
+    isEnabled = true,
   }: {
     step: ProductionStepResponse | null;
     isCheckStep?: boolean;
+    isEnabled?: boolean;
   }) => {
     if (!step)
       return (
@@ -279,34 +314,32 @@ function ProductionTableRow({
         className="align-top py-3 px-1.5"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-col gap-1.5 w-[140px] mx-auto">
+        <div className="flex flex-col gap-1 w-full max-w-[100px] md:max-w-[110px] mx-auto">
           <Select
             value={step.status || "pending"}
             onValueChange={(val: any) => handleUpdate({ status: val })}
+            disabled={!isEnabled}
           >
             <SelectTrigger
-              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(step.status || "pending")}`}
+              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(step.status || "pending")} ${!isEnabled ? "opacity-30 grayscale" : ""}`}
             >
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem
-                value="pending"
-                className="text-xs font-semibold cursor-pointer"
-              >
-                Chưa thực hiện
+              <SelectItem value="pending" className="text-xs font-semibold cursor-pointer">
+                Chờ
               </SelectItem>
-              <SelectItem
-                value="in_progress"
-                className="text-xs font-semibold cursor-pointer"
-              >
+              <SelectItem value="ready" className="text-xs font-semibold cursor-pointer">
+                Sẵn sàng
+              </SelectItem>
+              <SelectItem value="in_progress" className="text-xs font-semibold cursor-pointer">
                 Đang thực hiện
               </SelectItem>
-              <SelectItem
-                value="done"
-                className="text-xs font-semibold cursor-pointer"
-              >
-                Đã hoàn thành
+              <SelectItem value="done" className="text-xs font-semibold cursor-pointer">
+                Hoàn thành
+              </SelectItem>
+              <SelectItem value="blocked" className="text-xs font-semibold cursor-pointer">
+                Bị chặn/Lỗi
               </SelectItem>
             </SelectContent>
           </Select>
@@ -381,8 +414,8 @@ function ProductionTableRow({
 
   return (
     <TableRow
-      className="cursor-pointer hover:bg-muted/50 border-b"
-      onClick={onClick}
+      className={`cursor-pointer hover:bg-muted/50 border-b ${isDraft ? "bg-blue-50/20 dark:bg-blue-900/10" : ""}`}
+      onClick={() => !isDraft && onProductionClick(prod.id!)}
     >
       <TableCell className="py-3 align-top font-bold text-base text-primary whitespace-nowrap bg-muted/20 border-r border-border/50 text-center w-[150px]">
         {isLoading ? (
@@ -391,7 +424,9 @@ function ProductionTableRow({
           </div>
         ) : proofingOrder ? (
           <div className="flex flex-col items-center justify-center mt-2">
-            <span>{(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}</span>
+            <span>
+              {(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}
+            </span>
           </div>
         ) : (
           <div className="flex justify-center mt-2 text-muted-foreground font-normal">
@@ -412,37 +447,39 @@ function ProductionTableRow({
             <div className="space-y-2">
               <div className="flex justify-between items-start">
                 <div className="flex flex-wrap items-center gap-2">
-                  {printStep && (
-                    <div className="flex items-center gap-1.5">
-                      <InlineStepStatus step={printStep} />
-                    </div>
-                  )}
+                  {/* Trạng thái công đoạn In nằm ở cột riêng */}
                 </div>
                 {/* <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full font-semibold border text-muted-foreground">
                   {String(prod.code || `PROD-${prod.id}`)}
                 </span> */}
               </div>
-              <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-xs">
-
+              <div className="grid grid-cols-[80px_1fr] gap-x-2 gap-y-0.5 text-[10px]">
                 <span className="text-muted-foreground font-medium">
                   Chất liệu:
                 </span>
-                <span className="font-bold text-foreground">
-                  {(proofingOrder as any).materialType?.name || "—"}
+                <span className="font-semibold text-foreground truncate">
+                  {proofingOrder?.materialType?.name || "—"}
                 </span>
 
                 <span className="text-muted-foreground font-medium">
-                  Số giấy in:
+                  Số lượng in:
                 </span>
-                <span className="font-bold text-foreground text-blue-600">
+                <span className="font-bold text-blue-600">
                   {String(
-                    (proofingOrder as any).totalProcessedQty ||
-                      (proofingOrder as any).totalQuantity ||
+                    proofingOrder?.totalProcessedQty ||
+                      proofingOrder?.totalQuantity ||
                       "0",
                   )}{" "}
                   tờ
                 </span>
               </div>
+              
+              {isDraft && (
+                <div className="mt-3 flex items-center gap-2 text-[10px] text-blue-600 font-bold animate-pulse">
+                  <PlayCircle className="w-3.5 h-3.5" />
+                  ĐANG KHỞI TẠO LỆNH...
+                </div>
+              )}
             </div>
 
             {/* 2. Thiết kế */}
@@ -691,13 +728,17 @@ function ProductionTableRow({
           </div>
         )}
       </TableCell>
-      <StepCell step={laminationStep} />
-      <StepCell step={cutStep} />
-      <StepCell step={pasteStep} />
-      <StepCell step={dieCutStep} />
-      <StepCell step={glueStep} />
-      <StepCell step={checkStep} isCheckStep={true} />
-      <StepCell step={deliveryStep} />
+      <StepCell step={materialExportStep} isEnabled={isMaterialExportEnabled} />
+      <StepCell step={printStep} isEnabled={isPrintEnabled} />
+      <StepCell step={laminationStep} isEnabled={isLaminationEnabled} />
+      <StepCell step={dieCutStep} isEnabled={isDieCutEnabled} />
+      <StepCell step={cutStep} isEnabled={isCutEnabled} />
+      <StepCell step={glueStep} isEnabled={isGlueEnabled} />
+      <StepCell
+        step={packagingStep}
+        isCheckStep={true}
+        isEnabled={isPackagingEnabled}
+      />
     </TableRow>
   );
 }
@@ -717,22 +758,29 @@ export function ProductionListTable({
   onNextPage,
   onPageInputChange,
   onPageInputBlur,
+  onStartProduction,
 }: ProductionListTableProps) {
   const [showDebug, setShowDebug] = useState(false);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      <div ref={tableContainerRef} className="flex-1 overflow-auto [&>div]:!overflow-visible">
+    <div className="flex-1 flex flex-col min-h-0 relative">
+      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
+        ProductionListTable.tsx
+      </span>
+      <div
+        ref={tableContainerRef}
+        className="flex-1 overflow-auto [&>div]:!overflow-visible"
+      >
         {isLoading ? (
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="h-10 font-bold text-sm text-center w-[150px] bg-muted/50 border-r border-border/50">
+                <TableHead className="h-10 font-bold text-sm text-center w-[120px] bg-muted/50 border-r border-border/50">
                   <div className="flex items-center justify-center gap-1.5">
-                    MÃ BÌNH BÀI
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    MÃ BB
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-6 w-6"
                       onClick={() => setShowDebug(true)}
                       title="Debug API Data"
@@ -741,29 +789,29 @@ export function ProductionListTable({
                     </Button>
                   </div>
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[300px]">
+                <TableHead className="h-10 font-bold text-sm w-[240px]">
                   LỆNH IN
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  XUẤT NL
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  IN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center">
                   CÁN MÀNG
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center">
-                  CẮT
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
-                  BỒI
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
                   BẾ
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center">
+                  CẮT
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center">
                   DÁN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center">
-                  KIỂM HÀNG
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
-                  GIAO HÀNG
+                  ĐÓNG GÓI
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -782,12 +830,12 @@ export function ProductionListTable({
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[150px] bg-muted/50 border-r border-border/50">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[120px] bg-muted/50 border-r border-border/50">
                   <div className="flex items-center justify-center gap-1.5">
-                    MÃ BÌNH BÀI
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    MÃ BB
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-6 w-6"
                       onClick={() => setShowDebug(true)}
                       title="Debug API Data"
@@ -796,38 +844,39 @@ export function ProductionListTable({
                     </Button>
                   </div>
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[300px]">
+                <TableHead className="h-10 font-bold text-sm w-[240px]">
                   LỆNH IN
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  XUẤT NL
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  IN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
                   CÁN MÀNG
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
-                  CẮT
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
-                  BỒI
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
                   BẾ
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                  CẮT
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
                   DÁN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
-                  KIỂM HÀNG
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
-                  GIAO HÀNG
+                  ĐÓNG GÓI
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {productions.map((prod: ProductionOrderResponse) => (
                 <ProductionTableRow
-                  key={prod.id}
+                  key={prod.id || `draft-${prod.proofingOrderId}`}
                   prod={prod}
-                  onClick={() => onProductionClick(prod.id!)}
+                  onProductionClick={onProductionClick}
+                  onStartProduction={onStartProduction}
                 />
               ))}
             </TableBody>
@@ -915,10 +964,15 @@ export function ProductionListTable({
           <div className="bg-background w-full max-w-[90vw] h-[85vh] flex flex-col rounded-xl shadow-2xl overflow-hidden relative border">
             <div className="flex justify-between items-center px-4 py-3 border-b bg-muted/40">
               <h2 className="font-bold text-[15px] flex items-center gap-2">
-                <Bug className="h-4 w-4 text-emerald-600" /> 
+                <Bug className="h-4 w-4 text-emerald-600" />
                 Debug API Data (productions)
               </h2>
-              <Button variant="secondary" size="sm" className="h-8 text-xs font-semibold" onClick={() => setShowDebug(false)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 text-xs font-semibold"
+                onClick={() => setShowDebug(false)}
+              >
                 Đóng
               </Button>
             </div>
