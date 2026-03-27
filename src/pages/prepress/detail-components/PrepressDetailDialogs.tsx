@@ -12,6 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText,
@@ -35,7 +45,11 @@ import { AddDesignToProofingDialog } from "@/components/proofing/AddDesignToProo
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { DieListDialog } from "@/components/dies/DieListDialog";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { proofingStatusLabels, dieStatusLabels, dieLocationLabels } from "@/lib/status-utils";
+import {
+  proofingStatusLabels,
+  dieStatusLabels,
+  dieLocationLabels,
+} from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
 import { formatDieSize } from "@/utils/format-die-size";
 import { format } from "date-fns";
@@ -144,6 +158,14 @@ interface PrepressDetailDialogsProps {
   setCancelReason: (val: string) => void;
   handleConfirmCancel: () => void;
   isCanceling: boolean;
+  // Reject (hoàn hàng)
+  isRejectDialogOpen: boolean;
+  setIsRejectDialogOpen: (val: boolean) => void;
+  rejectTarget: any;
+  rejectReason: string;
+  setRejectReason: (val: string) => void;
+  handleConfirmReject: () => void;
+  isRejecting: boolean;
 }
 
 export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
@@ -235,6 +257,13 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
     setCancelReason,
     handleConfirmCancel,
     isCanceling,
+    isRejectDialogOpen,
+    setIsRejectDialogOpen,
+    rejectTarget,
+    rejectReason,
+    setRejectReason,
+    handleConfirmReject,
+    isRejecting,
   } = props;
 
   // Helper functions for file classification
@@ -255,7 +284,8 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           <DialogHeader className="shrink-0">
             <DialogTitle>Tải lên ảnh bình bài</DialogTitle>
             <DialogDescription>
-              Chọn ảnh preview (JPG, PNG, ...) cho bài bình này. Có thể chọn nhiều ảnh.
+              Chọn ảnh preview (JPG, PNG, ...) cho bài bình này. Có thể chọn
+              nhiều ảnh.
             </DialogDescription>
           </DialogHeader>
 
@@ -281,27 +311,47 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             {/* Hiển thị danh sách ảnh đã chọn */}
             {uploadFiles.length > 0 && (
               <div className="space-y-2 flex-1 min-h-0 flex flex-col">
-                <Label className="text-sm font-medium flex-shrink-0">Ảnh đã chọn:</Label>
+                <Label className="text-sm font-medium flex-shrink-0">
+                  Ảnh đã chọn:
+                </Label>
                 <div className="space-y-2 flex-1 min-h-0 overflow-y-auto pr-2">
                   {uploadFiles.map((file, index) => {
                     const isImage = isImageFile(file);
 
                     return (
-                      <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 min-w-0">
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 min-w-0"
+                      >
                         {isImage ? (
-                          <img src={URL.createObjectURL(file)} alt="Preview" className="w-16 h-16 object-cover rounded border shrink-0" />
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt="Preview"
+                            className="w-16 h-16 object-cover rounded border shrink-0"
+                          />
                         ) : (
                           <div className="w-16 h-16 rounded border bg-background flex items-center justify-center shrink-0">
                             <FileText className="h-6 w-6 text-muted-foreground" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{file.name}</p>
-                          <p className="text-xs text-muted-foreground">Ảnh • {(file.size / 1024).toFixed(2)} KB</p>
+                          <p className="text-sm font-medium truncate">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Ảnh • {(file.size / 1024).toFixed(2)} KB
+                          </p>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => {
-                          setUploadFiles((prev: File[]) => prev.filter((_, i) => i !== index));
-                        }}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => {
+                            setUploadFiles((prev: File[]) =>
+                              prev.filter((_, i) => i !== index),
+                            );
+                          }}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -319,10 +369,19 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           </div>
 
           <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
-            <Button variant="outline" onClick={() => { setIsUploadDialogOpen(false); setUploadFiles([]); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsUploadDialogOpen(false);
+                setUploadFiles([]);
+              }}
+            >
               Hủy
             </Button>
-            <Button onClick={() => handleUploadFiles(uploadFiles)} disabled={!uploadFiles.find((f) => isImageFile(f))}>
+            <Button
+              onClick={() => handleUploadFiles(uploadFiles)}
+              disabled={!uploadFiles.find((f) => isImageFile(f))}
+            >
               <Upload className="h-4 w-4 mr-2" />
               Tải ảnh lên
             </Button>
@@ -331,7 +390,10 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
       </Dialog>
 
       {/* Image Upload Dialog */}
-      <Dialog open={isImageUploadDialogOpen} onOpenChange={setIsImageUploadDialogOpen}>
+      <Dialog
+        open={isImageUploadDialogOpen}
+        onOpenChange={setIsImageUploadDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Upload ảnh bình bài</DialogTitle>
@@ -367,10 +429,16 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImageUploadDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsImageUploadDialogOpen(false)}
+            >
               Hủy
             </Button>
-            <Button onClick={handleUploadImage} disabled={!uploadImage || isUploadingImage}>
+            <Button
+              onClick={handleUploadImage}
+              disabled={!uploadImage || isUploadingImage}
+            >
               <Upload className="h-4 w-4 mr-2" />
               {isUploadingImage ? "Đang upload..." : "Upload"}
             </Button>
@@ -404,9 +472,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">
-                  Tên hàng:
-                </span>
+                <span className="text-sm text-muted-foreground">Tên hàng:</span>
                 <span className="text-sm font-medium">
                   {removeDesignTarget.designName}
                 </span>
@@ -474,12 +540,16 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
       />
 
       {/* Confirm Status Change Dialog */}
-      <Dialog open={isConfirmStatusChangeDialogOpen} onOpenChange={setIsConfirmStatusChangeDialogOpen}>
+      <Dialog
+        open={isConfirmStatusChangeDialogOpen}
+        onOpenChange={setIsConfirmStatusChangeDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Xác nhận thay đổi trạng thái</DialogTitle>
             <DialogDescription>
-              {nextStatusInfo?.confirmMessage || "Bạn có chắc chắn muốn thay đổi trạng thái?"}
+              {nextStatusInfo?.confirmMessage ||
+                "Bạn có chắc chắn muốn thay đổi trạng thái?"}
             </DialogDescription>
           </DialogHeader>
 
@@ -488,7 +558,11 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
               <Label>Trạng thái hiện tại</Label>
               <StatusBadge
                 status={order?.status || ""}
-                label={proofingStatusLabels[order?.status || ""] || order?.status || "—"}
+                label={
+                  proofingStatusLabels[order?.status || ""] ||
+                  order?.status ||
+                  "—"
+                }
               />
             </div>
             {pendingStatus && (
@@ -518,12 +592,16 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
       </Dialog>
 
       {/* Hand to Production Dialog */}
-      <Dialog open={isHandToProductionDialogOpen} onOpenChange={setIsHandToProductionDialogOpen}>
+      <Dialog
+        open={isHandToProductionDialogOpen}
+        onOpenChange={setIsHandToProductionDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Hoàn thành và chuyển xuống sản xuất</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn đánh dấu mã bài là hoàn thành và chuyển xuống sản xuất?
+              Bạn có chắc chắn muốn đánh dấu mã bài là hoàn thành và chuyển
+              xuống sản xuất?
             </DialogDescription>
           </DialogHeader>
 
@@ -532,7 +610,11 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
               <Label>Trạng thái hiện tại</Label>
               <StatusBadge
                 status={order?.status || ""}
-                label={proofingStatusLabels[order?.status || ""] || order?.status || "—"}
+                label={
+                  proofingStatusLabels[order?.status || ""] ||
+                  order?.status ||
+                  "—"
+                }
               />
             </div>
             <div className="space-y-2">
@@ -544,7 +626,9 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             </div>
 
             <div className="space-y-2 pt-2 border-t">
-              <Label className="text-sm font-semibold">Điều kiện chuyển xuống sản xuất:</Label>
+              <Label className="text-sm font-semibold">
+                Điều kiện chuyển xuống sản xuất:
+              </Label>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2">
                   {order?.isPlateExported ? (
@@ -552,7 +636,9 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
                   ) : (
                     <AlertCircle className="h-4 w-4 text-yellow-600" />
                   )}
-                  <span className="text-sm">{order?.isPlateExported ? "Đã xuất kẽm" : "Chưa xuất kẽm"}</span>
+                  <span className="text-sm">
+                    {order?.isPlateExported ? "Đã xuất kẽm" : "Chưa xuất kẽm"}
+                  </span>
                 </div>
                 {hasDieCutDesigns && (
                   <div className="flex items-center gap-2">
@@ -561,13 +647,19 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
                     ) : (
                       <AlertCircle className="h-4 w-4 text-yellow-600" />
                     )}
-                    <span className="text-sm">{isDieExported ? "Đã xuất khuôn bế" : "Chưa xuất khuôn bế"}</span>
+                    <span className="text-sm">
+                      {isDieExported
+                        ? "Đã xuất khuôn bế"
+                        : "Chưa xuất khuôn bế"}
+                    </span>
                   </div>
                 )}
               </div>
-              {(!order?.isPlateExported || (hasDieCutDesigns && !isDieExported)) && (
+              {(!order?.isPlateExported ||
+                (hasDieCutDesigns && !isDieExported)) && (
                 <p className="text-xs text-destructive mt-2">
-                  * Cần hoàn thành tất cả các điều kiện trên để chuyển xuống sản xuất
+                  * Cần hoàn thành tất cả các điều kiện trên để chuyển xuống sản
+                  xuất
                 </p>
               )}
             </div>
@@ -585,7 +677,11 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             </Button>
             <Button
               onClick={handleConfirmHandToProduction}
-              disabled={isHandingToProduction || !order?.isPlateExported || (hasDieCutDesigns && !isDieExported)}
+              disabled={
+                isHandingToProduction ||
+                !order?.isPlateExported ||
+                (hasDieCutDesigns && !isDieExported)
+              }
             >
               {isHandingToProduction ? (
                 <>
@@ -609,7 +705,9 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         currentDesign={currentDesignForAdding}
         onSubmit={async (orderDetailItems) => {
           if (!order?.materialTypeId) {
-            toast.error("Lỗi", { description: "Không thể lấy thông tin Chất liệu" });
+            toast.error("Lỗi", {
+              description: "Không thể lấy thông tin Chất liệu",
+            });
             return;
           }
           const items = orderDetailItems.map((item) => ({
@@ -617,7 +715,9 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             quantity: item.quantity,
           }));
           if (items.length === 0) {
-            toast.error("Lỗi", { description: "Không có chi tiết đơn hàng nào được chọn" });
+            toast.error("Lỗi", {
+              description: "Không có chi tiết đơn hàng nào được chọn",
+            });
             return;
           }
           await addDesignsMutate({
@@ -644,13 +744,17 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle>Thay thế khuôn bế</DialogTitle>
-            <DialogDescription>Chọn khuôn mới để thay thế cho khuôn hiện tại</DialogDescription>
+            <DialogDescription>
+              Chọn khuôn mới để thay thế cho khuôn hiện tại
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
             {replacingDieExport && (
               <div className="bg-muted/50 rounded-lg p-3 border shrink-0">
-                <Label className="text-xs font-semibold mb-2 block">Khuôn hiện tại:</Label>
+                <Label className="text-xs font-semibold mb-2 block">
+                  Khuôn hiện tại:
+                </Label>
                 <div className="flex items-center gap-3">
                   {replacingDieExport.die?.imageUrl && (
                     <img
@@ -661,7 +765,8 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
                   )}
                   <div className="flex-1">
                     <div className="font-semibold text-sm">
-                      {replacingDieExport.die?.code || `Khuôn #${replacingDieExport.dieId}`}
+                      {replacingDieExport.die?.code ||
+                        `Khuôn #${replacingDieExport.dieId}`}
                     </div>
                     {replacingDieExport.die && (
                       <div className="text-xs text-muted-foreground mt-1">
@@ -688,7 +793,9 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             </div>
 
             <div className="flex-1 min-h-0 flex flex-col space-y-2">
-              <Label className="text-xs font-semibold shrink-0">Chọn khuôn mới:</Label>
+              <Label className="text-xs font-semibold shrink-0">
+                Chọn khuôn mới:
+              </Label>
               <ScrollArea className="h-[300px] border rounded-lg">
                 {isLoadingDies ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
@@ -697,7 +804,9 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
                   </div>
                 ) : availableDies.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
-                    {dieSearchTerm.trim() ? "Không tìm thấy khuôn phù hợp" : "Nhập từ khóa để tìm khuôn"}
+                    {dieSearchTerm.trim()
+                      ? "Không tìm thấy khuôn phù hợp"
+                      : "Nhập từ khóa để tìm khuôn"}
                   </div>
                 ) : (
                   <div className="p-2 space-y-2">
@@ -709,28 +818,50 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
                           key={die.id}
                           className={cn(
                             "p-3 rounded-lg border cursor-pointer transition-colors",
-                            isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-                            isCurrentDie && "opacity-50 cursor-not-allowed"
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:bg-muted/50",
+                            isCurrentDie && "opacity-50 cursor-not-allowed",
                           )}
-                          onClick={() => { if (!isCurrentDie) setSelectedNewDieId(die.id || null); }}
+                          onClick={() => {
+                            if (!isCurrentDie)
+                              setSelectedNewDieId(die.id || null);
+                          }}
                         >
                           <div className="flex items-center gap-3">
                             {die.imageUrl ? (
-                              <img src={die.imageUrl} alt={die.code || ""} className="w-12 h-12 rounded border object-contain bg-background shrink-0" />
+                              <img
+                                src={die.imageUrl}
+                                alt={die.code || ""}
+                                className="w-12 h-12 rounded border object-contain bg-background shrink-0"
+                              />
                             ) : (
                               <div className="w-12 h-12 rounded border bg-muted/50 flex items-center justify-center shrink-0">
                                 <Package className="h-5 w-5 text-muted-foreground" />
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm truncate">{die.code || `Khuôn #${die.id}`}</div>
+                              <div className="font-semibold text-sm truncate">
+                                {die.code || `Khuôn #${die.id}`}
+                              </div>
                               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                                 <span>KT: {formatDieSize(die)}</span>
-                                {die.vendorName && <span>• NCC: {die.vendorName}</span>}
+                                {die.vendorName && (
+                                  <span>• NCC: {die.vendorName}</span>
+                                )}
                               </div>
                             </div>
-                            {isSelected && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
-                            {isCurrentDie && <Badge variant="secondary" className="text-xs shrink-0">Đang dùng</Badge>}
+                            {isSelected && (
+                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                            )}
+                            {isCurrentDie && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs shrink-0"
+                              >
+                                Đang dùng
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       );
@@ -754,9 +885,22 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           </div>
 
           <DialogFooter className="shrink-0">
-            <Button variant="outline" onClick={() => setIsReplaceDieDialogOpen(false)} disabled={isReplacingDie}>Hủy</Button>
-            <Button onClick={handleReplaceDie} disabled={!selectedNewDieId || isReplacingDie}>
-              {isReplacingDie ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : "Thay thế"}
+            <Button
+              variant="outline"
+              onClick={() => setIsReplaceDieDialogOpen(false)}
+              disabled={isReplacingDie}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleReplaceDie}
+              disabled={!selectedNewDieId || isReplacingDie}
+            >
+              {isReplacingDie ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                "Thay thế"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -777,7 +921,9 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle>Thêm khuôn bế</DialogTitle>
-            <DialogDescription>Chọn khuôn bế để thêm vào bình bài</DialogDescription>
+            <DialogDescription>
+              Chọn khuôn bế để thêm vào bình bài
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
@@ -796,7 +942,9 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             </div>
 
             <div className="flex-1 min-h-0 flex flex-col space-y-2">
-              <Label className="text-xs font-semibold shrink-0">Chọn khuôn:</Label>
+              <Label className="text-xs font-semibold shrink-0">
+                Chọn khuôn:
+              </Label>
               <ScrollArea className="h-[300px] border rounded-lg">
                 {isLoadingAddDies ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
@@ -805,40 +953,68 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
                   </div>
                 ) : availableDiesForAdd.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
-                    {addDieSearchTerm.trim() ? "Không tìm thấy khuôn phù hợp" : "Nhập từ khóa để tìm khuôn"}
+                    {addDieSearchTerm.trim()
+                      ? "Không tìm thấy khuôn phù hợp"
+                      : "Nhập từ khóa để tìm khuôn"}
                   </div>
                 ) : (
                   <div className="p-2 space-y-2">
                     {availableDiesForAdd.map((die: any) => {
                       const isSelected = selectedDieIdForAdd === die.id;
-                      const isAlreadyAssigned = order?.dieExports?.some((de: any) => de.dieId === die.id) ?? false;
+                      const isAlreadyAssigned =
+                        order?.dieExports?.some(
+                          (de: any) => de.dieId === die.id,
+                        ) ?? false;
                       return (
                         <div
                           key={die.id}
                           className={cn(
                             "p-3 rounded-lg border cursor-pointer transition-colors",
-                            isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50",
-                            isAlreadyAssigned && "opacity-50 cursor-not-allowed"
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:bg-muted/50",
+                            isAlreadyAssigned &&
+                              "opacity-50 cursor-not-allowed",
                           )}
-                          onClick={() => { if (!isAlreadyAssigned) setSelectedDieIdForAdd(die.id || null); }}
+                          onClick={() => {
+                            if (!isAlreadyAssigned)
+                              setSelectedDieIdForAdd(die.id || null);
+                          }}
                         >
                           <div className="flex items-center gap-3">
                             {die.imageUrl ? (
-                              <img src={die.imageUrl} alt={die.code || ""} className="w-12 h-12 rounded border object-contain bg-background shrink-0" />
+                              <img
+                                src={die.imageUrl}
+                                alt={die.code || ""}
+                                className="w-12 h-12 rounded border object-contain bg-background shrink-0"
+                              />
                             ) : (
                               <div className="w-12 h-12 rounded border bg-muted/50 flex items-center justify-center shrink-0">
                                 <Package className="h-5 w-5 text-muted-foreground" />
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm truncate">{die.code || `Khuôn #${die.id}`}</div>
+                              <div className="font-semibold text-sm truncate">
+                                {die.code || `Khuôn #${die.id}`}
+                              </div>
                               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                                 <span>KT: {formatDieSize(die)}</span>
-                                {die.vendorName && <span>• NCC: {die.vendorName}</span>}
+                                {die.vendorName && (
+                                  <span>• NCC: {die.vendorName}</span>
+                                )}
                               </div>
                             </div>
-                            {isSelected && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
-                            {isAlreadyAssigned && <Badge variant="secondary" className="text-xs shrink-0">Đã có</Badge>}
+                            {isSelected && (
+                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                            )}
+                            {isAlreadyAssigned && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs shrink-0"
+                              >
+                                Đã có
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       );
@@ -862,9 +1038,22 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           </div>
 
           <DialogFooter className="shrink-0">
-            <Button variant="outline" onClick={() => setIsAddDieDialogOpen(false)} disabled={isAssigningDie}>Hủy</Button>
-            <Button onClick={handleAddDie} disabled={!selectedDieIdForAdd || isAssigningDie}>
-              {isAssigningDie ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : "Thêm khuôn bế"}
+            <Button
+              variant="outline"
+              onClick={() => setIsAddDieDialogOpen(false)}
+              disabled={isAssigningDie}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleAddDie}
+              disabled={!selectedDieIdForAdd || isAssigningDie}
+            >
+              {isAssigningDie ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                "Thêm khuôn bế"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -896,8 +1085,18 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             <DialogDescription className="text-sm text-muted-foreground">
               {selectedDesignForRelatedDies?.designCode && (
                 <>
-                  Khuôn phù hợp cho mã hàng: <span className="font-semibold text-foreground">{selectedDesignForRelatedDies.designCode}</span>
-                  {selectedDesignForRelatedDies.designName && <>{" - "}<span className="text-foreground">{selectedDesignForRelatedDies.designName}</span></>}
+                  Khuôn phù hợp cho mã hàng:{" "}
+                  <span className="font-semibold text-foreground">
+                    {selectedDesignForRelatedDies.designCode}
+                  </span>
+                  {selectedDesignForRelatedDies.designName && (
+                    <>
+                      {" - "}
+                      <span className="text-foreground">
+                        {selectedDesignForRelatedDies.designName}
+                      </span>
+                    </>
+                  )}
                 </>
               )}
             </DialogDescription>
@@ -930,7 +1129,10 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="cancel-reason" className="after:content-['*'] after:ml-0.5 after:text-destructive">
+              <Label
+                htmlFor="cancel-reason"
+                className="after:content-['*'] after:ml-0.5 after:text-destructive"
+              >
                 Lý do hủy bình bài
               </Label>
               <Textarea
@@ -971,6 +1173,75 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reject Design (Hoàn hàng về phòng thiết kế) Dialog */}
+      <AlertDialog
+        open={isRejectDialogOpen}
+        onOpenChange={(open) => {
+          setIsRejectDialogOpen(open);
+          if (!open) setRejectReason("");
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hoàn hàng về phòng thiết kế</AlertDialogTitle>
+            <AlertDialogDescription>
+              Xác nhận hoàn hàng để thiết kế được trả về phòng thiết kế xử lý
+              lại.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {rejectTarget && (() => {
+            const isDesignItem = !("design" in rejectTarget);
+            const code = isDesignItem ? rejectTarget.code : rejectTarget.design?.code;
+            const name = isDesignItem ? rejectTarget.name : rejectTarget.design?.designName;
+            const orderCode = isDesignItem ? (rejectTarget.orderCode || rejectTarget.orderId) : rejectTarget.design?.latestOrderCode;
+
+            return (
+              <div className="space-y-3">
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="text-sm font-semibold text-foreground">
+                    {code}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {name}
+                    {orderCode ? ` • ${orderCode}` : ""}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reject-reason-dialog">Lý do (tuỳ chọn)</Label>
+                  <Textarea
+                    id="reject-reason-dialog"
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="Ví dụ: sai thông tin, cần chỉnh file, thiếu chi tiết..."
+                    className="min-h-[90px]"
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setIsRejectDialogOpen(false);
+                setRejectReason("");
+              }}
+              disabled={isRejecting}
+            >
+              Huỷ
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReject}
+              disabled={isRejecting || !rejectTarget}
+            >
+              {isRejecting ? "Đang xử lý..." : "Xác nhận"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -1027,7 +1298,11 @@ function RelatedDiesContent({
         >
           {die.imageUrl ? (
             <>
-              <img src={die.imageUrl} alt={die.code || `Die ${die.id}`} className="w-full h-full object-contain" />
+              <img
+                src={die.imageUrl}
+                alt={die.code || `Die ${die.id}`}
+                className="w-full h-full object-contain"
+              />
               <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 transition-colors flex items-center justify-center">
                 <Eye className="h-4 w-4 text-white opacity-0 group-hover/image:opacity-100 transition-opacity" />
               </div>
@@ -1054,10 +1329,23 @@ function RelatedDiesContent({
                   handleCopyDieCode(die.code || `Khuôn #${die.id}`, die.id);
                 }}
               >
-                {copiedDieId === die.id ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+                {copiedDieId === die.id ? (
+                  <Check className="h-3.5 w-3.5 text-green-600" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
               </Button>
-              <Badge variant="secondary" className={cn("text-xs font-semibold", die.isUsable ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}>
-                {dieStatusLabels[die.status] || (die.isUsable ? "Sử dụng được" : "Không sử dụng được")}
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "text-xs font-semibold",
+                  die.isUsable
+                    ? "bg-green-100 text-green-800"
+                    : "bg-red-100 text-red-800",
+                )}
+              >
+                {dieStatusLabels[die.status] ||
+                  (die.isUsable ? "Sử dụng được" : "Không sử dụng được")}
               </Badge>
             </div>
           </div>
@@ -1066,26 +1354,35 @@ function RelatedDiesContent({
             {(die.length != null || die.height != null || die.size) && (
               <div className="flex items-center gap-1.5">
                 <span className="text-muted-foreground">Kích thước:</span>
-                <span className="font-medium text-foreground">{formatDieSize(die)}</span>
+                <span className="font-medium text-foreground">
+                  {formatDieSize(die)}
+                </span>
               </div>
             )}
             {die.vendorName && (
               <div className="flex items-center gap-1.5 min-w-0">
                 <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
                 <span className="text-muted-foreground">NCC:</span>
-                <span className="font-medium text-foreground truncate">{die.vendorName}</span>
+                <span className="font-medium text-foreground truncate">
+                  {die.vendorName}
+                </span>
               </div>
             )}
             {die.location && (
               <div className="flex items-center gap-1.5">
                 <span className="text-muted-foreground">Vị trí:</span>
-                <span className="font-medium text-foreground">{dieLocationLabels[die.location]}</span>
+                <span className="font-medium text-foreground">
+                  {dieLocationLabels[die.location]}
+                </span>
               </div>
             )}
           </div>
           {die.notes && (
             <div className="pt-2 border-t border-border/60">
-              <p className="text-xs text-muted-foreground line-clamp-2"><span className="font-medium">Ghi chú: </span>{die.notes}</p>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                <span className="font-medium">Ghi chú: </span>
+                {die.notes}
+              </p>
             </div>
           )}
         </div>
@@ -1099,7 +1396,9 @@ function RelatedDiesContent({
         {isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-            <p className="text-sm font-medium text-foreground">Đang tải khuôn liên quan...</p>
+            <p className="text-sm font-medium text-foreground">
+              Đang tải khuôn liên quan...
+            </p>
           </div>
         ) : error ? (
           <div className="flex-1 flex flex-col items-center justify-center py-12 text-center text-destructive">
@@ -1109,7 +1408,9 @@ function RelatedDiesContent({
         ) : relatedDies.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
             <Package className="h-8 w-8 text-muted-foreground mb-4 mx-auto" />
-            <p className="text-sm font-semibold text-foreground">Không tìm thấy khuôn liên quan</p>
+            <p className="text-sm font-semibold text-foreground">
+              Không tìm thấy khuôn liên quan
+            </p>
           </div>
         ) : (
           <ScrollArea className="flex-1">

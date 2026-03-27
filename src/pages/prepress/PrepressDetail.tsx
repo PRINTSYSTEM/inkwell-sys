@@ -20,16 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
 import {
   ArrowLeft,
   FileText,
@@ -2388,79 +2379,30 @@ export default function ProofingOrderDetailPage() {
         setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
         selectedDesignForRelatedDies={selectedDesignForRelatedDies}
         setSelectedDesignForRelatedDies={setSelectedDesignForRelatedDies}
+        isRejectDialogOpen={isRejectDialogOpen}
+        setIsRejectDialogOpen={setIsRejectDialogOpen}
+        rejectTarget={rejectTarget}
+        rejectReason={rejectReason}
+        setRejectReason={setRejectReason}
+        handleConfirmReject={async () => {
+          if (!rejectTarget || !order?.id) return;
+          try {
+            await rejectDesignMutate({
+              orderDetailId: rejectTarget.id,
+              reason: rejectReason.trim() || null,
+            });
+            setIsRejectDialogOpen(false);
+            setRejectTarget(null);
+            setRejectReason("");
+            queryClient.invalidateQueries({
+              queryKey: proofingKeys.detail(order.id),
+            });
+          } catch (err) {
+            console.error("Reject design failed:", err);
+          }
+        }}
+        isRejecting={isRejecting}
       />
-      <AlertDialog
-        open={isRejectDialogOpen}
-        onOpenChange={setIsRejectDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hoàn hàng về phòng thiết kế</AlertDialogTitle>
-            <AlertDialogDescription>
-              Xác nhận hoàn hàng để thiết kế được trả về phòng thiết kế xử lý
-              lại. Hành động này sẽ đồng thời xóa mã hàng khỏi lệnh bài hiện tại.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          {rejectTarget && (
-            <div className="space-y-3">
-              <div className="rounded-lg border bg-muted/20 p-3">
-                <div className="text-sm font-semibold text-foreground">
-                  {rejectTarget.design?.code}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {rejectTarget.design?.designName}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reject-reason">Lý do (tuỳ chọn)</Label>
-                <Textarea
-                  id="reject-reason"
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Ví dụ: sai thông tin, cần chỉnh file, thiếu chi tiết..."
-                  className="min-h-[90px]"
-                />
-              </div>
-            </div>
-          )}
-
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                closeRejectDialog();
-              }}
-              disabled={isRejecting}
-            >
-              Huỷ
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async (e) => {
-                e.preventDefault();
-                if (!rejectTarget || !order?.id) return;
-                try {
-                  await rejectDesignMutate({
-                    orderDetailId: rejectTarget.id,
-                    reason: rejectReason.trim() || null,
-                  });
-
-                  closeRejectDialog();
-                  // Refetch order details to reflect the removal
-                  queryClient.invalidateQueries({
-                    queryKey: proofingKeys.detail(order.id),
-                  });
-                } catch (err) {
-                  console.error("Reject design failed:", err);
-                }
-              }}
-              disabled={isRejecting || !rejectTarget}
-            >
-              {isRejecting ? "Đang xử lý..." : "Xác nhận"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
