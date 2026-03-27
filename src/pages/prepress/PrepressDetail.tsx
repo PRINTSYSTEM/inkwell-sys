@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -20,13 +21,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   ArrowLeft,
   FileText,
@@ -83,6 +86,8 @@ import {
   useAvailableQuantity,
   useProofingAvailableOrderDetailsDesignTypeSummary,
   useCancelProofingOrder,
+  useRejectDesignFromProofingOrder,
+  proofingKeys,
 } from "@/hooks/use-proofing-order";
 import { useProductionOrders } from "@/hooks/use-production";
 import { useAvailableOrderDetailsForProofing } from "@/hooks";
@@ -341,6 +346,7 @@ function QuantityCell({
 export default function ProofingOrderDetailPage() {
   const params = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUpdateFileDialogOpen, setIsUpdateFileDialogOpen] = useState(false);
@@ -443,6 +449,10 @@ export default function ProofingOrderDetailPage() {
   // Cancellation state
   const [isConfirmCancelDialogOpen, setIsConfirmCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<any>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const idValue = params.id ? Number(params.id) : Number.NaN;
   const idValid = IdSchema.safeParse(idValue).success;
@@ -563,6 +573,8 @@ export default function ProofingOrderDetailPage() {
     useAddDesignsToProofingOrder();
   const { mutate: removeDesignMutate, isPending: isRemovingDesign } =
     useRemoveDesignFromProofingOrder();
+  const { mutateAsync: rejectDesignMutate, isPending: isRejecting } =
+    useRejectDesignFromProofingOrder();
 
   // Replace die hooks
   const { mutate: replaceDieMutate, isPending: isReplacingDie } =
@@ -603,6 +615,18 @@ export default function ProofingOrderDetailPage() {
   const { data: addDieSearchData, isLoading: isLoadingAddDies } =
     useSearchDies(addDieSearchParams);
   const availableDiesForAdd = addDieSearchData?.items || [];
+
+  const closeRejectDialog = () => {
+    setIsRejectDialogOpen(false);
+    setRejectTarget(null);
+    setRejectReason("");
+  };
+
+  const handleOpenRejectDialog = (pod: any) => {
+    setRejectTarget(pod);
+    setRejectReason("");
+    setIsRejectDialogOpen(true);
+  };
 
   // Check if order is empty (no designs)
   const isEmptyOrder = orderDesigns.length === 0;
@@ -2059,7 +2083,9 @@ export default function ProofingOrderDetailPage() {
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden bg-background p-4">
-
+      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
+        PrepressDetail.tsx
+      </span>
       {/* Header */}
       <DetailHeader
         order={order}
@@ -2128,9 +2154,7 @@ export default function ProofingOrderDetailPage() {
                         }
                       }}
                       canSelect={canSelect}
-                      onReject={(design) => {
-                        toast.info("Tính năng hoàn hàng không không khả dụng ở đây");
-                      }}
+                      onReject={handleOpenRejectDialog}
                       onFindDie={handleFindDie}
                     />
                   </div>
@@ -2243,6 +2267,8 @@ export default function ProofingOrderDetailPage() {
                 setUpdateTotalQuantity={setUpdateTotalQuantity}
                 updateDesignQuantities={updateDesignQuantities}
                 setUpdateDesignQuantities={setUpdateDesignQuantities}
+                onReject={handleOpenRejectDialog}
+                isRejecting={isRejecting}
               />
 
               <DetailPlateExportCard
@@ -2363,6 +2389,78 @@ export default function ProofingOrderDetailPage() {
         selectedDesignForRelatedDies={selectedDesignForRelatedDies}
         setSelectedDesignForRelatedDies={setSelectedDesignForRelatedDies}
       />
+      <AlertDialog
+        open={isRejectDialogOpen}
+        onOpenChange={setIsRejectDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hoàn hàng về phòng thiết kế</AlertDialogTitle>
+            <AlertDialogDescription>
+              Xác nhận hoàn hàng để thiết kế được trả về phòng thiết kế xử lý
+              lại. Hành động này sẽ đồng thời xóa mã hàng khỏi lệnh bài hiện tại.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {rejectTarget && (
+            <div className="space-y-3">
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <div className="text-sm font-semibold text-foreground">
+                  {rejectTarget.design?.code}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {rejectTarget.design?.designName}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reject-reason">Lý do (tuỳ chọn)</Label>
+                <Textarea
+                  id="reject-reason"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Ví dụ: sai thông tin, cần chỉnh file, thiếu chi tiết..."
+                  className="min-h-[90px]"
+                />
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                closeRejectDialog();
+              }}
+              disabled={isRejecting}
+            >
+              Huỷ
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!rejectTarget || !order?.id) return;
+                try {
+                  await rejectDesignMutate({
+                    orderDetailId: rejectTarget.id,
+                    reason: rejectReason.trim() || null,
+                  });
+
+                  closeRejectDialog();
+                  // Refetch order details to reflect the removal
+                  queryClient.invalidateQueries({
+                    queryKey: proofingKeys.detail(order.id),
+                  });
+                } catch (err) {
+                  console.error("Reject design failed:", err);
+                }
+              }}
+              disabled={isRejecting || !rejectTarget}
+            >
+              {isRejecting ? "Đang xử lý..." : "Xác nhận"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

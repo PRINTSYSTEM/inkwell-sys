@@ -20,6 +20,7 @@ import {
   Download,
   Trash2,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import {
@@ -55,6 +56,8 @@ interface DetailDesignsListCardProps {
   setUpdateTotalQuantity: (val: string) => void;
   updateDesignQuantities: Record<number, string>;
   setUpdateDesignQuantities: (val: (prev: any) => any) => void;
+  onReject?: (pod: any) => void;
+  isRejecting?: boolean;
 }
 
 export function DetailDesignsListCard({
@@ -81,6 +84,8 @@ export function DetailDesignsListCard({
   setUpdateTotalQuantity,
   updateDesignQuantities,
   setUpdateDesignQuantities,
+  onReject,
+  isRejecting,
 }: DetailDesignsListCardProps) {
   if (!order) return null;
 
@@ -368,6 +373,25 @@ export function DetailDesignsListCard({
                                 }}
                               >
                                 <Download className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            {order && order.status !== "completed" && pod.id && onReject && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onReject(pod);
+                                }}
+                                disabled={isRejecting}
+                                title="Hoàn hàng về phòng thiết kế"
+                              >
+                                {isRejecting ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="h-3.5 w-3.5" />
+                                )}
                               </Button>
                             )}
                             {order && order.status !== "completed" && pod.id && (
