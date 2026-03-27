@@ -3,11 +3,7 @@ import { FileCheck, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function PrepressCheck() {
   return (
-    <div className="border border-black relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        PrepressCheck.tsx
-      </span>
-      <div className="relative space-y-6 p-6">
+    <div className="relative space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Kiểm tra file</h1>
@@ -62,6 +58,5 @@ export default function PrepressCheck() {
           </CardContent>
         </Card>
       </div>
-    </div>
   );
 }

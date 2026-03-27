@@ -74,11 +74,7 @@ export function PrepressDesignTable({
   setSelectedMaterialTypes,
 }: PrepressDesignTableProps) {
   return (
-    <div className="border border-black relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        PrepressDesignTable.tsx
-      </span>
-      <div className="relative flex-1 overflow-hidden flex flex-col">
+    <div className="relative flex-1 overflow-hidden flex flex-col">
         <div className="shrink-0 border-b p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -302,6 +298,5 @@ export function PrepressDesignTable({
           </div>
         </ScrollArea>
       </div>
-    </div>
   );
 }

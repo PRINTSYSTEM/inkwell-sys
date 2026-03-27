@@ -74,6 +74,7 @@ import {
   useCreateProofingOrder,
   useProofingAvailableOrderDetailsDesignTypeSummary,
   useProofingOrders,
+  useUpdateProofingOrder,
   useRejectDesignFromProofingOrder,
   usePaperSizes,
   useCreatePaperSize,
@@ -380,7 +381,7 @@ export default function PrepressList() {
   const [rejectReason, setRejectReason] = useState("");
 
   // ===== Config Panel State (inline DetailEmptyOrderView) =====
-  const [newOrderId, setNewOrderId] = useState<number | null>(null);
+  const [isConfiguring, setIsConfiguring] = useState(false);
   const [designQuantities, setDesignQuantities] = useState<
     Record<number, number>
   >({});
@@ -404,6 +405,8 @@ export default function PrepressList() {
     );
     return found?.name || null;
   }, [currentMaterialTypeId, materialTypeOptions]);
+
+  const { mutateAsync: updateProofingOrder } = useUpdateProofingOrder();
 
   const parsedCustomPaperSize = useMemo(() => {
     if (!customPaperSize || paperSizeId !== "custom") return null;
@@ -469,7 +472,6 @@ export default function PrepressList() {
   };
 
   const handleConfigSubmitDesigns = async () => {
-    if (!newOrderId) return;
     try {
       if (!currentMaterialTypeId || selectedDesigns.length === 0) {
         toast.error("Lỗi", {
@@ -496,29 +498,50 @@ export default function PrepressList() {
         return;
       }
 
+
+      // 1. Create proofing order first
+      const result = await createProofingOrder({} as any);
+      const orderId = result?.id;
+      if (!orderId) {
+        toast.error("Không thể tạo lệnh bình bài");
+        return;
+      }
+
+      // 2. Add designs to the new order
       await addDesignsMutate({
-        id: newOrderId,
+        id: orderId,
         request: { materialTypeId: currentMaterialTypeId, items },
       });
 
-      toast.success("Thành công", {
-        description: `Đã thêm ${items.length} mã hàng vào bình bài.`,
+      // 3. Update order with configuration (Sheet Qty, Paper Size, Notes)
+      await updateProofingOrder({
+        id: orderId,
+        data: {
+          totalQuantity: proofingSheetQuantity > 0 ? proofingSheetQuantity : undefined,
+          paperSizeId: (paperSizeId && paperSizeId !== "custom") ? parseInt(paperSizeId, 10) : undefined,
+          customPaperSize: paperSizeId === "custom" ? customPaperSize : undefined,
+          notes: configNotes || undefined,
+        },
       });
-      setNewOrderId(null);
+
+      toast.success("Thành công", {
+        description: `Đã tạo lệnh bình bài #${orderId}.`,
+      });
+      setIsConfiguring(false);
       setDesignQuantities({});
       setProofingSheetQuantity(0);
       setPaperSizeId("custom");
       setCustomPaperSize("");
       setConfigNotes("");
       clearSelection();
-      navigate(`/proofing/${newOrderId}`);
+      navigate(`/proofing/${orderId}`);
     } catch (e) {
       console.error("Submit designs failed:", e);
     }
   };
 
   const handleCancelCreateOrder = () => {
-    setNewOrderId(null);
+    setIsConfiguring(false);
     setDesignQuantities({});
     setProofingSheetQuantity(0);
     setPaperSizeId("custom");
@@ -527,28 +550,10 @@ export default function PrepressList() {
     clearSelection();
   };
 
-  const handleToggleDesign = async (design: DesignItem) => {
-    // 1. Toggle selection immediately for responsive UI
+  const handleToggleDesign = (design: DesignItem) => {
     toggleSelection(design);
-
-    // 2. If no order active, create one automatically
-    if (!newOrderId && !isCreating) {
-      try {
-        const result = await createProofingOrder({} as any);
-        if (result?.id) {
-          setNewOrderId(result.id);
-          // Initializing other fields
-          setDesignQuantities({});
-          setProofingSheetQuantity(0);
-          setPaperSizeId("custom");
-          setCustomPaperSize("");
-          setConfigNotes("");
-          toast.success("Đã tự động tạo lệnh bài mới");
-        }
-      } catch (e) {
-        console.error("Auto-create order failed:", e);
-        toast.error("Không thể tự động tạo lệnh");
-      }
+    if (!isConfiguring) {
+      setIsConfiguring(true);
     }
   };
 
@@ -616,7 +621,7 @@ export default function PrepressList() {
               </div>
 
               <div className="flex items-center gap-2">
-                {newOrderId ? (
+                {isConfiguring ? (
                   <Button
                     size="sm"
                     variant="destructive"
@@ -631,35 +636,17 @@ export default function PrepressList() {
                     size="sm"
                     className="gap-2"
                     disabled={isCreating}
-                    onClick={async () => {
-                      try {
-                        const result = await createProofingOrder({} as any);
-                        if (result?.id) {
-                          setNewOrderId(result.id);
-                          setDesignQuantities({});
-                          setProofingSheetQuantity(0);
-                          setPaperSizeId("custom");
-                          setCustomPaperSize("");
-                          setConfigNotes("");
-                        } else {
-                          toast.error("Không thể tạo lệnh");
-                        }
-                      } catch (e) {
-                        console.error(e);
-                      }
+                    onClick={() => {
+                      setIsConfiguring(true);
+                      setDesignQuantities({});
+                      setProofingSheetQuantity(0);
+                      setPaperSizeId("custom");
+                      setCustomPaperSize("");
+                      setConfigNotes("");
                     }}
                   >
-                    {isCreating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Đang tạo...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4" />
-                        Tạo lệnh mới
-                      </>
-                    )}
+                    <Plus className="h-4 w-4" />
+                    Tạo lệnh mới
                   </Button>
                 )}
               </div>
@@ -672,7 +659,7 @@ export default function PrepressList() {
               <Card
                 className={cn(
                   "h-full overflow-hidden",
-                  newOrderId ? "w-2/3 min-w-0 flex-none" : "w-full",
+                  isConfiguring ? "w-2/3 min-w-0 flex-none" : "w-full",
                 )}
               >
                 <CardContent className="h-full p-0">
@@ -798,8 +785,8 @@ export default function PrepressList() {
               </Card>
 
               {/* Right panel: config panel when creating new order */}
-              {newOrderId && (
-                <div className="w-1/3 min-w-0 shrink-0">
+              {isConfiguring && (
+                <div className="w-1/3 min-w-0 shrink-0 h-full flex flex-col">
                   <DetailEmptyOrderView
                     selectedDesigns={selectedDesigns}
                     selectedCount={configSelectedCount}

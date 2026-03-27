@@ -46,11 +46,7 @@ export function DetailHeader({
   if (!order) return null;
 
   return (
-    <div className="border border-black relative mb-4">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        DetailHeader.tsx
-      </span>
-      <div className="flex items-center justify-between shrink-0 p-2">
+    <div className="relative mb-4 shrink-0 p-2">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -189,6 +185,5 @@ export function DetailHeader({
           </>
         )}
       </div>
-    </div>
   );
 }

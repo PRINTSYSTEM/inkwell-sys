@@ -36,9 +36,6 @@ export function ProductionListFilter({
 }: ProductionListFilterProps) {
   return (
     <div className="mb-4 shrink-0 relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        ProductionListFilter.tsx
-      </span>
       <Card className="border-0 shadow-sm">
         <CardContent className="p-3">
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">

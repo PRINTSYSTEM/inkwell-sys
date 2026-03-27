@@ -34,11 +34,7 @@ export function PrepressDesignFilter({
   onClearSelection,
 }: PrepressDesignFilterProps) {
   return (
-    <div className="border border-black relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        PrepressDesignFilter.tsx
-      </span>
-      <Card className="relative shrink-0">
+    <Card className="relative shrink-0">
         <CardContent className="p-4">
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
@@ -88,6 +84,5 @@ export function PrepressDesignFilter({
           </div>
         </CardContent>
       </Card>
-    </div>
   );
 }

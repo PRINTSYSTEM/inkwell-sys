@@ -18,8 +18,8 @@ import {
   Box,
   Package,
   Save,
-  Bug,
   PlayCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +80,25 @@ function getStepStatus(
       return false;
     }) || null
   );
+}
+
+// Helper to find all steps of a type
+function getSteps(
+  steps: ProductionStepResponse[] | null | undefined,
+  keywords: string[],
+  stepTypeMatcher?: string,
+): ProductionStepResponse[] {
+  if (!steps) return [];
+  return (
+    steps.filter((s) => {
+      if (stepTypeMatcher && s.stepType === stepTypeMatcher) return true;
+      if (s.stepTypeName) {
+        const nameLower = s.stepTypeName.toLowerCase();
+        return keywords.some((k) => nameLower.includes(k.toLowerCase()));
+      }
+      return false;
+    }) || []
+  ).sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0));
 }
 
 // Outer helper to get status colors
@@ -146,11 +165,12 @@ function ProductionTableRow({
   const dieCutStep = getStepStatus(steps, ["bế"], "die_cut");
   const cutStep = getStepStatus(steps, ["cắt"], "cut");
   const glueStep = getStepStatus(steps, ["dán"], "glue");
-  const packagingStep = getStepStatus(
+  const packagingSteps = getSteps(
     steps,
     ["đóng gói", "giao hàng"],
     "packaging",
   );
+  const packagingStep = packagingSteps[0] || null;
 
   // Dependency Logic: A step is enabled if the previous step is "done" (or doesn't exist)
   const isMaterialExportEnabled = !isDraft;
@@ -236,22 +256,21 @@ function ProductionTableRow({
     );
   };
 
-  const StepCell = ({
+  const StepItem = ({
     step,
     isCheckStep = false,
     isEnabled = true,
+    showName = false,
+    label,
+    hideStatus = false,
   }: {
-    step: ProductionStepResponse | null;
+    step: ProductionStepResponse;
     isCheckStep?: boolean;
     isEnabled?: boolean;
+    showName?: boolean;
+    label?: string;
+    hideStatus?: boolean;
   }) => {
-    if (!step)
-      return (
-        <TableCell className="text-center py-3 text-muted-foreground">
-          —
-        </TableCell>
-      );
-
     // Auto-fill with proofing order qty if step qty not yet set (or zero)
     const initialInputQty = step.inputQty
       ? step.inputQty.toString()
@@ -310,11 +329,13 @@ function ProductionTableRow({
     };
 
     return (
-      <TableCell
-        className="align-top py-3 px-1.5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex flex-col gap-1 w-full max-w-[100px] md:max-w-[110px] mx-auto">
+      <div className="flex flex-col gap-1 w-full max-w-[100px] md:max-w-[110px] mx-auto py-2 first:pt-0 last:pb-0">
+        {(showName || label) && (
+          <span className="text-[9px] font-bold text-muted-foreground truncate leading-tight uppercase tracking-tighter" title={label || step.stepTypeName || ""}>
+            {label || step.stepTypeName || "Đóng gói"}
+          </span>
+        )}
+        {!hideStatus && (
           <Select
             value={step.status || "pending"}
             onValueChange={(val: any) => handleUpdate({ status: val })}
@@ -343,54 +364,80 @@ function ProductionTableRow({
               </SelectItem>
             </SelectContent>
           </Select>
+        )}
 
-          {isCheckStep && (
-            <div className="flex flex-col gap-1 mt-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
-                  Vào
-                </span>
-                <Input
-                  type="number"
-                  className="h-5 w-14 text-[10px] px-1 py-0 text-right bg-background"
-                  value={inputQty}
-                  onChange={(e) => setInputQty(e.target.value)}
-                  onBlur={() => {
-                    handleUpdate({ inputQty: Number(inputQty) || 0 });
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
-                  Ra
-                </span>
-                <Input
-                  type="number"
-                  className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-emerald-700 bg-background"
-                  value={outputQty}
-                  onChange={(e) => setOutputQty(e.target.value)}
-                  onBlur={() => {
-                    handleUpdate({ outputQty: Number(outputQty) || 0 });
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-red-600 dark:text-red-400">
-                  Lỗi
-                </span>
-                <Input
-                  type="number"
-                  className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-red-600 bg-background"
-                  value={defectQty}
-                  onChange={(e) => setDefectQty(e.target.value)}
-                  onBlur={() => {
-                    handleUpdate({ defectQty: Number(defectQty) || 0 });
-                  }}
-                />
-              </div>
+        {isCheckStep && (
+          <div className="flex flex-col gap-1 mt-1">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
+                Vào
+              </span>
+              <Input
+                type="number"
+                className="h-5 w-14 text-[10px] px-1 py-0 text-right bg-background"
+                value={inputQty}
+                onChange={(e) => setInputQty(e.target.value)}
+                onBlur={() => {
+                  handleUpdate({ inputQty: Number(inputQty) || 0 });
+                }}
+              />
             </div>
-          )}
-        </div>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
+                Ra
+              </span>
+              <Input
+                type="number"
+                className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-emerald-700 bg-background"
+                value={outputQty}
+                onChange={(e) => setOutputQty(e.target.value)}
+                onBlur={() => {
+                  handleUpdate({ outputQty: Number(outputQty) || 0 });
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-red-600 dark:text-red-400">
+                Lỗi
+              </span>
+              <Input
+                type="number"
+                className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-red-600 bg-background"
+                value={defectQty}
+                onChange={(e) => setDefectQty(e.target.value)}
+                onBlur={() => {
+                  handleUpdate({ defectQty: Number(defectQty) || 0 });
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const StepCell = ({
+    step,
+    isCheckStep = false,
+    isEnabled = true,
+  }: {
+    step: ProductionStepResponse | null;
+    isCheckStep?: boolean;
+    isEnabled?: boolean;
+  }) => {
+    if (!step)
+      return (
+        <TableCell className="text-center py-3 text-muted-foreground">
+          —
+        </TableCell>
+      );
+
+    return (
+      <TableCell
+        className="align-top py-3 px-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <StepItem step={step} isCheckStep={isCheckStep} isEnabled={isEnabled} />
       </TableCell>
     );
   };
@@ -734,11 +781,72 @@ function ProductionTableRow({
       <StepCell step={dieCutStep} isEnabled={isDieCutEnabled} />
       <StepCell step={cutStep} isEnabled={isCutEnabled} />
       <StepCell step={glueStep} isEnabled={isGlueEnabled} />
-      <StepCell
-        step={packagingStep}
-        isCheckStep={true}
-        isEnabled={isPackagingEnabled}
-      />
+      <TableCell
+        className="align-top py-3 px-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col gap-2">
+          {isLoading ? (
+            <div className="flex justify-center p-2">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : proofingOrder?.proofingOrderDesigns && proofingOrder.proofingOrderDesigns.length > 0 ? (
+            <>
+              {/* Universal Status for Packaging column */}
+              {(packagingStep || steps.find(s => s.stepType === 'packaging')) && (
+                <div className="pb-2 border-b border-dashed mb-1">
+                   <InlineStepStatus 
+                      step={(packagingStep || steps.find(s => s.stepType === 'packaging'))!} 
+                      isEnabled={isPackagingEnabled} 
+                   />
+                </div>
+              )}
+              
+              <div className="flex flex-col gap-2 divide-y divide-dashed">
+                {proofingOrder.proofingOrderDesigns.map((pod: any) => {
+                  const matchingStep = steps.find(s => {
+                    const isPackaging = s.stepType === "packaging" || 
+                                      (s.stepTypeName && ["đóng gói", "giao hàng"].some(k => s.stepTypeName!.toLowerCase().includes(k)));
+                    if (!isPackaging) return false;
+                    const name = s.stepTypeName?.toLowerCase() || "";
+                    const designCode = pod.design?.code?.toLowerCase() || "";
+                    const designName = pod.design?.designName?.toLowerCase() || "";
+                    return (designCode && name.includes(designCode)) || (designName && name.includes(designName));
+                  }) || packagingStep;
+
+                  if (!matchingStep) return null;
+
+                  return (
+                    <StepItem
+                      key={`${pod.id}-${matchingStep.id}`}
+                      step={matchingStep}
+                      isCheckStep={true}
+                      isEnabled={isPackagingEnabled}
+                      showName={true}
+                      label={pod.design?.designName || pod.design?.code}
+                      hideStatus={true}
+                    />
+                  );
+                }).filter(Boolean)}
+              </div>
+            </>
+          ) : packagingSteps.length > 0 ? (
+            <div className="flex flex-col gap-2 divide-y divide-dashed">
+              {packagingSteps.map((step) => (
+                <StepItem
+                  key={step.id}
+                  step={step}
+                  isCheckStep={true}
+                  isEnabled={isPackagingEnabled}
+                  showName={packagingSteps.length > 1}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-3 text-muted-foreground">—</div>
+          )}
+        </div>
+      </TableCell>
     </TableRow>
   );
 }
@@ -760,13 +868,9 @@ export function ProductionListTable({
   onPageInputBlur,
   onStartProduction,
 }: ProductionListTableProps) {
-  const [showDebug, setShowDebug] = useState(false);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        ProductionListTable.tsx
-      </span>
       <div
         ref={tableContainerRef}
         className="flex-1 overflow-auto [&>div]:!overflow-visible"
@@ -776,18 +880,7 @@ export function ProductionListTable({
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="h-10 font-bold text-sm text-center w-[120px] bg-muted/50 border-r border-border/50">
-                  <div className="flex items-center justify-center gap-1.5">
-                    MÃ BB
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setShowDebug(true)}
-                      title="Debug API Data"
-                    >
-                      <Bug className="h-3 w-3 text-muted-foreground" />
-                    </Button>
-                  </div>
+                  MÃ BB
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm w-[240px]">
                   LỆNH IN
@@ -831,18 +924,7 @@ export function ProductionListTable({
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[120px] bg-muted/50 border-r border-border/50">
-                  <div className="flex items-center justify-center gap-1.5">
-                    MÃ BB
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setShowDebug(true)}
-                      title="Debug API Data"
-                    >
-                      <Bug className="h-3 w-3 text-muted-foreground" />
-                    </Button>
-                  </div>
+                  MÃ BB
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm w-[240px]">
                   LỆNH IN
@@ -959,29 +1041,6 @@ export function ProductionListTable({
         </div>
       )}
 
-      {showDebug && (
-        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-background w-full max-w-[90vw] h-[85vh] flex flex-col rounded-xl shadow-2xl overflow-hidden relative border">
-            <div className="flex justify-between items-center px-4 py-3 border-b bg-muted/40">
-              <h2 className="font-bold text-[15px] flex items-center gap-2">
-                <Bug className="h-4 w-4 text-emerald-600" />
-                Debug API Data (productions)
-              </h2>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-8 text-xs font-semibold"
-                onClick={() => setShowDebug(false)}
-              >
-                Đóng
-              </Button>
-            </div>
-            <div className="p-4 overflow-auto flex-1 font-mono text-xs dark:text-emerald-400 text-emerald-700 bg-slate-950">
-              <pre>{JSON.stringify(productions, null, 2)}</pre>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

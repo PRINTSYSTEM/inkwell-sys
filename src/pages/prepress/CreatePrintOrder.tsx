@@ -174,11 +174,7 @@ export default function PrepressCreatePrintOrder() {
   };
 
   return (
-    <div className="border border-black relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        CreatePrintOrder.tsx
-      </span>
-      <div className="relative space-y-6">
+    <div className="relative space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -638,6 +634,5 @@ export default function PrepressCreatePrintOrder() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
   );
 }

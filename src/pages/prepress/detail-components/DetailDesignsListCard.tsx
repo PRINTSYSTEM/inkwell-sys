@@ -90,11 +90,7 @@ export function DetailDesignsListCard({
   if (!order) return null;
 
   return (
-    <div className="border border-black relative">
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-50">
-        DetailDesignsListCard.tsx
-      </span>
-      <Card className="relative">
+    <Card className="relative">
         <CardHeader className="pb-3 px-6">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
@@ -559,6 +555,5 @@ export function DetailDesignsListCard({
           )}
         </CardContent>
       </Card>
-    </div>
   );
 }
