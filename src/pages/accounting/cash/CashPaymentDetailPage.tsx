@@ -56,6 +56,7 @@ import {
   useApproveCashPayment,
   useCancelCashPayment,
   usePostCashPayment,
+  useCashFunds,
 } from "@/hooks/use-cash";
 import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
 import {
@@ -126,17 +127,17 @@ export default function CashPaymentDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Form state for creating new payment
-  const [createFormValues, setCreateFormValues] =
+    const [createFormValues, setCreateFormValues] =
     useState<CreateCashPaymentRequest>({
-      voucherDate: new Date().toISOString().split("T")[0],
-      postingDate: new Date().toISOString().split("T")[0],
+      voucherDate: new Date().toISOString(),
+      postingDate: new Date().toISOString(),
       receiverName: "",
       reason: "",
       amount: 0,
       notes: null,
-      paymentMethodId: null,
-      expenseCategoryId: null,
-      cashFundId: null,
+      paymentMethodId: 0,
+      expenseCategoryId: 0,
+      financeAccountId: null,
       vendorId: null,
     });
 
@@ -160,6 +161,7 @@ export default function CashPaymentDetailPage() {
     isActive: true,
   });
 
+  const { data: cashFundsData } = useCashFunds();
 
   const createMutation = useCreateCashPayment();
   const updateMutation = useUpdateCashPayment();
@@ -188,9 +190,9 @@ export default function CashPaymentDetailPage() {
       reason: payment.reason || "",
       amount: payment.amount || 0,
       notes: payment.notes || "",
-      paymentMethodId: payment.paymentMethodId || null,
-      expenseCategoryId: payment.expenseCategoryId || null,
-      cashFundId: (payment.cashFundId as number | null) || null,
+      paymentMethodId: payment.paymentMethodId || 0,
+      expenseCategoryId: payment.expenseCategoryId || 0,
+      financeAccountId: (payment.financeAccountId as number | null) || null,
     });
   };
 
@@ -203,16 +205,26 @@ export default function CashPaymentDetailPage() {
     if (!payment || !editingCard) return;
 
     const payload: UpdateCashPaymentRequest = {
-      voucherDate: cardEditValues.voucherDate as string,
-      postingDate: cardEditValues.postingDate as string,
+      voucherDate: new Date(cardEditValues.voucherDate as string).toISOString(),
+      postingDate: new Date(cardEditValues.postingDate as string).toISOString(),
       receiverName: cardEditValues.receiverName as string,
       reason: cardEditValues.reason as string,
       amount: cardEditValues.amount as number,
       notes: (cardEditValues.notes as string) || null,
-      paymentMethodId: cardEditValues.paymentMethodId as number | null,
-      expenseCategoryId: cardEditValues.expenseCategoryId as number | null,
-      cashFundId: cardEditValues.cashFundId as number | null,
+      paymentMethodId: (cardEditValues.paymentMethodId as number) || 0,
+      expenseCategoryId: (cardEditValues.expenseCategoryId as number) || 0,
+      financeAccountId: (cardEditValues.financeAccountId as number | null) || null,
     };
+
+    // Validation for update
+    if (!payload.paymentMethodId) {
+      toast.error("Vui lòng chọn phương thức thanh toán");
+      return;
+    }
+    if (!payload.expenseCategoryId) {
+      toast.error("Vui lòng chọn khoản mục chi");
+      return;
+    }
 
     updateMutation.mutate(
       { id: payment.id!, data: payload },
@@ -263,7 +275,35 @@ export default function CashPaymentDetailPage() {
   };
 
   const handleCreate = () => {
-    createMutation.mutate(createFormValues, {
+    // Validation
+    if (!createFormValues.receiverName) {
+      toast.error("Vui lòng nhập tên người nhận");
+      return;
+    }
+    if (!createFormValues.reason) {
+      toast.error("Vui lòng nhập lý do chi");
+      return;
+    }
+    if (!createFormValues.paymentMethodId || createFormValues.paymentMethodId === 0) {
+      toast.error("Vui lòng chọn phương thức thanh toán");
+      return;
+    }
+    if (!createFormValues.expenseCategoryId || createFormValues.expenseCategoryId === 0) {
+      toast.error("Vui lòng chọn khoản mục chi");
+      return;
+    }
+    if (createFormValues.amount <= 0) {
+      toast.error("Số tiền phải lớn hơn 0");
+      return;
+    }
+
+    const payload: CreateCashPaymentRequest = {
+      ...createFormValues,
+      voucherDate: new Date(createFormValues.voucherDate).toISOString(),
+      postingDate: new Date(createFormValues.postingDate).toISOString(),
+    };
+
+    createMutation.mutate(payload, {
       onSuccess: (data) => {
         if (data?.id) {
           navigate(`/accounting/cash-payments/${data.id}`);
@@ -432,6 +472,36 @@ export default function CashPaymentDetailPage() {
                           value={method.id?.toString() || ""}
                         >
                           {method.description}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="financeAccountId">Quỹ tiền mặt</Label>
+                  <Select
+                    value={
+                      createFormValues.financeAccountId?.toString() || "all"
+                    }
+                    onValueChange={(value) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        financeAccountId:
+                          value === "all" ? null : Number.parseInt(value, 10),
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn quỹ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Không chọn</SelectItem>
+                      {cashFundsData?.items?.map((fund) => (
+                        <SelectItem
+                          key={fund.id}
+                          value={fund.id?.toString() || ""}
+                        >
+                          {fund.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -759,6 +829,7 @@ export default function CashPaymentDetailPage() {
                   </div>
                 )}
               </div>
+
               <div className="space-y-2">
                 <Label>Số tiền</Label>
                 {editingCard === "main" ? (
@@ -823,7 +894,42 @@ export default function CashPaymentDetailPage() {
               </div>
               <div className="space-y-2">
                 <Label>Quỹ tiền mặt</Label>
-                <div className="text-sm">{(payment.cashFundName as string | null) || "—"}</div>
+                {editingCard === "main" ? (
+                  <Select
+                    value={
+                      (
+                        cardEditValues.financeAccountId as number
+                      )?.toString() || "all"
+                    }
+                    onValueChange={(value) =>
+                      setCardEditValues({
+                        ...cardEditValues,
+                        financeAccountId: value === "all"
+                          ? null
+                          : Number.parseInt(value, 10),
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn quỹ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Không chọn</SelectItem>
+                      {cashFundsData?.items?.map((fund) => (
+                        <SelectItem
+                          key={fund.id}
+                          value={fund.id?.toString() || ""}
+                        >
+                          {fund.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="text-sm">
+                    {cashFundsData?.items?.find(f => f.id === payment.financeAccountId)?.name || "—"}
+                  </div>
+                )}
               </div>
             </div>
             <Separator />

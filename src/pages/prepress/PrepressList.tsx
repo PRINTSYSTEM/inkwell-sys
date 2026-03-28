@@ -72,6 +72,7 @@ import {
   useAddDesignsToProofingOrder,
   useAvailableOrderDetailsForProofing,
   useCreateProofingOrder,
+  useUpdateProofingOrder,
   useProofingAvailableOrderDetailsDesignTypeSummary,
   useProofingOrders,
   useUpdateProofingOrder,
@@ -393,6 +394,8 @@ export default function PrepressList() {
   const paperSizes = paperSizesData || [];
   const { mutate: createPaperSizeMutate, loading: isCreatingPaperSize } =
     useCreatePaperSize();
+  const { mutateAsync: updateProofingOrder, isPending: isUpdatingOrder } =
+    useUpdateProofingOrder();
 
   const configSelectedCount = useMemo(() => {
     return Object.values(designQuantities).filter((qty) => qty > 0).length;
@@ -498,8 +501,12 @@ export default function PrepressList() {
         return;
       }
 
+<<<<<<< Updated upstream
 
       // 1. Create proofing order first
+=======
+      // 1. Create proofing order
+>>>>>>> Stashed changes
       const result = await createProofingOrder({} as any);
       const orderId = result?.id;
       if (!orderId) {
@@ -786,7 +793,11 @@ export default function PrepressList() {
 
               {/* Right panel: config panel when creating new order */}
               {isConfiguring && (
+<<<<<<< Updated upstream
                 <div className="w-1/3 min-w-0 shrink-0 h-full flex flex-col">
+=======
+                <div className="w-1/3 min-w-0 shrink-0">
+>>>>>>> Stashed changes
                   <DetailEmptyOrderView
                     selectedDesigns={selectedDesigns}
                     selectedCount={configSelectedCount}
@@ -807,7 +818,7 @@ export default function PrepressList() {
                     isCreatingPaperSize={isCreatingPaperSize}
                     handleCreatePaperSize={handleCreatePaperSize}
                     handleSubmitDesigns={handleConfigSubmitDesigns}
-                    isAddingDesigns={isAddingDesigns}
+                    isAddingDesigns={isCreating || isAddingDesigns || isUpdatingOrder}
                   />
                 </div>
               )}
