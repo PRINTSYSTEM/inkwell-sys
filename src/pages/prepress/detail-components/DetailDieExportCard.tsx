@@ -56,8 +56,7 @@ export function DetailDieExportCard({
   const dieExports = order.dieExports || [];
 
   return (
-    <div className="h-full flex flex-col">
-      <Card className="relative h-full flex flex-col">
+    <Card className="relative h-full flex flex-col">
         <CardHeader className="pb-1.5 px-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -289,6 +288,5 @@ export function DetailDieExportCard({
           )}
         </CardContent>
       </Card>
-    </div>
   );
 }

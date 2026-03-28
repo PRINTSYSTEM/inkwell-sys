@@ -90,8 +90,7 @@ export function DetailDesignsListCard({
   if (!order) return null;
 
   return (
-    <div >
-      <Card className="relative">
+    <Card className="relative">
         <CardHeader className="pb-3 px-6">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
@@ -556,6 +555,5 @@ export function DetailDesignsListCard({
           )}
         </CardContent>
       </Card>
-    </div>
   );
 }

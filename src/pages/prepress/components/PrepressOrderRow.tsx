@@ -179,8 +179,7 @@ export function PrepressOrderRow({
   );
 
   return (
-    <div className="contents">
-      <CursorTooltip
+    <CursorTooltip
         content={tooltipContent}
         delayDuration={1000}
         className="p-3 bg-popover/95 backdrop-blur-sm border shadow-2xl ring-1 ring-black/5 rounded-xl"
@@ -312,6 +311,5 @@ export function PrepressOrderRow({
           </TableCell>
         </TableRow>
       </CursorTooltip>
-    </div>
   );
 }

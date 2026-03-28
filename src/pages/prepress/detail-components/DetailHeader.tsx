@@ -46,8 +46,7 @@ export function DetailHeader({
   if (!order) return null;
 
   return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between shrink-0 p-2">
+    <div className="relative mb-4 shrink-0 p-2">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -186,6 +185,5 @@ export function DetailHeader({
           </>
         )}
       </div>
-    </div>
   );
 }

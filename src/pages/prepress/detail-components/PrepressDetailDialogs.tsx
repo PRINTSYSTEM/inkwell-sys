@@ -274,10 +274,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
   if (!order) return null;
 
   return (
-    <div >
-      <span className="absolute top-0 left-0 bg-black text-white text-[10px] px-1 z-[60]">
-        PrepressDetailDialogs.tsx
-      </span>
+    <>
       {/* Upload Images Dialog (only images, multiple allowed) */}
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent className="max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -1242,7 +1239,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
 

@@ -38,8 +38,7 @@ export function PrepressOrdersTable({
   tableRef,
 }: PrepressOrdersTableProps) {
   return (
-    <div >
-      <div className="relative flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
+    <div className="relative flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
         <div className="shrink-0 border-b bg-muted/30 px-4 py-2">
           <h3 className="text-sm font-semibold text-foreground">
             {title} ({count})
@@ -122,6 +121,5 @@ export function PrepressOrdersTable({
           </ScrollArea>
         </div>
       </div>
-    </div>
   );
 }

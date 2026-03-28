@@ -174,8 +174,7 @@ export default function PrepressCreatePrintOrder() {
   };
 
   return (
-    <div >
-      <div className="relative space-y-6">
+    <div className="relative space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -635,6 +634,5 @@ export default function PrepressCreatePrintOrder() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
   );
 }

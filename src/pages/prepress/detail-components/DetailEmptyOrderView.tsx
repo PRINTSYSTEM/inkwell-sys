@@ -68,7 +68,7 @@ export function DetailEmptyOrderView({
   isAddingDesigns,
 }: DetailEmptyOrderViewProps) {
   return (
-    <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm bg-background relative border-black">
+    <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm bg-background relative">
       {/* LEFT SIDE - DESIGN LIST */}
         <div className="flex-1 flex flex-col min-h-0 bg-background">
           {/* Right header */}
@@ -323,35 +323,37 @@ export function DetailEmptyOrderView({
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="space-y-3 pt-2">
-                    <Button
-                      className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-[0.98] bg-gradient-to-r from-primary to-primary/80"
-                      onClick={handleSubmitDesigns}
-                      disabled={
-                        isAddingDesigns ||
-                        !paperSizeId ||
-                        (paperSizeId === "custom" && !customPaperSize.trim())
-                      }
-                    >
-                      {isAddingDesigns ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Đang xử lý...
-                        </>
-                      ) : (
-                        <>Hoàn tất thêm mã hàng</>
-                      )}
-                    </Button>
-                    <p className="text-[10px] text-center text-muted-foreground px-4 uppercase tracking-tighter font-medium italic">
-                      <AlertTriangle className="inline h-3 w-3 mr-1" />
-                      Lưu ý: Các mã hàng phải có cùng loại chất liệu và quy cách
-                      cán màng
-                    </p>
-                  </div>
                 </div>
               )}
             </ScrollArea>
+
+            {/* FIXED FOOTER - ACTIONS */}
+            {selectedDesigns.length > 0 && (
+              <div className="shrink-0 border-t bg-card/50 p-4 space-y-3">
+                <Button
+                  className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-[0.98] bg-gradient-to-r from-primary to-primary/80"
+                  onClick={handleSubmitDesigns}
+                  disabled={
+                    isAddingDesigns ||
+                    !paperSizeId ||
+                    (paperSizeId === "custom" && !customPaperSize.trim())
+                  }
+                >
+                  {isAddingDesigns ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>Hoàn tất thêm mã hàng</>
+                  )}
+                </Button>
+                <p className="text-[10px] text-center text-muted-foreground px-4 uppercase tracking-tighter font-medium italic">
+                  <AlertTriangle className="inline h-3 w-3 mr-1" />
+                  Lưu ý: Các mã hàng phải có cùng loại chất liệu và quy cách cán màng
+                </p>
+              </div>
+            )}
           </div>
         </div>
     </div>
