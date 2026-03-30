@@ -41,21 +41,11 @@ export function PrepressDesignFilter({
               <div className="text-sm font-semibold text-foreground">
                 Bộ lọc thiết kế chờ bình bài
               </div>
-              {hasActiveFilters ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={onClearFilters}
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Về danh sách mã bài
-                </Button>
-              ) : (
-                <div className="text-xs text-muted-foreground">
-                  Chưa chọn bộ lọc: hiển thị danh sách mã bài
-                </div>
-              )}
+              <div className="text-[11px] text-muted-foreground italic">
+                {hasActiveFilters 
+                  ? "Đang lọc: nhấn đúp 'Tất cả' để xóa bộ lọc" 
+                  : "Hiển thị danh sách mã bài"}
+              </div>
             </div>
 
             <FilterSection

@@ -135,7 +135,7 @@ function ProductionTableRow({
 
   const isDraft = !prod.id;
   const isCreating = React.useRef(false);
-  
+
   // Auto-start production for draft items if they have a proofingOrderId
   React.useEffect(() => {
     if (isDraft && prod.proofingOrderId && !isCreating.current) {
@@ -155,7 +155,11 @@ function ProductionTableRow({
   const steps = prod.steps || [];
 
   // Extract steps based on requested columns
-  const materialExportStep = getStepStatus(steps, ["xuất nguyên liệu"], "material_export");
+  const materialExportStep = getStepStatus(
+    steps,
+    ["xuất nguyên liệu"],
+    "material_export",
+  );
   const printStep = getStepStatus(steps, ["in"], "print");
   const laminationStep = getStepStatus(
     steps,
@@ -174,23 +178,24 @@ function ProductionTableRow({
 
   // Dependency Logic: A step is enabled if the previous step is "done" (or doesn't exist)
   const isMaterialExportEnabled = !isDraft;
-  const isMaterialExportDone = !materialExportStep || materialExportStep.status === "done";
-  
+  const isMaterialExportDone =
+    !materialExportStep || materialExportStep.status === "done";
+
   const isPrintEnabled = isMaterialExportEnabled && isMaterialExportDone;
   const isPrintDone = !printStep || printStep.status === "done";
-  
+
   const isLaminationEnabled = isPrintEnabled && isPrintDone;
   const isLaminationDone = !laminationStep || laminationStep.status === "done";
-  
+
   const isDieCutEnabled = isLaminationEnabled && isLaminationDone;
   const isDieCutDone = !dieCutStep || dieCutStep.status === "done";
-  
+
   const isCutEnabled = isDieCutEnabled && isDieCutDone;
   const isCutDone = !cutStep || cutStep.status === "done";
-  
+
   const isGlueEnabled = isCutEnabled && isCutDone;
   const isGlueDone = !glueStep || glueStep.status === "done";
-  
+
   const isPackagingEnabled = isGlueEnabled && isGlueDone;
 
   const defaultPrintQty =
@@ -198,13 +203,12 @@ function ProductionTableRow({
     (proofingOrder as any)?.totalQuantity ||
     0;
 
-
-  const InlineStepStatus = ({ 
+  const InlineStepStatus = ({
     step,
-    isEnabled = true 
-  }: { 
-    step: ProductionStepResponse,
-    isEnabled?: boolean
+    isEnabled = true,
+  }: {
+    step: ProductionStepResponse;
+    isEnabled?: boolean;
   }) => {
     const handleStatusChange = (newStatus: string) => {
       updateStep({
@@ -235,19 +239,34 @@ function ProductionTableRow({
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="pending" className="text-xs font-semibold cursor-pointer">
+            <SelectItem
+              value="pending"
+              className="text-xs font-semibold cursor-pointer"
+            >
               Chờ
             </SelectItem>
-            <SelectItem value="ready" className="text-xs font-semibold cursor-pointer">
+            <SelectItem
+              value="ready"
+              className="text-xs font-semibold cursor-pointer"
+            >
               Sẵn sàng
             </SelectItem>
-            <SelectItem value="in_progress" className="text-xs font-semibold cursor-pointer">
+            <SelectItem
+              value="in_progress"
+              className="text-xs font-semibold cursor-pointer"
+            >
               Đang thực hiện
             </SelectItem>
-            <SelectItem value="done" className="text-xs font-semibold cursor-pointer">
+            <SelectItem
+              value="done"
+              className="text-xs font-semibold cursor-pointer"
+            >
               Hoàn thành
             </SelectItem>
-            <SelectItem value="blocked" className="text-xs font-semibold cursor-pointer">
+            <SelectItem
+              value="blocked"
+              className="text-xs font-semibold cursor-pointer"
+            >
               Bị chặn/Lỗi
             </SelectItem>
           </SelectContent>
@@ -331,7 +350,10 @@ function ProductionTableRow({
     return (
       <div className="flex flex-col gap-1 w-full max-w-[100px] md:max-w-[110px] mx-auto py-2 first:pt-0 last:pb-0">
         {(showName || label) && (
-          <span className="text-[9px] font-bold text-muted-foreground truncate leading-tight uppercase tracking-tighter" title={label || step.stepTypeName || ""}>
+          <span
+            className="text-[9px] font-bold text-muted-foreground truncate leading-tight uppercase tracking-tighter"
+            title={label || step.stepTypeName || ""}
+          >
             {label || step.stepTypeName || "Đóng gói"}
           </span>
         )}
@@ -347,19 +369,34 @@ function ProductionTableRow({
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="pending" className="text-xs font-semibold cursor-pointer">
+              <SelectItem
+                value="pending"
+                className="text-xs font-semibold cursor-pointer"
+              >
                 Chờ
               </SelectItem>
-              <SelectItem value="ready" className="text-xs font-semibold cursor-pointer">
+              <SelectItem
+                value="ready"
+                className="text-xs font-semibold cursor-pointer"
+              >
                 Sẵn sàng
               </SelectItem>
-              <SelectItem value="in_progress" className="text-xs font-semibold cursor-pointer">
+              <SelectItem
+                value="in_progress"
+                className="text-xs font-semibold cursor-pointer"
+              >
                 Đang thực hiện
               </SelectItem>
-              <SelectItem value="done" className="text-xs font-semibold cursor-pointer">
+              <SelectItem
+                value="done"
+                className="text-xs font-semibold cursor-pointer"
+              >
                 Hoàn thành
               </SelectItem>
-              <SelectItem value="blocked" className="text-xs font-semibold cursor-pointer">
+              <SelectItem
+                value="blocked"
+                className="text-xs font-semibold cursor-pointer"
+              >
                 Bị chặn/Lỗi
               </SelectItem>
             </SelectContent>
@@ -427,7 +464,7 @@ function ProductionTableRow({
   }) => {
     if (!step)
       return (
-        <TableCell className="text-center py-3 text-muted-foreground">
+        <TableCell className="text-center py-3 bg-primary/[0.08] dark:bg-primary/[0.15] text-primary/40 font-black text-lg italic border-r border-border/40">
           —
         </TableCell>
       );
@@ -520,7 +557,7 @@ function ProductionTableRow({
                   tờ
                 </span>
               </div>
-              
+
               {isDraft && (
                 <div className="mt-3 flex items-center gap-2 text-[10px] text-blue-600 font-bold animate-pulse">
                   <PlayCircle className="w-3.5 h-3.5" />
@@ -790,44 +827,61 @@ function ProductionTableRow({
             <div className="flex justify-center p-2">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
-          ) : proofingOrder?.proofingOrderDesigns && proofingOrder.proofingOrderDesigns.length > 0 ? (
+          ) : proofingOrder?.proofingOrderDesigns &&
+            proofingOrder.proofingOrderDesigns.length > 0 ? (
             <>
               {/* Universal Status for Packaging column */}
-              {(packagingStep || steps.find(s => s.stepType === 'packaging')) && (
+              {(packagingStep ||
+                steps.find((s) => s.stepType === "packaging")) && (
                 <div className="pb-2 border-b border-dashed mb-1">
-                   <InlineStepStatus 
-                      step={(packagingStep || steps.find(s => s.stepType === 'packaging'))!} 
-                      isEnabled={isPackagingEnabled} 
-                   />
+                  <InlineStepStatus
+                    step={
+                      (packagingStep ||
+                        steps.find((s) => s.stepType === "packaging"))!
+                    }
+                    isEnabled={isPackagingEnabled}
+                  />
                 </div>
               )}
-              
+
               <div className="flex flex-col gap-2 divide-y divide-dashed">
-                {proofingOrder.proofingOrderDesigns.map((pod: any) => {
-                  const matchingStep = steps.find(s => {
-                    const isPackaging = s.stepType === "packaging" || 
-                                      (s.stepTypeName && ["đóng gói", "giao hàng"].some(k => s.stepTypeName!.toLowerCase().includes(k)));
-                    if (!isPackaging) return false;
-                    const name = s.stepTypeName?.toLowerCase() || "";
-                    const designCode = pod.design?.code?.toLowerCase() || "";
-                    const designName = pod.design?.designName?.toLowerCase() || "";
-                    return (designCode && name.includes(designCode)) || (designName && name.includes(designName));
-                  }) || packagingStep;
+                {proofingOrder.proofingOrderDesigns
+                  .map((pod: any) => {
+                    const matchingStep =
+                      steps.find((s) => {
+                        const isPackaging =
+                          s.stepType === "packaging" ||
+                          (s.stepTypeName &&
+                            ["đóng gói", "giao hàng"].some((k) =>
+                              s.stepTypeName!.toLowerCase().includes(k),
+                            ));
+                        if (!isPackaging) return false;
+                        const name = s.stepTypeName?.toLowerCase() || "";
+                        const designCode =
+                          pod.design?.code?.toLowerCase() || "";
+                        const designName =
+                          pod.design?.designName?.toLowerCase() || "";
+                        return (
+                          (designCode && name.includes(designCode)) ||
+                          (designName && name.includes(designName))
+                        );
+                      }) || packagingStep;
 
-                  if (!matchingStep) return null;
+                    if (!matchingStep) return null;
 
-                  return (
-                    <StepItem
-                      key={`${pod.id}-${matchingStep.id}`}
-                      step={matchingStep}
-                      isCheckStep={true}
-                      isEnabled={isPackagingEnabled}
-                      showName={true}
-                      label={pod.design?.designName || pod.design?.code}
-                      hideStatus={true}
-                    />
-                  );
-                }).filter(Boolean)}
+                    return (
+                      <StepItem
+                        key={`${pod.id}-${matchingStep.id}`}
+                        step={matchingStep}
+                        isCheckStep={true}
+                        isEnabled={isPackagingEnabled}
+                        showName={true}
+                        label={pod.design?.designName || pod.design?.code}
+                        hideStatus={true}
+                      />
+                    );
+                  })
+                  .filter(Boolean)}
               </div>
             </>
           ) : packagingSteps.length > 0 ? (
@@ -843,7 +897,7 @@ function ProductionTableRow({
               ))}
             </div>
           ) : (
-            <div className="text-center py-3 text-muted-foreground">—</div>
+            <div className="text-center py-3 bg-primary/[0.08] dark:bg-primary/[0.15] text-primary/40 font-black text-lg italic border-r border-border/40">—</div>
           )}
         </div>
       </TableCell>
@@ -868,7 +922,6 @@ export function ProductionListTable({
   onPageInputBlur,
   onStartProduction,
 }: ProductionListTableProps) {
-
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
       <div
@@ -1040,7 +1093,6 @@ export function ProductionListTable({
           </div>
         </div>
       )}
-
     </div>
   );
 }

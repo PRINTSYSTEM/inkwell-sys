@@ -85,7 +85,13 @@ export function FilterSection({
             }
             size="sm"
             className="h-8 text-xs"
-            onClick={() => onDesignTypeChange([])}
+            onClick={() => {
+              if (selectedDesignTypes.length === 0 && hasActiveFilters) {
+                onClearFilters();
+              } else {
+                onDesignTypeChange([]);
+              }
+            }}
           >
             <span>Tất cả</span>
             <Badge

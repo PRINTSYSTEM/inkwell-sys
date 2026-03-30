@@ -20,6 +20,7 @@ import {
   FileImage,
   Bug,
   Maximize2,
+  RefreshCcw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatDieSize } from "@/utils/format-die-size";
@@ -283,6 +284,15 @@ export function DetailDieExportCard({
                     Thêm khuôn
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-amber-200 hover:bg-amber-50 text-amber-600 rounded-full"
+                  onClick={() => {}}
+                >
+                  <RefreshCcw className="h-3 w-3" />
+                  Xuất lại khuôn
+                </Button>
               </div>
             </div>
           )}

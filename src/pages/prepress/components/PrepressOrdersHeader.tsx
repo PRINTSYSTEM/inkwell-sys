@@ -261,17 +261,7 @@ export function PrepressOrdersHeader({
             Xóa bộ lọc
           </Button>
         )}
-        {hasActiveFilters && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary"
-            onClick={onClearFilters}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Quay lại danh sách lệnh
-          </Button>
-        )}
+
       </div>
 
       {/* FilterSection */}
