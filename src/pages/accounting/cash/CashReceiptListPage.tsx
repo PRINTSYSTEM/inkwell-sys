@@ -12,6 +12,9 @@ import {
   Loader2,
   AlertCircle,
   Download,
+  FileText,
+  Eye,
+  MoreHorizontal,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
@@ -39,7 +42,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { useCashReceipts } from "@/hooks/use-cash";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  useCashReceipts,
+  useExportCashReceiptsExcel,
+  useExportCashReceiptPDF,
+} from "@/hooks/use-cash";
 import { usePaymentMethods } from "@/hooks/use-expense";
 import { useCustomers } from "@/hooks/use-customer";
 import { formatCurrency, getPaymentMethodLabel } from "@/lib/status-utils";
@@ -117,8 +131,26 @@ export default function CashReceiptListPage() {
         : undefined,
   });
 
+  const { mutate: exportToExcel, isPending: isExporting } =
+    useExportCashReceiptsExcel();
+
+  const { mutate: exportToPDF, isPending: isExportingPDF } =
+    useExportCashReceiptPDF();
+
   const handleExportExcel = async () => {
-    toast.info("Chức năng xuất Excel đang được phát triển");
+    await exportToExcel({
+      status: statusFilter === "all" ? undefined : statusFilter,
+      search: searchQuery || undefined,
+      fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+      toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+      customerId: customerFilter
+        ? Number.parseInt(customerFilter, 10)
+        : undefined,
+      paymentMethodId:
+        paymentMethodFilter && paymentMethodFilter !== "all"
+          ? Number.parseInt(paymentMethodFilter, 10)
+          : undefined,
+    });
   };
 
   const handleViewDetails = (id: number | undefined, e?: React.MouseEvent) => {
@@ -266,8 +298,13 @@ export default function CashReceiptListPage() {
                   className="h-9 w-9"
                   title="Xuất Excel"
                   onClick={handleExportExcel}
+                  disabled={isExporting}
                 >
-                  <Download className="h-4 w-4" />
+                  {isExporting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -300,13 +337,14 @@ export default function CashReceiptListPage() {
                   <TableHead className="text-center font-semibold">
                     Trạng thái
                   </TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 10 }).map((_, j) => (
+                      {Array.from({ length: 11 }).map((_, j) => (
                         <TableCell key={j}>
                           <Skeleton className="h-6 w-full" />
                         </TableCell>
@@ -316,7 +354,7 @@ export default function CashReceiptListPage() {
                 ) : !receiptsData?.items || receiptsData.items.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={10}
+                      colSpan={11}
                       className="h-24 text-center text-muted-foreground"
                     >
                       Không tìm thấy phiếu thu nào.
@@ -411,6 +449,48 @@ export default function CashReceiptListPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         {getStatusBadge(receipt.status)}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewDetails(receipt.id);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Xem chi tiết
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                exportToPDF(receipt.id!);
+                              }}
+                              className="cursor-pointer"
+                              disabled={isExportingPDF}
+                            >
+                              {isExportingPDF ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <FileText className="h-4 w-4 mr-2 text-blue-600" />
+                              )}
+                              Xuất PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))

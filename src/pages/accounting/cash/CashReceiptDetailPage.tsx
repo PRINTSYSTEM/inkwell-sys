@@ -57,6 +57,7 @@ import {
   useCancelCashReceipt,
   usePostCashReceipt,
   useCashFunds,
+  useExportCashReceiptPDF,
 } from "@/hooks/use-cash";
 import { usePaymentMethods } from "@/hooks/use-expense";
 import {
@@ -163,6 +164,8 @@ export default function CashReceiptDetailPage() {
   const approveMutation = useApproveCashReceipt();
   const cancelMutation = useCancelCashReceipt();
   const postMutation = usePostCashReceipt();
+  const { mutate: exportToPDF, loading: isExportingPDF } =
+    useExportCashReceiptPDF();
 
   const isDraft = receipt?.status?.toLowerCase() === "draft";
   const isApproved = receipt?.status?.toLowerCase() === "approved";
@@ -631,9 +634,17 @@ export default function CashReceiptDetailPage() {
                 Xóa
               </Button>
             )}
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Xuất Excel
+            <Button
+              variant="outline"
+              onClick={() => receipt?.id && exportToPDF(receipt.id)}
+              disabled={isExportingPDF}
+            >
+              {isExportingPDF ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4 mr-2" />
+              )}
+              Xuất PDF
             </Button>
             <Button variant="outline">
               <Printer className="h-4 w-4 mr-2" />

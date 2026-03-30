@@ -57,6 +57,7 @@ import {
   useCancelCashPayment,
   usePostCashPayment,
   useCashFunds,
+  useExportCashPaymentPDF,
 } from "@/hooks/use-cash";
 import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
 import {
@@ -169,6 +170,8 @@ export default function CashPaymentDetailPage() {
   const approveMutation = useApproveCashPayment();
   const cancelMutation = useCancelCashPayment();
   const postMutation = usePostCashPayment();
+  const { mutate: exportToPDF, isPending: isExportingPDF } =
+    useExportCashPaymentPDF();
 
   const isDraft = payment?.status?.toLowerCase() === "draft";
   const isApproved = payment?.status?.toLowerCase() === "approved";
@@ -681,9 +684,17 @@ export default function CashPaymentDetailPage() {
                 Xóa
               </Button>
             )}
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Xuất Excel
+            <Button
+              variant="outline"
+              onClick={() => payment?.id && exportToPDF(payment.id)}
+              disabled={isExportingPDF}
+            >
+              {isExportingPDF ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4 mr-2" />
+              )}
+              Xuất PDF
             </Button>
             <Button variant="outline">
               <Printer className="h-4 w-4 mr-2" />
