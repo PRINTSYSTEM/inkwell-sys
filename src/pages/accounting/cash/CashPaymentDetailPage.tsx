@@ -499,14 +499,21 @@ export default function CashPaymentDetailPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Không chọn</SelectItem>
-                      {cashFundsData?.items?.map((fund) => (
-                        <SelectItem
-                          key={fund.id}
-                          value={fund.id?.toString() || ""}
-                        >
-                          {fund.name}
-                        </SelectItem>
-                      ))}
+                      {cashFundsData?.items
+                        ?.filter(
+                          (fund) =>
+                            fund.name !== "Quỹ tiền mặt chính" &&
+                            fund.name !== "Qũy tiền lẻ" &&
+                            fund.name !== "Quỹ tiền lẻ"
+                        )
+                        ?.map((fund) => (
+                          <SelectItem
+                            key={fund.id}
+                            value={fund.id?.toString() || ""}
+                          >
+                            {fund.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -926,14 +933,21 @@ export default function CashPaymentDetailPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Không chọn</SelectItem>
-                      {cashFundsData?.items?.map((fund) => (
-                        <SelectItem
-                          key={fund.id}
-                          value={fund.id?.toString() || ""}
-                        >
-                          {fund.name}
-                        </SelectItem>
-                      ))}
+                      {cashFundsData?.items
+                        ?.filter(
+                          (fund) =>
+                            fund.name !== "Quỹ tiền mặt chính" &&
+                            fund.name !== "Qũy tiền lẻ" &&
+                            fund.name !== "Quỹ tiền lẻ"
+                        )
+                        ?.map((fund) => (
+                          <SelectItem
+                            key={fund.id}
+                            value={fund.id?.toString() || ""}
+                          >
+                            {fund.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 ) : (
