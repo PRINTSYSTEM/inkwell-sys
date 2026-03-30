@@ -75,7 +75,6 @@ import {
   useUpdateProofingOrder,
   useProofingAvailableOrderDetailsDesignTypeSummary,
   useProofingOrders,
-  useUpdateProofingOrder,
   useRejectDesignFromProofingOrder,
   usePaperSizes,
   useCreatePaperSize,
@@ -409,7 +408,7 @@ export default function PrepressList() {
     return found?.name || null;
   }, [currentMaterialTypeId, materialTypeOptions]);
 
-  const { mutateAsync: updateProofingOrder } = useUpdateProofingOrder();
+
 
   const parsedCustomPaperSize = useMemo(() => {
     if (!customPaperSize || paperSizeId !== "custom") return null;
@@ -501,12 +500,8 @@ export default function PrepressList() {
         return;
       }
 
-<<<<<<< Updated upstream
 
       // 1. Create proofing order first
-=======
-      // 1. Create proofing order
->>>>>>> Stashed changes
       const result = await createProofingOrder({} as any);
       const orderId = result?.id;
       if (!orderId) {
@@ -524,9 +519,14 @@ export default function PrepressList() {
       await updateProofingOrder({
         id: orderId,
         data: {
-          totalQuantity: proofingSheetQuantity > 0 ? proofingSheetQuantity : undefined,
-          paperSizeId: (paperSizeId && paperSizeId !== "custom") ? parseInt(paperSizeId, 10) : undefined,
-          customPaperSize: paperSizeId === "custom" ? customPaperSize : undefined,
+          totalQuantity:
+            proofingSheetQuantity > 0 ? proofingSheetQuantity : undefined,
+          paperSizeId:
+            paperSizeId && paperSizeId !== "custom"
+              ? parseInt(paperSizeId, 10)
+              : undefined,
+          customPaperSize:
+            paperSizeId === "custom" ? customPaperSize : undefined,
           notes: configNotes || undefined,
         },
       });
@@ -739,7 +739,9 @@ export default function PrepressList() {
                           handleIncompletePageInputBlur
                         }
                         completedOrdersPageInput={completedOrdersPageInput}
-                        setCompletedOrdersPageInput={setCompletedOrdersPageInput}
+                        setCompletedOrdersPageInput={
+                          setCompletedOrdersPageInput
+                        }
                         handleCompletedPageInputBlur={
                           handleCompletedPageInputBlur
                         }
@@ -793,11 +795,7 @@ export default function PrepressList() {
 
               {/* Right panel: config panel when creating new order */}
               {isConfiguring && (
-<<<<<<< Updated upstream
                 <div className="w-1/3 min-w-0 shrink-0 h-full flex flex-col">
-=======
-                <div className="w-1/3 min-w-0 shrink-0">
->>>>>>> Stashed changes
                   <DetailEmptyOrderView
                     selectedDesigns={selectedDesigns}
                     selectedCount={configSelectedCount}
@@ -818,7 +816,9 @@ export default function PrepressList() {
                     isCreatingPaperSize={isCreatingPaperSize}
                     handleCreatePaperSize={handleCreatePaperSize}
                     handleSubmitDesigns={handleConfigSubmitDesigns}
-                    isAddingDesigns={isCreating || isAddingDesigns || isUpdatingOrder}
+                    isAddingDesigns={
+                      isCreating || isAddingDesigns || isUpdatingOrder
+                    }
                   />
                 </div>
               )}
@@ -843,8 +843,8 @@ export default function PrepressList() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Hoàn hàng về phòng thiết kế</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Xác nhận hoàn hàng để thiết kế được trả về phòng thiết kế xử lý
-                  lại.
+                  Xác nhận hoàn hàng để thiết kế được trả về phòng thiết kế xử
+                  lý lại.
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
