@@ -1760,8 +1760,12 @@ export default function ProofingOrderDetailPage() {
 
   const handleStatusChangeClick = () => {
     if (nextStatusInfo) {
-      setPendingStatus(nextStatusInfo.nextStatus);
-      setIsConfirmStatusChangeDialogOpen(true);
+      if (nextStatusInfo.nextStatus === "completed" && order?.status === "not_completed") {
+        handleConfirmHandToProduction();
+      } else {
+        setPendingStatus(nextStatusInfo.nextStatus);
+        setIsConfirmStatusChangeDialogOpen(true);
+      }
     }
   };
 
@@ -1769,13 +1773,6 @@ export default function ProofingOrderDetailPage() {
     if (!order?.id || !pendingStatus) {
       setIsConfirmStatusChangeDialogOpen(false);
       setPendingStatus(null);
-      return;
-    }
-
-    // Nếu chuyển sang "completed" từ "not_completed", hiện dialog hand to production
-    if (pendingStatus === "completed" && order.status === "not_completed") {
-      setIsConfirmStatusChangeDialogOpen(false);
-      setIsHandToProductionDialogOpen(true);
       return;
     }
 

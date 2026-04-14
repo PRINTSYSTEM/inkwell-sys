@@ -57,7 +57,7 @@ import {
   useExportOrderPDF,
   useUpdateOrderForAccounting,
 } from "@/hooks/use-order";
-import { useConfirmDeposit, useApproveDebt } from "@/hooks/use-accounting";
+import { useConfirmDeposit, useApproveDebt, useCreateAccountingForOrder } from "@/hooks/use-accounting";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
 import { useCreateCashReceipt, useCashReceipts } from "@/hooks/use-cash";
 import type {
@@ -238,6 +238,7 @@ export default function AccountingOrderDetail() {
   const exportPDFMutation = useExportOrderPDF();
   const confirmDepositMutation = useConfirmDeposit();
   const approveDebtMutation = useApproveDebt();
+  const createAccountingMutation = useCreateAccountingForOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const createInvoiceMutation = useCreateInvoice();
@@ -435,6 +436,19 @@ export default function AccountingOrderDetail() {
           : String(cardEditValues.recipientAddress).trim();
     }
 
+    if (cardName === "paymentInfo") {
+      if (
+        payload.depositAmount &&
+        payload.depositAmount > 0 &&
+        !payload.paymentMethodId
+      ) {
+        toast.error("Lỗi", {
+          description: "Vui lòng chọn phương thức thanh toán",
+        });
+        return;
+      }
+    }
+
     try {
       await updateOrderForAccounting(
         order.id,
@@ -463,34 +477,45 @@ export default function AccountingOrderDetail() {
           const postingDate = now.toISOString();
 
           // Xác định payerName: ưu tiên customerCompanyName, nếu không có thì dùng customerName
-          const payerName =
-            order.customerCompanyName?.trim() ||
-            order.customerName?.trim() ||
-            "";
+          let payerName = "";
+          if (order.customer?.type === "company") {
+            payerName = order.customer?.companyName?.trim() || order.customer?.name?.trim() || "";
+          } else {
+            payerName = order.customer?.name?.trim() || "";
+          }
+          payerName = payerName || "Khách hàng ẩn danh";
 
-          if (payerName) {
-            const cashReceiptRequest: CreateCashReceiptRequest = {
-              voucherDate,
-              postingDate,
-              payerName,
-              amount: depositAmount,
-              paymentMethodId,
-              orderId: order.id,
-              customerId: order.customerId || null,
-              cashFundId: cashFundId || null,
-              expenseCategoryId: null,
-              reason: null,
-              notes: order.note || null,
-            };
+          const cashReceiptRequest: CreateCashReceiptRequest = {
+            voucherDate,
+            postingDate,
+            payerName,
+            amount: depositAmount,
+            paymentMethodId,
+            orderId: order.id,
+            customerId: order.customerId || null,
+            cashFundId: cashFundId || null,
+            expenseCategoryId: null,
+            reason: null,
+            notes: order.note || null,
+          };
 
-            try {
-              await createCashReceiptMutation.mutateAsync(cashReceiptRequest);
-              // Refetch order và cash receipts để cập nhật UI (ẩn nút sửa)
-              await refetchOrder();
-            } catch (error) {
-              // Error is handled by the hook, nhưng không block việc đóng edit mode
-              console.error("Error creating cash receipt:", error);
-            }
+          try {
+            await createCashReceiptMutation.mutateAsync(cashReceiptRequest);
+            // Refetch order và cash receipts để cập nhật UI (ẩn nút sửa)
+            await refetchOrder();
+          } catch (error) {
+            // Error is handled by the hook, nhưng không block việc đóng edit mode
+            console.error("Error creating cash receipt:", error);
+          }
+        }
+
+        // Tự động cộng công nợ (tạo bản ghi kế toán) cho khách lẻ vì không có nút bấm
+        if (order.customer?.type === "retail" && order.isDebtApproved === false) {
+          try {
+            await createAccountingMutation.mutate(order.id);
+            await refetchOrder();
+          } catch (error) {
+            console.error("Error creating accounting record for retail customer:", error);
           }
         }
       }
@@ -778,54 +803,20 @@ export default function AccountingOrderDetail() {
                   )}
                   Xuất PDF Đơn Hàng
                 </Button>
-                {/* {remainingAmount > 0 && ( */}
-                {order.customer?.type === "company" &&
-                  [
-                    "confirmed_for_printing",
-                    "waiting_for_proofing",
-                    "waiting_for_production",
-                    "in_production",
-                    "production_completed",
-                  ].includes(order.status || "") &&
-                  !order.isDebtApproved && (
+                {order.isDebtApproved === false && order.customer?.type !== "retail" && (
                     <Button
                       size="sm"
-                      onClick={handleUpdatePayment}
-                      disabled={
-                        confirmDepositMutation.loading ||
-                        approveDebtMutation.loading
-                      }
+                      onClick={() => approveDebtMutation.mutate(order.id)}
+                      disabled={approveDebtMutation.loading}
                     >
-                      {confirmDepositMutation.loading ||
-                      approveDebtMutation.loading ? (
+                      {approveDebtMutation.loading ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
                         <CreditCard className="h-4 w-4 mr-2" />
                       )}
                       Cộng công nợ
                     </Button>
-                  )}
-                {order.customer?.type === "retail" &&
-                  order.status === "confirmed_for_printing" &&
-                  (!order.depositAmount || order.depositAmount <= 0) && (
-                    <Button
-                      size="sm"
-                      onClick={handleUpdatePayment}
-                      disabled={
-                        confirmDepositMutation.loading ||
-                        approveDebtMutation.loading
-                      }
-                    >
-                      {confirmDepositMutation.loading ||
-                      approveDebtMutation.loading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <CreditCard className="h-4 w-4 mr-2" />
-                      )}
-                      Cọc tiền
-                    </Button>
-                  )}
-                {/* )} */}
+                )}
                 {invoiceStatus === "not_issued" &&
                   hasBeenDelivered(order.status) && (() => {
                     const customerInfoCheck = isCustomerInfoComplete(order);

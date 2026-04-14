@@ -2301,6 +2301,7 @@ const ProductionOrderResponse = z
     completedAt: z.string().datetime({ offset: true }).nullable(),
     producedQty: z.number().int(),
     totalWastage: z.number(),
+    customerName: z.string().nullable(),
     steps: z.array(ProductionStepResponse).nullable(),
   })
   .partial();

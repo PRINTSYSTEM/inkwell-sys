@@ -251,8 +251,8 @@ export default function DeliveryNoteDetailPage() {
   const exportPDFMutation = useExportDeliveryNotePDF();
   const recreateMutation = useRecreateDeliveryNote();
 
-  const handleOpenUpdateDialog = () => {
-    setStatus(deliveryNote?.status || "");
+  const handleOpenUpdateDialog = (newStatus?: string) => {
+    setStatus(newStatus || deliveryNote?.status || "");
     setFailureReason(deliveryNote?.failureReason || "");
     setFailureType(deliveryNote?.failureType || "");
     setAffectsDebt(deliveryNote?.affectsDebt || false);
@@ -391,6 +391,17 @@ export default function DeliveryNoteDetailPage() {
     });
   };
 
+  const statusRanks: Record<string, number> = {
+    draft: 0,
+    pending: 1,
+    delivering: 2,
+    delivered: 3,
+    failed: 3,
+  };
+
+  const currentStatus = deliveryNote.status?.toLowerCase() || "draft";
+  const currentRank = statusRanks[currentStatus] ?? 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -412,7 +423,49 @@ export default function DeliveryNoteDetailPage() {
               <h1 className="text-2xl font-bold tracking-tight">
                 {deliveryNote.code || `Phiếu giao hàng #${deliveryNote.id}`}
               </h1>
-              {getStatusBadge(deliveryNote.status)}
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-fit items-center">
+                {[
+                  { value: "draft", label: "Lưu nháp" },
+                  { value: "pending", label: "Chờ giao" },
+                  { value: "delivering", label: "Đang giao" },
+                  { value: "delivered", label: "Thành công" },
+                  { value: "failed", label: "Thất bại" },
+                ].map((opt) => {
+                  const matchVal = (currentStatus === "completed" || currentStatus === "success") 
+                    ? "delivered" 
+                    : currentStatus;
+                  const isActive = matchVal === opt.value;
+                  const disabled = Math.abs(statusRanks[opt.value] - currentRank) > 1 || updateStatusMutation.isPending;
+
+                  return (
+                    <button
+                      key={opt.value}
+                      disabled={disabled}
+                      onClick={() => {
+                        if (opt.value === "failed") {
+                          handleOpenUpdateDialog("failed");
+                        } else {
+                          updateStatusMutation.mutate({
+                            id: deliveryNote.id!,
+                            data: { status: opt.value },
+                          });
+                        }
+                      }}
+                      className={`
+                        px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap
+                        ${!isActive && !disabled ? "hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-400" : ""}
+                        ${disabled && !isActive ? "opacity-40 cursor-not-allowed hover:bg-transparent text-slate-500" : ""}
+                        ${isActive && opt.value === "delivered" ? "bg-green-500 text-white shadow-md hover:bg-green-600" : ""}
+                        ${isActive && opt.value === "failed" ? "bg-red-500 text-white shadow-md hover:bg-red-600" : ""}
+                        ${isActive && (opt.value === "pending" || opt.value === "delivering") ? "bg-blue-500 text-white shadow-md hover:bg-blue-600" : ""}
+                        ${isActive && opt.value === "draft" ? "bg-slate-600 dark:bg-slate-700 text-white shadow-md" : ""}
+                      `}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1.5">
@@ -438,15 +491,7 @@ export default function DeliveryNoteDetailPage() {
               <Download className="w-4 h-4" />
               Xuất PDF
             </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleOpenUpdateDialog}
-              className="gap-2"
-            >
-              <Edit className="w-4 h-4" />
-              Cập nhật trạng thái
-            </Button>
+
             {canRecreate && (
               <Button
                 variant="outline"

@@ -68,10 +68,14 @@ import { orderStatusLabels } from "@/lib/status-utils";
 // ============================================================================
 
 const getDeliveryNoteStatusLabel = (
-  status: string | null | undefined
+  status: string | null | undefined,
 ): string => {
   if (!status) return "—";
   const statusLower = status.toLowerCase();
+
+  if (statusLower === "draft" || statusLower.includes("draft")) {
+    return "Lưu nháp";
+  }
   if (
     statusLower.includes("success") ||
     statusLower.includes("completed") ||
@@ -244,7 +248,7 @@ function DeliveryNoteCard({ deliveryNote, onClick }: DeliveryNoteCardProps) {
   const totalAmount =
     deliveryNote.orders?.reduce(
       (sum, order) => sum + (order.totalAmount || 0),
-      0
+      0,
     ) || 0;
 
   const customers =
@@ -360,14 +364,14 @@ function DeliveryNoteCard({ deliveryNote, onClick }: DeliveryNoteCardProps) {
 export default function DeliveryNoteListPage() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"orders" | "delivery-notes">(
-    "orders"
+    "orders",
   );
 
   // Orders state
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(
-    new Set()
+    new Set(),
   );
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [recipientName, setRecipientName] = useState("");
@@ -446,7 +450,7 @@ export default function DeliveryNoteListPage() {
   const totalSelectedAmount = useMemo(() => {
     return selectedOrders.reduce(
       (sum, order) => sum + (order.totalAmount || 0),
-      0
+      0,
     );
   }, [selectedOrders]);
 
@@ -454,10 +458,27 @@ export default function DeliveryNoteListPage() {
   const handleToggleOrder = (orderId: number) => {
     setSelectedOrderIds((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(orderId)) {
-        newSet.delete(orderId);
-      } else {
+      const isAdding = !newSet.has(orderId);
+
+      const order = ordersData?.items?.find((o: any) => o.id === orderId);
+      const filterText = order?.customer?.companyName || order?.customer?.name;
+
+      if (isAdding) {
         newSet.add(orderId);
+
+        // Auto-filter by customer if selecting the first item and no search query exists
+        if (prev.size === 0 && !searchQuery) {
+          if (filterText) {
+            setSearchQuery(filterText);
+          }
+        }
+      } else {
+        newSet.delete(orderId);
+
+        // Revert the search query if unchecking the last item and it matches our auto-fill
+        if (newSet.size === 0 && filterText && searchQuery === filterText) {
+          setSearchQuery("");
+        }
       }
       return newSet;
     });
@@ -469,8 +490,8 @@ export default function DeliveryNoteListPage() {
     } else {
       setSelectedOrderIds(
         new Set(
-          filteredOrders.map((o) => o.id).filter((id): id is number => !!id)
-        )
+          filteredOrders.map((o) => o.id).filter((id): id is number => !!id),
+        ),
       );
     }
   };
@@ -486,7 +507,7 @@ export default function DeliveryNoteListPage() {
         order.recipientName ||
         order.recipientPhone ||
         order.recipientAddress ||
-        order.deliveryAddress
+        order.deliveryAddress,
     );
 
     if (firstOrderWithRecipient) {
@@ -517,7 +538,7 @@ export default function DeliveryNoteListPage() {
         order.recipientName ||
         order.recipientPhone ||
         order.recipientAddress ||
-        order.deliveryAddress
+        order.deliveryAddress,
     );
 
     const finalRecipientName =
@@ -580,7 +601,7 @@ export default function DeliveryNoteListPage() {
                 className="gap-2"
               >
                 <Package className="h-4 w-4" />
-                Đơn hàng
+                Tạo Phiếu Giao Hàng
               </Button>
               <Button
                 variant={viewMode === "delivery-notes" ? "default" : "outline"}
@@ -588,7 +609,7 @@ export default function DeliveryNoteListPage() {
                 className="gap-2"
               >
                 <FileText className="h-4 w-4" />
-                Phiếu giao hàng
+                Phiếu giao hàng đã tạo
               </Button>
             </div>
           </div>
@@ -912,7 +933,17 @@ function OrdersView({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
+                        <div
+                          className="space-y-1 p-1 -m-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const val =
+                              order.customer?.companyName ||
+                              order.customer?.name;
+                            if (val) setSearchQuery(val);
+                          }}
+                          title="Click để lọc theo khách hàng này"
+                        >
                           <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
                             {order.customer?.companyName ||
                               order.customer?.name ||
@@ -927,7 +958,16 @@ function OrdersView({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-slate-700 dark:text-slate-300 max-w-xs">
+                        <div
+                          className="text-sm text-slate-700 dark:text-slate-300 max-w-xs p-1 -m-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors line-clamp-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const val =
+                              order.deliveryAddress || order.recipientAddress;
+                            if (val) setSearchQuery(val);
+                          }}
+                          title="Click để lọc theo địa chỉ này"
+                        >
                           {order.deliveryAddress ||
                             order.recipientAddress ||
                             "—"}
@@ -1010,7 +1050,7 @@ function OrdersView({
                     onClick={() => {
                       const newPage = Math.min(
                         ordersDataTyped.totalPages || 1,
-                        currentPage + 1
+                        currentPage + 1,
                       );
                       setCurrentPage(newPage);
                     }}
@@ -1196,7 +1236,7 @@ function DeliveryNotesView({
                   const totalAmount =
                     deliveryNote.orders?.reduce(
                       (sum, order) => sum + (order.totalAmount || 0),
-                      0
+                      0,
                     ) || 0;
 
                   const customers =
@@ -1279,7 +1319,7 @@ function DeliveryNotesView({
                         <StatusBadge
                           status={deliveryNote.status || null}
                           label={getDeliveryNoteStatusLabel(
-                            deliveryNote.status
+                            deliveryNote.status,
                           )}
                         />
                       </TableCell>
@@ -1344,7 +1384,7 @@ function DeliveryNotesView({
                           onClick={() => {
                             const newPage = Math.min(
                               deliveryNotesDataTyped.totalPages || 1,
-                              deliveryNotePage + 1
+                              deliveryNotePage + 1,
                             );
                             setDeliveryNotePage(newPage);
                           }}

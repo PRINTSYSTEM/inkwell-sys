@@ -20,6 +20,7 @@ import {
   Save,
   PlayCircle,
   Loader2,
+  Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,11 @@ import type {
   ProofingOrderResponse,
 } from "@/Schema";
 import { useProofingOrder } from "@/hooks/use-proofing-order";
-import { useUpdateProductionStep } from "@/hooks/use-production";
+import {
+  useUpdateProductionStep,
+  useUpdateProductionOrderItem,
+  useProductionOrder,
+} from "@/hooks/use-production";
 import {
   Select,
   SelectContent,
@@ -103,9 +108,8 @@ function getSteps(
 
 // Outer helper to get status colors
 function getStatusColorClass(status: string) {
-  switch (status) {
-    case "pending":
-      return "text-slate-600 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-800/80";
+  const effectiveStatus = !status || status === "pending" ? "ready" : status;
+  switch (effectiveStatus) {
     case "ready":
       return "text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/40";
     case "in_progress":
@@ -150,7 +154,12 @@ function ProductionTableRow({
   );
   const proofingOrder = (prod.proofingOrder || proofingOrderData) as any;
 
+  const { data: detailedProd } = useProductionOrder(prod.id || null, !isDraft);
+  const productionItems =
+    (detailedProd as any)?.items || (prod as any).items || [];
+
   const { mutate: updateStep } = useUpdateProductionStep();
+  const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
 
   const steps = prod.steps || [];
 
@@ -228,23 +237,19 @@ function ProductionTableRow({
         onClick={(e) => e.stopPropagation()}
       >
         <Select
-          value={step.status || "pending"}
+          value={
+            !step.status || step.status === "pending" ? "ready" : step.status
+          }
           onValueChange={handleStatusChange}
         >
           <SelectTrigger
             className={`h-7 min-w-[105px] text-[10px] px-2 font-bold border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(
-              step.status || "pending",
+              !step.status || step.status === "pending" ? "ready" : step.status,
             )}`}
           >
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem
-              value="pending"
-              className="text-xs font-semibold cursor-pointer"
-            >
-              Chờ
-            </SelectItem>
             <SelectItem
               value="ready"
               className="text-xs font-semibold cursor-pointer"
@@ -282,6 +287,11 @@ function ProductionTableRow({
     showName = false,
     label,
     hideStatus = false,
+    isPackagingItem = false,
+    productionItemId = null,
+    productionOrderId = null,
+    initialOutputQtyOverride = null,
+    initialDefectQtyOverride = null,
   }: {
     step: ProductionStepResponse;
     isCheckStep?: boolean;
@@ -289,6 +299,11 @@ function ProductionTableRow({
     showName?: boolean;
     label?: string;
     hideStatus?: boolean;
+    isPackagingItem?: boolean;
+    productionItemId?: number | null;
+    productionOrderId?: number | null;
+    initialOutputQtyOverride?: number | null;
+    initialDefectQtyOverride?: number | null;
   }) => {
     // Auto-fill with proofing order qty if step qty not yet set (or zero)
     const initialInputQty = step.inputQty
@@ -296,16 +311,27 @@ function ProductionTableRow({
       : defaultPrintQty
         ? String(defaultPrintQty)
         : "";
-    const initialOutputQty = step.outputQty
-      ? step.outputQty.toString()
-      : defaultPrintQty
-        ? String(defaultPrintQty)
-        : "";
+    const computedOutputQty =
+      isPackagingItem && initialOutputQtyOverride !== null
+        ? initialOutputQtyOverride.toString()
+        : step.outputQty
+          ? step.outputQty.toString()
+          : defaultPrintQty
+            ? String(defaultPrintQty)
+            : "";
+    const computedDefectQty =
+      isPackagingItem && initialDefectQtyOverride !== null
+        ? initialDefectQtyOverride.toString()
+        : step.defectQty?.toString() || "";
+
+    const hasBeenSaved = isPackagingItem
+      ? initialOutputQtyOverride !== null || initialDefectQtyOverride !== null
+      : step.outputQty != null || step.defectQty != null;
+
     const [inputQty, setInputQty] = useState(initialInputQty);
-    const [outputQty, setOutputQty] = useState(initialOutputQty);
-    const [defectQty, setDefectQty] = useState(
-      step.defectQty?.toString() || "",
-    );
+    const [outputQty, setOutputQty] = useState(computedOutputQty);
+    const [defectQty, setDefectQty] = useState(computedDefectQty);
+    const [isEditing, setIsEditing] = useState(!hasBeenSaved);
 
     React.useEffect(() => {
       setInputQty(
@@ -316,14 +342,28 @@ function ProductionTableRow({
             : "",
       );
       setOutputQty(
-        step.outputQty
-          ? step.outputQty.toString()
-          : defaultPrintQty
-            ? String(defaultPrintQty)
-            : "",
+        isPackagingItem && initialOutputQtyOverride !== null
+          ? initialOutputQtyOverride.toString()
+          : step.outputQty
+            ? step.outputQty.toString()
+            : defaultPrintQty
+              ? String(defaultPrintQty)
+              : "",
       );
-      setDefectQty(step.defectQty?.toString() || "");
-    }, [step.inputQty, step.outputQty, step.defectQty, defaultPrintQty]);
+      setDefectQty(
+        isPackagingItem && initialDefectQtyOverride !== null
+          ? initialDefectQtyOverride.toString()
+          : step.defectQty?.toString() || "",
+      );
+    }, [
+      step.inputQty,
+      step.outputQty,
+      step.defectQty,
+      defaultPrintQty,
+      isPackagingItem,
+      initialOutputQtyOverride,
+      initialDefectQtyOverride,
+    ]);
 
     const handleUpdate = (
       updates: Partial<{
@@ -331,9 +371,30 @@ function ProductionTableRow({
         inputQty: number;
         outputQty: number;
         defectQty: number;
+        notes?: string;
       }>,
     ) => {
-      if (step.id) {
+      if (
+        isPackagingItem &&
+        productionItemId !== null &&
+        productionOrderId !== null
+      ) {
+        updateOrderItem({
+          productionOrderId,
+          itemId: productionItemId,
+          data: {
+            outputQty:
+              updates.outputQty !== undefined
+                ? updates.outputQty
+                : Number(outputQty) || 0,
+            defectQty:
+              updates.defectQty !== undefined
+                ? updates.defectQty
+                : Number(defectQty) || 0,
+            notes: updates.notes || "Ghi chú đóng gói",
+          },
+        });
+      } else if (step.id) {
         updateStep({
           stepId: step.id,
           data: {
@@ -345,6 +406,8 @@ function ProductionTableRow({
           },
         });
       }
+
+      setIsEditing(false);
     };
 
     return (
@@ -359,22 +422,18 @@ function ProductionTableRow({
         )}
         {!hideStatus && (
           <Select
-            value={step.status || "pending"}
+            value={
+              !step.status || step.status === "pending" ? "ready" : step.status
+            }
             onValueChange={(val: any) => handleUpdate({ status: val })}
             disabled={!isEnabled}
           >
             <SelectTrigger
-              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(step.status || "pending")} ${!isEnabled ? "opacity-30 grayscale" : ""}`}
+              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""}`}
             >
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem
-                value="pending"
-                className="text-xs font-semibold cursor-pointer"
-              >
-                Chờ
-              </SelectItem>
               <SelectItem
                 value="ready"
                 className="text-xs font-semibold cursor-pointer"
@@ -403,7 +462,45 @@ function ProductionTableRow({
           </Select>
         )}
 
-        {isCheckStep && (
+        {isCheckStep && !isEditing && (
+          <div className="flex flex-col gap-1 mt-1">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
+                Vào
+              </span>
+              <span className="text-[10px] tabular-nums font-medium">
+                {inputQty || 0}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+                Ra
+              </span>
+              <span className="text-[10px] tabular-nums font-medium text-emerald-700">
+                {outputQty || 0}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[9px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tighter">
+                Lỗi
+              </span>
+              <span className="text-[10px] tabular-nums font-medium text-red-600">
+                {defectQty || 0}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 mt-1 text-[10px] w-full"
+              disabled={!isEnabled}
+              onClick={() => setIsEditing(true)}
+            >
+              <Edit className="w-3 h-3 mr-1" /> Sửa
+            </Button>
+          </div>
+        )}
+
+        {isCheckStep && isEditing && (
           <div className="flex flex-col gap-1 mt-1">
             <div className="flex items-center justify-between gap-1">
               <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
@@ -414,9 +511,6 @@ function ProductionTableRow({
                 className="h-5 w-14 text-[10px] px-1 py-0 text-right bg-background"
                 value={inputQty}
                 onChange={(e) => setInputQty(e.target.value)}
-                onBlur={() => {
-                  handleUpdate({ inputQty: Number(inputQty) || 0 });
-                }}
               />
             </div>
             <div className="flex items-center justify-between gap-1">
@@ -428,9 +522,6 @@ function ProductionTableRow({
                 className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-emerald-700 bg-background"
                 value={outputQty}
                 onChange={(e) => setOutputQty(e.target.value)}
-                onBlur={() => {
-                  handleUpdate({ outputQty: Number(outputQty) || 0 });
-                }}
               />
             </div>
             <div className="flex items-center justify-between gap-1">
@@ -442,11 +533,23 @@ function ProductionTableRow({
                 className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-red-600 bg-background"
                 value={defectQty}
                 onChange={(e) => setDefectQty(e.target.value)}
-                onBlur={() => {
-                  handleUpdate({ defectQty: Number(defectQty) || 0 });
-                }}
               />
             </div>
+            <Button
+              variant="default"
+              size="sm"
+              className="h-6 mt-1 text-[10px] w-full"
+              disabled={!isEnabled}
+              onClick={() => {
+                handleUpdate({
+                  inputQty: Number(inputQty) || 0,
+                  outputQty: Number(outputQty) || 0,
+                  defectQty: Number(defectQty) || 0,
+                });
+              }}
+            >
+              <Save className="w-3 h-3 mr-1" /> Lưu
+            </Button>
           </div>
         )}
       </div>
@@ -501,16 +604,21 @@ function ProductionTableRow({
       className={`cursor-pointer hover:bg-muted/50 border-b ${isDraft ? "bg-blue-50/20 dark:bg-blue-900/10" : ""}`}
       onClick={() => !isDraft && onProductionClick(prod.id!)}
     >
-      <TableCell className="py-3 align-top font-bold text-base text-primary whitespace-nowrap bg-muted/20 border-r border-border/50 text-center w-[150px]">
+      <TableCell className="py-3 align-top font-bold text-base text-primary bg-muted/20 border-r border-border/50 text-center w-[150px]">
         {isLoading ? (
           <div className="flex justify-center mt-2">
             <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
           </div>
         ) : proofingOrder ? (
-          <div className="flex flex-col items-center justify-center mt-2">
-            <span>
+          <div className="flex flex-col items-center justify-center mt-2 gap-1 px-1">
+            <span className="whitespace-nowrap">
               {(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}
             </span>
+            {prod.customerName && (
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300 whitespace-normal break-words text-center leading-tight line-clamp-3">
+                {prod.customerName}
+              </span>
+            )}
           </div>
         ) : (
           <div className="flex justify-center mt-2 text-muted-foreground font-normal">
@@ -537,7 +645,7 @@ function ProductionTableRow({
                   {String(prod.code || `PROD-${prod.id}`)}
                 </span> */}
               </div>
-              <div className="grid grid-cols-[80px_1fr] gap-x-2 gap-y-0.5 text-[10px]">
+              <div className="grid grid-cols-[90px_1fr] gap-x-2 gap-y-1 text-xs">
                 <span className="text-muted-foreground font-medium">
                   Chất liệu:
                 </span>
@@ -869,6 +977,13 @@ function ProductionTableRow({
 
                     if (!matchingStep) return null;
 
+                    const prodItem = productionItems.find(
+                      (i: any) =>
+                        i.proofingOrderDesignId === pod.id ||
+                        i.designId === pod.designId ||
+                        i.id === pod.id,
+                    );
+
                     return (
                       <StepItem
                         key={`${pod.id}-${matchingStep.id}`}
@@ -878,6 +993,21 @@ function ProductionTableRow({
                         showName={true}
                         label={pod.design?.designName || pod.design?.code}
                         hideStatus={true}
+                        isPackagingItem={true}
+                        productionItemId={prodItem ? prodItem.id : pod.id}
+                        productionOrderId={prod.id}
+                        initialOutputQtyOverride={
+                          prodItem?.outputQty != null
+                            ? prodItem.outputQty
+                            : prodItem?.producedQty != null
+                              ? prodItem.producedQty
+                              : null
+                        }
+                        initialDefectQtyOverride={
+                          prodItem?.defectQty != null
+                            ? prodItem.defectQty
+                            : null
+                        }
                       />
                     );
                   })
@@ -897,7 +1027,9 @@ function ProductionTableRow({
               ))}
             </div>
           ) : (
-            <div className="text-center py-3 bg-primary/[0.08] dark:bg-primary/[0.15] text-primary/40 font-black text-lg italic border-r border-border/40">—</div>
+            <div className="text-center py-3 bg-primary/[0.08] dark:bg-primary/[0.15] text-primary/40 font-black text-lg italic border-r border-border/40">
+              —
+            </div>
           )}
         </div>
       </TableCell>

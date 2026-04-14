@@ -643,7 +643,8 @@ export default function ProductionDetailPage() {
                 <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
                   Chi tiết lệnh sản xuất
                 </h1>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span>
                     ID lệnh{" "}
                     <span className="font-medium text-foreground">
@@ -657,21 +658,30 @@ export default function ProductionDetailPage() {
                       {production.proofingOrderId ?? "N/A"}
                     </span>
                   </span>
-                  {stepStats.total > 0 && (
-                    <>
-                      <span className="text-muted-foreground/60">•</span>
-                      <Badge variant="secondary">
-                        Bước {stepStats.done}/{stepStats.total}
+                    {stepStats.total > 0 && (
+                      <>
+                        <span className="text-muted-foreground/60">•</span>
+                        <Badge variant="secondary">
+                          Bước {stepStats.done}/{stepStats.total}
+                        </Badge>
+                      </>
+                    )}
+                    {stepStats.inProgress > 0 && (
+                      <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
+                        Đang làm {stepStats.inProgress}
                       </Badge>
-                    </>
-                  )}
-                  {stepStats.inProgress > 0 && (
-                    <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
-                      Đang làm {stepStats.inProgress}
-                    </Badge>
-                  )}
-                  {stepStats.ready > 0 && (
-                    <Badge variant="outline">Sẵn sàng {stepStats.ready}</Badge>
+                    )}
+                    {stepStats.ready > 0 && (
+                      <Badge variant="outline">Sẵn sàng {stepStats.ready}</Badge>
+                    )}
+                  </div>
+                  {production.customerName && (
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-blue-600 dark:text-blue-400">
+                      <User className="h-4 w-4 shrink-0" />
+                      <span className="truncate uppercase tracking-tight">
+                        {production.customerName}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1587,6 +1597,14 @@ export default function ProductionDetailPage() {
                         </Label>
                         <p className="font-semibold">
                           {proofingOrder.code || `BB${proofingOrder.id}`}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          Khách hàng
+                        </Label>
+                        <p className="font-semibold text-blue-600">
+                          {production.customerName || "N/A"}
                         </p>
                       </div>
                       <div className="space-y-1">

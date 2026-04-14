@@ -99,7 +99,7 @@ export function PaymentList() {
       const matchesPaymentStatus =
         paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
 
-      return matchesPaymentStatus;
+      return matchesPaymentStatus && order.isDebtApproved === false;
     });
   }, [data?.items, paymentStatusFilter]);
 

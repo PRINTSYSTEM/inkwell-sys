@@ -107,6 +107,60 @@ export const useUpdateProductionStep = () => {
   };
 };
 
+// PUT /api/production-orders/:productionOrderId/items/:itemId - Update production order item (design)
+export const useUpdateProductionOrderItem = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    any,
+    [{ productionOrderId: number; itemId: number; data: { outputQty?: number; defectQty?: number; notes?: string } }]
+  >(async ({ productionOrderId, itemId, data }) => {
+    const res = await apiRequest.put<any>(
+      `/production-orders/${productionOrderId}/items/${itemId}`,
+      data
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: {
+    productionOrderId: number;
+    itemId: number;
+    data: { outputQty?: number; defectQty?: number; notes?: string };
+  }) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate production order queries to refresh data
+      queryClient.invalidateQueries({
+        queryKey: productionOrderKeys.all,
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật số lượng thiết kế",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật số lượng thiết kế",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    isPending: loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
 // PUT /api/production-orders/steps/:stepId/assign - Assign worker to production step
 export const useAssignProductionWorker = () => {
   const queryClient = useQueryClient();
