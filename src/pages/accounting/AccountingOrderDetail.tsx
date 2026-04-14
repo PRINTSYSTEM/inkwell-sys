@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
@@ -60,6 +60,7 @@ import {
 import { useConfirmDeposit, useApproveDebt, useCreateAccountingForOrder } from "@/hooks/use-accounting";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
 import { useCreateCashReceipt, useCashReceipts } from "@/hooks/use-cash";
+import { useBankAccounts } from "@/hooks/use-bank";
 import type {
   UpdateOrderForAccountingRequest,
   UpdateOrderDetailForAccountingRequest,
@@ -201,25 +202,31 @@ export default function AccountingOrderDetail() {
     cashReceiptsData?.items?.some((receipt) => receipt.orderId === order?.id) ||
     false;
 
-  // Fetch payment methods
   const { data: paymentMethodsData } = usePaymentMethods({
     pageNumber: 1,
     pageSize: 100,
     isActive: true,
   });
 
-  // Cash fund functionality removed - field no longer exists in schema
-  // const [cashFundSearchQuery, setCashFundSearchQuery] = useState("");
-  // const [debouncedCashFundSearch] = useDebounce(cashFundSearchQuery, 300);
-  const [isCashFundSelectOpen, setIsCashFundSelectOpen] = useState(false);
-  const cashFundsData = null;
-  const isLoadingCashFunds = false;
-
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [cardEditValues, setCardEditValues] = useState<
     Record<string, string | number | null>
   >({});
+
+  // Check if selected payment method is Bank Transfer
+  const isBankTransfer = useMemo(() => {
+    if (!cardEditValues.paymentMethodId) return false;
+    const method = paymentMethodsData?.items?.find(
+      (m: any) => m.id?.toString() === cardEditValues.paymentMethodId?.toString()
+    );
+    return method?.name?.toLowerCase().includes("chuyển khoản") || false;
+  }, [cardEditValues.paymentMethodId, paymentMethodsData]);
+
+  // Fetch bank accounts when bank transfer is selected
+  const { data: bankAccountsData, isLoading: isLoadingBankAccounts } = useBankAccounts(
+    isBankTransfer ? { pageNumber: 1, pageSize: 100 } : undefined
+  );
   // Order detail editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -447,6 +454,13 @@ export default function AccountingOrderDetail() {
         });
         return;
       }
+
+      if (isBankTransfer && !cardEditValues.bankAccountId) {
+        toast.error("Lỗi", {
+          description: "Vui lòng chọn tài khoản ngân hàng",
+        });
+        return;
+      }
     }
 
     try {
@@ -467,8 +481,7 @@ export default function AccountingOrderDetail() {
           cardEditValues.paymentMethodId === null
             ? null
             : Number(cardEditValues.paymentMethodId);
-        // cashFundId removed from schema
-        const cashFundId = null;
+        const bankAccountId = cardEditValues.bankAccountId ? Number(cardEditValues.bankAccountId) : null;
 
         // Chỉ tạo phiếu thu nếu có số tiền (không cần đủ số tiền) và phương thức thanh toán
         if (depositAmount && depositAmount > 0 && paymentMethodId) {
@@ -485,7 +498,7 @@ export default function AccountingOrderDetail() {
           }
           payerName = payerName || "Khách hàng ẩn danh";
 
-          const cashReceiptRequest: CreateCashReceiptRequest = {
+          const cashReceiptRequest: any = {
             voucherDate,
             postingDate,
             payerName,
@@ -493,7 +506,7 @@ export default function AccountingOrderDetail() {
             paymentMethodId,
             orderId: order.id,
             customerId: order.customerId || null,
-            cashFundId: cashFundId || null,
+            bankAccountId: bankAccountId || null,
             expenseCategoryId: null,
             reason: null,
             notes: order.note || null,
@@ -1034,12 +1047,34 @@ export default function AccountingOrderDetail() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Tài khoản thanh toán</Label>
-                        <div className="text-sm text-muted-foreground">
-                          Chức năng này đã được gỡ bỏ
+                      {isBankTransfer && (
+                        <div className="space-y-2">
+                          <Label>
+                            Tài khoản thanh toán <span className="text-destructive">*</span>
+                          </Label>
+                          <Select
+                            value={cardEditValues.bankAccountId?.toString() || ""}
+                            onValueChange={(val) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                bankAccountId: val,
+                              })
+                            }
+                            disabled={isLoadingBankAccounts}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={isLoadingBankAccounts ? "Đang tải..." : "Chọn tài khoản nhận tiền"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccountsData?.items?.map((acc: any) => (
+                                <SelectItem key={acc.id} value={acc.id?.toString() || ""}>
+                                  {acc.bankName ? `${acc.bankName} - ` : ""}{acc.accountNumber} ({acc.accountName})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                      </div>
+                      )}
                     </div>
                   ) : (
                     /* View Mode */

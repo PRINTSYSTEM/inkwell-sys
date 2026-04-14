@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useAPAging } from "@/hooks/use-ar-ap";
+import { useAPAging, useExportAPAging } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 
@@ -55,9 +55,13 @@ export default function APAgingPage() {
   const totalOver90 = apData?.items?.reduce((sum, item) => sum + (item.daysOver90 || 0), 0) || 0;
   const grandTotal = apData?.items?.reduce((sum, item) => sum + (item.total || 0), 0) || 0;
 
+  const { mutate: exportAging, loading: isExporting } = useExportAPAging();
+
   const handleExportExcel = async () => {
-    // TODO: Implement export Excel when API endpoint is available
-    toast.info("Chức năng xuất Excel đang được phát triển");
+    await exportAging({
+      asOfDate: asOfDate ? new Date(asOfDate).toISOString() : undefined,
+      search: searchQuery || undefined,
+    });
   };
 
   const handleVendorClick = (vendorId: number | null | undefined) => {
@@ -74,8 +78,16 @@ export default function APAgingPage() {
           <RefreshCw className="h-4 w-4 mr-2" />
           Làm mới
         </Button>
-        <Button variant="outline" onClick={handleExportExcel}>
-          <Download className="h-4 w-4 mr-2" />
+        <Button 
+          variant="outline" 
+          onClick={handleExportExcel}
+          disabled={isExporting}
+        >
+          {isExporting ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
           Xuất Excel
         </Button>
       </div>

@@ -203,6 +203,114 @@ export const useAPAging = (params?: DebtReportApAgingParams) => {
   });
 };
 
+export const useExportAPSummary = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<
+    ArrayBuffer,
+    [DebtReportApSummaryParams?]
+  >(async (params?: DebtReportApSummaryParams) => {
+    const normalizedParams = normalizeParams(
+      (params ?? {}) as Record<string, unknown>
+    );
+    const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AP_SUMMARY_EXPORT, {
+      params: normalizedParams,
+      responseType: "arraybuffer",
+    });
+    return res.data;
+  });
+
+  const mutate = async (params?: DebtReportApSummaryParams) => {
+    try {
+      const blob = await execute(params);
+      const fileBlob = new Blob([blob], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ap-summary-export.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Thành công", {
+        description: "Đã xuất báo cáo tổng hợp công nợ phải trả",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể xuất báo cáo tổng hợp công nợ phải trả";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return { loading, error, mutate, reset };
+};
+
+export const useExportAPAging = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<
+    ArrayBuffer,
+    [DebtReportApAgingParams?]
+  >(async (params?: DebtReportApAgingParams) => {
+    const normalizedParams = normalizeParams(
+      (params ?? {}) as Record<string, unknown>
+    );
+    const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AP_AGING_EXPORT, {
+      params: normalizedParams,
+      responseType: "arraybuffer",
+    });
+    return res.data;
+  });
+
+  const mutate = async (params?: DebtReportApAgingParams) => {
+    try {
+      const blob = await execute(params);
+      const fileBlob = new Blob([blob], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ap-aging-export.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Thành công", {
+        description: "Đã xuất báo cáo phân tích tuổi nợ phải trả",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể xuất báo cáo phân tích tuổi nợ phải trả";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return { loading, error, mutate, reset };
+};
+
 // ================== COLLECTION SCHEDULE ==================
 
 export const useCollectionSchedule = (params?: DebtReportCollectionScheduleParams) => {

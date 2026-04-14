@@ -29,7 +29,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useAPSummary, useAPDetail } from "@/hooks/use-ar-ap";
+import { useAPSummary, useAPDetail, useExportAPSummary, useExportAPDetailLedger } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -102,8 +102,22 @@ export default function APUnifiedPage() {
     summaryData?.items?.reduce((sum, item) => sum + (item.overdue || 0), 0) ||
     0;
 
+  const { mutate: exportSummary, loading: isExportingSummary } = useExportAPSummary();
+  const { mutate: exportDetail, loading: isExportingDetail } = useExportAPDetailLedger();
+
   const handleExportExcel = async () => {
-    toast.info("Chức năng xuất Excel đang được phát triển");
+    if (selectedVendorId) {
+      await exportDetail(selectedVendorId, {
+        fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+        toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+      });
+    } else {
+      await exportSummary({
+        fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+        toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+        search: searchQuery || undefined,
+      });
+    }
   };
 
   const handleVendorClick = (vendorId: number | null | undefined, vendorName?: string) => {
@@ -141,8 +155,16 @@ export default function APUnifiedPage() {
           <RefreshCw className="h-4 w-4 mr-2" />
           Làm mới
         </Button>
-        <Button variant="outline" onClick={handleExportExcel}>
-          <Download className="h-4 w-4 mr-2" />
+        <Button 
+          variant="outline" 
+          onClick={handleExportExcel}
+          disabled={isExportingSummary || isExportingDetail}
+        >
+          {isExportingSummary || isExportingDetail ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
           Xuất Excel
         </Button>
       </div>
