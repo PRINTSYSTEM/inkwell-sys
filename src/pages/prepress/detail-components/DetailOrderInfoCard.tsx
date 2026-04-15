@@ -78,6 +78,40 @@ export function DetailOrderInfoCard({
 }: DetailOrderInfoCardProps) {
   if (!order) return null;
 
+  const firstDesignCustomer = order.proofingOrderDesigns?.[0]?.design?.customer;
+  const nestedOrderCustomer = order.order?.customer;
+  const customerSource = order.customer || nestedOrderCustomer || firstDesignCustomer;
+
+  const customerName =
+    order.customerName ||
+    order.order?.customerName ||
+    customerSource?.name ||
+    null;
+  const customerCompanyName =
+    order.customerCompanyName ||
+    order.order?.customerCompanyName ||
+    customerSource?.companyName ||
+    null;
+
+  const customerDisplayName = customerCompanyName || customerName || "—";
+
+  const designDesignerNames = Array.from(
+    new Set(
+      (order.proofingOrderDesigns ?? [])
+        .map((pod: any) => pod?.design?.designer)
+        .map((designer: any) => designer?.fullName || designer?.name)
+        .filter(Boolean),
+    ),
+  ) as string[];
+
+  const designerDisplay =
+    (designDesignerNames.length > 0 && designDesignerNames.join(", ")) ||
+    order.creator?.fullName ||
+    order.creator?.name ||
+    order.createdBy?.fullName ||
+    order.createdBy?.name ||
+    "-";
+
   return (
     <Card className="relative h-full flex flex-col">
       <CardHeader className="pb-1.5 px-4">
@@ -321,6 +355,22 @@ export function DetailOrderInfoCard({
 
           <div className="h-px bg-muted-foreground/5" />
 
+          {/* Customer Info */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-start justify-between gap-4">
+              <Label className="text-muted-foreground text-[11px] font-normal uppercase tracking-tight shrink-0 mt-0.5">
+                Khách hàng
+              </Label>
+              <div className="text-right min-w-0">
+                <p className="font-bold text-[13px] leading-snug break-words">
+                  {customerDisplayName}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-muted-foreground/5" />
+
           {/* Designer & Date */}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
@@ -328,7 +378,7 @@ export function DetailOrderInfoCard({
                 Designer
               </Label>
               <p className="font-bold text-[12px] truncate">
-                {order.creator?.name || "—"}
+                {designerDisplay}
               </p>
             </div>
             <div className="flex items-center justify-between">
