@@ -331,19 +331,9 @@ export default function DesignDetailPage() {
       currentStatus === "confirmed_for_printing");
 
   const canTransitionTo = (targetStatus: DesignStatus): boolean => {
-    if (
-      currentStatus === "designing" &&
-      targetStatus === "waiting_for_customer_approval"
-    ) {
-      return !!design?.designFileUrl;
-    }
+    void targetStatus;
     return true;
   };
-
-  const needsDesignFile =
-    currentStatus === "designing" &&
-    validNextStatuses.includes("waiting_for_customer_approval") &&
-    !design?.designFileUrl;
 
   const canExportDocuments =
     (user?.role === ROLE.ACCOUNTING || user?.role === ROLE.ADMIN) &&
@@ -396,19 +386,6 @@ export default function DesignDetailPage() {
       return;
     }
 
-    if (
-      currentStatus === "designing" &&
-      targetStatus === "waiting_for_customer_approval"
-    ) {
-      if (!design.designFileUrl) {
-        toast.error("Không thể chuyển trạng thái", {
-          description:
-            "Vui lòng tải lên file thiết kế trước khi chuyển sang trạng thái 'Chờ khách duyệt'",
-        });
-        return;
-      }
-    }
-
     setUpdatingStatus(true);
 
     try {
@@ -450,6 +427,13 @@ export default function DesignDetailPage() {
     const designFiles = files.filter((f) => isDesignFile(f));
     const imageFiles = files.filter((f) => isImageFile(f));
 
+    if (designFiles.length === 0 && imageFiles.length === 0) {
+      toast.error("Lỗi", {
+        description: "Vui lòng chọn ít nhất 1 file ảnh hoặc file thiết kế (.ai)",
+      });
+      return;
+    }
+
     const errors: string[] = [];
     const successes: string[] = [];
 
@@ -461,8 +445,6 @@ export default function DesignDetailPage() {
       } catch (error) {
         errors.push(`File thiết kế "${designFiles[0].name}" lỗi`);
       }
-    } else {
-      errors.push("Thiếu file thiết kế (.ai)");
     }
 
     // Upload ảnh
@@ -473,8 +455,6 @@ export default function DesignDetailPage() {
       } catch (error) {
         errors.push(`Ảnh "${imageFiles[0].name}" lỗi`);
       }
-    } else {
-      errors.push("Thiếu file ảnh");
     }
 
     setShowFileUpload(false);
@@ -482,7 +462,7 @@ export default function DesignDetailPage() {
     // Hiển thị thông báo kết quả
     if (errors.length === 0) {
       toast.success("Thành công", {
-        description: "Đã tải lên tất cả file",
+        description: "Đã tải lên file đã chọn",
       });
       refetchDesign();
     } else if (successes.length > 0) {
@@ -845,16 +825,6 @@ export default function DesignDetailPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 px-4 pb-4">
-                      {needsDesignFile && (
-                        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
-                          <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                          <p className="text-amber-800 dark:text-amber-200 font-medium">
-                            Cần tải lên file thiết kế trước khi chuyển sang
-                            trạng thái &quot;Chờ khách duyệt&quot;.
-                          </p>
-                        </div>
-                      )}
-
                       <div className="grid grid-cols-3 gap-2">
                         {(
                           Object.keys(designStatusConfig) as DesignStatus[]
@@ -1501,12 +1471,6 @@ export default function DesignDetailPage() {
                     Thêm timeline
                   </Button>
                 </div>
-                {needsDesignFile && (
-                  <p className="text-xs text-destructive flex items-center gap-1 font-semibold">
-                    <AlertCircle className="h-3 w-3" />
-                    Bắt buộc có file thiết kế để chuyển trạng thái.
-                  </p>
-                )}
               </div>
             </div>
 
@@ -1514,7 +1478,7 @@ export default function DesignDetailPage() {
             <div className="flex-1 min-h-0 flex">
               {/* File preview */}
               <div className="w-1/2 shrink-0 border-r p-4 flex flex-col gap-4 bg-muted/20">
-                {!d.designFileUrl ? (
+                {!d.designImageUrl && !d.designFileUrl && !d.excelFileUrl ? (
                   <Card
                     className="flex-1 flex flex-col items-center justify-center border-2 border-dashed cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all"
                     onClick={() => setShowFileUpload(true)}
@@ -1533,7 +1497,9 @@ export default function DesignDetailPage() {
                   <>
                     <Card className="overflow-hidden border-2 hover:border-violet-500 transition-colors">
                       <div
-                        className="relative aspect-square cursor-pointer group"
+                        className={`relative aspect-square group ${
+                          d.designImageUrl ? "cursor-pointer" : ""
+                        }`}
                         onClick={() =>
                           d.designImageUrl &&
                           setViewingImage({
@@ -1547,62 +1513,66 @@ export default function DesignDetailPage() {
                           alt="Design preview"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <div className="flex flex-col items-center gap-2">
-                            <Eye className="h-8 w-8 text-white" />
-                            <span className="text-xs text-white font-medium">
-                              Xem ảnh lớn
-                            </span>
+                        {d.designImageUrl && (
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <Eye className="h-8 w-8 text-white" />
+                              <span className="text-xs text-white font-medium">
+                                Xem ảnh lớn
+                              </span>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </Card>
 
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-semibold truncate">
-                          {d.designFileUrl?.split("/").pop()}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          {d.designFileUrl && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-9 gap-2"
-                              onClick={() =>
-                                d.designFileUrl &&
-                                downloadFile(
-                                  d.designFileUrl,
-                                  d.code || `DES-${d.id}`
-                                )
-                              }
-                            >
-                              <Download className="h-4 w-4" />
-                              AI
-                            </Button>
-                          )}
-                          {d.excelFileUrl && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-9 gap-2"
-                              onClick={() =>
-                                d.excelFileUrl &&
-                                downloadFile(
-                                  d.excelFileUrl,
-                                  `${d.code || `DES-${d.id}`}.xlsx`
-                                )
-                              }
-                            >
-                              <FileSpreadsheet className="h-4 w-4" />
-                              Excel
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                    {(d.designFileUrl || d.excelFileUrl) && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-semibold truncate">
+                            {d.designFileUrl?.split("/").pop() || "Tệp đính kèm"}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            {d.designFileUrl && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-9 gap-2"
+                                onClick={() =>
+                                  d.designFileUrl &&
+                                  downloadFile(
+                                    d.designFileUrl,
+                                    d.code || `DES-${d.id}`
+                                  )
+                                }
+                              >
+                                <Download className="h-4 w-4" />
+                                AI
+                              </Button>
+                            )}
+                            {d.excelFileUrl && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-9 gap-2"
+                                onClick={() =>
+                                  d.excelFileUrl &&
+                                  downloadFile(
+                                    d.excelFileUrl,
+                                    `${d.code || `DES-${d.id}`}.xlsx`
+                                  )
+                                }
+                              >
+                                <FileSpreadsheet className="h-4 w-4" />
+                                Excel
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </>
                 )}
               </div>
