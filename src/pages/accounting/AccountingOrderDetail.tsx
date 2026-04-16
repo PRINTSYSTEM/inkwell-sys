@@ -59,7 +59,7 @@ import {
 } from "@/hooks/use-order";
 import { useApproveDebt, useCreateAccountingForOrder } from "@/hooks/use-accounting";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
-import { useCashReceipts, useCreateCashReceipt } from "@/hooks/use-cash";
+import { useCashReceipts } from "@/hooks/use-cash";
 import { useBankAccounts } from "@/hooks/use-bank";
 import type {
   UpdateOrderForAccountingRequest,
@@ -249,7 +249,6 @@ export default function AccountingOrderDetail() {
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const createInvoiceMutation = useCreateInvoice();
-  const createCashReceiptMutation = useCreateCashReceipt();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -278,22 +277,31 @@ export default function AccountingOrderDetail() {
     }
   };
 
-  const showRetailDepositThresholdWarning = (
+  /**
+   * Kiểm tra 30% cọc cho khách lẻ.
+   * @returns true nếu hợp lệ (hoặc không phải khách lẻ), false nếu vi phạm (đã show toast).
+   */
+  const validateRetailDepositThreshold = (
     currentDeposit: number | null | undefined,
     currentTotalAmount: number | null | undefined
-  ) => {
-    if (order?.customer?.type !== "retail") return;
+  ): boolean => {
+    // Dùng deriveCustomerType để xác định khách lẻ (không phụ thuộc vào field type từ API)
+    const customerType = deriveCustomerType(order?.customer?.companyName);
+    if (customerType !== "retail") return true;
 
     const total = Number(currentTotalAmount || 0);
     const paid = Number(currentDeposit || 0);
-    if (total <= 0) return;
+    if (total <= 0) return true;
 
     const minimumToProofing = total * 0.3;
     if (paid < minimumToProofing) {
-      toast.warning("Cọc chưa đủ điều kiện chuyển trạng thái", {
-        description: `Khách lẻ chỉ chuyển sang "Chờ bình bài" khi thanh toán >= 30% tổng đơn (${formatCurrency(minimumToProofing)}). Hiện tại đã thanh toán ${formatCurrency(paid)}.`,
+      toast.error("Cọc chưa đủ 30% — không thể lưu", {
+        description: `Khách lẻ cần thanh toán tối thiểu ${formatCurrency(minimumToProofing)} (30% của ${formatCurrency(total)}). Hiện tại: ${formatCurrency(paid)}.`,
+        duration: 6000,
       });
+      return false;
     }
+    return true;
   };
 
   // Helper to start editing a card
@@ -481,59 +489,38 @@ export default function AccountingOrderDetail() {
       }
     }
 
+    // Validate 30% deposit threshold for retail customers BEFORE saving
+    if (cardName === "paymentInfo") {
+      const depositAmt = payload.depositAmount != null ? payload.depositAmount : order.depositAmount;
+      const totalAmt   = payload.totalAmount   != null ? payload.totalAmount   : order.totalAmount;
+      if (!validateRetailDepositThreshold(depositAmt, totalAmt)) {
+        return; // Block save — user must increase deposit
+      }
+    }
+
     try {
       await updateOrderForAccounting(
         order.id,
         payload as UpdateOrderForAccountingRequest
       );
 
-      // Payment info post-save: tạo phiếu thu nếu có nhập số tiền
-      if (cardName === "paymentInfo") {
-        const depositAmt =
-          payload.depositAmount != null
-            ? payload.depositAmount
-            : order.depositAmount;
-        const pmId =
-          payload.paymentMethodId != null
-            ? payload.paymentMethodId
-            : order.paymentMethodId;
+      // useUpdateOrderForAccounting đã tự xử lý:
+      //   GET /cash-receipts?customerId&status=approved → lọc orderId → POST .../post
+      // (xem postApprovedCashReceiptForOrder trong use-order.ts)
 
-        if (depositAmt && depositAmt > 0 && pmId && order.customerId) {
-          try {
-            await createCashReceiptMutation.mutateAsync({
-              voucherDate: new Date().toISOString(),
-              postingDate: new Date().toISOString(),
-              payerName: order.customerName || order.customer?.name || "",
-              amount: depositAmt,
-              paymentMethodId: Number(pmId),
-              orderId: order.id,
-              customerId: order.customerId,
-              bankAccountId:
-                cardEditValues.bankAccountId != null
-                  ? Number(cardEditValues.bankAccountId)
-                  : null,
-              reason: `Thu tiền cọc đơn hàng ${order.code}`,
-              notes: null,
-            });
-          } catch {
-            // Lỗi tạo phiếu thu sẽ được hiển thị bởi hook
-          }
-        }
-
-        showRetailDepositThresholdWarning(
-          payload.depositAmount ?? order.depositAmount,
-          payload.totalAmount ?? order.totalAmount
-        );
-
-        if (order.customer?.type === "retail" && order.isDebtApproved === false) {
+      if (cardName === "paymentInfo" && order.customerId) {
+        // Tạo accounting record cho khách lẻ chưa duyệt nợ
+        if (deriveCustomerType(order.customer?.companyName) === "retail" && order.isDebtApproved === false) {
           try {
             await createAccountingMutation.mutate(order.id);
-            await refetchOrder();
           } catch (error) {
-            console.error("Error creating accounting record for retail customer:", error);
+            console.error("[AccountingOrderDetail] Error creating accounting record:", error);
           }
         }
+
+        await refetchOrder();
       }
+
 
       setEditingCard(null);
       setCardEditValues({});
