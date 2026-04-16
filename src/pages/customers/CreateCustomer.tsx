@@ -489,7 +489,7 @@ export default function CreateCustomer() {
                 </p>
               </div>
               <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                Mã tự động tạo từ tên người đại diện
+                Mã tự động tạo từ tên công ty
               </p>
             </div>
 

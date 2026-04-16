@@ -236,10 +236,7 @@ export default function OrderCreatePage() {
   };
 
   const handleCreateCustomer = async () => {
-    if (
-      !newCustomerForm.name.trim() ||
-      !newCustomerForm.representativeName.trim()
-    ) {
+    if (!newCustomerForm.name.trim()) {
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
@@ -247,7 +244,7 @@ export default function OrderCreatePage() {
     try {
       const result = await createCustomer({
         name: newCustomerForm.name.trim(),
-        representativeName: newCustomerForm.representativeName.trim(),
+        representativeName: newCustomerForm.representativeName.trim() || null,
         companyName: newCustomerForm.companyName.trim() || null,
         address: newCustomerForm.address.trim() || null,
         type: newCustomerForm.type,
@@ -1128,7 +1125,7 @@ export default function OrderCreatePage() {
             </div>
             <div className="space-y-2">
               <Label>
-                Người đại diện <span className="text-destructive">*</span>
+                Người đại diện
               </Label>
               <Input
                 placeholder="Nhập tên người đại diện"
