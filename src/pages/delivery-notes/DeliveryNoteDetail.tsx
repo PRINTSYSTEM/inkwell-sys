@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Edit,
+  Package,
+  Hash,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,15 +58,9 @@ import {
   useExportDeliveryNotePDF,
   useRecreateDeliveryNote,
 } from "@/hooks/use-delivery-note";
-import { useOrder } from "@/hooks/use-order";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/status-utils";
-import { ChevronDown, ChevronRight, Package } from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import type { DeliveryNoteLineResponse } from "@/Schema/delivery-note.schema";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -77,149 +72,112 @@ const formatDateTime = (dateStr: string | null | undefined) => {
   return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
 };
 
-// Component for expandable order row
-function OrderDetailRow({
-  order,
-  isExpanded,
-  onToggle,
-}: {
-  order: {
-    orderId?: number;
-    orderCode?: string | null;
-    customerName?: string | null;
-    totalAmount?: number;
-    deliveryAddress?: string | null;
-  };
-  isExpanded: boolean;
-  onToggle: () => void;
-}) {
-  const { data: orderDetail, isLoading: isLoadingOrder } = useOrder(
-    order.orderId ?? null,
-    isExpanded && !!order.orderId // Only fetch when expanded and orderId exists
+// ============================================================
+// LINE STATUS BADGE
+// ============================================================
+function LineStatusBadge({ status }: { status?: string | null }) {
+  if (!status) return <Badge variant="secondary">—</Badge>;
+  const s = status.toLowerCase();
+  if (s === "delivered" || s === "success" || s === "completed")
+    return (
+      <Badge className="bg-green-500 text-white text-xs">
+        <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
+        Đã giao
+      </Badge>
+    );
+  if (s === "failed" || s.includes("fail"))
+    return (
+      <Badge variant="destructive" className="text-xs">
+        <XCircle className="h-2.5 w-2.5 mr-1" />
+        Thất bại
+      </Badge>
+    );
+  return (
+    <Badge variant="secondary" className="text-xs">
+      {status}
+    </Badge>
   );
+}
 
-  const scrapQuantity = (quantity: number) => Math.floor(quantity * 0.05);
+// ============================================================
+// DELIVERY LINE ROW
+// ============================================================
+function DeliveryLineRow({ line }: { line: DeliveryNoteLineResponse }) {
+  const hasAddress = !!(line as any).customerAddress;
+  const addr = (line as any).customerAddress as {
+    label?: string | null;
+    recipientName?: string | null;
+    recipientPhone?: string | null;
+    address?: string | null;
+  } | null;
 
   return (
-    <>
-      <TableRow className="cursor-pointer hover:bg-muted/50" onClick={onToggle}>
-        <TableCell className="font-medium font-mono">
-          <div className="flex items-center gap-2">
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
-            {order.orderCode || `#${order.orderId}`}
+    <TableRow className="hover:bg-muted/30 transition-colors">
+      <TableCell>
+        <div className="space-y-0.5">
+          <div className="font-mono font-semibold text-sm">
+            {line.designCode || "—"}
           </div>
-        </TableCell>
-        <TableCell>{order.customerName || "—"}</TableCell>
-        <TableCell className="text-sm text-muted-foreground">
-          {order.deliveryAddress || "—"}
-        </TableCell>
-      </TableRow>
-      {isExpanded && (
-        <TableRow>
-          <TableCell colSpan={4} className="p-0">
-            <div className="bg-muted/30 p-4">
-              {isLoadingOrder ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : orderDetail?.orderDetails &&
-                orderDetail.orderDetails.length > 0 ? (
-                <div className="space-y-3">
-                  <h4 className="font-medium text-sm flex items-center gap-2">
-                    <Package className="h-4 w-4" />
-                    Chi tiết sản phẩm ({orderDetail.orderDetails.length})
-                  </h4>
-                  <div className="space-y-2">
-                    {orderDetail.orderDetails.map((detail) => (
-                      <div
-                        key={detail.id}
-                        className="bg-background border rounded-lg p-3 space-y-2"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 space-y-1">
-                            <div className="font-medium text-sm">
-                              {detail.design?.designName || "—"}
-                            </div>
-                            <div className="text-xs text-muted-foreground font-mono">
-                              {detail.design?.code || "—"}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                          <div>
-                            <Label className="text-xs text-muted-foreground">
-                              Số lượng
-                            </Label>
-                            <p className="font-medium">
-                              {detail.quantity?.toLocaleString("vi-VN") || "—"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-xs text-muted-foreground">
-                              Phụ hao
-                            </Label>
-                            <p className="font-medium">
-                              {/* Phụ hao = quantity - proofedQuantity */}
-                              {detail.proofedQuantity != null &&
-                              detail.quantity != null
-                                ? scrapQuantity(detail.quantity).toLocaleString(
-                                    "vi-VN"
-                                  )
-                                : "—"}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-xs text-muted-foreground">
-                              Số lượng thực
-                            </Label>
-                            <p className="font-medium">
-                              {(
-                                detail.quantity - scrapQuantity(detail.quantity)
-                              ).toLocaleString("vi-VN") || "—"}
-                            </p>
-                          </div>
-                        </div>
-                        {(detail.requirements || detail.additionalNotes) && (
-                          <div className="pt-2 border-t">
-                            <Label className="text-xs text-muted-foreground">
-                              Ghi chú
-                            </Label>
-                            <div className="text-sm mt-1 space-y-1">
-                              {detail.requirements && (
-                                <p>
-                                  <span className="font-medium">Yêu cầu:</span>{" "}
-                                  {detail.requirements}
-                                </p>
-                              )}
-                              {detail.additionalNotes && (
-                                <p>
-                                  <span className="font-medium">
-                                    Ghi chú thêm:
-                                  </span>{" "}
-                                  {detail.additionalNotes}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Không có chi tiết sản phẩm
-                </p>
-              )}
+          {(line as any).orderCode && (
+            <div className="text-xs text-muted-foreground font-mono">
+              {(line as any).orderCode}
             </div>
-          </TableCell>
-        </TableRow>
-      )}
-    </>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="text-sm font-medium line-clamp-2">
+          {line.designName || "—"}
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        <span className="font-semibold text-sm">
+          {line.deliveryQty?.toLocaleString("vi-VN") ?? "—"}
+        </span>
+        {line.orderedQty && (
+          <div className="text-xs text-muted-foreground">
+            / {line.orderedQty.toLocaleString("vi-VN")}
+          </div>
+        )}
+      </TableCell>
+      <TableCell>
+        {hasAddress && addr ? (
+          <div className="space-y-0.5 text-xs">
+            {addr.label && (
+              <div className="font-medium text-foreground">{addr.label}</div>
+            )}
+            {addr.recipientName && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <User className="h-3 w-3 flex-shrink-0" />
+                {addr.recipientName}
+              </div>
+            )}
+            {addr.recipientPhone && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Phone className="h-3 w-3 flex-shrink-0" />
+                {addr.recipientPhone}
+              </div>
+            )}
+            {addr.address && (
+              <div className="flex items-start gap-1 text-muted-foreground">
+                <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                <span className="line-clamp-2">{addr.address}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="font-medium text-sm">
+          {line.lineAmount != null ? formatCurrency(line.lineAmount) : "—"}
+        </div>
+      </TableCell>
+      <TableCell>
+        <LineStatusBadge status={line.status} />
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -236,9 +194,6 @@ export default function DeliveryNoteDetailPage() {
   const [affectsDebt, setAffectsDebt] = useState(false);
   const [notes, setNotes] = useState("");
   const [isRecreateDialogOpen, setIsRecreateDialogOpen] = useState(false);
-  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<number>>(
-    new Set()
-  );
 
   const {
     data: deliveryNote,
@@ -295,6 +250,7 @@ export default function DeliveryNoteDetailPage() {
     try {
       await recreateMutation.mutateAsync({
         originalDeliveryNoteId: deliveryNote.id,
+        lines: null, // null = BE auto-recreates from all failed lines
       });
       setIsRecreateDialogOpen(false);
       navigate("/delivery-notes");
@@ -375,18 +331,6 @@ export default function DeliveryNoteDetailPage() {
     deliveryNote.status?.toLowerCase() === "failed";
   const canRecreate = isFailed;
 
-  const toggleOrderExpand = (orderId: number) => {
-    setExpandedOrderIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(orderId)) {
-        newSet.delete(orderId);
-      } else {
-        newSet.add(orderId);
-      }
-      return newSet;
-    });
-  };
-
   const statusRanks: Record<string, number> = {
     draft: 0,
     pending: 1,
@@ -397,6 +341,14 @@ export default function DeliveryNoteDetailPage() {
 
   const currentStatus = deliveryNote.status?.toLowerCase() || "draft";
   const currentRank = statusRanks[currentStatus] ?? 0;
+
+  // Stats from lines
+  const lines = (deliveryNote as any).lines as DeliveryNoteLineResponse[] | null;
+  const hasLines = lines && lines.length > 0;
+  const totalDeliveryQty = (deliveryNote as any).totalDeliveryQty as number | undefined;
+  const totalPendingLines = (deliveryNote as any).totalPendingLines as number | undefined;
+  const totalDeliveredLines = (deliveryNote as any).totalDeliveredLines as number | undefined;
+  const totalFailedLines = (deliveryNote as any).totalFailedLines as number | undefined;
 
   return (
     <div className="space-y-6">
@@ -419,6 +371,7 @@ export default function DeliveryNoteDetailPage() {
               <h1 className="text-2xl font-bold tracking-tight">
                 {deliveryNote.code || `Phiếu giao hàng #${deliveryNote.id}`}
               </h1>
+              {/* Status Stepper */}
               <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-fit items-center">
                 {[
                   { value: "draft", label: "Lưu nháp" },
@@ -427,11 +380,15 @@ export default function DeliveryNoteDetailPage() {
                   { value: "delivered", label: "Thành công" },
                   { value: "failed", label: "Thất bại" },
                 ].map((opt) => {
-                  const matchVal = (currentStatus === "completed" || currentStatus === "success") 
-                    ? "delivered" 
-                    : currentStatus;
+                  const matchVal =
+                    currentStatus === "completed" ||
+                    currentStatus === "success"
+                      ? "delivered"
+                      : currentStatus;
                   const isActive = matchVal === opt.value;
-                  const disabled = Math.abs(statusRanks[opt.value] - currentRank) > 1 || updateStatusMutation.isPending;
+                  const disabled =
+                    Math.abs(statusRanks[opt.value] - currentRank) > 1 ||
+                    updateStatusMutation.isPending;
 
                   return (
                     <button
@@ -482,10 +439,11 @@ export default function DeliveryNoteDetailPage() {
               variant="outline"
               size="sm"
               onClick={handleExportPDF}
+              disabled={exportPDFMutation.isPending}
               className="gap-2"
             >
               <Download className="w-4 h-4" />
-              Xuất PDF
+              {exportPDFMutation.isPending ? "Đang xuất..." : "Xuất PDF"}
             </Button>
 
             {canRecreate && (
@@ -536,47 +494,84 @@ export default function DeliveryNoteDetailPage() {
         </Alert>
       )}
 
+      {/* Summary Stats */}
+      {hasLines && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Card className="p-4">
+            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <Package className="h-3 w-3" />
+              Tổng SL giao
+            </div>
+            <div className="text-xl font-bold text-primary">
+              {totalDeliveryQty?.toLocaleString("vi-VN") ?? lines.length}
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-xs text-muted-foreground mb-1">Chờ giao</div>
+            <div className="text-xl font-bold text-blue-500">
+              {totalPendingLines ?? "—"}
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-xs text-muted-foreground mb-1">Đã giao</div>
+            <div className="text-xl font-bold text-green-500">
+              {totalDeliveredLines ?? "—"}
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="text-xs text-muted-foreground mb-1">Thất bại</div>
+            <div className="text-xl font-bold text-red-500">
+              {totalFailedLines ?? "—"}
+            </div>
+          </Card>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Orders */}
+          {/* Lines Table */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Danh sách đơn hàng
+                Chi tiết dòng hàng
+                {hasLines && (
+                  <Badge variant="secondary" className="ml-auto">
+                    {lines.length} dòng
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {deliveryNote.orders && deliveryNote.orders.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mã đơn</TableHead>
-                      <TableHead>Khách hàng</TableHead>
-                      <TableHead>Địa chỉ</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {deliveryNote.orders.map((order) => {
-                      const orderId = order.orderId;
-                      if (!orderId) return null;
-                      const isExpanded = expandedOrderIds.has(orderId);
-                      return (
-                        <OrderDetailRow
-                          key={orderId}
-                          order={order}
-                          isExpanded={isExpanded}
-                          onToggle={() => toggleOrderExpand(orderId)}
+            <CardContent className="p-0">
+              {hasLines ? (
+                <div className="overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
+                        <TableHead>Sản phẩm</TableHead>
+                        <TableHead className="text-right">SL giao</TableHead>
+                        <TableHead>Địa chỉ giao</TableHead>
+                        <TableHead className="text-right">Thành tiền</TableHead>
+                        <TableHead>Trạng thái</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lines.map((line, idx) => (
+                        <DeliveryLineRow
+                          key={line.id ?? idx}
+                          line={line}
                         />
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Không có đơn hàng nào
-                </p>
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                  Không có dòng hàng nào
+                </div>
               )}
             </CardContent>
           </Card>
@@ -607,39 +602,56 @@ export default function DeliveryNoteDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label className="text-muted-foreground">Người nhận</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">
-                    {deliveryNote.recipientName || "—"}
-                  </span>
-                </div>
-              </div>
+              {/* Recipient info (legacy / fallback) */}
+              {deliveryNote.recipientName && (
+                <>
+                  <div>
+                    <Label className="text-muted-foreground">Người nhận</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {deliveryNote.recipientName}
+                      </span>
+                    </div>
+                  </div>
+                  <Separator />
+                </>
+              )}
 
-              <Separator />
+              {deliveryNote.recipientPhone && (
+                <>
+                  <div>
+                    <Label className="text-muted-foreground">Số điện thoại</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <span>{deliveryNote.recipientPhone}</span>
+                    </div>
+                  </div>
+                  <Separator />
+                </>
+              )}
 
-              <div>
-                <Label className="text-muted-foreground">Số điện thoại</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span>{deliveryNote.recipientPhone || "—"}</span>
-                </div>
-              </div>
+              {deliveryNote.deliveryAddress && (
+                <>
+                  <div>
+                    <Label className="text-muted-foreground">Địa chỉ giao hàng</Label>
+                    <div className="flex items-start gap-2 mt-1">
+                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      <span className="text-sm">
+                        {deliveryNote.deliveryAddress}
+                      </span>
+                    </div>
+                  </div>
+                  <Separator />
+                </>
+              )}
 
-              <Separator />
-
-              <div>
-                <Label className="text-muted-foreground">
-                  Địa chỉ giao hàng
-                </Label>
-                <div className="flex items-start gap-2 mt-1">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  <span className="text-sm">
-                    {deliveryNote.deliveryAddress || "—"}
-                  </span>
-                </div>
-              </div>
+              {/* No recipient info when using per-line addresses */}
+              {!deliveryNote.recipientName && !deliveryNote.deliveryAddress && (
+                <p className="text-sm text-muted-foreground">
+                  Địa chỉ giao được cấu hình riêng cho từng dòng hàng.
+                </p>
+              )}
 
               {deliveryNote.deliveredAt && (
                 <>
@@ -685,22 +697,11 @@ export default function DeliveryNoteDetailPage() {
                     {deliveryNote.handedOverBy && (
                       <div className="flex items-center gap-2 mt-1 ml-6">
                         <User className="w-4 h-4 text-muted-foreground" />
-                        <span>{deliveryNote.handedOverBy.fullName || "—"}</span>
+                        <span>
+                          {deliveryNote.handedOverBy.fullName || "—"}
+                        </span>
                       </div>
                     )}
-                  </div>
-                </>
-              )}
-
-              {deliveryNote.deliveredAt && (
-                <>
-                  <Separator />
-                  <div>
-                    <Label className="text-muted-foreground">Ngày giao</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span>{formatDateTime(deliveryNote.deliveredAt)}</span>
-                    </div>
                   </div>
                 </>
               )}
@@ -717,7 +718,9 @@ export default function DeliveryNoteDetailPage() {
                     {deliveryNote.cancelledBy && (
                       <div className="flex items-center gap-2 mt-1 ml-6">
                         <User className="w-4 h-4 text-muted-foreground" />
-                        <span>{deliveryNote.cancelledBy.fullName || "—"}</span>
+                        <span>
+                          {deliveryNote.cancelledBy.fullName || "—"}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -725,6 +728,48 @@ export default function DeliveryNoteDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Line summary (groups by order) */}
+          {hasLines && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Hash className="w-4 h-4" />
+                  Đơn hàng liên quan
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {Array.from(
+                  new Map(
+                    lines.map((l) => [(l as any).orderCode || l.id, l])
+                  ).values()
+                )
+                  .reduce<{ orderCode: string | null; count: number }[]>((acc, l) => {
+                    const code = (l as any).orderCode as string | null;
+                    const existing = acc.find((a) => a.orderCode === code);
+                    if (existing) {
+                      existing.count++;
+                    } else {
+                      acc.push({ orderCode: code, count: 1 });
+                    }
+                    return acc;
+                  }, [])
+                  .map(({ orderCode, count }) => (
+                    <div
+                      key={orderCode}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="font-mono text-muted-foreground">
+                        {orderCode || "—"}
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        {count} dòng
+                      </Badge>
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
@@ -858,8 +903,9 @@ export default function DeliveryNoteDetailPage() {
           <DialogHeader>
             <DialogTitle>Tạo lại phiếu giao hàng</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn tạo lại phiếu giao hàng cho các đơn hàng
-              này?
+              Hệ thống sẽ tự động gom tất cả các dòng giao thất bại của phiếu
+              này và tạo một phiếu giao hàng mới, giữ nguyên địa chỉ và số
+              lượng ban đầu.
             </DialogDescription>
           </DialogHeader>
 

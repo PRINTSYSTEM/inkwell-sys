@@ -105,6 +105,14 @@ export const API_SUFFIX = {
   CUSTOMER_STATISTICS: (id: number) => `/customers/${id}/statistics`,
   CUSTOMER_ORDERS: (id: number) => `/customers/${id}/order-history`,
 
+  // ========== CUSTOMER ADDRESSES ==========
+  CUSTOMER_ADDRESSES: (customerId: number) =>
+    `/customers/${customerId}/addresses`,
+  CUSTOMER_ADDRESS_BY_ID: (customerId: number, addressId: number) =>
+    `/customers/${customerId}/addresses/${addressId}`,
+  CUSTOMER_ADDRESS_SET_DEFAULT: (customerId: number, addressId: number) =>
+    `/customers/${customerId}/addresses/${addressId}/set-default`,
+
   // ========== DESIGN TYPES ==========
   DESIGN_TYPES: "/designs/types",
   DESIGN_TYPE_BY_ID: (id: number) => `/designs/types/${id}`,

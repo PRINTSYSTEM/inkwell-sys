@@ -9,6 +9,9 @@ import type {
   CustomerDebtSummaryResponse,
   CustomerStatisticsResponse,
   CustomerOrdersResponsePagedResponse,
+  CustomerAddress,
+  CreateCustomerAddressRequest,
+  UpdateCustomerAddressRequest,
 } from "@/Schema/customer.schema";
 import { createCrudHooks } from "./use-base";
 import {
@@ -23,7 +26,7 @@ import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { normalizeParams } from "@/apis/util.api";
 
 // Không có DELETE trong swagger → vẫn dùng createCrudHooks nhưng KHÔNG export useDelete.
@@ -283,3 +286,123 @@ export function useCustomerFavoriteStats(
     enabled: enabled && !!customerId,
   });
 }
+
+// ================== CUSTOMER ADDRESSES (Sổ địa chỉ) ==================
+
+// GET /customers/{id}/addresses
+export const useCustomerAddresses = (
+  customerId: number | null,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "addresses"],
+    enabled: enabled && !!customerId,
+    queryFn: async () => {
+      const res = await apiRequest.get<CustomerAddress[]>(
+        API_SUFFIX.CUSTOMER_ADDRESSES(customerId as number)
+      );
+      return res.data;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+// POST /customers/{id}/addresses
+export const useCreateCustomerAddress = (customerId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateCustomerAddressRequest) => {
+      const res = await apiRequest.post<CustomerAddress>(
+        API_SUFFIX.CUSTOMER_ADDRESSES(customerId),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["customers", customerId, "addresses"],
+      });
+      toast.success("Đã thêm địa chỉ giao hàng");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// PUT /customers/{id}/addresses/{addressId}
+export const useUpdateCustomerAddress = (customerId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      addressId,
+      data,
+    }: {
+      addressId: number;
+      data: UpdateCustomerAddressRequest;
+    }) => {
+      const res = await apiRequest.put<CustomerAddress>(
+        API_SUFFIX.CUSTOMER_ADDRESS_BY_ID(customerId, addressId),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["customers", customerId, "addresses"],
+      });
+      toast.success("Đã cập nhật địa chỉ giao hàng");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// DELETE /customers/{id}/addresses/{addressId}
+export const useDeleteCustomerAddress = (customerId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (addressId: number) => {
+      await apiRequest.delete(
+        API_SUFFIX.CUSTOMER_ADDRESS_BY_ID(customerId, addressId)
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["customers", customerId, "addresses"],
+      });
+      toast.success("Đã xóa địa chỉ giao hàng");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// POST /customers/{id}/addresses/{addressId}/set-default
+export const useSetDefaultCustomerAddress = (customerId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (addressId: number) => {
+      const res = await apiRequest.post<CustomerAddress>(
+        API_SUFFIX.CUSTOMER_ADDRESS_SET_DEFAULT(customerId, addressId),
+        {}
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["customers", customerId, "addresses"],
+      });
+      toast.success("Đã đặt địa chỉ mặc định");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
