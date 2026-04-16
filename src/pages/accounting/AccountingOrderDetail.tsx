@@ -57,15 +57,14 @@ import {
   useExportOrderPDF,
   useUpdateOrderForAccounting,
 } from "@/hooks/use-order";
-import { useConfirmDeposit, useApproveDebt, useCreateAccountingForOrder } from "@/hooks/use-accounting";
+import { useApproveDebt, useCreateAccountingForOrder } from "@/hooks/use-accounting";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
-import { useCreateCashReceipt, useCashReceipts } from "@/hooks/use-cash";
+import { useCashReceipts } from "@/hooks/use-cash";
 import { useBankAccounts } from "@/hooks/use-bank";
 import type {
   UpdateOrderForAccountingRequest,
   UpdateOrderDetailForAccountingRequest,
   CreateInvoiceRequest,
-  CreateCashReceiptRequest,
 } from "@/Schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -237,19 +236,18 @@ export default function AccountingOrderDetail() {
   // Deposit dialog state
   const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState<string>("");
+  const [isConfirmingDeposit, setIsConfirmingDeposit] = useState(false);
 
   // Mutations
   const exportInvoiceMutation = useExportOrderInvoice();
   const exportDeliveryNoteMutation = useExportOrderDeliveryNote();
   const generateExcelMutation = useGenerateOrderExcel();
   const exportPDFMutation = useExportOrderPDF();
-  const confirmDepositMutation = useConfirmDeposit();
   const approveDebtMutation = useApproveDebt();
   const createAccountingMutation = useCreateAccountingForOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const createInvoiceMutation = useCreateInvoice();
-  const createCashReceiptMutation = useCreateCashReceipt();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -275,6 +273,24 @@ export default function AccountingOrderDetail() {
       return format(new Date(dateStr), "yyyy-MM-dd'T'HH:mm");
     } catch {
       return "";
+    }
+  };
+
+  const showRetailDepositThresholdWarning = (
+    currentDeposit: number | null | undefined,
+    currentTotalAmount: number | null | undefined
+  ) => {
+    if (order?.customer?.type !== "retail") return;
+
+    const total = Number(currentTotalAmount || 0);
+    const paid = Number(currentDeposit || 0);
+    if (total <= 0) return;
+
+    const minimumToProofing = total * 0.3;
+    if (paid < minimumToProofing) {
+      toast.warning("Cọc chưa đủ điều kiện chuyển trạng thái", {
+        description: `Khách lẻ chỉ chuyển sang "Chờ bình bài" khi thanh toán >= 30% tổng đơn (${formatCurrency(minimumToProofing)}). Hiện tại đã thanh toán ${formatCurrency(paid)}.`,
+      });
     }
   };
 
@@ -469,60 +485,13 @@ export default function AccountingOrderDetail() {
         payload as UpdateOrderForAccountingRequest
       );
 
-      // Nếu là paymentInfo và có số tiền cọc, tự động tạo phiếu thu
+      // Payment info post-save handling
       if (cardName === "paymentInfo") {
-        const depositAmount =
-          cardEditValues.depositAmount === "" ||
-          cardEditValues.depositAmount === null
-            ? null
-            : Number(cardEditValues.depositAmount);
-        const paymentMethodId =
-          cardEditValues.paymentMethodId === "" ||
-          cardEditValues.paymentMethodId === null
-            ? null
-            : Number(cardEditValues.paymentMethodId);
-        const bankAccountId = cardEditValues.bankAccountId ? Number(cardEditValues.bankAccountId) : null;
+        showRetailDepositThresholdWarning(
+          payload.depositAmount ?? order.depositAmount,
+          payload.totalAmount ?? order.totalAmount
+        );
 
-        // Chỉ tạo phiếu thu nếu có số tiền (không cần đủ số tiền) và phương thức thanh toán
-        if (depositAmount && depositAmount > 0 && paymentMethodId) {
-          const now = new Date();
-          const voucherDate = now.toISOString();
-          const postingDate = now.toISOString();
-
-          // Xác định payerName: ưu tiên customerCompanyName, nếu không có thì dùng customerName
-          let payerName = "";
-          if (order.customer?.type === "company") {
-            payerName = order.customer?.companyName?.trim() || order.customer?.name?.trim() || "";
-          } else {
-            payerName = order.customer?.name?.trim() || "";
-          }
-          payerName = payerName || "Khách hàng ẩn danh";
-
-          const cashReceiptRequest: any = {
-            voucherDate,
-            postingDate,
-            payerName,
-            amount: depositAmount,
-            paymentMethodId,
-            orderId: order.id,
-            customerId: order.customerId || null,
-            bankAccountId: bankAccountId || null,
-            expenseCategoryId: null,
-            reason: null,
-            notes: order.note || null,
-          };
-
-          try {
-            await createCashReceiptMutation.mutateAsync(cashReceiptRequest);
-            // Refetch order và cash receipts để cập nhật UI (ẩn nút sửa)
-            await refetchOrder();
-          } catch (error) {
-            // Error is handled by the hook, nhưng không block việc đóng edit mode
-            console.error("Error creating cash receipt:", error);
-          }
-        }
-
-        // Tự động cộng công nợ (tạo bản ghi kế toán) cho khách lẻ vì không có nút bấm
         if (order.customer?.type === "retail" && order.isDebtApproved === false) {
           try {
             await createAccountingMutation.mutate(order.id);
@@ -591,14 +560,10 @@ export default function AccountingOrderDetail() {
   const handleUpdatePayment = () => {
     if (!order) return;
 
-    const isCompany = order.customer?.type === "company";
-
     if (order.customer?.type === "retail") {
-      // Khách lẻ: mở dialog để nhập số tiền cọc
       setDepositAmount("");
       setIsDepositDialogOpen(true);
     } else {
-      // Khách công ty: cộng công nợ
       approveDebtMutation.mutate(order.id);
     }
   };
@@ -621,20 +586,22 @@ export default function AccountingOrderDetail() {
       return;
     }
 
+    setIsConfirmingDeposit(true);
+
     try {
-      // Bước 1: Cọc tiền với paymentMethodId = 2
       await updateOrderForAccounting(order.id, {
         depositAmount: amount,
         paymentMethodId: 2,
       } as UpdateOrderForAccountingRequest);
 
-      // Bước 2: Cộng công nợ vào hệ thống
-      await approveDebtMutation.mutate(order.id);
+      showRetailDepositThresholdWarning(amount, order.totalAmount);
 
       setIsDepositDialogOpen(false);
       setDepositAmount("");
     } catch (error) {
       // Error is handled by the mutation hooks
+    } finally {
+      setIsConfirmingDeposit(false);
     }
   };
 
@@ -2159,19 +2126,19 @@ export default function AccountingOrderDetail() {
                 setIsDepositDialogOpen(false);
                 setDepositAmount("");
               }}
-              disabled={confirmDepositMutation.loading}
+              disabled={isConfirmingDeposit}
             >
               Hủy
             </Button>
             <Button
               onClick={handleConfirmDeposit}
               disabled={
-                confirmDepositMutation.loading ||
+                isConfirmingDeposit ||
                 !depositAmount ||
                 parseFloat(depositAmount) <= 0
               }
             >
-              {confirmDepositMutation.loading ? (
+              {isConfirmingDeposit ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Đang xử lý...
@@ -2186,3 +2153,4 @@ export default function AccountingOrderDetail() {
     </>
   );
 }
+
