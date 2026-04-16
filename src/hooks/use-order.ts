@@ -15,6 +15,7 @@ import type {
   UserRole,
   OrdersMyListParams,
   OrderExportResponse,
+  CashReceiptResponseIPaginate,
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
@@ -335,12 +336,97 @@ export const useUpdateOrderForAccounting = () => {
     return res.data;
   });
 
+  const sleep = (ms: number) =>
+    new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+
+  const postApprovedCashReceiptForOrder = async (
+    orderId: number,
+    customerId: number | null | undefined
+  ): Promise<"posted" | "missing_customer" | "not_found"> => {
+    if (!customerId) return "missing_customer";
+
+    const MAX_RETRIES = 3;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const receiptsRes = await apiRequest.get<CashReceiptResponseIPaginate>(
+        API_SUFFIX.CASH_RECEIPTS,
+        {
+          params: {
+            customerId,
+            status: "approved",
+            pageNumber: 1,
+            pageSize: 50,
+          },
+        }
+      );
+
+      const matchedReceipts = (receiptsRes.data.items ?? []).filter(
+        (receipt) => receipt.orderId === orderId && receipt.id != null
+      );
+
+      if (matchedReceipts.length > 0) {
+        const receiptToPost = [...matchedReceipts].sort((a, b) => {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          if (bTime !== aTime) return bTime - aTime;
+          return (b.id ?? 0) - (a.id ?? 0);
+        })[0];
+
+        if (receiptToPost?.id != null) {
+          await apiRequest.post(API_SUFFIX.CASH_RECEIPT_POST(receiptToPost.id));
+          queryClient.invalidateQueries({ queryKey: ["cash-receipts"] });
+          queryClient.invalidateQueries({ queryKey: ["cash-book"] });
+          return "posted";
+        }
+      }
+
+      if (attempt < MAX_RETRIES) {
+        await sleep(500);
+      }
+    }
+
+    return "not_found";
+  };
+
   const mutate = async (
     id: number,
     payload: UpdateOrderForAccountingRequest
   ) => {
     try {
       const result = await execute(id, payload);
+      const shouldPostCashReceipt =
+        (payload.depositAmount != null && payload.depositAmount > 0) ||
+        payload.paymentMethodId != null;
+      let postReceiptResult: "posted" | "missing_customer" | "not_found" =
+        "missing_customer";
+
+      if (shouldPostCashReceipt) {
+        try {
+          postReceiptResult = await postApprovedCashReceiptForOrder(
+            id,
+            result.customerId
+          );
+
+          if (postReceiptResult === "missing_customer") {
+            toast.warning("Đã cập nhật đơn hàng", {
+              description:
+                "Không xác định được khách hàng để tìm phiếu thu duyệt và ghi sổ tự động.",
+            });
+          } else if (postReceiptResult === "not_found") {
+            toast.warning("Đã cập nhật đơn hàng", {
+              description:
+                "Chưa tìm thấy phiếu thu ở trạng thái duyệt để ghi sổ. Vui lòng thử lại sau.",
+            });
+          }
+        } catch {
+          toast.warning("Đã cập nhật đơn hàng", {
+            description:
+              "Không thể ghi sổ phiếu thu tự động. Vui lòng vào Phiếu thu để ghi sổ thủ công.",
+          });
+        }
+      }
 
       // Invalidate order detail
       queryClient.invalidateQueries({
@@ -358,7 +444,10 @@ export const useUpdateOrderForAccounting = () => {
       });
 
       toast.success("Thành công", {
-        description: "Đã cập nhật đơn hàng thành công",
+        description:
+          shouldPostCashReceipt && postReceiptResult === "posted"
+            ? "Đã cập nhật đơn hàng và ghi sổ phiếu thu"
+            : "Đã cập nhật đơn hàng thành công",
       });
 
       return result;
