@@ -56,7 +56,7 @@ import {
 } from "@/components/ui/table";
 
 import { StatusBadge } from "@/components/ui/status-badge";
-import { useOrdersForAccounting } from "@/hooks/use-order";
+import { useAvailableOrderDetailsForDelivery } from "@/hooks/use-delivery-note";
 import {
   useDeliveryNotes,
   useCreateDeliveryNote,
@@ -386,29 +386,14 @@ export default function DeliveryNoteListPage() {
 
   const itemsPerPage = 10;
 
-  // Build params for orders API
-  const ordersParams = useMemo(() => {
-    return {
-      pageNumber: currentPage,
-      pageSize: itemsPerPage,
-      filterType: "delivery",
-      status: "",
-      orderCode: "",
-      designCode: "",
-      customerName: "",
-      sortColumn: "",
-      sortOrder: "",
-    };
-  }, [currentPage, itemsPerPage]);
-
-  // Data fetching
+  // Data fetching for available order details
   const {
-    data: ordersData,
-    isLoading: ordersLoading,
-    isError: ordersError,
-    error: ordersErrorObj,
-    refetch: refetchOrders,
-  } = useOrdersForAccounting(ordersParams);
+    data: orderDetailsData,
+    isLoading: orderDetailsLoading,
+    isError: orderDetailsError,
+    error: orderDetailsErrorObj,
+    refetch: refetchOrderDetails,
+  } = useAvailableOrderDetailsForDelivery({});
 
   const {
     data: deliveryNotesData,
@@ -425,57 +410,56 @@ export default function DeliveryNoteListPage() {
 
   const createDeliveryNoteMutation = useCreateDeliveryNote();
 
-  // Filter orders
+  // Filter order details
   const filteredOrders = useMemo(() => {
-    if (!ordersData?.items) return [];
-    return ordersData.items.filter((order) => {
+    if (!Array.isArray(orderDetailsData)) return [];
+    return orderDetailsData.filter((od) => {
       const matchesSearch =
         !searchQuery ||
-        order.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.companyName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.phone?.includes(searchQuery);
+        od.orderCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        od.designCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        od.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     });
-  }, [ordersData?.items, searchQuery]);
+  }, [orderDetailsData, searchQuery]);
 
+  const pagedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredOrders.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredOrders, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+
+  // We map selectedOrderIds to quantities to allow input, but initially just a Set
   const selectedOrders = useMemo(() => {
-    return filteredOrders.filter((o) => o.id && selectedOrderIds.has(o.id));
+    return filteredOrders.filter((o) => o.orderDetailId && selectedOrderIds.has(o.orderDetailId));
   }, [filteredOrders, selectedOrderIds]);
 
   const totalSelectedAmount = useMemo(() => {
     return selectedOrders.reduce(
-      (sum, order) => sum + (order.totalAmount || 0),
+      (sum, order) => sum + (order.remainingToDeliver || 0) * (order.unitPrice || 0),
       0,
     );
   }, [selectedOrders]);
 
   // Handlers
-  const handleToggleOrder = (orderId: number) => {
+  const handleToggleOrder = (orderDetailId: number) => {
     setSelectedOrderIds((prev) => {
       const newSet = new Set(prev);
-      const isAdding = !newSet.has(orderId);
+      const isAdding = !newSet.has(orderDetailId);
 
-      const order = ordersData?.items?.find((o: any) => o.id === orderId);
-      const filterText = order?.customer?.companyName || order?.customer?.name;
+      const od = Array.isArray(orderDetailsData) ? orderDetailsData.find((o: any) => o.orderDetailId === orderDetailId) : null;
+      const filterText = od?.customerName;
 
       if (isAdding) {
-        newSet.add(orderId);
+        newSet.add(orderDetailId);
 
-        // Auto-filter by customer if selecting the first item and no search query exists
-        if (prev.size === 0 && !searchQuery) {
-          if (filterText) {
-            setSearchQuery(filterText);
-          }
+        if (prev.size === 0 && !searchQuery && filterText) {
+          setSearchQuery(filterText);
         }
       } else {
-        newSet.delete(orderId);
+        newSet.delete(orderDetailId);
 
-        // Revert the search query if unchecking the last item and it matches our auto-fill
         if (newSet.size === 0 && filterText && searchQuery === filterText) {
           setSearchQuery("");
         }
@@ -490,7 +474,7 @@ export default function DeliveryNoteListPage() {
     } else {
       setSelectedOrderIds(
         new Set(
-          filteredOrders.map((o) => o.id).filter((id): id is number => !!id),
+          filteredOrders.map((o) => o.orderDetailId).filter((id): id is number => !!id),
         ),
       );
     }
@@ -498,74 +482,39 @@ export default function DeliveryNoteListPage() {
 
   const handleCreateDeliveryNote = () => {
     if (selectedOrderIds.size === 0) {
-      toast.error("Vui lòng chọn ít nhất một đơn hàng");
+      toast.error("Vui lòng chọn ít nhất một sản phẩm");
       return;
     }
-
-    const firstOrderWithRecipient = selectedOrders.find(
-      (order) =>
-        order.recipientName ||
-        order.recipientPhone ||
-        order.recipientAddress ||
-        order.deliveryAddress,
-    );
-
-    if (firstOrderWithRecipient) {
-      if (!recipientName && firstOrderWithRecipient.recipientName) {
-        setRecipientName(firstOrderWithRecipient.recipientName);
-      }
-      if (!recipientPhone && firstOrderWithRecipient.recipientPhone) {
-        setRecipientPhone(firstOrderWithRecipient.recipientPhone);
-      }
-      if (!deliveryAddress) {
-        const address =
-          firstOrderWithRecipient.recipientAddress ||
-          firstOrderWithRecipient.deliveryAddress;
-        if (address) {
-          setDeliveryAddress(address);
-        }
-      }
-    }
+    
+    // Initialize default quantities
+    const qtys: Record<number, number> = {};
+    selectedOrders.forEach(od => {
+      qtys[od.orderDetailId!] = od.remainingToDeliver || 0;
+    });
+    setDeliveryQtys(qtys);
 
     setIsCreateDialogOpen(true);
   };
 
+  // Quantity state map for selected details
+  const [deliveryQtys, setDeliveryQtys] = useState<Record<number, number>>({});
+
   const handleConfirmCreate = async () => {
     if (selectedOrderIds.size === 0) return;
 
-    const firstOrderWithRecipient = selectedOrders.find(
-      (order) =>
-        order.recipientName ||
-        order.recipientPhone ||
-        order.recipientAddress ||
-        order.deliveryAddress,
-    );
-
-    const finalRecipientName =
-      recipientName || firstOrderWithRecipient?.recipientName || undefined;
-    const finalRecipientPhone =
-      recipientPhone || firstOrderWithRecipient?.recipientPhone || undefined;
-    const finalDeliveryAddress =
-      deliveryAddress ||
-      firstOrderWithRecipient?.recipientAddress ||
-      firstOrderWithRecipient?.deliveryAddress ||
-      undefined;
-
     try {
       await createDeliveryNoteMutation.mutateAsync({
-        orderIds: Array.from(selectedOrderIds),
-        recipientName: finalRecipientName || undefined,
-        recipientPhone: finalRecipientPhone || undefined,
-        deliveryAddress: finalDeliveryAddress || undefined,
+        lines: selectedOrders.map(od => ({
+          orderDetailId: od.orderDetailId!,
+          deliveryQty: deliveryQtys[od.orderDetailId!] || od.remainingToDeliver || 0
+        })),
         notes: notes || undefined,
       });
       setSelectedOrderIds(new Set());
-      setRecipientName("");
-      setRecipientPhone("");
-      setDeliveryAddress("");
+      setDeliveryQtys({});
       setNotes("");
       setIsCreateDialogOpen(false);
-      refetchOrders();
+      refetchOrderDetails();
       refetchDeliveryNotes();
       setViewMode("delivery-notes");
       toast.success("Tạo phiếu giao hàng thành công");
@@ -622,12 +571,13 @@ export default function DeliveryNoteListPage() {
           <OrdersView
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            ordersData={ordersData}
-            ordersLoading={ordersLoading}
-            ordersError={ordersError}
-            ordersErrorObj={ordersErrorObj}
-            refetchOrders={refetchOrders}
+            orderDetailsLoading={orderDetailsLoading}
+            orderDetailsError={orderDetailsError}
+            orderDetailsErrorObj={orderDetailsErrorObj}
+            refetchOrderDetails={refetchOrderDetails}
             filteredOrders={filteredOrders}
+            pagedOrders={pagedOrders}
+            totalPages={totalPages}
             selectedOrderIds={selectedOrderIds}
             handleToggleOrder={handleToggleOrder}
             handleSelectAll={handleSelectAll}
@@ -659,12 +609,8 @@ export default function DeliveryNoteListPage() {
         isOpen={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         selectedOrders={selectedOrders}
-        recipientName={recipientName}
-        setRecipientName={setRecipientName}
-        recipientPhone={recipientPhone}
-        setRecipientPhone={setRecipientPhone}
-        deliveryAddress={deliveryAddress}
-        setDeliveryAddress={setDeliveryAddress}
+        deliveryQtys={deliveryQtys}
+        setDeliveryQtys={setDeliveryQtys}
         notes={notes}
         setNotes={setNotes}
         onCreate={handleConfirmCreate}
@@ -681,30 +627,17 @@ export default function DeliveryNoteListPage() {
 interface OrdersViewProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  ordersData: unknown;
-  ordersLoading: boolean;
-  ordersError: boolean;
-  ordersErrorObj: unknown;
-  refetchOrders: () => void;
-  filteredOrders: Array<{
-    id?: number;
-    code?: string | null;
-    customer?: {
-      name?: string | null;
-      companyName?: string | null;
-      phone?: string | null;
-    } | null;
-    status?: string | null;
-    orderDetails?: Array<unknown>;
-    deliveryAddress?: string | null;
-    recipientAddress?: string | null;
-    deliveryDate?: string | null;
-    totalAmount?: number | null;
-  }>;
+  orderDetailsLoading: boolean;
+  orderDetailsError: boolean;
+  orderDetailsErrorObj: unknown;
+  refetchOrderDetails: () => void;
+  filteredOrders: Array<any>;
+  pagedOrders: Array<any>;
+  totalPages: number;
   selectedOrderIds: Set<number>;
   handleToggleOrder: (id: number) => void;
   handleSelectAll: () => void;
-  selectedOrders: Array<unknown>;
+  selectedOrders: Array<any>;
   totalSelectedAmount: number;
   handleCreateDeliveryNote: () => void;
   currentPage: number;
@@ -715,11 +648,13 @@ interface OrdersViewProps {
 function OrdersView({
   searchQuery,
   setSearchQuery,
-  ordersLoading,
-  ordersError,
-  ordersErrorObj,
-  refetchOrders,
+  orderDetailsLoading,
+  orderDetailsError,
+  orderDetailsErrorObj,
+  refetchOrderDetails,
   filteredOrders,
+  pagedOrders,
+  totalPages,
   selectedOrderIds,
   handleToggleOrder,
   handleSelectAll,
@@ -728,16 +663,8 @@ function OrdersView({
   handleCreateDeliveryNote,
   currentPage,
   setCurrentPage,
-  ordersData,
   navigate,
 }: OrdersViewProps) {
-  const ordersDataTyped = ordersData as
-    | {
-        totalPages?: number;
-        total?: number;
-      }
-    | undefined;
-
   return (
     <div className="space-y-6">
       {/* Search Bar */}
@@ -756,12 +683,12 @@ function OrdersView({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => refetchOrders()}
-              disabled={ordersLoading}
+              onClick={() => refetchOrderDetails()}
+              disabled={orderDetailsLoading}
               className="h-11 w-11 border-slate-300 dark:border-slate-700"
             >
               <RefreshCw
-                className={`h-4 w-4 ${ordersLoading ? "animate-spin" : ""}`}
+                className={`h-4 w-4 ${orderDetailsLoading ? "animate-spin" : ""}`}
               />
             </Button>
           </div>
@@ -769,7 +696,7 @@ function OrdersView({
       </Card>
 
       {/* Error Alert */}
-      {ordersError && (
+      {orderDetailsError && (
         <Alert
           variant="destructive"
           className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50"
@@ -777,8 +704,8 @@ function OrdersView({
           <AlertCircle className="h-4 w-4" />
           <AlertTitle className="font-semibold">Lỗi kết nối</AlertTitle>
           <AlertDescription>
-            {ordersErrorObj instanceof Error
-              ? ordersErrorObj.message
+            {orderDetailsErrorObj instanceof Error
+              ? orderDetailsErrorObj.message
               : "Không thể tải dữ liệu. Vui lòng thử lại."}
           </AlertDescription>
         </Alert>
@@ -846,52 +773,46 @@ function OrdersView({
                   />
                 </TableHead>
                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                  Mã đơn hàng
+                  Mã hàng / Đơn hàng
+                </TableHead>
+                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+                  Sản phẩm
                 </TableHead>
                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                   Khách hàng
                 </TableHead>
-                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                  Địa chỉ giao hàng
-                </TableHead>
-                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                  Ngày giao
-                </TableHead>
-                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">
-                  Trạng thái
-                </TableHead>
-                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">
-                  Số SP
+                <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300">
+                  Số lượng (Tổng)
                 </TableHead>
                 <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300">
-                  Tổng tiền
+                  Đã giao
+                </TableHead>
+                <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300">
+                  Cần giao
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {ordersLoading ? (
+              {orderDetailsLoading ? (
                 Array.from({ length: 10 }).map((_, i) => (
-                  <TableRow
-                    key={i}
-                    className="border-slate-200 dark:border-slate-800"
-                  >
-                    {Array.from({ length: 8 }).map((_, j) => (
+                  <TableRow key={i} className="border-slate-200 dark:border-slate-800">
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-10 w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
-              ) : filteredOrders.length === 0 ? (
+              ) : pagedOrders.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={7}
                     className="h-32 text-center border-slate-200 dark:border-slate-800"
                   >
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Package className="h-12 w-12 text-slate-300 dark:text-slate-700" />
                       <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                        Không tìm thấy đơn hàng nào
+                        Không tìm thấy chi tiết đơn hàng nào
                       </p>
                       <p className="text-xs text-slate-400 dark:text-slate-500">
                         Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc
@@ -900,28 +821,23 @@ function OrdersView({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOrders.map((order) => {
-                  const isSelected = order.id
-                    ? selectedOrderIds.has(order.id)
-                    : false;
-                  const itemCount = order.orderDetails?.length || 0;
+                pagedOrders.map((od) => {
+                  const isSelected = od.orderDetailId ? selectedOrderIds.has(od.orderDetailId) : false;
 
                   return (
                     <TableRow
-                      key={order.id}
+                      key={od.orderDetailId}
                       className={`cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/50 ${
                         isSelected ? "bg-primary/5 border-primary/20" : ""
                       }`}
-                      onClick={() =>
-                        order.id && navigate(`/accounting/orders/${order.id}`)
-                      }
+                      onClick={() => navigate(`/accounting/orders/${od.orderId}`)}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={(checked) => {
-                            if (checked !== isSelected && order.id) {
-                              handleToggleOrder(order.id);
+                            if (checked !== isSelected && od.orderDetailId) {
+                              handleToggleOrder(od.orderDetailId);
                             }
                           }}
                           className="border-slate-300 dark:border-slate-700"
@@ -929,76 +845,41 @@ function OrdersView({
                       </TableCell>
                       <TableCell>
                         <div className="font-mono font-semibold text-sm text-slate-900 dark:text-slate-50">
-                          {order.code || `#${order.id}`}
+                          {od.designCode}
+                        </div>
+                        <div className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                          {od.orderCode}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-slate-900 dark:text-slate-50 font-semibold line-clamp-2">
+                          {od.designName}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div
-                          className="space-y-1 p-1 -m-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          className="text-sm text-slate-900 dark:text-slate-50 font-semibold hover:bg-slate-100 p-1 -m-1 rounded transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const val =
-                              order.customer?.companyName ||
-                              order.customer?.name;
-                            if (val) setSearchQuery(val);
+                            if (od.customerName) setSearchQuery(od.customerName);
                           }}
-                          title="Click để lọc theo khách hàng này"
                         >
-                          <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                            {order.customer?.companyName ||
-                              order.customer?.name ||
-                              "—"}
-                          </div>
-                          {order.customer?.phone && (
-                            <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {order.customer.phone}
-                            </div>
-                          )}
+                          {od.customerName}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div
-                          className="text-sm text-slate-700 dark:text-slate-300 max-w-xs p-1 -m-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors line-clamp-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const val =
-                              order.deliveryAddress || order.recipientAddress;
-                            if (val) setSearchQuery(val);
-                          }}
-                          title="Click để lọc theo địa chỉ này"
-                        >
-                          {order.deliveryAddress ||
-                            order.recipientAddress ||
-                            "—"}
+                      <TableCell className="text-right">
+                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                          {new Intl.NumberFormat('vi-VN').format(od.netQtyTotal || 0)}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-slate-400" />
-                          {formatDate(order.deliveryDate)}
+                      <TableCell className="text-right">
+                        <div className="text-sm font-semibold text-green-600 dark:text-green-400">
+                          {new Intl.NumberFormat('vi-VN').format(od.deliveredQtyTotal || 0)}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <StatusBadge
-                          status={order.status || ""}
-                          label={orderStatusLabels[order.status || ""]}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge
-                          variant="secondary"
-                          className="font-semibold bg-slate-100 dark:bg-slate-800"
-                        >
-                          <Package className="h-3 w-3 mr-1" />
-                          {itemCount}
-                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="text-sm font-bold text-primary">
-                          {order.totalAmount
-                            ? formatCurrency(order.totalAmount)
-                            : "—"}
+                          {new Intl.NumberFormat('vi-VN').format(od.remainingToDeliver || 0)}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1011,18 +892,18 @@ function OrdersView({
       </Card>
 
       {/* Pagination */}
-      {!ordersLoading &&
+      {!orderDetailsLoading &&
         filteredOrders.length > 0 &&
-        ordersDataTyped &&
-        ordersDataTyped.totalPages &&
-        ordersDataTyped.totalPages > 0 && (
+        orderDetailsDataTyped &&
+        orderDetailsDataTyped.totalPages &&
+        orderDetailsDataTyped.totalPages > 0 && (
           <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-                  Trang {currentPage} / {ordersDataTyped.totalPages} •{" "}
+                  Trang {currentPage} / {orderDetailsDataTyped.totalPages} •{" "}
                   <span className="text-slate-900 dark:text-slate-50">
-                    {ordersDataTyped.total}
+                    {orderDetailsDataTyped.total}
                   </span>{" "}
                   đơn hàng
                 </p>
@@ -1034,14 +915,14 @@ function OrdersView({
                       const newPage = Math.max(1, currentPage - 1);
                       setCurrentPage(newPage);
                     }}
-                    disabled={currentPage === 1 || ordersLoading}
+                    disabled={currentPage === 1 || orderDetailsLoading}
                     className="h-9"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-md">
                     <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                      {currentPage} / {ordersDataTyped.totalPages}
+                      {currentPage} / {orderDetailsDataTyped.totalPages}
                     </span>
                   </div>
                   <Button
@@ -1049,14 +930,14 @@ function OrdersView({
                     size="sm"
                     onClick={() => {
                       const newPage = Math.min(
-                        ordersDataTyped.totalPages || 1,
+                        orderDetailsDataTyped.totalPages || 1,
                         currentPage + 1,
                       );
                       setCurrentPage(newPage);
                     }}
                     disabled={
-                      currentPage === (ordersDataTyped.totalPages || 1) ||
-                      ordersLoading
+                      currentPage === (orderDetailsDataTyped.totalPages || 1) ||
+                      orderDetailsLoading
                     }
                     className="h-9"
                   >
@@ -1415,21 +1296,9 @@ function DeliveryNotesView({
 interface CreateDeliveryNoteDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedOrders: Array<{
-    id?: number;
-    code?: string | null;
-    customer?: {
-      companyName?: string | null;
-      name?: string | null;
-    } | null;
-    totalAmount?: number | null;
-  }>;
-  recipientName: string;
-  setRecipientName: (name: string) => void;
-  recipientPhone: string;
-  setRecipientPhone: (phone: string) => void;
-  deliveryAddress: string;
-  setDeliveryAddress: (address: string) => void;
+  selectedOrders: Array<any>;
+  deliveryQtys: Record<number, number>;
+  setDeliveryQtys: (qtys: any) => void;
   notes: string;
   setNotes: (notes: string) => void;
   onCreate: () => void;
@@ -1440,12 +1309,8 @@ function CreateDeliveryNoteDialog({
   isOpen,
   onOpenChange,
   selectedOrders,
-  recipientName,
-  setRecipientName,
-  recipientPhone,
-  setRecipientPhone,
-  deliveryAddress,
-  setDeliveryAddress,
+  deliveryQtys,
+  setDeliveryQtys,
   notes,
   setNotes,
   onCreate,
@@ -1463,30 +1328,42 @@ function CreateDeliveryNoteDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[35vh] pr-4 mb-4">
-          <div className="space-y-2">
-            {selectedOrders.map((order) => (
+        <ScrollArea className="max-h-[50vh] pr-4 mb-4">
+          <div className="space-y-3">
+            {selectedOrders.map((od) => (
               <Card
-                key={order.id}
+                key={od.orderDetailId}
                 className="border-slate-200 dark:border-slate-800"
               >
                 <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-slate-900 dark:text-slate-50">
-                        {order.code}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">
+                          {od.designCode} <span className="text-slate-400 font-sans text-xs">({od.orderCode})</span>
+                        </div>
+                        <div className="text-sm text-slate-700 dark:text-slate-300 mt-1 line-clamp-1">
+                          {od.designName}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Tối đa giao: <span className="font-bold text-primary">{new Intl.NumberFormat('vi-VN').format(od.remainingToDeliver || 0)}</span>
+                        </div>
                       </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {order.customer?.companyName ||
-                          order.customer?.name ||
-                          "—"}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-sm text-slate-900 dark:text-slate-50">
-                        {order.totalAmount
-                          ? formatCurrency(order.totalAmount)
-                          : "—"}
+                      <div className="w-[120px] flex-shrink-0">
+                        <Label className="text-xs text-slate-500 mb-1 block">Số lượng giao</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max={od.remainingToDeliver || 1}
+                          value={deliveryQtys[od.orderDetailId] || ''}
+                          onChange={(e) => {
+                            let val = parseInt(e.target.value, 10);
+                            if (isNaN(val)) val = 0;
+                            if (val > (od.remainingToDeliver || 0)) val = od.remainingToDeliver || 0;
+                            setDeliveryQtys((prev: any) => ({...prev, [od.orderDetailId]: val}));
+                          }}
+                          className="h-8 text-right font-semibold text-primary"
+                        />
                       </div>
                     </div>
                   </div>
@@ -1497,59 +1374,12 @@ function CreateDeliveryNoteDialog({
         </ScrollArea>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label
-                htmlFor="recipientName"
-                className="text-sm font-semibold text-slate-700 dark:text-slate-300"
-              >
-                Tên người nhận
-              </Label>
-              <Input
-                id="recipientName"
-                value={recipientName}
-                onChange={(e) => setRecipientName(e.target.value)}
-                placeholder="Tên người nhận"
-                className="h-10 border-slate-300 dark:border-slate-700"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="recipientPhone"
-                className="text-sm font-semibold text-slate-700 dark:text-slate-300"
-              >
-                Số điện thoại
-              </Label>
-              <Input
-                id="recipientPhone"
-                value={recipientPhone}
-                onChange={(e) => setRecipientPhone(e.target.value)}
-                placeholder="Số điện thoại"
-                className="h-10 border-slate-300 dark:border-slate-700"
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="deliveryAddress"
-              className="text-sm font-semibold text-slate-700 dark:text-slate-300"
-            >
-              Địa chỉ giao hàng
-            </Label>
-            <Input
-              id="deliveryAddress"
-              value={deliveryAddress}
-              onChange={(e) => setDeliveryAddress(e.target.value)}
-              placeholder="Địa chỉ giao hàng"
-              className="h-10 border-slate-300 dark:border-slate-700"
-            />
-          </div>
           <div className="space-y-2">
             <Label
               htmlFor="notes"
               className="text-sm font-semibold text-slate-700 dark:text-slate-300"
             >
-              Ghi chú
+              Ghi chú chung
             </Label>
             <Textarea
               id="notes"

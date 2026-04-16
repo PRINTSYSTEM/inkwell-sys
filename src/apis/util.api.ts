@@ -245,6 +245,7 @@ export const API_SUFFIX = {
   DELIVERY_NOTE_EXPORT_PDF: (id: number) => `/delivery-notes/${id}/export-pdf`,
   DELIVERY_NOTE_RECREATE: "/delivery-notes/recreate",
   DELIVERY_NOTE_AVAILABLE_ORDERS: "/delivery-notes/available-orders",
+  DELIVERY_NOTE_AVAILABLE_ORDER_DETAILS: "/delivery-notes/available-order-details",
   DELIVERY_NOTE_FAILURE_REASONS: "/delivery-notes/failure-reasons",
   DELIVERY_NOTE_LINE_RESULT: (lineId: number) =>
     `/delivery-notes/lines/${lineId}/result`,
