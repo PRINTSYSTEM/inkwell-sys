@@ -236,10 +236,12 @@ export const useUpdateDeliveryLineResult = () => {
 // ================== GET AVAILABLE ORDER DETAILS FOR DELIVERY ==================
 // GET /delivery-notes/available-order-details
 export const useAvailableOrderDetailsForDelivery = (
-  params?: { customerId?: number }
+  params?: { customerId?: number },
+  options?: { enabled?: boolean }
 ) => {
   return useQuery({
     queryKey: ["availableOrderDetailsForDelivery", params],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const normalizedParams = normalizeParams(
         (params ?? {}) as Record<string, unknown>

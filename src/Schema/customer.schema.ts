@@ -187,9 +187,41 @@ export type FrequentProductResponse = z.infer<
   typeof FrequentProductResponseSchema
 >;
 
+
 // ===== CustomerStatisticsResponse =====
 export const CustomerStatisticsResponseSchema =
   GenCustomerStatisticsResponseSchema.passthrough();
 export type CustomerStatisticsResponse = z.infer<
   typeof CustomerStatisticsResponseSchema
+>;
+
+// ===== CustomerAddress =====
+// Địa chỉ giao hàng của từng khách hàng (Sổ địa chỉ)
+export const CustomerAddressSchema = z
+  .object({
+    id: z.number().int(),
+    label: z.string().nullable().optional(),
+    recipientName: z.string().nullable().optional(),
+    recipientPhone: z.string().nullable().optional(),
+    address: z.string().nullable().optional(),
+    isDefault: z.boolean().optional(),
+  })
+  .passthrough();
+export type CustomerAddress = z.infer<typeof CustomerAddressSchema>;
+
+export const CreateCustomerAddressRequestSchema = z.object({
+  label: z.string().min(1, "Nhãn là bắt buộc"),
+  recipientName: z.string().min(1, "Tên người nhận là bắt buộc"),
+  recipientPhone: z.string().optional(),
+  address: z.string().min(1, "Địa chỉ là bắt buộc"),
+  isDefault: z.boolean().optional().default(false),
+});
+export type CreateCustomerAddressRequest = z.infer<
+  typeof CreateCustomerAddressRequestSchema
+>;
+
+export const UpdateCustomerAddressRequestSchema =
+  CreateCustomerAddressRequestSchema.partial();
+export type UpdateCustomerAddressRequest = z.infer<
+  typeof UpdateCustomerAddressRequestSchema
 >;

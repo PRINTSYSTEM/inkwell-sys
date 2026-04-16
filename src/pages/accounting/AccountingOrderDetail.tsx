@@ -59,7 +59,7 @@ import {
 } from "@/hooks/use-order";
 import { useApproveDebt, useCreateAccountingForOrder } from "@/hooks/use-accounting";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
-import { useCashReceipts } from "@/hooks/use-cash";
+import { useCashReceipts, useCreateCashReceipt } from "@/hooks/use-cash";
 import { useBankAccounts } from "@/hooks/use-bank";
 import type {
   UpdateOrderForAccountingRequest,
@@ -185,6 +185,7 @@ export default function AccountingOrderDetail() {
     !!order?.id
   );
 
+
   // Fetch cash receipts for this order's customer to check if receipt exists
   const { data: cashReceiptsData } = useCashReceipts(
     order?.customerId
@@ -248,6 +249,7 @@ export default function AccountingOrderDetail() {
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const createInvoiceMutation = useCreateInvoice();
+  const createCashReceiptMutation = useCreateCashReceipt();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -485,8 +487,39 @@ export default function AccountingOrderDetail() {
         payload as UpdateOrderForAccountingRequest
       );
 
-      // Payment info post-save handling
+      // Payment info post-save: tạo phiếu thu nếu có nhập số tiền
       if (cardName === "paymentInfo") {
+        const depositAmt =
+          payload.depositAmount != null
+            ? payload.depositAmount
+            : order.depositAmount;
+        const pmId =
+          payload.paymentMethodId != null
+            ? payload.paymentMethodId
+            : order.paymentMethodId;
+
+        if (depositAmt && depositAmt > 0 && pmId && order.customerId) {
+          try {
+            await createCashReceiptMutation.mutateAsync({
+              voucherDate: new Date().toISOString(),
+              postingDate: new Date().toISOString(),
+              payerName: order.customerName || order.customer?.name || "",
+              amount: depositAmt,
+              paymentMethodId: Number(pmId),
+              orderId: order.id,
+              customerId: order.customerId,
+              bankAccountId:
+                cardEditValues.bankAccountId != null
+                  ? Number(cardEditValues.bankAccountId)
+                  : null,
+              reason: `Thu tiền cọc đơn hàng ${order.code}`,
+              notes: null,
+            });
+          } catch {
+            // Lỗi tạo phiếu thu sẽ được hiển thị bởi hook
+          }
+        }
+
         showRetailDepositThresholdWarning(
           payload.depositAmount ?? order.depositAmount,
           payload.totalAmount ?? order.totalAmount

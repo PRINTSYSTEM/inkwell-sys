@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -14,10 +14,15 @@ import {
   Users,
   Calendar,
   MapPin,
+  Navigation,
   Phone,
   FileText,
   Plus,
   X,
+  Star,
+  Trash2,
+  BookOpen,
+  ChevronDown,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -61,7 +66,28 @@ import {
   useDeliveryNotes,
   useCreateDeliveryNote,
 } from "@/hooks/use-delivery-note";
+import {
+  useCustomerAddresses,
+  useCreateCustomerAddress,
+  useDeleteCustomerAddress,
+  useSetDefaultCustomerAddress,
+} from "@/hooks/use-customer";
+import { useOrdersForAccounting } from "@/hooks/use-order";
 import { orderStatusLabels } from "@/lib/status-utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check } from "lucide-react";
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -370,14 +396,10 @@ export default function DeliveryNoteListPage() {
   // Orders state
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<number>>(
-    new Set(),
-  );
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [recipientName, setRecipientName] = useState("");
-  const [recipientPhone, setRecipientPhone] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [notes, setNotes] = useState("");
+  // Per-line selected address id map: orderDetailId -> customerAddressId
+  const [selectedAddressIds, setSelectedAddressIds] = useState<Record<number, number | null>>({});
 
   // Delivery notes state
   const [deliveryNoteStatusFilter, setDeliveryNoteStatusFilter] =
@@ -386,14 +408,35 @@ export default function DeliveryNoteListPage() {
 
   const itemsPerPage = 10;
 
-  // Data fetching for available order details
+  // Selection state
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [selectedCustomerName, setSelectedCustomerName] = useState<string>("");
+  const [selectedOrderDetailIds, setSelectedOrderDetailIds] = useState<Set<number>>(new Set());
+
+  // Data fetching for orders (for-accounting)
+  const {
+    data: ordersData,
+    isLoading: ordersLoading,
+    isError: ordersError,
+    error: ordersErrorObj,
+    refetch: refetchOrders,
+  } = useOrdersForAccounting({
+    pageNumber: currentPage,
+    pageSize: itemsPerPage,
+    customerName: searchQuery || undefined,
+  });
+
+  // Data fetching for available order details for the active customer
   const {
     data: orderDetailsData,
     isLoading: orderDetailsLoading,
     isError: orderDetailsError,
     error: orderDetailsErrorObj,
     refetch: refetchOrderDetails,
-  } = useAvailableOrderDetailsForDelivery({});
+  } = useAvailableOrderDetailsForDelivery(
+    { customerId: selectedCustomerId ?? undefined },
+    { enabled: !!selectedCustomerId }
+  );
 
   const {
     data: deliveryNotesData,
@@ -410,88 +453,75 @@ export default function DeliveryNoteListPage() {
 
   const createDeliveryNoteMutation = useCreateDeliveryNote();
 
-  // Filter order details
-  const filteredOrders = useMemo(() => {
-    if (!Array.isArray(orderDetailsData)) return [];
-    return orderDetailsData.filter((od) => {
-      const matchesSearch =
-        !searchQuery ||
-        od.orderCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        od.designCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        od.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesSearch;
-    });
-  }, [orderDetailsData, searchQuery]);
-
-  const pagedOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredOrders.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredOrders, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-
-  // We map selectedOrderIds to quantities to allow input, but initially just a Set
+  // Selected details derived from fetched details data
   const selectedOrders = useMemo(() => {
-    return filteredOrders.filter((o) => o.orderDetailId && selectedOrderIds.has(o.orderDetailId));
-  }, [filteredOrders, selectedOrderIds]);
+    if (!Array.isArray(orderDetailsData)) return [];
+    return orderDetailsData.filter(
+      (od) => od.orderDetailId != null && selectedOrderDetailIds.has(od.orderDetailId)
+    );
+  }, [orderDetailsData, selectedOrderDetailIds]);
 
   const totalSelectedAmount = useMemo(() => {
     return selectedOrders.reduce(
-      (sum, order) => sum + (order.remainingToDeliver || 0) * (order.unitPrice || 0),
+      (sum, item) => sum + (item.remainingToDeliver || 0) * (item.unitPrice || 0),
       0,
     );
   }, [selectedOrders]);
 
+  const ordersList = ordersData?.items || [];
+  const totalPages = ordersData?.totalPages || 0;
+
   // Handlers
-  const handleToggleOrder = (orderDetailId: number) => {
-    setSelectedOrderIds((prev) => {
+  const handleSelectCustomer = (customerId: number, customerName: string) => {
+    if (selectedCustomerId === customerId) return;
+    
+    // Clear selections if switching customer
+    setSelectedCustomerId(customerId);
+    setSelectedCustomerName(customerName);
+    setSelectedOrderDetailIds(new Set());
+    setDeliveryQtys({});
+  };
+
+  const handleToggleOrderDetail = (orderDetailId: number) => {
+    setSelectedOrderDetailIds((prev) => {
       const newSet = new Set(prev);
-      const isAdding = !newSet.has(orderDetailId);
-
-      const od = Array.isArray(orderDetailsData) ? orderDetailsData.find((o: any) => o.orderDetailId === orderDetailId) : null;
-      const filterText = od?.customerName;
-
-      if (isAdding) {
-        newSet.add(orderDetailId);
-
-        if (prev.size === 0 && !searchQuery && filterText) {
-          setSearchQuery(filterText);
-        }
-      } else {
+      if (newSet.has(orderDetailId)) {
         newSet.delete(orderDetailId);
-
-        if (newSet.size === 0 && filterText && searchQuery === filterText) {
-          setSearchQuery("");
-        }
+      } else {
+        newSet.add(orderDetailId);
       }
       return newSet;
     });
   };
 
-  const handleSelectAll = () => {
-    if (selectedOrderIds.size === filteredOrders.length) {
-      setSelectedOrderIds(new Set());
+  const handleSelectAllDetails = () => {
+    if (!Array.isArray(orderDetailsData)) return;
+    
+    if (selectedOrderDetailIds.size === orderDetailsData.length) {
+      setSelectedOrderDetailIds(new Set());
     } else {
-      setSelectedOrderIds(
-        new Set(
-          filteredOrders.map((o) => o.orderDetailId).filter((id): id is number => !!id),
-        ),
-      );
+      const allIds = orderDetailsData
+        .map((od) => od.orderDetailId)
+        .filter((id): id is number => id != null);
+      setSelectedOrderDetailIds(new Set(allIds));
     }
   };
 
   const handleCreateDeliveryNote = () => {
-    if (selectedOrderIds.size === 0) {
+    if (selectedOrderDetailIds.size === 0) {
       toast.error("Vui lòng chọn ít nhất một sản phẩm");
       return;
     }
     
-    // Initialize default quantities
+    // Initialize default quantities and reset address selections
     const qtys: Record<number, number> = {};
     selectedOrders.forEach(od => {
-      qtys[od.orderDetailId!] = od.remainingToDeliver || 0;
+      if (od.orderDetailId != null) {
+        qtys[od.orderDetailId] = od.remainingToDeliver || 0;
+      }
     });
     setDeliveryQtys(qtys);
+    setSelectedAddressIds({});
 
     setIsCreateDialogOpen(true);
   };
@@ -500,24 +530,25 @@ export default function DeliveryNoteListPage() {
   const [deliveryQtys, setDeliveryQtys] = useState<Record<number, number>>({});
 
   const handleConfirmCreate = async () => {
-    if (selectedOrderIds.size === 0) return;
+    if (selectedOrderDetailIds.size === 0) return;
 
     try {
       await createDeliveryNoteMutation.mutateAsync({
         lines: selectedOrders.map(od => ({
           orderDetailId: od.orderDetailId!,
-          deliveryQty: deliveryQtys[od.orderDetailId!] || od.remainingToDeliver || 0
+          deliveryQty: deliveryQtys[od.orderDetailId!] || od.remainingToDeliver || 0,
+          customerAddressId: selectedAddressIds[od.orderDetailId!] ?? undefined,
         })),
         notes: notes || undefined,
       });
-      setSelectedOrderIds(new Set());
+      setSelectedOrderDetailIds(new Set());
       setDeliveryQtys({});
+      setSelectedAddressIds({});
       setNotes("");
       setIsCreateDialogOpen(false);
       refetchOrderDetails();
       refetchDeliveryNotes();
       setViewMode("delivery-notes");
-      toast.success("Tạo phiếu giao hàng thành công");
     } catch (error) {
       // Error is handled by the hook
     }
@@ -571,22 +602,26 @@ export default function DeliveryNoteListPage() {
           <OrdersView
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            orderDetailsLoading={orderDetailsLoading}
-            orderDetailsError={orderDetailsError}
-            orderDetailsErrorObj={orderDetailsErrorObj}
-            refetchOrderDetails={refetchOrderDetails}
-            filteredOrders={filteredOrders}
-            pagedOrders={pagedOrders}
+            ordersLoading={ordersLoading}
+            ordersError={ordersError}
+            ordersErrorObj={ordersErrorObj}
+            refetchOrders={refetchOrders}
+            ordersList={ordersList}
             totalPages={totalPages}
-            selectedOrderIds={selectedOrderIds}
-            handleToggleOrder={handleToggleOrder}
-            handleSelectAll={handleSelectAll}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            selectedCustomerId={selectedCustomerId}
+            handleSelectCustomer={handleSelectCustomer}
+            selectedCustomerName={selectedCustomerName}
+            orderDetailsData={orderDetailsData}
+            orderDetailsLoading={orderDetailsLoading}
+            refetchOrderDetails={refetchOrderDetails}
+            selectedOrderDetailIds={selectedOrderDetailIds}
+            handleToggleOrderDetail={handleToggleOrderDetail}
+            handleSelectAllDetails={handleSelectAllDetails}
             selectedOrders={selectedOrders}
             totalSelectedAmount={totalSelectedAmount}
             handleCreateDeliveryNote={handleCreateDeliveryNote}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            navigate={navigate}
           />
         ) : (
           <DeliveryNotesView
@@ -611,6 +646,9 @@ export default function DeliveryNoteListPage() {
         selectedOrders={selectedOrders}
         deliveryQtys={deliveryQtys}
         setDeliveryQtys={setDeliveryQtys}
+        selectedAddressIds={selectedAddressIds}
+        setSelectedAddressIds={setSelectedAddressIds}
+        customerId={selectedCustomerId}
         notes={notes}
         setNotes={setNotes}
         onCreate={handleConfirmCreate}
@@ -627,54 +665,70 @@ export default function DeliveryNoteListPage() {
 interface OrdersViewProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  orderDetailsLoading: boolean;
-  orderDetailsError: boolean;
-  orderDetailsErrorObj: unknown;
-  refetchOrderDetails: () => void;
-  filteredOrders: Array<any>;
-  pagedOrders: Array<any>;
+  ordersLoading: boolean;
+  ordersError: boolean;
+  ordersErrorObj: unknown;
+  refetchOrders: () => void;
+  ordersList: Array<any>;
   totalPages: number;
-  selectedOrderIds: Set<number>;
-  handleToggleOrder: (id: number) => void;
-  handleSelectAll: () => void;
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  selectedCustomerId: number | null;
+  handleSelectCustomer: (id: number, name: string) => void;
+  selectedCustomerName: string;
+  orderDetailsData: Array<any> | undefined;
+  orderDetailsLoading: boolean;
+  refetchOrderDetails: () => void;
+  selectedOrderDetailIds: Set<number>;
+  handleToggleOrderDetail: (id: number) => void;
+  handleSelectAllDetails: () => void;
   selectedOrders: Array<any>;
   totalSelectedAmount: number;
   handleCreateDeliveryNote: () => void;
-  currentPage: number;
-  setCurrentPage: (page: number) => void;
-  navigate: (path: string) => void;
 }
 
 function OrdersView({
   searchQuery,
   setSearchQuery,
-  orderDetailsLoading,
-  orderDetailsError,
-  orderDetailsErrorObj,
-  refetchOrderDetails,
-  filteredOrders,
-  pagedOrders,
+  ordersLoading,
+  ordersError,
+  ordersErrorObj,
+  refetchOrders,
+  ordersList,
   totalPages,
-  selectedOrderIds,
-  handleToggleOrder,
-  handleSelectAll,
+  currentPage,
+  setCurrentPage,
+  selectedCustomerId,
+  handleSelectCustomer,
+  selectedCustomerName,
+  orderDetailsData,
+  orderDetailsLoading,
+  refetchOrderDetails,
+  selectedOrderDetailIds,
+  handleToggleOrderDetail,
+  handleSelectAllDetails,
   selectedOrders,
   totalSelectedAmount,
   handleCreateDeliveryNote,
-  currentPage,
-  setCurrentPage,
-  navigate,
 }: OrdersViewProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
-      <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+      {/* Search Bar for Orders */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Tìm khách hàng & Đơn hàng
+          </span>
+        </div>
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Tìm kiếm theo mã đơn, tên khách, SĐT..."
+                placeholder="Nhập tên khách hàng, mã đơn hàng để tìm kiếm..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-11 border-slate-300 dark:border-slate-700"
@@ -683,12 +737,12 @@ function OrdersView({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => refetchOrderDetails()}
-              disabled={orderDetailsLoading}
+              onClick={() => refetchOrders()}
+              disabled={ordersLoading}
               className="h-11 w-11 border-slate-300 dark:border-slate-700"
             >
               <RefreshCw
-                className={`h-4 w-4 ${orderDetailsLoading ? "animate-spin" : ""}`}
+                className={`h-4 w-4 ${ordersLoading ? "animate-spin" : ""}`}
               />
             </Button>
           </div>
@@ -696,258 +750,276 @@ function OrdersView({
       </Card>
 
       {/* Error Alert */}
-      {orderDetailsError && (
-        <Alert
-          variant="destructive"
-          className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50"
-        >
+      {ordersError && (
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle className="font-semibold">Lỗi kết nối</AlertTitle>
+          <AlertTitle>Lỗi</AlertTitle>
           <AlertDescription>
-            {orderDetailsErrorObj instanceof Error
-              ? orderDetailsErrorObj.message
-              : "Không thể tải dữ liệu. Vui lòng thử lại."}
+            {ordersErrorObj instanceof Error ? ordersErrorObj.message : "Có lỗi xảy ra khi tải danh sách đơn hàng"}
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Selection Bar */}
-      {selectedOrderIds.size > 0 && (
-        <Card className="border-primary/20 bg-primary/5 dark:bg-primary/10 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Package className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                    Đã chọn {selectedOrderIds.size} đơn hàng
-                  </p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Tổng:{" "}
-                    <span className="font-bold text-primary">
-                      {formatCurrency(totalSelectedAmount)}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSelectAll()}
-                  className="h-9"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Bỏ chọn tất cả
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleCreateDeliveryNote}
-                  className="gap-2 h-9 font-semibold"
-                >
-                  <Truck className="h-4 w-4" />
-                  Tạo phiếu giao hàng ({selectedOrderIds.size})
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Orders Table */}
-      <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="overflow-auto">
-          <Table>
-            <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-800">
-              <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={
-                      filteredOrders.length > 0 &&
-                      selectedOrderIds.size === filteredOrders.length
-                    }
-                    onCheckedChange={handleSelectAll}
-                    className="border-slate-300 dark:border-slate-700"
-                  />
-                </TableHead>
-                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                  Mã hàng / Đơn hàng
-                </TableHead>
-                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                  Sản phẩm
-                </TableHead>
-                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                  Khách hàng
-                </TableHead>
-                <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300">
-                  Số lượng (Tổng)
-                </TableHead>
-                <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300">
-                  Đã giao
-                </TableHead>
-                <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300">
-                  Cần giao
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orderDetailsLoading ? (
-                Array.from({ length: 10 }).map((_, i) => (
-                  <TableRow key={i} className="border-slate-200 dark:border-slate-800">
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-10 w-full" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : pagedOrders.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="h-32 text-center border-slate-200 dark:border-slate-800"
+      {/* Customer / Order Selection Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Orders List */}
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-[600px]">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10 flex items-center justify-between">
+            <h3 className="font-bold flex items-center gap-2">
+              <Package className="h-4 w-4 text-primary" />
+              Danh sách đơn hàng
+            </h3>
+            {ordersLoading && <RefreshCw className="h-4 w-4 animate-spin text-slate-400" />}
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-3">
+              {ordersList.map((order) => {
+                const isSelected = selectedCustomerId === order.customerId;
+                return (
+                  <Card
+                    key={order.id}
+                    className={`group cursor-pointer transition-all border-2 ${
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
+                    }`}
+                    onClick={() => handleSelectCustomer(order.customerId, order.customerName || `Khách hàng #${order.customerId}`)}
                   >
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Package className="h-12 w-12 text-slate-300 dark:text-slate-700" />
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                        Không tìm thấy chi tiết đơn hàng nào
-                      </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                pagedOrders.map((od) => {
-                  const isSelected = od.orderDetailId ? selectedOrderIds.has(od.orderDetailId) : false;
-
-                  return (
-                    <TableRow
-                      key={od.orderDetailId}
-                      className={`cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/50 ${
-                        isSelected ? "bg-primary/5 border-primary/20" : ""
-                      }`}
-                      onClick={() => navigate(`/accounting/orders/${od.orderId}`)}
-                    >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={(checked) => {
-                            if (checked !== isSelected && od.orderDetailId) {
-                              handleToggleOrder(od.orderDetailId);
-                            }
-                          }}
-                          className="border-slate-300 dark:border-slate-700"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-mono font-semibold text-sm text-slate-900 dark:text-slate-50">
-                          {od.designCode}
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-mono font-bold text-slate-900 dark:text-slate-50">
+                              {order.orderCode}
+                            </span>
+                            <StatusBadge
+                              status={order.status || ""}
+                              label={orderStatusLabels[order.status || ""]}
+                              className="scale-75 origin-left"
+                            />
+                          </div>
+                          <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 truncate flex items-center gap-2">
+                            {order.customerName}
+                            <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-mono">
+                              ID: {order.customerId}
+                            </span>
+                          </div>
+                          {order.deliveryAddress && (
+                            <div className="text-xs text-slate-500 truncate flex items-center gap-1 mt-1">
+                              <MapPin className="h-3 w-3" />
+                              {order.deliveryAddress}
+                            </div>
+                          )}
                         </div>
-                        <div className="font-mono text-xs text-slate-500 dark:text-slate-400">
-                          {od.orderCode}
+                        <div className="text-right flex-shrink-0">
+                           <div className="text-sm font-bold text-primary">
+                             {formatCurrency(order.totalAmount || 0)}
+                           </div>
+                           <div className="text-[10px] text-slate-400 mt-1">
+                             {formatDate(order.createdAt)}
+                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm text-slate-900 dark:text-slate-50 font-semibold line-clamp-2">
-                          {od.designName}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div
-                          className="text-sm text-slate-900 dark:text-slate-50 font-semibold hover:bg-slate-100 p-1 -m-1 rounded transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (od.customerName) setSearchQuery(od.customerName);
-                          }}
-                        >
-                          {od.customerName}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          {new Intl.NumberFormat('vi-VN').format(od.netQtyTotal || 0)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="text-sm font-semibold text-green-600 dark:text-green-400">
-                          {new Intl.NumberFormat('vi-VN').format(od.deliveredQtyTotal || 0)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="text-sm font-bold text-primary">
-                          {new Intl.NumberFormat('vi-VN').format(od.remainingToDeliver || 0)}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {!ordersLoading && ordersList.length === 0 && (
+                <div className="py-12 text-center text-slate-500">
+                  Không tìm thấy đơn hàng nào
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+            </div>
+          </ScrollArea>
+          
+          {/* Internal Pagination for orders */}
+          {totalPages > 1 && (
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs font-bold text-slate-500">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </Card>
 
-      {/* Pagination */}
-      {!orderDetailsLoading &&
-        filteredOrders.length > 0 &&
-        orderDetailsDataTyped &&
-        orderDetailsDataTyped.totalPages &&
-        orderDetailsDataTyped.totalPages > 0 && (
-          <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-                  Trang {currentPage} / {orderDetailsDataTyped.totalPages} •{" "}
-                  <span className="text-slate-900 dark:text-slate-50">
-                    {orderDetailsDataTyped.total}
-                  </span>{" "}
-                  đơn hàng
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const newPage = Math.max(1, currentPage - 1);
-                      setCurrentPage(newPage);
-                    }}
-                    disabled={currentPage === 1 || orderDetailsLoading}
-                    className="h-9"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-md">
-                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                      {currentPage} / {orderDetailsDataTyped.totalPages}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const newPage = Math.min(
-                        orderDetailsDataTyped.totalPages || 1,
-                        currentPage + 1,
-                      );
-                      setCurrentPage(newPage);
-                    }}
-                    disabled={
-                      currentPage === (orderDetailsDataTyped.totalPages || 1) ||
-                      orderDetailsLoading
-                    }
-                    className="h-9"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+        {/* Right: Item Selection for Active Customer */}
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-[600px] bg-slate-50/30">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10 flex items-center justify-between">
+            <h3 className="font-bold flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Sản phẩm khả dụng {selectedCustomerId && ` - ${selectedCustomerName}`}
+            </h3>
+            {selectedCustomerId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetchOrderDetails()}
+                disabled={orderDetailsLoading}
+                className="h-8 w-8 p-0"
+              >
+                <RefreshCw className={`h-3 w-3 ${orderDetailsLoading ? "animate-spin" : ""}`} />
+              </Button>
+            )}
+          </div>
+          
+          <div className="flex-1 p-4 flex flex-col gap-4">
+            {!selectedCustomerId ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
+                <div className="h-16 w-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Plus className="h-8 w-8" />
                 </div>
+                <p className="text-sm font-medium">Vui lòng chọn một đơn hàng / khách hàng ở bên trái</p>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-slate-500">Chọn sản phẩm từ danh sách</Label>
+                  <Popover open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={isDropdownOpen}
+                        className="w-full justify-between h-12 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                        disabled={orderDetailsLoading || !orderDetailsData}
+                      >
+                        <span className="truncate">
+                          {orderDetailsLoading ? "Đang tải sản phẩm..." : 
+                           (orderDetailsData?.length === 0 ? "Khách hàng không còn sản phẩm chờ giao" : "Bấm để chọn thêm sản phẩm...")}
+                        </span>
+                        <ChevronRight className={`ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform ${isDropdownOpen ? 'rotate-90' : ''}`} />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Tìm sản phẩm (mã hàng, tên)..." />
+                        <CommandList className="max-h-[300px]">
+                          <CommandEmpty>Không tìm thấy sản phẩm nào.</CommandEmpty>
+                          <CommandGroup>
+                            {orderDetailsData?.map((item) => {
+                              const isChecked = selectedOrderDetailIds.has(item.orderDetailId!);
+                              return (
+                                <CommandItem
+                                  key={item.orderDetailId}
+                                  value={`${item.designCode} ${item.designName} ${item.orderCode}`}
+                                  onSelect={() => {
+                                    handleToggleOrderDetail(item.orderDetailId!);
+                                  }}
+                                  className="flex items-start gap-3 py-3 cursor-pointer"
+                                >
+                                  <div className={`mt-0.5 flex h-4 w-4 items-center justify-center rounded-sm border border-primary ${isChecked ? 'bg-primary text-primary-foreground' : 'opacity-50'}`}>
+                                    {isChecked && <Check className="h-3 w-3" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono font-bold text-xs">{item.designCode}</span>
+                                      <span className="text-[10px] text-slate-500 font-mono">({item.orderCode})</span>
+                                    </div>
+                                    <div className="text-sm font-medium truncate">{item.designName}</div>
+                                    <div className="text-[10px] text-primary font-bold mt-1">
+                                      Còn lại: {new Intl.NumberFormat('vi-VN').format(item.remainingToDeliver || 0)} SP
+                                    </div>
+                                  </div>
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="flex-1 flex flex-col gap-2 min-h-0">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold uppercase text-slate-500">Sản phẩm đã chọn ({selectedOrderDetailIds.size})</Label>
+                    {selectedOrderDetailIds.size > 0 && (
+                      <Button variant="ghost" size="sm" onClick={handleSelectAllDetails} className="h-6 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0">
+                        Xóa tất cả
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <ScrollArea className="flex-1 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg bg-white/50 dark:bg-slate-900/50">
+                    <div className="p-3 space-y-2">
+                      {selectedOrders.map((item) => (
+                        <div 
+                          key={item.orderDetailId} 
+                          className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md group shadow-sm"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="font-mono font-bold text-[11px] text-slate-900 dark:text-slate-50">{item.designCode}</span>
+                              <span className="text-[10px] text-slate-400 font-mono">{item.orderCode}</span>
+                            </div>
+                            <div className="text-xs font-semibold text-slate-700 truncate">{item.designName}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                               <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-primary/30 text-primary bg-primary/5">
+                                 {new Intl.NumberFormat('vi-VN').format(item.remainingToDeliver || 0)} SP cần giao
+                               </Badge>
+                               <span className="text-[10px] text-slate-400 font-bold">×</span>
+                               <span className="text-[10px] text-slate-500 font-medium">{formatCurrency(item.unitPrice || 0)}</span>
+                            </div>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleToggleOrderDetail(item.orderDetailId!)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      {selectedOrderDetailIds.size === 0 && (
+                        <div className="py-12 text-center text-slate-400 text-xs italic">
+                          Chưa có sản phẩm nào được chọn
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+
+                {selectedOrderDetailIds.size > 0 && (
+                  <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                    <div className="flex items-end justify-between">
+                       <div className="text-xs text-slate-500 font-medium">Tổng giá trị</div>
+                       <div className="text-xl font-black text-primary tracking-tight">
+                         {formatCurrency(totalSelectedAmount)}
+                       </div>
+                    </div>
+                    <Button 
+                      className="w-full h-12 gap-2 text-md font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-100"
+                      onClick={handleCreateDeliveryNote}
+                    >
+                      <Truck className="h-5 w-5" />
+                      Tạo phiếu giao hàng
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -1290,6 +1362,279 @@ function DeliveryNotesView({
 }
 
 // ============================================================================
+// ADDRESS BOOK MANAGER COMPONENT
+// ============================================================================
+
+interface AddressBookManagerProps {
+  customerId: number;
+  onSelect?: (addressId: number | null) => void;
+  selectedId?: number | null;
+  compact?: boolean;
+}
+
+function AddressBookManager({
+  customerId,
+  onSelect,
+  selectedId,
+  compact = false,
+}: AddressBookManagerProps) {
+  const [showForm, setShowForm] = useState(false);
+  const [newLabel, setNewLabel] = useState("");
+  const [newRecipientName, setNewRecipientName] = useState("");
+  const [newRecipientPhone, setNewRecipientPhone] = useState("");
+  const [newAddress, setNewAddress] = useState("");
+  const [newIsDefault, setNewIsDefault] = useState(false);
+
+  const { data: addresses, isLoading } = useCustomerAddresses(customerId, true);
+  const createMutation = useCreateCustomerAddress(customerId);
+  const deleteMutation = useDeleteCustomerAddress(customerId);
+  const setDefaultMutation = useSetDefaultCustomerAddress(customerId);
+
+  const handleCreate = async () => {
+    if (!newLabel.trim() || !newRecipientName.trim() || !newAddress.trim()) {
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+      return;
+    }
+    await createMutation.mutateAsync({
+      label: newLabel,
+      recipientName: newRecipientName,
+      recipientPhone: newRecipientPhone || undefined,
+      address: newAddress,
+      isDefault: newIsDefault,
+    });
+    setNewLabel("");
+    setNewRecipientName("");
+    setNewRecipientPhone("");
+    setNewAddress("");
+    setNewIsDefault(false);
+    setShowForm(false);
+  };
+
+  if (compact) {
+    // Compact mode: just a dropdown selector, no CRUD
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <Navigation className="h-3 w-3 text-slate-400" />
+          <span className="text-xs text-slate-500">Địa chỉ giao</span>
+        </div>
+        {isLoading ? (
+          <Skeleton className="h-8 w-full" />
+        ) : !addresses || addresses.length === 0 ? (
+          <div className="text-xs text-slate-400 italic">Chưa có địa chỉ trong sổ</div>
+        ) : (
+          <Select
+            value={selectedId != null ? String(selectedId) : "__none__"}
+            onValueChange={(val) => {
+              if (onSelect) {
+                onSelect(val === "__none__" ? null : Number(val));
+              }
+            }}
+          >
+            <SelectTrigger className="h-8 text-xs border-slate-200 dark:border-slate-700">
+              <SelectValue placeholder="Chọn địa chỉ (tùy chọn)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">
+                <span className="text-slate-400 text-xs">Không chỉ định</span>
+              </SelectItem>
+              {addresses.map((addr) => (
+                <SelectItem key={addr.id} value={String(addr.id)}>
+                  <div className="flex items-center gap-1.5">
+                    {addr.isDefault && <Star className="h-3 w-3 text-amber-400 fill-amber-400" />}
+                    <span className="text-xs font-medium">{addr.label}</span>
+                    <span className="text-xs text-slate-400">{addr.recipientName}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {selectedId != null && addresses && (() => {
+          const sel = addresses.find(a => a.id === selectedId);
+          return sel ? (
+            <div className="text-[10px] text-slate-500 flex items-start gap-1 bg-primary/5 rounded px-1.5 py-1 border border-primary/20">
+              <MapPin className="h-2.5 w-2.5 mt-0.5 text-primary flex-shrink-0" />
+              <span className="line-clamp-1">{sel.address}</span>
+              {sel.recipientPhone && <span className="text-slate-400 shrink-0">• {sel.recipientPhone}</span>}
+            </div>
+          ) : null;
+        })()}
+      </div>
+    );
+  }
+
+  // Full CRUD mode
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Sổ địa chỉ ({addresses?.length || 0})
+          </span>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowForm(!showForm)}
+          className="h-7 text-xs gap-1"
+        >
+          <Plus className="h-3 w-3" />
+          Thêm địa chỉ
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="border-dashed border-primary/40 bg-primary/5">
+          <CardContent className="p-3 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs text-slate-500 mb-1 block">Nhãn *</Label>
+                <Input
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  placeholder="VD: Kho Q7 - Chị Lan"
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-slate-500 mb-1 block">Tên người nhận *</Label>
+                <Input
+                  value={newRecipientName}
+                  onChange={(e) => setNewRecipientName(e.target.value)}
+                  placeholder="Họ tên người nhận"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs text-slate-500 mb-1 block">Số điện thoại</Label>
+                <Input
+                  value={newRecipientPhone}
+                  onChange={(e) => setNewRecipientPhone(e.target.value)}
+                  placeholder="0901 234 567"
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <div className="flex items-center gap-1.5 pb-1">
+                  <Checkbox
+                    id="isDefault"
+                    checked={newIsDefault}
+                    onCheckedChange={(v) => setNewIsDefault(!!v)}
+                  />
+                  <Label htmlFor="isDefault" className="text-xs text-slate-500 cursor-pointer">Mặc định</Label>
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-slate-500 mb-1 block">Địa chỉ *</Label>
+              <Input
+                value={newAddress}
+                onChange={(e) => setNewAddress(e.target.value)}
+                placeholder="Số nhà, đường, quận, thành phố..."
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowForm(false)}
+                className="h-7 text-xs"
+              >
+                Hủy
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleCreate}
+                disabled={createMutation.isPending}
+                className="h-7 text-xs gap-1"
+              >
+                <Plus className="h-3 w-3" />
+                {createMutation.isPending ? "Đang lưu..." : "Lưu địa chỉ"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+        </div>
+      ) : !addresses || addresses.length === 0 ? (
+        <div className="text-center py-4 text-xs text-slate-400 italic border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
+          Chưa có địa chỉ nào. Bấm "Thêm địa chỉ" để tạo.
+        </div>
+      ) : (
+        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+          {addresses.map((addr) => (
+            <div
+              key={addr.id}
+              className={`flex items-start gap-3 p-2.5 rounded-lg border transition-all cursor-pointer group ${
+                selectedId === addr.id
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+              }`}
+              onClick={() => onSelect && onSelect(selectedId === addr.id ? null : addr.id)}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  {addr.isDefault && (
+                    <Star className="h-3 w-3 text-amber-400 fill-amber-400 flex-shrink-0" />
+                  )}
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                    {addr.label}
+                  </span>
+                  {selectedId === addr.id && (
+                    <Badge className="h-4 text-[9px] px-1 py-0 ml-auto bg-primary">Đã chọn</Badge>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                  {addr.recipientName}
+                  {addr.recipientPhone && (
+                    <span className="ml-1.5 text-slate-400">• {addr.recipientPhone}</span>
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-500 flex items-start gap-0.5 mt-0.5">
+                  <MapPin className="h-2.5 w-2.5 mt-0.5 flex-shrink-0" />
+                  <span className="line-clamp-1">{addr.address}</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                {!addr.isDefault && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+                    title="Đặt làm mặc định"
+                    onClick={(e) => { e.stopPropagation(); setDefaultMutation.mutate(addr.id); }}
+                  >
+                    <Star className="h-3 w-3" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 text-red-400 hover:text-red-600 hover:bg-red-50"
+                  title="Xóa địa chỉ"
+                  onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(addr.id); }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // CREATE DIALOG COMPONENT
 // ============================================================================
 
@@ -1299,6 +1644,9 @@ interface CreateDeliveryNoteDialogProps {
   selectedOrders: Array<any>;
   deliveryQtys: Record<number, number>;
   setDeliveryQtys: (qtys: any) => void;
+  selectedAddressIds: Record<number, number | null>;
+  setSelectedAddressIds: React.Dispatch<React.SetStateAction<Record<number, number | null>>>;
+  customerId: number | null;
   notes: string;
   setNotes: (notes: string) => void;
   onCreate: () => void;
@@ -1311,88 +1659,148 @@ function CreateDeliveryNoteDialog({
   selectedOrders,
   deliveryQtys,
   setDeliveryQtys,
+  selectedAddressIds,
+  setSelectedAddressIds,
+  customerId,
   notes,
   setNotes,
   onCreate,
   isPending,
 }: CreateDeliveryNoteDialogProps) {
+  const [showAddressBook, setShowAddressBook] = useState(false);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] border-slate-200 dark:border-slate-800">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] border-slate-200 dark:border-slate-800 flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-50">
-            Tạo phiếu giao hàng cho {selectedOrders.length} đơn hàng
+            Tạo phiếu giao hàng ({selectedOrders.length} sản phẩm)
           </DialogTitle>
           <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
-            Nhập thông tin giao hàng cho các đơn hàng đã chọn.
+            Xác nhận số lượng và chọn địa chỉ giao cho từng sản phẩm.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[50vh] pr-4 mb-4">
-          <div className="space-y-3">
-            {selectedOrders.map((od) => (
-              <Card
-                key={od.orderDetailId}
-                className="border-slate-200 dark:border-slate-800"
-              >
-                <CardContent className="p-3">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">
-                          {od.designCode} <span className="text-slate-400 font-sans text-xs">({od.orderCode})</span>
+        <ScrollArea className="flex-1 pr-4">
+          <div className="space-y-4 pb-2">
+            {/* Per-line items */}
+            <div className="space-y-3">
+              {selectedOrders.map((od) => (
+                <Card
+                  key={od.orderDetailId}
+                  className="border-slate-200 dark:border-slate-800 overflow-hidden"
+                >
+                  <CardContent className="p-3">
+                    <div className="flex flex-col gap-3">
+                      {/* Header row: name + qty input */}
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">
+                            {od.designCode}{" "}
+                            <span className="text-slate-400 font-sans text-xs">({od.orderCode})</span>
+                          </div>
+                          <div className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 line-clamp-1">
+                            {od.designName}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Tối đa:{" "}
+                            <span className="font-bold text-primary">
+                              {new Intl.NumberFormat("vi-VN").format(od.remainingToDeliver || 0)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-sm text-slate-700 dark:text-slate-300 mt-1 line-clamp-1">
-                          {od.designName}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          Tối đa giao: <span className="font-bold text-primary">{new Intl.NumberFormat('vi-VN').format(od.remainingToDeliver || 0)}</span>
+                        <div className="w-[110px] flex-shrink-0">
+                          <Label className="text-xs text-slate-500 mb-1 block">Số lượng giao</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max={od.remainingToDeliver || 1}
+                            value={deliveryQtys[od.orderDetailId] || ""}
+                            onChange={(e) => {
+                              let val = parseInt(e.target.value, 10);
+                              if (isNaN(val)) val = 0;
+                              if (val > (od.remainingToDeliver || 0)) val = od.remainingToDeliver || 0;
+                              setDeliveryQtys((prev: any) => ({
+                                ...prev,
+                                [od.orderDetailId]: val,
+                              }));
+                            }}
+                            className="h-8 text-right font-semibold text-primary"
+                          />
                         </div>
                       </div>
-                      <div className="w-[120px] flex-shrink-0">
-                        <Label className="text-xs text-slate-500 mb-1 block">Số lượng giao</Label>
-                        <Input
-                          type="number"
-                          min="1"
-                          max={od.remainingToDeliver || 1}
-                          value={deliveryQtys[od.orderDetailId] || ''}
-                          onChange={(e) => {
-                            let val = parseInt(e.target.value, 10);
-                            if (isNaN(val)) val = 0;
-                            if (val > (od.remainingToDeliver || 0)) val = od.remainingToDeliver || 0;
-                            setDeliveryQtys((prev: any) => ({...prev, [od.orderDetailId]: val}));
-                          }}
-                          className="h-8 text-right font-semibold text-primary"
-                        />
-                      </div>
+
+                      {/* Per-line address selector */}
+                      {customerId && (
+                        <div className="border-t border-slate-100 dark:border-slate-800 pt-2">
+                          <AddressBookManager
+                            customerId={customerId}
+                            compact
+                            selectedId={selectedAddressIds[od.orderDetailId] ?? null}
+                            onSelect={(addrId) =>
+                              setSelectedAddressIds((prev) => ({
+                                ...prev,
+                                [od.orderDetailId]: addrId,
+                              }))
+                            }
+                          />
+                        </div>
+                      )}
                     </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Address Book Manager (expandable) */}
+            {customerId && (
+              <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm"
+                  onClick={() => setShowAddressBook(!showAddressBook)}
+                >
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      Quản lý sổ địa chỉ
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                  <ChevronDown
+                    className={`h-4 w-4 text-slate-400 transition-transform ${
+                      showAddressBook ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {showAddressBook && (
+                  <div className="p-4 bg-white dark:bg-slate-900">
+                    <AddressBookManager customerId={customerId} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="delivery-notes"
+                className="text-sm font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Ghi chú chung
+              </Label>
+              <Textarea
+                id="delivery-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Ghi chú (tùy chọn)"
+                rows={2}
+                className="resize-none border-slate-300 dark:border-slate-700"
+              />
+            </div>
           </div>
         </ScrollArea>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label
-              htmlFor="notes"
-              className="text-sm font-semibold text-slate-700 dark:text-slate-300"
-            >
-              Ghi chú chung
-            </Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ghi chú (tùy chọn)"
-              rows={3}
-              className="resize-none border-slate-300 dark:border-slate-700"
-            />
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 flex-shrink-0 pt-2 border-t border-slate-200 dark:border-slate-800">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
