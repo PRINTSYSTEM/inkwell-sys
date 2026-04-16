@@ -11,6 +11,7 @@ import type {
   RecreateDeliveryNoteRequest,
   CreateDeliveryNoteRequest,
   OrderForDeliveryResponse,
+  OrderDetailForDeliveryResponse,
   FailureReasonResponse,
   DeliveryNoteLineResponse,
   UpdateDeliveryLineResultRequest,
@@ -228,6 +229,26 @@ export const useUpdateDeliveryLineResult = () => {
     },
     onError: (error: Error) => {
       toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// ================== GET AVAILABLE ORDER DETAILS FOR DELIVERY ==================
+// GET /delivery-notes/available-order-details
+export const useAvailableOrderDetailsForDelivery = (
+  params?: { customerId?: number }
+) => {
+  return useQuery({
+    queryKey: ["availableOrderDetailsForDelivery", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<OrderDetailForDeliveryResponse[]>(
+        API_SUFFIX.DELIVERY_NOTE_AVAILABLE_ORDER_DETAILS,
+        { params: normalizedParams }
+      );
+      return res.data;
     },
   });
 };

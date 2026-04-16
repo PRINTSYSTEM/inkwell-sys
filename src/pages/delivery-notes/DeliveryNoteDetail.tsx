@@ -295,10 +295,6 @@ export default function DeliveryNoteDetailPage() {
     try {
       await recreateMutation.mutateAsync({
         originalDeliveryNoteId: deliveryNote.id,
-        orderIds:
-          deliveryNote.orders
-            ?.map((o) => o.orderId)
-            .filter((id): id is number => !!id) || undefined,
       });
       setIsRecreateDialogOpen(false);
       navigate("/delivery-notes");
