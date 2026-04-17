@@ -1442,7 +1442,6 @@ function AddressBookManager({
   const [newAddress, setNewAddress] = useState("");
   const [newIsDefault, setNewIsDefault] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
-  const [showFullCrud, setShowFullCrud] = useState(false);
 
   const { data: addresses, isLoading } = useCustomerAddresses(customerId, true);
   const createMutation = useCreateCustomerAddress(customerId);
@@ -1471,82 +1470,225 @@ function AddressBookManager({
   };
 
   const handleSave = async () => {
-    if (!newLabel.trim() || !newRecipientName.trim() || !newAddress.trim()) {
-      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+    if (!newLabel.trim() || !newAddress.trim()) {
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc (Nhãn và Địa chỉ)");
       return;
     }
 
-    if (editingAddressId) {
-      await updateMutation.mutateAsync({
-        addressId: editingAddressId,
-        data: {
+    try {
+      if (editingAddressId) {
+        await updateMutation.mutateAsync({
+          addressId: editingAddressId,
+          data: {
+            label: newLabel,
+            recipientName: newRecipientName || null,
+            recipientPhone: newRecipientPhone || null,
+            address: newAddress,
+            isDefault: newIsDefault,
+            isActive: true
+          }
+        });
+      } else {
+        await createMutation.mutateAsync({
           label: newLabel,
-          recipientName: newRecipientName,
-          recipientPhone: newRecipientPhone || undefined,
+          recipientName: newRecipientName || null,
+          recipientPhone: newRecipientPhone || null,
           address: newAddress,
           isDefault: newIsDefault,
-        }
-      });
-    } else {
-      await createMutation.mutateAsync({
-        label: newLabel,
-        recipientName: newRecipientName,
-        recipientPhone: newRecipientPhone || undefined,
-        address: newAddress,
-        isDefault: newIsDefault,
-      });
+        });
+      }
+      resetForm();
+    } catch (err) {
+      // toast.error handled in mutation hooks
     }
-    resetForm();
   };
 
-  if (compact && !showFullCrud) {
-    // Compact mode: just a dropdown selector, no CRUD
-    return (
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-          <Navigation className="h-3 w-3 text-slate-400" />
-          <span className="text-xs text-slate-500">Địa chỉ giao</span>
+  const renderForm = () => (
+    <Card className="border-dashed border-primary/40 bg-primary/5 shadow-inner">
+      <CardContent className="p-3 space-y-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-bold text-primary flex items-center gap-1">
+            {editingAddressId ? <Edit2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+            {editingAddressId ? "Cập nhật địa chỉ" : "Thêm địa chỉ mới"}
+          </span>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={resetForm}>
+            <X className="h-3 w-3" />
+          </Button>
         </div>
-        {isLoading ? (
-          <Skeleton className="h-8 w-full" />
-        ) : !addresses || addresses.length === 0 ? (
-          <div className="text-xs text-slate-400 italic">Chưa có địa chỉ trong sổ</div>
-        ) : (
-          <Select
-            value={selectedId != null ? String(selectedId) : "__none__"}
-            onValueChange={(val) => {
-              if (onSelect) {
-                onSelect(val === "__none__" ? null : Number(val));
-              }
-            }}
+        
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-slate-500 font-bold">Nhãn địa chỉ *</Label>
+            <Input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder="VD: Kho hàng, Văn phòng..."
+              className="h-8 text-xs bg-white dark:bg-slate-900"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-slate-500 font-bold">Người nhận</Label>
+            <Input
+              value={newRecipientName}
+              onChange={(e) => setNewRecipientName(e.target.value)}
+              placeholder="Họ tên người nhận"
+              className="h-8 text-xs bg-white dark:bg-slate-900"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase text-slate-500 font-bold">Số điện thoại</Label>
+            <Input
+              value={newRecipientPhone}
+              onChange={(e) => setNewRecipientPhone(e.target.value)}
+              placeholder="09xx xxx xxx"
+              className="h-8 text-xs bg-white dark:bg-slate-900"
+            />
+          </div>
+          <div className="flex items-end pb-1.5">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id={`isDefault-${customerId}-${editingAddressId || 'new'}`}
+                checked={newIsDefault}
+                onCheckedChange={(v) => setNewIsDefault(!!v)}
+              />
+              <Label 
+                htmlFor={`isDefault-${customerId}-${editingAddressId || 'new'}`} 
+                className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer"
+              >
+                Đặt làm mặc định
+              </Label>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-slate-500 font-bold">Địa chỉ chi tiết *</Label>
+          <Input
+            value={newAddress}
+            onChange={(e) => setNewAddress(e.target.value)}
+            placeholder="Số nhà, tên đường, phường/xã..."
+            className="h-8 text-xs bg-white dark:bg-slate-900"
+          />
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetForm}
+            className="h-7 text-xs border border-slate-200 dark:border-slate-700"
           >
-            <SelectTrigger className="h-8 text-xs border-slate-200 dark:border-slate-700">
-              <SelectValue placeholder="Chọn địa chỉ (tùy chọn)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">
-                <span className="text-slate-400 text-xs">Không chỉ định</span>
-              </SelectItem>
-              {addresses.map((addr) => (
-                <SelectItem key={addr.id} value={String(addr.id)}>
-                  <div className="flex items-center gap-1.5">
-                    {addr.isDefault && <Star className="h-3 w-3 text-amber-400 fill-amber-400" />}
-                    <span className="text-xs font-medium">{addr.label}</span>
-                    <span className="text-xs text-slate-400">{addr.recipientName}</span>
+            Hủy
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={createMutation.isPending || updateMutation.isPending}
+            className="h-7 text-xs gap-1 font-bold shadow-sm"
+          >
+            {createMutation.isPending || updateMutation.isPending ? (
+              <RefreshCw className="h-3 w-3 animate-spin" />
+            ) : (
+              editingAddressId ? <Edit2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />
+            )}
+            {editingAddressId ? "CẬP NHẬT" : "LƯU ĐỊA CHỈ"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            {isLoading ? (
+              <Skeleton className="h-8 w-full" />
+            ) : (
+              <Select
+                value={selectedId != null ? String(selectedId) : "__none__"}
+                onValueChange={(val) => {
+                  if (onSelect) {
+                    onSelect(val === "__none__" ? null : Number(val));
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50">
+                  <div className="flex items-center gap-2 truncate">
+                    <Navigation className="h-3 w-3 text-slate-400" />
+                    <SelectValue placeholder="Chọn địa chỉ giao..." />
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        {selectedId != null && addresses && (() => {
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">
+                    <span className="text-slate-400 text-xs italic">Không chọn địa chỉ</span>
+                  </SelectItem>
+                  {addresses && addresses.map((addr) => (
+                    <SelectItem key={addr.id} value={String(addr.id)}>
+                      <div className="flex items-center gap-1.5">
+                        {addr.isDefault && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+                        <span className="text-xs font-semibold">{addr.label}</span>
+                        <span className="text-xs text-slate-400 truncate max-w-[150px]">({addr.address})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 text-primary border-primary/20 bg-primary/5 hover:bg-primary/10"
+              title="Thêm địa chỉ mới"
+              onClick={() => {
+                if (showForm && editingAddressId) {
+                  resetForm();
+                  setShowForm(true);
+                } else {
+                  setShowForm(!showForm);
+                }
+              }}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+            {selectedId != null && (
+               <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 text-blue-500 border-blue-200 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800"
+                title="Sửa địa chỉ này"
+                onClick={() => {
+                  const addr = addresses?.find(a => a.id === selectedId);
+                  if (addr) handleEdit(addr);
+                }}
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {showForm && renderForm()}
+
+        {selectedId != null && !showForm && addresses && (() => {
           const sel = addresses.find(a => a.id === selectedId);
           return sel ? (
-            <div className="text-[10px] text-slate-500 flex items-start gap-1 bg-primary/5 rounded px-1.5 py-1 border border-primary/20">
-              <MapPin className="h-2.5 w-2.5 mt-0.5 text-primary flex-shrink-0" />
-              <span className="line-clamp-1">{sel.address}</span>
-              {sel.recipientPhone && <span className="text-slate-400 shrink-0">• {sel.recipientPhone}</span>}
+            <div className="text-[10px] text-slate-600 dark:text-slate-400 flex items-start gap-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-md px-2 py-1.5 border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-1">
+              <MapPin className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="line-clamp-1">
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{sel.recipientName || "Người nhận"}</span>
+                  {sel.recipientPhone && <span className="ml-1">• {sel.recipientPhone}</span>}
+                </p>
+                <p className="line-clamp-1 italic">{sel.address}</p>
+              </div>
             </div>
           ) : null;
         })()}
@@ -1556,187 +1698,117 @@ function AddressBookManager({
 
   // Full CRUD mode
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BookOpen className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            Sổ địa chỉ ({addresses?.length || 0})
-          </span>
+          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+            Sổ địa chỉ khách hàng
+          </h4>
+          <Badge variant="outline" className="px-1.5 h-5 text-[10px] font-bold bg-slate-50 dark:bg-slate-800">
+            {addresses?.length || 0}
+          </Badge>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            if (showForm && editingAddressId) {
-              resetForm();
-              setShowForm(true);
-            } else {
-              setShowForm(!showForm);
-              if (editingAddressId) resetForm();
-            }
-          }}
-          className="h-7 text-xs gap-1"
-        >
-          <Plus className="h-3 w-3" />
-          Thêm địa chỉ
-        </Button>
+        {!showForm && (
+          <Button
+            size="sm"
+            variant="default"
+            onClick={() => setShowForm(true)}
+            className="h-8 shadow-md gap-1.5 font-bold"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            THÊM ĐỊA CHỈ
+          </Button>
+        )}
       </div>
 
-      {showForm && (
-        <Card className="border-dashed border-primary/40 bg-primary/5">
-          <CardContent className="p-3 space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs text-slate-500 mb-1 block">Nhãn *</Label>
-                <Input
-                  value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
-                  placeholder="VD: Kho Q7 - Chị Lan"
-                  className="h-8 text-xs"
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-slate-500 mb-1 block">Tên người nhận *</Label>
-                <Input
-                  value={newRecipientName}
-                  onChange={(e) => setNewRecipientName(e.target.value)}
-                  placeholder="Họ tên người nhận"
-                  className="h-8 text-xs"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs text-slate-500 mb-1 block">Số điện thoại</Label>
-                <Input
-                  value={newRecipientPhone}
-                  onChange={(e) => setNewRecipientPhone(e.target.value)}
-                  placeholder="0901 234 567"
-                  className="h-8 text-xs"
-                />
-              </div>
-              <div className="flex items-end gap-2">
-                <div className="flex items-center gap-1.5 pb-1">
-                  <Checkbox
-                    id="isDefault"
-                    checked={newIsDefault}
-                    onCheckedChange={(v) => setNewIsDefault(!!v)}
-                  />
-                  <Label htmlFor="isDefault" className="text-xs text-slate-500 cursor-pointer">Mặc định</Label>
-                </div>
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500 mb-1 block">Địa chỉ *</Label>
-              <Input
-                value={newAddress}
-                onChange={(e) => setNewAddress(e.target.value)}
-                placeholder="Số nhà, đường, quận, thành phố..."
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetForm}
-                className="h-7 text-xs"
-              >
-                Hủy
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={createMutation.isPending || updateMutation.isPending}
-                className="h-7 text-xs gap-1"
-              >
-                {editingAddressId ? <Edit2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                {createMutation.isPending || updateMutation.isPending ? "Đang lưu..." : (editingAddressId ? "Cập nhật" : "Lưu địa chỉ")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {showForm && renderForm()}
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
-        </div>
-      ) : !addresses || addresses.length === 0 ? (
-        <div className="text-center py-4 text-xs text-slate-400 italic border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
-          Chưa có địa chỉ nào. Bấm "Thêm địa chỉ" để tạo.
-        </div>
-      ) : (
-        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-          {addresses.map((addr) => (
+      <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+        {isLoading ? (
+          Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)
+        ) : !addresses || addresses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
+            <MapPin className="h-8 w-8 text-slate-300 mb-2" />
+            <p className="text-sm text-slate-500 font-medium">Chưa có địa chỉ nào được lưu</p>
+            <p className="text-xs text-slate-400 mt-1">Bấm nút "Thêm địa chỉ" để bắt đầu</p>
+          </div>
+        ) : (
+          addresses.map((addr) => (
             <div
               key={addr.id}
-              className={`flex items-start gap-3 p-2.5 rounded-lg border transition-all cursor-pointer group ${
+              className={`relative flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer group ${
                 selectedId === addr.id
-                  ? "border-primary bg-primary/5 shadow-sm"
-                  : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                  ? "border-primary bg-primary/5 ring-1 ring-primary shadow-md"
+                  : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm"
               }`}
-              onClick={() => onSelect && onSelect(selectedId === addr.id ? null : addr.id)}
+              onClick={() => onSelect && onSelect(addr.id)}
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  {addr.isDefault && (
-                    <Star className="h-3 w-3 text-amber-400 fill-amber-400 flex-shrink-0" />
-                  )}
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-black uppercase text-slate-900 dark:text-slate-50 truncate">
                     {addr.label}
                   </span>
+                  {addr.isDefault && (
+                    <Badge variant="secondary" className="h-4 text-[8px] px-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-100 border-none font-bold">
+                      MẶC ĐỊNH
+                    </Badge>
+                  )}
                   {selectedId === addr.id && (
-                    <Badge className="h-4 text-[9px] px-1 py-0 ml-auto bg-primary">Đã chọn</Badge>
+                    <Badge className="h-4 text-[8px] px-1 bg-primary font-bold">ĐÃ CHỌN</Badge>
                   )}
                 </div>
-                <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                  {addr.recipientName}
-                  {addr.recipientPhone && (
-                    <span className="ml-1.5 text-slate-400">• {addr.recipientPhone}</span>
-                  )}
-                </div>
-                <div className="text-[10px] text-slate-500 flex items-start gap-0.5 mt-0.5">
-                  <MapPin className="h-2.5 w-2.5 mt-0.5 flex-shrink-0" />
-                  <span className="line-clamp-1">{addr.address}</span>
+                
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300 font-medium">
+                    <User className="h-3 w-3 text-slate-400" />
+                    {addr.recipientName || "Chưa có tên"}
+                    {addr.recipientPhone && (
+                      <span className="text-slate-400 font-normal">| {addr.recipientPhone}</span>
+                    )}
+                  </div>
+                  <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    <MapPin className="h-3 w-3 mt-0.5 text-slate-400 shrink-0" />
+                    <span className="leading-relaxed">{addr.address}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+
+              <div className="flex items-center gap-1 self-center opacity-0 group-hover:opacity-100 transition-opacity">
                 {!addr.isDefault && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-5 w-5 text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+                    className="h-8 w-8 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                     title="Đặt làm mặc định"
                     onClick={(e) => { e.stopPropagation(); setDefaultMutation.mutate(addr.id); }}
                   >
-                    <Star className="h-3 w-3" />
+                    <Star className="h-4 w-4" />
                   </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                  className="h-8 w-8 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                   title="Chỉnh sửa"
                   onClick={(e) => { e.stopPropagation(); handleEdit(addr); }}
                 >
-                  <Edit2 className="h-3 w-3" />
+                  <Edit2 className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 text-red-400 hover:text-red-600 hover:bg-red-50"
+                  className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
                   title="Xóa địa chỉ"
                   onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(addr.id); }}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }
