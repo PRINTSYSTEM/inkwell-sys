@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -418,7 +418,6 @@ export default function DeliveryNoteListPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>("");
   const [selectedOrderDetailIds, setSelectedOrderDetailIds] = useState<Set<number>>(new Set());
-  const [deliveryQtys, setDeliveryQtys] = useState<Record<number, number>>({});
 
   // Data fetching for all available orders
   const {
@@ -459,25 +458,10 @@ export default function DeliveryNoteListPage() {
   // Derive selected orders from the entire pool of available orders
   const selectedOrders = useMemo(() => {
     if (!allOrders) return [];
-    const results: any[] = [];
-    allOrders.forEach(order => {
-      (order.details || []).forEach((detail: any) => {
-        if (detail.orderDetailId != null && selectedOrderDetailIds.has(detail.orderDetailId)) {
-          results.push({
-            ...detail,
-            orderCode: order.orderCode,
-            customerName: order.customerName,
-            orderId: order.orderId,
-            customerId: (order as any).customerId // Use the customerId from the order
-          });
-        }
-      });
-    });
-    return results;
-
-
-
-
+    const flattened = allOrders.flatMap(o => o.details ?? []);
+    return flattened.filter(
+      (od) => od.orderDetailId != null && selectedOrderDetailIds.has(od.orderDetailId)
+    );
   }, [allOrders, selectedOrderDetailIds]);
 
   const totalSelectedAmount = useMemo(() => {
@@ -583,9 +567,7 @@ export default function DeliveryNoteListPage() {
       
       // Extract customerId from the first line or note data
       const firstLine = failedLines[0];
-      if (firstLine && firstLine.customerAddress?.customerId) {
-        setRecreateCustomerId(firstLine.customerAddress.customerId);
-      } else if (firstLine && (firstLine as any).customerId) {
+      if (firstLine && (firstLine as any).customerId) {
         setRecreateCustomerId((firstLine as any).customerId);
       } else if ((recreateNoteData as any).customerId) {
         setRecreateCustomerId((recreateNoteData as any).customerId);
@@ -633,7 +615,7 @@ export default function DeliveryNoteListPage() {
   };
 
   // Quantity state map for selected details
-
+  const [deliveryQtys, setDeliveryQtys] = useState<Record<number, number>>({});
 
   const handleConfirmCreate = async () => {
     if (selectedOrderDetailIds.size === 0) return;
@@ -1442,7 +1424,6 @@ function AddressBookManager({
   const [newAddress, setNewAddress] = useState("");
   const [newIsDefault, setNewIsDefault] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
-  const [showFullCrud, setShowFullCrud] = useState(false);
 
   const { data: addresses, isLoading } = useCustomerAddresses(customerId, true);
   const createMutation = useCreateCustomerAddress(customerId);
@@ -1499,12 +1480,11 @@ function AddressBookManager({
     resetForm();
   };
 
-  if (compact && !showFullCrud) {
+  if (compact) {
     // Compact mode: just a dropdown selector, no CRUD
     return (
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <Navigation className="h-3 w-3 text-slate-400" />
           <span className="text-xs text-slate-500">Địa chỉ giao</span>
         </div>
@@ -1838,10 +1818,10 @@ function CreateDeliveryNoteDialog({
                       </div>
 
                       {/* Per-line address selector */}
-                      {od.customerId && (
+                      {customerId && (
                         <div className="border-t border-slate-100 dark:border-slate-800 pt-2">
                           <AddressBookManager
-                            customerId={od.customerId}
+                            customerId={customerId}
                             compact
                             selectedId={selectedAddressIds[od.orderDetailId] ?? null}
                             onSelect={(addrId) =>

@@ -28,37 +28,9 @@ Từ bây giờ, việc gửi mảng `OrderIds` bị loại bỏ. FE cần gửi
 
 ---
 
-### 2. API Mới: Lấy Danh Sách Mã Hàng (OrderDetails) Chờ Giao
-
-Thay vì FE phải gọi API `available-orders` rồi tự bóc tách mảng `Details` bên trong, Backend đã cung cấp một API trả về danh sách **phẳng (Flat List)** các mã hàng đủ điều kiện giao, giúp FE trực tiếp map vào Table/List để người dùng tick chọn.
-
-**API Mới:** `GET /api/delivery-notes/available-order-details?customerId={id}`
-
-**Response trả về (Mảng):**
-
-```json
-[
-  {
-    "orderDetailId": 105,
-    "orderId": 50,
-    "orderCode": "ORD-2405-001",
-    "designId": 80,
-    "designCode": "DS-A4-01",
-    "designName": "Tờ rơi A4",
-    "orderedQty": 1000,
-    "netQtyTotal": 1000,
-    "deliveredQtyTotal": 500,
-    "remainingToDeliver": 500, // Trọng tâm - FE khóa ô input tối đa ở số lượng này
-    "unitPrice": 1200,
-    "customerId": 5,
-    "customerName": "Công ty TNHH ABC"
-  }
-]
-```
-
 ---
 
-### 3. Payload Tạo Lại Phiếu Giao Hàng Thất Bại (`RecreateDeliveryNoteRequest`)
+### 2. Payload Tạo Lại Phiếu Giao Hàng Thất Bại (`RecreateDeliveryNoteRequest`)
 
 Giao diện tạo lại phiếu khi luồng giao bị thất bại ("Thất bại - hẹn giao lại") đi theo chuẩn mới và thông minh hơn.
 
@@ -80,7 +52,7 @@ Giao diện tạo lại phiếu khi luồng giao bị thất bại ("Thất bạ
 
 ---
 
-### 4. Dữ Liệu Chi Tiết PGH Tăng Cường (Trong `DeliveryNoteResponse`)
+### 3. Dữ Liệu Chi Tiết PGH Tăng Cường (Trong `DeliveryNoteResponse`)
 
 Khi FE vào trang Chi Tiết Phiếu Giao Hàng (`GET /api/delivery-notes/{id}`), ở bên trong mảng `Lines` sẽ đính kèm thêm một số metadata mới phục vụ UI:
 

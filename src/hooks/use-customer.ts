@@ -10,6 +10,7 @@ import type {
   CustomerStatisticsResponse,
   CustomerOrdersResponsePagedResponse,
   CustomerAddress,
+  CustomerAddressResponsePaginate,
   CreateCustomerAddressRequest,
   UpdateCustomerAddressRequest,
 } from "@/Schema/customer.schema";
@@ -289,7 +290,7 @@ export function useCustomerFavoriteStats(
 
 // ================== CUSTOMER ADDRESSES (Sổ địa chỉ) ==================
 
-// GET /customers/{id}/addresses
+// GET /customers/{id}/addresses  → trả về CustomerAddressResponsePaginate
 export const useCustomerAddresses = (
   customerId: number | null,
   enabled: boolean = true
@@ -298,10 +299,12 @@ export const useCustomerAddresses = (
     queryKey: ["customers", customerId, "addresses"],
     enabled: enabled && !!customerId,
     queryFn: async () => {
-      const res = await apiRequest.get<CustomerAddress[]>(
-        API_SUFFIX.CUSTOMER_ADDRESSES(customerId as number)
+      const res = await apiRequest.get<CustomerAddressResponsePaginate>(
+        API_SUFFIX.CUSTOMER_ADDRESSES(customerId as number),
+        { params: { pageNumber: 1, pageSize: 50 } }
       );
-      return res.data;
+      // Trả về mảng items để component dùng tiếp tục như cũ
+      return (res.data?.items ?? []) as CustomerAddress[];
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -361,14 +364,15 @@ export const useUpdateCustomerAddress = (customerId: number) => {
   });
 };
 
-// DELETE /customers/{id}/addresses/{addressId}
+// "Xóa" địa chỉ: Swagger không có DELETE → dùng PUT với isActive=false
 export const useDeleteCustomerAddress = (customerId: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (addressId: number) => {
-      await apiRequest.delete(
-        API_SUFFIX.CUSTOMER_ADDRESS_BY_ID(customerId, addressId)
+      await apiRequest.put(
+        API_SUFFIX.CUSTOMER_ADDRESS_BY_ID(customerId, addressId),
+        { isActive: false } as UpdateCustomerAddressRequest
       );
     },
     onSuccess: () => {
@@ -383,15 +387,15 @@ export const useDeleteCustomerAddress = (customerId: number) => {
   });
 };
 
-// POST /customers/{id}/addresses/{addressId}/set-default
+// Đặt mặc định: dùng PUT với isDefault=true
 export const useSetDefaultCustomerAddress = (customerId: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (addressId: number) => {
-      const res = await apiRequest.post<CustomerAddress>(
-        API_SUFFIX.CUSTOMER_ADDRESS_SET_DEFAULT(customerId, addressId),
-        {}
+      const res = await apiRequest.put<CustomerAddress>(
+        API_SUFFIX.CUSTOMER_ADDRESS_BY_ID(customerId, addressId),
+        { isDefault: true } as UpdateCustomerAddressRequest
       );
       return res.data;
     },
@@ -406,3 +410,4 @@ export const useSetDefaultCustomerAddress = (customerId: number) => {
     },
   });
 };
+
