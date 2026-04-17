@@ -189,6 +189,7 @@ export default function DeliveryNoteDetailPage() {
 
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [status, setStatus] = useState<string>("");
+  const [cancelReason, setCancelReason] = useState("");
   const [failureReason, setFailureReason] = useState("");
   const [failureType, setFailureType] = useState<string>("");
   const [affectsDebt, setAffectsDebt] = useState(false);
@@ -208,6 +209,7 @@ export default function DeliveryNoteDetailPage() {
 
   const handleOpenUpdateDialog = (newStatus?: string) => {
     setStatus(newStatus || deliveryNote?.status || "");
+    setCancelReason((deliveryNote as any)?.cancelReason || "");
     setFailureReason(deliveryNote?.failureReason || "");
     setFailureType(deliveryNote?.failureType || "");
     setAffectsDebt(deliveryNote?.affectsDebt || false);
@@ -223,6 +225,7 @@ export default function DeliveryNoteDetailPage() {
         id: deliveryNote.id,
         data: {
           status,
+          cancelReason: cancelReason || undefined,
           failureReason: failureReason || undefined,
           failureType: failureType || undefined,
           affectsDebt: affectsDebt,
@@ -379,6 +382,7 @@ export default function DeliveryNoteDetailPage() {
                   { value: "delivering", label: "Đang giao" },
                   { value: "delivered", label: "Thành công" },
                   { value: "failed", label: "Thất bại" },
+                  { value: "cancelled", label: "Hủy đơn" },
                 ].map((opt) => {
                   const matchVal =
                     currentStatus === "completed" ||
@@ -395,8 +399,8 @@ export default function DeliveryNoteDetailPage() {
                       key={opt.value}
                       disabled={disabled}
                       onClick={() => {
-                        if (opt.value === "failed") {
-                          handleOpenUpdateDialog("failed");
+                        if (opt.value === "failed" || opt.value === "cancelled") {
+                          handleOpenUpdateDialog(opt.value);
                         } else {
                           updateStatusMutation.mutate({
                             id: deliveryNote.id!,
@@ -410,6 +414,7 @@ export default function DeliveryNoteDetailPage() {
                         ${disabled && !isActive ? "opacity-40 cursor-not-allowed hover:bg-transparent text-slate-500" : ""}
                         ${isActive && opt.value === "delivered" ? "bg-green-500 text-white shadow-md hover:bg-green-600" : ""}
                         ${isActive && opt.value === "failed" ? "bg-red-500 text-white shadow-md hover:bg-red-600" : ""}
+                        ${isActive && opt.value === "cancelled" ? "bg-slate-500 text-white shadow-md hover:bg-slate-600" : ""}
                         ${isActive && (opt.value === "pending" || opt.value === "delivering") ? "bg-blue-500 text-white shadow-md hover:bg-blue-600" : ""}
                         ${isActive && opt.value === "draft" ? "bg-slate-600 dark:bg-slate-700 text-white shadow-md" : ""}
                       `}
@@ -794,9 +799,23 @@ export default function DeliveryNoteDetailPage() {
                   <SelectItem value="pending">Chờ giao</SelectItem>
                   <SelectItem value="delivered">Đã giao thành công</SelectItem>
                   <SelectItem value="failed">Giao thất bại</SelectItem>
+                  <SelectItem value="cancelled">Hủy đơn</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {status === "cancelled" && (
+              <div className="space-y-2">
+                <Label htmlFor="cancelReason">Lý do hủy *</Label>
+                <Textarea
+                  id="cancelReason"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Nhập lý do hủy phiếu giao hàng..."
+                  rows={3}
+                />
+              </div>
+            )}
 
             {status === "failed" && (
               <>
@@ -885,7 +904,8 @@ export default function DeliveryNoteDetailPage() {
               disabled={
                 updateStatusMutation.isPending ||
                 !status ||
-                (status === "failed" && !failureReason)
+                (status === "failed" && !failureReason) ||
+                (status === "cancelled" && !cancelReason)
               }
             >
               {updateStatusMutation.isPending ? "Đang cập nhật..." : "Xác nhận"}

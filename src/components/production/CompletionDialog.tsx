@@ -554,6 +554,31 @@ export function CompletionDialog({
         </div>
 
         <DialogFooter className="shrink-0 border-t pt-4 mt-4">
+          <div className="flex-1 flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              onClick={async () => {
+                if (window.confirm("Bạn có chắc chắn muốn hủy hoàn thành và đưa bước này về trạng thái 'Sẵn sàng' không? Dữ liệu nhập kho hiện tại sẽ không được tạo.")) {
+                  try {
+                    await updateStep({
+                      stepId: step.id!,
+                      data: {
+                        status: "ready",
+                        outputQty: 0,
+                        defectQty: 0,
+                      },
+                    });
+                    toast.success("Đã đưa bước sản xuất về trạng thái Sẵn sàng");
+                    handleClose();
+                  } catch (err) {}
+                }
+              }} 
+              disabled={isProcessing}
+              className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+            >
+              Hủy hoàn thành (Về Sẵn sàng)
+            </Button>
+          </div>
           <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
             Hủy
           </Button>

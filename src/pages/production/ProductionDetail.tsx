@@ -588,6 +588,20 @@ export default function ProductionDetailPage() {
     });
   };
 
+  const handleReopenStep = async (stepId: number) => {
+    try {
+      await updateStep({
+        stepId,
+        data: {
+          status: "in_progress",
+        },
+      });
+      toast.success("Đã mở lại bước sản xuất này để điều chỉnh");
+    } catch (error) {
+      // Error is handled by the hook
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
@@ -848,7 +862,7 @@ export default function ProductionDetailPage() {
                                     </p>
                                   </div>
                                 </div>
-                                <div className="flex-shrink-0">
+                                <div className="flex-shrink-0 flex items-center gap-2">
                                   <StatusBadge
                                     status={step.status}
                                     label={
@@ -2095,6 +2109,32 @@ export default function ProductionDetailPage() {
             </div>
 
             <DialogFooter>
+              <div className="flex-1 flex items-center">
+                <Button
+                  variant="ghost"
+                  type="button"
+                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                  onClick={async () => {
+                    if (currentActiveStep?.id && window.confirm("Bạn có chắc chắn muốn đưa bước này về trạng thái 'Sẵn sàng' không? Dữ liệu tiến độ hiện tại sẽ bị xóa.")) {
+                      try {
+                        await updateStep({
+                          stepId: currentActiveStep.id,
+                          data: {
+                            status: "ready",
+                            outputQty: 0,
+                            defectQty: 0,
+                          },
+                        });
+                        toast.success("Đã đưa bước sản xuất về trạng thái Sẵn sàng");
+                        setIsUpdateDialogOpen(false);
+                      } catch (err) {}
+                    }
+                  }}
+                  disabled={updating}
+                >
+                  Về Sẵn sàng
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 onClick={() => setIsUpdateDialogOpen(false)}
