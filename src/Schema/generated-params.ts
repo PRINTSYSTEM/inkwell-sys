@@ -411,11 +411,7 @@ export const DebtReportsCustomerReconciliationExportParamsSchema = z.object({
 }).passthrough();
 export type DebtReportsCustomerReconciliationExportParams = z.infer<typeof DebtReportsCustomerReconciliationExportParamsSchema>;
 
-// ==== DeliveryNoteAvailableOrdersListParams (GET /api/delivery-notes/available-orders) ====
-export const DeliveryNoteAvailableOrdersListParamsSchema = z.object({
-  customerId: z.number().int().nullable().optional(),
-}).passthrough();
-export type DeliveryNoteAvailableOrdersListParams = z.infer<typeof DeliveryNoteAvailableOrdersListParamsSchema>;
+
 
 // ==== DeliveryNoteFailureReasonsListParams (GET /api/delivery-notes/failure-reasons) ====
 export const DeliveryNoteFailureReasonsListParamsSchema = z.object({

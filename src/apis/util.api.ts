@@ -110,8 +110,9 @@ export const API_SUFFIX = {
     `/customers/${customerId}/addresses`,
   CUSTOMER_ADDRESS_BY_ID: (customerId: number, addressId: number) =>
     `/customers/${customerId}/addresses/${addressId}`,
-  CUSTOMER_ADDRESS_SET_DEFAULT: (customerId: number, addressId: number) =>
-    `/customers/${customerId}/addresses/${addressId}/set-default`,
+  // Note: Không có set-default endpoint riêng.
+  // Dùng PUT CUSTOMER_ADDRESS_BY_ID với { isDefault: true } để đặt mặc định.
+  // Dùng PUT CUSTOMER_ADDRESS_BY_ID với { isActive: false } để "xóa" địa chỉ.
 
   // ========== DESIGN TYPES ==========
   DESIGN_TYPES: "/designs/types",

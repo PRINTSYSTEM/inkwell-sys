@@ -2564,6 +2564,203 @@
         }
       }
     },
+    "/api/customers/{id}/addresses": {
+      "post": {
+        "tags": [
+          "Customer"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerAddressRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerAddressRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerAddressRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Customer"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "sortColumn",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResponsePaginate"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResponsePaginate"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResponsePaginate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/customers/{id}/addresses/{addressId}": {
+      "put": {
+        "tags": [
+          "Customer"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "addressId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerAddressRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerAddressRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerAddressRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/customers/{id}/export-debt-comparison": {
       "post": {
         "tags": [
@@ -5902,16 +6099,6 @@
         "tags": [
           "DeliveryNote"
         ],
-        "parameters": [
-          {
-            "name": "customerId",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -5937,6 +6124,54 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/OrderForDeliveryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/delivery-notes/available-order-details": {
+      "get": {
+        "tags": [
+          "DeliveryNote"
+        ],
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderDetailForDeliveryResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderDetailForDeliveryResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderDetailForDeliveryResponse"
                   }
                 }
               }
@@ -12211,6 +12446,74 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProductionStepResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/production-orders/{productionOrderId}/items/{itemId}": {
+      "put": {
+        "tags": [
+          "ProductionOrder"
+        ],
+        "parameters": [
+          {
+            "name": "productionOrderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductionOrderItemRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductionOrderItemRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductionOrderItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionOrderItemResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionOrderItemResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionOrderItemResponse"
                 }
               }
             }
@@ -20539,6 +20842,41 @@
         },
         "additionalProperties": false
       },
+      "CreateCustomerAddressRequest": {
+        "required": [
+          "address",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string"
+          },
+          "recipientName": {
+            "maxLength": 255,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "recipientPhone": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateCustomerRequest": {
         "required": [
           "name"
@@ -20641,40 +20979,17 @@
         "additionalProperties": false
       },
       "CreateDeliveryNoteRequest": {
+        "required": [
+          "lines"
+        ],
         "type": "object",
         "properties": {
-          "orderIds": {
-            "type": "array",
-            "items": {
-              "type": "integer",
-              "format": "int32"
-            },
-            "nullable": true
-          },
           "lines": {
+            "minItems": 1,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/DeliveryLineRequest"
-            },
-            "nullable": true
-          },
-          "recipientName": {
-            "maxLength": 255,
-            "minLength": 0,
-            "type": "string",
-            "nullable": true
-          },
-          "recipientPhone": {
-            "maxLength": 20,
-            "minLength": 0,
-            "type": "string",
-            "nullable": true
-          },
-          "deliveryAddress": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": "string",
-            "nullable": true
+            }
           },
           "notes": {
             "type": "string",
@@ -21721,6 +22036,80 @@
         },
         "additionalProperties": false
       },
+      "CustomerAddressResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "label": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipientName": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipientPhone": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CustomerAddressResponsePaginate": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerAddressResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CustomerDebtHistoryResponse": {
         "type": "object",
         "properties": {
@@ -22444,6 +22833,11 @@
             "minimum": 1,
             "type": "integer",
             "format": "int32"
+          },
+          "customerAddressId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -22458,6 +22852,10 @@
           "orderDetailId": {
             "type": "integer",
             "format": "int32"
+          },
+          "orderCode": {
+            "type": "string",
+            "nullable": true
           },
           "designId": {
             "type": "integer",
@@ -22503,6 +22901,14 @@
           "lineAmount": {
             "type": "number",
             "format": "double"
+          },
+          "customerAddressId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "customerAddress": {
+            "$ref": "#/components/schemas/CustomerAddressResponse"
           },
           "status": {
             "type": "string",
@@ -24343,6 +24749,14 @@
             "type": "integer",
             "format": "int32"
           },
+          "orderId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "orderCode": {
+            "type": "string",
+            "nullable": true
+          },
           "designId": {
             "type": "integer",
             "format": "int32"
@@ -24374,6 +24788,14 @@
           "unitPrice": {
             "type": "number",
             "format": "double"
+          },
+          "customerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customerName": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -25594,6 +26016,53 @@
         },
         "additionalProperties": false
       },
+      "ProductionOrderItemResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productionOrderId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "designName": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderDetailId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "inputQty": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "outputQty": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defectQty": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "ProductionOrderResponse": {
         "type": "object",
         "properties": {
@@ -25658,6 +26127,28 @@
               "$ref": "#/components/schemas/ProductionStepResponse"
             },
             "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductionOrderItemResponse"
+            },
+            "nullable": true
+          },
+          "customerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerCompanyName": {
+            "type": "string",
+            "nullable": true
+          },
+          "deliveryStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasDeliveryNote": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -26439,30 +26930,11 @@
             "type": "integer",
             "format": "int32"
           },
-          "orderIds": {
+          "lines": {
             "type": "array",
             "items": {
-              "type": "integer",
-              "format": "int32"
+              "$ref": "#/components/schemas/DeliveryLineRequest"
             },
-            "nullable": true
-          },
-          "recipientName": {
-            "maxLength": 255,
-            "minLength": 0,
-            "type": "string",
-            "nullable": true
-          },
-          "recipientPhone": {
-            "maxLength": 20,
-            "minLength": 0,
-            "type": "string",
-            "nullable": true
-          },
-          "deliveryAddress": {
-            "maxLength": 500,
-            "minLength": 0,
-            "type": "string",
             "nullable": true
           },
           "notes": {
@@ -27624,6 +28096,44 @@
         },
         "additionalProperties": false
       },
+      "UpdateCustomerAddressRequest": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "maxLength": 100,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "recipientName": {
+            "maxLength": 255,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "recipientPhone": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "isDefault": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "UpdateCustomerRequest": {
         "type": "object",
         "properties": {
@@ -28304,6 +28814,11 @@
       "UpdateOrderRequest": {
         "type": "object",
         "properties": {
+          "customerId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
           "status": {
             "maxLength": 50,
             "minLength": 0,
@@ -28463,6 +28978,28 @@
           "receivedAt": {
             "type": "string",
             "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateProductionOrderItemRequest": {
+        "required": [
+          "outputQty"
+        ],
+        "type": "object",
+        "properties": {
+          "outputQty": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defectQty": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
             "nullable": true
           }
         },

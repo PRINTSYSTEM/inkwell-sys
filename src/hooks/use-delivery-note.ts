@@ -18,7 +18,6 @@ import type {
 } from "@/Schema/delivery-note.schema";
 import type {
   DeliveryNoteListParams,
-  DeliveryNoteAvailableOrdersListParams,
   DeliveryNoteFailureReasonsListParams,
 } from "@/Schema";
 
@@ -163,25 +162,7 @@ export const useRecreateDeliveryNote = () => {
   });
 };
 
-// ================== GET AVAILABLE ORDERS FOR DELIVERY ==================
-// GET /delivery-notes/available-orders
-export const useAvailableOrdersForDelivery = (
-  params?: DeliveryNoteAvailableOrdersListParams
-) => {
-  return useQuery({
-    queryKey: ["availableOrdersForDelivery", params],
-    queryFn: async () => {
-      const normalizedParams = normalizeParams(
-        (params ?? {}) as Record<string, unknown>
-      );
-      const res = await apiRequest.get<OrderForDeliveryResponse[]>(
-        API_SUFFIX.DELIVERY_NOTE_AVAILABLE_ORDERS,
-        { params: normalizedParams }
-      );
-      return res.data;
-    },
-  });
-};
+
 
 // ================== GET FAILURE REASONS ==================
 // GET /delivery-notes/failure-reasons
@@ -233,21 +214,21 @@ export const useUpdateDeliveryLineResult = () => {
   });
 };
 
-// ================== GET AVAILABLE ORDER DETAILS FOR DELIVERY ==================
-// GET /delivery-notes/available-order-details
-export const useAvailableOrderDetailsForDelivery = (
+// ================== GET AVAILABLE ORDERS FOR DELIVERY ==================
+// GET /delivery-notes/available-orders
+export const useAvailableOrdersForDelivery = (
   params?: { customerId?: number },
   options?: { enabled?: boolean }
 ) => {
   return useQuery({
-    queryKey: ["availableOrderDetailsForDelivery", params],
+    queryKey: ["availableOrdersForDelivery", params],
     enabled: options?.enabled ?? true,
     queryFn: async () => {
       const normalizedParams = normalizeParams(
         (params ?? {}) as Record<string, unknown>
       );
-      const res = await apiRequest.get<OrderDetailForDeliveryResponse[]>(
-        API_SUFFIX.DELIVERY_NOTE_AVAILABLE_ORDER_DETAILS,
+      const res = await apiRequest.get<OrderForDeliveryResponse[]>(
+        API_SUFFIX.DELIVERY_NOTE_AVAILABLE_ORDERS,
         { params: normalizedParams }
       );
       return res.data;
