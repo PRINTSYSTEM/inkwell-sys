@@ -79,7 +79,11 @@ import {
   useSetDefaultCustomerAddress,
 } from "@/hooks/use-customer";
 // import { useOrdersForAccounting } from "@/hooks/use-order";
-import { orderStatusLabels } from "@/lib/status-utils";
+import { 
+  orderStatusLabels, 
+  deliveryNoteStatusLabels, 
+  deliveryLineStatusLabels 
+} from "@/lib/status-utils";
 import {
   Popover,
   PopoverContent,
@@ -103,28 +107,7 @@ const getDeliveryNoteStatusLabel = (
   status: string | null | undefined,
 ): string => {
   if (!status) return "—";
-  const statusLower = status.toLowerCase();
-
-  if (statusLower === "draft" || statusLower.includes("draft")) {
-    return "Lưu nháp";
-  }
-  if (
-    statusLower.includes("success") ||
-    statusLower.includes("completed") ||
-    statusLower === "delivered"
-  ) {
-    return "Đã giao";
-  }
-  if (statusLower.includes("fail") || statusLower.includes("failed")) {
-    return "Thất bại";
-  }
-  if (statusLower === "pending" || statusLower.includes("pending")) {
-    return "Chờ giao";
-  }
-  if (statusLower === "delivering" || statusLower.includes("delivering")) {
-    return "Đang giao";
-  }
-  return status;
+  return deliveryNoteStatusLabels[status] || status;
 };
 
 const formatCurrency = (value: number) => {
@@ -564,7 +547,7 @@ export default function DeliveryNoteListPage() {
   React.useEffect(() => {
     if (recreateNoteData && isRecreateDialogOpen) {
       const failedLines = (recreateNoteData as any).lines?.filter((l: any) => 
-        l.status === "failed" || l.status === "failure"
+        l.status === "failed" || l.status === "failure" || l.status === "failed_reschedule" || l.status === "returned"
       ) || [];
       
       setRecreateItems(failedLines);

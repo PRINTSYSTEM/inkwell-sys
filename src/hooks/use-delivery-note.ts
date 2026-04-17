@@ -56,10 +56,13 @@ export const useDeliveryNote = (id: number | null, enabled: boolean = true) => {
 
 // ================== UPDATE DELIVERY NOTE STATUS ==================
 // PUT /delivery-notes/{id}/status
-export const useUpdateDeliveryNoteStatus = () => {
+export const useUpdateDeliveryNoteStatus = (
+  options?: any
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    ...options,
     mutationFn: async ({
       id,
       data,
@@ -73,15 +76,23 @@ export const useUpdateDeliveryNoteStatus = () => {
       );
       return res.data;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["deliveryNote", variables.id],
-      });
+    onSuccess: (updatedData, variables, context) => {
+      const deliveryNoteId = Number(variables.id);
+      
+      // Update the cache for the specific delivery note immediately
+      queryClient.setQueryData(["deliveryNote", deliveryNoteId], updatedData);
+      
+      // Also invalidate using the number ID and the general lists to be safe
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote", deliveryNoteId] });
       queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
-      toast.success("Cập nhật trạng thái phiếu giao hàng thành công");
+      
+      if (options?.onSuccess) options.onSuccess(updatedData, variables, context);
     },
-    onError: (error: Error) => {
-      toast.error(`Lỗi: ${error.message}`);
+    onError: (error: Error, variables, context) => {
+      if (options?.onError) options.onError(error, variables, context);
+    },
+    onSettled: (data, error, variables, context) => {
+      if (options?.onSettled) options.onSettled(data, error, variables, context);
     },
   });
 };

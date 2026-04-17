@@ -18,6 +18,14 @@ import {
   Loader2,
   Package,
   Hash,
+  Check,
+  PackageCheck,
+  Send,
+  X,
+  ClipboardCheck,
+  FileEdit,
+  ChevronRight,
+  MoreHorizontal,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,7 +67,23 @@ import {
   useRecreateDeliveryNote,
 } from "@/hooks/use-delivery-note";
 import { useAuth } from "@/hooks/use-auth";
-import { formatCurrency } from "@/lib/status-utils";
+import {
+  formatCurrency,
+  deliveryNoteStatusLabels,
+  deliveryLineStatusLabels,
+  deliveryFailureTypeLabels,
+  getStatusColorClass,
+} from "@/lib/status-utils";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { ENTITY_CONFIG } from "@/config/entities.config";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { DeliveryNoteLineResponse } from "@/Schema/delivery-note.schema";
 
 const formatDate = (dateStr: string | null | undefined) => {
@@ -77,26 +101,8 @@ const formatDateTime = (dateStr: string | null | undefined) => {
 // ============================================================
 function LineStatusBadge({ status }: { status?: string | null }) {
   if (!status) return <Badge variant="secondary">—</Badge>;
-  const s = status.toLowerCase();
-  if (s === "delivered" || s === "success" || s === "completed")
-    return (
-      <Badge className="bg-green-500 text-white text-xs">
-        <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
-        Đã giao
-      </Badge>
-    );
-  if (s === "failed" || s.includes("fail"))
-    return (
-      <Badge variant="destructive" className="text-xs">
-        <XCircle className="h-2.5 w-2.5 mr-1" />
-        Thất bại
-      </Badge>
-    );
-  return (
-    <Badge variant="secondary" className="text-xs">
-      {status}
-    </Badge>
-  );
+  const label = deliveryLineStatusLabels[status] || status;
+  return <StatusBadge status={status} label={label} />;
 }
 
 // ============================================================
@@ -139,6 +145,20 @@ function DeliveryLineRow({ line }: { line: DeliveryNoteLineResponse }) {
             / {line.orderedQty.toLocaleString("vi-VN")}
           </div>
         )}
+      </TableCell>
+      <TableCell className="text-right">
+        <span className="text-sm text-muted-foreground">
+          {line.deliveryQty 
+            ? Math.round(line.deliveryQty * 0.005).toLocaleString("vi-VN") 
+            : "0"}
+        </span>
+      </TableCell>
+      <TableCell className="text-right">
+        <span className="font-medium text-sm text-primary">
+          {line.deliveryQty 
+            ? (line.deliveryQty - Math.round(line.deliveryQty * 0.005)).toLocaleString("vi-VN") 
+            : "—"}
+        </span>
       </TableCell>
       <TableCell>
         {hasAddress && addr ? (
@@ -222,14 +242,14 @@ export default function DeliveryNoteDetailPage() {
 
     try {
       await updateStatusMutation.mutateAsync({
-        id: deliveryNote.id,
+        id: Number(deliveryNote.id),
         data: {
           status,
-          cancelReason: cancelReason || undefined,
-          failureReason: failureReason || undefined,
-          failureType: failureType || undefined,
+          cancelReason: cancelReason || null,
+          failureReason: failureReason || null,
+          failureType: failureType || null,
           affectsDebt: affectsDebt,
-          notes: notes || undefined,
+          notes: notes || null,
         },
       });
       setIsUpdateDialogOpen(false);
@@ -264,39 +284,9 @@ export default function DeliveryNoteDetailPage() {
 
   const getStatusBadge = (status: string | null | undefined) => {
     if (!status) return <Badge variant="secondary">—</Badge>;
-
-    const statusLower = status.toLowerCase();
-    if (
-      statusLower.includes("success") ||
-      statusLower.includes("completed") ||
-      statusLower === "delivered"
-    ) {
-      return (
-        <Badge variant="default" className="bg-green-500">
-          <CheckCircle2 className="h-3 w-3 mr-1" />
-          Thành công
-        </Badge>
-      );
-    }
-    if (statusLower.includes("fail") || statusLower.includes("failed")) {
-      return (
-        <Badge variant="destructive">
-          <XCircle className="h-3 w-3 mr-1" />
-          Thất bại
-        </Badge>
-      );
-    }
-    if (statusLower === "pending" || statusLower.includes("pending")) {
-      return (
-        <Badge variant="secondary">
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Chờ giao
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="secondary">{deliveryNote?.statusName || status}</Badge>
-    );
+    const label =
+      deliveryNoteStatusLabels[status] || deliveryNote?.statusName || status;
+    return <StatusBadge status={status} label={label} />;
   };
 
   if (isLoading) {
@@ -329,29 +319,79 @@ export default function DeliveryNoteDetailPage() {
     );
   }
 
-  const isFailed =
-    deliveryNote.status?.toLowerCase().includes("fail") ||
-    deliveryNote.status?.toLowerCase() === "failed";
-  const canRecreate = isFailed;
+  const currentStatus = (deliveryNote?.status || "draft").toLowerCase();
 
   const statusRanks: Record<string, number> = {
     draft: 0,
-    pending: 1,
-    delivering: 2,
-    delivered: 3,
-    failed: 3,
+    confirmed: 1,
+    pending: 1, // backward compatibility
+    ready_to_ship: 2,
+    handed_over: 3,
+    in_transit: 4,
+    delivering: 4, // backward compatibility
+    completed: 5,
+    delivered: 5, // backward compatibility
+    partially_completed: 5,
+    cancelled: 6,
   };
 
-  const currentStatus = deliveryNote.status?.toLowerCase() || "draft";
   const currentRank = statusRanks[currentStatus] ?? 0;
 
+  const isFailed = currentStatus === "failed" || currentStatus === "failure";
+  const isCancelled = currentStatus === "cancelled";
+  const canRecreate = isFailed;
+
+  // Next steps mapping
+  const nextSteps: Record<string, { value: string; label: string; icon: any }> =
+    {
+      draft: { value: "confirmed", label: "Xác nhận", icon: Check },
+      confirmed: {
+        value: "ready_to_ship",
+        label: "Sẵn sàng giao",
+        icon: PackageCheck,
+      },
+      pending: {
+        value: "ready_to_ship",
+        label: "Sẵn sàng giao",
+        icon: PackageCheck,
+      },
+      ready_to_ship: {
+        value: "handed_over",
+        label: "Bàn giao ĐVVC",
+        icon: Send,
+      },
+      handed_over: { value: "in_transit", label: "Giao hàng", icon: Truck },
+      in_transit: {
+        value: "completed",
+        label: "Hoàn tất",
+        icon: ClipboardCheck,
+      },
+      delivering: {
+        value: "completed",
+        label: "Hoàn tất",
+        icon: ClipboardCheck,
+      },
+    };
+
+  const nextAction = nextSteps[currentStatus];
+
   // Stats from lines
-  const lines = (deliveryNote as any).lines as DeliveryNoteLineResponse[] | null;
+  const lines = (deliveryNote as any).lines as
+    | DeliveryNoteLineResponse[]
+    | null;
   const hasLines = lines && lines.length > 0;
-  const totalDeliveryQty = (deliveryNote as any).totalDeliveryQty as number | undefined;
-  const totalPendingLines = (deliveryNote as any).totalPendingLines as number | undefined;
-  const totalDeliveredLines = (deliveryNote as any).totalDeliveredLines as number | undefined;
-  const totalFailedLines = (deliveryNote as any).totalFailedLines as number | undefined;
+  const totalDeliveryQty = (deliveryNote as any).totalDeliveryQty as
+    | number
+    | undefined;
+  const totalPendingLines = (deliveryNote as any).totalPendingLines as
+    | number
+    | undefined;
+  const totalDeliveredLines = (deliveryNote as any).totalDeliveredLines as
+    | number
+    | undefined;
+  const totalFailedLines = (deliveryNote as any).totalFailedLines as
+    | number
+    | undefined;
 
   return (
     <div className="space-y-6">
@@ -369,60 +409,14 @@ export default function DeliveryNoteDetailPage() {
         </Link>
 
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="space-y-2">
+          <div className="space-y-4">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight">
                 {deliveryNote.code || `Phiếu giao hàng #${deliveryNote.id}`}
               </h1>
-              {/* Status Stepper */}
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-fit items-center">
-                {[
-                  { value: "draft", label: "Lưu nháp" },
-                  { value: "pending", label: "Chờ giao" },
-                  { value: "delivering", label: "Đang giao" },
-                  { value: "delivered", label: "Thành công" },
-                  { value: "failed", label: "Thất bại" },
-                  { value: "cancelled", label: "Hủy đơn" },
-                ].map((opt) => {
-                  const matchVal =
-                    currentStatus === "completed" ||
-                    currentStatus === "success"
-                      ? "delivered"
-                      : currentStatus;
-                  const isActive = matchVal === opt.value;
-                  const disabled =
-                    Math.abs(statusRanks[opt.value] - currentRank) > 1 ||
-                    updateStatusMutation.isPending;
-
-                  return (
-                    <button
-                      key={opt.value}
-                      disabled={disabled}
-                      onClick={() => {
-                        if (opt.value === "failed" || opt.value === "cancelled") {
-                          handleOpenUpdateDialog(opt.value);
-                        } else {
-                          updateStatusMutation.mutate({
-                            id: deliveryNote.id!,
-                            data: { status: opt.value },
-                          });
-                        }
-                      }}
-                      className={`
-                        px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap
-                        ${!isActive && !disabled ? "hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-400" : ""}
-                        ${disabled && !isActive ? "opacity-40 cursor-not-allowed hover:bg-transparent text-slate-500" : ""}
-                        ${isActive && opt.value === "delivered" ? "bg-green-500 text-white shadow-md hover:bg-green-600" : ""}
-                        ${isActive && opt.value === "failed" ? "bg-red-500 text-white shadow-md hover:bg-red-600" : ""}
-                        ${isActive && opt.value === "cancelled" ? "bg-slate-500 text-white shadow-md hover:bg-slate-600" : ""}
-                        ${isActive && (opt.value === "pending" || opt.value === "delivering") ? "bg-blue-500 text-white shadow-md hover:bg-blue-600" : ""}
-                        ${isActive && opt.value === "draft" ? "bg-slate-600 dark:bg-slate-700 text-white shadow-md" : ""}
-                      `}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
+              <div className="flex items-center gap-2 rounded-full bg-card/60 px-3 py-1 text-xs shadow-sm border border-border">
+                <span className="text-muted-foreground mr-1">Trạng thái:</span>
+                {getStatusBadge(currentStatus)}
               </div>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
@@ -439,17 +433,71 @@ export default function DeliveryNoteDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportPDF}
-              disabled={exportPDFMutation.isPending}
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              {exportPDFMutation.isPending ? "Đang xuất..." : "Xuất PDF"}
-            </Button>
+          <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+            {nextAction &&
+              !isCancelled &&
+              currentStatus !== "completed" &&
+              currentStatus !== "partially_completed" && (
+                <Button
+                  className="gap-2 shadow-sm"
+                  onClick={() => {
+                    updateStatusMutation.mutate({
+                      id: Number(deliveryNote.id),
+                      data: { status: nextAction.value },
+                    });
+                  }}
+                  disabled={updateStatusMutation.isPending}
+                >
+                  <nextAction.icon className="w-4 h-4" />
+                  {updateStatusMutation.isPending
+                    ? "Đang xử lý..."
+                    : nextAction.label}
+                </Button>
+              )}
+
+            {!isCancelled && currentStatus !== "completed" && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleExportPDF}
+                  disabled={exportPDFMutation.isPending}
+                >
+                  <Download className="w-4 h-4" />
+                  Xuất PDF
+                </Button>
+
+                {currentStatus !== "cancelled" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleOpenUpdateDialog("cancelled")}
+                  >
+                    <X className="w-4 h-4" />
+                    Hủy phiếu
+                  </Button>
+                )}
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Thêm thao tác</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Thao tác khác</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleOpenUpdateDialog()}>
+                      <FileEdit className="mr-2 h-4 w-4" />
+                      Cập nhật chi tiết
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
 
             {canRecreate && (
               <Button
@@ -462,6 +510,22 @@ export default function DeliveryNoteDetailPage() {
                 Tạo lại phiếu
               </Button>
             )}
+
+            {/* Legend for the user to see the full flow */}
+            <div className="hidden xl:flex items-center gap-1 ml-4 bg-muted/30 px-3 py-1 rounded-full border border-border/50">
+              {Object.keys(nextSteps).map((step, idx) => (
+                <div key={step} className="flex items-center">
+                  <span
+                    className={`text-xs font-medium ${currentStatus === step ? "text-primary font-bold" : "text-muted-foreground"}`}
+                  >
+                    {deliveryNoteStatusLabels[step]}
+                  </span>
+                  {idx < Object.keys(nextSteps).length - 1 && (
+                    <ChevronRight className="w-3 h-3 text-muted-foreground mx-0.5" />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -478,9 +542,10 @@ export default function DeliveryNoteDetailPage() {
               </div>
               <div>
                 <strong>Loại:</strong>{" "}
-                {(deliveryNote.failureTypeName as string | undefined) ||
-                  deliveryNote.failureType ||
-                  "—"}
+                {deliveryNote.failureType &&
+                  (deliveryFailureTypeLabels[deliveryNote.failureType] ||
+                    deliveryNote.failureType)}
+                {" — "}
               </div>
               <div>
                 <strong>Ảnh hưởng công nợ:</strong>{" "}
@@ -494,6 +559,29 @@ export default function DeliveryNoteDetailPage() {
                   </Badge>
                 )}
               </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isCancelled && (
+        <Alert variant="warning" className="border-amber-200 bg-amber-50">
+          <XCircle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800">
+            Phiếu giao hàng đã hủy
+          </AlertTitle>
+          <AlertDescription className="text-amber-700">
+            <div className="space-y-1 mt-1">
+              <div>
+                <strong>Lý do hủy:</strong>{" "}
+                {(deliveryNote as any).cancelReason || "—"}
+              </div>
+              {deliveryNote.cancelledBy && (
+                <div>
+                  <strong>Người hủy:</strong>{" "}
+                  {deliveryNote.cancelledBy.fullName || "—"}
+                </div>
+              )}
             </div>
           </AlertDescription>
         </Alert>
@@ -557,6 +645,8 @@ export default function DeliveryNoteDetailPage() {
                         <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
                         <TableHead>Sản phẩm</TableHead>
                         <TableHead className="text-right">SL giao</TableHead>
+                        <TableHead className="text-right">Phụ hao (0.5%)</TableHead>
+                        <TableHead className="text-right">SL thực</TableHead>
                         <TableHead>Địa chỉ giao</TableHead>
                         <TableHead className="text-right">Thành tiền</TableHead>
                         <TableHead>Trạng thái</TableHead>
@@ -564,10 +654,7 @@ export default function DeliveryNoteDetailPage() {
                     </TableHeader>
                     <TableBody>
                       {lines.map((line, idx) => (
-                        <DeliveryLineRow
-                          key={line.id ?? idx}
-                          line={line}
-                        />
+                        <DeliveryLineRow key={line.id ?? idx} line={line} />
                       ))}
                     </TableBody>
                   </Table>
@@ -626,7 +713,9 @@ export default function DeliveryNoteDetailPage() {
               {deliveryNote.recipientPhone && (
                 <>
                   <div>
-                    <Label className="text-muted-foreground">Số điện thoại</Label>
+                    <Label className="text-muted-foreground">
+                      Số điện thoại
+                    </Label>
                     <div className="flex items-center gap-2 mt-1">
                       <Phone className="w-4 h-4 text-muted-foreground" />
                       <span>{deliveryNote.recipientPhone}</span>
@@ -639,7 +728,9 @@ export default function DeliveryNoteDetailPage() {
               {deliveryNote.deliveryAddress && (
                 <>
                   <div>
-                    <Label className="text-muted-foreground">Địa chỉ giao hàng</Label>
+                    <Label className="text-muted-foreground">
+                      Địa chỉ giao hàng
+                    </Label>
                     <div className="flex items-start gap-2 mt-1">
                       <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
                       <span className="text-sm">
@@ -702,9 +793,7 @@ export default function DeliveryNoteDetailPage() {
                     {deliveryNote.handedOverBy && (
                       <div className="flex items-center gap-2 mt-1 ml-6">
                         <User className="w-4 h-4 text-muted-foreground" />
-                        <span>
-                          {deliveryNote.handedOverBy.fullName || "—"}
-                        </span>
+                        <span>{deliveryNote.handedOverBy.fullName || "—"}</span>
                       </div>
                     )}
                   </div>
@@ -723,9 +812,7 @@ export default function DeliveryNoteDetailPage() {
                     {deliveryNote.cancelledBy && (
                       <div className="flex items-center gap-2 mt-1 ml-6">
                         <User className="w-4 h-4 text-muted-foreground" />
-                        <span>
-                          {deliveryNote.cancelledBy.fullName || "—"}
-                        </span>
+                        <span>{deliveryNote.cancelledBy.fullName || "—"}</span>
                       </div>
                     )}
                   </div>
@@ -746,19 +833,22 @@ export default function DeliveryNoteDetailPage() {
               <CardContent className="space-y-2">
                 {Array.from(
                   new Map(
-                    lines.map((l) => [(l as any).orderCode || l.id, l])
-                  ).values()
+                    lines.map((l) => [(l as any).orderCode || l.id, l]),
+                  ).values(),
                 )
-                  .reduce<{ orderCode: string | null; count: number }[]>((acc, l) => {
-                    const code = (l as any).orderCode as string | null;
-                    const existing = acc.find((a) => a.orderCode === code);
-                    if (existing) {
-                      existing.count++;
-                    } else {
-                      acc.push({ orderCode: code, count: 1 });
-                    }
-                    return acc;
-                  }, [])
+                  .reduce<{ orderCode: string | null; count: number }[]>(
+                    (acc, l) => {
+                      const code = (l as any).orderCode as string | null;
+                      const existing = acc.find((a) => a.orderCode === code);
+                      if (existing) {
+                        existing.count++;
+                      } else {
+                        acc.push({ orderCode: code, count: 1 });
+                      }
+                      return acc;
+                    },
+                    [],
+                  )
                   .map(({ orderCode, count }) => (
                     <div
                       key={orderCode}
@@ -791,15 +881,31 @@ export default function DeliveryNoteDetailPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="status">Trạng thái *</Label>
-              <Select value={status} onValueChange={setStatus}>
+              <Select
+                value={status}
+                onValueChange={(val) => {
+                  setStatus(val);
+                  // Clear specific reasons when switching away from that status
+                  if (val !== "failed") {
+                    setFailureReason("");
+                    setFailureType("");
+                  }
+                  if (val !== "cancelled") {
+                    setCancelReason("");
+                  }
+                }}
+              >
                 <SelectTrigger id="status">
                   <SelectValue placeholder="Chọn trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">Chờ giao</SelectItem>
-                  <SelectItem value="delivered">Đã giao thành công</SelectItem>
-                  <SelectItem value="failed">Giao thất bại</SelectItem>
-                  <SelectItem value="cancelled">Hủy đơn</SelectItem>
+                  {Object.entries(deliveryNoteStatusLabels).map(
+                    ([val, label]) => (
+                      <SelectItem key={val} value={val}>
+                        {label}
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -826,8 +932,13 @@ export default function DeliveryNoteDetailPage() {
                       <SelectValue placeholder="Chọn loại thất bại" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="customer">Do khách hàng</SelectItem>
-                      <SelectItem value="company">Do công ty</SelectItem>
+                      {Object.entries(deliveryFailureTypeLabels).map(
+                        ([val, label]) => (
+                          <SelectItem key={val} value={val}>
+                            {label}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -924,8 +1035,8 @@ export default function DeliveryNoteDetailPage() {
             <DialogTitle>Tạo lại phiếu giao hàng</DialogTitle>
             <DialogDescription>
               Hệ thống sẽ tự động gom tất cả các dòng giao thất bại của phiếu
-              này và tạo một phiếu giao hàng mới, giữ nguyên địa chỉ và số
-              lượng ban đầu.
+              này và tạo một phiếu giao hàng mới, giữ nguyên địa chỉ và số lượng
+              ban đầu.
             </DialogDescription>
           </DialogHeader>
 
