@@ -91,8 +91,8 @@ export default function OrderCreatePage() {
     isLoading: loadingCustomers,
     refetch: refetchCustomers,
   } = useCustomers({
-    page: 1,
-    size: 1000, // Get all customers
+    pageNumber: 1,
+    pageSize: 1000, // Get all customers
   });
   const customers = customersData?.items || [];
 
@@ -121,12 +121,16 @@ export default function OrderCreatePage() {
 
   // Auto-select customer from URL params
   useEffect(() => {
-    if (
-      parsedCustomerId &&
-      !loadingCustomers &&
-      customers.length > 0 &&
-      !selectedCustomer
-    ) {
+    // If URL contains a customerId, ensure customers are loaded and try to auto-select
+    if (!parsedCustomerId || selectedCustomer) return;
+
+    // If customers haven't been fetched yet, trigger a refetch once
+    if (!loadingCustomers && customers.length === 0) {
+      refetchCustomers();
+      return;
+    }
+
+    if (!loadingCustomers && customers.length > 0) {
       const customer = customers.find((c) => c.id === parsedCustomerId);
       if (customer) {
         setSelectedCustomer(customer);
@@ -137,12 +141,8 @@ export default function OrderCreatePage() {
           ? `${window.location.pathname}?${newSearchParams.toString()}`
           : window.location.pathname;
         window.history.replaceState({}, "", newUrl);
-      } else if (
-        parsedCustomerId &&
-        !loadingCustomers &&
-        customers.length > 0
-      ) {
-        // Customer not found, show warning and remove from URL
+      } else {
+        // Customer not found in loaded list, warn and remove param
         toast.warning("Không tìm thấy khách hàng với ID đã cho");
         const newSearchParams = new URLSearchParams(searchParams);
         newSearchParams.delete("customerId");
@@ -158,6 +158,7 @@ export default function OrderCreatePage() {
     customers,
     selectedCustomer,
     searchParams,
+    refetchCustomers,
   ]);
 
   // Search state for existing designs
