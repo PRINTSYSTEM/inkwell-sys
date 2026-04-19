@@ -148,13 +148,13 @@ function ProductionTableRow({
     }
   }, [isDraft, prod.proofingOrderId, onStartProduction]);
 
-  const { data: proofingOrderData, isLoading } = useProofingOrder(
+  const { data: proofingOrderData, isLoading: isProofingLoading } = useProofingOrder(
     prod.proofingOrderId || null,
     !!prod.proofingOrderId && !prod.proofingOrder,
   );
   const proofingOrder = (prod.proofingOrder || proofingOrderData) as any;
 
-  const { data: detailedProd } = useProductionOrder(prod.id || null, !isDraft);
+  const { data: detailedProd, isLoading: isProdDetailLoading } = useProductionOrder(prod.id || null, !isDraft);
   const productionItems =
     (detailedProd as any)?.items || (prod as any).items || [];
 
@@ -636,7 +636,7 @@ function ProductionTableRow({
       onClick={() => !isDraft && onProductionClick(prod.id!)}
     >
       <TableCell className="py-3 align-top font-bold text-base text-primary bg-muted/20 border-r border-border/50 text-center w-[150px]">
-        {isLoading ? (
+        {isProofingLoading ? (
           <div className="flex justify-center mt-2">
             <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
           </div>
@@ -658,7 +658,7 @@ function ProductionTableRow({
         )}
       </TableCell>
       <TableCell className="py-3 align-top min-w-[300px]">
-        {isLoading ? (
+        {isProofingLoading ? (
           <div className="space-y-4 animate-pulse">
             <div className="h-4 bg-muted rounded w-3/4"></div>
             <div className="h-4 bg-muted rounded w-1/2"></div>
@@ -962,7 +962,7 @@ function ProductionTableRow({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-2">
-          {isLoading ? (
+          {isProofingLoading || isProdDetailLoading ? (
             <div className="flex justify-center p-2">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
@@ -1025,7 +1025,7 @@ function ProductionTableRow({
                         label={pod.design?.designName || pod.design?.code}
                         hideStatus={true}
                         isPackagingItem={true}
-                        productionItemId={prodItem ? prodItem.id : pod.id}
+                        productionItemId={prodItem ? prodItem.id : null}
                         productionOrderId={prod.id}
                         initialOutputQtyOverride={
                           prodItem?.outputQty != null
