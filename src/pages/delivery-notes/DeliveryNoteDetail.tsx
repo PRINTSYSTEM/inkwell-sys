@@ -137,28 +137,26 @@ function DeliveryLineRow({ line }: { line: DeliveryNoteLineResponse }) {
         </div>
       </TableCell>
       <TableCell className="text-right">
-        <span className="font-semibold text-sm">
-          {line.deliveryQty?.toLocaleString("vi-VN") ?? "—"}
-        </span>
-        {line.orderedQty && (
-          <div className="text-xs text-muted-foreground">
-            / {line.orderedQty.toLocaleString("vi-VN")}
-          </div>
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        <span className="text-sm text-muted-foreground">
-          {line.deliveryQty 
-            ? Math.round(line.deliveryQty * 0.005).toLocaleString("vi-VN") 
-            : "0"}
+        <span className="text-sm font-medium">
+          {line.orderedQty?.toLocaleString("vi-VN") ?? "—"}
         </span>
       </TableCell>
       <TableCell className="text-right">
-        <span className="font-medium text-sm text-primary">
-          {line.deliveryQty 
-            ? (line.deliveryQty - Math.round(line.deliveryQty * 0.005)).toLocaleString("vi-VN") 
-            : "—"}
+        <span className="text-sm font-medium text-blue-600">
+          {line.netQtyTotal?.toLocaleString("vi-VN") ?? "—"}
         </span>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex flex-col items-end">
+          <span className="font-bold text-sm text-primary">
+            {line.deliveryQty?.toLocaleString("vi-VN") ?? "—"}
+          </span>
+          {line.actualDeliveredQty != null && line.actualDeliveredQty !== line.deliveryQty && (
+            <span className="text-[10px] text-green-600 font-medium">
+              Thực giao: {line.actualDeliveredQty.toLocaleString("vi-VN")}
+            </span>
+          )}
+        </div>
       </TableCell>
       <TableCell>
         {hasAddress && addr ? (
@@ -644,9 +642,9 @@ export default function DeliveryNoteDetailPage() {
                       <TableRow className="bg-muted/30">
                         <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
                         <TableHead>Sản phẩm</TableHead>
+                        <TableHead className="text-right">SL đặt</TableHead>
+                        <TableHead className="text-right">SL sản xuất</TableHead>
                         <TableHead className="text-right">SL giao</TableHead>
-                        <TableHead className="text-right">Phụ hao (0.5%)</TableHead>
-                        <TableHead className="text-right">SL thực</TableHead>
                         <TableHead>Địa chỉ giao</TableHead>
                         <TableHead className="text-right">Thành tiền</TableHead>
                         <TableHead>Trạng thái</TableHead>
