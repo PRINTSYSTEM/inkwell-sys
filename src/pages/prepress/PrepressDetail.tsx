@@ -631,11 +631,26 @@ export default function ProofingOrderDetailPage() {
     selectedDesigns,
     selectedIds,
     currentMaterialTypeId,
-    toggleSelection,
+    toggleSelection: rawToggleSelection,
     clearSelection,
     isSelected,
     canSelect,
   } = useProofingSelection();
+
+  const toggleSelection = (design: any) => {
+    const isSelecting = !isSelected(design.id);
+    rawToggleSelection(design);
+
+    if (isSelecting) {
+      setDesignQuantities((prev) => ({
+        ...prev,
+        [design.id]:
+          design.availableQuantity !== undefined
+            ? design.availableQuantity
+            : design.quantity || 0,
+      }));
+    }
+  };
 
   // Filter states for design selection
   const [selectedDesignTypes, setSelectedDesignTypes] = useState<number[]>([]);

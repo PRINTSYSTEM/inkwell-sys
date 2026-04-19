@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,33 +67,6 @@ export function DetailEmptyOrderView({
   handleSubmitDesigns,
   isAddingDesigns,
 }: DetailEmptyOrderViewProps) {
-  // Auto-fill quantities when designs are selected (Requested: "Truyền hẳn SL đặt vào luôn")
-  useEffect(() => {
-    if (selectedDesigns.length > 0) {
-      setDesignQuantities((prev: Record<number, number>) => {
-        let hasChanged = false;
-        const newQuantities = { ...prev };
-
-        selectedDesigns.forEach((design) => {
-          // If this design doesn't have a quantity set yet, use its available/ordered quantity
-          if (
-            newQuantities[design.id] === undefined ||
-            newQuantities[design.id] === null
-          ) {
-            const qty =
-              design.availableQuantity !== undefined
-                ? design.availableQuantity
-                : design.quantity;
-            newQuantities[design.id] = qty ?? 0;
-            hasChanged = true;
-          }
-        });
-
-        return hasChanged ? newQuantities : prev;
-      });
-    }
-  }, [selectedDesigns, setDesignQuantities]);
-
   return (
     <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm bg-background relative">
       {/* LEFT SIDE - DESIGN LIST */}
