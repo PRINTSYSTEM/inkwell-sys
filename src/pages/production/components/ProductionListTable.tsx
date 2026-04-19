@@ -205,7 +205,7 @@ function ProductionTableRow({
   const isGlueEnabled = isCutEnabled && isCutDone;
   const isGlueDone = !glueStep || glueStep.status === "done";
 
-  const isPackagingEnabled = isGlueEnabled && isGlueDone;
+  const isPackagingEnabled = !isDraft;
 
   const defaultPrintQty =
     (proofingOrder as any)?.totalProcessedQty ||
@@ -334,6 +334,9 @@ function ProductionTableRow({
     const [isEditing, setIsEditing] = useState(!hasBeenSaved);
 
     React.useEffect(() => {
+      // Don't overwrite local state while user is editing
+      if (isEditing) return;
+
       setInputQty(
         step.inputQty
           ? step.inputQty.toString()
@@ -356,6 +359,7 @@ function ProductionTableRow({
           : step.defectQty?.toString() || "",
       );
     }, [
+      isEditing,
       step.inputQty,
       step.outputQty,
       step.defectQty,
@@ -374,6 +378,7 @@ function ProductionTableRow({
         notes?: string;
       }>,
     ) => {
+      // 1. Update the Item (quantities) if it's a packaging item
       if (
         isPackagingItem &&
         productionItemId !== null &&
@@ -394,15 +399,27 @@ function ProductionTableRow({
             notes: updates.notes || "Ghi chú đóng gói",
           },
         });
-      } else if (step.id) {
+      }
+
+      // 2. Update the Step (status and quantities)
+      // This is always called for non-packaging steps, or for packaging steps when status changes
+      if (step.id && (updates.status !== undefined || !isPackagingItem)) {
         updateStep({
           stepId: step.id,
           data: {
-            status: step.status,
-            inputQty: Number(inputQty) || 0,
-            outputQty: Number(outputQty) || 0,
-            defectQty: Number(defectQty) || 0,
-            ...updates,
+            status: updates.status || step.status,
+            inputQty:
+              updates.inputQty !== undefined
+                ? updates.inputQty
+                : Number(inputQty) || 0,
+            outputQty:
+              updates.outputQty !== undefined
+                ? updates.outputQty
+                : Number(outputQty) || 0,
+            defectQty:
+              updates.defectQty !== undefined
+                ? updates.defectQty
+                : Number(defectQty) || 0,
           },
         });
       }
@@ -493,7 +510,21 @@ function ProductionTableRow({
               size="sm"
               className="h-6 mt-1 text-[10px] w-full"
               disabled={!isEnabled}
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                setIsEditing(true);
+                // Auto-jump to ready when clicking Edit (requested by user)
+                if (step.status !== "ready" && step.id) {
+                  updateStep({
+                    stepId: step.id,
+                    data: {
+                      status: "ready",
+                      inputQty: step.inputQty || undefined,
+                      outputQty: step.outputQty || undefined,
+                      defectQty: step.defectQty || undefined,
+                    },
+                  });
+                }
+              }}
             >
               <Edit className="w-3 h-3 mr-1" /> Sửa
             </Button>
@@ -1089,7 +1120,7 @@ export function ProductionListTable({
                   DÁN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center">
-                  ĐÓNG GÓI
+                  KIỂM HÀNG
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -1133,7 +1164,7 @@ export function ProductionListTable({
                   DÁN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
-                  ĐÓNG GÓI
+                  KIỂM HÀNG
                 </TableHead>
               </TableRow>
             </TableHeader>
