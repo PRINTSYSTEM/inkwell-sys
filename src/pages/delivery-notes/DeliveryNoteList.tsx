@@ -836,6 +836,45 @@ function OrdersView({
         </Alert>
       )}
 
+      {/* Selection Summary */}
+      {selectedOrderDetailIds.size > 0 && (
+        <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Package className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-sm">
+                Đã chọn <span className="font-bold">{selectedOrderDetailIds.size}</span> sản phẩm
+              </p>
+            </div>
+            <div className="h-6 w-px bg-primary/20" />
+            <p className="text-sm">
+              Tổng cộng: <span className="font-bold text-primary">{formatCurrency(totalSelectedAmount)}</span>
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+             <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleToggleOrderDetail(-1)}
+              className="h-9 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
+             >
+               Hủy
+             </Button>
+             <Button 
+              size="sm"
+              className="h-9 px-6 font-bold bg-primary hover:bg-primary/90"
+              onClick={handleCreateDeliveryNote}
+             >
+              TIẾP TỤC
+              <ChevronRight className="h-4 w-4 ml-1" />
+             </Button>
+          </div>
+        </div>
+      )}
+
       {/* Orders Table */}
       <Card className="border-0 shadow-sm overflow-hidden">
         <div className="overflow-auto border rounded-xl">
@@ -1001,44 +1040,6 @@ function OrdersView({
           </div>
         )}
       </Card>
-
-      {/* Sticky Bottom Summary Bar */}
-      {selectedOrderDetailIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
-          <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-            <div className="flex items-center gap-8">
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-0.5">Sản phẩm đã chọn</span>
-                <span className="text-xl font-black text-slate-900 dark:text-slate-50">{selectedOrderDetailIds.size} mặt hàng</span>
-              </div>
-              <div className="h-10 w-px bg-slate-200 dark:border-slate-800" />
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-0.5">Tổng giá trị tạm tính</span>
-                <span className="text-xl font-black text-primary">{formatCurrency(totalSelectedAmount)}</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-               <Button 
-                variant="ghost" 
-                size="lg"
-                className="text-slate-500 hover:text-red-500 font-bold text-sm"
-                onClick={() => handleToggleOrderDetail(-1)}
-               >
-                 Hủy chọn
-               </Button>
-               <Button 
-                size="lg"
-                className="h-12 px-10 gap-2 font-black text-base bg-primary shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform active:scale-95"
-                onClick={handleCreateDeliveryNote}
-               >
-                <Truck className="h-5 w-5" />
-                TIẾP TỤC
-               </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
