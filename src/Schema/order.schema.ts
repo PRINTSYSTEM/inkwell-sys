@@ -108,8 +108,9 @@ export const CreateOrderRequestSchema =
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
 
 // ===== UpdateOrderRequest =====
-export const UpdateOrderRequestSchema =
-  GenUpdateOrderRequestSchema.passthrough();
+export const UpdateOrderRequestSchema = GenUpdateOrderRequestSchema.extend({
+  customerId: IdSchema.nullish(),
+}).passthrough();
 export type UpdateOrderRequest = z.infer<typeof UpdateOrderRequestSchema>;
 
 // ===== ExistingDesignRequest =====

@@ -41,6 +41,9 @@ import {
   ChevronsUpDown,
   History,
   FileCheck,
+  ChevronDown,
+  UserPlus,
+  RefreshCw,
   Search,
   Check,
 } from "lucide-react";
@@ -115,6 +118,7 @@ import type {
   UserRole,
   ProofingOrderResponse,
   OrderDetailResponse,
+  UpdateOrderRequest,
   UpdateOrderForAccountingRequest,
   UpdateOrderDetailForAccountingRequest,
 } from "@/Schema";
@@ -130,6 +134,9 @@ import {
   useRemoveOrderDetail,
   useDesigns,
   useCustomers,
+  customerApi,
+  useOrders,
+  orderCrudApi,
 } from "@/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE } from "@/constants";
@@ -154,16 +161,7 @@ export default function OrderDetailPage() {
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [cardEditValues, setCardEditValues] = useState<any>({});
-  const [isChangingCustomer, setIsChangingCustomer] = useState(false);
-  const [customerComboOpen, setCustomerComboOpen] = useState(false);
-
-  // Customer search logic
-  const { data: customersData, isLoading: loadingCustomers } = useCustomers({
-    pageNumber: 1,
-    pageSize: 1000,
-  });
-  const customersList = customersData?.items || [];
-
+  
   // OrderDetail item-level editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -171,6 +169,16 @@ export default function OrderDetailPage() {
   const [orderDetailEditValues, setOrderDetailEditValues] = useState<
     Record<string, string | number | null>
   >({});
+  // Customer search logic (by Customers)
+  const [isChangingCustomer, setIsChangingCustomer] = useState(false);
+  const [customerComboOpen, setCustomerComboOpen] = useState(false);
+  const [customerSearchText, setCustomerSearchText] = useState("");
+  const { data: searchCustomersData, isLoading: loadingSearchCustomers } = useCustomers({
+    pageNumber: 1,
+    pageSize: 20,
+    search: customerSearchText,
+  });
+  const searchCustomersList = searchCustomersData?.items || [];
 
   const [viewingImage, setViewingImage] = useState<{
     url: string;
@@ -248,7 +256,7 @@ export default function OrderDetailPage() {
   // Check if current user is designer (not accounting/admin)
   const isDesignerRole = role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD;
 
-  const { mutate: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
+  const { mutateAsync: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const { mutate: addDesignToOrder, loading: isAddingDesign } =
@@ -540,14 +548,45 @@ export default function OrderDetailPage() {
     }
 
     try {
-      await updateOrderForAccounting(
-        order.id,
-        payload as UpdateOrderForAccountingRequest,
-      );
+      if (cardName === "customerInfo" || cardName === "orderInfo" || cardName === "recipientInfo") {
+        await updateOrder({
+          id: order.id,
+          data: payload as UpdateOrderRequest,
+        });
+      } else {
+        await updateOrderForAccounting(
+          order.id,
+          payload as UpdateOrderForAccountingRequest,
+        );
+      }
+
+      // Cập nhật thông tin khách hàng vào danh mục khách hàng master
+      if (cardName === "customerInfo" && cardEditValues.customerId) {
+        try {
+          await customerApi.update(Number(cardEditValues.customerId), {
+            name: String(cardEditValues.customerName || ""),
+            companyName: String(cardEditValues.customerCompanyName || ""),
+            phone: String(cardEditValues.customerPhone || ""),
+            email: String(cardEditValues.customerEmail || ""),
+            taxCode: String(cardEditValues.customerTaxCode || ""),
+            address: String(cardEditValues.customerAddress || ""),
+          });
+        } catch (customerError) {
+          console.error("Failed to update customer master data:", customerError);
+          toast.warning("Lưu danh mục khách hàng thất bại, đơn hàng vẫn được lưu.");
+        }
+      }
+
+      // Close editing mode early for better responsiveness
       setEditingCard(null);
       setCardEditValues({});
+      setIsChangingCustomer(false);
+
+      // Refresh data in background
+      await refetch();
     } catch (error) {
-      // Keep editing mode on error
+      console.error("Save failed:", error);
+      toast.error("Lưu thông tin thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -646,20 +685,12 @@ export default function OrderDetailPage() {
   // - address (địa chỉ) - bắt buộc
   // - email (email) - bắt buộc cho company, không bắt buộc cho retail
   // - taxCode (mã số thuế) - bắt buộc cho company nếu field tồn tại
-  const customerName = typeof customer?.name === "string" ? customer.name : "";
-  const customerPhone =
-    typeof customer?.phone === "string" ? customer.phone : "";
-  const customerAddress =
-    typeof customer?.address === "string" ? customer.address : "";
-  const customerEmail =
-    typeof customer?.email === "string" ? customer.email : "";
-  const customerCompanyName =
-    typeof customer?.companyName === "string" ? customer.companyName : "";
-  // taxCode may not exist in CustomerSummaryResponse (used in OrderResponse)
-  const customerTaxCode =
-    "taxCode" in customer && typeof customer.taxCode === "string"
-      ? customer.taxCode
-      : "";
+  const customerName = order.customerName || "";
+  const customerPhone = order.customerPhone || "";
+  const customerAddress = order.customerAddress || "";
+  const customerEmail = order.customerEmail || "";
+  const customerCompanyName = order.customerCompanyName || "";
+  const customerTaxCode = order.customerTaxCode || "";
 
   const isCompany = !!customerCompanyName;
   const customerType = isCompany ? "company" : "retail";
@@ -1700,6 +1731,7 @@ export default function OrderDetailPage() {
                             customerEmail: customerEmail || "",
                             customerTaxCode: customerTaxCode || "",
                             customerAddress: customerAddress || "",
+                            customerId: customer?.id,
                           });
                         }}
                       >
@@ -1771,69 +1803,69 @@ export default function OrderDetailPage() {
                             role="combobox"
                             className="w-full justify-between bg-background h-10 px-3 text-sm border-2 border-primary/30"
                           >
-                            <span className="truncate text-left">
-                              {cardEditValues.customerName
-                                ? `${cardEditValues.customerName} - ${
-                                    cardEditValues.customerId || ""
-                                  }`
-                                : "Tìm và chọn khách hàng mới..."}
+                            <span className="truncate text-left text-primary font-medium">
+                              {customerSearchText || "Tìm theo tên, mã, số điện thoại..."}
                             </span>
-                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50 text-primary" />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent
-                          className="w-[300px] p-0 bg-popover"
+                          className="w-[350px] p-0 bg-popover shadow-xl border-primary/20"
                           align="start"
                         >
                           <Command>
                             <CommandInput
-                              placeholder="Tìm theo tên, mã KH, SĐT..."
-                              className="h-9 text-sm"
+                              placeholder="Tìm tên, mã, SĐT khách hàng..."
+                              className="h-10 text-sm"
+                              value={customerSearchText}
+                              onValueChange={setCustomerSearchText}
                             />
-                            <CommandList>
-                              <CommandEmpty>
-                                {loadingCustomers
+                            <CommandList className="max-h-[300px]">
+                              <CommandEmpty className="p-4 text-center text-sm">
+                                {loadingSearchCustomers
                                   ? "Đang tải..."
-                                  : "Không tìm thấy khách hàng"}
+                                  : "Không tìm thấy khách hàng này"}
                               </CommandEmpty>
-                              <CommandGroup className="max-h-[300px] overflow-y-auto">
-                                {customersList.map((c: any) => (
+                              <CommandGroup>
+                                {searchCustomersList.map((c: any) => (
                                   <CommandItem
                                     key={c.id}
-                                    value={`${c.name || ""} ${c.code || ""} ${
-                                      c.phone || ""
-                                    } ${c.companyName || ""}`}
                                     onSelect={() => {
+                                      setCustomerComboOpen(false);
+                                      setIsChangingCustomer(false);
+                                      setCustomerSearchText("");
                                       setCardEditValues({
                                         ...cardEditValues,
                                         customerId: c.id,
                                         customerName: c.name || "",
-                                        customerCompanyName:
-                                          c.companyName || "",
+                                        customerCompanyName: c.companyName || "",
                                         customerPhone: c.phone || "",
                                         customerEmail: c.email || "",
                                         customerTaxCode: c.taxCode || "",
                                         customerAddress: c.address || "",
                                       });
-                                      setCustomerComboOpen(false);
+                                      toast.info(`Đã chọn khách hàng ${c.name}`);
                                     }}
-                                    className="py-2 text-sm"
+                                    className="py-3 text-sm border-b last:border-0"
                                   >
-                                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                                      <span className="font-medium truncate">
-                                        {c.name || ""} - {c.code || ""}
-                                      </span>
-                                      {(c.companyName || c.phone) && (
-                                        <span className="text-xs text-muted-foreground truncate">
-                                          {c.companyName && `${c.companyName}`}
-                                          {c.companyName && c.phone && " • "}
-                                          {c.phone}
+                                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-bold text-primary">
+                                          {c.name}
                                         </span>
-                                      )}
+                                        <span className="text-xs font-mono text-muted-foreground bg-muted px-1 rounded">
+                                          {c.code}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        {c.phone && <span>{c.phone}</span>}
+                                        {c.companyName && (
+                                          <span className="truncate max-w-[200px] border-l pl-2">
+                                            {c.companyName}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
-                                    {cardEditValues.customerId === c.id && (
-                                      <Check className="h-4 w-4 text-primary ml-2" />
-                                    )}
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -1938,12 +1970,10 @@ export default function OrderDetailPage() {
                         </p>
                       </div>
                       {/* Customer Company Name */}
-                      {customer?.companyName && (
+                      {customerCompanyName && (
                         <div className="flex items-center gap-2 group mt-1">
                           <p className="text-sm text-muted-foreground truncate">
-                            {typeof customer.companyName === "string"
-                              ? customer.companyName
-                              : ""}
+                            {customerCompanyName}
                           </p>
                         </div>
                       )}
@@ -1959,11 +1989,15 @@ export default function OrderDetailPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground w-20">Mã KH:</span>
                       <span className="font-medium">
-                        {typeof customer?.code === "string"
-                          ? customer.code
-                          : "—"}
+                        {customer?.code || "—"}
                       </span>
                     </div>
+                    {customerTaxCode && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground w-20">MST:</span>
+                        <span className="font-medium">{customerTaxCode}</span>
+                      </div>
+                    )}
                     {/* Customer Phone */}
                     <div className="flex items-center gap-2">
                       <Phone className="w-4 h-4 text-muted-foreground" />
