@@ -38,9 +38,27 @@ import {
   Palette,
   Plus,
   Trash2,
+  ChevronsUpDown,
+  History,
+  FileCheck,
+  Search,
+  Check,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -111,6 +129,7 @@ import {
   useAddDesignToOrder,
   useRemoveOrderDetail,
   useDesigns,
+  useCustomers,
 } from "@/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE } from "@/constants";
@@ -134,9 +153,17 @@ export default function OrderDetailPage() {
     useState(false);
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
-  const [cardEditValues, setCardEditValues] = useState<
-    Record<string, string | number | null>
-  >({});
+  const [cardEditValues, setCardEditValues] = useState<any>({});
+  const [isChangingCustomer, setIsChangingCustomer] = useState(false);
+  const [customerComboOpen, setCustomerComboOpen] = useState(false);
+
+  // Customer search logic
+  const { data: customersData, isLoading: loadingCustomers } = useCustomers({
+    pageNumber: 1,
+    pageSize: 1000,
+  });
+  const customersList = customersData?.items || [];
+
   // OrderDetail item-level editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -419,6 +446,11 @@ export default function OrderDetailPage() {
         cardEditValues.customerAddress === null
           ? null
           : String(cardEditValues.customerAddress).trim();
+
+      // Send customerId if it was changed
+      if (cardEditValues.customerId) {
+        (payload as any).customerId = Number(cardEditValues.customerId);
+      }
     } else if (cardName === "orderInfo") {
       payload.deliveryDate =
         cardEditValues.deliveryDate === "" ||
@@ -1604,13 +1636,15 @@ export default function OrderDetailPage() {
                   )}
                   Khách hàng
                 </CardTitle>
-                {canUpdateOrderForAccounting &&
-                  (editingCard === "customerInfo" ? (
+                {editingCard === "customerInfo" ? (
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
                         variant="default"
-                        onClick={() => handleSaveCard("customerInfo")}
+                        onClick={() => {
+                          handleSaveCard("customerInfo");
+                          setIsChangingCustomer(false);
+                        }}
                         disabled={isUpdatingForAccounting}
                       >
                         {isUpdatingForAccounting ? (
@@ -1625,31 +1659,55 @@ export default function OrderDetailPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={cancelEditingCard}
+                        onClick={() => {
+                          cancelEditingCard();
+                          setIsChangingCustomer(false);
+                        }}
                         disabled={isUpdatingForAccounting}
                       >
                         Hủy
                       </Button>
                     </div>
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        startEditingCard("customerInfo", {
-                          customerName: customerName || "",
-                          customerCompanyName: customer?.companyName || "",
-                          customerPhone: customerPhone || "",
-                          customerEmail: customerEmail || "",
-                          customerTaxCode: customerTaxCode || "",
-                          customerAddress: customerAddress || "",
-                        })
-                      }
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Sửa
-                    </Button>
-                  ))}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          startEditingCard("customerInfo", {
+                            customerName: customerName || "",
+                            customerCompanyName: customer?.companyName || "",
+                            customerPhone: customerPhone || "",
+                            customerEmail: customerEmail || "",
+                            customerTaxCode: customerTaxCode || "",
+                            customerAddress: customerAddress || "",
+                            customerId: customer?.id, // Keep current customer ID
+                          })
+                        }
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Cập nhật thông tin
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setIsChangingCustomer(true);
+                          startEditingCard("customerInfo", {
+                            customerName: customerName || "",
+                            customerCompanyName: customer?.companyName || "",
+                            customerPhone: customerPhone || "",
+                            customerEmail: customerEmail || "",
+                            customerTaxCode: customerTaxCode || "",
+                            customerAddress: customerAddress || "",
+                          });
+                        }}
+                      >
+                        <User className="h-3 w-3 mr-1" />
+                        Thay đổi khách hàng
+                      </Button>
+                    </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1698,6 +1756,95 @@ export default function OrderDetailPage() {
               {editingCard === "customerInfo" ? (
                 /* Edit Mode */
                 <div className="space-y-4">
+                  {isChangingCustomer && (
+                    <div className="space-y-2">
+                      <Label className="text-primary font-semibold">
+                        Tìm khách hàng để thay đổi
+                      </Label>
+                      <Popover
+                        open={customerComboOpen}
+                        onOpenChange={setCustomerComboOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between bg-background h-10 px-3 text-sm border-2 border-primary/30"
+                          >
+                            <span className="truncate text-left">
+                              {cardEditValues.customerName
+                                ? `${cardEditValues.customerName} - ${
+                                    cardEditValues.customerId || ""
+                                  }`
+                                : "Tìm và chọn khách hàng mới..."}
+                            </span>
+                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-[300px] p-0 bg-popover"
+                          align="start"
+                        >
+                          <Command>
+                            <CommandInput
+                              placeholder="Tìm theo tên, mã KH, SĐT..."
+                              className="h-9 text-sm"
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                {loadingCustomers
+                                  ? "Đang tải..."
+                                  : "Không tìm thấy khách hàng"}
+                              </CommandEmpty>
+                              <CommandGroup className="max-h-[300px] overflow-y-auto">
+                                {customersList.map((c: any) => (
+                                  <CommandItem
+                                    key={c.id}
+                                    value={`${c.name || ""} ${c.code || ""} ${
+                                      c.phone || ""
+                                    } ${c.companyName || ""}`}
+                                    onSelect={() => {
+                                      setCardEditValues({
+                                        ...cardEditValues,
+                                        customerId: c.id,
+                                        customerName: c.name || "",
+                                        customerCompanyName:
+                                          c.companyName || "",
+                                        customerPhone: c.phone || "",
+                                        customerEmail: c.email || "",
+                                        customerTaxCode: c.taxCode || "",
+                                        customerAddress: c.address || "",
+                                      });
+                                      setCustomerComboOpen(false);
+                                    }}
+                                    className="py-2 text-sm"
+                                  >
+                                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                      <span className="font-medium truncate">
+                                        {c.name || ""} - {c.code || ""}
+                                      </span>
+                                      {(c.companyName || c.phone) && (
+                                        <span className="text-xs text-muted-foreground truncate">
+                                          {c.companyName && `${c.companyName}`}
+                                          {c.companyName && c.phone && " • "}
+                                          {c.phone}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {cardEditValues.customerId === c.id && (
+                                      <Check className="h-4 w-4 text-primary ml-2" />
+                                    )}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <Separator className="my-4" />
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label>Tên khách hàng *</Label>
                     <Input
@@ -1711,7 +1858,8 @@ export default function OrderDetailPage() {
                       placeholder="Nhập tên khách hàng"
                     />
                   </div>
-                  {customerType === "company" && (
+                  {(customerType === "company" ||
+                    cardEditValues.customerCompanyName) && (
                     <div className="space-y-2">
                       <Label>Tên công ty</Label>
                       <Input
@@ -1740,7 +1888,12 @@ export default function OrderDetailPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Email {customerType === "company" && "*"}</Label>
+                    <Label>
+                      Email{" "}
+                      {(customerType === "company" ||
+                        cardEditValues.customerCompanyName) &&
+                        "*"}
+                    </Label>
                     <Input
                       type="email"
                       value={cardEditValues.customerEmail || ""}
