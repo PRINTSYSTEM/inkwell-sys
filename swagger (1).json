@@ -7551,6 +7551,9 @@
           "content": {
             "multipart/form-data": {
               "schema": {
+                "required": [
+                  "Size"
+                ],
                 "type": "object",
                 "properties": {
                   "Size": {
@@ -20498,7 +20501,8 @@
       },
       "ConfirmPaymentRequest": {
         "required": [
-          "amount"
+          "amount",
+          "paymentMethod"
         ],
         "type": "object",
         "properties": {
@@ -20991,6 +20995,11 @@
               "$ref": "#/components/schemas/DeliveryLineRequest"
             }
           },
+          "customerAddressId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
           "notes": {
             "type": "string",
             "nullable": true
@@ -21122,6 +21131,9 @@
         "additionalProperties": false
       },
       "CreateDieRequest": {
+        "required": [
+          "size"
+        ],
         "type": "object",
         "properties": {
           "size": {
@@ -22833,11 +22845,6 @@
             "minimum": 1,
             "type": "integer",
             "format": "int32"
-          },
-          "customerAddressId": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
           }
         },
         "additionalProperties": false
@@ -22873,6 +22880,10 @@
             "type": "integer",
             "format": "int32"
           },
+          "scrapQty": {
+            "type": "integer",
+            "format": "int32"
+          },
           "netQtyTotal": {
             "type": "integer",
             "format": "int32"
@@ -22901,14 +22912,6 @@
           "lineAmount": {
             "type": "number",
             "format": "double"
-          },
-          "customerAddressId": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "customerAddress": {
-            "$ref": "#/components/schemas/CustomerAddressResponse"
           },
           "status": {
             "type": "string",
@@ -23033,6 +23036,14 @@
           "cancelReason": {
             "type": "string",
             "nullable": true
+          },
+          "customerAddressId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "customerAddress": {
+            "$ref": "#/components/schemas/CustomerAddressResponse"
           },
           "createdBy": {
             "$ref": "#/components/schemas/UserInfo"
@@ -24782,6 +24793,10 @@
             "format": "int32"
           },
           "remainingToDeliver": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scrapQty": {
             "type": "integer",
             "format": "int32"
           },
@@ -26935,6 +26950,11 @@
             "items": {
               "$ref": "#/components/schemas/DeliveryLineRequest"
             },
+            "nullable": true
+          },
+          "customerAddressId": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           },
           "notes": {

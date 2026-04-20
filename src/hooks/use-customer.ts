@@ -299,12 +299,20 @@ export const useCustomerAddresses = (
     queryKey: ["customers", customerId, "addresses"],
     enabled: enabled && !!customerId,
     queryFn: async () => {
-      const res = await apiRequest.get<CustomerAddressResponsePaginate>(
+      const res = await apiRequest.get<CustomerAddressResponsePaginate | CustomerAddress[]>(
         API_SUFFIX.CUSTOMER_ADDRESSES(customerId as number),
         { params: { pageNumber: 1, pageSize: 50 } }
       );
-      // Trả về mảng items để component dùng tiếp tục như cũ
-      return (res.data?.items ?? []) as CustomerAddress[];
+      // Handle cả 2 case: server trả paginate object HOẶC plain array
+      let items: CustomerAddress[];
+      if (Array.isArray(res.data)) {
+        items = res.data as CustomerAddress[];
+      } else {
+        items = (res.data?.items ?? []) as CustomerAddress[];
+      }
+      // NOTE (backend bug): isActive luôn = false dù mới tạo → KHÔNG filter theo isActive
+      // Xem: https://checkafe.online/api/customers/{id}/addresses trả isActive=false cho tất cả
+      return items;
     },
     staleTime: 2 * 60 * 1000,
   });

@@ -105,9 +105,15 @@ type UIStatus = "ok" | "shipping" | "success" | "failed";
 
 const mapDeliveryNoteStatus = (status?: string | null): UIStatus => {
   const s = (status || "").toLowerCase();
-  if (["draft", "confirmed", "ready_to_ship", "handed_over", "pending"].includes(s)) return "ok";
+  if (
+    ["draft", "confirmed", "ready_to_ship", "handed_over", "pending"].includes(
+      s,
+    )
+  )
+    return "ok";
   if (["in_transit", "delivering"].includes(s)) return "shipping";
-  if (["completed", "delivered", "partially_completed"].includes(s)) return "success";
+  if (["completed", "delivered", "partially_completed"].includes(s))
+    return "success";
   if (["cancelled", "failed", "failure"].includes(s)) return "failed";
   return "ok";
 };
@@ -129,7 +135,6 @@ const UI_STATUS_CONFIG: Record<UIStatus, { label: string; color?: string }> = {
 // NOTE: Line row and status badge are extracted into separate components
 // `DeliveryLineRow` and `StatusBadge` in their own files. Keep this file
 // focused on the page logic.
-
 
 export default function DeliveryNoteDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -160,7 +165,9 @@ export default function DeliveryNoteDetailPage() {
 
   const handleOpenUpdateDialog = (newStatus?: string) => {
     // map backend status to simplified UI status
-    const mapped = newStatus ? mapDeliveryNoteStatus(newStatus) : mapDeliveryNoteStatus(deliveryNote?.status);
+    const mapped = newStatus
+      ? mapDeliveryNoteStatus(newStatus)
+      : mapDeliveryNoteStatus(deliveryNote?.status);
     setStatus(mapped);
     setCancelReason((deliveryNote as any)?.cancelReason || "");
     setFailureReason(deliveryNote?.failureReason || "");
@@ -212,7 +219,12 @@ export default function DeliveryNoteDetailPage() {
 
       // For success/failed flows: update lines only. BE will aggregate note status.
       if (Array.isArray(lines) && lines.length > 0) {
-        const targetLineStatus = current === "success" ? "delivered" : current === "failed" ? "failed_reschedule" : null;
+        const targetLineStatus =
+          current === "success"
+            ? "delivered"
+            : current === "failed"
+              ? "failed_reschedule"
+              : null;
         if (targetLineStatus) {
           await Promise.all(
             lines.map((l) => {
@@ -221,10 +233,13 @@ export default function DeliveryNoteDetailPage() {
                 lineId: Number(l.id),
                 data: {
                   status: targetLineStatus,
-                  failureNotes: current === "failed" ? (failureReason || undefined) : undefined,
+                  failureNotes:
+                    current === "failed"
+                      ? failureReason || undefined
+                      : undefined,
                 },
               });
-            })
+            }),
           );
         }
       }
@@ -267,7 +282,9 @@ export default function DeliveryNoteDetailPage() {
   };
 
   // Compute aggregated delivery note status from line statuses
-  const computeDeliveryNoteStatusFromLines = (ls: DeliveryNoteLineResponse[]) => {
+  const computeDeliveryNoteStatusFromLines = (
+    ls: DeliveryNoteLineResponse[],
+  ) => {
     if (!ls || ls.length === 0) return null;
     const statuses = ls.map((l) => (l.status || "").toLowerCase());
 
@@ -275,7 +292,9 @@ export default function DeliveryNoteDetailPage() {
     if (allDelivered) return "completed";
 
     const anyDelivered = statuses.some((s) => s === "delivered");
-    const allFailedish = statuses.every((s) => ["failed_reschedule", "cancelled", "returned"].includes(s));
+    const allFailedish = statuses.every((s) =>
+      ["failed_reschedule", "cancelled", "returned"].includes(s),
+    );
     if (allFailedish) return "cancelled";
 
     if (anyDelivered) return "partially_completed";
@@ -394,11 +413,12 @@ export default function DeliveryNoteDetailPage() {
       (lines ?? [])
         .map((l) => {
           const addr = (l as any).customerAddress;
-          const key = addr?.id ?? `${addr?.recipientName || ""}|${addr?.address || ""}`;
+          const key =
+            addr?.id ?? `${addr?.recipientName || ""}|${addr?.address || ""}`;
           return [key, addr];
         })
-        .filter(([, a]) => !!a)
-    ).values()
+        .filter(([, a]) => !!a),
+    ).values(),
   ).filter(Boolean) as Array<{
     label?: string | null;
     recipientName?: string | null;
@@ -422,17 +442,33 @@ export default function DeliveryNoteDetailPage() {
         </Link>
 
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="space-y-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            <h1 className="text-2xl font-semibold">{deliveryNote.code || `Phiếu giao hàng #${deliveryNote.id}`}</h1>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-semibold">
+                {deliveryNote.code || `Phiếu giao hàng #${deliveryNote.id}`}
+              </h1>
               <div className="flex items-center gap-2 rounded-full bg-card/60 px-3 py-1 text-xs shadow-sm border border-border">
                 <span className="text-muted-foreground mr-1">Trạng thái:</span>
                 {getStatusBadge(currentStatus)}
               </div>
+            </div>
 
+            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" />
+                Tạo: {formatDateTime(deliveryNote.createdAt)}
+              </span>
+              {deliveryNote.createdBy && (
+                <span className="flex items-center gap-1.5">
+                  <User className="w-4 h-4" />
+                  {deliveryNote.createdBy.fullName || "—"}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 flex-wrap">
               {/* Simplified UI actions (ok -> shipping -> success/failed) */}
-              <div className="flex gap-2 ml-3">
+              <div className="flex gap-2">
                 {(() => {
                   const uiStatus = mapDeliveryNoteStatus(currentStatus);
                   const actionsByStatus: Record<UIStatus, UIStatus[]> = {
@@ -465,19 +501,38 @@ export default function DeliveryNoteDetailPage() {
                   ));
                 })()}
               </div>
+
+              {/* Legend for the user to see the full flow */}
+              <div className="hidden xl:flex items-center gap-1 bg-muted/30 px-3 py-1.5 rounded-full border border-border/50">
+                {Object.keys(nextSteps).map((step, idx) => (
+                  <div key={step} className="flex items-center">
+                    <span
+                      className={`text-xs font-medium ${currentStatus === step ? "text-primary font-bold" : "text-muted-foreground"}`}
+                    >
+                      {deliveryNoteStatusLabels[step]}
+                    </span>
+                    {idx < Object.keys(nextSteps).length - 1 && (
+                      <ChevronRight className="w-3 h-3 text-muted-foreground mx-0.5" />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                Tạo: {formatDateTime(deliveryNote.createdAt)}
-              </span>
-              {deliveryNote.createdBy && (
-                <span className="flex items-center gap-1.5">
-                  <User className="w-4 h-4" />
-                  {deliveryNote.createdBy.fullName || "—"}
-                </span>
-              )}
-            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap lg:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={exportPDFMutation.isPending}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              {exportPDFMutation.isPending
+                ? "Đang xử lý..."
+                : "Xuất Phiếu (PDF)"}
+            </Button>
 
             {canRecreate && (
               <Button
@@ -490,22 +545,6 @@ export default function DeliveryNoteDetailPage() {
                 Tạo lại phiếu
               </Button>
             )}
-
-            {/* Legend for the user to see the full flow */}
-            <div className="hidden xl:flex items-center gap-1 ml-4 bg-muted/30 px-3 py-1 rounded-full border border-border/50">
-              {Object.keys(nextSteps).map((step, idx) => (
-                <div key={step} className="flex items-center">
-                  <span
-                    className={`text-xs font-medium ${currentStatus === step ? "text-primary font-bold" : "text-muted-foreground"}`}
-                  >
-                    {deliveryNoteStatusLabels[step]}
-                  </span>
-                  {idx < Object.keys(nextSteps).length - 1 && (
-                    <ChevronRight className="w-3 h-3 text-muted-foreground mx-0.5" />
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -611,7 +650,7 @@ export default function DeliveryNoteDetailPage() {
                 Chi tiết phiếu giao hàng
                 {hasLines && (
                   <Badge variant="secondary" className="ml-auto">
-                    {lines.length} dòng
+                    {lines.length} đơn
                   </Badge>
                 )}
               </CardTitle>
@@ -620,23 +659,34 @@ export default function DeliveryNoteDetailPage() {
               {hasLines ? (
                 <div className="overflow-auto">
                   <Table>
-                                    <TableHeader>
-                                      <TableRow className="bg-muted/30">
-                                        <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
-                                        <TableHead>Sản phẩm</TableHead>
-                                        <TableHead className="text-right">SL đặt hàng</TableHead>
-                                        <TableHead className="text-right">SL sản xuất</TableHead>
-                                        <TableHead className="text-right">Phụ hao</TableHead>
-                                        <TableHead className="text-right">SL thực tính</TableHead>
-                                        <TableHead className="text-right">Thành tiền</TableHead>
-                                        <TableHead>Trạng thái</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                      <TableBody>
-                        {lines.map((line, idx) => (
-                          <DeliveryLineRow key={line.id ?? idx} line={line} noteStatus={currentStatus} />
-                        ))}
-                      </TableBody>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
+                        <TableHead>Sản phẩm</TableHead>
+                        <TableHead className="text-right">
+                          SL đặt hàng
+                        </TableHead>
+                        <TableHead className="text-right">
+                          SL sản xuất
+                        </TableHead>
+                        <TableHead className="text-right">Phụ hao</TableHead>
+                        <TableHead className="text-right">
+                          SL thực tính
+                        </TableHead>
+                        <TableHead className="text-right">Thành tiền</TableHead>
+                        <TableHead>Trạng thái</TableHead>
+                        <TableHead>Thao tác</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lines.map((line, idx) => (
+                        <DeliveryLineRow
+                          key={line.id ?? idx}
+                          line={line}
+                          noteStatus={currentStatus}
+                        />
+                      ))}
+                    </TableBody>
                   </Table>
                 </div>
               ) : (
@@ -665,7 +715,11 @@ export default function DeliveryNoteDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <DeliveryInfoSidebar deliveryNote={deliveryNote} uniqueAddresses={uniqueAddresses} formatDateTime={formatDateTime} />
+          <DeliveryInfoSidebar
+            deliveryNote={deliveryNote}
+            uniqueAddresses={uniqueAddresses}
+            formatDateTime={formatDateTime}
+          />
 
           {/* Line summary (groups by order) */}
           {hasLines && (
