@@ -1817,11 +1817,11 @@ function AddressBookManager({
             <div className="text-[10px] text-slate-600 dark:text-slate-400 flex items-start gap-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-md px-2 py-1.5 border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-1">
               <MapPin className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="line-clamp-1">
+                <p className="line-clamp-2">
                   <span className="font-bold text-slate-900 dark:text-slate-100">{sel.recipientName || "Người nhận"}</span>
-                  {sel.recipientPhone && <span className="ml-1">• {sel.recipientPhone}</span>}
+                  {sel.recipientPhone && <span className="ml-1 text-slate-500 dark:text-slate-400">• {sel.recipientPhone}</span>}
+                  {sel.address && <span className="ml-1 italic text-slate-500 dark:text-slate-400">• {sel.address}</span>}
                 </p>
-                <p className="line-clamp-1 italic">{sel.address}</p>
               </div>
             </div>
           ) : null;
