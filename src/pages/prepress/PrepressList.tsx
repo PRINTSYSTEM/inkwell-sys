@@ -558,7 +558,19 @@ export default function PrepressList() {
   };
 
   const handleToggleDesign = (design: DesignItem) => {
+    const isSelecting = !selectedIds.has(design.id);
     toggleSelection(design);
+
+    if (isSelecting) {
+      setDesignQuantities((prev) => ({
+        ...prev,
+        [design.id]:
+          design.availableQuantity !== undefined
+            ? design.availableQuantity
+            : design.quantity || 0,
+      }));
+    }
+
     if (!isConfiguring) {
       setIsConfiguring(true);
     }
