@@ -65,6 +65,7 @@ import {
   useUpdateDeliveryNoteStatus,
   useExportDeliveryNotePDF,
   useRecreateDeliveryNote,
+  useUpdateDeliveryLineResult,
 } from "@/hooks/use-delivery-note";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -75,6 +76,9 @@ import {
   getStatusColorClass,
 } from "@/lib/status-utils";
 import { StatusBadge } from "@/components/ui/status-badge";
+import DeliveryLineRow from "./DeliveryLineRow";
+import DeliveryInfoSidebar from "./DeliveryInfoSidebar";
+import DeliveryNoteUpdateDialog from "./DeliveryNoteUpdateDialog";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 import {
   DropdownMenu,
@@ -96,108 +100,36 @@ const formatDateTime = (dateStr: string | null | undefined) => {
   return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
 };
 
-// ============================================================
-// LINE STATUS BADGE
-// ============================================================
-function LineStatusBadge({ status }: { status?: string | null }) {
-  if (!status) return <Badge variant="secondary">—</Badge>;
-  const label = deliveryLineStatusLabels[status] || status;
-  return <StatusBadge status={status} label={label} />;
-}
+// === Simplified UI status mapping ===
+type UIStatus = "ok" | "shipping" | "success" | "failed";
 
-// ============================================================
-// DELIVERY LINE ROW
-// ============================================================
-function DeliveryLineRow({ line }: { line: DeliveryNoteLineResponse }) {
-  const hasAddress = !!(line as any).customerAddress;
-  const addr = (line as any).customerAddress as {
-    label?: string | null;
-    recipientName?: string | null;
-    recipientPhone?: string | null;
-    address?: string | null;
-  } | null;
+const mapDeliveryNoteStatus = (status?: string | null): UIStatus => {
+  const s = (status || "").toLowerCase();
+  if (["draft", "confirmed", "ready_to_ship", "handed_over", "pending"].includes(s)) return "ok";
+  if (["in_transit", "delivering"].includes(s)) return "shipping";
+  if (["completed", "delivered", "partially_completed"].includes(s)) return "success";
+  if (["cancelled", "failed", "failure"].includes(s)) return "failed";
+  return "ok";
+};
 
-  return (
-    <TableRow className="hover:bg-muted/30 transition-colors">
-      <TableCell>
-        <div className="space-y-0.5">
-          <div className="font-mono font-semibold text-sm">
-            {line.designCode || "—"}
-          </div>
-          {(line as any).orderCode && (
-            <div className="text-xs text-muted-foreground font-mono">
-              {(line as any).orderCode}
-            </div>
-          )}
-        </div>
-      </TableCell>
-      <TableCell>
-        <div className="text-sm font-medium line-clamp-2">
-          {line.designName || "—"}
-        </div>
-      </TableCell>
-      <TableCell className="text-right">
-        <span className="text-sm font-medium">
-          {line.orderedQty?.toLocaleString("vi-VN") ?? "—"}
-        </span>
-      </TableCell>
-      <TableCell className="text-right">
-        <span className="text-sm font-medium text-blue-600">
-          {line.netQtyTotal?.toLocaleString("vi-VN") ?? "—"}
-        </span>
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex flex-col items-end">
-          <span className="font-bold text-sm text-primary">
-            {line.deliveryQty?.toLocaleString("vi-VN") ?? "—"}
-          </span>
-          {line.actualDeliveredQty != null && line.actualDeliveredQty !== line.deliveryQty && (
-            <span className="text-[10px] text-green-600 font-medium">
-              Thực giao: {line.actualDeliveredQty.toLocaleString("vi-VN")}
-            </span>
-          )}
-        </div>
-      </TableCell>
-      <TableCell>
-        {hasAddress && addr ? (
-          <div className="space-y-0.5 text-xs">
-            {addr.label && (
-              <div className="font-medium text-foreground">{addr.label}</div>
-            )}
-            {addr.recipientName && (
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <User className="h-3 w-3 flex-shrink-0" />
-                {addr.recipientName}
-              </div>
-            )}
-            {addr.recipientPhone && (
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Phone className="h-3 w-3 flex-shrink-0" />
-                {addr.recipientPhone}
-              </div>
-            )}
-            {addr.address && (
-              <div className="flex items-start gap-1 text-muted-foreground">
-                <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
-                <span className="line-clamp-2">{addr.address}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="font-medium text-sm">
-          {line.lineAmount != null ? formatCurrency(line.lineAmount) : "—"}
-        </div>
-      </TableCell>
-      <TableCell>
-        <LineStatusBadge status={line.status} />
-      </TableCell>
-    </TableRow>
-  );
-}
+const uiActionToBEStatus: Record<UIStatus, string> = {
+  ok: "confirmed",
+  shipping: "in_transit",
+  success: "completed",
+  failed: "cancelled",
+};
+
+const UI_STATUS_CONFIG: Record<UIStatus, { label: string; color?: string }> = {
+  ok: { label: "OK", color: "gray" },
+  shipping: { label: "Đang giao", color: "blue" },
+  success: { label: "Thành công", color: "green" },
+  failed: { label: "Thất bại", color: "red" },
+};
+
+// NOTE: Line row and status badge are extracted into separate components
+// `DeliveryLineRow` and `StatusBadge` in their own files. Keep this file
+// focused on the page logic.
+
 
 export default function DeliveryNoteDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -206,7 +138,7 @@ export default function DeliveryNoteDetailPage() {
   const { user } = useAuth();
 
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<UIStatus>("ok");
   const [cancelReason, setCancelReason] = useState("");
   const [failureReason, setFailureReason] = useState("");
   const [failureType, setFailureType] = useState<string>("");
@@ -224,9 +156,12 @@ export default function DeliveryNoteDetailPage() {
   const updateStatusMutation = useUpdateDeliveryNoteStatus();
   const exportPDFMutation = useExportDeliveryNotePDF();
   const recreateMutation = useRecreateDeliveryNote();
+  const updateLineResultMutation = useUpdateDeliveryLineResult();
 
   const handleOpenUpdateDialog = (newStatus?: string) => {
-    setStatus(newStatus || deliveryNote?.status || "");
+    // map backend status to simplified UI status
+    const mapped = newStatus ? mapDeliveryNoteStatus(newStatus) : mapDeliveryNoteStatus(deliveryNote?.status);
+    setStatus(mapped);
     setCancelReason((deliveryNote as any)?.cancelReason || "");
     setFailureReason(deliveryNote?.failureReason || "");
     setFailureType(deliveryNote?.failureType || "");
@@ -235,21 +170,65 @@ export default function DeliveryNoteDetailPage() {
     setIsUpdateDialogOpen(true);
   };
 
-  const handleUpdateStatus = async () => {
+  // Open dialog directly for a simplified UI action
+  const openUpdateDialogForUI = (uiStatus: UIStatus) => {
+    setStatus(uiStatus);
+    setCancelReason((deliveryNote as any)?.cancelReason || "");
+    setFailureReason(deliveryNote?.failureReason || "");
+    setFailureType(deliveryNote?.failureType || "");
+    setAffectsDebt(deliveryNote?.affectsDebt || false);
+    setNotes(deliveryNote?.notes || "");
+    setIsUpdateDialogOpen(true);
+  };
+
+  const handleUpdateStatus = async (statusArg?: UIStatus) => {
     if (!deliveryNote?.id) return;
+    const current = (statusArg as UIStatus) || status;
 
     try {
-      await updateStatusMutation.mutateAsync({
-        id: Number(deliveryNote.id),
-        data: {
-          status,
-          cancelReason: cancelReason || null,
-          failureReason: failureReason || null,
-          failureType: failureType || null,
-          affectsDebt: affectsDebt,
-          notes: notes || null,
-        },
-      });
+      // If user chose failed, require a failureReason
+      if (current === "failed" && !failureReason) {
+        // keep dialog open and don't submit
+        return;
+      }
+
+      // If starting shipping: only update the DeliveryNote status to in_transit.
+      if (current === "shipping") {
+        await updateStatusMutation.mutateAsync({
+          id: Number(deliveryNote.id),
+          data: {
+            status: uiActionToBEStatus[current],
+            cancelReason: cancelReason || null,
+            failureReason: failureReason || null,
+            failureType: failureType || null,
+            affectsDebt: affectsDebt,
+            notes: notes || null,
+          },
+        });
+
+        setIsUpdateDialogOpen(false);
+        return;
+      }
+
+      // For success/failed flows: update lines only. BE will aggregate note status.
+      if (Array.isArray(lines) && lines.length > 0) {
+        const targetLineStatus = current === "success" ? "delivered" : current === "failed" ? "failed_reschedule" : null;
+        if (targetLineStatus) {
+          await Promise.all(
+            lines.map((l) => {
+              if (!l?.id) return Promise.resolve(null);
+              return updateLineResultMutation.mutateAsync({
+                lineId: Number(l.id),
+                data: {
+                  status: targetLineStatus,
+                  failureNotes: current === "failed" ? (failureReason || undefined) : undefined,
+                },
+              });
+            })
+          );
+        }
+      }
+
       setIsUpdateDialogOpen(false);
     } catch (error) {
       // Error is handled by the hook
@@ -285,6 +264,24 @@ export default function DeliveryNoteDetailPage() {
     const label =
       deliveryNoteStatusLabels[status] || deliveryNote?.statusName || status;
     return <StatusBadge status={status} label={label} />;
+  };
+
+  // Compute aggregated delivery note status from line statuses
+  const computeDeliveryNoteStatusFromLines = (ls: DeliveryNoteLineResponse[]) => {
+    if (!ls || ls.length === 0) return null;
+    const statuses = ls.map((l) => (l.status || "").toLowerCase());
+
+    const allDelivered = statuses.every((s) => s === "delivered");
+    if (allDelivered) return "completed";
+
+    const anyDelivered = statuses.some((s) => s === "delivered");
+    const allFailedish = statuses.every((s) => ["failed_reschedule", "cancelled", "returned"].includes(s));
+    if (allFailedish) return "cancelled";
+
+    if (anyDelivered) return "partially_completed";
+
+    // default: still in transit
+    return "in_transit";
   };
 
   if (isLoading) {
@@ -391,6 +388,24 @@ export default function DeliveryNoteDetailPage() {
     | number
     | undefined;
 
+  // Collect unique per-line customer addresses for sidebar display
+  const uniqueAddresses = Array.from(
+    new Map(
+      (lines ?? [])
+        .map((l) => {
+          const addr = (l as any).customerAddress;
+          const key = addr?.id ?? `${addr?.recipientName || ""}|${addr?.address || ""}`;
+          return [key, addr];
+        })
+        .filter(([, a]) => !!a)
+    ).values()
+  ).filter(Boolean) as Array<{
+    label?: string | null;
+    recipientName?: string | null;
+    recipientPhone?: string | null;
+    address?: string | null;
+  }>;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -407,14 +422,48 @@ export default function DeliveryNoteDetailPage() {
         </Link>
 
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight">
-                {deliveryNote.code || `Phiếu giao hàng #${deliveryNote.id}`}
-              </h1>
+          <div className="space-y-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            <h1 className="text-2xl font-semibold">{deliveryNote.code || `Phiếu giao hàng #${deliveryNote.id}`}</h1>
               <div className="flex items-center gap-2 rounded-full bg-card/60 px-3 py-1 text-xs shadow-sm border border-border">
                 <span className="text-muted-foreground mr-1">Trạng thái:</span>
                 {getStatusBadge(currentStatus)}
+              </div>
+
+              {/* Simplified UI actions (ok -> shipping -> success/failed) */}
+              <div className="flex gap-2 ml-3">
+                {(() => {
+                  const uiStatus = mapDeliveryNoteStatus(currentStatus);
+                  const actionsByStatus: Record<UIStatus, UIStatus[]> = {
+                    ok: ["shipping"],
+                    // once shipping, per-line actions handle success/failed via line API
+                    shipping: [],
+                    success: [],
+                    failed: [],
+                  };
+
+                  const quickUpdate = async (next: UIStatus) => {
+                    // for failed we need details -> open dialog; for shipping/success perform immediately
+                    if (next === "failed") {
+                      openUpdateDialogForUI(next);
+                      return;
+                    }
+                    setStatus(next);
+                    await handleUpdateStatus(next);
+                  };
+
+                  return actionsByStatus[uiStatus].map((next) => (
+                    <Button
+                      key={next}
+                      onClick={() => quickUpdate(next)}
+                      variant={next === "failed" ? "destructive" : "default"}
+                      size="sm"
+                    >
+                      {UI_STATUS_CONFIG[next].label}
+                    </Button>
+                  ));
+                })()}
               </div>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
@@ -429,73 +478,6 @@ export default function DeliveryNoteDetailPage() {
                 </span>
               )}
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap sm:justify-end">
-            {nextAction &&
-              !isCancelled &&
-              currentStatus !== "completed" &&
-              currentStatus !== "partially_completed" && (
-                <Button
-                  className="gap-2 shadow-sm"
-                  onClick={() => {
-                    updateStatusMutation.mutate({
-                      id: Number(deliveryNote.id),
-                      data: { status: nextAction.value },
-                    });
-                  }}
-                  disabled={updateStatusMutation.isPending}
-                >
-                  <nextAction.icon className="w-4 h-4" />
-                  {updateStatusMutation.isPending
-                    ? "Đang xử lý..."
-                    : nextAction.label}
-                </Button>
-              )}
-
-            {!isCancelled && currentStatus !== "completed" && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={handleExportPDF}
-                  disabled={exportPDFMutation.isPending}
-                >
-                  <Download className="w-4 h-4" />
-                  Xuất PDF
-                </Button>
-
-                {currentStatus !== "cancelled" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => handleOpenUpdateDialog("cancelled")}
-                  >
-                    <X className="w-4 h-4" />
-                    Hủy phiếu
-                  </Button>
-                )}
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Thêm thao tác</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuLabel>Thao tác khác</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleOpenUpdateDialog()}>
-                      <FileEdit className="mr-2 h-4 w-4" />
-                      Cập nhật chi tiết
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            )}
 
             {canRecreate && (
               <Button
@@ -626,7 +608,7 @@ export default function DeliveryNoteDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Chi tiết dòng hàng
+                Chi tiết phiếu giao hàng
                 {hasLines && (
                   <Badge variant="secondary" className="ml-auto">
                     {lines.length} dòng
@@ -638,23 +620,23 @@ export default function DeliveryNoteDetailPage() {
               {hasLines ? (
                 <div className="overflow-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30">
-                        <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
-                        <TableHead>Sản phẩm</TableHead>
-                        <TableHead className="text-right">SL đặt</TableHead>
-                        <TableHead className="text-right">SL sản xuất</TableHead>
-                        <TableHead className="text-right">SL giao</TableHead>
-                        <TableHead>Địa chỉ giao</TableHead>
-                        <TableHead className="text-right">Thành tiền</TableHead>
-                        <TableHead>Trạng thái</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {lines.map((line, idx) => (
-                        <DeliveryLineRow key={line.id ?? idx} line={line} />
-                      ))}
-                    </TableBody>
+                                    <TableHeader>
+                                      <TableRow className="bg-muted/30">
+                                        <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
+                                        <TableHead>Sản phẩm</TableHead>
+                                        <TableHead className="text-right">SL đặt hàng</TableHead>
+                                        <TableHead className="text-right">SL sản xuất</TableHead>
+                                        <TableHead className="text-right">Phụ hao</TableHead>
+                                        <TableHead className="text-right">SL thực tính</TableHead>
+                                        <TableHead className="text-right">Thành tiền</TableHead>
+                                        <TableHead>Trạng thái</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                      <TableBody>
+                        {lines.map((line, idx) => (
+                          <DeliveryLineRow key={line.id ?? idx} line={line} noteStatus={currentStatus} />
+                        ))}
+                      </TableBody>
                   </Table>
                 </div>
               ) : (
@@ -683,141 +665,7 @@ export default function DeliveryNoteDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Delivery Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="w-5 h-5" />
-                Thông tin giao hàng
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Recipient info (legacy / fallback) */}
-              {deliveryNote.recipientName && (
-                <>
-                  <div>
-                    <Label className="text-muted-foreground">Người nhận</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        {deliveryNote.recipientName}
-                      </span>
-                    </div>
-                  </div>
-                  <Separator />
-                </>
-              )}
-
-              {deliveryNote.recipientPhone && (
-                <>
-                  <div>
-                    <Label className="text-muted-foreground">
-                      Số điện thoại
-                    </Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      <span>{deliveryNote.recipientPhone}</span>
-                    </div>
-                  </div>
-                  <Separator />
-                </>
-              )}
-
-              {deliveryNote.deliveryAddress && (
-                <>
-                  <div>
-                    <Label className="text-muted-foreground">
-                      Địa chỉ giao hàng
-                    </Label>
-                    <div className="flex items-start gap-2 mt-1">
-                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                      <span className="text-sm">
-                        {deliveryNote.deliveryAddress}
-                      </span>
-                    </div>
-                  </div>
-                  <Separator />
-                </>
-              )}
-
-              {/* No recipient info when using per-line addresses */}
-              {!deliveryNote.recipientName && !deliveryNote.deliveryAddress && (
-                <p className="text-sm text-muted-foreground">
-                  Địa chỉ giao được cấu hình riêng cho từng dòng hàng.
-                </p>
-              )}
-
-              {deliveryNote.deliveredAt && (
-                <>
-                  <Separator />
-                  <div>
-                    <Label className="text-muted-foreground">Ngày giao</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span>{formatDateTime(deliveryNote.deliveredAt)}</span>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {deliveryNote.confirmedAt && (
-                <>
-                  <Separator />
-                  <div>
-                    <Label className="text-muted-foreground">Xác nhận</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span>{formatDateTime(deliveryNote.confirmedAt)}</span>
-                    </div>
-                    {deliveryNote.confirmedBy && (
-                      <div className="flex items-center gap-2 mt-1 ml-6">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span>{deliveryNote.confirmedBy.fullName || "—"}</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {deliveryNote.handedOverAt && (
-                <>
-                  <Separator />
-                  <div>
-                    <Label className="text-muted-foreground">Bàn giao</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span>{formatDateTime(deliveryNote.handedOverAt)}</span>
-                    </div>
-                    {deliveryNote.handedOverBy && (
-                      <div className="flex items-center gap-2 mt-1 ml-6">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span>{deliveryNote.handedOverBy.fullName || "—"}</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {deliveryNote.cancelledAt && (
-                <>
-                  <Separator />
-                  <div>
-                    <Label className="text-muted-foreground">Hủy</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span>{formatDateTime(deliveryNote.cancelledAt)}</span>
-                    </div>
-                    {deliveryNote.cancelledBy && (
-                      <div className="flex items-center gap-2 mt-1 ml-6">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span>{deliveryNote.cancelledBy.fullName || "—"}</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <DeliveryInfoSidebar deliveryNote={deliveryNote} uniqueAddresses={uniqueAddresses} formatDateTime={formatDateTime} />
 
           {/* Line summary (groups by order) */}
           {hasLines && (
@@ -866,162 +714,23 @@ export default function DeliveryNoteDetailPage() {
         </div>
       </div>
 
-      {/* Update Status Dialog */}
-      <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Cập nhật trạng thái phiếu giao hàng</DialogTitle>
-            <DialogDescription>
-              Cập nhật trạng thái giao hàng và thông tin liên quan.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="status">Trạng thái *</Label>
-              <Select
-                value={status}
-                onValueChange={(val) => {
-                  setStatus(val);
-                  // Clear specific reasons when switching away from that status
-                  if (val !== "failed") {
-                    setFailureReason("");
-                    setFailureType("");
-                  }
-                  if (val !== "cancelled") {
-                    setCancelReason("");
-                  }
-                }}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Chọn trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(deliveryNoteStatusLabels).map(
-                    ([val, label]) => (
-                      <SelectItem key={val} value={val}>
-                        {label}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {status === "cancelled" && (
-              <div className="space-y-2">
-                <Label htmlFor="cancelReason">Lý do hủy *</Label>
-                <Textarea
-                  id="cancelReason"
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="Nhập lý do hủy phiếu giao hàng..."
-                  rows={3}
-                />
-              </div>
-            )}
-
-            {status === "failed" && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="failureType">Loại thất bại</Label>
-                  <Select value={failureType} onValueChange={setFailureType}>
-                    <SelectTrigger id="failureType">
-                      <SelectValue placeholder="Chọn loại thất bại" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(deliveryFailureTypeLabels).map(
-                        ([val, label]) => (
-                          <SelectItem key={val} value={val}>
-                            {label}
-                          </SelectItem>
-                        ),
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="failureReason">Lý do thất bại *</Label>
-                  <Textarea
-                    id="failureReason"
-                    value={failureReason}
-                    onChange={(e) => setFailureReason(e.target.value)}
-                    placeholder="Nhập lý do thất bại..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="affectsDebt"
-                    checked={affectsDebt}
-                    onCheckedChange={(checked) =>
-                      setAffectsDebt(checked === true)
-                    }
-                  />
-                  <Label
-                    htmlFor="affectsDebt"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Ảnh hưởng đến công nợ (Đánh dấu nếu do khách hàng)
-                  </Label>
-                </div>
-
-                {failureType === "customer" && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Thất bại do khách hàng: Vẫn cộng tiền vào công nợ
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {failureType === "company" && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Thất bại do công ty: Không cộng công nợ, coi như đơn hủy
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Ghi chú</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Ghi chú (tùy chọn)..."
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsUpdateDialogOpen(false)}
-              disabled={updateStatusMutation.isPending}
-            >
-              Hủy
-            </Button>
-            <Button
-              onClick={handleUpdateStatus}
-              disabled={
-                updateStatusMutation.isPending ||
-                !status ||
-                (status === "failed" && !failureReason) ||
-                (status === "cancelled" && !cancelReason)
-              }
-            >
-              {updateStatusMutation.isPending ? "Đang cập nhật..." : "Xác nhận"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Update Status Dialog (extracted) */}
+      <DeliveryNoteUpdateDialog
+        open={isUpdateDialogOpen}
+        onOpenChange={setIsUpdateDialogOpen}
+        status={status}
+        setStatus={(v: any) => setStatus(v)}
+        failureType={failureType}
+        setFailureType={setFailureType}
+        failureReason={failureReason}
+        setFailureReason={setFailureReason}
+        affectsDebt={affectsDebt}
+        setAffectsDebt={setAffectsDebt}
+        notes={notes}
+        setNotes={setNotes}
+        onConfirm={() => handleUpdateStatus()}
+        isPending={updateStatusMutation.isPending}
+      />
 
       {/* Recreate Dialog */}
       <Dialog

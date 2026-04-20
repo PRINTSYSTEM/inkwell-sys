@@ -1,5 +1,5 @@
 // src/hooks/use-delivery-note.ts
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
@@ -57,19 +57,13 @@ export const useDeliveryNote = (id: number | null, enabled: boolean = true) => {
 // ================== UPDATE DELIVERY NOTE STATUS ==================
 // PUT /delivery-notes/{id}/status
 export const useUpdateDeliveryNoteStatus = (
-  options?: any
+  options?: UseMutationOptions<DeliveryNoteResponse, Error, { id: number; data: UpdateDeliveryStatusRequest }>
 ) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<DeliveryNoteResponse, Error, { id: number; data: UpdateDeliveryStatusRequest }>({
     ...options,
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: UpdateDeliveryStatusRequest;
-    }) => {
+    mutationFn: async ({ id, data }) => {
       const res = await apiRequest.put<DeliveryNoteResponse>(
         API_SUFFIX.DELIVERY_NOTE_STATUS(id),
         data
@@ -86,13 +80,13 @@ export const useUpdateDeliveryNoteStatus = (
       queryClient.invalidateQueries({ queryKey: ["deliveryNote", deliveryNoteId] });
       queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
       
-      if (options?.onSuccess) options.onSuccess(updatedData, variables, context);
+      if (options?.onSuccess) options.onSuccess(updatedData, variables, context as any);
     },
     onError: (error: Error, variables, context) => {
-      if (options?.onError) options.onError(error, variables, context);
+      if (options?.onError) options.onError(error, variables, context as any);
     },
     onSettled: (data, error, variables, context) => {
-      if (options?.onSettled) options.onSettled(data, error, variables, context);
+      if (options?.onSettled) options.onSettled(data as any, error as any, variables as any, context as any);
     },
   });
 };

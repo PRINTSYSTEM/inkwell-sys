@@ -431,11 +431,47 @@ export default function OrderList() {
 
                     return (
                       <>
-                        <TableRow
-                          key={order.id}
-                          className="h-14 cursor-pointer bg-card hover:bg-muted/40 border-x-2 border-t-2 border-border border-l-4 border-l-primary shadow-sm"
-                          onClick={() => handleOrderClick(order.id ?? 0)}
-                        >
+                                // Determine if customer invoice info is complete
+                                const customerNameField =
+                                  (orderResponse.customer && typeof orderResponse.customer.name === "string")
+                                    ? orderResponse.customer.name
+                                    : orderResponse.customerName || "";
+                                const customerPhoneField =
+                                  (orderResponse.customer && typeof (orderResponse.customer as any).phone === "string")
+                                    ? (orderResponse.customer as any).phone
+                                    : orderResponse.customerPhone || "";
+                                const customerAddressField =
+                                  (orderResponse.customer && typeof (orderResponse.customer as any).address === "string")
+                                    ? (orderResponse.customer as any).address
+                                    : orderResponse.customerAddress || "";
+                                const customerEmailField =
+                                  (orderResponse.customer && typeof (orderResponse.customer as any).email === "string")
+                                    ? (orderResponse.customer as any).email
+                                    : orderResponse.customerEmail || "";
+                                const customerCompanyField =
+                                  (orderResponse.customer && typeof (orderResponse.customer as any).companyName === "string")
+                                    ? (orderResponse.customer as any).companyName
+                                    : orderResponse.customerCompanyName || "";
+                                const customerTaxCodeField =
+                                  (orderResponse.customer && typeof (orderResponse.customer as any).taxCode === "string")
+                                    ? (orderResponse.customer as any).taxCode
+                                    : orderResponse.customerTaxCode || "";
+
+                                const isCustomerInfoComplete =
+                                  !!customerNameField.trim() &&
+                                  !!customerPhoneField.trim() &&
+                                  !!customerAddressField.trim() &&
+                                  !!customerEmailField.trim() &&
+                                  (!customerCompanyField.trim() || !!customerTaxCodeField.trim());
+
+                                const highlightMissingInfo = !isCustomerInfoComplete;
+
+                                <TableRow
+                                  key={order.id}
+                                  className={`h-14 cursor-pointer border-x-2 border-t-2 border-border border-l-4 shadow-sm ${highlightMissingInfo ? "bg-rose-50 hover:bg-rose-100 border-l-rose-500" : "bg-card hover:bg-muted/40 border-l-primary"}`}
+                                  onClick={() => handleOrderClick(order.id ?? 0)}
+                                  title={highlightMissingInfo ? "Thiếu thông tin để xuất hóa đơn" : undefined}
+                                >
                           <TableCell className="py-3">
                             <div className="font-bold text-sm text-primary">
                               {order.code || `ORD-${order.id}`}
@@ -456,10 +492,15 @@ export default function OrderList() {
                                 )}
                               </div>
                               <div className="min-w-0">
-                                <TruncatedText
-                                  text={customerName || "-"}
-                                  className="font-semibold text-sm"
-                                />
+                                <div className="flex items-center gap-2">
+                                  <TruncatedText
+                                    text={customerName || "-"}
+                                    className="font-semibold text-sm"
+                                  />
+                                  {highlightMissingInfo && (
+                                    <AlertTriangle className="h-4 w-4 text-rose-700" />
+                                  )}
+                                </div>
                                 {customerCompanyName && (
                                   <TruncatedText
                                     text={customerCompanyName}

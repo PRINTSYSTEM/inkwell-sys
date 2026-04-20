@@ -64,8 +64,7 @@ export const ENTITY_CONFIG = {
   },
   orderDetailDerivedStatuses: {
     entityType: "OrderDetail",
-    description:
-      "Trạng thái chi tiết đơn hàng trước chốt in (đồng bộ từ Design.Status)",
+    description: "Trạng thái chi tiết đơn hàng trước chốt in (đồng bộ từ Design.Status)",
     values: {
       received_info: "Nhận thông tin",
       designing: "Đang thiết kế",
@@ -127,8 +126,7 @@ export const ENTITY_CONFIG = {
   },
   commonStatuses: {
     entityType: "MaterialType,DesignType",
-    description:
-      "Trạng thái chung (dùng cho MaterialType, DesignType và các entity khác)",
+    description: "Trạng thái chung (dùng cho MaterialType, DesignType và các entity khác)",
     values: {
       active: "Hoạt động",
       inactive: "Không hoạt động",
@@ -165,20 +163,19 @@ export const ENTITY_CONFIG = {
     values: {
       plate: "Nhà cung cấp kẽm",
       die: "Nhà cung cấp khuôn bế",
+      material: "Nhà cung cấp vật tư",
+      paper: "Nhà cung cấp giấy",
+      ink: "Nhà cung cấp mực",
     },
   },
   deliveryNoteStatuses: {
     entityType: "DeliveryNote",
     description: "Trạng thái phiếu giao hàng",
     values: {
-      draft: "Nháp",
-      confirmed: "Đã xác nhận",
-      ready_to_ship: "Sẵn sàng giao",
-      handed_over: "Đã bàn giao ĐVVC",
+      pending: "Chờ giao hàng",
       in_transit: "Đang giao",
-      partially_completed: "Hoàn tất một phần",
-      completed: "Kết thúc",
-      cancelled: "Hủy",
+      completed: "Giao thành công",
+      cancelled: "Giao thất bại/Đã hủy",
     },
   },
   deliveryLineStatuses: {
@@ -186,6 +183,7 @@ export const ENTITY_CONFIG = {
     description: "Trạng thái dòng giao hàng",
     values: {
       pending: "Chưa có kết quả",
+      in_transit: "Đang giao",
       delivered: "Giao thành công",
       failed_reschedule: "Thất bại - hẹn giao lại",
       returned: "Trả hàng",
@@ -210,6 +208,7 @@ export const ENTITY_CONFIG = {
       lamination: "Cán màng",
       die_cut: "Bế",
       cut: "Cắt",
+      mounting: "Bồi",
       glue: "Dán",
       packaging: "Đóng gói",
     },
@@ -286,8 +285,8 @@ export const ENTITY_CONFIG = {
     description: "Loại tìm kiếm khuôn (query parameter)",
     values: {
       exact_match: "Khớp chính xác (tất cả)",
-      related: "Liên quan (cùng/khác khách hàng)",
-      unrelated: "Không liên quan (chỉ khách hàng hiện tại)",
+      related: "Liên quan (cùng/khác customer)",
+      unrelated: "Không liên quan (chỉ customer hiện tại)",
     },
   },
   deliveryFailureTypes: {
@@ -334,7 +333,7 @@ export const ENTITY_CONFIG = {
     description: "Loại sử dụng khuôn bế",
     values: {
       one_time: "Dùng 1 lần",
-      reusable: "Lưu khuôn",
+      reusable: "Tái sử dụng",
     },
   },
   dieStatuses: {

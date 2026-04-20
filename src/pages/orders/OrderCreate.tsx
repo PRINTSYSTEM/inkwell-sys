@@ -210,6 +210,7 @@ export default function OrderCreatePage() {
     type: "company" as "company" | "retail",
     companyName: "",
     address: "",
+    scrapRate: 0.005,
   });
   const { mutateAsync: createCustomer, isPending: isCreatingCustomer } =
     useCreateCustomer();
@@ -243,14 +244,21 @@ export default function OrderCreatePage() {
     }
 
     try {
-      const result = await createCustomer({
+      const createPayload = {
         name: newCustomerForm.name.trim(),
         representativeName: newCustomerForm.representativeName.trim() || null,
         companyName: newCustomerForm.companyName.trim() || null,
         address: newCustomerForm.address.trim() || null,
         type: newCustomerForm.type,
         maxDebt: 50000000,
-      });
+        // Use form value when available, otherwise default to 0.005
+        scrapRate: newCustomerForm.scrapRate ?? 0.005,
+      };
+
+      // Debug: log payload to verify scrapRate value sent
+      console.debug("OrderCreate quick-create payload:", createPayload);
+
+      const result = await createCustomer(createPayload);
 
       if (result?.id) {
         // Invalidate and refetch customers list
@@ -273,6 +281,7 @@ export default function OrderCreatePage() {
           type: "company",
           companyName: "",
           address: "",
+          scrapRate: 0.005,
         });
       }
     } catch (error) {
@@ -1252,6 +1261,7 @@ export default function OrderCreatePage() {
                   type: "company",
                   companyName: "",
                   address: "",
+                  scrapRate: 0.005,
                 });
               }}
             >

@@ -26,6 +26,7 @@ import {
   User,
   Image as ImageIcon,
   Edit2,
+  Loader2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -69,8 +70,15 @@ import {
   useCreateDeliveryNote,
   useAvailableOrdersForDelivery,
   useRecreateDeliveryNote,
+  useUpdateDeliveryNoteStatus,
   useDeliveryNote,
 } from "@/hooks/use-delivery-note";
+import type {
+  OrderForDeliveryResponse,
+  OrderDetailForDeliveryResponse,
+  DeliveryNoteResponse,
+  DeliveryNoteLineResponse,
+} from "@/Schema/delivery-note.schema";
 import {
   useCustomerAddresses,
   useCreateCustomerAddress,
@@ -102,6 +110,13 @@ import { Check } from "lucide-react";
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+
+type SelectedOrderDetail = OrderDetailForDeliveryResponse & {
+  orderCode?: string | null;
+  customerName?: string | null;
+  orderId?: number;
+  customerId?: number;
+};
 
 const getDeliveryNoteStatusLabel = (
   status: string | null | undefined,
@@ -260,6 +275,7 @@ interface DeliveryNoteCardProps {
 }
 
 function DeliveryNoteCard({ deliveryNote, onClick }: DeliveryNoteCardProps) {
+  const updateStatusMutation = useUpdateDeliveryNoteStatus(); // No change
   const totalAmount =
     deliveryNote.orders?.reduce(
       (sum, order) => sum + (order.totalAmount || 0),
@@ -360,6 +376,32 @@ function DeliveryNoteCard({ deliveryNote, onClick }: DeliveryNoteCardProps) {
               status={deliveryNote.status || null}
               label={getDeliveryNoteStatusLabel(deliveryNote.status)}
             />
+            {/* Quick actions: only show Start Shipping when allowed */}
+            {deliveryNote.id && ["confirmed", "ready_to_ship", "handed_over", "pending"].includes(String(deliveryNote.status || "").toLowerCase()) && (
+              <div className="mt-2 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!deliveryNote.id) return;
+                    updateStatusMutation.mutate({
+                      id: Number(deliveryNote.id),
+                      data: {
+                        status: "in_transit",
+                        cancelReason: null,
+                        failureReason: null,
+                        failureType: null,
+                        affectsDebt: false,
+                        notes: null,
+                      },
+                    });
+                  }}
+                  disabled={Boolean((updateStatusMutation as any).isPending ?? updateStatusMutation.isPending)}
+                >
+                  Bắt đầu giao
+                </Button>
+              </div>
+            )}
             {totalAmount > 0 && (
               <div className="text-lg font-bold text-primary mt-2">
                 {formatCurrency(totalAmount)}
@@ -378,6 +420,10 @@ function DeliveryNoteCard({ deliveryNote, onClick }: DeliveryNoteCardProps) {
 
 export default function DeliveryNoteListPage() {
   const navigate = useNavigate();
+  const updateStatusMutation = useUpdateDeliveryNoteStatus();
+  const [selectedNoteIds, setSelectedNoteIds] = useState<Set<number>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<"orders" | "delivery-notes">(
     "orders",
   );
@@ -414,7 +460,7 @@ export default function DeliveryNoteListPage() {
 
   // Mapping available orders for list display
   const availableOrdersRaw = useMemo(() => {
-    return allOrders ?? [];
+    return (allOrders ?? []) as OrderForDeliveryResponse[];
   }, [allOrders]);
 
   // Client-side filtering and pagination for available orders
@@ -422,10 +468,10 @@ export default function DeliveryNoteListPage() {
     let filtered = [...availableOrdersRaw];
     
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase();
       filtered = filtered.filter(order => 
-        order.code?.toLowerCase().includes(query) ||
-        order.customerName?.toLowerCase().includes(query)
+        String(order.code || "").toLowerCase().includes(q) ||
+        String(order.customerName || "").toLowerCase().includes(q)
       );
     }
     
@@ -441,26 +487,22 @@ export default function DeliveryNoteListPage() {
 
   // Derive selected orders from the entire pool of available orders
   const selectedOrders = useMemo(() => {
-    if (!allOrders) return [];
-    const results: any[] = [];
-    allOrders.forEach(order => {
-      (order.details || []).forEach((detail: any) => {
+    if (!allOrders) return [] as SelectedOrderDetail[];
+    const results: SelectedOrderDetail[] = [];
+    allOrders.forEach((order: OrderForDeliveryResponse) => {
+      (order.details || []).forEach((detail: OrderDetailForDeliveryResponse) => {
         if (detail.orderDetailId != null && selectedOrderDetailIds.has(detail.orderDetailId)) {
           results.push({
-            ...detail,
+            ...(detail as OrderDetailForDeliveryResponse),
             orderCode: order.orderCode,
             customerName: order.customerName,
             orderId: order.orderId,
-            customerId: (order as any).customerId // Use the customerId from the order
+            customerId: order.customerId,
           });
         }
       });
     });
     return results;
-
-
-
-
   }, [allOrders, selectedOrderDetailIds]);
 
   const totalSelectedAmount = useMemo(() => {
@@ -482,6 +524,60 @@ export default function DeliveryNoteListPage() {
     status:
       deliveryNoteStatusFilter === "all" ? undefined : deliveryNoteStatusFilter,
   });
+
+  const handleToggleSelectNote = (noteId?: number) => {
+    if (!noteId) return;
+    setSelectedNoteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(noteId)) next.delete(noteId);
+      else next.add(noteId);
+      return next;
+    });
+  };
+
+  const handleSelectAllVisible = () => {
+    const items = deliveryNotesDataTyped?.items || [];
+    const visibleIds = items.map((i) => i.id ?? undefined).filter((id): id is number => typeof id === "number");
+    const allSelected = visibleIds.every((id) => selectedNoteIds.has(id));
+    if (allSelected) {
+      setSelectedNoteIds(new Set());
+    } else {
+      setSelectedNoteIds(new Set(visibleIds));
+    }
+  };
+
+  const handleBulkStartShipping = async () => {
+    const ids = Array.from(selectedNoteIds);
+    if (ids.length === 0) return;
+    setBulkLoading(true);
+    setUpdatingIds(new Set(ids));
+    try {
+      await Promise.all(
+        ids.map((id) =>
+          updateStatusMutation.mutateAsync({
+            id: Number(id),
+            data: {
+              status: "in_transit",
+              cancelReason: null,
+              failureReason: null,
+              failureType: null,
+              affectsDebt: false,
+              notes: null,
+            },
+          })
+        )
+      );
+      toast.success(`Đã cập nhật ${ids.length} phiếu sang Đang giao`);
+      setSelectedNoteIds(new Set());
+      refetchDeliveryNotes();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message || "Lỗi khi cập nhật");
+    } finally {
+      setBulkLoading(false);
+      setUpdatingIds(new Set());
+    }
+  };
 
   const createDeliveryNoteMutation = useCreateDeliveryNote();
 
@@ -515,27 +611,26 @@ export default function DeliveryNoteListPage() {
   };
 
   const handleSelectAllDetails = () => {
-    if (!Array.isArray(orderDetailsData)) return;
-    
-    if (selectedOrderDetailIds.size === orderDetailsData.length) {
+    // Collect all orderDetailId from available orders
+    const allDetails = availableOrdersRaw.flatMap((o) => (o.details || []).map((d) => d.orderDetailId));
+    const uniqueIds = Array.from(new Set(allDetails.filter((id) => id != null))) as number[];
+    if (selectedOrderDetailIds.size === uniqueIds.length) {
       setSelectedOrderDetailIds(new Set());
     } else {
-      const allIds = orderDetailsData
-        .map((od) => od.orderDetailId)
-        .filter((id): id is number => id != null);
-      setSelectedOrderDetailIds(new Set(allIds));
+      setSelectedOrderDetailIds(new Set(uniqueIds));
     }
   };
 
   const [recreateNoteId, setRecreateNoteId] = useState<number | null>(null);
   const [isRecreateDialogOpen, setIsRecreateDialogOpen] = useState(false);
-  const [recreateItems, setRecreateItems] = useState<any[]>([]);
+  const [recreateItems, setRecreateItems] = useState<DeliveryNoteLineResponse[]>([]);
   const [recreateQtys, setRecreateQtys] = useState<Record<number, number>>({});
   const [recreateAddressIds, setRecreateAddressIds] = useState<Record<number, number | null>>({});
   const [recreateNotes, setRecreateNotes] = useState("");
   const [recreateCustomerId, setRecreateCustomerId] = useState<number | null>(null);
 
   const { data: recreateNoteData } = useDeliveryNote(recreateNoteId, !!recreateNoteId);
+  const recreateNoteDataTyped = recreateNoteData as DeliveryNoteResponse | undefined;
   const recreateMutation = useRecreateDeliveryNote();
 
   const handleOpenRecreate = (id: number) => {
@@ -546,16 +641,16 @@ export default function DeliveryNoteListPage() {
   // When recreateNoteData changes, populate the items
   React.useEffect(() => {
     if (recreateNoteData && isRecreateDialogOpen) {
-      const failedLines = (recreateNoteData as any).lines?.filter((l: any) => 
+      const failedLines = (recreateNoteDataTyped?.lines?.filter((l) =>
         l.status === "failed" || l.status === "failure" || l.status === "failed_reschedule" || l.status === "returned"
-      ) || [];
+      ) || []) as DeliveryNoteLineResponse[];
       
       setRecreateItems(failedLines);
       
       const qtys: Record<number, number> = {};
       const addrs: Record<number, number | null> = {};
       
-      failedLines.forEach((l: any) => {
+      failedLines.forEach((l) => {
         qtys[l.orderDetailId] = l.deliveryQty || 0;
         addrs[l.orderDetailId] = l.customerAddressId || null;
       });
@@ -566,16 +661,15 @@ export default function DeliveryNoteListPage() {
       
       // Extract customerId from the first line or note data
       const firstLine = failedLines[0];
-      if (firstLine && firstLine.customerAddress?.customerId) {
-        setRecreateCustomerId(firstLine.customerAddress.customerId);
-      } else if (firstLine && (firstLine as any).customerId) {
-        setRecreateCustomerId((firstLine as any).customerId);
-      } else if ((recreateNoteData as any).customerId) {
-        setRecreateCustomerId((recreateNoteData as any).customerId);
-      } else if (recreateNoteData.orders && recreateNoteData.orders.length > 0) {
-        // This is a bit tricky, might need to check how backend returns it
-        // For now try to fall back to the first order's customer if available
+      let cid: number | null = null;
+      if (firstLine && firstLine.customerAddress && typeof firstLine.customerAddress.customerId === 'number') {
+        cid = firstLine.customerAddress.customerId;
+      } else if (firstLine && typeof (firstLine as any).customerId === 'number') {
+        cid = (firstLine as any).customerId;
+      } else if (typeof recreateNoteDataTyped?.customerId === 'number') {
+        cid = recreateNoteDataTyped.customerId;
       }
+      setRecreateCustomerId(cid);
     }
   }, [recreateNoteData, isRecreateDialogOpen]);
 
@@ -718,6 +812,13 @@ export default function DeliveryNoteListPage() {
             setDeliveryNotePage={setDeliveryNotePage}
             handleViewDeliveryNote={handleViewDeliveryNote}
             handleOpenRecreate={handleOpenRecreate}
+            selectedNoteIds={selectedNoteIds}
+            handleToggleSelectNote={handleToggleSelectNote}
+            handleSelectAllVisible={handleSelectAllVisible}
+            handleClearSelection={() => setSelectedNoteIds(new Set())}
+            bulkLoading={bulkLoading}
+            handleBulkStartShipping={handleBulkStartShipping}
+            updatingIds={updatingIds}
           />
         )}
       </div>
@@ -767,13 +868,13 @@ interface OrdersViewProps {
   ordersError: boolean;
   ordersErrorObj: unknown;
   refetchOrders: () => void;
-  ordersList: Array<any>;
+  ordersList: Array<OrderForDeliveryResponse>;
   totalPages: number;
   currentPage: number;
   setCurrentPage: (page: number) => void;
   selectedOrderDetailIds: Set<number>;
   handleToggleOrderDetail: (id: number) => void;
-  selectedOrders: Array<any>;
+  selectedOrders: Array<SelectedOrderDetail>;
   totalSelectedAmount: number;
   handleCreateDeliveryNote: () => void;
 }
@@ -948,7 +1049,7 @@ function OrdersView({
                           <div className="rounded-xl overflow-hidden border border-slate-200/60 bg-white/70 shadow-sm">
                             <Table>
                               <TableBody>
-                                {order.details.map((detail: any) => {
+                                {order.details.map((detail: OrderDetailForDeliveryResponse) => {
                                   const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
                                   return (
                                     <TableRow 
@@ -1060,6 +1161,13 @@ interface DeliveryNotesViewProps {
   setDeliveryNotePage: (page: number) => void;
   handleViewDeliveryNote: (id: number | undefined) => void;
   handleOpenRecreate: (id: number) => void;
+  selectedNoteIds: Set<number>;
+  handleToggleSelectNote: (id?: number) => void;
+  handleSelectAllVisible: () => void;
+  handleClearSelection: () => void;
+  bulkLoading: boolean;
+  handleBulkStartShipping: () => void;
+  updatingIds: Set<number>;
 }
 
 function DeliveryNotesView({
@@ -1074,6 +1182,13 @@ function DeliveryNotesView({
   deliveryNotesData,
   handleViewDeliveryNote,
   handleOpenRecreate,
+  selectedNoteIds,
+  handleToggleSelectNote,
+  handleSelectAllVisible,
+  handleClearSelection,
+  bulkLoading,
+  handleBulkStartShipping,
+  updatingIds,
 }: DeliveryNotesViewProps) {
   const deliveryNotesDataTyped = deliveryNotesData as
     | {
@@ -1102,32 +1217,47 @@ function DeliveryNotesView({
       <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-3">
-            <Select
-              value={deliveryNoteStatusFilter}
-              onValueChange={setDeliveryNoteStatusFilter}
-            >
+            <div className="flex items-center gap-2">
+              <Select
+                value={deliveryNoteStatusFilter}
+                onValueChange={setDeliveryNoteStatusFilter}
+              >
               <SelectTrigger className="w-full sm:w-[200px] h-11 border-slate-300 dark:border-slate-700">
                 <Filter className="h-4 w-4 mr-2 text-slate-400" />
                 <SelectValue placeholder="Trạng thái" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="pending">Chờ giao</SelectItem>
-                <SelectItem value="delivered">Đã giao</SelectItem>
-                <SelectItem value="failed">Thất bại</SelectItem>
+                {Object.entries(deliveryNoteStatusLabels).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => refetchDeliveryNotes()}
-              disabled={deliveryNotesLoading}
-              className="h-11 w-11 border-slate-300 dark:border-slate-700"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${deliveryNotesLoading ? "animate-spin" : ""}`}
-              />
-            </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => refetchDeliveryNotes()}
+                disabled={deliveryNotesLoading}
+                className="h-11 w-11 border-slate-300 dark:border-slate-700"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${deliveryNotesLoading ? "animate-spin" : ""}`}
+                />
+              </Button>
+
+                  {selectedNoteIds.size > 0 && (
+                <div className="ml-2 flex items-center gap-2">
+                  <div className="text-sm text-slate-700">Đã chọn <strong>{selectedNoteIds.size}</strong></div>
+                  <Button size="sm" onClick={() => handleClearSelection()} variant="outline">Bỏ chọn</Button>
+                  <Button size="sm" onClick={handleBulkStartShipping} disabled={bulkLoading}>
+                    {bulkLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : null}
+                    Bắt đầu giao
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1154,9 +1284,18 @@ function DeliveryNotesView({
           <Table>
             <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-800">
               <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
-                <TableHead className="w-[140px] font-semibold text-slate-700 dark:text-slate-300">
-                  Mã phiếu
-                </TableHead>
+                  <TableHead className="w-10 font-semibold text-slate-700 dark:text-slate-300">
+                    <Checkbox
+                      checked={
+                        !!deliveryNotesDataTyped?.items && deliveryNotesDataTyped.items.length > 0 && deliveryNotesDataTyped.items.every(i => selectedNoteIds.has(i.id as number))
+                      }
+                      onCheckedChange={() => handleSelectAllVisible()}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </TableHead>
+                  <TableHead className="w-[140px] font-semibold text-slate-700 dark:text-slate-300">
+                    Mã phiếu
+                  </TableHead>
                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                   Đơn hàng
                 </TableHead>
@@ -1184,7 +1323,7 @@ function DeliveryNotesView({
                     key={i}
                     className="border-slate-200 dark:border-slate-800"
                   >
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-10 w-full" />
                       </TableCell>
@@ -1195,7 +1334,7 @@ function DeliveryNotesView({
                 deliveryNotesDataTyped.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={8}
                     className="h-32 text-center border-slate-200 dark:border-slate-800"
                   >
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -1226,9 +1365,16 @@ function DeliveryNotesView({
                   return (
                     <TableRow
                       key={deliveryNote.id}
-                      className="cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                      className={`cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 ${updatingIds.has(deliveryNote.id as number) ? 'opacity-70' : 'hover:bg-slate-50 dark:hover:bg-slate-900/50'}`}
                       onClick={() => handleViewDeliveryNote(deliveryNote.id)}
                     >
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedNoteIds.has(deliveryNote.id as number)}
+                          onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">
                           {deliveryNote.code || `#${deliveryNote.id}`}
@@ -1294,12 +1440,16 @@ function DeliveryNotesView({
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <StatusBadge
-                          status={deliveryNote.status || null}
-                          label={getDeliveryNoteStatusLabel(
-                            deliveryNote.status,
-                          )}
-                        />
+                        {updatingIds.has(deliveryNote.id as number) ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
+                        ) : (
+                          <StatusBadge
+                            status={deliveryNote.status || null}
+                            label={getDeliveryNoteStatusLabel(
+                              deliveryNote.status,
+                            )}
+                          />
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1">
@@ -1443,7 +1593,7 @@ function AddressBookManager({
     setShowForm(false);
   };
 
-  const handleEdit = (addr: any) => {
+  const handleEdit = (addr: { id?: number; label?: string; recipientName?: string; recipientPhone?: string; address?: string; isDefault?: boolean }) => {
     setEditingAddressId(addr.id);
     setNewLabel(addr.label || "");
     setNewRecipientName(addr.recipientName || "");
@@ -1804,9 +1954,9 @@ function AddressBookManager({
 interface CreateDeliveryNoteDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedOrders: Array<any>;
+  selectedOrders: Array<SelectedOrderDetail>;
   deliveryQtys: Record<number, number>;
-  setDeliveryQtys: (qtys: any) => void;
+  setDeliveryQtys: React.Dispatch<React.SetStateAction<Record<number, number>>>;
   selectedAddressIds: Record<number, number | null>;
   setSelectedAddressIds: React.Dispatch<React.SetStateAction<Record<number, number | null>>>;
   customerId: number | null;
@@ -1883,7 +2033,7 @@ function CreateDeliveryNoteDialog({
                               let val = parseInt(e.target.value, 10);
                               if (isNaN(val)) val = 0;
                               if (val > (od.remainingToDeliver || 0)) val = od.remainingToDeliver || 0;
-                              setDeliveryQtys((prev: any) => ({
+                              setDeliveryQtys((prev: Record<number, number>) => ({
                                 ...prev,
                                 [od.orderDetailId]: val,
                               }));
@@ -1993,9 +2143,9 @@ function CreateDeliveryNoteDialog({
 interface RecreateDeliveryNoteDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  items: Array<any>;
+  items: DeliveryNoteLineResponse[];
   qtys: Record<number, number>;
-  setQtys: (qtys: any) => void;
+  setQtys: React.Dispatch<React.SetStateAction<Record<number, number>>>;
   addressIds: Record<number, number | null>;
   setAddressIds: React.Dispatch<React.SetStateAction<Record<number, number | null>>>;
   customerId: number | null;
@@ -2064,7 +2214,7 @@ function RecreateDeliveryNoteDialog({
                             onChange={(e) => {
                               let val = parseInt(e.target.value, 10);
                               if (isNaN(val)) val = 0;
-                              setQtys((prev: any) => ({
+                              setQtys((prev: Record<number, number>) => ({
                                 ...prev,
                                 [item.orderDetailId]: val,
                               }));
