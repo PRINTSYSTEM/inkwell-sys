@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronRight, XCircle, Loader2 } from "lucide-react";
-import { useUpdateDeliveryLineResult } from "@/hooks/use-delivery-note";
+import { useUpdateDeliveryLineResult, useFailureReasons } from "@/hooks/use-delivery-note";
 
 // ── Status display ──────────────────────────────────────────────────────────
 
@@ -55,8 +55,6 @@ const FAILURE_REASONS = [
 const NEXT_STATUS: Record<string, string> = {
   pending: "delivered",
   in_transit: "delivered",
-  // sau khi fail có thể retry
-  failed_reschedule: "delivered",
 };
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -68,12 +66,16 @@ export default function DeliveryLineRow({
   line: DeliveryNoteLineResponse;
   noteStatus?: string | null;
 }) {
-  const [localStatus, setLocalStatus] = useState<string | null | undefined>(line.status);
+  const [localStatus, setLocalStatus] = useState<string | null | undefined>(
+    line.status,
+  );
   const [failDialogOpen, setFailDialogOpen] = useState(false);
   const [failureReasonId, setFailureReasonId] = useState<number | null>(null);
   const [failureNotes, setFailureNotes] = useState("");
 
   const updateLineResultMutation = useUpdateDeliveryLineResult();
+  const { data: failureReasonsApi } = useFailureReasons();
+  const reasonsList = failureReasonsApi || FAILURE_REASONS;
 
   const noteStatusLower = (noteStatus || "").toLowerCase();
   // Phiếu phải đang trong trạng thái giao hàng hoặc giao một phần
@@ -81,17 +83,19 @@ export default function DeliveryLineRow({
     "in_transit",
     "delivering",
     "partially_completed",
-    "completed",  // backend tự validate, FE cứ cho phép
+    "completed", // backend tự validate, FE cứ cho phép
   ].includes(noteStatusLower);
 
   const currentStatus = (localStatus || "").toLowerCase();
   const nextStatus = NEXT_STATUS[currentStatus];
+  const nextStatusLabel = deliveryLineStatusLabels[nextStatus] || nextStatus;
 
-  // Line đã kết thúc → ẩn nút
+  // Line đã kết thúc hoặc chờ giao lại thì ẩn nút
   const isSettled =
     currentStatus === "delivered" ||
     currentStatus === "cancelled" ||
-    currentStatus === "returned";
+    currentStatus === "returned" ||
+    currentStatus === "failed_reschedule";
 
   // Chỉ phụ thuộc vào trạng thái của CHÍNH LINE này, không phụ thuộc noteStatus
   const showButtons = !isSettled;
@@ -116,17 +120,41 @@ export default function DeliveryLineRow({
 
   const handleFail = async () => {
     if (!line?.id || !failureReasonId) return;
+
+    let targetStatus = "failed_reschedule";
+    const selectedReason = reasonsList.find((r) => r.id === failureReasonId);
+
+    if (selectedReason) {
+      if ("allowRedelivery" in selectedReason) {
+        // dynamic logic from API
+        if ((selectedReason as any).allowRedelivery) {
+          targetStatus = "failed_reschedule";
+        } else if ((selectedReason as any).code === "BUYER_REJECT" || failureReasonId === 11) {
+          targetStatus = "cancelled";
+        } else {
+          targetStatus = "returned";
+        }
+      } else {
+        // fallback hardcoded logic
+        if (failureReasonId >= 6 && failureReasonId <= 10) {
+          targetStatus = "returned";
+        } else if (failureReasonId === 11) {
+          targetStatus = "cancelled";
+        }
+      }
+    }
+
     try {
       await updateLineResultMutation.mutateAsync({
         lineId: Number(line.id),
         data: {
-          status: "failed_reschedule",
+          status: targetStatus as any,
           failureReasonId,
           failureNotes: failureNotes || undefined,
           actualDeliveredQty: 0,
         },
       });
-      setLocalStatus("failed_reschedule");
+      setLocalStatus(targetStatus);
       setFailDialogOpen(false);
       setFailureReasonId(null);
       setFailureNotes("");
@@ -260,7 +288,7 @@ export default function DeliveryLineRow({
                   ) : (
                     <ChevronRight className="h-3 w-3" />
                   )}
-                  {deliveryLineStatusLabels[nextStatus] || nextStatus}
+                  {nextStatusLabel}
                 </Button>
               )}
 
@@ -306,7 +334,7 @@ export default function DeliveryLineRow({
                   <SelectValue placeholder="Chọn lý do..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {FAILURE_REASONS.map((r) => (
+                  {reasonsList.map((r) => (
                     <SelectItem key={r.id} value={String(r.id)}>
                       {r.name}
                     </SelectItem>
