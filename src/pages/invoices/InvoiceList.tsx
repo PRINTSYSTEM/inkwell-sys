@@ -251,7 +251,11 @@ export default function InvoiceListPage() {
               </TableRow>
             ) : (
               filteredInvoices.map((invoice) => (
-                <TableRow key={invoice.id} className="group">
+                <TableRow
+                  key={invoice.id}
+                  className={`group ${!invoice.buyerTaxCode ? "bg-rose-50" : ""}`}
+                  title={!invoice.buyerTaxCode ? "Thiếu MST (không thể xuất hóa đơn VAT)" : undefined}
+                >
                   <TableCell className="font-medium font-mono text-sm">
                     {invoice.invoiceNumber || `#${invoice.id}`}
                   </TableCell>
@@ -260,9 +264,12 @@ export default function InvoiceListPage() {
                       <div className="font-medium text-sm">
                         {invoice.buyerCompanyName || invoice.buyerName || "—"}
                       </div>
-                      {invoice.buyerTaxCode && (
-                        <div className="text-xs text-muted-foreground">
-                          MST: {invoice.buyerTaxCode}
+                      {invoice.buyerTaxCode ? (
+                        <div className="text-xs text-muted-foreground">MST: {invoice.buyerTaxCode}</div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-xs text-rose-700">
+                          <AlertCircle className="h-3 w-3" />
+                          Thiếu MST
                         </div>
                       )}
                     </div>

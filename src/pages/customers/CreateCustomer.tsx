@@ -37,6 +37,7 @@ export default function CreateCustomer() {
     phone: "",
     email: "",
     address: "",
+    scrapRate: 0.005,
     type: "company",
     maxDebt: 50000000,
   });
@@ -118,6 +119,8 @@ export default function CreateCustomer() {
       taxCode: form.taxCode?.trim() || undefined,
       address: form.address?.trim() || undefined,
       type: form.type || undefined,
+      // Ensure scrapRate is sent to API. Default to 0.005 when not provided.
+      scrapRate: form.scrapRate ?? 0.005,
       currentDebt: form.currentDebt,
       maxDebt: Number(form.maxDebt) || 0,
     };
@@ -134,6 +137,8 @@ export default function CreateCustomer() {
     }
 
     try {
+      // Debug: log payload to verify scrapRate value sent
+      console.debug("CreateCustomer payload:", payload);
       await createCustomer(payload);
       setTimeout(() => navigate("/customers"), 2000);
     } catch (error) {
