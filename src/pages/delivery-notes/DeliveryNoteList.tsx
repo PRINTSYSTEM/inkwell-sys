@@ -90,7 +90,9 @@ import {
 import { 
   orderStatusLabels, 
   deliveryNoteStatusLabels, 
-  deliveryLineStatusLabels 
+  deliveryLineStatusLabels,
+  orderDetailItemStatusLabels,
+  getStatusColorClass,
 } from "@/lib/status-utils";
 import {
   Popover,
@@ -536,7 +538,7 @@ export default function DeliveryNoteListPage() {
   };
 
   const handleSelectAllVisible = () => {
-    const items = deliveryNotesDataTyped?.items || [];
+    const items = (deliveryNotesData as any)?.items || [];
     const visibleIds = items.map((i) => i.id ?? undefined).filter((id): id is number => typeof id === "number");
     const allSelected = visibleIds.every((id) => selectedNoteIds.has(id));
     if (allSelected) {
@@ -1076,8 +1078,11 @@ function OrdersView({
                                         </div>
                                       </TableCell>
                                       <TableCell className="w-[150px]">
-                                        <Badge variant="outline" className="h-6 text-[10px] font-bold border-emerald-200 bg-emerald-50 text-emerald-600">
-                                          Đã chốt in
+                                        <Badge
+                                          variant="outline"
+                                          className={`h-6 text-[10px] font-bold ${getStatusColorClass(detail.itemStatus)}`}
+                                        >
+                                          {orderDetailItemStatusLabels[detail.itemStatus as string] || detail.itemStatus || "—"}
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="w-[120px] text-right pr-6 font-black text-slate-600 text-sm">
