@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -1012,7 +1012,7 @@ function OrdersView({
                 </TableRow>
               ) : (
                 ordersList.map((order) => (
-                  <React.Fragment key={order.id}>
+                  <React.Fragment key={order.orderId}>
                     <TableRow className="bg-white hover:bg-white border-t border-slate-100">
                       <TableCell className="py-4">
                         <div className="font-bold text-primary text-sm flex flex-col">
@@ -1044,59 +1044,58 @@ function OrdersView({
                         {formatCurrency(order.totalAmount || 0)}
                       </TableCell>
                     </TableRow>
-                    {/* Items Sub-table */}
-                    {order.details && order.details.length > 0 && (
-                      <TableRow key={`details-${order.id}`} className="bg-slate-50/50 hover:bg-slate-50/50 border-0">
-                        <TableCell colSpan={5} className="py-0 px-4 pb-4">
-                          <div className="rounded-xl overflow-hidden border border-slate-200/60 bg-white/70 shadow-sm">
-                            <Table>
-                              <TableBody>
-                                {order.details.map((detail: OrderDetailForDeliveryResponse) => {
-                                  const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
-                                  return (
-                                    <TableRow 
-                                      key={detail.id} 
-                                      className={`border-b last:border-0 border-slate-100/60 cursor-pointer transition-colors ${isChecked ? 'bg-primary/[0.03] hover:bg-primary/[0.05]' : 'hover:bg-slate-50/50'}`}
-                                      onClick={() => handleToggleOrderDetail(detail.orderDetailId)}
-                                    >
-                                      <TableCell className="w-12 pl-6">
-                                        <Checkbox 
-                                          checked={isChecked}
-                                          onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId)}
-                                          className="h-4 w-4 rounded"
-                                        />
-                                      </TableCell>
-                                      <TableCell className="w-[80px]">
-                                        <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                                          <ImageIcon className="h-5 w-5 text-slate-300" />
-                                        </div>
-                                      </TableCell>
-                                      <TableCell>
-                                        <div className="flex flex-col">
-                                          <span className="font-mono font-black text-xs text-slate-900 uppercase leading-none">{detail.designCode}</span>
-                                          <span className="text-[11px] text-slate-500 font-medium mt-1 truncate max-w-[300px]">{detail.designName}</span>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="w-[150px]">
-                                        <Badge
-                                          variant="outline"
-                                          className={`h-6 text-[10px] font-bold ${getStatusColorClass(detail.itemStatus)}`}
-                                        >
-                                          {orderDetailItemStatusLabels[detail.itemStatus as string] || detail.itemStatus || "—"}
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell className="w-[120px] text-right pr-6 font-black text-slate-600 text-sm">
-                                        x{new Intl.NumberFormat('vi-VN').format(detail.remainingToDeliver || 0)}
-                                      </TableCell>
-                                    </TableRow>
-                                  );
-                                })}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
+                    {/* Detail rows â€” pháº³ng trong cÃ¹ng báº£ng cha, 5 cá»™t khá»›p header */}
+                    {order.details?.map((detail: OrderDetailForDeliveryResponse, detailIdx: number) => {
+                      const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
+                      const isLastDetail = detailIdx === (order.details?.length ?? 0) - 1;
+                      return (
+                        <TableRow
+                          key={detail.orderDetailId}
+                          className={`cursor-pointer transition-colors ${
+                            isLastDetail ? 'border-b-2 border-slate-200' : 'border-b border-slate-100'
+                          } ${isChecked ? 'bg-primary/[0.04] hover:bg-primary/[0.06]' : 'bg-slate-50/60 hover:bg-slate-100/60'}`}
+                          onClick={() => handleToggleOrderDetail(detail.orderDetailId)}
+                        >
+                          {/* Col 1+2: checkbox + áº£nh + tÃªn â€” gá»™p "ÄÆ¡n hÃ ng"+"KhÃ¡ch hÃ ng" */}
+                          <TableCell colSpan={2} className="pl-10 py-2.5">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-4 w-4 rounded flex-shrink-0"
+                              />
+                              <div className="h-8 w-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
+                                <ImageIcon className="h-4 w-4 text-slate-300" />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-mono font-black text-xs text-slate-900 uppercase leading-none">{detail.designCode}</span>
+                                <span className="text-[11px] text-slate-500 font-medium mt-0.5 truncate max-w-[280px]">{detail.designName}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          {/* Col 3: itemStatus â€” tháº³ng cá»™t TRáº NG THÃI */}
+                          <TableCell className="text-center py-2.5">
+                            <Badge
+                              variant="outline"
+                              className={`h-6 text-[10px] font-bold px-2 ${getStatusColorClass(detail.itemStatus)}`}
+                            >
+                              {orderDetailItemStatusLabels[detail.itemStatus as string] || detail.itemStatus || "â€”"}
+                            </Badge>
+                          </TableCell>
+                          {/* Col 4: sá»‘ lÆ°á»£ng â€” tháº³ng cá»™t Sá» LÆ¯á»¢NG BÃ€I */}
+                          <TableCell className="text-center py-2.5 font-black text-slate-600 text-sm">
+                            x{new Intl.NumberFormat('vi-VN').format(detail.remainingToDeliver || 0)}
+                          </TableCell>
+                          {/* Col 5: trá»‘ng â€” tháº³ng cá»™t THÃ€NH TIá»€N */}
+                          <TableCell className="pr-6" />
+                        </TableRow>
+                      );
+                    })}
+                    {/* Spacer giá»¯a cÃ¡c Ä‘Æ¡n hÃ ng */}
+                    <TableRow className="h-2 bg-transparent hover:bg-transparent border-0 pointer-events-none">
+                      <TableCell colSpan={5} className="p-0" />
+                    </TableRow>
                   </React.Fragment>
                 ))
               )}
