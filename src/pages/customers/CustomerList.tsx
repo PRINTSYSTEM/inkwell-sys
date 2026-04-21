@@ -39,6 +39,7 @@ export default function Customers() {
   const canViewFinancialInfo =
     userRole === ROLE.ACCOUNTING ||
     userRole === ROLE.ACCOUNTING_LEAD ||
+    userRole === ROLE.SALE ||
     userRole === ROLE.ADMIN;
 
   const [searchTerm, setSearchTerm] = useState("");

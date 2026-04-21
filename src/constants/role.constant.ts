@@ -3,6 +3,7 @@ import { ROUTE_PATHS } from "./route.constant";
 
 export const ROLE = {
   ADMIN: "admin",
+  SALE: "sale",
   MANAGER: "manager",
   DESIGN: "design",
   DESIGN_LEAD: "design_lead",
@@ -15,6 +16,7 @@ export const ROLE = {
 
 export const REDIRECT_ROLE = {
   [ROLE.ADMIN]: ROUTE_PATHS.DASHBOARD,
+  [ROLE.SALE]: ROUTE_PATHS.ORDERS.ROOT,
   [ROLE.MANAGER]: ROUTE_PATHS.MANAGER.ROOT,
   [ROLE.DESIGN]: ROUTE_PATHS.DESIGN.MY_WORK,
   [ROLE.DESIGN_LEAD]: ROUTE_PATHS.DESIGN.MY_WORK,

@@ -194,27 +194,31 @@ export default function OrderDetailPage() {
 
   const canViewPrice = role !== ROLE.DESIGN && role !== ROLE.DESIGN_LEAD;
   const canViewDesigner =
-    role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD || role === ROLE.ADMIN;
+    role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD || role === ROLE.ADMIN || role === ROLE.SALE;
 
   const canExportExcel =
     role === ROLE.ACCOUNTING_LEAD ||
     role === ROLE.ADMIN ||
+    role === ROLE.SALE ||
     role === ROLE.ACCOUNTING;
 
   const canUpdateRecipient =
     role === ROLE.ACCOUNTING ||
     role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.SALE ||
     role === ROLE.ADMIN;
 
   const canUpdateOrderForAccounting =
     role === ROLE.ACCOUNTING ||
     role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.SALE ||
     role === ROLE.ADMIN;
 
   // Can view payment step in flow diagram: ACCOUNTING, ACCOUNTING_LEAD, or ADMIN
   const canViewPayment =
     role === ROLE.ACCOUNTING ||
     role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.SALE ||
     role === ROLE.ADMIN;
 
   // Can change designer: DESIGN_LEAD or ADMIN
