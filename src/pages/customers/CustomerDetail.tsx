@@ -38,6 +38,7 @@ export default function CustomerDetail() {
   const canViewFinancialInfo =
     userRole === ROLE.ACCOUNTING ||
     userRole === ROLE.ACCOUNTING_LEAD ||
+    userRole === ROLE.SALE ||
     userRole === ROLE.ADMIN;
 
   // Only fetch when customerId is valid

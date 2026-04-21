@@ -776,7 +776,8 @@ export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
     role === ROLE.PRODUCTION ||
     role === ROLE.PRODUCTION_LEAD ||
     role === ROLE.ACCOUNTING_LEAD ||
-    role === ROLE.ACCOUNTING;
+    role === ROLE.ACCOUNTING ||
+    role === ROLE.SALE;
   const isDesignerRole = role === ROLE.DESIGN;
   const isDesignerLeadRole = role === ROLE.DESIGN_LEAD;
 

@@ -6,6 +6,7 @@ export const ENTITY_CONFIG = {
     description: "Vai trò người dùng trong hệ thống",
     values: {
       admin: "Quản trị viên hệ thống",
+      sale: "Nhân viên sale",
       manager: "Quản lý",
       accounting: "Nhân viên kế toán",
       accounting_lead: "Trưởng phòng kế toán",
