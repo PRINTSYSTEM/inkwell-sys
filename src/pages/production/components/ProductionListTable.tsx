@@ -21,10 +21,20 @@ import {
   PlayCircle,
   Loader2,
   Edit,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { productionStepStatusLabels } from "@/lib/status-utils";
+import { productionStepStatusLabels, laminationTypeLabels } from "@/lib/status-utils";
 import type {
   ProductionOrderResponse,
   ProductionStepResponse,
@@ -136,6 +146,7 @@ function ProductionTableRow({
 }) {
   const [openDiePopover, setOpenDiePopover] = useState(false);
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   const isDraft = !prod.id;
   const isCreating = React.useRef(false);
@@ -211,6 +222,29 @@ function ProductionTableRow({
     (proofingOrder as any)?.totalProcessedQty ||
     (proofingOrder as any)?.totalQuantity ||
     0;
+
+  // Aggregate lamination info from order and all designs
+  const laminationInfo = React.useMemo(() => {
+    if (!proofingOrder) return null;
+    
+    const lams = new Set<string>();
+    
+    // 1. From order level
+    if (proofingOrder.laminationTypeName) lams.add(proofingOrder.laminationTypeName);
+    else if (proofingOrder.laminationType) {
+      lams.add(laminationTypeLabels[proofingOrder.laminationType] || proofingOrder.laminationType);
+    }
+    
+    // 2. From designs
+    proofingOrder.proofingOrderDesigns?.forEach((pod: any) => {
+      const designLam = pod.design?.laminationType;
+      if (designLam) {
+        lams.add(laminationTypeLabels[designLam] || designLam);
+      }
+    });
+
+    return Array.from(lams).join(", ");
+  }, [proofingOrder]);
 
   const InlineStepStatus = ({
     step,
@@ -481,7 +515,8 @@ function ProductionTableRow({
 
         {isCheckStep && !isEditing && (
           <div className="flex flex-col gap-1 mt-1">
-            <div className="flex items-center justify-between gap-1">
+            {/* Ẩn phần Vào theo yêu cầu */}
+            <div className="hidden items-center justify-between gap-1">
               <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
                 Vào
               </span>
@@ -533,7 +568,8 @@ function ProductionTableRow({
 
         {isCheckStep && isEditing && (
           <div className="flex flex-col gap-1 mt-1">
-            <div className="flex items-center justify-between gap-1">
+            {/* Ẩn phần Vào theo yêu cầu */}
+            <div className="hidden items-center justify-between gap-1">
               <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
                 Vào
               </span>
@@ -591,12 +627,15 @@ function ProductionTableRow({
     step,
     isCheckStep = false,
     isEnabled = true,
+    info,
   }: {
     step: ProductionStepResponse | null;
     isCheckStep?: boolean;
     isEnabled?: boolean;
+    info?: React.ReactNode;
   }) => {
-    if (!step)
+    // If no step AND no info, show empty
+    if (!step && !info)
       return (
         <TableCell className="text-center py-3 bg-primary/[0.08] dark:bg-primary/[0.15] text-primary/40 font-black text-lg italic border-r border-border/40">
           —
@@ -608,7 +647,12 @@ function ProductionTableRow({
         className="align-top py-3 px-1.5"
         onClick={(e) => e.stopPropagation()}
       >
-        <StepItem step={step} isCheckStep={isCheckStep} isEnabled={isEnabled} />
+        <div className="flex flex-col items-center gap-1.5">
+          {step && (
+            <StepItem step={step} isCheckStep={isCheckStep} isEnabled={isEnabled} />
+          )}
+          {info && <div className="w-full text-center">{info}</div>}
+        </div>
       </TableCell>
     );
   };
@@ -631,10 +675,11 @@ function ProductionTableRow({
   };
 
   return (
-    <TableRow
-      className={`cursor-pointer hover:bg-muted/50 border-b ${isDraft ? "bg-blue-50/20 dark:bg-blue-900/10" : ""}`}
-      onClick={() => !isDraft && onProductionClick(prod.id!)}
-    >
+    <>
+      <TableRow
+        className={`cursor-pointer hover:bg-muted/50 border-b ${isDraft ? "bg-blue-50/20 dark:bg-blue-900/10" : ""}`}
+        onClick={() => !isDraft && onProductionClick(prod.id!)}
+      >
       <TableCell className="py-3 align-top font-bold text-base text-primary bg-muted/20 border-r border-border/50 text-center w-[150px]">
         {isProofingLoading ? (
           <div className="flex justify-center mt-2">
@@ -649,6 +694,19 @@ function ProductionTableRow({
               <span className="text-sm font-bold text-slate-700 dark:text-slate-300 whitespace-normal break-words text-center leading-tight line-clamp-3">
                 {prod.customerName}
               </span>
+            )}
+            {/* Nút hủy lệnh SX */}
+            {!isDraft && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCancelDialog(true);
+                }}
+                className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 border border-red-200 hover:border-red-300 rounded-md px-2 py-1 transition-all duration-150 w-full justify-center"
+              >
+                <XCircle className="w-3 h-3 flex-shrink-0" />
+                Hủy lệnh SX
+              </button>
             )}
           </div>
         ) : (
@@ -953,7 +1011,17 @@ function ProductionTableRow({
       </TableCell>
       <StepCell step={materialExportStep} isEnabled={isMaterialExportEnabled} />
       <StepCell step={printStep} isEnabled={isPrintEnabled} />
-      <StepCell step={laminationStep} isEnabled={isLaminationEnabled} />
+      <StepCell
+        step={laminationStep}
+        isEnabled={isLaminationEnabled}
+        info={
+          laminationInfo && (
+            <div className="text-[10px] font-bold text-primary border border-primary/20 px-1.5 py-0.5 rounded bg-primary/5 italic uppercase leading-tight shadow-sm inline-block">
+              {laminationInfo}
+            </div>
+          )
+        }
+      />
       <StepCell step={dieCutStep} isEnabled={isDieCutEnabled} />
       <StepCell step={cutStep} isEnabled={isCutEnabled} />
       <StepCell step={glueStep} isEnabled={isGlueEnabled} />
@@ -1065,6 +1133,55 @@ function ProductionTableRow({
         </div>
       </TableCell>
     </TableRow>
+
+    {/* Dialog xác nhận hủy lệnh sản xuất */}
+    <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+      <DialogContent
+        className="max-w-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="w-5 h-5" />
+            Hủy lệnh sản xuất
+          </DialogTitle>
+          <DialogDescription className="text-sm text-slate-600 dark:text-slate-400 pt-1">
+            Bạn có chắc muốn hủy lệnh sản xuất{" "}
+            <span className="font-bold text-foreground">
+              {(proofingOrder as any)?.code || `BB${(proofingOrder as any)?.id}` || "này"}
+            </span>?
+            <br />
+            <span className="text-red-500 font-medium text-xs mt-1 block">
+              Hành động này không thể hoàn tác.
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCancelDialog(false)}
+            className="flex-1"
+          >
+            Quay lại
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="flex-1 gap-1.5"
+            onClick={(e) => {
+              e.stopPropagation();
+              // TODO: gọi API hủy lệnh SX ở đây
+              setShowCancelDialog(false);
+            }}
+          >
+            <XCircle className="w-4 h-4" />
+            Xác nhận hủy
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

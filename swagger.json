@@ -24768,6 +24768,10 @@
             "type": "string",
             "nullable": true
           },
+          "itemStatus": {
+            "type": "string",
+            "nullable": true
+          },
           "designId": {
             "type": "integer",
             "format": "int32"
