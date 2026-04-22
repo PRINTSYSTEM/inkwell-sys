@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -483,11 +483,17 @@ export default function DeliveryNoteListPage() {
 
   // Mapping available orders for list display
   const availableOrdersRaw = useMemo(() => {
-    return (allOrders ?? []) as OrderForDeliveryResponse[];
+    if (!allOrders) return [];
+    if (Array.isArray(allOrders)) return allOrders as OrderForDeliveryResponse[];
+    if (typeof allOrders === "object" && "items" in (allOrders as any)) {
+      return ((allOrders as any).items || []) as OrderForDeliveryResponse[];
+    }
+    return [] as OrderForDeliveryResponse[];
   }, [allOrders]);
 
   // Client-side filtering and pagination for available orders
   const filteredAvailableOrders = useMemo(() => {
+    if (!Array.isArray(availableOrdersRaw)) return [];
     let filtered = [...availableOrdersRaw];
     
     if (searchQuery) {
@@ -510,9 +516,10 @@ export default function DeliveryNoteListPage() {
 
   // Derive selected orders from the entire pool of available orders
   const selectedOrders = useMemo(() => {
-    if (!allOrders) return [] as SelectedOrderDetail[];
+    const pool = availableOrdersRaw;
+    if (!pool || !Array.isArray(pool)) return [] as SelectedOrderDetail[];
     const results: SelectedOrderDetail[] = [];
-    allOrders.forEach((order: OrderForDeliveryResponse) => {
+    pool.forEach((order: OrderForDeliveryResponse) => {
       (order.details || []).forEach((detail: OrderDetailForDeliveryResponse) => {
         if (detail.orderDetailId != null && selectedOrderDetailIds.has(detail.orderDetailId)) {
           results.push({
