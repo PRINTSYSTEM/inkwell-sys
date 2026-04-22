@@ -127,6 +127,9 @@ export function DetailDesignsListCard({
                 </TableHead>
                 <TableHead className="h-9 px-2 text-[10px]">Quy cách</TableHead>
                 <TableHead className="h-9 px-2 text-[10px]">Cán màng</TableHead>
+                <TableHead className="h-9 px-2 text-[10px]">
+                  Quy cách đầy đủ
+                </TableHead>
                 <TableHead className="h-9 px-6 text-right text-[10px]">
                   Thao tác
                 </TableHead>
@@ -226,6 +229,64 @@ export function DetailDesignsListCard({
                       </div>
                     )}
 
+                    {/* Full Specifications */}
+                    {(() => {
+                      const rawSpec =
+                        (pod.design as any)?.specification ||
+                        (pod.design as any)?.specifications ||
+                        (pod as any).specification ||
+                        (pod as any).specifications ||
+                        (pod as any).orderDetail?.specification ||
+                        (pod as any).orderDetail?.specifications;
+
+                      let specs: string[] = [];
+                      if (Array.isArray(rawSpec)) {
+                        specs = rawSpec.filter(
+                          (s) => typeof s === "string" && s.trim(),
+                        );
+                      } else if (typeof rawSpec === "string" && rawSpec.trim()) {
+                        const trimmed = rawSpec.trim();
+                        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                          try {
+                            const parsed = JSON.parse(trimmed);
+                            if (Array.isArray(parsed)) {
+                              specs = parsed.filter(
+                                (s) => typeof s === "string" && s.trim(),
+                              );
+                            }
+                          } catch (e) {}
+                        }
+                        if (specs.length === 0) {
+                          specs = trimmed
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean);
+                        }
+                      }
+
+                      if (specs.length > 0) {
+                        return (
+                          <div className="pt-2 border-t space-y-1">
+                            <div className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
+                              Quy cách đầy đủ:
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {specs.map((spec, i) => (
+                                <Badge
+                                  key={i}
+                                  variant="outline"
+                                  className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 py-0 h-5"
+                                >
+                                  {spec}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     <div className="pt-2 border-t space-y-1">
                       <div className="font-semibold text-xs text-muted-foreground">
                         Yêu cầu:
@@ -312,148 +373,93 @@ export function DetailDesignsListCard({
                       </TableCell>
                       <TableCell className="px-2 py-1">
                         <span className="text-xs">
-                          {(() => {
-                            const rawSpec =
-                              (pod.design as any)?.specification ||
-                              (pod.design as any)?.specifications ||
-                              (pod as any).specification ||
-                              (pod as any).specifications;
-
-                            let specs: string[] = [];
-                            if (Array.isArray(rawSpec)) {
-                              specs = rawSpec.filter(
-                                (s) => typeof s === "string" && s.trim(),
-                              );
-                            } else if (
-                              typeof rawSpec === "string" &&
-                              rawSpec.trim()
-                            ) {
-                              if (
-                                rawSpec.trim().startsWith("[") &&
-                                rawSpec.trim().endsWith("]")
-                              ) {
-                                try {
-                                  const parsed = JSON.parse(rawSpec);
-                                  if (Array.isArray(parsed)) {
-                                    specs = parsed.filter(
-                                      (s) => typeof s === "string" && s.trim(),
-                                    );
-                                  } else {
-                                    specs = [rawSpec.trim()];
-                                  }
-                                } catch (e) {
-                                  specs = [rawSpec.trim()];
-                                }
-                              } else {
-                                specs = [rawSpec.trim()];
-                              }
-                            }
-
-                            const hasSpecs = specs.length > 0;
-                            if (hasSpecs) return "—";
-                            return pod.design?.sidesClassification
-                              ? sidesClassificationLabels[
-                                  pod.design.sidesClassification
-                                ] || pod.design.sidesClassification
-                              : "—";
-                          })()}
+                          {pod.design?.sidesClassification
+                            ? sidesClassificationLabels[
+                                pod.design.sidesClassification
+                              ] || pod.design.sidesClassification
+                            : "—"}
                         </span>
                       </TableCell>
                       <TableCell className="px-2 py-1">
                         <span className="text-xs">
-                          {(() => {
-                            const rawSpec =
-                              (pod.design as any)?.specification ||
-                              (pod.design as any)?.specifications ||
-                              (pod as any).specification ||
-                              (pod as any).specifications;
-
-                            let specs: string[] = [];
-                            if (Array.isArray(rawSpec)) {
-                              specs = rawSpec.filter(
-                                (s) => typeof s === "string" && s.trim(),
-                              );
-                            } else if (
-                              typeof rawSpec === "string" &&
-                              rawSpec.trim()
-                            ) {
-                              if (
-                                rawSpec.trim().startsWith("[") &&
-                                rawSpec.trim().endsWith("]")
-                              ) {
-                                try {
-                                  const parsed = JSON.parse(rawSpec);
-                                  if (Array.isArray(parsed)) {
-                                    specs = parsed.filter(
-                                      (s) => typeof s === "string" && s.trim(),
-                                    );
-                                  } else {
-                                    specs = [rawSpec.trim()];
-                                  }
-                                } catch (e) {
-                                  specs = [rawSpec.trim()];
-                                }
-                              } else {
-                                specs = [rawSpec.trim()];
-                              }
-                            }
-
-                            if (specs.length > 0) return specs.join(", ");
-                            return pod.design?.processClassification
-                              ? processClassificationLabels[
-                                  pod.design.processClassification
-                                ] || pod.design.processClassification
-                              : "—";
-                          })()}
+                          {pod.design?.processClassification
+                            ? processClassificationLabels[
+                                pod.design.processClassification
+                              ] || pod.design.processClassification
+                            : "—"}
                         </span>
                       </TableCell>
                       <TableCell className="px-2 py-1">
                         <span className="text-xs">
-                          {(() => {
-                            const rawSpec =
-                              (pod.design as any)?.specification ||
-                              (pod.design as any)?.specifications ||
-                              (pod as any).specification ||
-                              (pod as any).specifications;
-
-                            let specs: string[] = [];
-                            if (Array.isArray(rawSpec)) {
-                              specs = rawSpec.filter(
-                                (s) => typeof s === "string" && s.trim(),
-                              );
-                            } else if (
-                              typeof rawSpec === "string" &&
-                              rawSpec.trim()
-                            ) {
-                              if (
-                                rawSpec.trim().startsWith("[") &&
-                                rawSpec.trim().endsWith("]")
-                              ) {
-                                try {
-                                  const parsed = JSON.parse(rawSpec);
-                                  if (Array.isArray(parsed)) {
-                                    specs = parsed.filter(
-                                      (s) => typeof s === "string" && s.trim(),
-                                    );
-                                  } else {
-                                    specs = [rawSpec.trim()];
-                                  }
-                                } catch (e) {
-                                  specs = [rawSpec.trim()];
-                                }
-                              } else {
-                                specs = [rawSpec.trim()];
-                              }
-                            }
-
-                            const hasSpecs = specs.length > 0;
-                            if (hasSpecs) return "—";
-                            return pod.design?.laminationType
-                              ? laminationTypeLabels[pod.design.laminationType] ||
+                          {pod.design?.laminationType
+                            ? laminationTypeLabels[
                                 pod.design.laminationType
-                              : "—";
-                          })()}
+                              ] || pod.design.laminationType
+                            : "—"}
                         </span>
+                      </TableCell>
+                      <TableCell className="px-2 py-1">
+                        <div className="flex flex-wrap gap-1">
+                          {(() => {
+                            const rawSpec =
+                              (pod.design as any)?.specification ||
+                              (pod.design as any)?.specifications ||
+                              (pod as any).specification ||
+                              (pod as any).specifications ||
+                              (pod as any).orderDetail?.specification ||
+                              (pod as any).orderDetail?.specifications;
+
+                            let specs: string[] = [];
+                            if (Array.isArray(rawSpec)) {
+                              specs = rawSpec.filter(
+                                (s) => typeof s === "string" && s.trim(),
+                              );
+                            } else if (
+                              typeof rawSpec === "string" &&
+                              rawSpec.trim()
+                            ) {
+                              const trimmed = rawSpec.trim();
+                              if (
+                                trimmed.startsWith("[") &&
+                                trimmed.endsWith("]")
+                              ) {
+                                try {
+                                  const parsed = JSON.parse(trimmed);
+                                  if (Array.isArray(parsed)) {
+                                    specs = parsed.filter(
+                                      (s) => typeof s === "string" && s.trim(),
+                                    );
+                                  }
+                                } catch (e) {
+                                  // Not valid JSON
+                                }
+                              }
+                              if (specs.length === 0) {
+                                specs = trimmed
+                                  .split(",")
+                                  .map((s) => s.trim())
+                                  .filter(Boolean);
+                              }
+                            }
+
+                            if (specs.length > 0) {
+                              return specs.map((spec, i) => (
+                                <Badge
+                                  key={i}
+                                  variant="secondary"
+                                  className="text-[10px] bg-blue-50 text-blue-700 border-blue-100 whitespace-nowrap"
+                                >
+                                  {spec}
+                                </Badge>
+                              ));
+                            }
+                            return (
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </TableCell>
                       <TableCell className="px-6 py-1 text-right">
                         <div className="flex items-center justify-end gap-1">

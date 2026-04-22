@@ -518,7 +518,7 @@ export default function ProofingOrderDetailPage() {
     });
     return Array.from(classifications);
   }, [orderDesigns]);
- 
+
   const uniqueSpecifications = useMemo(() => {
     if (!orderDesigns || orderDesigns.length === 0) return [];
     const specs = new Set<string>();
