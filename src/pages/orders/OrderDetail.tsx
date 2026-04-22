@@ -139,7 +139,7 @@ import {
   orderCrudApi,
 } from "@/hooks";
 import { useQueryClient } from "@tanstack/react-query";
-import { ROLE } from "@/constants";
+import { ROLE, ROUTE_PATHS } from "@/constants";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { toast } from "sonner";
 export default function OrderDetailPage() {
@@ -789,7 +789,11 @@ export default function OrderDetailPage() {
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={() => navigate(`/orders/${order.id}/quote`)}
+                onClick={() =>
+                  navigate(
+                    `/accounting/orders/${order.id}?tab=payment`,
+                  )
+                }
               >
                 Báo giá
               </Button>

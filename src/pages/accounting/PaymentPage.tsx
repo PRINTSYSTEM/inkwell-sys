@@ -4,6 +4,8 @@ import { CreditCard, TrendingUp, Clock, AlertCircle } from "lucide-react";
 import { PaymentList } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
 import type { OrderResponse } from "@/Schema/order.schema";
+import { useAuth } from "@/hooks/use-auth";
+import { ROLE } from "@/constants";
 
 // Helper to calculate summary stats from orders
 const calculateSummaryStats = (orders: OrderResponse[]) => {
@@ -45,6 +47,10 @@ const calculateSummaryStats = (orders: OrderResponse[]) => {
 };
 
 export default function PaymentPage() {
+  const { user } = useAuth();
+  const isSale = user?.role === ROLE.SALE;
+  const pageTitle = isSale ? "Báo giá" : "Thanh toán";
+
   // Build params for API
   const ordersParams = useMemo(() => {
     return {
@@ -87,10 +93,10 @@ export default function PaymentPage() {
   return (
     <>
       <Helmet>
-        <title>Thanh toán | Print Production ERP</title>
+        <title>{pageTitle} | Print Production ERP</title>
         <meta
           name="description"
-          content="Quản lý thanh toán cho đơn hàng in ấn"
+          content={`Quản lý ${pageTitle.toLowerCase()} cho đơn hàng in ấn`}
         />
       </Helmet>
 
@@ -98,9 +104,9 @@ export default function PaymentPage() {
         <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
           {/* Header */}
           <div className="mb-3 shrink-0">
-            <h1 className="text-2xl font-bold tracking-tight">Thanh toán</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
             <p className="text-muted-foreground text-sm">
-              Quản lý thanh toán cho đơn hàng
+              Quản lý {pageTitle.toLowerCase()} cho đơn hàng
             </p>
           </div>
 

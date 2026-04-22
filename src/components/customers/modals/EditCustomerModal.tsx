@@ -133,19 +133,9 @@ export function EditCustomerModal({
   }, [customerType, form]);
 
   const onSubmit = async (values: FormValues) => {
-    // Nếu không có quyền edit công nợ, giữ nguyên giá trị công nợ hiện tại
-    const updateData: Partial<FormValues> & {
-      currentDebt?: number;
-      maxDebt?: number;
-    } = { ...values };
-    if (!canEditDebt) {
-      updateData.currentDebt = customer.currentDebt ?? 0;
-      updateData.maxDebt = customer.maxDebt ?? 0;
-    }
-
     await updateCustomer.mutateAsync({
       id: customer.id,
-      data: updateData,
+      data: values,
     });
     onOpenChange(false);
   };

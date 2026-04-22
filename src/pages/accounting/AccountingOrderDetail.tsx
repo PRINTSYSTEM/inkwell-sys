@@ -57,7 +57,10 @@ import {
   useExportOrderPDF,
   useUpdateOrderForAccounting,
 } from "@/hooks/use-order";
-import { useApproveDebt, useCreateAccountingForOrder } from "@/hooks/use-accounting";
+import {
+  useApproveDebt,
+  useCreateAccountingForOrder,
+} from "@/hooks/use-accounting";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
 import { useUpdateCustomer } from "@/hooks/use-customer";
 import { useCashReceipts } from "@/hooks/use-cash";
@@ -100,7 +103,7 @@ import { usePaymentMethods } from "@/hooks/use-expense";
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
   totalAmount: number,
-  depositAmount: number
+  depositAmount: number,
 ): "not_paid" | "deposited" | "fully_paid" {
   if (depositAmount <= 0) return "not_paid";
   if (depositAmount >= totalAmount) return "fully_paid";
@@ -109,7 +112,7 @@ function derivePaymentStatus(
 
 // Helper to derive customer type
 function deriveCustomerType(
-  companyName: string | null | undefined
+  companyName: string | null | undefined,
 ): "company" | "retail" {
   return companyName ? "company" : "retail";
 }
@@ -183,9 +186,8 @@ export default function AccountingOrderDetail() {
   const { data: invoicesData } = useInvoicesByOrder(
     order?.id || null,
     undefined,
-    !!order?.id
+    !!order?.id,
   );
-
 
   // Fetch cash receipts for this order's customer to check if receipt exists
   const { data: cashReceiptsData } = useCashReceipts(
@@ -195,7 +197,7 @@ export default function AccountingOrderDetail() {
           pageSize: 100,
           customerId: order.customerId,
         }
-      : undefined
+      : undefined,
   );
 
   // Check if order has cash receipt
@@ -219,15 +221,17 @@ export default function AccountingOrderDetail() {
   const isBankTransfer = useMemo(() => {
     if (!cardEditValues.paymentMethodId) return false;
     const method = paymentMethodsData?.items?.find(
-      (m: any) => m.id?.toString() === cardEditValues.paymentMethodId?.toString()
+      (m: any) =>
+        m.id?.toString() === cardEditValues.paymentMethodId?.toString(),
     );
     return method?.name?.toLowerCase().includes("chuyển khoản") || false;
   }, [cardEditValues.paymentMethodId, paymentMethodsData]);
 
   // Fetch bank accounts when bank transfer is selected
-  const { data: bankAccountsData, isLoading: isLoadingBankAccounts } = useBankAccounts(
-    isBankTransfer ? { pageNumber: 1, pageSize: 100 } : undefined
-  );
+  const { data: bankAccountsData, isLoading: isLoadingBankAccounts } =
+    useBankAccounts(
+      isBankTransfer ? { pageNumber: 1, pageSize: 100 } : undefined,
+    );
   // Order detail editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -285,7 +289,7 @@ export default function AccountingOrderDetail() {
    */
   const validateRetailDepositThreshold = (
     currentDeposit: number | null | undefined,
-    currentTotalAmount: number | null | undefined
+    currentTotalAmount: number | null | undefined,
   ): boolean => {
     // Dùng deriveCustomerType để xác định khách lẻ (không phụ thuộc vào field type từ API)
     const customerType = deriveCustomerType(order?.customer?.companyName);
@@ -309,7 +313,7 @@ export default function AccountingOrderDetail() {
   // Helper to start editing a card
   const startEditingCard = (
     cardName: string,
-    initialValues: Record<string, string | number | null>
+    initialValues: Record<string, string | number | null>,
   ) => {
     setEditingCard(cardName);
     setCardEditValues(initialValues);
@@ -345,7 +349,7 @@ export default function AccountingOrderDetail() {
     if (!order) return;
 
     const orderDetail = order.orderDetails?.find(
-      (od) => od.id === orderDetailId
+      (od) => od.id === orderDetailId,
     );
     if (!orderDetail) return;
 
@@ -493,8 +497,12 @@ export default function AccountingOrderDetail() {
 
     // Validate 30% deposit threshold for retail customers BEFORE saving
     if (cardName === "paymentInfo") {
-      const depositAmt = payload.depositAmount != null ? payload.depositAmount : order.depositAmount;
-      const totalAmt   = payload.totalAmount   != null ? payload.totalAmount   : order.totalAmount;
+      const depositAmt =
+        payload.depositAmount != null
+          ? payload.depositAmount
+          : order.depositAmount;
+      const totalAmt =
+        payload.totalAmount != null ? payload.totalAmount : order.totalAmount;
       if (!validateRetailDepositThreshold(depositAmt, totalAmt)) {
         return; // Block save — user must increase deposit
       }
@@ -508,7 +516,8 @@ export default function AccountingOrderDetail() {
             id: order.customerId,
             data: {
               name: payload.customerName ?? order.customer?.name,
-              companyName: payload.customerCompanyName ?? order.customer?.companyName,
+              companyName:
+                payload.customerCompanyName ?? order.customer?.companyName,
               representativeName: order.customer?.representativeName,
               phone: payload.customerPhone ?? order.customer?.phone,
               email: payload.customerEmail ?? order.customer?.email,
@@ -516,7 +525,7 @@ export default function AccountingOrderDetail() {
               address: payload.customerAddress ?? order.customer?.address,
               type: order.customer?.type ?? "retail",
               scrapRate: order.customer?.scrapRate ?? 0,
-            }
+            },
           });
         } catch (err) {
           console.error("Failed to update central customer record:", err);
@@ -527,7 +536,7 @@ export default function AccountingOrderDetail() {
       // 2. Update Order's customer info snapshot
       await updateOrderForAccounting(
         order.id,
-        payload as UpdateOrderForAccountingRequest
+        payload as UpdateOrderForAccountingRequest,
       );
 
       // useUpdateOrderForAccounting đã tự xử lý:
@@ -536,17 +545,22 @@ export default function AccountingOrderDetail() {
 
       if (cardName === "paymentInfo" && order.customerId) {
         // Tạo accounting record cho khách lẻ chưa duyệt nợ
-        if (deriveCustomerType(order.customer?.companyName) === "retail" && order.isDebtApproved === false) {
+        if (
+          deriveCustomerType(order.customer?.companyName) === "retail" &&
+          order.isDebtApproved === false
+        ) {
           try {
             await createAccountingMutation.mutate(order.id);
           } catch (error) {
-            console.error("[AccountingOrderDetail] Error creating accounting record:", error);
+            console.error(
+              "[AccountingOrderDetail] Error creating accounting record:",
+              error,
+            );
           }
         }
 
         await refetchOrder();
       }
-
 
       setEditingCard(null);
       setCardEditValues({});
@@ -742,7 +756,7 @@ export default function AccountingOrderDetail() {
     order.totalAmount > 0 ? (order.depositAmount / order.totalAmount) * 100 : 0;
   const paymentStatus = derivePaymentStatus(
     order.totalAmount,
-    order.depositAmount
+    order.depositAmount,
   );
   const invoiceStatus = deriveInvoiceStatus(order);
   const customerType = order.customer?.type;
@@ -829,7 +843,8 @@ export default function AccountingOrderDetail() {
                   )}
                   Xuất PDF Đơn Hàng
                 </Button>
-                {order.isDebtApproved === false && order.customer?.type !== "retail" && (
+                {order.isDebtApproved === false &&
+                  order.customer?.type !== "retail" && (
                     <Button
                       size="sm"
                       onClick={() => approveDebtMutation.mutate(order.id)}
@@ -842,16 +857,18 @@ export default function AccountingOrderDetail() {
                       )}
                       Cộng công nợ
                     </Button>
-                )}
+                  )}
                 {invoiceStatus === "not_issued" &&
-                  hasBeenDelivered(order.status) && (() => {
+                  hasBeenDelivered(order.status) &&
+                  (() => {
                     const customerInfoCheck = isCustomerInfoComplete(order);
                     const isDisabled =
                       !customerInfoCheck.isValid ||
                       exportInvoiceMutation.loading;
-                    const disableReason = customerInfoCheck.missingFields.length > 0
-                      ? `Vui lòng điền đầy đủ thông tin khách hàng: ${customerInfoCheck.missingFields.join(", ")}`
-                      : "";
+                    const disableReason =
+                      customerInfoCheck.missingFields.length > 0
+                        ? `Vui lòng điền đầy đủ thông tin khách hàng: ${customerInfoCheck.missingFields.join(", ")}`
+                        : "";
 
                     const button = (
                       <Button
@@ -873,9 +890,7 @@ export default function AccountingOrderDetail() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="inline-block">
-                                {button}
-                              </span>
+                              <span className="inline-block">{button}</span>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p className="max-w-xs">{disableReason}</p>
@@ -988,7 +1003,7 @@ export default function AccountingOrderDetail() {
                               depositAmount:
                                 order.depositAmount?.toString() || "",
                               paymentDueDate: formatDateTimeForInput(
-                                order.paymentDueDate
+                                order.paymentDueDate,
                               ),
                               paymentMethodId:
                                 order.paymentMethodId?.toString() || "",
@@ -997,34 +1012,123 @@ export default function AccountingOrderDetail() {
                           }
                         >
                           <Edit className="h-3 w-3 mr-1" />
-                          Sửa
+                          Cọc tiền
                         </Button>
                       ) : null}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-4 rounded-lg bg-muted/50">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Tổng giá trị
+                      </p>
+                      <p className="text-xl font-bold tabular-nums">
+                        {formatCurrency(order.totalAmount)}
+                      </p>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-success/10">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Đã thanh toán
+                      </p>
+                      <p className="text-xl font-bold tabular-nums text-success">
+                        {formatCurrency(order.depositAmount)}
+                      </p>
+                    </div>
+                    <div
+                      className={`text-center p-4 rounded-lg ${
+                        remainingAmount > 0 && isPaymentDueOverdue
+                          ? "bg-red-100 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700"
+                          : remainingAmount > 0
+                            ? "bg-destructive/10"
+                            : "bg-success/10"
+                      }`}
+                    >
+                      <p
+                        className={`text-sm mb-1 ${
+                          remainingAmount > 0 && isPaymentDueOverdue
+                            ? "text-red-700 dark:text-red-300 font-semibold"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        Còn lại
+                        {remainingAmount > 0 &&
+                          isPaymentDueOverdue &&
+                          " (Quá hạn)"}
+                      </p>
+                      <p
+                        className={`text-xl font-bold tabular-nums ${
+                          remainingAmount > 0 && isPaymentDueOverdue
+                            ? "text-red-700 dark:text-red-400"
+                            : remainingAmount > 0
+                              ? "text-destructive"
+                              : "text-success"
+                        }`}
+                      >
+                        {formatCurrency(remainingAmount)}
+                        {remainingAmount > 0 && isPaymentDueOverdue && (
+                          <span className="block text-xs mt-1 bg-red-200 dark:bg-red-900/50 text-red-800 dark:text-red-200 px-2 py-1 rounded">
+                            ⚠️ Đã quá hạn thanh toán
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
                   {editingCard === "paymentInfo" ? (
                     /* Edit Mode */
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-4 border-t">
                       <div className="space-y-2">
                         <Label>
                           Số tiền <span className="text-destructive">*</span>
                         </Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1000"
-                          value={cardEditValues.depositAmount || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              depositAmount: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập số tiền"
-                          className="text-lg font-medium"
-                        />
+                        <div className="flex gap-2 items-start sm:items-center flex-col sm:flex-row">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            value={cardEditValues.depositAmount || ""}
+                            onChange={(e) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                depositAmount: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập số tiền"
+                            className="text-lg font-medium flex-1"
+                          />
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                setCardEditValues({
+                                  ...cardEditValues,
+                                  depositAmount: (
+                                    (order.totalAmount || 0) * 0.3
+                                  ).toString(),
+                                });
+                              }}
+                            >
+                              30%
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                setCardEditValues({
+                                  ...cardEditValues,
+                                  depositAmount: (
+                                    order.totalAmount || 0
+                                  ).toString(),
+                                });
+                              }}
+                            >
+                              Điền đủ
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label>
@@ -1063,10 +1167,13 @@ export default function AccountingOrderDetail() {
                       {isBankTransfer && (
                         <div className="space-y-2">
                           <Label>
-                            Tài khoản thanh toán <span className="text-destructive">*</span>
+                            Tài khoản thanh toán{" "}
+                            <span className="text-destructive">*</span>
                           </Label>
                           <Select
-                            value={cardEditValues.bankAccountId?.toString() || ""}
+                            value={
+                              cardEditValues.bankAccountId?.toString() || ""
+                            }
                             onValueChange={(val) =>
                               setCardEditValues({
                                 ...cardEditValues,
@@ -1076,12 +1183,22 @@ export default function AccountingOrderDetail() {
                             disabled={isLoadingBankAccounts}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder={isLoadingBankAccounts ? "Đang tải..." : "Chọn tài khoản nhận tiền"} />
+                              <SelectValue
+                                placeholder={
+                                  isLoadingBankAccounts
+                                    ? "Đang tải..."
+                                    : "Chọn tài khoản nhận tiền"
+                                }
+                              />
                             </SelectTrigger>
                             <SelectContent>
                               {bankAccountsData?.items?.map((acc: any) => (
-                                <SelectItem key={acc.id} value={acc.id?.toString() || ""}>
-                                  {acc.bankName ? `${acc.bankName} - ` : ""}{acc.accountNumber} ({acc.accountName})
+                                <SelectItem
+                                  key={acc.id}
+                                  value={acc.id?.toString() || ""}
+                                >
+                                  {acc.bankName ? `${acc.bankName} - ` : ""}
+                                  {acc.accountNumber} ({acc.accountName})
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1092,63 +1209,6 @@ export default function AccountingOrderDetail() {
                   ) : (
                     /* View Mode */
                     <>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center p-4 rounded-lg bg-muted/50">
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Tổng giá trị
-                          </p>
-                          <p className="text-xl font-bold tabular-nums">
-                            {formatCurrency(order.totalAmount)}
-                          </p>
-                        </div>
-                        <div className="text-center p-4 rounded-lg bg-success/10">
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Đã thanh toán
-                          </p>
-                          <p className="text-xl font-bold tabular-nums text-success">
-                            {formatCurrency(order.depositAmount)}
-                          </p>
-                        </div>
-                        <div
-                          className={`text-center p-4 rounded-lg ${
-                            remainingAmount > 0 && isPaymentDueOverdue
-                              ? "bg-red-100 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700"
-                              : remainingAmount > 0
-                                ? "bg-destructive/10"
-                                : "bg-success/10"
-                          }`}
-                        >
-                          <p
-                            className={`text-sm mb-1 ${
-                              remainingAmount > 0 && isPaymentDueOverdue
-                                ? "text-red-700 dark:text-red-300 font-semibold"
-                                : "text-muted-foreground"
-                            }`}
-                          >
-                            Còn lại
-                            {remainingAmount > 0 &&
-                              isPaymentDueOverdue &&
-                              " (Quá hạn)"}
-                          </p>
-                          <p
-                            className={`text-xl font-bold tabular-nums ${
-                              remainingAmount > 0 && isPaymentDueOverdue
-                                ? "text-red-700 dark:text-red-400"
-                                : remainingAmount > 0
-                                  ? "text-destructive"
-                                  : "text-success"
-                            }`}
-                          >
-                            {formatCurrency(remainingAmount)}
-                            {remainingAmount > 0 && isPaymentDueOverdue && (
-                              <span className="block text-xs mt-1 bg-red-200 dark:bg-red-900/50 text-red-800 dark:text-red-200 px-2 py-1 rounded">
-                                ⚠️ Đã quá hạn thanh toán
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">
@@ -1365,7 +1425,7 @@ export default function AccountingOrderDetail() {
                                   (Number(orderDetailEditValues.quantity) ||
                                     0) *
                                     (Number(orderDetailEditValues.unitPrice) ||
-                                      0)
+                                      0),
                                 )
                               : formatCurrency(item.totalPrice || 0)}
                           </TableCell>
@@ -1699,7 +1759,7 @@ export default function AccountingOrderDetail() {
                               <p className="text-xs text-red-700 dark:text-red-300 mt-1">
                                 Khách hàng đang nợ{" "}
                                 {formatCurrency(
-                                  order.customer?.currentDebt || 0
+                                  order.customer?.currentDebt || 0,
                                 )}
                                 , vượt quá hạn mức cho phép{" "}
                                 {formatCurrency(order.customer?.maxDebt || 0)}
@@ -1794,7 +1854,7 @@ export default function AccountingOrderDetail() {
                         onClick={() =>
                           startEditingCard("orderInfo", {
                             deliveryDate: formatDateTimeForInput(
-                              order.deliveryDate
+                              order.deliveryDate,
                             ),
                             deliveryAddress: order.deliveryAddress || "",
                             note: order.note || "",
@@ -2199,4 +2259,3 @@ export default function AccountingOrderDetail() {
     </>
   );
 }
-
