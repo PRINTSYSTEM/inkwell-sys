@@ -356,6 +356,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "sale",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <Orders />
+              </Suspense>
+            ),
+          },
+          {
             path: lastSegment(ROUTE_PATHS.ORDERS.NEW), // "new"
             element: (
               <Suspense fallback={<PageLoadingFallback />}>

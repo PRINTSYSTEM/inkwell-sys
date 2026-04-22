@@ -108,10 +108,10 @@ export const MENU_ITEMS: MenuItem[] = [
     allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
     children: [
       {
-        id: "orders",
+        id: "sale-orders",
         title: "Đơn hàng",
         icon: FileText,
-        path: ROUTE_PATHS.ORDERS.ROOT,
+        path: ROUTE_PATHS.ORDERS.SALE_ORDERS,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
       {
@@ -119,14 +119,14 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Báo giá",
         icon: FileText,
         path: ROUTE_PATHS.ACCOUNTING.PAYMENT,
-        allowedRoles: [ROLE.SALE],
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
       {
         id: "sale-receipts",
         title: "Phiếu thu",
         icon: Banknote,
         path: ROUTE_PATHS.ACCOUNTING.CASH_RECEIPTS,
-        allowedRoles: [ROLE.SALE],
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
     ],
   },
@@ -175,7 +175,7 @@ export const MENU_ITEMS: MenuItem[] = [
     allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
     children: [
       {
-        id: "proofing",
+        id: "proofing-list",
         title: "Danh sách bình bài",
         icon: Layers,
         path: ROUTE_PATHS.PROOFING.ROOT,
@@ -209,7 +209,7 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     children: [
       {
-        id: "production",
+        id: "production-process",
         title: "Quy trình sản xuất",
         icon: Layers,
         path: ROUTE_PATHS.PRODUCTION.ROOT,

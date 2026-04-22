@@ -161,7 +161,7 @@ export default function OrderDetailPage() {
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [cardEditValues, setCardEditValues] = useState<any>({});
-  
+
   // OrderDetail item-level editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -173,11 +173,12 @@ export default function OrderDetailPage() {
   const [isChangingCustomer, setIsChangingCustomer] = useState(false);
   const [customerComboOpen, setCustomerComboOpen] = useState(false);
   const [customerSearchText, setCustomerSearchText] = useState("");
-  const { data: searchCustomersData, isLoading: loadingSearchCustomers } = useCustomers({
-    pageNumber: 1,
-    pageSize: 20,
-    search: customerSearchText,
-  });
+  const { data: searchCustomersData, isLoading: loadingSearchCustomers } =
+    useCustomers({
+      pageNumber: 1,
+      pageSize: 20,
+      search: customerSearchText,
+    });
   const searchCustomersList = searchCustomersData?.items || [];
 
   const [viewingImage, setViewingImage] = useState<{
@@ -194,7 +195,10 @@ export default function OrderDetailPage() {
 
   const canViewPrice = role !== ROLE.DESIGN && role !== ROLE.DESIGN_LEAD;
   const canViewDesigner =
-    role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD || role === ROLE.ADMIN || role === ROLE.SALE;
+    role === ROLE.DESIGN ||
+    role === ROLE.DESIGN_LEAD ||
+    role === ROLE.ADMIN ||
+    role === ROLE.SALE;
 
   const canExportExcel =
     role === ROLE.ACCOUNTING_LEAD ||
@@ -260,7 +264,8 @@ export default function OrderDetailPage() {
   // Check if current user is designer (not accounting/admin)
   const isDesignerRole = role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD;
 
-  const { mutateAsync: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
+  const { mutateAsync: updateOrder, isPending: isUpdatingOrder } =
+    useUpdateOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const { mutate: addDesignToOrder, loading: isAddingDesign } =
@@ -552,7 +557,11 @@ export default function OrderDetailPage() {
     }
 
     try {
-      if (cardName === "customerInfo" || cardName === "orderInfo" || cardName === "recipientInfo") {
+      if (
+        cardName === "customerInfo" ||
+        cardName === "orderInfo" ||
+        cardName === "recipientInfo"
+      ) {
         await updateOrder({
           id: order.id,
           data: payload as UpdateOrderRequest,
@@ -576,8 +585,13 @@ export default function OrderDetailPage() {
             address: String(cardEditValues.customerAddress || ""),
           });
         } catch (customerError) {
-          console.error("Failed to update customer master data:", customerError);
-          toast.warning("Lưu danh mục khách hàng thất bại, đơn hàng vẫn được lưu.");
+          console.error(
+            "Failed to update customer master data:",
+            customerError,
+          );
+          toast.warning(
+            "Lưu danh mục khách hàng thất bại, đơn hàng vẫn được lưu.",
+          );
         }
       }
 
@@ -735,8 +749,8 @@ export default function OrderDetailPage() {
       : false;
   const isDebtOverLimit = Boolean(
     order.customer?.currentDebt &&
-      order.customer?.maxDebt &&
-      order.customer.currentDebt > order.customer.maxDebt,
+    order.customer?.maxDebt &&
+    order.customer.currentDebt > order.customer.maxDebt,
   );
 
   return (
@@ -784,15 +798,13 @@ export default function OrderDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            {role === ROLE.SALE && (
+            {(role === ROLE.SALE || role === ROLE.ADMIN || role === ROLE.MANAGER) && (
               <Button
                 variant="outline"
                 size="sm"
                 className="gap-2"
                 onClick={() =>
-                  navigate(
-                    `/accounting/orders/${order.id}?tab=payment`,
-                  )
+                  navigate(`/accounting/orders/${order.id}?tab=payment`)
                 }
               >
                 Báo giá
@@ -1686,77 +1698,77 @@ export default function OrderDetailPage() {
                   Khách hàng
                 </CardTitle>
                 {editingCard === "customerInfo" ? (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => {
-                          handleSaveCard("customerInfo");
-                          setIsChangingCustomer(false);
-                        }}
-                        disabled={isUpdatingForAccounting}
-                      >
-                        {isUpdatingForAccounting ? (
-                          <>
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            Đang lưu...
-                          </>
-                        ) : (
-                          "Lưu"
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          cancelEditingCard();
-                          setIsChangingCustomer(false);
-                        }}
-                        disabled={isUpdatingForAccounting}
-                      >
-                        Hủy
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          startEditingCard("customerInfo", {
-                            customerName: customerName || "",
-                            customerCompanyName: customer?.companyName || "",
-                            customerPhone: customerPhone || "",
-                            customerEmail: customerEmail || "",
-                            customerTaxCode: customerTaxCode || "",
-                            customerAddress: customerAddress || "",
-                            customerId: customer?.id, // Keep current customer ID
-                          })
-                        }
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Cập nhật thông tin
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setIsChangingCustomer(true);
-                          startEditingCard("customerInfo", {
-                            customerName: customerName || "",
-                            customerCompanyName: customer?.companyName || "",
-                            customerPhone: customerPhone || "",
-                            customerEmail: customerEmail || "",
-                            customerTaxCode: customerTaxCode || "",
-                            customerAddress: customerAddress || "",
-                            customerId: customer?.id,
-                          });
-                        }}
-                      >
-                        <User className="h-3 w-3 mr-1" />
-                        Thay đổi khách hàng
-                      </Button>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => {
+                        handleSaveCard("customerInfo");
+                        setIsChangingCustomer(false);
+                      }}
+                      disabled={isUpdatingForAccounting}
+                    >
+                      {isUpdatingForAccounting ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Đang lưu...
+                        </>
+                      ) : (
+                        "Lưu"
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        cancelEditingCard();
+                        setIsChangingCustomer(false);
+                      }}
+                      disabled={isUpdatingForAccounting}
+                    >
+                      Hủy
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        startEditingCard("customerInfo", {
+                          customerName: customerName || "",
+                          customerCompanyName: customer?.companyName || "",
+                          customerPhone: customerPhone || "",
+                          customerEmail: customerEmail || "",
+                          customerTaxCode: customerTaxCode || "",
+                          customerAddress: customerAddress || "",
+                          customerId: customer?.id, // Keep current customer ID
+                        })
+                      }
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Cập nhật thông tin
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsChangingCustomer(true);
+                        startEditingCard("customerInfo", {
+                          customerName: customerName || "",
+                          customerCompanyName: customer?.companyName || "",
+                          customerPhone: customerPhone || "",
+                          customerEmail: customerEmail || "",
+                          customerTaxCode: customerTaxCode || "",
+                          customerAddress: customerAddress || "",
+                          customerId: customer?.id,
+                        });
+                      }}
+                    >
+                      <User className="h-3 w-3 mr-1" />
+                      Thay đổi khách hàng
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardHeader>
@@ -1822,7 +1834,8 @@ export default function OrderDetailPage() {
                             className="w-full justify-between bg-background h-10 px-3 text-sm border-2 border-primary/30"
                           >
                             <span className="truncate text-left text-primary font-medium">
-                              {customerSearchText || "Tìm theo tên, mã, số điện thoại..."}
+                              {customerSearchText ||
+                                "Tìm theo tên, mã, số điện thoại..."}
                             </span>
                             <Search className="ml-2 h-4 w-4 shrink-0 opacity-50 text-primary" />
                           </Button>
@@ -1856,13 +1869,16 @@ export default function OrderDetailPage() {
                                         ...cardEditValues,
                                         customerId: c.id,
                                         customerName: c.name || "",
-                                        customerCompanyName: c.companyName || "",
+                                        customerCompanyName:
+                                          c.companyName || "",
                                         customerPhone: c.phone || "",
                                         customerEmail: c.email || "",
                                         customerTaxCode: c.taxCode || "",
                                         customerAddress: c.address || "",
                                       });
-                                      toast.info(`Đã chọn khách hàng ${c.name}`);
+                                      toast.info(
+                                        `Đã chọn khách hàng ${c.name}`,
+                                      );
                                     }}
                                     className="py-3 text-sm border-b last:border-0"
                                   >
