@@ -111,7 +111,7 @@ export const MENU_ITEMS: MenuItem[] = [
         id: "sale-orders",
         title: "Đơn hàng",
         icon: FileText,
-        path: ROUTE_PATHS.ORDERS.ROOT,
+        path: ROUTE_PATHS.ORDERS.SALE_ORDERS,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
       {

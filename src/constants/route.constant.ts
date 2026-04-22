@@ -20,6 +20,7 @@ export const ROUTE_PATHS = {
 
   ORDERS: {
     ROOT: "/orders" as const, // list
+    SALE_ORDERS: "/orders/sale" as const,
     NEW: "/orders/new" as const,
     DETAIL_BASE: "/orders" as const, // prefix cho /orders/:id
   },

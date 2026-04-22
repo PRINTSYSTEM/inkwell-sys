@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { DateRange } from "react-day-picker";
 import { useDebounce } from "use-debounce";
 import {
@@ -63,6 +63,8 @@ export default function OrderList() {
   const { user } = useAuth();
   const role = user?.role as UserRole;
   const navigate = useNavigate();
+  const location = useLocation();
+  const isSalePath = location.pathname === ROUTE_PATHS.ORDERS.SALE_ORDERS;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
@@ -91,7 +93,7 @@ export default function OrderList() {
   // Build params for API
   const listParams: OrderListParams = useMemo(() => {
     const searchValue = debouncedSearchTerm.trim();
-    
+
     const params: OrderListParams = {
       pageNumber: currentPage,
       pageSize: pageSize,
@@ -130,7 +132,15 @@ export default function OrderList() {
     }
 
     return params;
-  }, [statusFilter, dateRange, currentPage, pageSize, sortColumn, sortOrder, debouncedSearchTerm]);
+  }, [
+    statusFilter,
+    dateRange,
+    currentPage,
+    pageSize,
+    sortColumn,
+    sortOrder,
+    debouncedSearchTerm,
+  ]);
 
   // Call API
   const { data, isLoading, isError, error } = useOrdersByRole(role, listParams);
@@ -170,7 +180,7 @@ export default function OrderList() {
       total: totalOrders,
       pending: allOrders.filter((o) => o.status === "pending").length,
       inProgress: allOrders.filter((o) =>
-        ["designing", "production", "in_progress"].includes(o.status || "")
+        ["designing", "production", "in_progress"].includes(o.status || ""),
       ).length,
       completed: allOrders.filter((o) => o.status === "completed").length,
       totalRevenue: allOrders.reduce((sum, o) => {
@@ -221,7 +231,12 @@ export default function OrderList() {
   };
 
   const handleOrderClick = (orderId: number) => {
-    if (role === ROLE.SALE) {
+    // Nếu là role SALE, hoặc Admin/Manager đang ở route /orders/sale
+    const isSaleView =
+      role === ROLE.SALE ||
+      ((role === ROLE.ADMIN || role === ROLE.MANAGER) && isSalePath);
+
+    if (isSaleView) {
       navigate(`/accounting/orders/${orderId}?tab=payment`);
     } else {
       navigate(`/orders/${orderId}`);
@@ -230,7 +245,7 @@ export default function OrderList() {
 
   const handleDesignClick = (
     designId: number | null | undefined,
-    e: React.MouseEvent
+    e: React.MouseEvent,
   ) => {
     e.stopPropagation();
     if (designId) {
@@ -240,7 +255,7 @@ export default function OrderList() {
 
   const handleImageClick = (
     imageUrl: string | null | undefined,
-    e: React.MouseEvent
+    e: React.MouseEvent,
   ) => {
     e.stopPropagation();
     if (imageUrl) {
@@ -441,27 +456,36 @@ export default function OrderList() {
 
                     // Determine if customer invoice info is complete
                     const customerNameField =
-                      (orderResponse.customer && typeof orderResponse.customer.name === "string")
+                      orderResponse.customer &&
+                      typeof orderResponse.customer.name === "string"
                         ? orderResponse.customer.name
                         : orderResponse.customerName || "";
                     const customerPhoneField =
-                      (orderResponse.customer && typeof (orderResponse.customer as any).phone === "string")
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).phone === "string"
                         ? (orderResponse.customer as any).phone
                         : orderResponse.customerPhone || "";
                     const customerAddressField =
-                      (orderResponse.customer && typeof (orderResponse.customer as any).address === "string")
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).address ===
+                        "string"
                         ? (orderResponse.customer as any).address
                         : orderResponse.customerAddress || "";
                     const customerEmailField =
-                      (orderResponse.customer && typeof (orderResponse.customer as any).email === "string")
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).email === "string"
                         ? (orderResponse.customer as any).email
                         : orderResponse.customerEmail || "";
                     const customerCompanyField =
-                      (orderResponse.customer && typeof (orderResponse.customer as any).companyName === "string")
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).companyName ===
+                        "string"
                         ? (orderResponse.customer as any).companyName
                         : orderResponse.customerCompanyName || "";
                     const customerTaxCodeField =
-                      (orderResponse.customer && typeof (orderResponse.customer as any).taxCode === "string")
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).taxCode ===
+                        "string"
                         ? (orderResponse.customer as any).taxCode
                         : orderResponse.customerTaxCode || "";
 
@@ -470,7 +494,8 @@ export default function OrderList() {
                       !!customerPhoneField.trim() &&
                       !!customerAddressField.trim() &&
                       !!customerEmailField.trim() &&
-                      (!customerCompanyField.trim() || !!customerTaxCodeField.trim());
+                      (!customerCompanyField.trim() ||
+                        !!customerTaxCodeField.trim());
 
                     const highlightMissingInfo = !isCustomerInfoComplete;
 
@@ -480,7 +505,11 @@ export default function OrderList() {
                           key={order.id}
                           className={`h-14 cursor-pointer border-x-2 border-t-2 border-border border-l-4 shadow-sm ${highlightMissingInfo ? "bg-rose-50 hover:bg-rose-100 border-l-rose-500" : "bg-card hover:bg-muted/40 border-l-primary"}`}
                           onClick={() => handleOrderClick(order.id ?? 0)}
-                          title={highlightMissingInfo ? "Thiếu thông tin để xuất hóa đơn" : undefined}
+                          title={
+                            highlightMissingInfo
+                              ? "Thiếu thông tin để xuất hóa đơn"
+                              : undefined
+                          }
                         >
                           <TableCell className="py-3">
                             <div className="font-bold text-sm text-primary">
@@ -602,7 +631,7 @@ export default function OrderList() {
                                                     onClick={(e) =>
                                                       handleImageClick(
                                                         design.designImageUrl!,
-                                                        e
+                                                        e,
                                                       )
                                                     }
                                                   />
