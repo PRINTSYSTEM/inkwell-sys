@@ -59,6 +59,7 @@ import {
 } from "@/hooks/use-order";
 import { useApproveDebt, useCreateAccountingForOrder } from "@/hooks/use-accounting";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
+import { useUpdateCustomer } from "@/hooks/use-customer";
 import { useCashReceipts } from "@/hooks/use-cash";
 import { useBankAccounts } from "@/hooks/use-bank";
 import type {
@@ -249,6 +250,7 @@ export default function AccountingOrderDetail() {
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const createInvoiceMutation = useCreateInvoice();
+  const { mutateAsync: updateCustomer } = useUpdateCustomer();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -499,6 +501,30 @@ export default function AccountingOrderDetail() {
     }
 
     try {
+      // 1. Update Customer record first if it's customer info
+      if (cardName === "customerInfo" && order.customerId) {
+        try {
+          await updateCustomer({
+            id: order.customerId,
+            data: {
+              name: payload.customerName ?? order.customer?.name,
+              companyName: payload.customerCompanyName ?? order.customer?.companyName,
+              representativeName: order.customer?.representativeName,
+              phone: payload.customerPhone ?? order.customer?.phone,
+              email: payload.customerEmail ?? order.customer?.email,
+              taxCode: payload.customerTaxCode ?? order.customer?.taxCode,
+              address: payload.customerAddress ?? order.customer?.address,
+              type: order.customer?.type ?? "retail",
+              scrapRate: order.customer?.scrapRate ?? 0,
+            }
+          });
+        } catch (err) {
+          console.error("Failed to update central customer record:", err);
+          // We continue anyway to update the order's snapshot
+        }
+      }
+
+      // 2. Update Order's customer info snapshot
       await updateOrderForAccounting(
         order.id,
         payload as UpdateOrderForAccountingRequest
