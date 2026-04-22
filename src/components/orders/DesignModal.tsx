@@ -905,18 +905,54 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                         Quy trình sản xuất{" "}
                         <span className="text-destructive">*</span>
                       </Label>
-                      <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
-                        <Badge variant="outline" className="text-sm">
-                          {formData.processClassification
-                            ? ENTITY_CONFIG.processClassification.values[
-                                formData.processClassification
-                              ]
-                            : "—"}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          (Tự động thiết lập)
-                        </span>
-                      </div>
+                      {isDecal && !isDecalCuon ? (
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(
+                            ENTITY_CONFIG.processClassification.values
+                          ).map(([key, label]) => {
+                            const isSelected =
+                              formData.processClassification === key;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => {
+                                  updateField("processClassification", key);
+                                }}
+                                disabled={!!isExistingDesign}
+                                className={`
+                                  px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all
+                                  ${
+                                    isSelected
+                                      ? "border-primary bg-primary text-primary-foreground"
+                                      : "border-border hover:border-primary/50"
+                                  }
+                                  ${
+                                    isExistingDesign
+                                      ? "opacity-50 cursor-not-allowed"
+                                      : ""
+                                  }
+                                `}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                          <Badge variant="outline" className="text-sm">
+                            {formData.processClassification
+                              ? ENTITY_CONFIG.processClassification.values[
+                                  formData.processClassification
+                                ]
+                              : "—"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            (Tự động thiết lập)
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
 
