@@ -437,6 +437,8 @@ export default function DeliveryNoteListPage() {
   const [notes, setNotes] = useState("");
   // Per-line selected address id map: orderDetailId -> customerAddressId
   const [selectedAddressIds, setSelectedAddressIds] = useState<Record<number, number | null>>({});
+  // Single address selection for Create dialog (backend expects one address per delivery note)
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
 
   // Delivery notes state
   const [deliveryNoteStatusFilter, setDeliveryNoteStatusFilter] =
@@ -628,6 +630,7 @@ export default function DeliveryNoteListPage() {
   const [recreateItems, setRecreateItems] = useState<DeliveryNoteLineResponse[]>([]);
   const [recreateQtys, setRecreateQtys] = useState<Record<number, number>>({});
   const [recreateAddressIds, setRecreateAddressIds] = useState<Record<number, number | null>>({});
+  const [recreateSelectedAddressId, setRecreateSelectedAddressId] = useState<number | null>(null);
   const [recreateNotes, setRecreateNotes] = useState("");
   const [recreateCustomerId, setRecreateCustomerId] = useState<number | null>(null);
 
@@ -659,6 +662,9 @@ export default function DeliveryNoteListPage() {
       
       setRecreateQtys(qtys);
       setRecreateAddressIds(addrs);
+      // choose first non-null address as the shared address for recreate
+      const firstAddr = Object.values(addrs).find((v) => v != null);
+      setRecreateSelectedAddressId(typeof firstAddr === "number" ? firstAddr : null);
       setRecreateNotes(recreateNoteData.notes || "");
       
       // Extract customerId from the first line or note data
@@ -677,17 +683,30 @@ export default function DeliveryNoteListPage() {
 
   const handleConfirmedRecreate = async () => {
     if (!recreateNoteId) return;
-    
-    const payload = {
-      originalDeliveryNoteId: recreateNoteId,
-      lines: recreateItems.map(item => ({
+    if (!recreateSelectedAddressId) {
+      toast.error("Vui lòng chọn địa chỉ giao hàng");
+      return;
+    }
+
+    const lines = recreateItems
+      .map((item) => ({
         orderDetailId: item.orderDetailId,
         deliveryQty: recreateQtys[item.orderDetailId] || 0,
-        customerAddressId: recreateAddressIds[item.orderDetailId] || undefined,
-      })),
+      }))
+      .filter((l) => l.deliveryQty > 0);
+
+    if (lines.length === 0) {
+      toast.error("Vui lòng nhập số lượng giao");
+      return;
+    }
+
+    const payload = {
+      originalDeliveryNoteId: recreateNoteId,
+      customerAddressId: recreateSelectedAddressId,
       notes: recreateNotes,
+      lines,
     };
-    
+
     await recreateMutation.mutateAsync(payload);
     setIsRecreateDialogOpen(false);
     setRecreateNoteId(null);
@@ -707,6 +726,15 @@ export default function DeliveryNoteListPage() {
     });
     setDeliveryQtys(qtys);
     setSelectedAddressIds({});
+    // Default customer/address: take from first selected order detail
+    const firstSelected = selectedOrders[0];
+    const defaultCustomerId = firstSelected?.customerId ?? selectedCustomerId;
+    let defaultAddress: number | null = null;
+    if (firstSelected && firstSelected.orderDetailId != null) {
+      defaultAddress = selectedAddressIds[firstSelected.orderDetailId] ?? null;
+    }
+    setSelectedCustomerId(defaultCustomerId ?? null);
+    setSelectedAddressId(defaultAddress ?? null);
 
     setIsCreateDialogOpen(true);
   };
@@ -717,18 +745,36 @@ export default function DeliveryNoteListPage() {
   const handleConfirmCreate = async () => {
     if (selectedOrderDetailIds.size === 0) return;
 
+    if (!selectedAddressId) {
+      toast.error("Vui lòng chọn địa chỉ giao hàng");
+      return;
+    }
+
+    const lines = selectedOrders
+      .map((od) => ({
+        orderDetailId: od.orderDetailId,
+        deliveryQty: deliveryQtys[od.orderDetailId] || 0,
+      }))
+      .filter((l) => l.deliveryQty > 0);
+
+    if (lines.length === 0) {
+      toast.error("Vui lòng nhập số lượng giao");
+      return;
+    }
+
     try {
-      await createDeliveryNoteMutation.mutateAsync({
-        lines: selectedOrders.map(od => ({
-          orderDetailId: od.orderDetailId!,
-          deliveryQty: deliveryQtys[od.orderDetailId!] || od.remainingToDeliver || 0,
-          customerAddressId: selectedAddressIds[od.orderDetailId!] ?? undefined,
-        })),
+      const payload = {
+        customerAddressId: selectedAddressId,
         notes: notes || undefined,
-      });
+        lines,
+      };
+
+      await createDeliveryNoteMutation.mutateAsync(payload as any);
+
       setSelectedOrderDetailIds(new Set());
       setDeliveryQtys({});
       setSelectedAddressIds({});
+      setSelectedAddressId(null);
       setNotes("");
       setIsCreateDialogOpen(false);
       refetchOrders();
@@ -832,9 +878,11 @@ export default function DeliveryNoteListPage() {
         selectedOrders={selectedOrders}
         deliveryQtys={deliveryQtys}
         setDeliveryQtys={setDeliveryQtys}
+        selectedAddressId={selectedAddressId}
+        setSelectedAddressId={setSelectedAddressId}
         selectedAddressIds={selectedAddressIds}
         setSelectedAddressIds={setSelectedAddressIds}
-        customerId={selectedCustomerId}
+        customerId={selectedOrders[0]?.customerId ?? selectedCustomerId}
         notes={notes}
         setNotes={setNotes}
         onCreate={handleConfirmCreate}
@@ -849,6 +897,8 @@ export default function DeliveryNoteListPage() {
         setQtys={setRecreateQtys}
         addressIds={recreateAddressIds}
         setAddressIds={setRecreateAddressIds}
+        selectedAddressId={recreateSelectedAddressId}
+        setSelectedAddressId={setRecreateSelectedAddressId}
         customerId={recreateCustomerId}
         notes={recreateNotes}
         setNotes={setRecreateNotes}
@@ -1301,7 +1351,7 @@ function DeliveryNotesView({
                     Mã phiếu
                   </TableHead>
                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                  Đơn hàng
+                  Số lượng mã hàng
                 </TableHead>
                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                   Khách hàng
@@ -1314,9 +1364,6 @@ function DeliveryNotesView({
                 </TableHead>
                 <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">
                   Ngày tạo
-                </TableHead>
-                <TableHead className="w-[100px] text-right font-semibold text-slate-700 dark:text-slate-300 pr-6">
-                  Thao tác
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -1961,6 +2008,8 @@ interface CreateDeliveryNoteDialogProps {
   selectedOrders: Array<SelectedOrderDetail>;
   deliveryQtys: Record<number, number>;
   setDeliveryQtys: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  selectedAddressId: number | null;
+  setSelectedAddressId: React.Dispatch<React.SetStateAction<number | null>>;
   selectedAddressIds: Record<number, number | null>;
   setSelectedAddressIds: React.Dispatch<React.SetStateAction<Record<number, number | null>>>;
   customerId: number | null;
@@ -1976,6 +2025,8 @@ function CreateDeliveryNoteDialog({
   selectedOrders,
   deliveryQtys,
   setDeliveryQtys,
+  selectedAddressId,
+  setSelectedAddressId,
   selectedAddressIds,
   setSelectedAddressIds,
   customerId,
@@ -1994,7 +2045,7 @@ function CreateDeliveryNoteDialog({
             Tạo phiếu giao hàng ({selectedOrders.length} sản phẩm)
           </DialogTitle>
           <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
-            Xác nhận số lượng và chọn địa chỉ giao cho từng sản phẩm.
+            Xác nhận số lượng và chọn địa chỉ giao (áp dụng cho toàn bộ phiếu).
           </DialogDescription>
         </DialogHeader>
 
@@ -2047,51 +2098,44 @@ function CreateDeliveryNoteDialog({
                         </div>
                       </div>
 
-                      {/* Per-line address selector */}
-                      {od.customerId && (
-                        <div className="border-t border-slate-100 dark:border-slate-800 pt-2">
-                          <AddressBookManager
-                            customerId={od.customerId}
-                            compact
-                            selectedId={selectedAddressIds[od.orderDetailId] ?? null}
-                            onSelect={(addrId) =>
-                              setSelectedAddressIds((prev) => ({
-                                ...prev,
-                                [od.orderDetailId]: addrId,
-                              }))
-                            }
-                          />
-                        </div>
-                      )}
+                      {/* Address selection moved to global selector below */}
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            {/* Address Book Manager (expandable) */}
+            {/* Compact selector + expandable Address Book Manager */}
             {customerId && (
-              <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm"
-                  onClick={() => setShowAddressBook(!showAddressBook)}
-                >
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      Quản lý sổ địa chỉ
-                    </span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <AddressBookManager
+                      customerId={customerId}
+                      compact
+                      selectedId={selectedAddressId ?? null}
+                      onSelect={(id) => setSelectedAddressId(id)}
+                    />
                   </div>
-                  <ChevronDown
-                    className={`h-4 w-4 text-slate-400 transition-transform ${
-                      showAddressBook ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
+                  <div>
+                    <button
+                      type="button"
+                      className="h-8 w-8 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => setShowAddressBook(!showAddressBook)}
+                      title="Quản lý sổ địa chỉ"
+                    >
+                      <Plus className="h-4 w-4 text-primary" />
+                    </button>
+                  </div>
+                </div>
+
                 {showAddressBook && (
-                  <div className="p-4 bg-white dark:bg-slate-900">
-                    <AddressBookManager customerId={customerId} />
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden p-4 bg-white dark:bg-slate-900">
+                    <AddressBookManager
+                      customerId={customerId}
+                      selectedId={selectedAddressId ?? null}
+                      onSelect={(id) => setSelectedAddressId(id)}
+                    />
                   </div>
                 )}
               </div>
@@ -2152,6 +2196,8 @@ interface RecreateDeliveryNoteDialogProps {
   setQtys: React.Dispatch<React.SetStateAction<Record<number, number>>>;
   addressIds: Record<number, number | null>;
   setAddressIds: React.Dispatch<React.SetStateAction<Record<number, number | null>>>;
+  selectedAddressId?: number | null;
+  setSelectedAddressId?: React.Dispatch<React.SetStateAction<number | null>>;
   customerId: number | null;
   notes: string;
   setNotes: (notes: string) => void;
@@ -2167,6 +2213,8 @@ function RecreateDeliveryNoteDialog({
   setQtys,
   addressIds,
   setAddressIds,
+  selectedAddressId,
+  setSelectedAddressId,
   customerId,
   notes,
   setNotes,
@@ -2228,51 +2276,44 @@ function RecreateDeliveryNoteDialog({
                         </div>
                       </div>
 
-                      {/* Per-line address selector */}
-                      {customerId && (
-                        <div className="border-t border-slate-100 dark:border-slate-800 pt-2">
-                          <AddressBookManager
-                            customerId={customerId}
-                            compact
-                            selectedId={addressIds[item.orderDetailId] ?? null}
-                            onSelect={(addrId) =>
-                              setAddressIds((prev) => ({
-                                ...prev,
-                                [item.orderDetailId]: addrId,
-                              }))
-                            }
-                          />
-                        </div>
-                      )}
+                      {/* Address selection moved to global selector below */}
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            {/* Address Book Manager (expandable) */}
+            {/* Compact selector + expandable Address Book Manager */}
             {customerId && (
-              <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm"
-                  onClick={() => setShowAddressBook(!showAddressBook)}
-                >
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      Quản lý sổ địa chỉ của khách
-                    </span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <AddressBookManager
+                      customerId={customerId}
+                      compact
+                      selectedId={selectedAddressId ?? null}
+                      onSelect={(id) => setSelectedAddressId && setSelectedAddressId(id)}
+                    />
                   </div>
-                  <ChevronDown
-                    className={`h-4 w-4 text-slate-400 transition-transform ${
-                      showAddressBook ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
+                  <div>
+                    <button
+                      type="button"
+                      className="h-8 w-8 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => setShowAddressBook(!showAddressBook)}
+                      title="Quản lý sổ địa chỉ"
+                    >
+                      <Plus className="h-4 w-4 text-primary" />
+                    </button>
+                  </div>
+                </div>
+
                 {showAddressBook && (
-                  <div className="p-4 bg-white dark:bg-slate-900">
-                    <AddressBookManager customerId={customerId} />
+                  <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden p-4 bg-white dark:bg-slate-900">
+                    <AddressBookManager
+                      customerId={customerId!}
+                      selectedId={selectedAddressId ?? null}
+                      onSelect={(id) => setSelectedAddressId && setSelectedAddressId(id)}
+                    />
                   </div>
                 )}
               </div>
