@@ -139,7 +139,7 @@ import {
   orderCrudApi,
 } from "@/hooks";
 import { useQueryClient } from "@tanstack/react-query";
-import { ROLE } from "@/constants";
+import { ROLE, ROUTE_PATHS } from "@/constants";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { toast } from "sonner";
 export default function OrderDetailPage() {
@@ -784,6 +784,20 @@ export default function OrderDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
+            {role === ROLE.SALE && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() =>
+                  navigate(
+                    `/accounting/orders/${order.id}?tab=payment`,
+                  )
+                }
+              >
+                Báo giá
+              </Button>
+            )}
             {canExportExcel && (
               <Button
                 variant="outline"

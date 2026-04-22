@@ -87,10 +87,7 @@ export default function CashReceiptListPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: addDays(new Date(), -30),
-    to: new Date(),
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [customerFilter, setCustomerFilter] = useState<string>("");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);

@@ -19,7 +19,7 @@ import {
   ChevronRight,
   Calendar,
 } from "lucide-react";
-import { useDesigns, useFilters } from "@/hooks";
+import { useDesigns, useFilters, useUsers, useUpdateDesign, useAuth } from "@/hooks";
 import type { DesignResponse } from "@/Schema";
 import { designStatusConfig, designStatusLabels } from "@/lib/status-utils";
 import {
@@ -90,6 +90,15 @@ export default function AllDesignsPage() {
     ]
   );
   const { data, isLoading } = useDesigns(useDesignsParams);
+
+  // Designers list for assignment
+  const { data: designersData } = useUsers({ role: "design", pageSize: 100 });
+  const designers = designersData?.items || [];
+
+  const { user } = useAuth();
+  const isDesignLeadOrAdmin = user?.role === "design_lead" || user?.role === "admin";
+
+  const { mutate: updateDesign, loading: updatingDesign } = useUpdateDesign();
 
   // Memoize designs to prevent dependency warnings
   const designs = useMemo<DesignResponse[]>(
@@ -420,7 +429,7 @@ export default function AllDesignsPage() {
                   <TableHead className="h-9 text-sm font-bold">
                     Trạng thái
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Loại</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Người thiết kế</TableHead>
                   <TableHead className="h-9 text-sm font-bold">
                     Kích thước
                   </TableHead>
@@ -434,7 +443,7 @@ export default function AllDesignsPage() {
                     <TableRow
                       key={design.id}
                       className={`cursor-pointer hover:bg-muted/50 h-14 ${design.status === "returned" && `bg-red-50`}`}
-                      onClick={() => navigate(`/design/detail/${design.id}`)}
+                        onClick={() => navigate(`/design/detail/${design.id}`)}
                     >
                       <TableCell className="py-3 font-semibold text-sm">
                         {design.code || `DES-${design.id}`}
@@ -490,6 +499,39 @@ export default function AllDesignsPage() {
                             "N/A"
                           }
                         />
+                      </TableCell>
+                      <TableCell className="py-3 text-sm font-semibold max-w-[140px]">
+                        {isDesignLeadOrAdmin ? (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={
+                                design.assignedDesignerId != null
+                                  ? design.assignedDesignerId.toString()
+                                  : design.designer?.id != null
+                                  ? design.designer.id.toString()
+                                  : "__none__"
+                              }
+                              onValueChange={(val) => {
+                                const assignedId = val === "__none__" ? null : Number(val);
+                                updateDesign({ id: design.id, data: { assignedDesignerId: assignedId } } as any);
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue placeholder="Chọn designer" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">(Chưa gán)</SelectItem>
+                                {designers.map((d) => (
+                                  <SelectItem key={d.id} value={d.id.toString()}>
+                                    {d.fullName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <div className="truncate">{design.designer?.fullName || '—'}</div>
+                        )}
                       </TableCell>
                       <TableCell className="py-3 text-sm font-semibold">
                         {design.designType?.name || "—"}

@@ -15,6 +15,7 @@ import {
   Calendar,
   Loader2,
   Image as ImageIcon,
+  FileText,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,7 @@ import type {
 } from "@/Schema";
 import { useAuth } from "@/hooks";
 import { useOrdersByRole } from "@/hooks/use-order";
-import { ROLE } from "@/constants";
+import { ROLE, ROUTE_PATHS } from "@/constants";
 import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
 export default function OrderList() {
@@ -220,7 +221,11 @@ export default function OrderList() {
   };
 
   const handleOrderClick = (orderId: number) => {
-    navigate(`/orders/${orderId}`);
+    if (role === ROLE.SALE) {
+      navigate(`/accounting/orders/${orderId}?tab=payment`);
+    } else {
+      navigate(`/orders/${orderId}`);
+    }
   };
 
   const handleDesignClick = (
@@ -383,7 +388,11 @@ export default function OrderList() {
               <TableBody>
                 {/* Loading */}
                 {isLoading && (
-                  <TableSkeleton cols={canViewPrice ? 7 : 5} rows={8} rowHeight="h-14" />
+                  <TableSkeleton
+                    cols={canViewPrice ? 7 : 5}
+                    rows={8}
+                    rowHeight="h-14"
+                  />
                 )}
 
                 {/* Error */}

@@ -5,8 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   useCreateCustomer,
   useFormValidation,
+  useAuth,
   // useCheckDuplicateCompany, // DEPRECATED: Endpoint not found in OpenAPI
 } from "@/hooks";
+import { ROLE } from "@/constants";
 import { CreateCustomerRequest, CreateCustomerRequestSchema } from "@/Schema";
 import { FormFieldError } from "@/components/ui/form-field-error";
 import {
@@ -29,6 +31,12 @@ import { useNavigate } from "react-router-dom";
 
 export default function CreateCustomer() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canEditDebt =
+    user?.role === ROLE.ACCOUNTING ||
+    user?.role === ROLE.ACCOUNTING_LEAD ||
+    user?.role === ROLE.ADMIN;
+
   const [form, setForm] = useState<CreateCustomerRequest>({
     name: "",
     companyName: "",
@@ -121,8 +129,11 @@ export default function CreateCustomer() {
       type: form.type || undefined,
       // Ensure scrapRate is sent to API. Default to 0.005 when not provided.
       scrapRate: form.scrapRate ?? 0.005,
-      currentDebt: form.currentDebt,
-      maxDebt: Number(form.maxDebt) || 0,
+      // Only send debt fields if user has permission
+      ...(canEditDebt && {
+        currentDebt: form.currentDebt,
+        maxDebt: Number(form.maxDebt) || 0,
+      }),
     };
 
     // Validate and parse form data
@@ -498,46 +509,48 @@ export default function CreateCustomer() {
               </p>
             </div>
 
-            {/* Credit Limit */}
-            <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-6 border-b">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Hạn mức công nợ</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Giới hạn tín dụng
-                    </p>
+            {/* Credit Limit - Only show if user has permission */}
+            {canEditDebt && (
+              <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-6 border-b">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Hạn mức công nợ</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Giới hạn tín dụng
+                      </p>
+                    </div>
                   </div>
                 </div>
+                <div className="p-6 space-y-2">
+                  <Label htmlFor="maxDebt" className="text-sm font-medium">
+                    Số tiền (VNĐ)
+                  </Label>
+                  <Input
+                    id="maxDebt"
+                    type="number"
+                    placeholder="50000000"
+                    value={form.maxDebt}
+                    onChange={(e) =>
+                      handleInput("maxDebt", Number(e.target.value))
+                    }
+                    onBlur={() => handleBlur("maxDebt")}
+                    className={`text-lg font-semibold ${
+                      getError("maxDebt") ? "border-destructive" : ""
+                    }`}
+                  />
+                  <FormFieldError error={getError("maxDebt")} />
+                  <p className="text-xs text-muted-foreground">
+                    ≈{" "}
+                    {new Intl.NumberFormat("vi-VN").format(Number(form.maxDebt))}{" "}
+                    đ
+                  </p>
+                </div>
               </div>
-              <div className="p-6 space-y-2">
-                <Label htmlFor="maxDebt" className="text-sm font-medium">
-                  Số tiền (VNĐ)
-                </Label>
-                <Input
-                  id="maxDebt"
-                  type="number"
-                  placeholder="50000000"
-                  value={form.maxDebt}
-                  onChange={(e) =>
-                    handleInput("maxDebt", Number(e.target.value))
-                  }
-                  onBlur={() => handleBlur("maxDebt")}
-                  className={`text-lg font-semibold ${
-                    getError("maxDebt") ? "border-destructive" : ""
-                  }`}
-                />
-                <FormFieldError error={getError("maxDebt")} />
-                <p className="text-xs text-muted-foreground">
-                  ≈{" "}
-                  {new Intl.NumberFormat("vi-VN").format(Number(form.maxDebt))}{" "}
-                  đ
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* Submit Button */}
             <Button

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { useDebounce } from "use-debounce";
 import { vi } from "date-fns/locale";
@@ -58,8 +58,18 @@ function deriveCustomerType(
 
 export function PaymentList() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const orderCodeFromUrl = searchParams.get("orderCode");
+
+  const [searchQuery, setSearchQuery] = useState(orderCodeFromUrl || "");
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
+
+  // Sync search query with URL parameter
+  useEffect(() => {
+    if (orderCodeFromUrl) {
+      setSearchQuery(orderCodeFromUrl);
+    }
+  }, [orderCodeFromUrl]);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("1");

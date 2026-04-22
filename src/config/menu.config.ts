@@ -100,6 +100,37 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
+  // ==== Sale (Bán hàng) ====
+  {
+    id: "sales",
+    title: "Sale",
+    icon: ShoppingCart,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
+    children: [
+      {
+        id: "orders",
+        title: "Đơn hàng",
+        icon: FileText,
+        path: ROUTE_PATHS.ORDERS.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
+      },
+      {
+        id: "sale-quotes",
+        title: "Báo giá",
+        icon: FileText,
+        path: ROUTE_PATHS.ACCOUNTING.PAYMENT,
+        allowedRoles: [ROLE.SALE],
+      },
+      {
+        id: "sale-receipts",
+        title: "Phiếu thu",
+        icon: Banknote,
+        path: ROUTE_PATHS.ACCOUNTING.CASH_RECEIPTS,
+        allowedRoles: [ROLE.SALE],
+      },
+    ],
+  },
+
   // ==== Khách hàng & Đơn hàng ====
   {
     id: "customer",
@@ -136,7 +167,7 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
-  // ==== Sản xuất ====
+  // ==== Bình bài ====
   {
     id: "proofing",
     title: "Bình bài",
@@ -606,42 +637,72 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Doanh số theo kỳ",
         icon: LineChart,
         path: ROUTE_PATHS.REPORTS.SALES.BY_PERIOD,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD, ROLE.SALE],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "sales-by-customer",
         title: "Doanh số theo khách hàng",
         icon: Users,
         path: ROUTE_PATHS.REPORTS.SALES.BY_CUSTOMER,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD, ROLE.SALE],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "sales-by-dimension",
         title: "Doanh số theo chiều",
         icon: PieChart,
         path: ROUTE_PATHS.REPORTS.SALES.BY_DIMENSION,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD, ROLE.SALE],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "top-products",
         title: "Sản phẩm bán chạy",
         icon: ShoppingCart,
         path: ROUTE_PATHS.REPORTS.SALES.TOP_PRODUCTS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD, ROLE.SALE],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "returns-discounts",
         title: "Trả hàng & giảm giá",
         icon: FileText,
         path: ROUTE_PATHS.REPORTS.SALES.RETURNS_DISCOUNTS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD, ROLE.SALE],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "order-drill-down",
         title: "Chi tiết đơn hàng",
         icon: FileSpreadsheet,
         path: ROUTE_PATHS.REPORTS.SALES.ORDER_DRILL_DOWN,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD, ROLE.SALE],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       // Report Exports
       {
@@ -649,7 +710,12 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Báo cáo đã xuất",
         icon: FileSpreadsheet,
         path: ROUTE_PATHS.REPORTS.EXPORTS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD, ROLE.SALE],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
     ],
   },

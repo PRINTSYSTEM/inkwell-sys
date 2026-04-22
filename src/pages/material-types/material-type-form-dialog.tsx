@@ -91,16 +91,17 @@ export function MaterialTypeFormDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Convert string -> number an toàn
-    const pricePerM2Number =
-      formData.pricePerM2.trim() === "" ? 0 : Number(formData.pricePerM2);
+    // Convert string -> number an toàn, hỗ trợ cả dấu phẩy (locale VN)
+    const parseNumber = (val: string) => {
+      const cleanVal = val.trim().replace(",", ".");
+      return cleanVal === "" ? 0 : Number(cleanVal);
+    };
+
+    const pricePerM2Number = parseNumber(formData.pricePerM2);
     const minimumQuantityNumber =
       formData.minimumQuantity.trim() === ""
         ? undefined
-        : Number(formData.minimumQuantity);
-
-    // Nếu muốn bắt buộc > 0 thì check kỹ:
-    // if (!pricePerM2Number) { ... } // chú ý: 0 là falsy
+        : parseNumber(formData.minimumQuantity);
 
     const payload: CreateMaterialTypeRequest = {
       code: formData.code,
@@ -207,16 +208,19 @@ export function MaterialTypeFormDialog({
               <div className="relative">
                 <Input
                   id="pricePerM2"
-                  type="number"
-                  min="0"
-                  // step="10"
+                  type="text"
+                  inputMode="decimal"
                   value={formData.pricePerM2}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      pricePerM2: e.target.value,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Chỉ cho phép số, dấu chấm và dấu phẩy
+                    if (val === "" || /^[0-9.,]*$/.test(val)) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        pricePerM2: val,
+                      }));
+                    }
+                  }}
                   placeholder="0"
                   required
                   className="pr-16"
@@ -233,15 +237,18 @@ export function MaterialTypeFormDialog({
               <Label htmlFor="minimumQuantity">Số lượng tối thiểu</Label>
               <Input
                 id="minimumQuantity"
-                type="number"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 value={formData.minimumQuantity}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    minimumQuantity: e.target.value,
-                  }))
-                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "" || /^[0-9.,]*$/.test(val)) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      minimumQuantity: val,
+                    }));
+                  }
+                }}
                 placeholder="0"
                 className="pr-12"
               />
