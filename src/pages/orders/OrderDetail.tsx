@@ -137,6 +137,7 @@ import {
   customerApi,
   useOrders,
   orderCrudApi,
+  useProductionOrdersByOrder,
 } from "@/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE, ROUTE_PATHS } from "@/constants";
@@ -618,12 +619,8 @@ export default function OrderDetailPage() {
 
   const relatedProofing: ProofingOrderResponse[] = relatedProofingOrders ?? [];
 
-  // Extract productions from proofing orders (they are already included in the response)
-  const relatedProductions: ProductionResponse[] = relatedProofing
-    .flatMap((proof) => proof.productions ?? [])
-    .filter(
-      (prod): prod is ProductionResponse => prod !== null && prod !== undefined,
-    );
+  const { data: productionOrders } = useProductionOrdersByOrder(orderId);
+  const relatedProductions = productionOrders ?? [];
 
   // Fetch users for assignedToUserId select
   const { data: usersData } = useUsers({ pageSize: 100 });
@@ -1655,7 +1652,7 @@ export default function OrderDetailPage() {
                             />
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Phụ trách: {prod.productionLead?.fullName || "—"}
+                            Phụ trách: {prod.productionLeadName || "—"}
                           </p>
                           {/* Progress bar */}
                           <div className="flex items-center gap-3">

@@ -56,7 +56,7 @@ interface PrepressOrdersHeaderProps {
   // Actions for shared DesignTable
   onReject?: (design: DesignItem) => void;
   isRejecting?: boolean;
-  onFindDie?: (design: DesignItem) => void;
+  onFindDie?: (design: DesignItem, dimensions: string) => void;
 
   // New props for split orders
   hasActiveFilters: boolean;

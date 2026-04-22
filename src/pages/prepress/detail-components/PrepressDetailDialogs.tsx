@@ -138,7 +138,6 @@ interface PrepressDetailDialogsProps {
   // Die list
   isDieListDialogOpen: boolean;
   setIsDieListDialogOpen: (val: boolean) => void;
-  dieListInitialDesignCode?: string;
   dieListInitialSize?: string;
   // Related dies
   isRelatedDiesDialogOpen: boolean;
@@ -240,7 +239,6 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
     isAssigningDie,
     isDieListDialogOpen,
     setIsDieListDialogOpen,
-    dieListInitialDesignCode,
     dieListInitialSize,
     isRelatedDiesDialogOpen,
     setIsRelatedDiesDialogOpen,
@@ -1059,7 +1057,6 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
       <DieListDialog
         open={isDieListDialogOpen}
         onOpenChange={setIsDieListDialogOpen}
-        initialDesignCode={dieListInitialDesignCode}
         initialSize={dieListInitialSize}
       />
 

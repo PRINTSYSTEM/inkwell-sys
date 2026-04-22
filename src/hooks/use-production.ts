@@ -53,6 +53,21 @@ export const useProductionOrder = (id: number | null, enabled = true) =>
   useProductionOrderDetailBase(id, enabled);
 
 export const useCreateProductionOrder = () => useCreateProductionOrderBase();
+export const useProductionOrdersByOrder = (
+  orderId: number | null,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["production-orders", "by-order", orderId],
+    enabled: enabled && !!orderId,
+    queryFn: async () => {
+      const res = await apiRequest.get<ProductionOrderResponse[]>(
+        API_SUFFIX.PRODUCTION_ORDERS_BY_ORDER(orderId as number)
+      );
+      return res.data;
+    },
+  });
+};
 
 // PUT /api/production-orders/steps/:stepId/status - Update production step status
 export const useUpdateProductionStep = () => {
