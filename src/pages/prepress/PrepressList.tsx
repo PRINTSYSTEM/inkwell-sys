@@ -408,8 +408,6 @@ export default function PrepressList() {
     return found?.name || null;
   }, [currentMaterialTypeId, materialTypeOptions]);
 
-
-
   const parsedCustomPaperSize = useMemo(() => {
     if (!customPaperSize || paperSizeId !== "custom") return null;
     const trimmed = customPaperSize.trim();
@@ -499,7 +497,6 @@ export default function PrepressList() {
         });
         return;
       }
-
 
       // 1. Create proofing order first
       const result = await createProofingOrder({} as any);

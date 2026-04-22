@@ -798,7 +798,9 @@ export default function OrderDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            {(role === ROLE.SALE || role === ROLE.ADMIN || role === ROLE.MANAGER) && (
+            {(role === ROLE.SALE ||
+              role === ROLE.ADMIN ||
+              role === ROLE.MANAGER) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -1177,48 +1179,58 @@ export default function OrderDetailPage() {
                                   </p>
                                 )}
                               </div>
-                              {design?.laminationType && (
-                                <div>
-                                  <p className="text-muted-foreground text-xs">
-                                    Cán màng
-                                  </p>
-                                  <p className="font-medium">
-                                    {laminationTypeLabels[
-                                      design.laminationType
-                                    ] ||
-                                      design.laminationType ||
-                                      "—"}
-                                  </p>
-                                </div>
-                              )}
-                              {design?.sidesClassification && (
-                                <div>
-                                  <p className="text-muted-foreground text-xs">
-                                    Mặt in
-                                  </p>
-                                  <p className="font-medium">
-                                    {sidesClassificationLabels[
-                                      design.sidesClassification
-                                    ] ||
-                                      design.sidesClassification ||
-                                      "—"}
-                                  </p>
-                                </div>
-                              )}
-                              {design?.processClassification && (
-                                <div>
-                                  <p className="text-muted-foreground text-xs">
-                                    Quy cách sản xuất
-                                  </p>
-                                  <p className="font-medium">
-                                    {processClassificationLabels[
-                                      design.processClassification
-                                    ] ||
-                                      design.processClassification ||
-                                      "—"}
-                                  </p>
-                                </div>
-                              )}
+                              {(() => {
+                                const specs = design?.specification || (design as any)?.specifications;
+                                const hasSpecs = (Array.isArray(specs) && specs.length > 0) || (typeof specs === "string" && specs.trim().length > 0);
+                                
+                                if (hasSpecs) {
+                                  return (
+                                    <div className="col-span-2">
+                                      <p className="text-muted-foreground text-xs">
+                                        Quy cách đầy đủ
+                                      </p>
+                                      <p className="font-medium text-amber-600">
+                                        {Array.isArray(specs) ? specs.join(", ") : specs}
+                                      </p>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <>
+                                    {design?.laminationType && (
+                                      <div>
+                                        <p className="text-muted-foreground text-xs">
+                                          Cán màng
+                                        </p>
+                                        <p className="font-medium">
+                                          {laminationTypeLabels[design.laminationType] || design.laminationType || "—"}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {design?.sidesClassification && (
+                                      <div>
+                                        <p className="text-muted-foreground text-xs">
+                                          Mặt in
+                                        </p>
+                                        <p className="font-medium">
+                                          {sidesClassificationLabels[design.sidesClassification] || design.sidesClassification || "—"}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {design?.processClassification && (
+                                      <div>
+                                        <p className="text-muted-foreground text-xs">
+                                          Quy cách sản xuất
+                                        </p>
+                                        <p className="font-medium">
+                                          {processClassificationLabels[design.processClassification] || design.processClassification || "—"}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
                               {design?.adhesiveOffset != null &&
                                 typeof design.adhesiveOffset === "number" &&
                                 design.adhesiveOffset > 0 && (
@@ -1402,7 +1414,7 @@ export default function OrderDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Package className="w-4 h-4 text-primary" />
-                mã bài
+                Mã bài
                 {relatedProofing.length > 0 && (
                   <Badge variant="secondary" className="ml-1">
                     {relatedProofing.length}

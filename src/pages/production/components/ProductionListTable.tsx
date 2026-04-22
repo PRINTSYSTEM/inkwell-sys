@@ -34,7 +34,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { productionStepStatusLabels, laminationTypeLabels } from "@/lib/status-utils";
+import {
+  productionStepStatusLabels,
+  laminationTypeLabels,
+} from "@/lib/status-utils";
 import type {
   ProductionOrderResponse,
   ProductionStepResponse,
@@ -159,13 +162,15 @@ function ProductionTableRow({
     }
   }, [isDraft, prod.proofingOrderId, onStartProduction]);
 
-  const { data: proofingOrderData, isLoading: isProofingLoading } = useProofingOrder(
-    prod.proofingOrderId || null,
-    !!prod.proofingOrderId && !prod.proofingOrder,
-  );
+  const { data: proofingOrderData, isLoading: isProofingLoading } =
+    useProofingOrder(
+      prod.proofingOrderId || null,
+      !!prod.proofingOrderId && !prod.proofingOrder,
+    );
   const proofingOrder = (prod.proofingOrder || proofingOrderData) as any;
 
-  const { data: detailedProd, isLoading: isProdDetailLoading } = useProductionOrder(prod.id || null, !isDraft);
+  const { data: detailedProd, isLoading: isProdDetailLoading } =
+    useProductionOrder(prod.id || null, !isDraft);
   const productionItems =
     (detailedProd as any)?.items || (prod as any).items || [];
 
@@ -226,15 +231,19 @@ function ProductionTableRow({
   // Aggregate lamination info from order and all designs
   const laminationInfo = React.useMemo(() => {
     if (!proofingOrder) return null;
-    
+
     const lams = new Set<string>();
-    
+
     // 1. From order level
-    if (proofingOrder.laminationTypeName) lams.add(proofingOrder.laminationTypeName);
+    if (proofingOrder.laminationTypeName)
+      lams.add(proofingOrder.laminationTypeName);
     else if (proofingOrder.laminationType) {
-      lams.add(laminationTypeLabels[proofingOrder.laminationType] || proofingOrder.laminationType);
+      lams.add(
+        laminationTypeLabels[proofingOrder.laminationType] ||
+          proofingOrder.laminationType,
+      );
     }
-    
+
     // 2. From designs
     proofingOrder.proofingOrderDesigns?.forEach((pod: any) => {
       const designLam = pod.design?.laminationType;
@@ -649,7 +658,11 @@ function ProductionTableRow({
       >
         <div className="flex flex-col items-center gap-1.5">
           {step && (
-            <StepItem step={step} isCheckStep={isCheckStep} isEnabled={isEnabled} />
+            <StepItem
+              step={step}
+              isCheckStep={isCheckStep}
+              isEnabled={isEnabled}
+            />
           )}
           {info && <div className="w-full text-center">{info}</div>}
         </div>
@@ -680,507 +693,519 @@ function ProductionTableRow({
         className={`cursor-pointer hover:bg-muted/50 border-b ${isDraft ? "bg-blue-50/20 dark:bg-blue-900/10" : ""}`}
         onClick={() => !isDraft && onProductionClick(prod.id!)}
       >
-      <TableCell className="py-3 align-top font-bold text-base text-primary bg-muted/20 border-r border-border/50 text-center w-[150px]">
-        {isProofingLoading ? (
-          <div className="flex justify-center mt-2">
-            <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
-          </div>
-        ) : proofingOrder ? (
-          <div className="flex flex-col items-center justify-center mt-2 gap-1 px-1">
-            <span className="whitespace-nowrap">
-              {(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}
-            </span>
-            {prod.customerName && (
-              <span className="text-sm font-bold text-slate-700 dark:text-slate-300 whitespace-normal break-words text-center leading-tight line-clamp-3">
-                {prod.customerName}
+        <TableCell className="py-3 align-top font-bold text-base text-primary bg-muted/20 border-r border-border/50 text-center w-[150px]">
+          {isProofingLoading ? (
+            <div className="flex justify-center mt-2">
+              <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
+            </div>
+          ) : proofingOrder ? (
+            <div className="flex flex-col items-center justify-center mt-2 gap-1 px-1">
+              <span className="whitespace-nowrap">
+                {(proofingOrder as any).code ||
+                  `BB${(proofingOrder as any).id}`}
               </span>
-            )}
-            {/* Nút hủy lệnh SX */}
-            {!isDraft && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCancelDialog(true);
-                }}
-                className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 border border-red-200 hover:border-red-300 rounded-md px-2 py-1 transition-all duration-150 w-full justify-center"
-              >
-                <XCircle className="w-3 h-3 flex-shrink-0" />
-                Hủy lệnh SX
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex justify-center mt-2 text-muted-foreground font-normal">
-            —
-          </div>
-        )}
-      </TableCell>
-      <TableCell className="py-3 align-top min-w-[300px]">
-        {isProofingLoading ? (
-          <div className="space-y-4 animate-pulse">
-            <div className="h-4 bg-muted rounded w-3/4"></div>
-            <div className="h-4 bg-muted rounded w-1/2"></div>
-            <div className="h-4 bg-muted rounded w-5/6"></div>
-          </div>
-        ) : proofingOrder ? (
-          <div className="flex flex-col gap-2.5 text-sm">
-            {/* 1. Header & General Info */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-start">
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* Trạng thái công đoạn In nằm ở cột riêng */}
-                </div>
-                {/* <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full font-semibold border text-muted-foreground">
-                  {String(prod.code || `PROD-${prod.id}`)}
-                </span> */}
-              </div>
-              <div className="grid grid-cols-[90px_1fr] gap-x-2 gap-y-1 text-xs">
-                <span className="text-muted-foreground font-medium">
-                  Chất liệu:
+              {prod.customerName && (
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300 whitespace-normal break-words text-center leading-tight line-clamp-3">
+                  {prod.customerName}
                 </span>
-                <span className="font-semibold text-foreground truncate">
-                  {proofingOrder?.materialType?.name || "—"}
-                </span>
-
-                <span className="text-muted-foreground font-medium">
-                  Số lượng in:
-                </span>
-                <span className="font-bold text-blue-600">
-                  {String(
-                    proofingOrder?.totalProcessedQty ||
-                      proofingOrder?.totalQuantity ||
-                      "0",
-                  )}{" "}
-                  tờ
-                </span>
-              </div>
-
-              {isDraft && (
-                <div className="mt-3 flex items-center gap-2 text-[10px] text-blue-600 font-bold animate-pulse">
-                  <PlayCircle className="w-3.5 h-3.5" />
-                  ĐANG KHỞI TẠO LỆNH...
-                </div>
+              )}
+              {/* Nút hủy lệnh SX */}
+              {!isDraft && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCancelDialog(true);
+                  }}
+                  className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 border border-red-200 hover:border-red-300 rounded-md px-2 py-1 transition-all duration-150 w-full justify-center"
+                >
+                  <XCircle className="w-3 h-3 flex-shrink-0" />
+                  Hủy lệnh SX
+                </button>
               )}
             </div>
-
-            {/* 2. Thiết kế */}
-            {(proofingOrder as any).proofingOrderDesigns &&
-              (proofingOrder as any).proofingOrderDesigns.length > 0 && (
-                <div className="space-y-1.5">
-                  <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
-                    <Layers className="w-3.5 h-3.5" /> Thiết kế (
-                    {(proofingOrder as any).proofingOrderDesigns.length})
-                  </span>
-                  <div className="space-y-2">
-                    {(proofingOrder as any).proofingOrderDesigns.map(
-                      (pod: any) => (
-                        <div
-                          key={pod.id}
-                          className="bg-muted/20 p-2.5 rounded-md text-xs"
-                        >
-                          <p className="font-bold text-[13px] text-foreground mb-2">
-                            {pod.design?.designName || pod.design?.code || "—"}
-                          </p>
-                          <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-xs">
-                            <span className="text-muted-foreground font-medium">
-                              Số lượng:
-                            </span>
-                            <span className="font-bold text-foreground text-amber-700">
-                              {pod.quantity} sản phẩm
-                            </span>
-
-                            <span className="text-muted-foreground font-medium">
-                              Mã thiết kế:
-                            </span>
-                            <span className="font-bold text-foreground">
-                              {pod.design?.code || "—"}
-                            </span>
-
-                            <span className="text-muted-foreground font-medium">
-                              Kích thước:
-                            </span>
-                            <span className="font-bold text-foreground break-all">
-                              {pod.design?.dimensions
-                                ? String(pod.design.dimensions)
-                                : "—"}
-                            </span>
-                          </div>
-                        </div>
-                      ),
-                    )}
+          ) : (
+            <div className="flex justify-center mt-2 text-muted-foreground font-normal">
+              —
+            </div>
+          )}
+        </TableCell>
+        <TableCell className="py-3 align-top min-w-[300px]">
+          {isProofingLoading ? (
+            <div className="space-y-4 animate-pulse">
+              <div className="h-4 bg-muted rounded w-3/4"></div>
+              <div className="h-4 bg-muted rounded w-1/2"></div>
+              <div className="h-4 bg-muted rounded w-5/6"></div>
+            </div>
+          ) : proofingOrder ? (
+            <div className="flex flex-col gap-2.5 text-sm">
+              {/* 1. Header & General Info */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Trạng thái công đoạn In nằm ở cột riêng */}
                   </div>
+                  {/* <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full font-semibold border text-muted-foreground">
+                  {String(prod.code || `PROD-${prod.id}`)}
+                </span> */}
                 </div>
-              )}
+                <div className="grid grid-cols-[90px_1fr] gap-x-2 gap-y-1 text-xs">
+                  <span className="text-muted-foreground font-medium">
+                    Chất liệu:
+                  </span>
+                  <span className="font-semibold text-foreground truncate">
+                    {proofingOrder?.materialType?.name || "—"}
+                  </span>
 
-            {/* 3. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
-            <div className="flex flex-row gap-2 mt-1">
-              {((proofingOrder as any).dieExports?.length > 0 ||
-                (proofingOrder as any).proofingOrderDies?.length > 0) && (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Popover
-                    open={openDiePopover}
-                    onOpenChange={setOpenDiePopover}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5 border-dashed border-slate-300 hover:border-slate-400 dark:border-slate-700 bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-900/50"
-                        onMouseEnter={() => setOpenDiePopover(true)}
-                        onMouseLeave={() => setOpenDiePopover(false)}
-                      >
-                        <Box className="w-3.5 h-3.5 text-slate-500" />
-                        Thông tin khuôn bế
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      side="top"
-                      className="w-80 p-0 shadow-lg"
-                      onMouseEnter={() => setOpenDiePopover(true)}
-                      onMouseLeave={() => setOpenDiePopover(false)}
-                    >
-                      <div className="p-3 bg-slate-50/80 dark:bg-slate-900/80 border-b border-border/50">
-                        <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
-                          <Box className="w-3.5 h-3.5" /> Thông tin khuôn bế
-                        </span>
-                      </div>
-                      <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
-                        {(
-                          (proofingOrder as any).dieExports ||
-                          (proofingOrder as any).proofingOrderDies ||
-                          []
-                        ).map((dieExport: any, i: number) => (
+                  <span className="text-muted-foreground font-medium">
+                    Số lượng in:
+                  </span>
+                  <span className="font-bold text-blue-600">
+                    {String(
+                      proofingOrder?.totalProcessedQty ||
+                        proofingOrder?.totalQuantity ||
+                        "0",
+                    )}{" "}
+                    tờ
+                  </span>
+                </div>
+
+                {isDraft && (
+                  <div className="mt-3 flex items-center gap-2 text-[10px] text-blue-600 font-bold animate-pulse">
+                    <PlayCircle className="w-3.5 h-3.5" />
+                    ĐANG KHỞI TẠO LỆNH...
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Thiết kế */}
+              {(proofingOrder as any).proofingOrderDesigns &&
+                (proofingOrder as any).proofingOrderDesigns.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
+                      <Layers className="w-3.5 h-3.5" /> Thiết kế (
+                      {(proofingOrder as any).proofingOrderDesigns.length})
+                    </span>
+                    <div className="space-y-2">
+                      {(proofingOrder as any).proofingOrderDesigns.map(
+                        (pod: any) => (
                           <div
-                            key={dieExport.id || i}
-                            className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2"
+                            key={pod.id}
+                            className="bg-muted/20 p-2.5 rounded-md text-xs"
                           >
-                            <div className="flex flex-col">
-                              <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                Mã số khuôn
+                            <p className="font-bold text-[13px] text-foreground mb-2">
+                              {pod.design?.designName ||
+                                pod.design?.code ||
+                                "—"}
+                            </p>
+                            <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-xs">
+                              <span className="text-muted-foreground font-medium">
+                                Số lượng:
+                              </span>
+                              <span className="font-bold text-foreground text-amber-700">
+                                {pod.quantity} sản phẩm
+                              </span>
+
+                              <span className="text-muted-foreground font-medium">
+                                Mã thiết kế:
                               </span>
                               <span className="font-bold text-foreground">
-                                {dieExport.die?.code || "—"}
+                                {pod.design?.code || "—"}
                               </span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                Kích thước
+
+                              <span className="text-muted-foreground font-medium">
+                                Kích thước:
                               </span>
-                              <span className="font-semibold text-foreground">
-                                {dieExport.die
-                                  ? dieExport.die.length && dieExport.die.width
-                                    ? `${dieExport.die.length}x${dieExport.die.width}`
-                                    : "—"
+                              <span className="font-bold text-foreground break-all">
+                                {pod.design?.dimensions
+                                  ? String(pod.design.dimensions)
                                   : "—"}
                               </span>
                             </div>
-                            <div className="flex flex-col">
-                              <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                Tình trạng khuôn
-                              </span>
-                              <span className="font-semibold text-green-600">
-                                {dieExport.die?.location || "Có thể sử dụng"}
-                              </span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                Ngày xuất khuôn
-                              </span>
-                              <span className="font-semibold text-foreground">
-                                {formatDate(dieExport.createdAt)}
-                              </span>
-                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
+                        ),
+                      )}
+                    </div>
+                  </div>
+                )}
 
-              {(proofingOrder as any).plateExport && (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Popover
-                    open={openPlatePopover}
-                    onOpenChange={setOpenPlatePopover}
-                  >
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5 border-dashed border-slate-300 hover:border-slate-400 dark:border-slate-700 bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-900/50"
-                        onMouseEnter={() => setOpenPlatePopover(true)}
-                        onMouseLeave={() => setOpenPlatePopover(false)}
-                      >
-                        <FileText className="w-3.5 h-3.5 text-slate-500" />
-                        Thông tin kẽm
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      side="top"
-                      className="w-80 p-0 shadow-lg"
-                      onMouseEnter={() => setOpenPlatePopover(true)}
-                      onMouseLeave={() => setOpenPlatePopover(false)}
+              {/* 3. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
+              <div className="flex flex-row gap-2 mt-1">
+                {((proofingOrder as any).dieExports?.length > 0 ||
+                  (proofingOrder as any).proofingOrderDies?.length > 0) && (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Popover
+                      open={openDiePopover}
+                      onOpenChange={setOpenDiePopover}
                     >
-                      <div className="p-3 bg-slate-50/80 dark:bg-slate-900/80 border-b border-border/50">
-                        <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
-                          <FileText className="w-3.5 h-3.5" /> Thông tin kẽm
-                        </span>
-                      </div>
-                      <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
-                        {[(proofingOrder as any).plateExport]
-                          .filter(Boolean)
-                          .map((plateExport: any, i: number) => (
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 border-dashed border-slate-300 hover:border-slate-400 dark:border-slate-700 bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-900/50"
+                          onMouseEnter={() => setOpenDiePopover(true)}
+                          onMouseLeave={() => setOpenDiePopover(false)}
+                        >
+                          <Box className="w-3.5 h-3.5 text-slate-500" />
+                          Thông tin khuôn bế
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        side="top"
+                        className="w-80 p-0 shadow-lg"
+                        onMouseEnter={() => setOpenDiePopover(true)}
+                        onMouseLeave={() => setOpenDiePopover(false)}
+                      >
+                        <div className="p-3 bg-slate-50/80 dark:bg-slate-900/80 border-b border-border/50">
+                          <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
+                            <Box className="w-3.5 h-3.5" /> Thông tin khuôn bế
+                          </span>
+                        </div>
+                        <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
+                          {(
+                            (proofingOrder as any).dieExports ||
+                            (proofingOrder as any).proofingOrderDies ||
+                            []
+                          ).map((dieExport: any, i: number) => (
                             <div
-                              key={plateExport.id || i}
+                              key={dieExport.id || i}
                               className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2"
                             >
-                              <div className="flex flex-col col-span-2">
+                              <div className="flex flex-col">
                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Mã số kẽm
+                                  Mã số khuôn
                                 </span>
                                 <span className="font-bold text-foreground">
-                                  {plateExport.id ? `ZK${plateExport.id}` : "—"}
+                                  {dieExport.die?.code || "—"}
                                 </span>
                               </div>
-
                               <div className="flex flex-col">
                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Chất liệu (NCC)
+                                  Kích thước
                                 </span>
                                 <span className="font-semibold text-foreground">
-                                  {plateExport.vendorName ||
-                                    plateExport.plateVendor?.name ||
-                                    "Tâm An"}
+                                  {dieExport.die
+                                    ? dieExport.die.length &&
+                                      dieExport.die.width
+                                      ? `${dieExport.die.length}x${dieExport.die.width}`
+                                      : "—"
+                                    : "—"}
                                 </span>
                               </div>
-
                               <div className="flex flex-col">
                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Số lượng / Độ dày
+                                  Tình trạng khuôn
                                 </span>
-                                <span className="font-bold text-amber-700">
-                                  {plateExport.plateCount || "—"} bản
+                                <span className="font-semibold text-green-600">
+                                  {dieExport.die?.location || "Có thể sử dụng"}
                                 </span>
                               </div>
-
                               <div className="flex flex-col">
                                 <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Ngày xuất kẽm
+                                  Ngày xuất khuôn
                                 </span>
                                 <span className="font-semibold text-foreground">
-                                  {formatDate(
-                                    plateExport.createdAt ||
-                                      plateExport.exportedAt,
-                                  )}
-                                </span>
-                              </div>
-
-                              <div className="flex flex-col">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Tình trạng kẽm
-                                </span>
-                                <span className="font-semibold text-blue-600">
-                                  Đã nhận
-                                </span>
-                              </div>
-
-                              <div className="flex flex-col col-span-2 pt-1">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Ghi chú
-                                </span>
-                                <span className="font-semibold italic text-muted-foreground">
-                                  {plateExport.notes || "—"}
+                                  {formatDate(dieExport.createdAt)}
                                 </span>
                               </div>
                             </div>
                           ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="text-sm font-medium text-muted-foreground flex flex-col items-center justify-center p-4 bg-muted/20 border-2 border-dashed rounded-lg">
-            <Package className="w-6 h-6 mb-2 opacity-50" />
-            Không có thông tin bình bài đính kèm
-          </div>
-        )}
-      </TableCell>
-      <StepCell step={materialExportStep} isEnabled={isMaterialExportEnabled} />
-      <StepCell step={printStep} isEnabled={isPrintEnabled} />
-      <StepCell
-        step={laminationStep}
-        isEnabled={isLaminationEnabled}
-        info={
-          laminationInfo && (
-            <div className="text-[10px] font-bold text-primary border border-primary/20 px-1.5 py-0.5 rounded bg-primary/5 italic uppercase leading-tight shadow-sm inline-block">
-              {laminationInfo}
-            </div>
-          )
-        }
-      />
-      <StepCell step={dieCutStep} isEnabled={isDieCutEnabled} />
-      <StepCell step={cutStep} isEnabled={isCutEnabled} />
-      <StepCell step={glueStep} isEnabled={isGlueEnabled} />
-      <TableCell
-        className="align-top py-3 px-1.5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex flex-col gap-2">
-          {isProofingLoading || isProdDetailLoading ? (
-            <div className="flex justify-center p-2">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          ) : proofingOrder?.proofingOrderDesigns &&
-            proofingOrder.proofingOrderDesigns.length > 0 ? (
-            <>
-              {/* Universal Status for Packaging column */}
-              {(packagingStep ||
-                steps.find((s) => s.stepType === "packaging")) && (
-                <div className="pb-2 border-b border-dashed mb-1">
-                  <InlineStepStatus
-                    step={
-                      (packagingStep ||
-                        steps.find((s) => s.stepType === "packaging"))!
-                    }
-                    isEnabled={isPackagingEnabled}
-                  />
-                </div>
-              )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
 
-              <div className="flex flex-col gap-2 divide-y divide-dashed">
-                {proofingOrder.proofingOrderDesigns
-                  .map((pod: any) => {
-                    const matchingStep =
-                      steps.find((s) => {
-                        const isPackaging =
-                          s.stepType === "packaging" ||
-                          (s.stepTypeName &&
-                            ["đóng gói", "giao hàng"].some((k) =>
-                              s.stepTypeName!.toLowerCase().includes(k),
-                            ));
-                        if (!isPackaging) return false;
-                        const name = s.stepTypeName?.toLowerCase() || "";
-                        const designCode =
-                          pod.design?.code?.toLowerCase() || "";
-                        const designName =
-                          pod.design?.designName?.toLowerCase() || "";
-                        return (
-                          (designCode && name.includes(designCode)) ||
-                          (designName && name.includes(designName))
-                        );
-                      }) || packagingStep;
+                {(proofingOrder as any).plateExport && (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Popover
+                      open={openPlatePopover}
+                      onOpenChange={setOpenPlatePopover}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 border-dashed border-slate-300 hover:border-slate-400 dark:border-slate-700 bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-900/50"
+                          onMouseEnter={() => setOpenPlatePopover(true)}
+                          onMouseLeave={() => setOpenPlatePopover(false)}
+                        >
+                          <FileText className="w-3.5 h-3.5 text-slate-500" />
+                          Thông tin kẽm
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        side="top"
+                        className="w-80 p-0 shadow-lg"
+                        onMouseEnter={() => setOpenPlatePopover(true)}
+                        onMouseLeave={() => setOpenPlatePopover(false)}
+                      >
+                        <div className="p-3 bg-slate-50/80 dark:bg-slate-900/80 border-b border-border/50">
+                          <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
+                            <FileText className="w-3.5 h-3.5" /> Thông tin kẽm
+                          </span>
+                        </div>
+                        <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
+                          {[(proofingOrder as any).plateExport]
+                            .filter(Boolean)
+                            .map((plateExport: any, i: number) => (
+                              <div
+                                key={plateExport.id || i}
+                                className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2"
+                              >
+                                <div className="flex flex-col col-span-2">
+                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                    Mã số kẽm
+                                  </span>
+                                  <span className="font-bold text-foreground">
+                                    {plateExport.id
+                                      ? `ZK${plateExport.id}`
+                                      : "—"}
+                                  </span>
+                                </div>
 
-                    if (!matchingStep) return null;
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                    Chất liệu (NCC)
+                                  </span>
+                                  <span className="font-semibold text-foreground">
+                                    {plateExport.vendorName ||
+                                      plateExport.plateVendor?.name ||
+                                      "Tâm An"}
+                                  </span>
+                                </div>
 
-                    const prodItem = productionItems.find(
-                      (i: any) =>
-                        i.proofingOrderDesignId === pod.id ||
-                        i.designId === pod.designId ||
-                        i.id === pod.id,
-                    );
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                    Số lượng / Độ dày
+                                  </span>
+                                  <span className="font-bold text-amber-700">
+                                    {plateExport.plateCount || "—"} bản
+                                  </span>
+                                </div>
 
-                    return (
-                      <StepItem
-                        key={`${pod.id}-${matchingStep.id}`}
-                        step={matchingStep}
-                        isCheckStep={true}
-                        isEnabled={isPackagingEnabled}
-                        showName={true}
-                        label={pod.design?.designName || pod.design?.code}
-                        hideStatus={true}
-                        isPackagingItem={true}
-                        productionItemId={prodItem ? prodItem.id : null}
-                        productionOrderId={prod.id}
-                        initialOutputQtyOverride={
-                          prodItem?.outputQty != null
-                            ? prodItem.outputQty
-                            : prodItem?.producedQty != null
-                              ? prodItem.producedQty
-                              : null
-                        }
-                        initialDefectQtyOverride={
-                          prodItem?.defectQty != null
-                            ? prodItem.defectQty
-                            : null
-                        }
-                      />
-                    );
-                  })
-                  .filter(Boolean)}
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                    Ngày xuất kẽm
+                                  </span>
+                                  <span className="font-semibold text-foreground">
+                                    {formatDate(
+                                      plateExport.createdAt ||
+                                        plateExport.exportedAt,
+                                    )}
+                                  </span>
+                                </div>
+
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                    Tình trạng kẽm
+                                  </span>
+                                  <span className="font-semibold text-blue-600">
+                                    Đã nhận
+                                  </span>
+                                </div>
+
+                                <div className="flex flex-col col-span-2 pt-1">
+                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                                    Ghi chú
+                                  </span>
+                                  <span className="font-semibold italic text-muted-foreground">
+                                    {plateExport.notes || "—"}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </div>
-            </>
-          ) : packagingSteps.length > 0 ? (
-            <div className="flex flex-col gap-2 divide-y divide-dashed">
-              {packagingSteps.map((step) => (
-                <StepItem
-                  key={step.id}
-                  step={step}
-                  isCheckStep={true}
-                  isEnabled={isPackagingEnabled}
-                  showName={packagingSteps.length > 1}
-                />
-              ))}
             </div>
           ) : (
-            <div className="text-center py-3 bg-primary/[0.08] dark:bg-primary/[0.15] text-primary/40 font-black text-lg italic border-r border-border/40">
-              —
+            <div className="text-sm font-medium text-muted-foreground flex flex-col items-center justify-center p-4 bg-muted/20 border-2 border-dashed rounded-lg">
+              <Package className="w-6 h-6 mb-2 opacity-50" />
+              Không có thông tin bình bài đính kèm
             </div>
           )}
-        </div>
-      </TableCell>
-    </TableRow>
+        </TableCell>
+        <StepCell
+          step={materialExportStep}
+          isEnabled={isMaterialExportEnabled}
+        />
+        <StepCell step={printStep} isEnabled={isPrintEnabled} />
+        <StepCell
+          step={laminationStep}
+          isEnabled={isLaminationEnabled}
+          info={
+            laminationInfo && (
+              <div className="text-[10px] font-bold text-primary border border-primary/20 px-1.5 py-0.5 rounded bg-primary/5 italic uppercase leading-tight shadow-sm inline-block">
+                {laminationInfo}
+              </div>
+            )
+          }
+        />
+        <StepCell step={dieCutStep} isEnabled={isDieCutEnabled} />
+        <StepCell step={cutStep} isEnabled={isCutEnabled} />
+        <StepCell step={glueStep} isEnabled={isGlueEnabled} />
+        <TableCell
+          className="align-top py-3 px-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex flex-col gap-2">
+            {isProofingLoading || isProdDetailLoading ? (
+              <div className="flex justify-center p-2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : proofingOrder?.proofingOrderDesigns &&
+              proofingOrder.proofingOrderDesigns.length > 0 ? (
+              <>
+                {/* Universal Status for Packaging column */}
+                {(packagingStep ||
+                  steps.find((s) => s.stepType === "packaging")) && (
+                  <div className="pb-2 border-b border-dashed mb-1">
+                    <InlineStepStatus
+                      step={
+                        (packagingStep ||
+                          steps.find((s) => s.stepType === "packaging"))!
+                      }
+                      isEnabled={isPackagingEnabled}
+                    />
+                  </div>
+                )}
 
-    {/* Dialog xác nhận hủy lệnh sản xuất */}
-    <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-      <DialogContent
-        className="max-w-sm"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <AlertTriangle className="w-5 h-5" />
-            Hủy lệnh sản xuất
-          </DialogTitle>
-          <DialogDescription className="text-sm text-slate-600 dark:text-slate-400 pt-1">
-            Bạn có chắc muốn hủy lệnh sản xuất{" "}
-            <span className="font-bold text-foreground">
-              {(proofingOrder as any)?.code || `BB${(proofingOrder as any)?.id}` || "này"}
-            </span>?
-            <br />
-            <span className="text-red-500 font-medium text-xs mt-1 block">
-              Hành động này không thể hoàn tác.
-            </span>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCancelDialog(false)}
-            className="flex-1"
-          >
-            Quay lại
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="flex-1 gap-1.5"
-            onClick={(e) => {
-              e.stopPropagation();
-              // TODO: gọi API hủy lệnh SX ở đây
-              setShowCancelDialog(false);
-            }}
-          >
-            <XCircle className="w-4 h-4" />
-            Xác nhận hủy
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+                <div className="flex flex-col gap-2 divide-y divide-dashed">
+                  {proofingOrder.proofingOrderDesigns
+                    .map((pod: any) => {
+                      const matchingStep =
+                        steps.find((s) => {
+                          const isPackaging =
+                            s.stepType === "packaging" ||
+                            (s.stepTypeName &&
+                              ["đóng gói", "giao hàng"].some((k) =>
+                                s.stepTypeName!.toLowerCase().includes(k),
+                              ));
+                          if (!isPackaging) return false;
+                          const name = s.stepTypeName?.toLowerCase() || "";
+                          const designCode =
+                            pod.design?.code?.toLowerCase() || "";
+                          const designName =
+                            pod.design?.designName?.toLowerCase() || "";
+                          return (
+                            (designCode && name.includes(designCode)) ||
+                            (designName && name.includes(designName))
+                          );
+                        }) || packagingStep;
+
+                      if (!matchingStep) return null;
+
+                      const prodItem = productionItems.find(
+                        (i: any) =>
+                          i.proofingOrderDesignId === pod.id ||
+                          i.designId === pod.designId ||
+                          i.id === pod.id,
+                      );
+
+                      return (
+                        <StepItem
+                          key={`${pod.id}-${matchingStep.id}`}
+                          step={matchingStep}
+                          isCheckStep={true}
+                          isEnabled={isPackagingEnabled}
+                          showName={true}
+                          label={pod.design?.designName || pod.design?.code}
+                          hideStatus={true}
+                          isPackagingItem={true}
+                          productionItemId={prodItem ? prodItem.id : null}
+                          productionOrderId={prod.id}
+                          initialOutputQtyOverride={
+                            prodItem?.outputQty != null
+                              ? prodItem.outputQty
+                              : prodItem?.producedQty != null
+                                ? prodItem.producedQty
+                                : null
+                          }
+                          initialDefectQtyOverride={
+                            prodItem?.defectQty != null
+                              ? prodItem.defectQty
+                              : null
+                          }
+                        />
+                      );
+                    })
+                    .filter(Boolean)}
+                </div>
+              </>
+            ) : packagingSteps.length > 0 ? (
+              <div className="flex flex-col gap-2 divide-y divide-dashed">
+                {packagingSteps.map((step) => (
+                  <StepItem
+                    key={step.id}
+                    step={step}
+                    isCheckStep={true}
+                    isEnabled={isPackagingEnabled}
+                    showName={packagingSteps.length > 1}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-3 bg-primary/[0.08] dark:bg-primary/[0.15] text-primary/40 font-black text-lg italic border-r border-border/40">
+                —
+              </div>
+            )}
+          </div>
+        </TableCell>
+      </TableRow>
+
+      {/* Dialog xác nhận hủy lệnh sản xuất */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent
+          className="max-w-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Hủy lệnh sản xuất
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400 pt-1">
+              Bạn có chắc muốn hủy lệnh sản xuất{" "}
+              <span className="font-bold text-foreground">
+                {(proofingOrder as any)?.code ||
+                  `BB${(proofingOrder as any)?.id}` ||
+                  "này"}
+              </span>
+              ?
+              <br />
+              <span className="text-red-500 font-medium text-xs mt-1 block">
+                Hành động này không thể hoàn tác.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCancelDialog(false)}
+              className="flex-1"
+            >
+              Quay lại
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={(e) => {
+                e.stopPropagation();
+                // TODO: gọi API hủy lệnh SX ở đây
+                setShowCancelDialog(false);
+              }}
+            >
+              <XCircle className="w-4 h-4" />
+              Xác nhận hủy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

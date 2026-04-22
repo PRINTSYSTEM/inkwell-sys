@@ -87,7 +87,7 @@ export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();
 
 // GET /proofing-orders/available-order-details
 export const useAvailableOrderDetailsForProofing = (
-  params?: ProofingOrderAvailableOrderDetailsParams
+  params?: ProofingOrderAvailableOrderDetailsParams,
 ) => {
   return useQuery({
     // Use specific value in queryKey instead of object to ensure proper refetch
@@ -106,7 +106,7 @@ export const useAvailableOrderDetailsForProofing = (
       // API returns OrderDetailResponsePaginate
       const res = await apiRequest.get<OrderDetailResponsePaginate>(
         API_SUFFIX.PROOFING_AVAILABLE_ORDER_DETAILS,
-        { params: normalizedParams }
+        { params: normalizedParams },
       );
 
       // Extract items from paginate response
@@ -156,6 +156,34 @@ export const useAvailableOrderDetailsForProofing = (
             designerName: design.designer?.fullName || undefined,
             // Note: accountant may not be in DesignResponse schema, but if it exists in API response, it will be mapped
             accountantName: (design as any).accountant?.fullName || undefined,
+            specification: (() => {
+              const rawSpec =
+                (od as any).specification ||
+                (design as any).specification ||
+                (od as any).specifications ||
+                (design as any).specifications;
+
+              if (Array.isArray(rawSpec)) {
+                return rawSpec.filter((s) => typeof s === "string" && s.trim());
+              }
+
+              if (typeof rawSpec === "string" && rawSpec.trim()) {
+                // Check if it's a JSON array string
+                if (rawSpec.trim().startsWith("[") && rawSpec.trim().endsWith("]")) {
+                  try {
+                    const parsed = JSON.parse(rawSpec);
+                    if (Array.isArray(parsed)) {
+                      return parsed.filter((s) => typeof s === "string" && s.trim());
+                    }
+                  } catch (e) {
+                    // Not valid JSON, treat as single string
+                  }
+                }
+                return [rawSpec.trim()];
+              }
+
+              return [];
+            })(),
           };
 
           return designItem;
@@ -208,8 +236,8 @@ export const useAvailableOrderDetailsForProofing = (
             1,
             Math.ceil(
               (res.data.total ?? designs.length) /
-                (res.data.size ?? params?.pageSize ?? 10)
-            )
+                (res.data.size ?? params?.pageSize ?? 10),
+            ),
           ),
         designs,
         designTypeOptions: Array.from(designTypeMap.values()),
@@ -224,7 +252,7 @@ export const useAvailableOrderDetailsForProofing = (
 
 // GET /proofing-orders/available-order-details/design-type-summary
 export const useProofingAvailableOrderDetailsDesignTypeSummary = (
-  enabled: boolean = true
+  enabled: boolean = true,
 ) => {
   return useQuery<DesignTypeCountResponse[]>({
     queryKey: [
@@ -235,7 +263,7 @@ export const useProofingAvailableOrderDetailsDesignTypeSummary = (
     enabled,
     queryFn: async () => {
       const res = await apiRequest.get<DesignTypeCountResponse[]>(
-        API_SUFFIX.PROOFING_DESIGN_TYPE_SUMMARY
+        API_SUFFIX.PROOFING_DESIGN_TYPE_SUMMARY,
       );
       return res.data;
     },
@@ -249,7 +277,7 @@ export { proofingCrudApi, proofingKeys };
 // GET /proofing-orders/by-order/{orderId}
 export const useProofingOrdersByOrder = (
   orderId: number | null,
-  enabled = true
+  enabled = true,
 ) => {
   return useQuery<ProofingOrderResponse[]>({
     queryKey: [proofingKeys.all[0], "by-order", orderId],
@@ -274,14 +302,14 @@ export const useProofingOrdersByOrder = (
 // GET /proofing-orders/for-production
 
 export const useProofingOrdersForProduction = (
-  params?: ProofingOrderForProductionListParams
+  params?: ProofingOrderForProductionListParams,
 ) => {
   return useQuery<ProofingOrderResponsePaginate>({
     queryKey: [proofingKeys.all[0], "for-production", params],
     queryFn: async () => {
       const res = await apiRequest.get<ProofingOrderResponsePaginate>(
         API_SUFFIX.PROOFING_FOR_PRODUCTION,
-        { params }
+        { params },
       );
       return res.data;
     },
@@ -309,7 +337,7 @@ export const useUploadProofingFile = () => {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return res.data;
   });
@@ -362,7 +390,7 @@ export const useUploadProofingImage = () => {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return res.data;
   });
@@ -416,7 +444,7 @@ export const useUpdateProofingFile = () => {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return res.data;
   });
@@ -470,7 +498,7 @@ export const useUpdateProofingImage = () => {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return res.data;
   });
@@ -513,7 +541,7 @@ export const useDownloadProofingFile = () => {
   >(async ({ proofingOrderId, filename }) => {
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.PROOFING_DOWNLOAD_FILE(proofingOrderId),
-      { responseType: "arraybuffer" }
+      { responseType: "arraybuffer" },
     );
 
     const blob = new Blob([res.data]);
@@ -558,7 +586,7 @@ export const useCompleteProofingOrder = () => {
     [number]
   >(async (id: number) => {
     const res = await apiRequest.put<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_COMPLETE(id)
+      API_SUFFIX.PROOFING_COMPLETE(id),
     );
     return res.data;
   });
@@ -663,7 +691,7 @@ export const useCreatePaperSize = () => {
   >(async (payload) => {
     const res = await apiRequest.post<PaperSizeResponse>(
       API_SUFFIX.PAPER_SIZES,
-      payload
+      payload,
     );
     return PaperSizeResponseSchema.parse(res.data);
   });
@@ -711,7 +739,7 @@ export const useRecordPlateExport = () => {
     }) => {
       const response = await apiRequest.post(
         API_SUFFIX.PROOFING_RECORD_PLATE(id),
-        request
+        request,
       );
 
       // Sử dụng safeParse để tránh throw error khi validation fail
@@ -723,7 +751,7 @@ export const useRecordPlateExport = () => {
         // Log warning nhưng vẫn return response.data vì API đã trả về 200
         console.warn(
           "Schema validation failed for plate export response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
@@ -754,7 +782,7 @@ export const useUpdatePlateExport = () => {
   >(async ({ id, request }) => {
     const res = await apiRequest.put<PlateExportResponse>(
       API_SUFFIX.PLATE_EXPORT_UPDATE(id),
-      request
+      request,
     );
     return res.data;
   });
@@ -828,13 +856,13 @@ export const useRecordDieExportWithFile = () => {
         RecordDieExportRequestSchema.safeParse(requestPayload);
       if (!validationResult.success) {
         throw new Error(
-          `Invalid request payload: ${validationResult.error.message}`
+          `Invalid request payload: ${validationResult.error.message}`,
         );
       }
 
       const response = await apiRequest.post(
         API_SUFFIX.PROOFING_RECORD_DIE(id),
-        validationResult.data
+        validationResult.data,
       );
 
       // Validate response against schema
@@ -845,7 +873,7 @@ export const useRecordDieExportWithFile = () => {
         // Log warning nhưng vẫn return response.data vì API đã trả về 200
         console.warn(
           "Schema validation failed for die export response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
@@ -870,7 +898,7 @@ export const useHandToProduction = () => {
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest.put(
-        API_SUFFIX.PROOFING_HAND_TO_PRODUCTION(id)
+        API_SUFFIX.PROOFING_HAND_TO_PRODUCTION(id),
       );
 
       // Sử dụng safeParse để tránh throw error khi validation fail
@@ -881,7 +909,7 @@ export const useHandToProduction = () => {
         // Log warning nhưng vẫn return response.data vì API đã trả về 200
         console.warn(
           "Schema validation failed for hand to production response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
@@ -906,21 +934,21 @@ export const useHandToProduction = () => {
 
 export const useAvailableQuantity = (
   designId: number | null,
-  enabled: boolean = true
+  enabled: boolean = true,
 ) => {
   return useQuery({
     queryKey: [proofingKeys.all[0], "available-quantity", designId],
     enabled: enabled && !!designId,
     queryFn: async () => {
       const res = await apiRequest.get<unknown>(
-        API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId as number)
+        API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId as number),
       );
       // API response could be a number or an object with quantity field
       // Log for debugging
       console.log(
         "Available quantity API response:",
         res.data,
-        typeof res.data
+        typeof res.data,
       );
       return res.data;
     },
@@ -943,7 +971,7 @@ export const useAddDesignsToProofingOrder = () => {
     }) => {
       const response = await apiRequest.post<ProofingOrderResponse>(
         API_SUFFIX.PROOFING_ADD_DESIGNS(id),
-        request
+        request,
       );
 
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
@@ -952,7 +980,7 @@ export const useAddDesignsToProofingOrder = () => {
       } else {
         console.warn(
           "Schema validation failed for add designs response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
@@ -998,8 +1026,8 @@ export const useRemoveDesignFromProofingOrder = () => {
       const response = await apiRequest.delete<ProofingOrderResponse>(
         API_SUFFIX.PROOFING_REMOVE_DESIGN(
           proofingOrderId,
-          proofingOrderDesignId
-        )
+          proofingOrderDesignId,
+        ),
       );
 
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
@@ -1008,7 +1036,7 @@ export const useRemoveDesignFromProofingOrder = () => {
       } else {
         console.warn(
           "Schema validation failed for remove design response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
@@ -1079,7 +1107,7 @@ export const useCancelProofingOrder = () => {
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
       const response = await apiRequest.put<ProofingOrderResponse>(
         API_SUFFIX.PROOFING_CANCEL(id),
-        { reason }
+        { reason },
       );
       return response.data;
     },
