@@ -70,7 +70,7 @@ export function CustomerHeader({
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onEdit}>
               <Pencil className="h-4 w-4 mr-1.5" />
-              Sửa
+              Cập nhật thông tin
             </Button>
             {canViewFinancialInfo && (
               <>
@@ -79,7 +79,11 @@ export function CustomerHeader({
                   Xuất công nợ
                 </Button>
                 {onCreateCashReceipt && (
-                  <Button variant="outline" size="sm" onClick={onCreateCashReceipt}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onCreateCashReceipt}
+                  >
                     <Plus className="h-4 w-4 mr-1.5" />
                     Tạo phiếu thu
                   </Button>

@@ -42,6 +42,7 @@ const baseFormSchema = z.object({
   taxCode: z.string().optional(),
   address: z.string().optional(),
   type: z.enum(["retail", "company"]),
+  scrapRate: z.number().min(0, "Tỷ lệ bù hao không được âm").optional(),
 });
 
 // Helper function để thêm validation cho companyName khi type là company
@@ -61,7 +62,7 @@ const addCompanyNameValidation = <T extends z.ZodTypeAny>(schema: T) => {
     {
       message: "Tên công ty là bắt buộc khi chọn loại khách hàng là Công ty",
       path: ["companyName"], // Đặt lỗi vào field companyName
-    }
+    },
   );
 };
 
@@ -71,9 +72,9 @@ const basicFormSchema = addCompanyNameValidation(baseFormSchema);
 // Schema đầy đủ (có công nợ) - extend trước, refine sau
 const fullFormSchema = addCompanyNameValidation(
   baseFormSchema.extend({
-    currentDebt: z.number().min(0, "Công nợ không được âm"),
+    currentDebt: z.number(),
     maxDebt: z.number().min(0, "Hạn mức không được âm"),
-  })
+  }),
 );
 
 interface EditCustomerModalProps {
@@ -91,14 +92,11 @@ export function EditCustomerModal({
   const { user } = useAuth();
   const userRole = user?.role;
 
-  // Chỉ role accounting và admin mới edit được công nợ
-  const canEditDebt =
-    userRole === ROLE.ACCOUNTING ||
-    userRole === ROLE.ACCOUNTING_LEAD ||
-    userRole === ROLE.ADMIN;
+  // Cho phép tất cả các role chỉnh sửa công nợ
+  const canEditDebt = true;
 
   // Sử dụng schema phù hợp
-  const formSchema = canEditDebt ? fullFormSchema : basicFormSchema;
+  const formSchema = fullFormSchema;
   type FormValues = z.infer<typeof formSchema>;
 
   const defaultValues: Partial<FormValues> = {
@@ -112,10 +110,9 @@ export function EditCustomerModal({
     type: (customer.type === "retail" || customer.type === "company"
       ? customer.type
       : "retail") as "retail" | "company",
-    ...(canEditDebt && {
-      currentDebt: customer.currentDebt ?? 0,
-      maxDebt: customer.maxDebt ?? 0,
-    }),
+    scrapRate: customer.scrapRate ?? 0,
+    currentDebt: customer.currentDebt ?? 0,
+    maxDebt: customer.maxDebt ?? 0,
   };
 
   const form = useForm<FormValues>({
@@ -133,9 +130,14 @@ export function EditCustomerModal({
   }, [customerType, form]);
 
   const onSubmit = async (values: FormValues) => {
+    const data = {
+      ...values,
+      phone: values.phone?.trim() === "" ? null : values.phone,
+      email: values.email?.trim() === "" ? null : values.email,
+    };
     await updateCustomer.mutateAsync({
       id: customer.id,
-      data: values,
+      data: data as FormValues,
     });
     onOpenChange(false);
   };
@@ -294,54 +296,75 @@ export function EditCustomerModal({
               )}
             />
 
-            {/* Chỉ hiển thị trường công nợ nếu có quyền */}
-            {canEditDebt && (
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="currentDebt"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">
-                        Công nợ hiện tại
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                          className="h-9"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <FormField
+              control={form.control}
+              name="scrapRate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Tỷ lệ bù hao</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        className="h-9 flex-1"
+                      />
+                      <span className="text-sm font-medium text-muted-foreground shrink-0">
+                        ≈ {Math.round((Number(field.value) || 0) * 10000) / 100}%
+                      </span>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <FormField
-                  control={form.control}
-                  name="maxDebt"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Hạn mức công nợ</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                          className="h-9"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="currentDebt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">
+                      Công nợ hiện tại
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(Number(e.target.value))
+                        }
+                        className="h-9"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="maxDebt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs">Hạn mức công nợ</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(Number(e.target.value))
+                        }
+                        className="h-9"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex justify-end gap-2 pt-4">
               <Button
