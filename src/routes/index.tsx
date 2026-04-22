@@ -34,6 +34,7 @@ const DesignerDetailPage = lazy(
 const Orders = lazy(() => import("@/pages/orders/OrderList"));
 const OrderDetail = lazy(() => import("@/pages/orders/OrderDetail"));
 const CreateOrder = lazy(() => import("@/pages/orders/OrderCreate"));
+const OrderQuote = lazy(() => import("@/pages/orders/OrderQuote"));
 
 // Customers
 const Customers = lazy(() => import("@/pages/customers/CustomerList"));
@@ -748,6 +749,14 @@ export const router = createBrowserRouter([
           //     </Suspense>
           //   ),
           // },
+          {
+            path: ":id/quote",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <OrderQuote />
+              </Suspense>
+            ),
+          },
           {
             path: "cash-receipts",
             element: (

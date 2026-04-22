@@ -784,6 +784,16 @@ export default function OrderDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
+            {role === ROLE.SALE && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => navigate(`/orders/${order.id}/quote`)}
+              >
+                Báo giá
+              </Button>
+            )}
             {canExportExcel && (
               <Button
                 variant="outline"

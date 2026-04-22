@@ -100,6 +100,23 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
+  // ==== Sale (Bán hàng) ====
+  {
+    id: "sales",
+    title: "Sale",
+    icon: ShoppingCart,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
+    children: [
+      {
+        id: "sale-payments",
+        title: "Sale - Báo giá",
+        icon: CreditCard,
+        path: ROUTE_PATHS.ACCOUNTING.PAYMENT,
+        allowedRoles: [ROLE.SALE, ROLE.ADMIN, ROLE.MANAGER],
+      },
+    ],
+  },
+
   // ==== Khách hàng & Đơn hàng ====
   {
     id: "customer",
@@ -136,7 +153,7 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
-  // ==== Sản xuất ====
+  // ==== Bình bài ====
   {
     id: "proofing",
     title: "Bình bài",
@@ -308,6 +325,7 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.MANAGER,
       ROLE.ACCOUNTING,
       ROLE.ACCOUNTING_LEAD,
+      ROLE.SALE,
     ],
     children: [
       {
@@ -320,6 +338,7 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.MANAGER,
           ROLE.ACCOUNTING,
           ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
         ],
       },
       {
@@ -406,6 +425,7 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.MANAGER,
           ROLE.ACCOUNTING,
           ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
         ],
       },
       {
