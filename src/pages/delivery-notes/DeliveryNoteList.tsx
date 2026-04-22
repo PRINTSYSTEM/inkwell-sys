@@ -127,6 +127,25 @@ const getDeliveryNoteStatusLabel = (
   return deliveryNoteStatusLabels[status] || status;
 };
 
+const getDisplayStatus = (note: { lines?: Array<{ status?: string | null }>; status?: string | null }) => {
+  const lines = note.lines || [];
+
+  const hasDelivered = lines.some((l) => l.status === "delivered");
+  const hasReschedule = lines.some((l) => l.status === "failed_reschedule");
+  const hasFailed = lines.some((l) => l.status === "failed");
+
+  if (note.status === "cancelled" && (hasDelivered || hasReschedule)) {
+    return "partial";
+  }
+
+  if (hasReschedule) return "reschedule";
+  if (hasDelivered && hasFailed) return "partial";
+  if (hasDelivered) return "completed";
+  if (hasFailed) return "failed";
+
+  return note.status;
+};
+
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -375,8 +394,8 @@ function DeliveryNoteCard({ deliveryNote, onClick }: DeliveryNoteCardProps) {
 
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
             <StatusBadge
-              status={deliveryNote.status || null}
-              label={getDeliveryNoteStatusLabel(deliveryNote.status)}
+              status={getDisplayStatus(deliveryNote) || null}
+              label={getDeliveryNoteStatusLabel(getDisplayStatus(deliveryNote))}
             />
             {/* Quick actions: only show Start Shipping when allowed */}
             {deliveryNote.id && ["confirmed", "ready_to_ship", "handed_over", "pending"].includes(String(deliveryNote.status || "").toLowerCase()) && (
@@ -1265,6 +1284,32 @@ function DeliveryNotesView({
       }
     | undefined;
 
+    // Sort delivery notes so items needing action float to top:
+    // 1) status === 'pending' (chờ giao hàng)
+    // 2) notes with no delivered lines (chưa giao)
+    // 3) others
+    const sortedDeliveryNotes = useMemo(() => {
+      const items = (deliveryNotesDataTyped?.items || []).slice();
+      const priority = (note: any) => {
+        if (!note) return 3;
+        if (String(note.status) === "pending") return 0;
+        const lines = note.lines || [];
+        const hasDelivered = lines.some((l: any) => l && l.status === "delivered");
+        if (!hasDelivered) return 1;
+        return 2;
+      };
+
+      items.sort((a: any, b: any) => {
+        const pa = priority(a);
+        const pb = priority(b);
+        if (pa !== pb) return pa - pb;
+        const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return db - da; // newer first
+      });
+      return items;
+    }, [deliveryNotesDataTyped]);
+
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -1356,9 +1401,6 @@ function DeliveryNotesView({
                 <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
                   Khách hàng
                 </TableHead>
-                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
-                  Người nhận
-                </TableHead>
                 <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">
                   Trạng thái
                 </TableHead>
@@ -1400,7 +1442,7 @@ function DeliveryNotesView({
                   </TableCell>
                 </TableRow>
               ) : (
-                deliveryNotesDataTyped.items.map((deliveryNote) => {
+                sortedDeliveryNotes.map((deliveryNote) => {
                   const totalAmount =
                     deliveryNote.orders?.reduce(
                       (sum, order) => sum + (order.totalAmount || 0),
@@ -1435,25 +1477,23 @@ function DeliveryNotesView({
                         <div className="space-y-1">
                           <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-1.5">
                             <Package className="h-3.5 w-3.5 text-slate-400" />
-                            {deliveryNote.orders?.length || 0} đơn hàng
+                            {deliveryNote.lines?.length ?? 0} mã hàng
                           </div>
-                          <div className="space-y-0.5">
-                            {deliveryNote.orders?.slice(0, 2).map((order) => (
+                          {/* <div className="space-y-0.5">
+                            {deliveryNote.lines?.slice(0, 2).map((line: any, idx: number) => (
                               <div
-                                key={order.orderId}
+                                key={line?.id ?? idx}
                                 className="text-xs text-slate-500 dark:text-slate-400 font-mono"
                               >
-                                {order.orderCode}
+                                {line?.designCode || line?.orderCode || "—"}
                               </div>
                             ))}
-                            {deliveryNote.orders &&
-                              deliveryNote.orders.length > 2 && (
-                                <div className="text-xs text-slate-400 dark:text-slate-500">
-                                  +{deliveryNote.orders.length - 2} đơn hàng
-                                  khác
-                                </div>
-                              )}
-                          </div>
+                            {deliveryNote.lines && deliveryNote.lines.length > 2 && (
+                              <div className="text-xs text-slate-400 dark:text-slate-500">
+                                +{deliveryNote.lines.length - 2} mã hàng khác
+                              </div>
+                            )}
+                          </div> */}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1477,28 +1517,14 @@ function DeliveryNotesView({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                            {deliveryNote.recipientName || "—"}
-                          </div>
-                          {deliveryNote.recipientPhone && (
-                            <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {deliveryNote.recipientPhone}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
+                    
                       <TableCell className="text-center">
                         {updatingIds.has(deliveryNote.id as number) ? (
                           <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
                         ) : (
                           <StatusBadge
-                            status={deliveryNote.status || null}
-                            label={getDeliveryNoteStatusLabel(
-                              deliveryNote.status,
-                            )}
+                            status={getDisplayStatus(deliveryNote) || null}
+                            label={getDeliveryNoteStatusLabel(getDisplayStatus(deliveryNote))}
                           />
                         )}
                       </TableCell>
@@ -2253,7 +2279,7 @@ function RecreateDeliveryNoteDialog({
                             {item.designCode}{" "}
                             {item.orderCode && <span className="text-slate-400 font-sans text-xs">({item.orderCode})</span>}
                           </div>
-                          <div className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 line-clamp-1">
+                          <div className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 line-clamp-2">
                             {item.designName}
                           </div>
                         </div>
