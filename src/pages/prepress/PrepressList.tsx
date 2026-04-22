@@ -380,6 +380,16 @@ export default function PrepressList() {
   const [rejectTarget, setRejectTarget] = useState<DesignItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // Die list prefill state
+  const [dieListInitialSize, setDieListInitialSize] = useState<
+    string | undefined
+  >(undefined);
+
+  const handleFindDie = (_design: DesignItem, dimensions: string) => {
+    setDieListInitialSize(dimensions || "");
+    setIsDieListDialogOpen(true);
+  };
+
   // ===== Config Panel State (inline DetailEmptyOrderView) =====
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [designQuantities, setDesignQuantities] = useState<
@@ -766,7 +776,7 @@ export default function PrepressList() {
                         // Actions for shared DesignTable
                         onReject={openRejectDialog}
                         isRejecting={isRejecting}
-                        onFindDie={() => setIsDieListDialogOpen(true)}
+                        onFindDie={handleFindDie}
                         // Designs Pagination props
                         designsPage={designsPage}
                         setDesignsPage={setDesignsPage}
@@ -837,6 +847,7 @@ export default function PrepressList() {
           <DieListDialog
             open={isDieListDialogOpen}
             onOpenChange={setIsDieListDialogOpen}
+            initialSize={dieListInitialSize}
           />
 
           <InventoryViewDialog

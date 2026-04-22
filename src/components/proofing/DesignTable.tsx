@@ -28,7 +28,7 @@ interface DesignTableProps {
   onToggle: (design: DesignItem) => void;
   onReject?: (design: DesignItem) => void;
   isRejecting?: boolean;
-  onFindDie?: (design: DesignItem) => void;
+  onFindDie?: (design: DesignItem, dimensions: string) => void;
 }
 
 export function DesignTable({
@@ -379,7 +379,8 @@ export function DesignTable({
                               disabled={isRejecting}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onFindDie(design);
+                                const dimensions = `${design.length} × ${design.height}${design.width ? ` × ${design.width}` : ""}`;
+                                onFindDie(design, dimensions);
                               }}
                               title="Tìm khuôn liên quan"
                             >

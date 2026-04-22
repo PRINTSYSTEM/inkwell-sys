@@ -373,9 +373,6 @@ export default function ProofingOrderDetailPage() {
   const [selectedNewDieId, setSelectedNewDieId] = useState<number | null>(null);
   const [replaceDieNotes, setReplaceDieNotes] = useState<string>("");
   const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
-  const [dieListInitialDesignCode, setDieListInitialDesignCode] = useState<
-    string | undefined
-  >(undefined);
   const [dieListInitialSize, setDieListInitialSize] = useState<
     string | undefined
   >(undefined);
@@ -799,16 +796,8 @@ export default function ProofingOrderDetailPage() {
   });
 
   // Handler to open die-list dialog prefilled with design code and size
-  const handleFindDie = (design: any) => {
-    const sizeStr = formatDesignDimensions(
-      design.length,
-      design.width,
-      design.height,
-      1,
-      " × ",
-    ).trim();
-    setDieListInitialDesignCode(design.code || "");
-    setDieListInitialSize(sizeStr || "");
+  const handleFindDie = (_design: DesignItem, dimensions: string) => {
+    setDieListInitialSize(dimensions || "");
     setIsDieListDialogOpen(true);
   };
 
@@ -2468,7 +2457,6 @@ export default function ProofingOrderDetailPage() {
         isAssigningDie={isAssigningDie}
         availableDiesForAdd={availableDiesForAdd}
         isLoadingAddDies={isLoadingAddDies}
-        dieListInitialDesignCode={dieListInitialDesignCode}
         dieListInitialSize={dieListInitialSize}
         isDieListDialogOpen={isDieListDialogOpen}
         setIsDieListDialogOpen={setIsDieListDialogOpen}

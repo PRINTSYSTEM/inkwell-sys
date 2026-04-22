@@ -242,6 +242,8 @@ export const API_SUFFIX = {
   // ========== PRODUCTIONS ==========
   PRODUCTION_ORDERS: "/production-orders",
   PRODUCTION_ORDER_BY_ID: (id: number) => `/production-orders/${id}`,
+  PRODUCTION_ORDERS_BY_ORDER: (orderId: number) =>
+    `/production-orders/by-order/${orderId}`,
   PRODUCTION_STEP_ASSIGN: (id: number) =>
     `/production-orders/steps/${id}/assign`,
   PRODUCTION_STEP_STATUS: (id: number) =>

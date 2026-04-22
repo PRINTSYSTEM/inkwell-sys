@@ -34,7 +34,7 @@ interface PrepressDesignTableProps {
   designsTotalPages: number;
   selectedDesignsCount: number;
   onOpenInventoryView: () => void;
-  onFindDie?: (design: DesignItem) => void;
+  onFindDie?: (design: DesignItem, dimensions: string) => void;
   setImageViewerOpen?: (val: boolean) => void;
   setViewingImageUrl?: (val: string | null) => void;
   // Filters
@@ -335,7 +335,14 @@ export function PrepressDesignTable({
                                         disabled={isRejecting}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          onFindDie(design);
+                                          const dimensions = formatDesignDimensions(
+                                            design.length,
+                                            design.width,
+                                            design.height,
+                                            1,
+                                            " × ",
+                                          ).trim();
+                                          onFindDie(design, dimensions);
                                         }}
                                         title="Tìm khuôn liên quan"
                                       >
