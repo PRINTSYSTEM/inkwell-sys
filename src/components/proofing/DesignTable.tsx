@@ -54,11 +54,16 @@ export function DesignTable({
               <TableHead className="w-16 h-10 text-sm font-bold">Ảnh</TableHead>
               <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
-              <TableHead className="h-10 text-sm font-bold">Kích thước</TableHead>
-              <TableHead className="h-10 text-sm font-bold">SL đặt</TableHead>
-              <TableHead className="h-10 text-sm font-bold">Chất liệu</TableHead>
               <TableHead className="h-10 text-sm font-bold">
-                Quy cách
+                Kích thước
+              </TableHead>
+              <TableHead className="h-10 text-sm font-bold">SL đặt</TableHead>
+              <TableHead className="h-10 text-sm font-bold">
+                Chất liệu
+              </TableHead>
+              <TableHead className="h-10 text-sm font-bold">Số mặt</TableHead>
+              <TableHead className="h-10 text-sm font-bold">
+                Quy cách đầy đủ
               </TableHead>
               <TableHead className="h-10 text-sm font-bold text-right sticky right-0 bg-background z-20">
                 Thao tác
@@ -94,7 +99,10 @@ export function DesignTable({
                       </h4>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">
-                          Mã hàng: <span className="font-mono font-bold text-foreground">{design.code}</span>
+                          Mã hàng:{" "}
+                          <span className="font-mono font-bold text-foreground">
+                            {design.code}
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -107,46 +115,95 @@ export function DesignTable({
                         </p>
                         <div className="bg-muted/30 rounded-md p-2.5 space-y-2 border">
                           <div className="flex justify-between text-xs items-center">
-                            <span className="text-muted-foreground">Đơn hàng:</span>
-                            <span className="font-semibold text-primary">{design.orderCode || design.orderId}</span>
+                            <span className="text-muted-foreground">
+                              Đơn hàng:
+                            </span>
+                            <span className="font-semibold text-primary">
+                              {design.orderCode || design.orderId}
+                            </span>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">Chất liệu:</span>
-                            <span className="font-medium">{design.materialTypeName}</span>
+                            <span className="text-muted-foreground">
+                              Chất liệu:
+                            </span>
+                            <span className="font-medium">
+                              {design.materialTypeName}
+                            </span>
                           </div>
                           <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">Kích thước:</span>
+                            <span className="text-muted-foreground">
+                              Kích thước:
+                            </span>
                             <span className="font-medium">
                               {design.length} × {design.height}
                               {design.width ? ` × ${design.width}` : ""} mm
                             </span>
                           </div>
                           <div className="flex justify-between text-xs pt-1 border-t">
-                            <span className="text-muted-foreground">SL có thể bình:</span>
-                            <span className={cn("font-bold", design.availableQuantity && design.availableQuantity > 0 ? "text-green-600" : "text-red-600")}>
-                                {design.availableQuantity?.toLocaleString() || "0"} / {design.quantity.toLocaleString()}
+                            <span className="text-muted-foreground">
+                              SL có thể bình:
+                            </span>
+                            <span
+                              className={cn(
+                                "font-bold",
+                                design.availableQuantity &&
+                                  design.availableQuantity > 0
+                                  ? "text-green-600"
+                                  : "text-red-600",
+                              )}
+                            >
+                              {design.availableQuantity?.toLocaleString() ||
+                                "0"}{" "}
+                              / {design.quantity.toLocaleString()}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      {(design.processClassificationOptionName || design.laminationType) && (
+                      {(design.processClassificationOptionName ||
+                        design.laminationType ||
+                        (design.specification &&
+                          design.specification.length > 0)) && (
                         <div className="space-y-1.5">
                           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                             Quy cách sản xuất
                           </p>
                           <div className="flex flex-wrap gap-1.5">
-                            {design.processClassificationOptionName && (
-                              <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-800 border-amber-200">
-                                {processClassificationLabels[design.processClassificationOptionName] || design.processClassificationOptionName}
-                              </Badge>
-                            )}
-                            {design.laminationType && (
-                              <Badge variant="secondary" className="text-[10px]">
-                                {laminationTypeLabels[design.laminationType] || design.laminationType}
-                              </Badge>
-                            )}
+                            {design.specification &&
+                            design.specification.length > 0
+                              ? design.specification.map((spec, i) => (
+                                  <Badge
+                                    key={i}
+                                    variant="secondary"
+                                    className="text-[10px] bg-blue-50 text-blue-700 border-blue-100"
+                                  >
+                                    {spec}
+                                  </Badge>
+                                ))
+                              : null}
+                            {!design.specification?.length &&
+                              design.processClassificationOptionName && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] bg-amber-100 text-amber-800 border-amber-200"
+                                >
+                                  {processClassificationLabels[
+                                    design.processClassificationOptionName
+                                  ] || design.processClassificationOptionName}
+                                </Badge>
+                              )}
+                            {!design.specification?.length &&
+                              design.laminationType && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px]"
+                                >
+                                  {laminationTypeLabels[
+                                    design.laminationType
+                                  ] || design.laminationType}
+                                </Badge>
+                              )}
                           </div>
                         </div>
                       )}
@@ -165,9 +222,12 @@ export function DesignTable({
                   <TableRow
                     className={cn(
                       "cursor-pointer h-14 transition-colors relative",
-                      isSelected && "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]",
+                      isSelected &&
+                        "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]",
                       !isSelected && selectable && "hover:bg-muted/50",
-                      !selectable && !isSelected && "opacity-50 cursor-not-allowed"
+                      !selectable &&
+                        !isSelected &&
+                        "opacity-50 cursor-not-allowed",
                     )}
                     onClick={() => {
                       if (selectable || isSelected) {
@@ -237,13 +297,6 @@ export function DesignTable({
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1.5">
-                        {design.processClassificationOptionName && (
-                          <Badge variant="outline" className="text-xs">
-                            {processClassificationLabels[
-                              design.processClassificationOptionName
-                            ] || design.processClassificationOptionName}
-                          </Badge>
-                        )}
                         {design.sidesClassification && (
                           <Badge variant="outline" className="text-xs">
                             {sidesClassificationLabels[
@@ -251,22 +304,57 @@ export function DesignTable({
                             ] || design.sidesClassification}
                           </Badge>
                         )}
-                        {design.laminationType && (
-                          <Badge variant="outline" className="text-xs">
-                            {laminationTypeLabels[design.laminationType] ||
-                              design.laminationType}
-                          </Badge>
+                        {!design.sidesClassification && (
+                          <span className="text-muted-foreground text-xs">
+                            —
+                          </span>
                         )}
-                        {!design.processClassificationOptionName &&
-                          !design.sidesClassification &&
-                          !design.laminationType && (
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const specs = design.specification;
+                          if (Array.isArray(specs) && specs.length > 0) {
+                            return specs.map((spec, i) => (
+                              <Badge
+                                key={i}
+                                variant="secondary"
+                                className="text-[10px] bg-blue-50 text-blue-700 border-blue-100 whitespace-nowrap"
+                              >
+                                {spec}
+                              </Badge>
+                            ));
+                          }
+                          if (
+                            typeof specs === "string" &&
+                            specs.trim().length > 0
+                          ) {
+                            return (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] bg-blue-50 text-blue-700 border-blue-100 whitespace-nowrap"
+                              >
+                                {specs}
+                              </Badge>
+                            );
+                          }
+                          return (
                             <span className="text-muted-foreground text-xs">
                               —
                             </span>
-                          )}
+                          );
+                        })()}
                       </div>
                     </TableCell>
-                    <TableCell className={cn("py-2 text-right sticky right-0 z-10 transition-colors", isSelected ? "bg-green-100/90 group-hover:bg-green-200/80 dark:bg-green-900/40" : "bg-background")}>
+                    <TableCell
+                      className={cn(
+                        "py-2 text-right sticky right-0 z-10 transition-colors",
+                        isSelected
+                          ? "bg-green-100/90 group-hover:bg-green-200/80 dark:bg-green-900/40"
+                          : "bg-background",
+                      )}
+                    >
                       <div className="flex items-center justify-end gap-2">
                         {onReject && (
                           <Button
@@ -282,21 +370,24 @@ export function DesignTable({
                           </Button>
                         )}
 
-                        {onFindDie && (design.designTypeName || "").toLowerCase().includes("hộp") && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                            disabled={isRejecting}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onFindDie(design);
-                            }}
-                            title="Tìm khuôn liên quan"
-                          >
-                            <Search className="h-4 w-4" />
-                          </Button>
-                        )}
+                        {onFindDie &&
+                          (design.designTypeName || "")
+                            .toLowerCase()
+                            .includes("hộp") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                              disabled={isRejecting}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onFindDie(design);
+                              }}
+                              title="Tìm khuôn liên quan"
+                            >
+                              <Search className="h-4 w-4" />
+                            </Button>
+                          )}
                       </div>
                     </TableCell>
                   </TableRow>

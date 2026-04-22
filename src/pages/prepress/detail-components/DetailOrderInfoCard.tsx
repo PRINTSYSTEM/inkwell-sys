@@ -43,6 +43,7 @@ interface DetailOrderInfoCardProps {
   paperSizes: any[];
   uniqueProcessClassifications: string[];
   uniqueLaminationTypes: string[];
+  uniqueSpecifications: string[];
   isUpdatingInfo: boolean;
   handleStartEditField: (
     field: "totalQuantity" | "paperSize" | "notes",
@@ -68,6 +69,7 @@ export function DetailOrderInfoCard({
   paperSizes,
   uniqueProcessClassifications,
   uniqueLaminationTypes,
+  uniqueSpecifications,
   isUpdatingInfo,
   handleStartEditField,
   handleCancelEditField,
@@ -80,7 +82,8 @@ export function DetailOrderInfoCard({
 
   const firstDesignCustomer = order.proofingOrderDesigns?.[0]?.design?.customer;
   const nestedOrderCustomer = order.order?.customer;
-  const customerSource = order.customer || nestedOrderCustomer || firstDesignCustomer;
+  const customerSource =
+    order.customer || nestedOrderCustomer || firstDesignCustomer;
 
   const customerName =
     order.customerName ||
@@ -319,38 +322,59 @@ export function DetailOrderInfoCard({
 
           {/* Classification Badges */}
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
-                Quy cách
-              </Label>
-              <div className="flex flex-wrap gap-1 justify-end">
-                {uniqueProcessClassifications.map((c) => (
-                  <Badge
-                    key={c}
-                    variant="secondary"
-                    className="text-[9px] font-bold px-1 py-0 bg-primary/10 text-primary border-none"
-                  >
-                    {processClassificationLabels[c] || c}
-                  </Badge>
-                ))}
+            {uniqueSpecifications && uniqueSpecifications.length > 0 ? (
+              <div className="flex items-center justify-between">
+                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+                  Quy cách đầy đủ
+                </Label>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {uniqueSpecifications.map((s) => (
+                    <Badge
+                      key={s}
+                      variant="secondary"
+                      className="text-[9px] font-bold px-1 py-0 bg-amber-100 text-amber-700 border-none"
+                    >
+                      {s}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
-                Cán màng
-              </Label>
-              <div className="flex flex-wrap gap-1 justify-end">
-                {uniqueLaminationTypes.map((l) => (
-                  <Badge
-                    key={l}
-                    variant="secondary"
-                    className="text-[9px] font-bold px-1 py-0 bg-blue-50 text-blue-700 border-none"
-                  >
-                    {laminationTypeLabels[l] || l}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+                    Quy cách
+                  </Label>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {uniqueProcessClassifications.map((c) => (
+                      <Badge
+                        key={c}
+                        variant="secondary"
+                        className="text-[9px] font-bold px-1 py-0 bg-primary/10 text-primary border-none"
+                      >
+                        {processClassificationLabels[c] || c}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+                    Cán màng
+                  </Label>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {uniqueLaminationTypes.map((l) => (
+                      <Badge
+                        key={l}
+                        variant="secondary"
+                        className="text-[9px] font-bold px-1 py-0 bg-blue-50 text-blue-700 border-none"
+                      >
+                        {laminationTypeLabels[l] || l}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="h-px bg-muted-foreground/5" />

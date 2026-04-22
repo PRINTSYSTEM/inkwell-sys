@@ -127,13 +127,17 @@ export function PrepressOrderRow({
                       Quy cách:
                     </span>
                     <span className="font-medium text-right">
-                      {d?.processClassification
-                        ? processClassificationLabels[
+                      {(() => {
+                        const specs = d?.specification || (d as any)?.specifications;
+                        if (Array.isArray(specs) && specs.length > 0) return specs.join(", ");
+                        if (typeof specs === "string" && specs.trim().length > 0) return specs;
+                        return d?.processClassification
+                          ? processClassificationLabels[d.processClassification] ||
                             d.processClassification
-                          ] || d.processClassification
-                        : d?.length != null
-                          ? `${d.length}x${d.height}mm`
-                          : "—"}
+                          : d?.length != null
+                            ? `${d.length}x${d.height}mm`
+                            : "—";
+                      })()}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs pt-1 border-t border-muted-foreground/10">
@@ -180,136 +184,141 @@ export function PrepressOrderRow({
 
   return (
     <CursorTooltip
-        content={tooltipContent}
-        delayDuration={1000}
-        className="p-3 bg-popover/95 backdrop-blur-sm border shadow-2xl ring-1 ring-black/5 rounded-xl"
-      >
-        <TableRow
+      content={tooltipContent}
+      delayDuration={1000}
+      className="p-3 bg-popover/95 backdrop-blur-sm border shadow-2xl ring-1 ring-black/5 rounded-xl"
+    >
+      <TableRow
         className="h-10 cursor-pointer group hover:bg-muted/50 transition-colors"
         onClick={() => onNavigate(order.id)}
       >
-          {shouldShowExpand && (
-            <TableCell className="py-3 w-10">
-              <div className="flex items-center justify-center">
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                  )}
-                />
+        {shouldShowExpand && (
+          <TableCell className="py-3 w-10">
+            <div className="flex items-center justify-center">
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                )}
+              />
+            </div>
+          </TableCell>
+        )}
+        <TableCell className="py-2 w-12 align-top">
+          <div className="flex flex-col gap-1">
+            {designs.slice(0, 3).map((pod: any, idx: number) => (
+              <div key={pod.id || idx} className="w-10 h-10 shrink-0">
+                {pod.design?.designImageUrl ? (
+                  <img
+                    src={pod.design.designImageUrl}
+                    alt={pod.design.code}
+                    className="w-10 h-10 object-cover rounded border shadow-sm"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
+                    <FileImage className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
               </div>
-            </TableCell>
-          )}
-          <TableCell className="py-2 w-12 align-top">
-            <div className="flex flex-col gap-1">
-              {designs.slice(0, 3).map((pod: any, idx: number) => (
-                <div key={pod.id || idx} className="w-10 h-10 shrink-0">
-                  {pod.design?.designImageUrl ? (
-                    <img
-                      src={pod.design.designImageUrl}
-                      alt={pod.design.code}
-                      className="w-10 h-10 object-cover rounded border shadow-sm"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
-                      <FileImage className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              ))}
-              {designs.length > 3 && (
-                <div className="w-10 text-[9px] text-center font-bold text-muted-foreground">
-                  +{designs.length - 3} nữa
-                </div>
-              )}
-            </div>
-          </TableCell>
-          <TableCell className="py-3 font-semibold align-top">
-            {shouldShowExpand && orderCodeMatches
-              ? highlightText(order.code || "", debouncedSearchTerm.trim())
-              : order.code}
-          </TableCell>
+            ))}
+            {designs.length > 3 && (
+              <div className="w-10 text-[9px] text-center font-bold text-muted-foreground">
+                +{designs.length - 3} nữa
+              </div>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="py-3 font-semibold align-top">
+          {shouldShowExpand && orderCodeMatches
+            ? highlightText(order.code || "", debouncedSearchTerm.trim())
+            : order.code}
+        </TableCell>
 
-          <TableCell className="py-3 font-semibold text-xs align-top">
-            <div className="flex flex-col gap-1">
-              {designs.map((pod: any, idx: number) => (
-                <span key={pod.id || idx} className="text-muted-foreground">
-                  {pod.design?.materialType?.name || "—"}
-                </span>
-              ))}
-            </div>
-          </TableCell>
-          <TableCell className="py-3 text-xs align-top">
-            <div className="flex flex-col gap-1">
-              {designs.map((pod: any, idx: number) => {
-                const d = pod.design;
-                const spec = d?.processClassification
-                  ? processClassificationLabels[d.processClassification] ||
-                    d.processClassification
-                  : d?.length != null
-                    ? `${d.length}x${d.height}mm`
-                    : "—";
-                return <span key={pod.id || idx}>{spec}</span>;
-              })}
-            </div>
-          </TableCell>
-          <TableCell className="py-3 align-top">
+        <TableCell className="py-3 font-semibold text-xs align-top">
+          <div className="flex flex-col gap-1">
+            {designs.map((pod: any, idx: number) => (
+              <span key={pod.id || idx} className="text-muted-foreground">
+                {pod.design?.materialType?.name || "—"}
+              </span>
+            ))}
+          </div>
+        </TableCell>
+        <TableCell className="py-3 text-xs align-top">
+          <div className="flex flex-col gap-1">
+            {designs.map((pod: any, idx: number) => {
+              const d = pod.design;
+              const specs = d?.specification || (d as any)?.specifications;
+              const spec = Array.isArray(specs)
+                ? specs.join(", ")
+                : typeof specs === "string" && specs.trim().length > 0
+                  ? specs
+                  : d?.processClassification
+                    ? processClassificationLabels[d.processClassification] ||
+                      d.processClassification
+                    : d?.length != null
+                      ? `${d.length}x${d.height}mm`
+                      : "—";
+              return <span key={pod.id || idx}>{spec}</span>;
+            })}
+          </div>
+        </TableCell>
+        <TableCell className="py-3 align-top">
+          <StatusBadge
+            status={order.status || ""}
+            label={
+              proofingStatusLabels[order.status || ""] || order.status || "—"
+            }
+            className={cn(
+              "text-xs font-bold",
+              order.status === "completed"
+                ? "bg-green-100 text-green-800 border-green-300"
+                : "bg-amber-100 text-amber-800 border-amber-300",
+            )}
+          />
+        </TableCell>
+        <TableCell className="py-3 align-top">
+          <StatusBadge
+            status={order.plateExport ? "exported" : "not_exported"}
+            label={order.plateExport ? "Đã xuất" : "Chưa xuất"}
+            className={cn(
+              "text-xs font-semibold",
+              order.plateExport
+                ? "bg-green-100 text-green-800 border-green-300"
+                : "bg-red-100 text-red-800 border-red-300",
+            )}
+          />
+        </TableCell>
+        <TableCell className="py-3 align-top">
+          {order.proofingOrderDesigns?.some(
+            (pod: any) => pod.design?.processClassification === "die_cut",
+          ) ? (
             <StatusBadge
-              status={order.status || ""}
+              status={
+                (order.dieExports?.length ?? 0) > 0
+                  ? "exported"
+                  : "not_exported"
+              }
               label={
-                proofingStatusLabels[order.status || ""] || order.status || "—"
+                (order.dieExports?.length ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"
               }
               className={cn(
-                "text-xs font-bold",
-                order.status === "completed"
-                  ? "bg-green-100 text-green-800 border-green-300"
-                  : "bg-amber-100 text-amber-800 border-amber-300",
-              )}
-            />
-          </TableCell>
-          <TableCell className="py-3 align-top">
-            <StatusBadge
-              status={order.plateExport ? "exported" : "not_exported"}
-              label={order.plateExport ? "Đã xuất" : "Chưa xuất"}
-              className={cn(
                 "text-xs font-semibold",
-                order.plateExport
+                (order.dieExports?.length ?? 0) > 0
                   ? "bg-green-100 text-green-800 border-green-300"
                   : "bg-red-100 text-red-800 border-red-300",
               )}
             />
-          </TableCell>
-          <TableCell className="py-3 align-top">
-            {order.proofingOrderDesigns?.some(
-              (pod: any) => pod.design?.processClassification === "die_cut",
-            ) ? (
-              <StatusBadge
-                status={
-                  (order.dieExports?.length ?? 0) > 0
-                    ? "exported"
-                    : "not_exported"
-                }
-                label={
-                  (order.dieExports?.length ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"
-                }
-                className={cn(
-                  "text-xs font-semibold",
-                  (order.dieExports?.length ?? 0) > 0
-                    ? "bg-green-100 text-green-800 border-green-300"
-                    : "bg-red-100 text-red-800 border-red-300",
-                )}
-              />
-            ) : (
-              <span className="text-[10px] font-medium text-muted-foreground italic">
-                Không có bế
-              </span>
-            )}
-          </TableCell>
-          <TableCell className="py-3 font-medium align-top whitespace-nowrap text-muted-foreground text-[11px]">
-            {order.createdAt
-              ? new Date(order.createdAt).toLocaleDateString("vi-VN")
-              : "—"}
-          </TableCell>
-        </TableRow>
-      </CursorTooltip>
+          ) : (
+            <span className="text-[10px] font-medium text-muted-foreground italic">
+              Không có bế
+            </span>
+          )}
+        </TableCell>
+        <TableCell className="py-3 font-medium align-top whitespace-nowrap text-muted-foreground text-[11px]">
+          {order.createdAt
+            ? new Date(order.createdAt).toLocaleDateString("vi-VN")
+            : "—"}
+        </TableCell>
+      </TableRow>
+    </CursorTooltip>
   );
 }

@@ -171,7 +171,7 @@ function QuantityCell({
   const { data: availableQuantityFromApi, isLoading: isLoadingAvailableQty } =
     useAvailableQuantity(
       isEditing && designId ? designId : null,
-      isEditing && !!designId
+      isEditing && !!designId,
     );
 
   // Extract quantity from API response (could be number or object)
@@ -373,13 +373,17 @@ export default function ProofingOrderDetailPage() {
   const [selectedNewDieId, setSelectedNewDieId] = useState<number | null>(null);
   const [replaceDieNotes, setReplaceDieNotes] = useState<string>("");
   const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
-  const [dieListInitialDesignCode, setDieListInitialDesignCode] = useState<string | undefined>(undefined);
-  const [dieListInitialSize, setDieListInitialSize] = useState<string | undefined>(undefined);
+  const [dieListInitialDesignCode, setDieListInitialDesignCode] = useState<
+    string | undefined
+  >(undefined);
+  const [dieListInitialSize, setDieListInitialSize] = useState<
+    string | undefined
+  >(undefined);
 
   // Add die dialog state
   const [isAddDieDialogOpen, setIsAddDieDialogOpen] = useState(false);
   const [selectedDieIdForAdd, setSelectedDieIdForAdd] = useState<number | null>(
-    null
+    null,
   );
   const [addDieNotes, setAddDieNotes] = useState<string>("");
   const [addDieSearchTerm, setAddDieSearchTerm] = useState<string>("");
@@ -415,7 +419,7 @@ export default function ProofingOrderDetailPage() {
   const [inlineQuantityValue, setInlineQuantityValue] = useState<string>("");
   const [updateImageFile, setUpdateImageFile] = useState<File | null>(null);
   const [updateProofingFile, setUpdateProofingFile] = useState<File | null>(
-    null
+    null,
   );
 
   // Inline editing state for order info
@@ -438,7 +442,8 @@ export default function ProofingOrderDetailPage() {
     } | null>(null);
 
   // Cancellation state
-  const [isConfirmCancelDialogOpen, setIsConfirmCancelDialogOpen] = useState(false);
+  const [isConfirmCancelDialogOpen, setIsConfirmCancelDialogOpen] =
+    useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
@@ -455,10 +460,11 @@ export default function ProofingOrderDetailPage() {
   } = useProofingOrder(idValid ? idValue : null, idValid);
 
   // Check for production orders for cancellation logic
-  const { data: productionOrdersData, isLoading: isLoadingProductions } = useProductionOrders({
-    proofingOrderId: idValid ? idValue : undefined,
-    pageSize: 1,
-  });
+  const { data: productionOrdersData, isLoading: isLoadingProductions } =
+    useProductionOrders({
+      proofingOrderId: idValid ? idValue : undefined,
+      pageSize: 1,
+    });
   const hasExternalProduction = (productionOrdersData?.items?.length ?? 0) > 0;
 
   // Use raw response directly instead of strict schema parsing
@@ -486,7 +492,7 @@ export default function ProofingOrderDetailPage() {
   const hasDieCutDesigns = useMemo(() => {
     if (!orderDesigns || orderDesigns.length === 0) return false;
     return orderDesigns.some(
-      (pod) => pod.design?.processClassification === "die_cut"
+      (pod) => pod.design?.processClassification === "die_cut",
     );
   }, [orderDesigns]);
 
@@ -511,6 +517,42 @@ export default function ProofingOrderDetailPage() {
       }
     });
     return Array.from(classifications);
+  }, [orderDesigns]);
+ 
+  const uniqueSpecifications = useMemo(() => {
+    if (!orderDesigns || orderDesigns.length === 0) return [];
+    const specs = new Set<string>();
+    orderDesigns.forEach((pod) => {
+      const rawSpec =
+        (pod.design as any)?.specification ||
+        (pod.design as any)?.specifications ||
+        (pod as any).specification ||
+        (pod as any).specifications;
+
+      if (Array.isArray(rawSpec)) {
+        rawSpec.forEach((s: string) => {
+          if (typeof s === "string" && s.trim()) specs.add(s.trim());
+        });
+      } else if (typeof rawSpec === "string" && rawSpec.trim()) {
+        if (rawSpec.trim().startsWith("[") && rawSpec.trim().endsWith("]")) {
+          try {
+            const parsed = JSON.parse(rawSpec);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((s: any) => {
+                if (typeof s === "string" && s.trim()) specs.add(s.trim());
+              });
+            } else {
+              specs.add(rawSpec.trim());
+            }
+          } catch (e) {
+            specs.add(rawSpec.trim());
+          }
+        } else {
+          specs.add(rawSpec.trim());
+        }
+      }
+    });
+    return Array.from(specs);
   }, [orderDesigns]);
 
   // ===== Completion readiness (for "Hoàn thành") =====
@@ -655,7 +697,7 @@ export default function ProofingOrderDetailPage() {
   // Filter states for design selection
   const [selectedDesignTypes, setSelectedDesignTypes] = useState<number[]>([]);
   const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<number[]>(
-    []
+    [],
   );
 
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -708,10 +750,10 @@ export default function ProofingOrderDetailPage() {
     const existingDesignIds = new Set(
       order.proofingOrderDesigns
         ?.map((pod) => pod.design?.id)
-        .filter(Boolean) ?? []
+        .filter(Boolean) ?? [],
     );
     return availableDesignsData.designs.filter(
-      (design) => !existingDesignIds.has(design.designId)
+      (design) => !existingDesignIds.has(design.designId),
     );
   }, [availableDesignsData?.designs, order]);
 
@@ -758,7 +800,13 @@ export default function ProofingOrderDetailPage() {
 
   // Handler to open die-list dialog prefilled with design code and size
   const handleFindDie = (design: any) => {
-    const sizeStr = formatDesignDimensions(design.length, design.width, design.height, 1, " × ").trim();
+    const sizeStr = formatDesignDimensions(
+      design.length,
+      design.width,
+      design.height,
+      1,
+      " × ",
+    ).trim();
     setDieListInitialDesignCode(design.code || "");
     setDieListInitialSize(sizeStr || "");
     setIsDieListDialogOpen(true);
@@ -816,7 +864,7 @@ export default function ProofingOrderDetailPage() {
     return selectedDesigns.every(
       (design) =>
         isNhanDesignType(design.designTypeName || "") ||
-        isDecalDesignType(design.designTypeName || "")
+        isDecalDesignType(design.designTypeName || ""),
     );
   }, [selectedDesigns]);
 
@@ -838,7 +886,7 @@ export default function ProofingOrderDetailPage() {
     // Filter by material type (only when no design is selected and not filtered by API)
     if (!currentMaterialTypeId && selectedMaterialTypes.length > 0) {
       result = result.filter((d) =>
-        selectedMaterialTypes.includes(d.materialTypeId)
+        selectedMaterialTypes.includes(d.materialTypeId),
       );
     }
 
@@ -959,7 +1007,7 @@ export default function ProofingOrderDetailPage() {
   const currentMaterialTypeName = useMemo(() => {
     if (!currentMaterialTypeId || !availableDesignsData) return "";
     const material = availableDesignsData.materialTypeOptions.find(
-      (m) => m.id === currentMaterialTypeId
+      (m) => m.id === currentMaterialTypeId,
     );
     return material?.name || "";
   }, [currentMaterialTypeId, availableDesignsData]);
@@ -1023,7 +1071,7 @@ export default function ProofingOrderDetailPage() {
     id: number,
     value: string,
     maxQty: number,
-    availableQty?: number
+    availableQty?: number,
   ) => {
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (!isNaN(numValue) && numValue >= 0) {
@@ -1069,7 +1117,7 @@ export default function ProofingOrderDetailPage() {
     const found = paperSizes.find(
       (ps) =>
         ps.width === parsedCustomPaperSize.width &&
-        ps.height === parsedCustomPaperSize.height
+        ps.height === parsedCustomPaperSize.height,
     );
     return found ?? null;
   }, [parsedCustomPaperSize, paperSizes]);
@@ -1142,7 +1190,7 @@ export default function ProofingOrderDetailPage() {
     const found = paperSizes.find(
       (ps) =>
         ps.width === parsedUpdateCustomPaperSize.width &&
-        ps.height === parsedUpdateCustomPaperSize.height
+        ps.height === parsedUpdateCustomPaperSize.height,
     );
     // Fix: Return null instead of undefined to match condition check
     return found ?? null;
@@ -1151,7 +1199,7 @@ export default function ProofingOrderDetailPage() {
   // Helper function to create paper size for update if needed
   const ensurePaperSizeExistsForUpdate = async (
     customSize: string,
-    currentPaperSizeId: string
+    currentPaperSizeId: string,
   ): Promise<number | null> => {
     if (currentPaperSizeId !== "custom" || !customSize?.trim()) {
       return currentPaperSizeId === "none" || currentPaperSizeId === "custom"
@@ -1174,7 +1222,7 @@ export default function ProofingOrderDetailPage() {
 
     // Check if paper size already exists
     const existing = paperSizes.find(
-      (ps) => ps.width === width && ps.height === height
+      (ps) => ps.width === width && ps.height === height,
     );
 
     if (existing) {
@@ -1202,7 +1250,8 @@ export default function ProofingOrderDetailPage() {
 
     try {
       // Validate paper size
-      const isPaperSizeValid = paperSizeId !== "custom" ? !!paperSizeId : !!customPaperSize?.trim();
+      const isPaperSizeValid =
+        paperSizeId !== "custom" ? !!paperSizeId : !!customPaperSize?.trim();
       if (!isPaperSizeValid) {
         toast.error("Lỗi", {
           description: "Vui lòng chọn hoặc nhập khổ giấy in",
@@ -1266,7 +1315,7 @@ export default function ProofingOrderDetailPage() {
         })
         .filter(
           (item): item is { orderDetailId: number; quantity: number } =>
-            item !== null
+            item !== null,
         );
 
       if (items.length === 0) {
@@ -1302,7 +1351,7 @@ export default function ProofingOrderDetailPage() {
           try {
             const createdPaperSizeId = await ensurePaperSizeExistsForUpdate(
               customPaperSize,
-              paperSizeId
+              paperSizeId,
             );
             if (createdPaperSizeId) {
               updateData.paperSizeId = createdPaperSizeId;
@@ -1398,7 +1447,7 @@ export default function ProofingOrderDetailPage() {
 
   // Inline editing handlers
   const handleStartEditField = (
-    field: "totalQuantity" | "paperSize" | "notes"
+    field: "totalQuantity" | "paperSize" | "notes",
   ) => {
     if (!order || order.status === "completed") return;
     // If another field is being edited, cancel it first
@@ -1410,7 +1459,7 @@ export default function ProofingOrderDetailPage() {
       setInlineTotalQuantity((order.totalQuantity ?? 0).toString());
     } else if (field === "paperSize") {
       setInlinePaperSizeId(
-        order.paperSizeId ? order.paperSizeId.toString() : "custom"
+        order.paperSizeId ? order.paperSizeId.toString() : "custom",
       );
       setInlineCustomPaperSize(order.customPaperSize || "");
     } else if (field === "notes") {
@@ -1448,7 +1497,7 @@ export default function ProofingOrderDetailPage() {
         try {
           const createdPaperSizeId = await ensurePaperSizeExistsForUpdate(
             inlineCustomPaperSize,
-            inlinePaperSizeId
+            inlinePaperSizeId,
           );
           if (createdPaperSizeId) {
             updateData.paperSizeId = createdPaperSizeId;
@@ -1506,7 +1555,7 @@ export default function ProofingOrderDetailPage() {
     setUpdateStatus(order.status || "");
     setUpdateNotes(order.notes || "");
     setUpdatePaperSizeId(
-      order.paperSizeId ? order.paperSizeId.toString() : "custom"
+      order.paperSizeId ? order.paperSizeId.toString() : "custom",
     );
     setUpdateCustomPaperSize(order.customPaperSize || "");
     setUpdateTotalQuantity((order.totalQuantity ?? 0).toString());
@@ -1547,7 +1596,7 @@ export default function ProofingOrderDetailPage() {
       try {
         const createdPaperSizeId = await ensurePaperSizeExistsForUpdate(
           updateCustomPaperSize,
-          updatePaperSizeId
+          updatePaperSizeId,
         );
         if (createdPaperSizeId) {
           updateData.paperSizeId = createdPaperSizeId;
@@ -1629,7 +1678,7 @@ export default function ProofingOrderDetailPage() {
     }
 
     const originalDesign = order.proofingOrderDesigns?.find(
-      (pod) => pod.id === designId
+      (pod) => pod.id === designId,
     );
     if (!originalDesign) {
       toast.error("Lỗi", {
@@ -1736,7 +1785,8 @@ export default function ProofingOrderDetailPage() {
     return null;
   };
 
-  const { mutate: cancelProofing, isPending: isCanceling } = useCancelProofingOrder();
+  const { mutate: cancelProofing, isPending: isCanceling } =
+    useCancelProofingOrder();
 
   const handleCancelProofingOrder = () => {
     if (isLoadingProductions) {
@@ -1744,12 +1794,11 @@ export default function ProofingOrderDetailPage() {
       return;
     }
 
-    const hasProduction = hasExternalProduction || (order?.productions?.length ?? 0) > 0;
+    const hasProduction =
+      hasExternalProduction || (order?.productions?.length ?? 0) > 0;
 
     if (hasProduction) {
-      toast.error(
-        "Không thể hủy bình bài đã có lệnh sản xuất."
-      );
+      toast.error("Không thể hủy bình bài đã có lệnh sản xuất.");
       return;
     }
     setCancelReason("");
@@ -1767,7 +1816,7 @@ export default function ProofingOrderDetailPage() {
           setCancelReason("");
           navigate("/proofing");
         },
-      }
+      },
     );
   };
 
@@ -1775,7 +1824,10 @@ export default function ProofingOrderDetailPage() {
 
   const handleStatusChangeClick = () => {
     if (nextStatusInfo) {
-      if (nextStatusInfo.nextStatus === "completed" && order?.status === "not_completed") {
+      if (
+        nextStatusInfo.nextStatus === "completed" &&
+        order?.status === "not_completed"
+      ) {
         handleConfirmHandToProduction();
       } else {
         setPendingStatus(nextStatusInfo.nextStatus);
@@ -1814,7 +1866,7 @@ export default function ProofingOrderDetailPage() {
     // Kiểm tra điều kiện trước khi hand to production
     const needsDieExport =
       orderDesigns.some(
-        (pod) => pod.design?.processClassification === "die_cut"
+        (pod) => pod.design?.processClassification === "die_cut",
       ) && !isDieExported;
 
     if (!order.isPlateExported || (needsDieExport && !isDieExported)) {
@@ -1910,7 +1962,7 @@ export default function ProofingOrderDetailPage() {
 
     if (
       !confirm(
-        "Bạn có chắc chắn muốn gỡ khuôn bế này khỏi bình bài? Hành động này không thể hoàn tác."
+        "Bạn có chắc chắn muốn gỡ khuôn bế này khỏi bình bài? Hành động này không thể hoàn tác.",
       )
     ) {
       return;
@@ -1982,7 +2034,7 @@ export default function ProofingOrderDetailPage() {
           setIsConfirmRemoveDesignDialogOpen(false);
           setRemoveDesignTarget(null);
         },
-      }
+      },
     );
   };
 
@@ -1995,7 +2047,9 @@ export default function ProofingOrderDetailPage() {
     const successes: string[] = [];
 
     if (imageFiles.length === 0) {
-      toast.error("Lỗi", { description: "Vui lòng chọn ít nhất 1 ảnh (JPG, PNG) để tải lên" });
+      toast.error("Lỗi", {
+        description: "Vui lòng chọn ít nhất 1 ảnh (JPG, PNG) để tải lên",
+      });
       return;
     }
 
@@ -2013,11 +2067,17 @@ export default function ProofingOrderDetailPage() {
     setUploadFiles([]);
 
     if (errors.length === 0) {
-      toast.success("Thành công", { description: `Đã tải lên ${successes.length} ảnh` });
+      toast.success("Thành công", {
+        description: `Đã tải lên ${successes.length} ảnh`,
+      });
     } else if (successes.length > 0) {
-      toast.warning("Một phần thành công", { description: `Đã tải: ${successes.join(", ")}. Lỗi: ${errors.join(", ")}` });
+      toast.warning("Một phần thành công", {
+        description: `Đã tải: ${successes.join(", ")}. Lỗi: ${errors.join(", ")}`,
+      });
     } else {
-      toast.error("Lỗi", { description: `Không thể tải lên ảnh: ${errors.join(", ")}` });
+      toast.error("Lỗi", {
+        description: `Không thể tải lên ảnh: ${errors.join(", ")}`,
+      });
     }
   };
 
@@ -2083,7 +2143,6 @@ export default function ProofingOrderDetailPage() {
     );
   }
 
-
   return (
     <div className="relative h-full flex flex-col overflow-hidden bg-background p-4">
       {/* Header */}
@@ -2112,10 +2171,19 @@ export default function ProofingOrderDetailPage() {
                 <div className="shrink-0 p-4 border-b space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold">Thiết kế chờ bình bài ({paginatedDesigns.length})</h3>
-                      <p className="text-xs text-muted-foreground">Đã chọn: {selectedCount}</p>
+                      <h3 className="text-sm font-semibold">
+                        Thiết kế chờ bình bài ({paginatedDesigns.length})
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Đã chọn: {selectedCount}
+                      </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setIsDieListDialogOpen(true)} className="gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsDieListDialogOpen(true)}
+                      className="gap-2"
+                    >
                       <Search className="h-4 w-4" />
                       Danh sách khuôn bế
                     </Button>
@@ -2123,10 +2191,12 @@ export default function ProofingOrderDetailPage() {
 
                   <FilterSection
                     designTypeOptions={designTypeOptions}
-                    materialTypeOptions={(availableDesignsData?.materialTypeOptions || []).map(m => ({
+                    materialTypeOptions={(
+                      availableDesignsData?.materialTypeOptions || []
+                    ).map((m) => ({
                       id: m.id,
                       name: m.name || "",
-                      count: 0
+                      count: 0,
                     }))}
                     selectedDesignTypes={selectedDesignTypes}
                     selectedMaterialTypes={selectedMaterialTypes}
@@ -2136,7 +2206,11 @@ export default function ProofingOrderDetailPage() {
                     onMaterialTypeChange={setSelectedMaterialTypes}
                     onSearchChange={setSearchTerm}
                     onClearFilters={handleClearFilters}
-                    hasActiveFilters={selectedDesignTypes.length > 0 || selectedMaterialTypes.length > 0 || searchTerm.trim().length > 0}
+                    hasActiveFilters={
+                      selectedDesignTypes.length > 0 ||
+                      selectedMaterialTypes.length > 0 ||
+                      searchTerm.trim().length > 0
+                    }
                   />
                 </div>
 
@@ -2149,7 +2223,10 @@ export default function ProofingOrderDetailPage() {
                       onToggle={(design) => {
                         toggleSelection(design);
                         // Auto-filter by design type if selecting for the first time
-                        if (selectedIds.size === 0 && typeof design.designTypeId === 'number') {
+                        if (
+                          selectedIds.size === 0 &&
+                          typeof design.designTypeId === "number"
+                        ) {
                           setSelectedDesignTypes([design.designTypeId]);
                         }
                       }}
@@ -2172,7 +2249,9 @@ export default function ProofingOrderDetailPage() {
                         size="sm"
                         className="h-8 w-8 p-0"
                         disabled={currentPage === 1}
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(1, prev - 1))
+                        }
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
@@ -2181,7 +2260,11 @@ export default function ProofingOrderDetailPage() {
                         size="sm"
                         className="h-8 w-8 p-0"
                         disabled={currentPage === totalPages}
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(totalPages, prev + 1),
+                          )
+                        }
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -2234,6 +2317,7 @@ export default function ProofingOrderDetailPage() {
                 paperSizes={paperSizes}
                 uniqueProcessClassifications={uniqueProcessClassifications}
                 uniqueLaminationTypes={uniqueLaminationTypes}
+                uniqueSpecifications={uniqueSpecifications}
                 isUpdatingInfo={isUpdatingInfo}
                 handleStartEditField={handleStartEditField}
                 handleCancelEditField={handleCancelEditField}
@@ -2254,11 +2338,15 @@ export default function ProofingOrderDetailPage() {
                 updatingDesignId={updatingDesignId}
                 setIsAddDesignDialogOpen={setIsAddDesignDialogOpen}
                 setRemoveDesignTarget={setRemoveDesignTarget}
-                setIsConfirmRemoveDesignDialogOpen={setIsConfirmRemoveDesignDialogOpen}
+                setIsConfirmRemoveDesignDialogOpen={
+                  setIsConfirmRemoveDesignDialogOpen
+                }
                 isRemovingDesign={isRemovingDesign}
                 setImageViewerOpen={setImageViewerOpen}
                 setViewingImageUrl={setViewingImageUrl}
-                setSelectedDesignForRelatedDies={setSelectedDesignForRelatedDies}
+                setSelectedDesignForRelatedDies={
+                  setSelectedDesignForRelatedDies
+                }
                 setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
                 isQuantityEditOpen={isQuantityEditOpen}
                 handleOpenQuantityEdit={handleOpenQuantityEdit}
