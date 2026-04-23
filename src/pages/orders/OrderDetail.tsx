@@ -619,8 +619,9 @@ export default function OrderDetailPage() {
 
   const relatedProofing: ProofingOrderResponse[] = relatedProofingOrders ?? [];
 
-  const { data: productionOrders } = useProductionOrdersByOrder(orderId);
-  const relatedProductions = productionOrders ?? [];
+  const { data: productionOrdersData, isLoading: isLoadingProductions } =
+    useProductionOrdersByOrder(orderId, { pageSize: 50 });
+  const relatedProductions = productionOrdersData?.items ?? [];
 
   // Fetch users for assignedToUserId select
   const { data: usersData } = useUsers({ pageSize: 100 });
@@ -1177,9 +1178,14 @@ export default function OrderDetailPage() {
                                 )}
                               </div>
                               {(() => {
-                                const specs = design?.specification || (design as any)?.specifications;
-                                const hasSpecs = (Array.isArray(specs) && specs.length > 0) || (typeof specs === "string" && specs.trim().length > 0);
-                                
+                                const specs =
+                                  design?.specification ||
+                                  (design as any)?.specifications;
+                                const hasSpecs =
+                                  (Array.isArray(specs) && specs.length > 0) ||
+                                  (typeof specs === "string" &&
+                                    specs.trim().length > 0);
+
                                 if (hasSpecs) {
                                   return (
                                     <div className="col-span-2">
@@ -1187,7 +1193,9 @@ export default function OrderDetailPage() {
                                         Quy cách đầy đủ
                                       </p>
                                       <p className="font-medium text-amber-600">
-                                        {Array.isArray(specs) ? specs.join(", ") : specs}
+                                        {Array.isArray(specs)
+                                          ? specs.join(", ")
+                                          : specs}
                                       </p>
                                     </div>
                                   );
@@ -1201,7 +1209,11 @@ export default function OrderDetailPage() {
                                           Cán màng
                                         </p>
                                         <p className="font-medium">
-                                          {laminationTypeLabels[design.laminationType] || design.laminationType || "—"}
+                                          {laminationTypeLabels[
+                                            design.laminationType
+                                          ] ||
+                                            design.laminationType ||
+                                            "—"}
                                         </p>
                                       </div>
                                     )}
@@ -1211,7 +1223,11 @@ export default function OrderDetailPage() {
                                           Mặt in
                                         </p>
                                         <p className="font-medium">
-                                          {sidesClassificationLabels[design.sidesClassification] || design.sidesClassification || "—"}
+                                          {sidesClassificationLabels[
+                                            design.sidesClassification
+                                          ] ||
+                                            design.sidesClassification ||
+                                            "—"}
                                         </p>
                                       </div>
                                     )}
@@ -1221,7 +1237,11 @@ export default function OrderDetailPage() {
                                           Quy cách sản xuất
                                         </p>
                                         <p className="font-medium">
-                                          {processClassificationLabels[design.processClassification] || design.processClassification || "—"}
+                                          {processClassificationLabels[
+                                            design.processClassification
+                                          ] ||
+                                            design.processClassification ||
+                                            "—"}
                                         </p>
                                       </div>
                                     )}
@@ -1629,7 +1649,11 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {relatedProductions.length > 0 ? (
+              {isLoadingProductions ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : relatedProductions.length > 0 ? (
                 <div className="space-y-3">
                   {relatedProductions.map((prod) => (
                     <div
@@ -1638,43 +1662,161 @@ export default function OrderDetailPage() {
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div className="space-y-2 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">SP-{prod.id}</span>
-                            <span className="text-sm text-muted-foreground">
-                              Trạng thái hiện tại:
-                            </span>{" "}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-lg text-primary">
+                                SP-{prod.id}
+                              </span>
+                              {prod.proofingOrderCode && (
+                                <Badge variant="outline" className="font-mono bg-muted/50 text-xs h-6">
+                                  {prod.proofingOrderCode}
+                                </Badge>
+                              )}
+                            </div>
                             <StatusBadge
                               status={prod.status}
+                              className="h-7 text-xs px-3"
                               label={
                                 productionStatusLabels[prod.status || ""] ||
                                 "N/A"
                               }
                             />
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            Phụ trách: {prod.productionLeadName || "—"}
-                          </p>
-                          {/* Progress bar */}
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                              <div
-                                className="bg-primary h-2 rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${prod.progressPercent || 0}%`,
-                                }}
-                              />
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground min-w-[100px]">
+                                Mã bình bài:
+                              </span>
+                              <span className="font-mono font-bold text-foreground">
+                                {prod.proofingOrderCode || "—"}
+                              </span>
                             </div>
-                            <span className="text-sm font-medium w-12 text-right">
-                              {prod.progressPercent || 0}%
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground min-w-[100px]">
+                                Phụ trách:
+                              </span>
+                              <span className="font-bold text-foreground">
+                                {prod.productionLeadName || "—"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground min-w-[100px]">
+                                Đã sản xuất:
+                              </span>
+                              <span className="font-bold text-emerald-600 text-base">
+                                {prod.producedQty?.toLocaleString() || "0"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground min-w-[100px]">
+                                Khách hàng:
+                              </span>
+                              <span className="font-bold text-foreground truncate max-w-[200px]">
+                                {prod.customerName || "—"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Production Steps Process Flow - Compact but Readable */}
+                          {prod.steps && prod.steps.length > 0 && (
+                            <div className="pt-4 mt-2 border-t border-dashed">
+                              <div className="relative flex items-center justify-between w-full px-2">
+                                {/* Connection line background */}
+                                <div className="absolute top-[12px] left-0 right-0 h-0.5 bg-muted -translate-y-1/2 z-0 mx-8" />
+
+                                {prod.steps
+                                  .sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0))
+                                  .map((step, index) => {
+                                    const isCompleted = step.status === "completed" || step.status === "done";
+                                    const isCurrent = step.status === "in_progress";
+
+                                    return (
+                                      <div key={step.id} className="relative z-10 flex flex-col items-center">
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div
+                                                className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                                                  isCompleted
+                                                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                                                    : isCurrent
+                                                      ? "bg-blue-500 border-blue-500 text-white animate-pulse"
+                                                      : "bg-background border-muted-foreground/30 text-muted-foreground"
+                                                }`}
+                                              >
+                                                {isCompleted ? (
+                                                  <Check className="w-3.5 h-3.5" />
+                                                ) : (
+                                                  <span className="text-[10px] font-bold">{index + 1}</span>
+                                                )}
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top">
+                                              <div className="space-y-1 p-1">
+                                                <p className="font-bold text-xs">{step.stepTypeName}</p>
+                                                <p className="text-[10px]">
+                                                  Trạng thái:{" "}
+                                                  {isCompleted ? "Đã xong" : isCurrent ? "Đang làm" : "Chờ"}
+                                                </p>
+                                                {step.assignedToName && (
+                                                  <p className="text-[10px] opacity-80 italic">
+                                                    Phụ trách: {step.assignedToName}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <span
+                                          className={`mt-1.5 text-[11px] font-bold whitespace-nowrap px-1 ${
+                                            isCurrent ? "text-blue-600" : isCompleted ? "text-emerald-600" : "text-muted-foreground"
+                                          }`}
+                                        >
+                                          {step.stepTypeName}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex flex-col gap-2 pt-1">
+                            <div className="flex items-center justify-between text-sm mb-1">
+                              <span className="text-muted-foreground">
+                                Tiến độ sản xuất:
+                              </span>
+                              <span className="font-bold">
+                                {prod.progressPercent || 0}%
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 bg-muted rounded-full h-2.5 overflow-hidden border border-muted-foreground/10">
+                                <div
+                                  className="bg-primary h-full rounded-full transition-all duration-500 shadow-sm"
+                                  style={{
+                                    width: `${prod.progressPercent || 0}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right text-sm text-muted-foreground">
-                          {prod.completedAt
-                            ? `Hoàn thành: ${formatDate(prod.completedAt)}`
-                            : prod.startedAt
-                              ? `Bắt đầu: ${formatDate(prod.startedAt)}`
-                              : "Chưa bắt đầu"}
+                        <div className="flex flex-col items-end justify-between self-stretch py-1">
+                          <div className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+                            {prod.completedAt
+                              ? "Đã hoàn thành"
+                              : prod.startedAt
+                                ? "Đang thực hiện"
+                                : "Chưa bắt đầu"}
+                          </div>
+                          <div className="text-right text-sm font-semibold">
+                            {prod.completedAt
+                              ? formatDate(prod.completedAt)
+                              : prod.startedAt
+                                ? formatDate(prod.startedAt)
+                                : "—"}
+                          </div>
                         </div>
                       </div>
                     </div>

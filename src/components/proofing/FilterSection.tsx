@@ -77,38 +77,7 @@ export function FilterSection({
           <span className="text-sm font-medium text-muted-foreground">
             Loại thiết kế:
           </span>
-          <Button
-            variant={
-              selectedDesignTypes.length === 0 && hasActiveFilters
-                ? "default"
-                : "outline"
-            }
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => {
-              if (selectedDesignTypes.length === 0 && hasActiveFilters) {
-                onClearFilters();
-              } else {
-                onDesignTypeChange([]);
-              }
-            }}
-          >
-            <span>Tất cả</span>
-            <Badge
-              variant="secondary"
-              className={cn(
-                "ml-2 h-5 px-1.5 text-[10px]",
-                selectedDesignTypes.length === 0 &&
-                  hasActiveFilters &&
-                  "bg-background/20 text-primary-foreground",
-              )}
-            >
-              {designTypeOptions.reduce(
-                (acc, opt) => acc + (opt.count || 0),
-                0,
-              )}
-            </Badge>
-          </Button>
+
           {designTypeOptions.map((option) => {
             const isSelected =
               selectedDesignTypes.length === 1 &&

@@ -22,6 +22,7 @@ import {
   Copy,
   Check,
   Ruler,
+  ExternalLink,
 } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useSearchDies, useRelatedDiesByProofingOrder } from "@/hooks/use-die";
@@ -32,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface DieListDialogProps {
   open: boolean;
@@ -41,6 +43,7 @@ interface DieListDialogProps {
 }
 
 export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSize }: DieListDialogProps) {
+  const navigate = useNavigate();
   const [designCode, setDesignCode] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [size, setSize] = useState("");
@@ -303,6 +306,9 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
                 )?.proofingOrderCode || die.usageHistory?.[0]?.proofingOrderCode || null;
               const displayCode = die.firstProofingOrderCode || usageCode;
               if (!displayCode) return null;
+
+              const proofingOrderId = die.firstProofingOrderId || die.usageHistory?.[0]?.proofingOrderId;
+
               return (
                 <div className="flex items-center gap-1.5 col-span-full">
                   <span className="text-muted-foreground whitespace-nowrap">
@@ -311,22 +317,39 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
                   <span className="font-medium text-foreground">
                     {displayCode}
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-5 w-5 p-0 hover:bg-primary/10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCopyProofingOrderCode(displayCode || "");
-                    }}
-                    title="Sao chép mã bài"
-                  >
-                    {copiedProofingOrderCode === displayCode ? (
-                      <Check className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <Copy className="h-3 w-3 text-muted-foreground" />
+                  <div className="flex items-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 hover:bg-primary/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyProofingOrderCode(displayCode || "");
+                      }}
+                      title="Sao chép mã bài"
+                    >
+                      {copiedProofingOrderCode === displayCode ? (
+                        <Check className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <Copy className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </Button>
+                    {proofingOrderId && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 hover:bg-primary/10 text-primary ml-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenChange(false);
+                          navigate(`/proofing/${proofingOrderId}`);
+                        }}
+                        title="Xem mã bài"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 </div>
               );
             })()}

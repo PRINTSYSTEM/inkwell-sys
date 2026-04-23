@@ -658,9 +658,7 @@ export type MyDesignListParams = z.infer<typeof MyDesignListParamsSchema>;
 export const OrderListParamsSchema = PagedParamsSchema.extend({
   customerId: z.number().int().nullable().optional(),
   status: z.string().nullable().optional(),
-  orderCode: z.string().nullable().optional(),
-  designCode: z.string().nullable().optional(),
-  customerName: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
   startDate: z.string().datetime({ offset: true }).nullable().optional(),
   endDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),
@@ -672,9 +670,7 @@ export type OrderListParams = z.infer<typeof OrderListParamsSchema>;
 export const OrdersForAccountingListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
   filterType: z.string().nullable().optional(),
-  orderCode: z.string().nullable().optional(),
-  designCode: z.string().nullable().optional(),
-  customerName: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -683,9 +679,7 @@ export type OrdersForAccountingListParams = z.infer<typeof OrdersForAccountingLi
 // ==== OrdersForDesignerListParams (GET /api/orders/for-designer) ====
 export const OrdersForDesignerListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
-  orderCode: z.string().nullable().optional(),
-  designCode: z.string().nullable().optional(),
-  customerName: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -694,9 +688,7 @@ export type OrdersForDesignerListParams = z.infer<typeof OrdersForDesignerListPa
 // ==== OrdersMyListParams (GET /api/orders/my) ====
 export const OrdersMyListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
-  orderCode: z.string().nullable().optional(),
-  designCode: z.string().nullable().optional(),
-  customerName: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
   startDate: z.string().datetime({ offset: true }).nullable().optional(),
   endDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),

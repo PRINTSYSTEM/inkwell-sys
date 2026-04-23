@@ -6099,32 +6099,50 @@
         "tags": [
           "DeliveryNote"
         ],
+        "parameters": [
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "searchTerm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrderForDeliveryResponse"
-                  }
+                  "$ref": "#/components/schemas/OrderForDeliveryResponsePaginate"
                 }
               },
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrderForDeliveryResponse"
-                  }
+                  "$ref": "#/components/schemas/OrderForDeliveryResponsePaginate"
                 }
               },
               "text/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrderForDeliveryResponse"
-                  }
+                  "$ref": "#/components/schemas/OrderForDeliveryResponsePaginate"
                 }
               }
             }
@@ -10431,21 +10449,7 @@
             }
           },
           {
-            "name": "orderCode",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "designCode",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "customerName",
+            "name": "search",
             "in": "query",
             "schema": {
               "type": "string"
@@ -12236,6 +12240,85 @@
             "schema": {
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "name": "sortColumn",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionOrderResponsePaginate"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionOrderResponsePaginate"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionOrderResponsePaginate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/production-orders/by-order/{orderId}": {
+      "get": {
+        "tags": [
+          "ProductionOrder"
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -21916,7 +21999,7 @@
           },
           "role": {
             "minLength": 1,
-            "pattern": "^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$",
+            "pattern": "^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead|sale)$",
             "type": "string"
           },
           "email": {
@@ -24784,6 +24867,10 @@
             "type": "string",
             "nullable": true
           },
+          "designImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
           "orderedQty": {
             "type": "integer",
             "format": "int32"
@@ -24836,6 +24923,13 @@
           },
           "design": {
             "$ref": "#/components/schemas/DesignResponse"
+          },
+          "specification": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
           },
           "quantity": {
             "type": "integer",
@@ -25291,6 +25385,35 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/OrderDetailForDeliveryResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "OrderForDeliveryResponsePaginate": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderForDeliveryResponse"
             },
             "nullable": true
           }
@@ -26372,6 +26495,13 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "specification": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
