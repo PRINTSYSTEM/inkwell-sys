@@ -137,10 +137,12 @@ export default function PrepressList() {
     searchTerm,
   });
 
-  // Switch to designs mode when any filter becomes active
+  // Switch to designs mode when any filter becomes active, back to orders if cleared
   useEffect(() => {
     if (hasActiveFilters) {
       setViewMode("designs");
+    } else {
+      setViewMode("orders");
     }
   }, [hasActiveFilters]);
 
@@ -727,8 +729,12 @@ export default function PrepressList() {
                         currentMaterialTypeId={currentMaterialTypeId}
                         searchTerm={searchTerm}
                         onDesignTypeChange={(ids) => {
-                          setSelectedDesignTypes(ids);
-                          setViewMode("designs");
+                          if (ids.length === 0) {
+                            handleClearFilters();
+                          } else {
+                            setSelectedDesignTypes(ids);
+                            setViewMode("designs");
+                          }
                         }}
                         onMaterialTypeChange={setSelectedMaterialTypes}
                         onSearchChange={setSearchTerm}

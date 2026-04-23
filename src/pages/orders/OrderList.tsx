@@ -98,12 +98,8 @@ export default function OrderList() {
       pageNumber: currentPage,
       pageSize: pageSize,
       status: statusFilter === "all" ? "" : statusFilter || "",
-      // Search by orderCode (mã đơn hàng) - primary search field
-      orderCode: searchValue || "",
-      // Also search by designCode and customerName for broader search
-      // API should handle OR logic, but orderCode takes priority
-      designCode: searchValue || "",
-      customerName: searchValue || "",
+      // Search term for all relevant fields
+      search: searchValue || "",
       customerId: undefined,
       startDate: "",
       endDate: "",

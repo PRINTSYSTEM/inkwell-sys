@@ -55,14 +55,22 @@ export const useProductionOrder = (id: number | null, enabled = true) =>
 export const useCreateProductionOrder = () => useCreateProductionOrderBase();
 export const useProductionOrdersByOrder = (
   orderId: number | null,
-  enabled: boolean = true
+  params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    status?: string;
+    sortColumn?: string;
+    sortOrder?: string;
+  },
+  enabled: boolean = true,
 ) => {
   return useQuery({
-    queryKey: ["production-orders", "by-order", orderId],
+    queryKey: ["production-orders", "by-order", orderId, params],
     enabled: enabled && !!orderId,
     queryFn: async () => {
-      const res = await apiRequest.get<ProductionOrderResponse[]>(
-        API_SUFFIX.PRODUCTION_ORDERS_BY_ORDER(orderId as number)
+      const res = await apiRequest.get<ProductionOrderResponsePaginate>(
+        API_SUFFIX.PRODUCTION_ORDERS_BY_ORDER(orderId as number),
+        { params },
       );
       return res.data;
     },
@@ -79,7 +87,7 @@ export const useUpdateProductionStep = () => {
   >(async ({ stepId, data }) => {
     const res = await apiRequest.put<ProductionStepResponse>(
       API_SUFFIX.PRODUCTION_STEP_STATUS(stepId),
-      data
+      data,
     );
     return res.data;
   });
@@ -128,11 +136,17 @@ export const useUpdateProductionOrderItem = () => {
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     any,
-    [{ productionOrderId: number; itemId: number; data: { outputQty?: number; defectQty?: number; notes?: string } }]
+    [
+      {
+        productionOrderId: number;
+        itemId: number;
+        data: { outputQty?: number; defectQty?: number; notes?: string };
+      },
+    ]
   >(async ({ productionOrderId, itemId, data }) => {
     const res = await apiRequest.put<any>(
       `/production-orders/${productionOrderId}/items/${itemId}`,
-      data
+      data,
     );
     return res.data;
   });
@@ -186,7 +200,7 @@ export const useAssignProductionWorker = () => {
   >(async ({ stepId, data }) => {
     const res = await apiRequest.put<ProductionStepResponse>(
       API_SUFFIX.PRODUCTION_STEP_ASSIGN(stepId),
-      data
+      data,
     );
     return res.data;
   });
@@ -234,7 +248,7 @@ export const useAssignProductionWorker = () => {
 // These are kept for components that haven't been migrated yet
 export const useStartProduction = () => {
   console.warn(
-    "useStartProduction is deprecated. Use useUpdateProductionStep to update step status instead."
+    "useStartProduction is deprecated. Use useUpdateProductionStep to update step status instead.",
   );
   // Return a no-op hook for backward compatibility
   return {
@@ -243,7 +257,7 @@ export const useStartProduction = () => {
     error: null,
     mutate: async () => {
       throw new Error(
-        "useStartProduction is deprecated. Please use useUpdateProductionStep instead."
+        "useStartProduction is deprecated. Please use useUpdateProductionStep instead.",
       );
     },
     reset: () => {},
@@ -252,7 +266,7 @@ export const useStartProduction = () => {
 
 export const useCompleteProduction = () => {
   console.warn(
-    "useCompleteProduction is deprecated. Use useUpdateProductionStep to update step status instead."
+    "useCompleteProduction is deprecated. Use useUpdateProductionStep to update step status instead.",
   );
   // Return a no-op hook for backward compatibility
   return {
@@ -261,7 +275,7 @@ export const useCompleteProduction = () => {
     error: null,
     mutate: async () => {
       throw new Error(
-        "useCompleteProduction is deprecated. Please use useUpdateProductionStep instead."
+        "useCompleteProduction is deprecated. Please use useUpdateProductionStep instead.",
       );
     },
     reset: () => {},
