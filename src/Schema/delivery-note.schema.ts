@@ -47,7 +47,19 @@ export type DeliveryNoteResponsePaginateFromGenerated = z.infer<
 // New format per backend_new_update.md: uses lines[] instead of orderIds[]
 // Validates that at least 1 line is provided
 export const CreateDeliveryNoteRequestSchema =
-  GenCreateDeliveryNoteRequestSchema.refine(
+  GenCreateDeliveryNoteRequestSchema.extend({
+    customerAddressId: z.number().int().nullish(),
+    notes: z.string().nullish(),
+    lines: z
+      .array(
+        z.object({
+          orderDetailId: z.number().int(),
+          deliveryQty: z.number().int().gte(1),
+          note: z.string().nullish(),
+        })
+      )
+      .nullish(),
+  }).refine(
     (data) => {
       if (!data.lines || data.lines.length < 1) {
         return false;
@@ -80,6 +92,7 @@ export const RecreateDeliveryNoteRequestSchema = z.object({
         orderDetailId: z.number().int(),
         deliveryQty: z.number().int().gte(1),
         customerAddressId: z.number().int().nullish(),
+        note: z.string().nullish(),
       })
     )
     .nullish(),
@@ -91,7 +104,9 @@ export type RecreateDeliveryNoteRequest = z.infer<
 
 // ===== DeliveryLineRequest =====
 export const DeliveryLineRequestSchema =
-  GenDeliveryLineRequestSchema.passthrough();
+  GenDeliveryLineRequestSchema.extend({
+    note: z.string().nullish(),
+  }).passthrough();
 export type DeliveryLineRequest = z.infer<typeof DeliveryLineRequestSchema>;
 
 // ===== CustomerAddress =====
@@ -116,6 +131,7 @@ export const DeliveryNoteLineResponseSchema =
     orderCode: z.string().nullable().optional(),
     customerAddressId: z.number().int().nullable().optional(),
     customerAddress: CustomerAddressSchema.nullable().optional(),
+    note: z.string().nullable().optional(),
   }).passthrough();
 export type DeliveryNoteLineResponse = z.infer<
   typeof DeliveryNoteLineResponseSchema

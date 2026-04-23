@@ -138,7 +138,7 @@ const getDisplayStatus = (note: { lines?: Array<{ status?: string | null }>; sta
     return "partial";
   }
 
-  if (hasReschedule) return "reschedule";
+  if (hasReschedule) return "failed_reschedule";
   if (hasDelivered && hasFailed) return "partial";
   if (hasDelivered) return "completed";
   if (hasFailed) return "failed";
@@ -471,6 +471,7 @@ export default function DeliveryNoteListPage() {
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>("");
   const [selectedOrderDetailIds, setSelectedOrderDetailIds] = useState<Set<number>>(new Set());
   const [deliveryQtys, setDeliveryQtys] = useState<Record<number, number>>({});
+  const [lineNotes, setLineNotes] = useState<Record<number, string>>({});
 
   // Data fetching for all available orders
   const {
@@ -655,6 +656,7 @@ export default function DeliveryNoteListPage() {
   const [isRecreateDialogOpen, setIsRecreateDialogOpen] = useState(false);
   const [recreateItems, setRecreateItems] = useState<DeliveryNoteLineResponse[]>([]);
   const [recreateQtys, setRecreateQtys] = useState<Record<number, number>>({});
+  const [recreateLineNotes, setRecreateLineNotes] = useState<Record<number, string>>({});
   const [recreateAddressIds, setRecreateAddressIds] = useState<Record<number, number | null>>({});
   const [recreateSelectedAddressId, setRecreateSelectedAddressId] = useState<number | null>(null);
   const [recreateNotes, setRecreateNotes] = useState("");
@@ -687,6 +689,7 @@ export default function DeliveryNoteListPage() {
       });
       
       setRecreateQtys(qtys);
+      setRecreateLineNotes({});
       setRecreateAddressIds(addrs);
       // choose first non-null address as the shared address for recreate
       const firstAddr = Object.values(addrs).find((v) => v != null);
@@ -718,6 +721,7 @@ export default function DeliveryNoteListPage() {
       .map((item) => ({
         orderDetailId: item.orderDetailId,
         deliveryQty: recreateQtys[item.orderDetailId] || 0,
+        note: recreateLineNotes[item.orderDetailId] || undefined,
       }))
       .filter((l) => l.deliveryQty > 0);
 
@@ -751,6 +755,7 @@ export default function DeliveryNoteListPage() {
       }
     });
     setDeliveryQtys(qtys);
+    setLineNotes({});
     setSelectedAddressIds({});
     // Default customer/address: take from first selected order detail
     const firstSelected = selectedOrders[0];
@@ -780,6 +785,7 @@ export default function DeliveryNoteListPage() {
       .map((od) => ({
         orderDetailId: od.orderDetailId,
         deliveryQty: deliveryQtys[od.orderDetailId] || 0,
+        note: lineNotes[od.orderDetailId] || undefined,
       }))
       .filter((l) => l.deliveryQty > 0);
 
@@ -799,6 +805,7 @@ export default function DeliveryNoteListPage() {
 
       setSelectedOrderDetailIds(new Set());
       setDeliveryQtys({});
+      setLineNotes({});
       setSelectedAddressIds({});
       setSelectedAddressId(null);
       setNotes("");
@@ -904,6 +911,8 @@ export default function DeliveryNoteListPage() {
         selectedOrders={selectedOrders}
         deliveryQtys={deliveryQtys}
         setDeliveryQtys={setDeliveryQtys}
+        lineNotes={lineNotes}
+        setLineNotes={setLineNotes}
         selectedAddressId={selectedAddressId}
         setSelectedAddressId={setSelectedAddressId}
         selectedAddressIds={selectedAddressIds}
@@ -921,6 +930,8 @@ export default function DeliveryNoteListPage() {
         items={recreateItems}
         qtys={recreateQtys}
         setQtys={setRecreateQtys}
+        lineNotes={recreateLineNotes}
+        setLineNotes={setRecreateLineNotes}
         addressIds={recreateAddressIds}
         setAddressIds={setRecreateAddressIds}
         selectedAddressId={recreateSelectedAddressId}
@@ -2041,6 +2052,8 @@ interface CreateDeliveryNoteDialogProps {
   selectedOrders: Array<SelectedOrderDetail>;
   deliveryQtys: Record<number, number>;
   setDeliveryQtys: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  lineNotes: Record<number, string>;
+  setLineNotes: React.Dispatch<React.SetStateAction<Record<number, string>>>;
   selectedAddressId: number | null;
   setSelectedAddressId: React.Dispatch<React.SetStateAction<number | null>>;
   selectedAddressIds: Record<number, number | null>;
@@ -2058,6 +2071,8 @@ function CreateDeliveryNoteDialog({
   selectedOrders,
   deliveryQtys,
   setDeliveryQtys,
+  lineNotes,
+  setLineNotes,
   selectedAddressId,
   setSelectedAddressId,
   selectedAddressIds,
@@ -2129,6 +2144,21 @@ function CreateDeliveryNoteDialog({
                             className="h-8 text-right font-semibold text-primary"
                           />
                         </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <Label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Ghi chú mặt hàng</Label>
+                        <Input
+                          placeholder="Nhập ghi chú riêng cho sản phẩm này..."
+                          value={lineNotes[od.orderDetailId] || ""}
+                          onChange={(e) => {
+                            setLineNotes((prev) => ({
+                              ...prev,
+                              [od.orderDetailId]: e.target.value,
+                            }));
+                          }}
+                          className="h-8 text-xs bg-slate-50/50 dark:bg-slate-900/50"
+                        />
                       </div>
 
                       {/* Address selection moved to global selector below */}
@@ -2227,6 +2257,8 @@ interface RecreateDeliveryNoteDialogProps {
   items: DeliveryNoteLineResponse[];
   qtys: Record<number, number>;
   setQtys: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  lineNotes: Record<number, string>;
+  setLineNotes: React.Dispatch<React.SetStateAction<Record<number, string>>>;
   addressIds: Record<number, number | null>;
   setAddressIds: React.Dispatch<React.SetStateAction<Record<number, number | null>>>;
   selectedAddressId?: number | null;
@@ -2244,6 +2276,8 @@ function RecreateDeliveryNoteDialog({
   items,
   qtys,
   setQtys,
+  lineNotes,
+  setLineNotes,
   addressIds,
   setAddressIds,
   selectedAddressId,
@@ -2307,6 +2341,21 @@ function RecreateDeliveryNoteDialog({
                             className="h-8 text-right font-semibold text-primary"
                           />
                         </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <Label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Ghi chú mặt hàng</Label>
+                        <Input
+                          placeholder="Nhập ghi chú riêng cho sản phẩm này..."
+                          value={lineNotes[item.orderDetailId] || ""}
+                          onChange={(e) => {
+                            setLineNotes((prev) => ({
+                              ...prev,
+                              [item.orderDetailId]: e.target.value,
+                            }));
+                          }}
+                          className="h-8 text-xs bg-slate-50/50 dark:bg-slate-900/50"
+                        />
                       </div>
 
                       {/* Address selection moved to global selector below */}

@@ -134,6 +134,7 @@ export const API_SUFFIX = {
   DESIGN_BY_USER: (userId: number) => `/designs/user/${userId}`,
   DESIGN_BY_CUSTOMER: (customerId: number) =>
     `/designs/by-customer/${customerId}`,
+  DESIGNS_SALE: "/designs/sale",
 
   DESIGN_TIMELINE: (id: number) => `/designs/${id}/timeline`,
   DESIGN_UPLOAD_FILE: (id: number) => `/designs/${id}/upload-design-file`,

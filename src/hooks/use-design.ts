@@ -10,6 +10,7 @@ import type {
   DesignTimelineEntryResponsePaginate,
   UpdateDesignRequest,
   DesignByCustomerParams,
+  DesignSaleParams,
   RevertDesignRequest,
   DesignUserParams,
 } from "@/Schema";
@@ -412,4 +413,18 @@ export const useRevertDesign = () => {
     mutate,
     reset,
   };
+};
+// GET /api/designs/sale
+export const useDesignsSale = (params?: DesignSaleParams) => {
+  return useQuery({
+    queryKey: [designKeys.all[0], "sale", params ?? {}],
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignResponsePaginate>(
+        API_SUFFIX.DESIGNS_SALE,
+        { params }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 };

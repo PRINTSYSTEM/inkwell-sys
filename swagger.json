@@ -6708,6 +6708,76 @@
         }
       }
     },
+    "/api/designs/sale": {
+      "get": {
+        "tags": [
+          "Design"
+        ],
+        "parameters": [
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortColumn",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignResponsePaginate"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignResponsePaginate"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignResponsePaginate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/designs/{id}/timeline": {
       "post": {
         "tags": [
@@ -22928,6 +22998,12 @@
             "minimum": 1,
             "type": "integer",
             "format": "int32"
+          },
+          "note": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -22995,6 +23071,10 @@
           "lineAmount": {
             "type": "number",
             "format": "double"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
           },
           "status": {
             "type": "string",
@@ -23356,6 +23436,11 @@
           },
           "latestRequirements": {
             "type": "string",
+            "nullable": true
+          },
+          "latestUnitPrice": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           },
           "availableQuantityForProofing": {
@@ -28390,6 +28475,12 @@
             "minimum": 0,
             "type": "integer",
             "format": "int32",
+            "nullable": true
+          },
+          "note": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
             "nullable": true
           }
         },

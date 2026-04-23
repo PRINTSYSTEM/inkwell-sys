@@ -695,7 +695,7 @@ export default function DesignDetailPage() {
             </Button>
 
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <h1 className="text-base font-semibold truncate">
+              <h1 className="text-base font-semibold break-all">
                 {d.code ?? `DES-${d.id}`}
               </h1>
               <StatusBadge
@@ -703,11 +703,6 @@ export default function DesignDetailPage() {
                 label={designStatusLabels[currentStatus]}
                 className="shrink-0"
               />
-              {d.designName && (
-                <span className="text-xs text-muted-foreground truncate hidden sm:block">
-                  • {d.designName}
-                </span>
-              )}
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -1092,9 +1087,11 @@ export default function DesignDetailPage() {
                             maxLength={255}
                           />
                         ) : (
-                          <p className="font-bold text-sm text-teal-900 dark:text-teal-100">
-                            {d.designName ?? "—"}
-                          </p>
+                          <CursorTooltip content={d.designName || ""}>
+                            <p className="font-bold text-sm text-teal-900 dark:text-teal-100 truncate cursor-help">
+                              {d.designName ?? "—"}
+                            </p>
+                          </CursorTooltip>
                         )}
                       </CardContent>
                     </Card>
