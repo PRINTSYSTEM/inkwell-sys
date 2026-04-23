@@ -62,6 +62,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useState } from "react";
+import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 
 interface ProductionListTableProps {
   isLoading: boolean;
@@ -792,7 +793,7 @@ function ProductionTableRow({
                             key={pod.id}
                             className="bg-muted/20 p-2.5 rounded-md text-xs"
                           >
-                            <p className="font-bold text-[13px] text-foreground mb-2">
+                            <p className="font-bold text-[13px] text-foreground mb-2 break-all">
                               {pod.design?.designName ||
                                 pod.design?.code ||
                                 "—"}

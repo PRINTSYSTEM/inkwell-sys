@@ -1038,7 +1038,7 @@ export default function OrderDetailPage() {
                                     }
                                   />
                                 </div>
-                                <h4 className="font-medium">
+                                <h4 className="font-medium break-all">
                                   {design?.designName || "Chưa đặt tên"}
                                 </h4>
                                 <p className="text-sm text-muted-foreground">

@@ -479,6 +479,8 @@ export const statusColorMap: Record<string, string> = {
   in_transit: "bg-blue-50 text-blue-700 border-blue-200",
   partially_completed: "bg-amber-50 text-amber-700 border-amber-200",
   partial: "bg-amber-50 text-amber-700 border-amber-200",
+  failed: "bg-red-50 text-red-700 border-red-200",
+  failure: "bg-red-50 text-red-700 border-red-200",
   // completed đã được định nghĩa ở ORDER STATUSES ở trên
   // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
 

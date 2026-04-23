@@ -11,7 +11,7 @@ export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   const colorClass = getStatusColorClass(status);
 
   return (
-    <Badge variant="outline" className={`font-medium border ${colorClass} ${className || ""}`}>
+    <Badge variant="outline" className={`font-medium border whitespace-nowrap py-1 ${colorClass} ${className || ""}`}>
       {label}
     </Badge>
   );

@@ -185,6 +185,11 @@ export default function DeliveryLineRow({
           <div className="text-sm font-medium line-clamp-2">
             {line.designName || "—"}
           </div>
+          {line.note && (
+            <div className="text-[11px] text-orange-600 font-medium mt-1 italic">
+              Ghi chú: {line.note}
+            </div>
+          )}
         </TableCell>
 
         {/* SL đặt hàng */}
@@ -274,12 +279,12 @@ export default function DeliveryLineRow({
         {/* Cột Thao tác */}
         <TableCell>
           {showButtons && (
-            <div className="flex items-center gap-1.5 flex-nowrap">
+            <div className="flex flex-col gap-1.5 w-fit">
               {nextStatus && (
                 <Button
                   size="sm"
                   variant="default"
-                  className="h-7 text-xs gap-1 px-2 whitespace-nowrap"
+                  className="h-7 text-[10px] gap-1 px-2 whitespace-nowrap w-full justify-center"
                   onClick={handleNext}
                   disabled={updateLineResultMutation.isPending}
                 >
@@ -295,7 +300,7 @@ export default function DeliveryLineRow({
               <Button
                 size="sm"
                 variant="destructive"
-                className="h-7 text-xs gap-1 px-2 whitespace-nowrap"
+                className="h-7 text-[10px] gap-1 px-2 whitespace-nowrap w-full justify-center"
                 onClick={() => setFailDialogOpen(true)}
                 disabled={updateLineResultMutation.isPending}
               >

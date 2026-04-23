@@ -40,45 +40,64 @@ export default function DesignCode(props: Props) {
   };
 
   return (
-    <div className="flex items-center gap-2 text-sm text-black">
-      {/* CODE: */}
-      <span className="font-bold">{code}:</span>
+    <div className="flex flex-col gap-2 text-sm text-black pl-12">
+      {/* ROW 1: CODE + DESIGN NAME */}
+      <div className="flex items-start gap-2">
+        <span className="font-bold shrink-0 whitespace-nowrap">{code}:</span>
+        <span className="font-semibold uppercase break-all text-slate-900 dark:text-slate-100 max-w-[60%]">
+          {designName}
+        </span>
+      </div>
 
-      {/* MATERIAL + DESIGN NAME */}
-      {/* <span className="font-bold uppercase">{materialType}</span> */}
-      <span className="font-semibold uppercase">{designName}</span>
-
-      {/* - KT: 325 x 80mm */}
-      <span className="font-normal">-</span>
-      <span>KT:</span>
-      <span className="font-bold">{dimensions}mm</span>
-      {adhesiveOffset > 0 && (
-        <div className="font-normal">
-          (bao gồm <span className="font-bold">{adhesiveOffset}mm</span> mép
-          dán)
+      {/* ROW 2: SPECS + DATE + ACTIONS */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-slate-600 dark:text-slate-400">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+          <span className="text-[10px] uppercase font-bold opacity-60">
+            KT:
+          </span>
+          <span className="font-bold text-slate-900 dark:text-slate-100">
+            {dimensions}mm
+          </span>
         </div>
-      )}
-      {/* (bao gồm 15mm mép dán) */}
-      {extraNote && <span className="italic text-gray-700">({extraNote})</span>}
 
-      {/* - Ngày 26/11/2025 */}
-      <span className="font-normal">-</span>
-      <span>Ngày: </span>
-      <span className="font-bold">{formattedDate}</span>
-
-      {/* Copy button */}
-      <button
-        type="button"
-        onClick={handleCopyToClipboard}
-        className="ml-2 inline-flex items-center rounded px-1 py-0.5 hover:bg-gray-100 transition"
-        title="Copy nội dung"
-      >
-        {copied ? (
-          <Check className="w-4 h-4 text-green-600" />
-        ) : (
-          <Copy className="w-4 h-4 text-gray-600" />
+        {adhesiveOffset > 0 && (
+          <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded border border-amber-200/50">
+            <span className="text-[10px] uppercase font-bold opacity-60">
+              Mép dán:
+            </span>
+            <span className="font-bold">{adhesiveOffset}mm</span>
+          </div>
         )}
-      </button>
+
+        {extraNote && (
+          <div className="flex items-center gap-1.5 italic text-slate-500 break-all">
+            ({extraNote})
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 border-l pl-4 border-slate-200 dark:border-slate-800">
+          <span className="text-[10px] uppercase font-bold opacity-60">
+            Ngày tạo:
+          </span>
+          <span className="font-medium text-slate-900 dark:text-slate-100">
+            {formattedDate}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleCopyToClipboard}
+          className="ml-auto inline-flex items-center gap-1 rounded bg-primary text-primary-foreground px-2 py-1 hover:opacity-90 transition shadow-sm active:scale-95"
+          title="Copy nội dung"
+        >
+          {copied ? (
+            <Check className="w-3.5 h-3.5" />
+          ) : (
+            <Copy className="w-3.5 h-3.5" />
+          )}
+          <span className="text-[10px] font-bold uppercase">Copy</span>
+        </button>
+      </div>
     </div>
   );
 }

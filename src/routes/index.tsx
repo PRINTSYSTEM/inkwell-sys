@@ -29,6 +29,7 @@ const DesignManagement = lazy(() => import("@/pages/design/Designers"));
 const DesignerDetailPage = lazy(
   () => import("@/pages/design/DesignerDetailView")
 );
+const SaleDesignSearch = lazy(() => import("@/pages/design/SaleDesignSearch"));
 
 // Orders
 const Orders = lazy(() => import("@/pages/orders/OrderList"));
@@ -328,6 +329,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <DesignManagement />
+              </Suspense>
+            ),
+          },
+          {
+            path: lastSegment(ROUTE_PATHS.DESIGN.SALE_LOOKUP), // "sale-lookup"
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <SaleDesignSearch />
               </Suspense>
             ),
           },

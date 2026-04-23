@@ -142,7 +142,7 @@ export function DetailEmptyOrderView({
                                 {design.designTypeName}
                               </Badge>
                             </div>
-                            <p className="text-[10px] text-muted-foreground font-medium truncate">
+                            <p className="text-[10px] text-muted-foreground font-medium break-all leading-relaxed">
                               {design.name}
                             </p>
                             <p className="text-[10px] text-muted-foreground font-medium mt-0.5">

@@ -179,6 +179,9 @@ export const ENTITY_CONFIG = {
       completed: "Giao thành công",
       partial: "Hẹn giao lại một phần",
       cancelled: "Giao thất bại/Đã hủy",
+      failed: "Thất bại",
+      failure: "Thất bại",
+      failed_reschedule: "Thất bại - hẹn giao lại",
     },
   },
   deliveryLineStatuses: {
