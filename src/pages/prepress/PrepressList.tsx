@@ -580,9 +580,12 @@ export default function PrepressList() {
       }));
     }
 
+    // Removed automatic triggering of isConfiguring to only open panel when "Tạo lệnh mới" is clicked
+    /* 
     if (!isConfiguring) {
       setIsConfiguring(true);
     }
+    */
   };
 
   const handleClearFilters = () => {
@@ -666,7 +669,6 @@ export default function PrepressList() {
                     disabled={isCreating}
                     onClick={() => {
                       setIsConfiguring(true);
-                      setDesignQuantities({});
                       setProofingSheetQuantity(0);
                       setPaperSizeId("custom");
                       setCustomPaperSize("");
