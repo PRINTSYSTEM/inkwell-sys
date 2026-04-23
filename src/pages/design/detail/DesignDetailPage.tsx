@@ -1087,11 +1087,9 @@ export default function DesignDetailPage() {
                             maxLength={255}
                           />
                         ) : (
-                          <CursorTooltip content={d.designName || ""}>
-                            <p className="font-bold text-sm text-teal-900 dark:text-teal-100 truncate cursor-help">
-                              {d.designName ?? "—"}
-                            </p>
-                          </CursorTooltip>
+                          <p className="font-bold text-sm text-teal-900 dark:text-teal-100 break-all">
+                            {d.designName ?? "—"}
+                          </p>
                         )}
                       </CardContent>
                     </Card>

@@ -1228,7 +1228,7 @@ export default function ProductionDetailPage() {
                                 <Card key={pod.id} className="bg-muted/40 p-3">
                                   <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                      <p className="text-sm font-medium">
+                                      <p className="text-sm font-medium break-all">
                                         {pod.design?.designName ||
                                           pod.design?.code ||
                                           "N/A"}
@@ -1672,7 +1672,7 @@ export default function ProductionDetailPage() {
                                 <Card key={pod.id} className="bg-muted/40 p-3">
                                   <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                      <p className="text-sm font-medium">
+                                      <p className="text-sm font-medium break-all">
                                         {pod.design?.designName ||
                                           pod.design?.code ||
                                           "N/A"}
