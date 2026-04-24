@@ -87,6 +87,7 @@ export const ROUTE_PATHS = {
     DEBT_REPORT: "/accounting/debt-report" as const,
     REVENUE: "/accounting/revenue" as const,
     EXPENSES: "/accounting/expenses" as const,
+    COST_PRICING: "/accounting/cost-pricing" as const,
     // Cash Management
     CASH_FUNDS: "/accounting/cash-funds" as const,
     CASH_PAYMENTS: "/accounting/cash-payments" as const,
