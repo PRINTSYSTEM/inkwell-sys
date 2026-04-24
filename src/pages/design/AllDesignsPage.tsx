@@ -431,6 +431,9 @@ export default function AllDesignsPage() {
                   </TableHead>
                   <TableHead className="h-9 text-sm font-bold">Người thiết kế</TableHead>
                   <TableHead className="h-9 text-sm font-bold">
+                    Loại
+                  </TableHead>
+                  <TableHead className="h-9 text-sm font-bold">
                     Kích thước
                   </TableHead>
                 </TableRow>
