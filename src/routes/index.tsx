@@ -93,6 +93,8 @@ const StockOutDetail = lazy(() => import("@/pages/stock/StockOutDetail"));
 // Vendors
 const VendorList = lazy(() => import("@/pages/vendors/VendorList"));
 const VendorCreate = lazy(() => import("@/pages/vendors/VendorCreate"));
+const VendorEdit = lazy(() => import("@/pages/vendors/VendorEdit"));
+const VendorDetail = lazy(() => import("@/pages/vendors/VendorDetail"));
 
 const PaymentPage = lazy(() => import("@/pages/accounting/PaymentPage"));
 const InvoicePage = lazy(() => import("@/pages/accounting/InvoicePage"));
@@ -666,6 +668,22 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <VendorCreate />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <VendorDetail />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id/edit",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <VendorEdit />
               </Suspense>
             ),
           },

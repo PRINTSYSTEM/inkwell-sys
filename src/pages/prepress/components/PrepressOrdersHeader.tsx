@@ -92,8 +92,8 @@ interface PrepressOrdersHeaderProps {
   setDesignsPageInput?: (val: string) => void;
   handleDesignsPageInputBlur?: () => void;
   designsTotalCount?: number;
-  shouldShowExpand?: boolean;
   expandedOrderIds?: Set<number>;
+  isSelectionEnabled?: boolean;
 }
 
 export function PrepressOrdersHeader({
@@ -156,6 +156,7 @@ export function PrepressOrdersHeader({
   onFindDie,
   shouldShowExpand = false,
   expandedOrderIds = new Set(),
+  isSelectionEnabled = true,
 }: PrepressOrdersHeaderProps) {
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
@@ -296,6 +297,7 @@ export function PrepressOrdersHeader({
                 onReject={onReject}
                 isRejecting={isRejecting}
                 onFindDie={onFindDie}
+                isSelectionEnabled={isSelectionEnabled}
               />
               {/* Designs Pagination */}
               {designsTotalCount > itemsPerPage &&

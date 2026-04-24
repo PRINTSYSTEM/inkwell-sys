@@ -1,5 +1,6 @@
 // src/pages/accounting/CostPricingPage.tsx
 import { useState, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -40,6 +41,7 @@ import {
   Scissors,
   AlertCircle,
   CircleDollarSign,
+  Users,
 } from "lucide-react";
 import { usePlateExports, useUpdatePlateExport } from "@/hooks/use-plate-export";
 import { useDies, useUpdateDie } from "@/hooks/use-die";
@@ -86,20 +88,20 @@ function InlinePriceCell({
   onSave,
   isSaving,
 }: InlinePriceCellProps) {
+  const displayPrice = (currentPrice && currentPrice > 0) ? currentPrice : (defaultValue ?? 0);
+
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(
-    (currentPrice ?? defaultValue ?? "").toString()
-  );
+  const [value, setValue] = useState(displayPrice.toString());
   const inputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = useCallback(() => {
-    setValue((currentPrice ?? defaultValue ?? "").toString());
+    setValue(displayPrice.toString());
     setEditing(true);
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, [currentPrice, defaultValue]);
+  }, [displayPrice]);
 
   const cancel = () => {
-    setValue((currentPrice ?? defaultValue ?? "").toString());
+    setValue(displayPrice.toString());
     setEditing(false);
   };
 
@@ -158,31 +160,18 @@ function InlinePriceCell({
     );
   }
 
-  const hasPrice = currentPrice != null && currentPrice > 0;
   return (
     <div className="flex items-center gap-2 group/cell">
-      <span
-        className={`font-semibold tabular-nums ${
-          hasPrice ? "text-slate-800" : "text-slate-400 italic"
-        }`}
-      >
-        {hasPrice ? formatVND(currentPrice) : "Chưa có giá"}
+      <span className="font-semibold tabular-nums text-slate-800">
+        {formatVND(displayPrice)}
       </span>
-      {defaultValue && !hasPrice && (
-        <Badge
-          variant="outline"
-          className="text-[10px] border-amber-300 text-amber-700 bg-amber-50 px-1.5 py-0"
-        >
-          Mặc định {formatVND(defaultValue)}
-        </Badge>
-      )}
       <Button
         size="icon"
-        variant="ghost"
-        className="h-6 w-6 opacity-0 group-hover/cell:opacity-100 transition-opacity text-[#93631F]"
+        variant="outline"
+        className="h-7 w-7 shrink-0 bg-white border-[#93631F]/20 text-[#93631F] hover:bg-[#93631F]/10 hover:text-[#93631F] hover:border-[#93631F]/40 shadow-sm transition-all"
         onClick={startEdit}
       >
-        <Pencil className="h-3 w-3" />
+        <Pencil className="h-3.5 w-3.5" />
       </Button>
     </div>
   );
@@ -195,6 +184,8 @@ function PlateTab() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [vendorId, setVendorId] = useState<string>("");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
   const [savingId, setSavingId] = useState<number | null>(null);
 
   const { data: vendorsData } = useActiveVendors();
@@ -203,22 +194,30 @@ function PlateTab() {
     pageSize: 15,
     search: search || undefined,
     vendorId: vendorId ? parseInt(vendorId) : undefined,
-  });
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+  } as any);
   const { mutateAsync: updatePlate } = useUpdatePlateExport();
 
   const items = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
 
   const handleSavePrice = async (id: number, price: number) => {
+    const plate = items.find((p: any) => p.id === id);
+    if (!plate) return;
+
     setSavingId(id);
     try {
-      await updatePlate({ id, data: { plateCount: undefined } as never });
-      // Note: UpdatePlateExportRequest only has plateCount/dates, not price.
-      // Price update for Kẽm must go through the Die endpoint or a vendor-cost endpoint.
-      // Until the API exposes a price field, we show a toast note.
-      toast.info(
-        `Đã ghi nhận giá ${formatVND(price)} – cần xác nhận API hỗ trợ trường giá.`
-      );
+      await updatePlate({
+        id,
+        data: {
+          plateCount: plate.plateCount ?? 0,
+          unitPrice: price,
+          estimatedReceiveAt: plate.estimatedReceiveAt || undefined,
+          receivedAt: plate.receivedAt || undefined,
+        } as any,
+      });
+      toast.success(`Đã cập nhật giá kẽm: ${formatVND(price)}`);
     } finally {
       setSavingId(null);
     }
@@ -269,6 +268,20 @@ function PlateTab() {
                 ))}
               </SelectContent>
             </Select>
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+              className="w-[140px] h-10"
+              title="Từ ngày"
+            />
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+              className="w-[140px] h-10"
+              title="Đến ngày"
+            />
             <Button
               variant="outline"
               size="sm"
@@ -340,7 +353,7 @@ function PlateTab() {
                   <TableBody>
                     {items.map((plate: PlateExportResponse) => {
                       const effectivePrice =
-                        (plate as { price?: number }).price ?? DEFAULT_PLATE_PRICE;
+                        (plate as { unitPrice?: number }).unitPrice ?? DEFAULT_PLATE_PRICE;
                       const totalCost =
                         effectivePrice * (plate.plateCount ?? 1);
                       return (
@@ -373,7 +386,7 @@ function PlateTab() {
                           <TableCell>
                             <InlinePriceCell
                               id={plate.id!}
-                              currentPrice={(plate as { price?: number }).price}
+                              currentPrice={effectivePrice}
                               defaultValue={DEFAULT_PLATE_PRICE}
                               onSave={handleSavePrice}
                               isSaving={savingId === plate.id}
@@ -428,13 +441,16 @@ function PlateTab() {
 function DieTab() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [priceFilter, setPriceFilter] = useState<"all" | "no_price">("no_price");
+  const [vendorId, setVendorId] = useState<string>("");
+  const [priceFilter, setPriceFilter] = useState<"all" | "no_price">("all");
   const [savingId, setSavingId] = useState<number | null>(null);
 
+  const { data: vendorsData } = useActiveVendors();
   const { data, isLoading, refetch } = useDies({
     pageNumber: page,
     pageSize: 15,
     q: search || undefined,
+    vendorName: vendorId ? vendorsData?.find(v => v.id.toString() === vendorId)?.name : undefined,
   });
   const { mutateAsync: updateDie } = useUpdateDie();
 
@@ -482,13 +498,32 @@ function DieTab() {
               />
             </div>
             <Select
+              value={vendorId || "all"}
+              onValueChange={(v) => {
+                setVendorId(v === "all" ? "" : v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-10 w-48">
+                <SelectValue placeholder="Nhà cung cấp khuôn" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả NCC</SelectItem>
+                {vendorsData?.map((v) => (
+                  <SelectItem key={v.id} value={String(v.id)}>
+                    {v.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
               value={priceFilter}
               onValueChange={(v) => {
                 setPriceFilter(v as "all" | "no_price");
                 setPage(1);
               }}
             >
-              <SelectTrigger className="h-10 w-48">
+              <SelectTrigger className="h-10 w-40">
                 <SelectValue placeholder="Trạng thái giá" />
               </SelectTrigger>
               <SelectContent>
@@ -555,10 +590,16 @@ function DieTab() {
                         Nhà cung cấp
                       </TableHead>
                       <TableHead className="font-semibold text-slate-700">
+                        Người tạo
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700">
                         Bình bài đầu
                       </TableHead>
                       <TableHead className="font-semibold text-slate-700">
                         Ngày nhận
+                      </TableHead>
+                      <TableHead className="text-center font-semibold text-slate-700">
+                        Lần dùng
                       </TableHead>
                       <TableHead className="font-semibold text-slate-700 w-[280px]">
                         Đơn giá
@@ -583,11 +624,39 @@ function DieTab() {
                         <TableCell className="text-sm text-slate-700">
                           {die.vendorName || die.vendor?.name || "—"}
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-slate-500">
-                          {die.firstProofingOrderCode || "—"}
+                        <TableCell className="text-sm text-slate-600">
+                          {(die as any).createdBy?.fullName || (die as any).createdBy?.username || "—"}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {(() => {
+                            const code = die.firstProofingOrderCode || (die as any).usageHistory?.[0]?.proofingOrderCode;
+                            const orderId = die.firstProofingOrderId || (die as any).usageHistory?.[0]?.proofingOrderId;
+                            
+                            if (code && orderId) {
+                              return (
+                                <Link 
+                                  to={`/proofing/${orderId}`} 
+                                  className="text-[#93631F] hover:text-[#7A521A] hover:underline font-medium transition-colors"
+                                  target="_blank"
+                                >
+                                  {code}
+                                </Link>
+                              );
+                            }
+                            return <span className="text-slate-500">—</span>;
+                          })()}
                         </TableCell>
                         <TableCell className="text-sm text-slate-600">
-                          {formatDateTime(die.receivedAt)}
+                          {die.receivedAt ? formatDateTime(die.receivedAt) : (
+                            <span className="text-slate-400 italic">
+                              {formatDateTime((die as any).estimatedReceiveAt || die.createdAt)}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center font-semibold text-slate-700">
+                          <Badge variant="outline" className="bg-slate-50 text-slate-600 font-mono">
+                            {(die as any).usageHistory?.length || 0}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <InlinePriceCell
@@ -654,6 +723,8 @@ function DieTab() {
     </div>
   );
 }
+
+
 
 // ───────────────────────────────────────────────────────
 // Main Page

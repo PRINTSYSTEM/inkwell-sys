@@ -29,6 +29,7 @@ interface DesignTableProps {
   onReject?: (design: DesignItem) => void;
   isRejecting?: boolean;
   onFindDie?: (design: DesignItem, dimensions: string) => void;
+  isSelectionEnabled?: boolean;
 }
 
 export function DesignTable({
@@ -39,6 +40,7 @@ export function DesignTable({
   onReject,
   isRejecting,
   onFindDie,
+  isSelectionEnabled = true,
 }: DesignTableProps) {
   const [viewingImage, setViewingImage] = useState<{
     url: string;
@@ -219,16 +221,18 @@ export function DesignTable({
                 >
                   <TableRow
                     className={cn(
-                      "cursor-pointer h-14 transition-colors relative",
+                      "h-14 transition-colors relative",
+                      isSelectionEnabled && "cursor-pointer",
                       isSelected &&
                         "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]",
-                      !isSelected && selectable && "hover:bg-muted/50",
-                      !selectable &&
+                      isSelectionEnabled && !isSelected && selectable && "hover:bg-muted/50",
+                      isSelectionEnabled && !selectable &&
                         !isSelected &&
                         "opacity-50 cursor-not-allowed",
+                      !isSelectionEnabled && !isSelected && "hover:bg-transparent"
                     )}
                     onClick={() => {
-                      if (selectable || isSelected) {
+                      if (isSelectionEnabled && (selectable || isSelected)) {
                         onToggle(design);
                       }
                     }}

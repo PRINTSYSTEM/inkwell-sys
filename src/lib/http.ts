@@ -6,19 +6,24 @@ const parseParams = (params: Record<string, unknown>) => {
   let options = "";
 
   keys.forEach((key) => {
-    const isParamTypeObject = typeof params[key] === "object";
+    const value = params[key];
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+
+    const isParamTypeObject = typeof value === "object";
     const isParamTypeArray =
-      isParamTypeObject &&
-      Array.isArray(params[key]) &&
-      (params[key] as unknown[]).length >= 0;
+      isParamTypeObject && Array.isArray(value) && value.length >= 0;
 
     if (!isParamTypeObject) {
-      options += `${key}=${params[key]}&`;
+      options += `${key}=${value}&`;
     }
 
     if (isParamTypeObject && isParamTypeArray) {
-      (params[key] as unknown[]).forEach((element: unknown) => {
-        options += `${key}=${element}&`;
+      (value as unknown[]).forEach((element: unknown) => {
+        if (element !== undefined && element !== null && element !== "") {
+          options += `${key}=${element}&`;
+        }
       });
     }
   });
