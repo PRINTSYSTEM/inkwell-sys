@@ -408,6 +408,13 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
+      {
+        id: "accounting-cost-pricing",
+        title: "Giá thành",
+        icon: Calculator,
+        path: ROUTE_PATHS.ACCOUNTING.COST_PRICING,
+        allowedRoles: [ROLE.ADMIN, ROLE.ACCOUNTING, ROLE.ACCOUNTING_LEAD],
+      },
       // Cash Management
       // Cash fund endpoints removed from API
       // {

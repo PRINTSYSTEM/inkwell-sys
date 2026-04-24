@@ -367,76 +367,59 @@ export default function StockInCreatePage() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Modern Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(-1)}
-                className="cursor-pointer transition-colors duration-200 hover:bg-slate-100"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Quay lại
-              </Button>
-              <div className="h-6 w-px bg-slate-300" />
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-                  <Package className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">
-                    Tạo phiếu nhập kho
-                  </h1>
-                  <p className="text-xs text-slate-500">
-                    Thêm vật phẩm mới vào kho
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate(-1)}
-                className="cursor-pointer transition-colors duration-200"
-              >
-                Hủy
-              </Button>
-              <Button
-                type="submit"
-                form="stock-in-form"
-                disabled={isPending}
-                className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg shadow-blue-500/25"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang tạo...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Tạo phiếu nhập kho
-                  </>
-                )}
-              </Button>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Standard Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Quay lại
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Tạo phiếu nhập kho</h1>
+              <p className="text-muted-foreground mt-1">Thêm vật phẩm mới vào kho</p>
             </div>
           </div>
+          
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(-1)}
+              className="cursor-pointer transition-colors duration-200 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              form="stock-in-form"
+              disabled={isPending}
+              className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-[#93631F] to-[#7a521a] hover:opacity-90 shadow-lg shadow-[#93631F]/25 text-white border-none"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang tạo...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Tạo phiếu nhập kho
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form id="stock-in-form" onSubmit={handleSubmit} className="space-y-6">
+        <form id="stock-in-form" onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+          <div className="xl:col-span-5 space-y-6 flex flex-col">
           {/* Main Information Card */}
-          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-6 py-5 border-b border-slate-200/60">
+          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden flex-1">
+            <div className="bg-gradient-to-r bg-[#93631F]/5 px-6 py-5 border-b border-slate-200/60">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-blue-600" />
+                <div className="h-12 w-12 rounded-xl bg-[#93631F]/10 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-[#93631F]" />
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">
@@ -566,14 +549,16 @@ export default function StockInCreatePage() {
               </div>
             </div>
           </div>
+          </div>
 
           {/* Items Card */}
-          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 px-6 py-5 border-b border-slate-200/60">
+          <div className="xl:col-span-7 space-y-6 flex flex-col">
+          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
+            <div className="bg-gradient-to-r bg-[#93631F]/5 px-6 py-5 border-b border-slate-200/60">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                    <Package className="h-6 w-6 text-indigo-600" />
+                  <div className="h-12 w-12 rounded-xl bg-[#93631F]/10 flex items-center justify-center">
+                    <Package className="h-6 w-6 text-[#93631F]" />
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">
@@ -626,65 +611,80 @@ export default function StockInCreatePage() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium text-slate-600">
-                        Chọn chất liệu
-                      </Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setCreatingMaterialIndex(index);
-                          setNewMaterialData({
-                            name: "",
-                            materialTypeId: 0,
-                            length: 0,
-                            width: undefined,
-                            height: 0,
-                            quantity: undefined,
-                          });
-                          setIsCreateMaterialDialogOpen(true);
-                        }}
-                        className="h-7 text-xs cursor-pointer transition-colors duration-200"
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Row 1: Chọn chất liệu | Mã vật phẩm */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-medium text-slate-600">
+                          Chọn chất liệu
+                        </Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setCreatingMaterialIndex(index);
+                            setNewMaterialData({
+                              name: "",
+                              materialTypeId: 0,
+                              length: 0,
+                              width: undefined,
+                              height: 0,
+                              quantity: undefined,
+                            });
+                            setIsCreateMaterialDialogOpen(true);
+                          }}
+                          className="h-7 text-xs cursor-pointer transition-colors duration-200"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Tạo mới
+                        </Button>
+                      </div>
+                      <Select
+                        value={items[index].materialId?.toString() || ""}
+                        onValueChange={(value) =>
+                          handleMaterialSelect(index, value)
+                        }
                       >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Tạo mới
-                      </Button>
+                        <SelectTrigger className="h-10 cursor-pointer transition-colors duration-200">
+                          <SelectValue placeholder="Chọn chất liệu để tự động điền thông tin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {materials.length === 0 ? (
+                            <div className="px-2 py-1.5 text-sm text-slate-500">
+                              Không có chất liệu nào
+                            </div>
+                          ) : (
+                            materials.map((material) => (
+                              <SelectItem
+                                key={material.id}
+                                value={material.id?.toString() || ""}
+                              >
+                                {material.name ||
+                                  material.materialTypeName ||
+                                  `Chất liệu #${material.id}`}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Select
-                      value={items[index].materialId?.toString() || ""}
-                      onValueChange={(value) =>
-                        handleMaterialSelect(index, value)
-                      }
-                    >
-                      <SelectTrigger className="h-10 cursor-pointer transition-colors duration-200">
-                        <SelectValue placeholder="Chọn chất liệu để tự động điền thông tin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {materials.length === 0 ? (
-                          <div className="px-2 py-1.5 text-sm text-slate-500">
-                            Không có chất liệu nào
-                          </div>
-                        ) : (
-                          materials.map((material) => (
-                            <SelectItem
-                              key={material.id}
-                              value={material.id?.toString() || ""}
-                            >
-                              {material.name ||
-                                material.materialTypeName ||
-                                `Chất liệu #${material.id}`}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <div className="md:col-span-2 space-y-2">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-600">
+                        Mã vật phẩm
+                      </Label>
+                      <Input
+                        value={item.itemCode || ""}
+                        onChange={(e) =>
+                          handleItemChange(index, "itemCode", e.target.value)
+                        }
+                        placeholder="Mã (tùy chọn)"
+                      />
+                    </div>
+
+                    {/* Row 2: Tên vật phẩm | Số lượng */}
+                    <div className="space-y-2">
                       <Label className="text-xs font-medium text-slate-600">
                         Tên vật phẩm <span className="text-red-500">*</span>
                       </Label>
@@ -709,34 +709,6 @@ export default function StockInCreatePage() {
                       )}
                     </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-600">
-                        Mã vật phẩm
-                      </Label>
-                      <Input
-                        value={item.itemCode || ""}
-                        onChange={(e) =>
-                          handleItemChange(index, "itemCode", e.target.value)
-                        }
-                        placeholder="Mã (tùy chọn)"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-600">
-                        Đơn vị
-                      </Label>
-                      <Input
-                        value={item.unit || ""}
-                        onChange={(e) =>
-                          handleItemChange(index, "unit", e.target.value)
-                        }
-                        placeholder="Đơn vị (tùy chọn)"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label className="text-xs font-medium text-slate-600">
                         Số lượng <span className="text-red-500">*</span>
@@ -781,6 +753,20 @@ export default function StockInCreatePage() {
                       )}
                     </div>
 
+                    {/* Row 3: Đơn vị | Đơn giá */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-600">
+                        Đơn vị
+                      </Label>
+                      <Input
+                        value={item.unit || ""}
+                        onChange={(e) =>
+                          handleItemChange(index, "unit", e.target.value)
+                        }
+                        placeholder="Đơn vị (tùy chọn)"
+                      />
+                    </div>
+
                     <div className="space-y-2">
                       <Label className="text-xs font-medium text-slate-600">
                         Đơn giá
@@ -821,6 +807,7 @@ export default function StockInCreatePage() {
                 </div>
               ))}
             </div>
+          </div>
           </div>
         </form>
       </div>

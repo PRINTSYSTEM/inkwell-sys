@@ -220,38 +220,24 @@ export default function StockInListPage() {
       </Helmet>
 
       <div className="min-h-screen bg-background">
-        {/* Modern Header */}
-        <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#93631F] to-[#7a521a] flex items-center justify-center shadow-lg shadow-[#93631F]/25">
-                    <Package className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-bold text-slate-900">
-                      Quản lý nhập kho
-                    </h1>
-                    <p className="text-xs text-slate-500">
-                      Quản lý các phiếu nhập kho Chất liệu
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <Button
-                onClick={() => navigate("/stock/stock-ins/create")}
-                className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-[#93631F] to-[#7a521a] hover:opacity-90 shadow-lg shadow-[#93631F]/25 text-white border-none"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Tạo phiếu nhập kho
-              </Button>
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          {/* Standard Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Quản lý nhập kho</h1>
+              <p className="text-muted-foreground mt-1">Quản lý các phiếu nhập kho Chất liệu</p>
             </div>
+            <Button
+              onClick={() => navigate("/stock/stock-ins/create")}
+              className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-[#93631F] to-[#7a521a] hover:opacity-90 shadow-lg shadow-[#93631F]/25 text-white border-none"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Tạo phiếu nhập kho
+            </Button>
           </div>
-        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Filters Card */}
+          <div className="space-y-6">
+            {/* Filters Card */}
           <Card className="mb-6 border-slate-200/60 shadow-lg shadow-slate-200/50">
             <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60">
               <div className="flex items-center gap-3">
@@ -417,25 +403,8 @@ export default function StockInListPage() {
                                 ? formatDate(stockIn.stockInDate)
                                 : "—"}
                             </TableCell>
-                            <TableCell>
-                              <div className="space-y-1">
-                                <div className="font-medium text-sm">
-                                  {stockIn.supplier?.name ||
-                                    stockIn.vendorName ||
-                                    "—"}
-                                </div>
-                                {stockIn.type && (
-                                  <div className="text-xs text-slate-500">
-                                    {stockIn.type === "purchase"
-                                      ? "Mua hàng"
-                                      : stockIn.type === "return"
-                                        ? "Trả hàng"
-                                        : stockIn.type === "adjustment"
-                                          ? "Điều chỉnh"
-                                          : stockIn.type}
-                                  </div>
-                                )}
-                              </div>
+                            <TableCell className="text-sm font-medium text-slate-700">
+                              {stockIn.supplier?.name || stockIn.vendorName || "—"}
                             </TableCell>
                             <TableCell className="text-sm text-slate-600">
                               {stockIn.type === "purchase"
@@ -575,6 +544,7 @@ export default function StockInListPage() {
               )}
             </CardContent>
           </Card>
+          </div>
         </div>
       </div>
 

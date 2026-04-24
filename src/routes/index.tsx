@@ -172,6 +172,11 @@ const PaymentMethodList = lazy(
   () => import("@/pages/accounting/payment-method/PaymentMethodListPage")
 );
 
+// Accounting - Cost Pricing (Phase 2)
+const CostPricingPage = lazy(
+  () => import("@/pages/accounting/CostPricingPage")
+);
+
 // Inventory Reports
 const CurrentStock = lazy(
   () => import("@/pages/reports/inventory/CurrentStockPage")
@@ -737,6 +742,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <AccountingExpenses />
+              </Suspense>
+            ),
+          },
+          {
+            path: lastSegment(ROUTE_PATHS.ACCOUNTING.COST_PRICING), // "cost-pricing"
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <CostPricingPage />
               </Suspense>
             ),
           },

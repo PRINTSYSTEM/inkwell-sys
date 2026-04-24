@@ -164,6 +164,11 @@ export default function StockOutCreatePage() {
       errors.quantity = "Số lượng phải lớn hơn 0";
     } else if (item.quantity > 2147483647) {
       errors.quantity = "Số lượng quá lớn (tối đa 2,147,483,647)";
+    } else if (item.materialId) {
+      const material = materials.find((m) => m.id === item.materialId);
+      if (material && material.quantity !== undefined && item.quantity > material.quantity) {
+        errors.quantity = `Số lượng vượt quá tồn kho hiện tại (${material.quantity})`;
+      }
     }
 
     setItemErrors((prev) => ({ ...prev, [index]: errors }));
@@ -215,7 +220,7 @@ export default function StockOutCreatePage() {
         ...newItems[index],
         itemName: materialName,
         itemCode: generatedCode,
-        unit: material.unit || "",
+        unit: "",
         materialId: material.id,
       };
       setItems(newItems);
@@ -342,12 +347,12 @@ export default function StockOutCreatePage() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50/30 to-red-50/20 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br bg-white flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="relative inline-block">
-            <div className="absolute inset-0 bg-orange-500/20 blur-3xl rounded-full animate-pulse" />
+            <div className="absolute inset-0 bg-[#93631F]/10 blur-3xl rounded-full animate-pulse" />
             <div className="relative bg-white rounded-full p-6 shadow-lg">
-              <CheckCircle2 className="h-16 w-16 text-orange-500 mx-auto" />
+              <CheckCircle2 className="h-16 w-16 text-[#93631F] mx-auto" />
             </div>
           </div>
           <div className="space-y-2">
@@ -372,75 +377,58 @@ export default function StockOutCreatePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Modern Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(-1)}
-                className="cursor-pointer transition-colors duration-200 hover:bg-slate-100"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Quay lại
-              </Button>
-              <div className="h-6 w-px bg-slate-300" />
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/25">
-                  <LogOut className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">
-                    Tạo phiếu xuất kho
-                  </h1>
-                  <p className="text-xs text-slate-500">
-                    Xuất vật phẩm ra khỏi kho
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate(-1)}
-                className="cursor-pointer transition-colors duration-200"
-              >
-                Hủy
-              </Button>
-              <Button
-                type="submit"
-                form="stock-out-form"
-                disabled={isPending}
-                className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-lg shadow-orange-500/25"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang tạo...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Tạo phiếu xuất kho
-                  </>
-                )}
-              </Button>
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Standard Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Quay lại
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Tạo phiếu xuất kho</h1>
+              <p className="text-muted-foreground mt-1">Xuất vật phẩm ra khỏi kho</p>
             </div>
           </div>
+          
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(-1)}
+              className="cursor-pointer transition-colors duration-200 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              form="stock-out-form"
+              disabled={isPending}
+              className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-[#93631F] to-[#7a521a] hover:opacity-90 shadow-lg shadow-[#93631F]/25 text-white border-none"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang tạo...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Tạo phiếu xuất kho
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form id="stock-out-form" onSubmit={handleSubmit} className="space-y-6">
+        <form id="stock-out-form" onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          <div className="xl:col-span-5 space-y-6 flex flex-col">
           {/* Main Information Card */}
-          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
-            <div className="bg-gradient-to-r from-orange-500/5 via-red-500/5 to-pink-500/5 px-6 py-5 border-b border-slate-200/60">
+          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden flex-1">
+            <div className="bg-gradient-to-r bg-[#93631F]/5 px-6 py-5 border-b border-slate-200/60">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-orange-600" />
+                <div className="h-12 w-12 rounded-xl bg-[#93631F]/10 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-[#93631F]" />
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">
@@ -474,15 +462,15 @@ export default function StockOutCreatePage() {
                     }}
                     className={`p-4 rounded-xl border-2 transition-all duration-200 ${
                       stockOutType === "production"
-                        ? "border-orange-500 bg-orange-50 shadow-md"
-                        : "border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/50"
+                        ? "border-[#93631F] bg-[#93631F]/5 shadow-md"
+                        : "border-slate-200 bg-white hover:border-[#93631F]/50 hover:bg-[#93631F]/5"
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className={`h-10 w-10 rounded-lg flex items-center justify-center ${
                           stockOutType === "production"
-                            ? "bg-orange-500 text-white"
+                            ? "bg-[#93631F] text-white"
                             : "bg-slate-100 text-slate-600"
                         }`}
                       >
@@ -510,15 +498,15 @@ export default function StockOutCreatePage() {
                     }}
                     className={`p-4 rounded-xl border-2 transition-all duration-200 ${
                       stockOutType === "delivery"
-                        ? "border-orange-500 bg-orange-50 shadow-md"
-                        : "border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50/50"
+                        ? "border-[#93631F] bg-[#93631F]/5 shadow-md"
+                        : "border-slate-200 bg-white hover:border-[#93631F]/50 hover:bg-[#93631F]/5"
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className={`h-10 w-10 rounded-lg flex items-center justify-center ${
                           stockOutType === "delivery"
-                            ? "bg-orange-500 text-white"
+                            ? "bg-[#93631F] text-white"
                             : "bg-slate-100 text-slate-600"
                         }`}
                       >
@@ -725,14 +713,16 @@ export default function StockOutCreatePage() {
               </div>
             </div>
           </div>
+          </div>
 
+          <div className="xl:col-span-7 space-y-6 flex flex-col">
           {/* Items Card */}
-          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden">
-            <div className="bg-gradient-to-r from-red-500/5 via-pink-500/5 to-rose-500/5 px-6 py-5 border-b border-slate-200/60">
+          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
+            <div className="bg-gradient-to-r bg-[#93631F]/5 px-6 py-5 border-b border-slate-200/60">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-red-500/10 flex items-center justify-center">
-                    <Package className="h-6 w-6 text-red-600" />
+                  <div className="h-12 w-12 rounded-xl bg-[#93631F]/10 flex items-center justify-center">
+                    <Package className="h-6 w-6 text-[#93631F]" />
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">
@@ -747,7 +737,7 @@ export default function StockOutCreatePage() {
                   type="button"
                   variant="outline"
                   onClick={handleAddItem}
-                  className="cursor-pointer transition-colors duration-200 hover:bg-red-50 hover:border-red-300"
+                  className="cursor-pointer transition-colors duration-200 hover:bg-[#93631F]/10 hover:border-[#93631F]/30"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Thêm vật phẩm
@@ -759,12 +749,12 @@ export default function StockOutCreatePage() {
               {items.map((item, index) => (
                 <div
                   key={index}
-                  className="bg-amber-50/30 rounded-xl border border-slate-200/60 p-5 space-y-4 hover:border-orange-300/60 transition-colors duration-200"
+                  className="bg-white rounded-xl border border-slate-200/60 p-5 space-y-4 hover:border-[#93631F]/30 shadow-sm transition-colors duration-200"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                        <span className="text-sm font-semibold text-red-600">
+                      <div className="h-8 w-8 rounded-lg bg-[#93631F]/10 flex items-center justify-center">
+                        <span className="text-sm font-semibold text-[#93631F]">
                           {index + 1}
                         </span>
                       </div>
@@ -778,50 +768,64 @@ export default function StockOutCreatePage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveItem(index)}
-                        className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors duration-200"
+                        className="h-8 w-8 p-0 text-red-500 hover:text-[#93631F] hover:bg-red-50 cursor-pointer transition-colors duration-200"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
 
-                  {/* Material Selection */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-slate-600">
-                      Chọn chất liệu
-                    </Label>
-                    <Select
-                      value={item.materialId?.toString() || ""}
-                      onValueChange={(value) =>
-                        handleMaterialSelect(index, value)
-                      }
-                    >
-                      <SelectTrigger className="h-10 cursor-pointer transition-colors duration-200">
-                        <SelectValue placeholder="Chọn chất liệu để tự động điền thông tin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {materials.length === 0 ? (
-                          <div className="px-2 py-1.5 text-sm text-slate-500">
-                            Không có chất liệu nào
-                          </div>
-                        ) : (
-                          materials.map((material) => (
-                            <SelectItem
-                              key={material.id}
-                              value={material.id?.toString() || ""}
-                            >
-                              {material.name ||
-                                material.materialTypeName ||
-                                `Chất liệu #${material.id}`}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Row 1: Chọn chất liệu | Mã vật phẩm */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-600">
+                        Chọn chất liệu
+                      </Label>
+                      <Select
+                        value={item.materialId?.toString() || ""}
+                        onValueChange={(value) =>
+                          handleMaterialSelect(index, value)
+                        }
+                      >
+                        <SelectTrigger className="h-10 cursor-pointer transition-colors duration-200">
+                          <SelectValue placeholder="Chọn chất liệu để tự động điền thông tin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {materials.length === 0 ? (
+                            <div className="px-2 py-1.5 text-sm text-slate-500">
+                              Không có chất liệu nào
+                            </div>
+                          ) : (
+                            materials.map((material) => (
+                              <SelectItem
+                                key={material.id}
+                                value={material.id?.toString() || ""}
+                              >
+                                {material.name ||
+                                  material.materialTypeName ||
+                                  `Chất liệu #${material.id}`}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <div className="md:col-span-2 space-y-2">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-slate-600">
+                        Mã vật phẩm
+                      </Label>
+                      <Input
+                        value={item.itemCode || ""}
+                        onChange={(e) =>
+                          handleItemChange(index, "itemCode", e.target.value)
+                        }
+                        placeholder="Mã (tự động hoặc nhập thủ công)"
+                      />
+                    </div>
+
+                    {/* Row 2: Tên vật phẩm | Số lượng */}
+                    <div className="space-y-2">
                       <Label className="text-xs font-medium text-slate-600">
                         Tên vật phẩm <span className="text-red-500">*</span>
                       </Label>
@@ -848,17 +852,65 @@ export default function StockOutCreatePage() {
 
                     <div className="space-y-2">
                       <Label className="text-xs font-medium text-slate-600">
-                        Mã vật phẩm
+                        Số lượng <span className="text-red-500">*</span>
                       </Label>
-                      <Input
-                        value={item.itemCode || ""}
-                        onChange={(e) =>
-                          handleItemChange(index, "itemCode", e.target.value)
-                        }
-                        placeholder="Mã (tự động hoặc nhập thủ công)"
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          min="1"
+                          max="2147483647"
+                          step="1"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "" || val === "0") {
+                              handleItemChange(index, "quantity", 1);
+                            } else {
+                              const num = parseInt(val, 10);
+                              if (!isNaN(num) && num >= 1 && num <= 2147483647) {
+                                handleItemChange(index, "quantity", num);
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (isNaN(val) || val < 1) {
+                              handleItemChange(index, "quantity", 1);
+                            } else if (val > 2147483647) {
+                              handleItemChange(index, "quantity", 2147483647);
+                            }
+                            handleItemBlur(index);
+                          }}
+                          className={
+                            itemErrors[index]?.quantity
+                              ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                              : ""
+                          }
+                        />
+                        {(() => {
+                          const material = materials.find((m) => m.id === item.materialId);
+                          if (material && material.quantity !== undefined) {
+                            return (
+                              <div className="flex items-center gap-1.5 px-3 bg-[#93631F]/10 border border-[#93631F]/20 rounded-md whitespace-nowrap">
+                                <Package className="h-4 w-4 text-[#93631F]" />
+                                <span className="text-sm font-semibold text-[#93631F]">
+                                  Tồn: {material.quantity.toLocaleString("vi-VN")}
+                                </span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                      {itemErrors[index]?.quantity && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {itemErrors[index].quantity}
+                        </p>
+                      )}
                     </div>
 
+                    {/* Row 3: Đơn vị */}
                     <div className="space-y-2">
                       <Label className="text-xs font-medium text-slate-600">
                         Đơn vị
@@ -870,52 +922,6 @@ export default function StockOutCreatePage() {
                         }
                         placeholder="Đơn vị (tự động hoặc nhập thủ công)"
                       />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-600">
-                        Số lượng <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="2147483647"
-                        step="1"
-                        value={item.quantity}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === "" || val === "0") {
-                            handleItemChange(index, "quantity", 1);
-                          } else {
-                            const num = parseInt(val, 10);
-                            if (!isNaN(num) && num >= 1 && num <= 2147483647) {
-                              handleItemChange(index, "quantity", num);
-                            }
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          if (isNaN(val) || val < 1) {
-                            handleItemChange(index, "quantity", 1);
-                          } else if (val > 2147483647) {
-                            handleItemChange(index, "quantity", 2147483647);
-                          }
-                          handleItemBlur(index);
-                        }}
-                        className={
-                          itemErrors[index]?.quantity
-                            ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                            : ""
-                        }
-                      />
-                      {itemErrors[index]?.quantity && (
-                        <p className="text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {itemErrors[index].quantity}
-                        </p>
-                      )}
                     </div>
                   </div>
 
@@ -936,6 +942,7 @@ export default function StockOutCreatePage() {
                 </div>
               ))}
             </div>
+          </div>
           </div>
         </form>
       </div>
