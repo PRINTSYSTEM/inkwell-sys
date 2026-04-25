@@ -415,6 +415,18 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ACCOUNTING.COST_PRICING,
         allowedRoles: [ROLE.ADMIN, ROLE.ACCOUNTING, ROLE.ACCOUNTING_LEAD],
       },
+      {
+        id: "accounting-vendors",
+        title: "Nhà cung cấp",
+        icon: Building2,
+        path: ROUTE_PATHS.VENDORS.ROOT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
       // Cash Management
       // Cash fund endpoints removed from API
       // {

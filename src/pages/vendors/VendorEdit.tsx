@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,20 +19,24 @@ import {
   Mail,
   MapPin,
   FileText,
-  CheckCircle2,
   Sparkles,
   AlertCircle,
 } from "lucide-react";
-import { useCreateVendor } from "@/hooks/use-vendor";
-import type { CreateVendorRequest } from "@/Schema/vendor.schema";
+import { useVendor, useUpdateVendor } from "@/hooks/use-vendor";
+import type { UpdateVendorRequest } from "@/Schema/vendor.schema";
 import { vendorTypeLabels } from "@/lib/status-utils";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
-export default function VendorCreatePage() {
+export default function VendorEditPage() {
+  const { id } = useParams<{ id: string }>();
+  const vendorId = id ? parseInt(id, 10) : null;
   const navigate = useNavigate();
-  const { mutate: createVendor, isPending, isSuccess } = useCreateVendor();
+  const { data: vendor, isLoading } = useVendor(vendorId, !!vendorId);
+  const { mutate: updateVendor, isPending } = useUpdateVendor();
 
-  const [formData, setFormData] = useState<CreateVendorRequest>({
+  const [formData, setFormData] = useState<UpdateVendorRequest>({
+    id: 0,
     name: "",
     vendorType: "",
     phone: "",
@@ -42,10 +46,25 @@ export default function VendorCreatePage() {
   });
 
   const [errors, setErrors] = useState<
-    Partial<Record<keyof CreateVendorRequest, string>>
+    Partial<Record<keyof UpdateVendorRequest, string>>
   >({});
 
-  const validateField = (field: keyof CreateVendorRequest, value: string) => {
+  // Prefill form when data is loaded
+  useEffect(() => {
+    if (vendor) {
+      setFormData({
+        id: vendor.id!,
+        name: vendor.name || "",
+        vendorType: vendor.vendorType || "",
+        phone: vendor.phone || "",
+        email: vendor.email || "",
+        address: vendor.address || "",
+        note: vendor.note || "",
+      });
+    }
+  }, [vendor]);
+
+  const validateField = (field: keyof UpdateVendorRequest, value: string) => {
     const newErrors = { ...errors };
 
     switch (field) {
@@ -89,7 +108,7 @@ export default function VendorCreatePage() {
   };
 
   const handleInputChange = (
-    field: keyof CreateVendorRequest,
+    field: keyof UpdateVendorRequest,
     value: string
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -103,7 +122,7 @@ export default function VendorCreatePage() {
     }
   };
 
-  const handleBlur = (field: keyof CreateVendorRequest) => {
+  const handleBlur = (field: keyof UpdateVendorRequest) => {
     validateField(field, formData[field] as string);
   };
 
@@ -131,8 +150,9 @@ export default function VendorCreatePage() {
     }
 
     // Prepare payload - convert empty strings to undefined for optional fields
-    const payload: CreateVendorRequest = {
-      name: formData.name.trim(),
+    const payload: UpdateVendorRequest = {
+      id: vendorId!,
+      name: formData.name?.trim(),
       vendorType: formData.vendorType,
       phone: formData.phone?.trim() || undefined,
       email: formData.email?.trim() || undefined,
@@ -140,14 +160,26 @@ export default function VendorCreatePage() {
       note: formData.note?.trim() || undefined,
     };
 
-    createVendor(payload, {
-      onSuccess: () => {
-        navigate("/vendors");
-      },
-    });
+    updateVendor(
+      { id: vendorId!, data: payload },
+      {
+        onSuccess: () => {
+          toast.success("Cập nhật nhà cung cấp thành công!");
+          navigate("/vendors");
+        },
+      }
+    );
   };
 
 
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -166,10 +198,10 @@ export default function VendorCreatePage() {
             </Button>
             <div className="flex-1">
               <h1 className="text-2xl sm:text-3xl font-bold text-balance">
-                Thêm nhà cung cấp mới
+                Cập nhật nhà cung cấp
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Điền thông tin để tạo hồ sơ nhà cung cấp
+                Chỉnh sửa thông tin hồ sơ nhà cung cấp
               </p>
             </div>
             <Sparkles className="h-6 w-6 text-accent hidden sm:block" />
@@ -190,7 +222,7 @@ export default function VendorCreatePage() {
               <div>
                 <CardTitle className="text-xl">Thông tin nhà cung cấp</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Nhập thông tin chi tiết của nhà cung cấp mới
+                  Nhập thông tin chi tiết của nhà cung cấp
                 </p>
               </div>
             </div>
@@ -219,9 +251,10 @@ export default function VendorCreatePage() {
 
               <div className="space-y-2">
                 <Label htmlFor="vendorType">
-                  Loại nhà cung cấp <span className="text-red-500">*</span>
+                  Loại nhà cung cấp
                 </Label>
                 <Select
+                  disabled
                   value={formData.vendorType || undefined}
                   onValueChange={(value) => {
                     handleInputChange("vendorType", value);
@@ -230,7 +263,7 @@ export default function VendorCreatePage() {
                 >
                   <SelectTrigger
                     id="vendorType"
-                    className={errors.vendorType ? "border-red-500" : ""}
+                    className="bg-muted/50 text-muted-foreground"
                   >
                     <SelectValue placeholder="Chọn loại nhà cung cấp" />
                   </SelectTrigger>
@@ -242,12 +275,9 @@ export default function VendorCreatePage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.vendorType && (
-                  <p className="text-sm text-red-500 flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" />
-                    {errors.vendorType}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Loại nhà cung cấp không thể thay đổi sau khi tạo.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -337,7 +367,14 @@ export default function VendorCreatePage() {
                 disabled={isPending}
                 className="cursor-pointer min-w-[140px]"
               >
-                {isPending ? "Đang tạo..." : "Tạo nhà cung cấp"}
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Đang cập nhật...
+                  </>
+                ) : (
+                  "Cập nhật"
+                )}
               </Button>
             </div>
           </CardContent>

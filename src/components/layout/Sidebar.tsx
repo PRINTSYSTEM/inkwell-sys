@@ -121,6 +121,7 @@ const departments: SidebarDepartment[] = [
       { title: "Báo cáo công nợ", href: "/accounting/debt-report" },
       { title: "Doanh thu", href: "/accounting/revenue" },
       { title: "Chi phí", href: "/accounting/expenses" },
+      { title: "Nhà cung cấp", href: "/vendors" },
     ],
   },
   {

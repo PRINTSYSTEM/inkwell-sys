@@ -785,6 +785,7 @@ export default function PrepressList() {
                         onReject={openRejectDialog}
                         isRejecting={isRejecting}
                         onFindDie={handleFindDie}
+                        isSelectionEnabled={isConfiguring}
                         // Designs Pagination props
                         designsPage={designsPage}
                         setDesignsPage={setDesignsPage}
