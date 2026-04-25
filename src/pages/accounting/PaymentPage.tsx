@@ -6,6 +6,7 @@ import { useOrdersForAccounting } from "@/hooks/use-order";
 import type { OrderResponse } from "@/Schema/order.schema";
 import { useAuth } from "@/hooks/use-auth";
 import { ROLE } from "@/constants";
+import { useSearchParams } from "react-router-dom";
 
 // Helper to calculate summary stats from orders
 const calculateSummaryStats = (orders: OrderResponse[]) => {
@@ -48,7 +49,8 @@ const calculateSummaryStats = (orders: OrderResponse[]) => {
 
 export default function PaymentPage() {
   const { user } = useAuth();
-  const isSale = user?.role === ROLE.SALE;
+  const [searchParams] = useSearchParams();
+  const isSale = user?.role === ROLE.SALE || searchParams.get("context") === "sale";
   const pageTitle = isSale ? "Báo giá" : "Thanh toán";
 
   // Build params for API
