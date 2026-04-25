@@ -319,6 +319,29 @@ export const useOrdersForAccounting = (
   });
 };
 
+// ================== ORDER: LIST FOR SALE (QUOTES) ==================
+// GET /orders/for-sale
+export const useOrdersForSale = (
+  params?: OrdersForAccountingListParams,
+  enabled = true
+) => {
+  return useQuery<OrderResponsePaginate>({
+    queryKey: [orderKeys.all[0], "for-sale", params],
+    enabled,
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<OrderResponsePaginate>(
+        API_SUFFIX.ORDERS_FOR_SALE,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 // ================== ORDER: UPDATE FOR ACCOUNTING ==================
 // PUT /orders/{id}/accounting
 

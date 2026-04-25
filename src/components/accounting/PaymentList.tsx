@@ -34,7 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { PaymentStatusBadge, CustomerTypeBadge } from "@/components/accounting";
-import { useOrdersForAccounting } from "@/hooks/use-order";
+import { useOrdersForAccounting, useOrdersForSale } from "@/hooks/use-order";
 import type { OrderResponse } from "@/Schema";
 import { StatusBadge } from "../ui/status-badge";
 import { ENTITY_CONFIG } from "@/config/entities.config";
@@ -110,7 +110,10 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
   }, [currentPage, apiPageSize, debouncedSearchQuery, listFilterType]);
 
   // Fetch orders from API
-  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting(listParams);
+  // If parent passed empty string (QuotePage) treat as "sale/quotes" and
+  // call the /orders/for-sale endpoint, otherwise use accounting endpoint.
+  const hook = clientSideMode ? useOrdersForSale : useOrdersForAccounting;
+  const { data, isLoading, isError, error, refetch } = hook(listParams);
 
   // Filter orders client-side (payment status - API doesn't support payment status filter)
   // When `clientSideMode` is true we filter the full fetched set and then

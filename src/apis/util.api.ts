@@ -49,6 +49,7 @@ export const API_SUFFIX = {
 
   ORDERS_FOR_DESIGNER: "/orders/for-designer",
   ORDERS_FOR_ACCOUNTING: "/orders/for-accounting",
+  ORDERS_FOR_SALE: "/orders/for-sale",
 
   ORDER_ADD_DESIGN: (id: number) => `/orders/${id}/add-design`,
   ORDER_REMOVE_DESIGN: (orderId: number, orderDetailId: number) =>

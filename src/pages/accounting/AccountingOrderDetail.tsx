@@ -858,95 +858,6 @@ export default function AccountingOrderDetail() {
                       Duyệt đơn hàng
                     </Button>
                   )}
-                {invoiceStatus === "not_issued" &&
-                  hasBeenDelivered(order.status) &&
-                  (() => {
-                    const customerInfoCheck = isCustomerInfoComplete(order);
-                    const isDisabled =
-                      !customerInfoCheck.isValid ||
-                      exportInvoiceMutation.loading;
-                    const disableReason =
-                      customerInfoCheck.missingFields.length > 0
-                        ? `Vui lòng điền đầy đủ thông tin khách hàng: ${customerInfoCheck.missingFields.join(", ")}`
-                        : "";
-
-                    const button = (
-                      <Button
-                        size="sm"
-                        onClick={handleExportInvoice}
-                        disabled={isDisabled}
-                      >
-                        {exportInvoiceMutation.loading ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <FileText className="h-4 w-4 mr-2" />
-                        )}
-                        Xuất hóa đơn
-                      </Button>
-                    );
-
-                    if (isDisabled && disableReason) {
-                      return (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="inline-block">{button}</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs">{disableReason}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      );
-                    }
-
-                    return button;
-                  })()}
-                {invoiceStatus === "issued" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportDeliveryNote}
-                    disabled={exportDeliveryNoteMutation.loading}
-                  >
-                    {exportDeliveryNoteMutation.loading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Truck className="h-4 w-4 mr-2" />
-                    )}
-                    Xuất phiếu giao hàng
-                  </Button>
-                )}
-                {order.status === "production_completed" && (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleUpdateStatusToDelivering}
-                    disabled={isUpdatingForAccounting}
-                  >
-                    {isUpdatingForAccounting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Truck className="h-4 w-4 mr-2" />
-                    )}
-                    Chuyển sang đang giao hàng
-                  </Button>
-                )}
-                {order.status === "delivering" && (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleUpdateStatusToCompleted}
-                    disabled={isUpdatingForAccounting}
-                  >
-                    {isUpdatingForAccounting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Chuyển thành đã giao hàng
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -1328,9 +1239,12 @@ export default function AccountingOrderDetail() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="min-w-0">
                             <div className="space-y-1">
-                              <p className="font-medium">
+                              <p
+                                className="font-medium max-w-[320px] truncate"
+                                title={item.design?.designName || undefined}
+                              >
                                 {item.design?.designName || "—"}
                               </p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
