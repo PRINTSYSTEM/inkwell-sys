@@ -9,7 +9,10 @@ import {
   Layers,
   Ruler,
   FileText,
+  Building2,
 } from "lucide-react";
+import { useSharedAddresses } from "@/hooks/use-shared-address";
+import { useMaterialTypeDetail } from "@/hooks/use-material-type";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 
 // Type definition for DesignType - matches API response
@@ -51,6 +54,7 @@ export type CreateDesignRequestUI = {
   sidesClassification?: string | null; // New: stores classification value directly
   processClassification?: string | null; // New: stores classification value directly
   laminationType?: string | null;
+  sharedAddressId?: number | null;
 };
 
 type DesignCardProps = {
@@ -105,6 +109,16 @@ export const DesignCard: React.FC<DesignCardProps> = ({
   const isValid = isDesignValid(design);
   const designType = designTypes.find((dt) => dt.id === design.designTypeId);
   const material = materials.find((m) => m.id === design.materialTypeId);
+  const { data: materialDetail } = useMaterialTypeDetail(
+    design.materialTypeId && design.materialTypeId > 0 ? design.materialTypeId : null,
+    !!(design.materialTypeId && design.materialTypeId > 0)
+  );
+  const materialToShow = material || materialDetail;
+  const { data: sharedAddressesData } = useSharedAddresses({ pageNumber: 1, pageSize: 1000 });
+  const sharedAddresses = sharedAddressesData?.items || [];
+  const selectedAddress = design.sharedAddressId
+    ? sharedAddresses.find((s: any) => s.id === design.sharedAddressId)
+    : undefined;
 
   return (
     <div
@@ -189,14 +203,17 @@ export const DesignCard: React.FC<DesignCardProps> = ({
             )}
 
             {/* Chất liệu */}
-            {material && (
+            {materialToShow && (
               <div className="flex items-start gap-2">
                 <Layers className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground mb-0.5">
                     Chất liệu
                   </p>
-                  <p className="font-medium">{material.name}</p>
+                  <p className="font-medium">{materialToShow.name}</p>
+                  {materialToShow.description && (
+                    <p className="text-xs text-muted-foreground truncate">{materialToShow.description}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -249,6 +266,20 @@ export const DesignCard: React.FC<DesignCardProps> = ({
                       design.laminationType as keyof typeof ENTITY_CONFIG.laminationTypes.values
                     ] || design.laminationType}
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* Địa chỉ giao hàng (nếu có) */}
+            {selectedAddress && (
+              <div className="flex items-start gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground mb-0.5">Địa chỉ giao hàng</p>
+                  <p className="font-medium">{selectedAddress.label}</p>
+                  {selectedAddress.address && (
+                    <p className="text-xs text-muted-foreground truncate">{selectedAddress.address}</p>
+                  )}
                 </div>
               </div>
             )}

@@ -342,7 +342,8 @@ export default function OrderCreatePage() {
   const handleConfirmExistingDesign = (
     design: DesignResponse,
     quantity: number,
-    laminationType: string
+    laminationType: string,
+    sharedAddressId?: number | null
   ) => {
     const newDesign: CreateDesignRequestUI = {
       id: `existing-${design.id}-${Date.now()}`,
@@ -359,6 +360,7 @@ export default function OrderCreatePage() {
       adhesiveOffset:
         (design.adhesiveOffset as number | undefined) || undefined,
       laminationType: laminationType,
+      sharedAddressId: sharedAddressId ?? undefined,
     };
     setDesigns((prev) => [...prev, newDesign]);
     toast.success("Đã thêm thiết kế có sẵn");
@@ -463,6 +465,7 @@ export default function OrderCreatePage() {
             designId: design.designId,
             quantity: design.quantity,
             laminationType: design.laminationType, // Bắt buộc, không null
+            sharedAddressId: design.sharedAddressId ?? null,
           };
         } else {
           // New design: include all fields
@@ -489,6 +492,7 @@ export default function OrderCreatePage() {
             additionalNotes: design.additionalNotes?.trim() || null,
             quantity: design.quantity,
             laminationType: design.laminationType || null,
+            sharedAddressId: design.sharedAddressId ?? null,
           };
         }
       });

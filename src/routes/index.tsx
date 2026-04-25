@@ -167,6 +167,8 @@ const DebtReconciliationAP = lazy(
   () => import("@/pages/accounting/debt-reconciliations/DebtReconciliationAPPage")
 );
 
+const SharedAddressListPage = lazy(() => import("@/pages/shared-addresses/SharedAddressListPage"));
+
 // Expense & Payment Method
 const ExpenseCategoryList = lazy(
   () => import("@/pages/accounting/expense/ExpenseCategoryListPage")
@@ -1047,6 +1049,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <EmployeeDetail />
+              </Suspense>
+            ),
+          },
+          {
+            path: "shared-addresses",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <SharedAddressListPage />
               </Suspense>
             ),
           },

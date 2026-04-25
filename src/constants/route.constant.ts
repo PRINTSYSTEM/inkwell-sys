@@ -133,6 +133,7 @@ export const ROUTE_PATHS = {
     USERS_DETAIL: "/admin/users/:id" as const,
     ROLES: "/admin/roles" as const,
     ANALYTICS: "/admin/analytics" as const,
+    SHARED_ADDRESSES: "/admin/shared-addresses" as const,
   },
 
   MANAGER: {

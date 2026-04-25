@@ -376,4 +376,7 @@ export const API_SUFFIX = {
 
   // ========== VENDORS (EXTRA) ==========
   VENDORS_PLATE_COUNT_OPTIONS: "/vendors/plate-count-options",
+  // ========== SHARED ADDRESSES ==========
+  SHARED_ADDRESSES: "/shared-addresses",
+  SHARED_ADDRESS_BY_ID: (id: number) => `/shared-addresses/${id}`,
 };

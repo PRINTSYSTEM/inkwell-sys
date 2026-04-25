@@ -4,6 +4,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +30,11 @@ import {
 } from "lucide-react";
 import type { CreateDesignRequestUI, DesignTypeResponse } from "./DesignCard";
 import { useMaterialTypeDetail } from "@/hooks/use-material-type";
+import {
+  useSharedAddresses,
+  useCreateSharedAddress,
+  useUpdateSharedAddress,
+} from "@/hooks/use-shared-address";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 
 // Helper functions to determine classification requirements
@@ -160,6 +167,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     requirements: "",
     additionalNotes: "",
     laminationType: undefined,
+    sharedAddressId: undefined,
   });
 
   // Reset form when modal opens with design data
@@ -183,6 +191,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         laminationType: undefined,
         sidesClassification: undefined,
         processClassification: undefined,
+        sharedAddressId: undefined,
       });
       setCurrentStep(1);
     }
@@ -190,7 +199,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
 
   const updateField = <K extends keyof CreateDesignRequestUI>(
     field: K,
-    value: CreateDesignRequestUI[K]
+    value: CreateDesignRequestUI[K],
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -240,12 +249,81 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     });
   };
 
+  // fetch shared addresses to allow selecting per-design delivery address
+  const { data: sharedAddressesData, isLoading: loadingSharedAddresses } =
+    useSharedAddresses({ pageNumber: 1, pageSize: 1000 });
+  const sharedAddresses = sharedAddressesData?.items || [];
+  const [sharedAddressSearch, setSharedAddressSearch] = useState<string>("");
+  const filteredSharedAddresses = sharedAddresses.filter((sa: any) => {
+    const text = `${sa.label || ""} ${sa.address || ""}`.toLowerCase();
+    return text.includes(sharedAddressSearch.trim().toLowerCase());
+  });
+
+  // Create / update hooks
+  const { mutate: createSharedAddress } = useCreateSharedAddress();
+  const { mutate: updateSharedAddress } = useUpdateSharedAddress();
+  // Dialog state for add/edit address
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+  const [addressDialogLabel, setAddressDialogLabel] = useState("");
+  const [addressDialogAddress, setAddressDialogAddress] = useState("");
+  const [addressEditingId, setAddressEditingId] = useState<number | undefined>(
+    undefined,
+  );
+
+  useEffect(() => {
+    if (!addressDialogOpen) {
+      setAddressDialogLabel("");
+      setAddressDialogAddress("");
+      setAddressEditingId(undefined);
+    }
+  }, [addressDialogOpen]);
+
+  const openAddAddressDialog = () => {
+    setAddressEditingId(undefined);
+    setAddressDialogLabel("");
+    setAddressDialogAddress("");
+    setAddressDialogOpen(true);
+  };
+
+  const openEditAddressDialog = () => {
+    if (!formData.sharedAddressId) return;
+    const sel = sharedAddresses.find(
+      (s: any) => s.id === formData.sharedAddressId,
+    );
+    if (!sel) return;
+    setAddressEditingId(sel.id);
+    setAddressDialogLabel(sel.label || "");
+    setAddressDialogAddress(sel.address || "");
+    setAddressDialogOpen(true);
+  };
+
+  const handleAddressDialogSave = async () => {
+    if (!addressDialogLabel?.trim()) return;
+    try {
+      if (addressEditingId) {
+        await updateSharedAddress(addressEditingId, {
+          label: addressDialogLabel.trim(),
+          address: addressDialogAddress?.trim(),
+        });
+      } else {
+        const created = await createSharedAddress({
+          label: addressDialogLabel.trim(),
+          address: addressDialogAddress?.trim(),
+        });
+        updateField("sharedAddressId", created.id);
+      }
+      setAddressDialogOpen(false);
+    } catch (err) {
+      // hook shows toast
+    }
+  };
+
   // Get material detail from API when on step 2 (quy trình nâng cao)
   const { data: materialDetail } = useMaterialTypeDetail(
     currentStep === 2 && formData.materialTypeId > 0
       ? formData.materialTypeId
       : null,
-    currentStep === 2 && formData.materialTypeId > 0
+    currentStep === 2 && formData.materialTypeId > 0,
   );
 
   // Check if this is an existing design (read-only except quantity)
@@ -253,7 +331,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
 
   // Determine which classifications to show based on design type and material
   const selectedDesignType = designTypes.find(
-    (dt) => dt.id === formData.designTypeId
+    (dt) => dt.id === formData.designTypeId,
   );
   const selectedMaterial =
     materialDetail || materials.find((m) => m.id === formData.materialTypeId);
@@ -474,16 +552,12 @@ export const DesignModal: React.FC<DesignModalProps> = ({
               <div key={step.id} className="flex items-center flex-1">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`
-                      flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors
-                      ${isActive ? "bg-primary text-primary-foreground" : ""}
-                      ${isCompleted ? "bg-primary/20 text-primary" : ""}
-                      ${
-                        !isActive && !isCompleted
-                          ? "bg-muted text-muted-foreground"
-                          : ""
-                      }
-                    `}
+                    className={[
+                      "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors",
+                      isActive ? "bg-primary text-primary-foreground" : "",
+                      isCompleted ? "bg-primary/20 text-primary" : "",
+                      !isActive && !isCompleted ? "bg-muted text-muted-foreground" : "",
+                    ].join(" ")}
                   >
                     {isCompleted ? (
                       <Check className="h-4 w-4" />
@@ -492,18 +566,19 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     )}
                   </div>
                   <span
-                    className={`text-xs font-medium hidden sm:block ${
-                      isActive ? "text-foreground" : "text-muted-foreground"
-                    }`}
+                    className={
+                      "text-xs font-medium hidden sm:block " +
+                      (isActive ? "text-foreground" : "text-muted-foreground")
+                    }
                   >
                     {step.title}
                   </span>
                 </div>
                 {idx < STEPS.length - 1 && (
                   <div
-                    className={`flex-1 h-0.5 mx-2 ${
-                      isCompleted ? "bg-primary/40" : "bg-muted"
-                    }`}
+                    className={
+                      "flex-1 h-0.5 mx-2 " + (isCompleted ? "bg-primary/40" : "bg-muted")
+                    }
                   />
                 )}
               </div>
@@ -561,7 +636,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     <p className="text-xs text-muted-foreground">
                       {
                         designTypes.find(
-                          (dt) => dt.id === formData.designTypeId
+                          (dt) => dt.id === formData.designTypeId,
                         )?.description
                       }
                     </p>
@@ -623,6 +698,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                 </div>
               </div>
 
+              {/* (Đã chuyển: Địa chỉ giao hàng moved to Step 2 - Advanced Options) */}
+
               {/* Tên thiết kế */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">
@@ -671,7 +748,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       onChange={(e) =>
                         updateField(
                           "length",
-                          e.target.value === "" ? 0 : Number(e.target.value)
+                          e.target.value === "" ? 0 : Number(e.target.value),
                         )
                       }
                       className="h-11"
@@ -689,7 +766,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       onChange={(e) =>
                         updateField(
                           "height",
-                          e.target.value === "" ? 0 : Number(e.target.value)
+                          e.target.value === "" ? 0 : Number(e.target.value),
                         )
                       }
                       className="h-11"
@@ -708,7 +785,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                         onChange={(e) =>
                           updateField(
                             "width",
-                            e.target.value === "" ? 0 : Number(e.target.value)
+                            e.target.value === "" ? 0 : Number(e.target.value),
                           )
                         }
                         className="h-11"
@@ -731,7 +808,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                             "adhesiveOffset",
                             e.target.value === ""
                               ? undefined
-                              : Number(e.target.value)
+                              : Number(e.target.value),
                           )
                         }
                         className="h-11"
@@ -773,7 +850,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     const val = e.target.value;
                     updateField(
                       "quantity",
-                      val === "" || val === "0" ? undefined : Number(val)
+                      val === "" || val === "0" ? undefined : Number(val),
                     );
                   }}
                   className={`max-w-xs h-11 ${
@@ -814,6 +891,71 @@ export const DesignModal: React.FC<DesignModalProps> = ({
           {/* Step 2: Advanced Options - Số mặt in, Quy trình sản xuất, Cán màng, Yêu cầu, Ghi chú */}
           {currentStep === 2 && (
             <div className="space-y-6">
+
+              {/* Địa chỉ giao hàng dùng chung (moved here from Step 1) */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Địa chỉ giao hàng</Label>
+                {loadingSharedAddresses ? (
+                  <p className="text-sm text-muted-foreground">Đang tải địa chỉ...</p>
+                ) : (
+                  <div>
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        placeholder="Tìm địa chỉ..."
+                        value={sharedAddressSearch}
+                        onChange={(e) => setSharedAddressSearch(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button onClick={openAddAddressDialog}>Thêm</Button>
+                      <Button
+                        variant="outline"
+                        disabled={!formData.sharedAddressId}
+                        onClick={openEditAddressDialog}
+                      >
+                        Sửa
+                      </Button>
+                    </div>
+                    <Select
+                      value={formData.sharedAddressId ? formData.sharedAddressId.toString() : undefined}
+                      onValueChange={(v) => updateField("sharedAddressId", v && v !== "0" ? Number(v) : undefined)}
+                      disabled={!!isExistingDesign}
+                    >
+                      <SelectTrigger className="h-11 bg-background">
+                        <SelectValue placeholder="Chọn địa chỉ..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Không chọn</SelectItem>
+                        {filteredSharedAddresses.map((sa: any) => (
+                          <SelectItem key={sa.id} value={sa.id.toString()} className="text-sm">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{sa.label}</span>
+                              {sa.address && (
+                                <span className="text-xs text-muted-foreground truncate">{sa.address}</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>{addressEditingId ? "Cập nhật địa chỉ" : "Thêm địa chỉ"}</DialogTitle>
+                          <DialogDescription>Thêm hoặc chỉnh sửa địa chỉ giao hàng dùng chung.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-3 py-2">
+                          <Input placeholder="Tên địa chỉ (bắt buộc)" value={addressDialogLabel} onChange={(e) => setAddressDialogLabel(e.target.value)} className="h-11" />
+                          <Textarea placeholder="Địa chỉ chi tiết (tuỳ chọn)" value={addressDialogAddress} onChange={(e) => setAddressDialogAddress(e.target.value)} className="h-24" />
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setAddressDialogOpen(false)}>Hủy</Button>
+                          <Button onClick={handleAddressDialogSave}>{addressEditingId ? "Cập nhật" : "Thêm"}</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                )}
+              </div>
               {/* Classifications và Cán màng - Số mặt in, Quy trình sản xuất, Cán màng */}
               {(shouldShowSidesClassification ||
                 shouldShowProcessClassification ||
@@ -849,7 +991,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       {shouldShowSidesClassification && isTheTreo && isNhan ? (
                         <div className="flex flex-wrap gap-2">
                           {Object.entries(
-                            ENTITY_CONFIG.sidesClassification.values
+                            ENTITY_CONFIG.sidesClassification.values,
                           ).map(([key, label]) => {
                             const isSelected =
                               formData.sidesClassification === key;
@@ -908,7 +1050,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       {isDecal && !isDecalCuon ? (
                         <div className="flex flex-wrap gap-2">
                           {Object.entries(
-                            ENTITY_CONFIG.processClassification.values
+                            ENTITY_CONFIG.processClassification.values,
                           ).map(([key, label]) => {
                             const isSelected =
                               formData.processClassification === key;

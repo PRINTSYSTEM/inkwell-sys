@@ -23,6 +23,7 @@ export * from "./die-export.schema";
 export * from "./die.schema";
 export * from "./vendor.schema";
 export * from "./stock.schema";
+export * from "./shared-address.schema";
 export * from "./report.schema";
 export * from "./generated-form-body";
 
