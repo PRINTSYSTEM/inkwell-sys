@@ -97,6 +97,7 @@ const VendorEdit = lazy(() => import("@/pages/vendors/VendorEdit"));
 const VendorDetail = lazy(() => import("@/pages/vendors/VendorDetail"));
 
 const PaymentPage = lazy(() => import("@/pages/accounting/PaymentPage"));
+const QuotePage = lazy(() => import("@/pages/accounting/QuotePage"));
 const InvoicePage = lazy(() => import("@/pages/accounting/InvoicePage"));
 const DeliveryPage = lazy(() => import("@/pages/accounting/DeliveryPage"));
 const AccountingOrderDetail = lazy(
@@ -288,6 +289,16 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageLoadingFallback />}>
             <Dashboard />
+          </Suspense>
+        ),
+      },
+
+      // ===== SALES (legacy sales URL for quote) =====
+      {
+        path: "sales/quote",
+        element: (
+          <Suspense fallback={<PageLoadingFallback />}>
+            <QuotePage />
           </Suspense>
         ),
       },
@@ -702,6 +713,14 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
+              {
+                path: "quote",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <QuotePage />
+                  </Suspense>
+                ),
+              },
           {
             path: "invoice",
             children: [

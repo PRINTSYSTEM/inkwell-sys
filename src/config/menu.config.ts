@@ -118,7 +118,7 @@ export const MENU_ITEMS: MenuItem[] = [
         id: "sale-quotes",
         title: "Báo giá",
         icon: FileText,
-        path: ROUTE_PATHS.ACCOUNTING.PAYMENT + "?context=sale",
+        path: ROUTE_PATHS.SALES.QUOTE,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
       {

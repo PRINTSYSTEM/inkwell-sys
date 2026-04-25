@@ -58,7 +58,12 @@ function deriveCustomerType(
   return customer?.type as keyof typeof ENTITY_CONFIG.customerTypes.values;
 }
 
-export function PaymentList() {
+type PaymentListProps = {
+  // override API filterType (default: "payment")
+  listFilterType?: string;
+};
+
+export function PaymentList({ listFilterType }: PaymentListProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -83,13 +88,18 @@ export function PaymentList() {
   const previousTotalPagesRef = useRef<number | null>(null);
 
   const itemsPerPage = 10;
+  // If parent passes an empty string for `listFilterType` (QuotePage) we
+  // can't rely on server filtering by `isDebtApproved`, so fetch a larger
+  // page and perform client-side filtering + pagination.
+  const clientSideMode = listFilterType === "";
+  const apiPageSize = clientSideMode ? 200 : itemsPerPage;
 
   // Build params for API
   const listParams = useMemo(() => {
     return {
       pageNumber: currentPage,
-      pageSize: itemsPerPage,
-      filterType: "payment",
+      pageSize: apiPageSize,
+      filterType: listFilterType ?? "payment",
       status: "",
       orderCode: debouncedSearchQuery || "",
       designCode: "",
@@ -97,30 +107,35 @@ export function PaymentList() {
       sortColumn: "",
       sortOrder: "",
     };
-  }, [currentPage, itemsPerPage, debouncedSearchQuery]);
+  }, [currentPage, apiPageSize, debouncedSearchQuery, listFilterType]);
 
   // Fetch orders from API
   const { data, isLoading, isError, error, refetch } = useOrdersForAccounting(listParams);
 
   // Filter orders client-side (payment status - API doesn't support payment status filter)
-  const filteredOrders = useMemo(() => {
-    if (!data?.items) return [];
+  // When `clientSideMode` is true we filter the full fetched set and then
+  // paginate locally so totals/pages reflect only visible (isDebtApproved === false) items.
+  const { pagedOrders, filteredTotalItems } = useMemo(() => {
+    if (!data?.items) return { pagedOrders: [] as OrderResponse[], filteredTotalItems: 0 };
 
-    return data.items.filter((order) => {
-      const paymentStatus = derivePaymentStatus(
-        order.totalAmount,
-        order.depositAmount
-      );
-
-      const matchesPaymentStatus =
-        paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
-
+    const allFiltered = data.items.filter((order) => {
+      const paymentStatus = derivePaymentStatus(order.totalAmount, order.depositAmount);
+      const matchesPaymentStatus = paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
       return matchesPaymentStatus && order.isDebtApproved === false;
     });
-  }, [data?.items, paymentStatusFilter]);
 
-  const totalPages = data?.totalPages || 1;
-  const totalItems = data?.total || 0;
+    if (clientSideMode) {
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      return { pagedOrders: allFiltered.slice(start, end), filteredTotalItems: allFiltered.length };
+    }
+
+    // Server-driven pagination: data.items corresponds to current page
+    return { pagedOrders: allFiltered, filteredTotalItems: data.total ?? allFiltered.length };
+  }, [data?.items, paymentStatusFilter, clientSideMode, currentPage, itemsPerPage]);
+
+  const totalItems = clientSideMode ? filteredTotalItems : data?.total || 0;
+  const totalPages = clientSideMode ? Math.max(1, Math.ceil(totalItems / itemsPerPage)) : data?.totalPages || 1;
 
   // Sync pageInput with currentPage
   useEffect(() => {
@@ -325,7 +340,7 @@ export function PaymentList() {
                     ))}
                   </TableRow>
                 ))
-              ) : filteredOrders.length === 0 ? (
+              ) : pagedOrders.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={8}
@@ -335,7 +350,7 @@ export function PaymentList() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOrders.map((order) => {
+                pagedOrders.map((order) => {
                   const remainingAmount =
                     order.totalAmount - order.depositAmount;
                   const paymentStatus = derivePaymentStatus(

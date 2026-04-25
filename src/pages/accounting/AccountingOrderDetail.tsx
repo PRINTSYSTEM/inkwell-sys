@@ -1415,7 +1415,9 @@ export default function AccountingOrderDetail() {
                               />
                             ) : (
                               <span className="tabular-nums">
-                                {formatCurrency(item.unitPrice || 0)}
+                                {item.unitPrice && item.unitPrice > 0
+                                  ? formatCurrency(item.unitPrice)
+                                  : "—"}
                               </span>
                             )}
                           </TableCell>
