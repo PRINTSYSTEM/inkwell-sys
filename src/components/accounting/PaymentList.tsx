@@ -38,6 +38,8 @@ import { useOrdersForAccounting } from "@/hooks/use-order";
 import type { OrderResponse } from "@/Schema";
 import { StatusBadge } from "../ui/status-badge";
 import { ENTITY_CONFIG } from "@/config/entities.config";
+import { useAuth } from "@/hooks/use-auth";
+import { ROLE } from "@/constants";
 
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
@@ -58,7 +60,11 @@ function deriveCustomerType(
 
 export function PaymentList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const isSale = user?.role === ROLE.SALE || searchParams.get("context") === "sale";
+  const paymentLabel = isSale ? "Báo giá" : "Thanh toán";
+  const paymentStatusLabel = isSale ? "Trạng thái Báo giá" : "Trạng thái TT";
   const orderCodeFromUrl = searchParams.get("orderCode");
 
   const [searchQuery, setSearchQuery] = useState(orderCodeFromUrl || "");
@@ -250,7 +256,7 @@ export function PaymentList() {
           >
             <SelectTrigger className="w-[180px]">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Trạng thái TT" />
+              <SelectValue placeholder={paymentStatusLabel} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả</SelectItem>
@@ -301,7 +307,7 @@ export function PaymentList() {
                   Trạng thái đơn
                 </TableHead>
                 <TableHead className="text-center font-bold text-sm">
-                  Thanh toán
+                  {paymentLabel}
                 </TableHead>
                 <TableHead className="text-center font-bold text-sm">
                   Ngày giao
