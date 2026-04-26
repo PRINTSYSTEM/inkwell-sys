@@ -55,6 +55,7 @@ export const API_SUFFIX = {
   ORDER_REMOVE_DESIGN: (orderId: number, orderDetailId: number) =>
     `/orders/${orderId}/designs/${orderDetailId}`,
   ORDER_UPDATE_FOR_ACCOUNTING: (id: number) => `/orders/${id}/accounting`,
+  ORDER_UPDATE_FOR_SALE: (id: number) => `/orders/${id}/sale`,
   ORDER_EXPORT_INVOICE: (id: number) => `/orders/${id}/export-invoice`,
   ORDER_EXPORT_DELIVERY_NOTE: (id: number) =>
     `/orders/${id}/export-delivery-note`,

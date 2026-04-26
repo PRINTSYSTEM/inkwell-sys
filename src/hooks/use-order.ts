@@ -492,6 +492,59 @@ export const useUpdateOrderForAccounting = () => {
   return { data, loading, error, mutate, reset };
 };
 
+// ================== ORDER: UPDATE FOR SALE ==================
+// PUT /orders/{id}/sale
+
+export const useUpdateOrderForSale = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    any,
+    [number, any]
+  >(async (id: number, payload: any) => {
+    const res = await apiRequest.put<OrderResponse>(
+      API_SUFFIX.ORDER_UPDATE_FOR_SALE(id),
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number, payload: any) => {
+    try {
+      const result = await execute(id, payload);
+
+      // Invalidate order detail
+      queryClient.invalidateQueries({
+        queryKey: orderKeys.detail(id),
+      });
+
+      // Invalidate orders list
+      queryClient.invalidateQueries({
+        queryKey: ["orders"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật đơn hàng (sale) thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message || error?.message ||
+          "Không thể cập nhật đơn hàng (sale)",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
 // ================== ORDER: EXPORT INVOICE / DELIVERY NOTE ==================
 // POST /orders/{id}/export-invoice
 // POST /orders/{id}/export-delivery-note

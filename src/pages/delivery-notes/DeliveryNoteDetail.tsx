@@ -667,7 +667,7 @@ export default function DeliveryNoteDetailPage() {
                           SL đặt hàng
                         </TableHead>
                         <TableHead className="text-right">
-                          SL sản xuất
+                          SL giao
                         </TableHead>
                         <TableHead className="text-right">Phụ hao</TableHead>
                         <TableHead className="text-right">
