@@ -45,7 +45,11 @@ const isDecalDesignType = (designTypeName: string): boolean => {
 const isTuiDesignType = (designTypeName: string): boolean => {
   return (
     designTypeName.toLowerCase().includes("túi") ||
-    designTypeName.toLowerCase().includes("tui")
+    designTypeName.toLowerCase().includes("tui") ||
+    designTypeName.toLowerCase().includes("bag") ||
+    designTypeName.toLowerCase().includes("pe") ||
+    designTypeName.toLowerCase().includes("pa") ||
+    designTypeName.toLowerCase().includes("metaline")
   );
 };
 
@@ -192,6 +196,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         sidesClassification: undefined,
         processClassification: undefined,
         sharedAddressId: undefined,
+        gusseted: false,
       });
       setCurrentStep(1);
     }
@@ -218,6 +223,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         sidesClassification: isTui ? "two_side" : undefined, // Túi mặc định 2 mặt
         processClassification: undefined,
         minQuantity: undefined,
+        gusseted: false,
       };
     });
     // Notify parent to load materials for this design type
@@ -345,6 +351,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
   const isNhan = isNhanDesignType(designTypeName);
   const isTheTreo = isTheTreoMaterial(materialName);
   const isTuiXepHong =
+    formData.gusseted ||
     isTuiXepHongDesignType(designTypeName) ||
     isTuiXepHongMaterial(materialName);
   const isDecalCuon = isDecalCuonDesignType(designTypeName);
@@ -697,9 +704,6 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   )}
                 </div>
               </div>
-
-              {/* (Đã chuyển: Địa chỉ giao hàng moved to Step 2 - Advanced Options) */}
-
               {/* Tên thiết kế */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">
@@ -722,6 +726,62 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   </p>
                 )}
               </div>
+
+              {/* Tùy chọn cho Túi: Túi xếp hông */}
+              {isTui && !isTuiCuon && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Túi xếp hông</Label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          gusseted: true,
+                          width: prev.width,
+                          processClassification: "die_cut"
+                        }));
+                      }}
+                      disabled={!!isExistingDesign}
+                      className={`
+                        px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
+                        ${formData.gusseted 
+                          ? "border-primary bg-primary text-primary-foreground" 
+                          : "border-border bg-background hover:border-primary/50 text-muted-foreground"}
+                        ${isExistingDesign ? "opacity-50 cursor-not-allowed" : ""}
+                      `}
+                    >
+                      Có
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          gusseted: false,
+                          width: 0,
+                          processClassification: "cut"
+                        }));
+                      }}
+                      disabled={!!isExistingDesign}
+                      className={`
+                        px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
+                        ${!formData.gusseted 
+                          ? "border-primary bg-primary text-primary-foreground" 
+                          : "border-border bg-background hover:border-primary/50 text-muted-foreground"}
+                        ${isExistingDesign ? "opacity-50 cursor-not-allowed" : ""}
+                      `}
+                    >
+                      Không
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* (Đã chuyển: Địa chỉ giao hàng moved to Step 2 - Advanced Options) */}
+
+              
+
 
               {/* Kích thước */}
               <div className="space-y-3">

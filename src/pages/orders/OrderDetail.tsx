@@ -140,6 +140,7 @@ import {
   useProductionOrdersByOrder,
 } from "@/hooks";
 import { useExportOrderPDF } from "@/hooks/use-order";
+import { useSharedAddresses } from "@/hooks/use-shared-address";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE, ROUTE_PATHS } from "@/constants";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
@@ -152,6 +153,12 @@ export default function OrderDetailPage() {
   const navigate = useNavigate();
 
   const role = user?.role as UserRole;
+
+  const { data: sharedAddressesData } = useSharedAddresses({
+    pageNumber: 1,
+    pageSize: 1000,
+  });
+  const sharedAddresses = sharedAddressesData?.items || [];
 
   // Dialog states
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
@@ -268,7 +275,7 @@ export default function OrderDetailPage() {
 
   const { mutateAsync: updateOrder, isPending: isUpdatingOrder } =
     useUpdateOrder();
-  const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
+  const { execute: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const { mutate: addDesignToOrder, loading: isAddingDesign } =
     useAddDesignToOrder();
@@ -316,10 +323,11 @@ export default function OrderDetailPage() {
       return;
     }
 
-    // Accounting roles: If order is restricted (from waiting_for_proofing onwards), only allow editing unitPrice
+    // Accounting roles: If order is restricted (from waiting_for_proofing onwards), only allow editing unitPrice and address
     if (isOrderRestricted) {
       setOrderDetailEditValues({
         unitPrice: orderDetail.unitPrice?.toString() || "",
+        sharedAddressId: (orderDetail as any).sharedAddressId,
       });
     } else {
       setOrderDetailEditValues({
@@ -327,6 +335,7 @@ export default function OrderDetailPage() {
         unitPrice: orderDetail.unitPrice?.toString() || "",
         requirements: orderDetail.requirements || "",
         additionalNotes: orderDetail.additionalNotes || "",
+        sharedAddressId: (orderDetail as any).sharedAddressId,
       });
     }
   };
@@ -387,6 +396,11 @@ export default function OrderDetailPage() {
           orderDetailEditValues.additionalNotes === null
             ? null
             : String(orderDetailEditValues.additionalNotes).trim();
+      }
+      
+      // Address can be updated regardless of restriction status
+      if (orderDetailEditValues.sharedAddressId !== undefined) {
+        (updateData as any).sharedAddressId = orderDetailEditValues.sharedAddressId;
       }
     }
 
@@ -1340,11 +1354,54 @@ export default function OrderDetailPage() {
                               )}
                             </div>
 
-                            {/* Requirements */}
+                            {/* Requirements & Address */}
                             {(editingOrderDetailId === orderDetail.id ||
+                              (orderDetail as any).sharedAddressId ||
                               orderDetail.requirements ||
                               orderDetail.additionalNotes) && (
-                              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm space-y-2">
+                              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm space-y-3">
+                                {editingOrderDetailId === orderDetail.id &&
+                                !isDesignerRole && (
+                                  <div className="space-y-2">
+                                    <Label className="text-xs">Địa chỉ giao hàng</Label>
+                                    <div onClick={(e) => e.stopPropagation()}>
+                                      <Select
+                                        value={orderDetailEditValues.sharedAddressId ? orderDetailEditValues.sharedAddressId.toString() : "0"}
+                                        onValueChange={(v) => {
+                                          setOrderDetailEditValues({
+                                            ...orderDetailEditValues,
+                                            sharedAddressId: v && v !== "0" ? Number(v) : null,
+                                          });
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-9 text-sm bg-background">
+                                          <SelectValue placeholder="Chọn địa chỉ giao hàng..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="0">Không chọn</SelectItem>
+                                          {sharedAddresses.map((sa: any) => (
+                                            <SelectItem key={sa.id} value={sa.id.toString()} className="text-sm">
+                                              {sa.label} {sa.address ? `- ${sa.address}` : ""}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {editingOrderDetailId !== orderDetail.id && (orderDetail as any).sharedAddressId && (
+                                  <div>
+                                    <span className="text-muted-foreground">Địa chỉ giao hàng: </span>
+                                    <span className="font-medium">
+                                      {sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.label || "Đã chọn địa chỉ"}
+                                      {sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.address 
+                                        ? ` - ${sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.address}` 
+                                        : ""}
+                                    </span>
+                                  </div>
+                                )}
+
                                 {editingOrderDetailId === orderDetail.id &&
                                 !isDesignerRole &&
                                 !isOrderRestricted ? (

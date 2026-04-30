@@ -55,6 +55,7 @@ export type CreateDesignRequestUI = {
   processClassification?: string | null; // New: stores classification value directly
   laminationType?: string | null;
   sharedAddressId?: number | null;
+  gusseted?: boolean;
 };
 
 type DesignCardProps = {

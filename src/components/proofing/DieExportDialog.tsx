@@ -782,7 +782,7 @@ export function DieExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[80vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-6xl h-[88vh] flex flex-col overflow-hidden">
         <DialogHeader className="pb-2">
           <DialogTitle>Xuất khuôn bế</DialogTitle>
         </DialogHeader>
@@ -1128,13 +1128,13 @@ export function DieExportDialog({
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="border-b bg-muted/50">
-                              <th className="text-left px-2 py-1.5 font-semibold text-[11px] text-muted-foreground">
+                              <th className="text-left px-2 py-1.5 font-semibold text-[13px] text-muted-foreground">
                                 Mã hàng
                               </th>
-                              <th className="text-left px-2 py-1.5 font-semibold text-[11px] text-muted-foreground">
+                              <th className="text-left px-2 py-1.5 font-semibold text-[13px] text-muted-foreground">
                                 Loại
                               </th>
-                              <th className="text-center px-2 py-1.5 font-semibold text-[11px] text-muted-foreground">
+                              <th className="text-center px-2 py-1.5 font-semibold text-[13px] text-muted-foreground">
                                 D × R × C (mm)
                               </th>
                               <th className="px-1 py-1.5"></th>
@@ -1147,34 +1147,22 @@ export function DieExportDialog({
                                 className="border-b last:border-0 hover:bg-muted/40 transition-colors"
                               >
                                 <td className="px-2 py-1.5">
-                                  <span className="font-mono font-bold text-[11px]">
+                                  <span className="font-mono font-bold text-[13px]">
                                     {d.code || "—"}
                                   </span>
                                 </td>
                                 <td className="px-2 py-1.5">
-                                  <span className="text-[11px] text-muted-foreground">
+                                  <span className="text-[13px] text-muted-foreground">
                                     {d.designTypeName || "—"}
                                   </span>
                                 </td>
                                 <td className="px-2 py-1.5 text-center">
-                                  <span className="font-medium text-[11px] tabular-nums">
+                                  <span className="font-medium text-[13px] tabular-nums">
                                     {d.length ?? "?"} × {d.width ?? "—"} ×{" "}
                                     {d.height ?? "?"}
                                   </span>
                                 </td>
                                 <td className="px-1 py-1 text-right">
-                                  {/* <button
-                                    type="button"
-                                    onClick={() => {
-                                      setDieLength(d.length);
-                                      setDieWidth(d.width);
-                                      setDieHeight(d.height);
-                                      setDieSize(d.sizeStr);
-                                    }}
-                                    className="text-[10px] text-primary hover:underline whitespace-nowrap px-1"
-                                  >
-                                    Dùng
-                                  </button> */}
                                 </td>
                               </tr>
                             ))}
@@ -1250,111 +1238,123 @@ export function DieExportDialog({
                       </div>
                     </div>
                   </div>
+                </>
+              ) : (
+                <div className="rounded-md border-2 border-dashed bg-muted/20 p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Chế độ <span className="font-bold text-foreground">Chọn khuôn có sẵn</span>.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vui lòng chọn khuôn bên trái và điền thông tin bên dưới.
+                  </p>
+                </div>
+              )}
 
-                  {/* Vendor selection / creation */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b">
-                      <h4 className="text-sm font-semibold">
-                        Đơn vị làm khuôn{" "}
-                        <span className="text-destructive">*</span>
-                      </h4>
-                    </div>
+              {/* Vendor selection / creation */}
+              <div className="space-y-3 pt-4 border-t">
                     <div className="space-y-1.5">
                       {!isCreatingVendor ? (
-                        <div className="flex gap-2">
-                          <Popover
-                            open={vendorSearchOpen}
-                            onOpenChange={setVendorSearchOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className="flex-1 justify-between h-8"
-                                disabled={loadingVendors}
-                              >
-                                {selectedVendor
-                                  ? selectedVendor.name
-                                  : "Chọn nhà cung cấp..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[360px] p-0">
-                              <Command>
-                                <CommandInput placeholder="Tìm kiếm nhà cung cấp..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    <div className="py-4 text-center text-sm">
-                                      <p className="mb-2">
-                                        Không tìm thấy nhà cung cấp
-                                      </p>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
+                        <div className="flex items-center justify-between gap-4">
+                          <Label className="text-sm font-medium whitespace-nowrap">
+                            Đơn vị làm khuôn <span className="text-destructive">*</span>
+                          </Label>
+                          <div className="flex-1 max-w-[240px] flex gap-2">
+                            <Popover
+                              open={vendorSearchOpen}
+                              onOpenChange={setVendorSearchOpen}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  className="flex-1 justify-between h-8 text-sm px-2 overflow-hidden"
+                                  disabled={loadingVendors}
+                                >
+                                  <span className="truncate">
+                                    {selectedVendor
+                                      ? selectedVendor.name
+                                      : "Chọn nhà cung cấp..."}
+                                  </span>
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[360px] p-0">
+                                <Command>
+                                  <CommandInput placeholder="Tìm kiếm nhà cung cấp..." />
+                                  <CommandList>
+                                    <CommandEmpty>
+                                      <div className="py-4 text-center text-sm">
+                                        <p className="mb-2">
+                                          Không tìm thấy nhà cung cấp
+                                        </p>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            setIsCreatingVendor(true);
+                                            setVendorSearchOpen(false);
+                                          }}
+                                          className="gap-2"
+                                        >
+                                          <Plus className="h-4 w-4" />
+                                          Tạo mới
+                                        </Button>
+                                      </div>
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      {vendors?.map((vendor) => (
+                                        <CommandItem
+                                          key={vendor.id}
+                                          value={vendor.name || ""}
+                                          onSelect={() => {
+                                            setVendorId(vendor.id);
+                                            setVendorSearchOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              vendorId === vendor.id
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                          <div className="flex flex-col">
+                                            <span className="text-sm font-medium">
+                                              {vendor.name}
+                                            </span>
+                                            {vendor.phone && (
+                                              <span className="text-[10px] text-muted-foreground">
+                                                {vendor.phone}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </CommandItem>
+                                      ))}
+                                      <CommandItem
+                                        onSelect={() => {
                                           setIsCreatingVendor(true);
                                           setVendorSearchOpen(false);
                                         }}
-                                        className="gap-2"
+                                        className="text-primary"
                                       >
-                                        <Plus className="h-4 w-4" />
-                                        Tạo mới
-                                      </Button>
-                                    </div>
-                                  </CommandEmpty>
-                                  <CommandGroup>
-                                    {vendors?.map((vendor) => (
-                                      <CommandItem
-                                        key={vendor.id}
-                                        value={vendor.name || ""}
-                                        onSelect={() => {
-                                          setVendorId(vendor.id);
-                                          setVendorSearchOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            vendorId === vendor.id
-                                              ? "opacity-100"
-                                              : "opacity-0",
-                                          )}
-                                        />
-                                        <div className="flex flex-col">
-                                          <span className="text-sm font-medium">
-                                            {vendor.name}
-                                          </span>
-                                          {vendor.phone && (
-                                            <span className="text-[10px] text-muted-foreground">
-                                              {vendor.phone}
-                                            </span>
-                                          )}
-                                        </div>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Tạo nhà cung cấp mới
                                       </CommandItem>
-                                    ))}
-                                    <CommandItem
-                                      onSelect={() => {
-                                        setIsCreatingVendor(true);
-                                        setVendorSearchOpen(false);
-                                      }}
-                                      className="text-primary"
-                                    >
-                                      <Plus className="mr-2 h-4 w-4" />
-                                      Tạo nhà cung cấp mới
-                                    </CommandItem>
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setIsCreatingVendor(true)}
-                            className="h-8 w-8"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setIsCreatingVendor(true)}
+                              className="h-8 w-8 flex-shrink-0"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-3 rounded-md border bg-muted/40 px-3 py-2">
@@ -1479,100 +1479,70 @@ export function DieExportDialog({
                     </div>
                   </div>
 
-                  {/* Die images */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 pb-1 border-b">
                       <h4 className="text-sm font-semibold">Ảnh khuôn bế</h4>
                     </div>
-                    <div className="space-y-1.5">
-                      {dieFiles.length === 0 && !existingImageUrl ? (
-                        <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                          <Input
-                            id="dieFiles"
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleFileChange}
-                            className="hidden"
+                    <div className="flex flex-wrap gap-3 items-start">
+                      {/* Existing Image */}
+                      {existingImageUrl && (
+                        <div className="relative group border rounded-lg bg-muted/30 overflow-hidden w-24 h-24 flex-shrink-0">
+                          <img
+                            src={existingImageUrl}
+                            alt="Ảnh khuôn bế"
+                            className="w-full h-full object-cover"
                           />
-                          <label
-                            htmlFor="dieFiles"
-                            className="cursor-pointer flex flex-col items-center gap-1"
-                          >
-                            <Upload className="h-6 w-6 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">
-                              Click để chọn ảnh hoặc kéo thả vào đây
-                            </span>
-                            <span className="text-[11px] text-muted-foreground">
-                              File ảnh (JPG, PNG, ...) - tối đa 10MB mỗi file
-                            </span>
-                          </label>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {existingImageUrl && (
-                            <div className="space-y-1.5">
-                              <Label className="text-[11px] text-muted-foreground">
-                                Ảnh đã lưu:
-                              </Label>
-                              <div className="border rounded-md bg-muted/30 overflow-hidden">
-                                <img
-                                  src={existingImageUrl}
-                                  alt="Ảnh khuôn bế"
-                                  className="h-28 w-full object-contain"
-                                />
-                              </div>
-                            </div>
-                          )}
-                          {dieFiles.length > 0 && (
-                            <div className="space-y-1.5">
-                              <Label className="text-[11px] text-muted-foreground">
-                                Ảnh mới:
-                              </Label>
-                              <div className="grid grid-cols-2 gap-2">
-                                {dieFiles.map((file, index) => (
-                                  <div
-                                    key={index}
-                                    className="relative group border rounded-md bg-muted/30 overflow-hidden"
-                                  >
-                                    <img
-                                      src={imagePreviews[index]}
-                                      alt={`Preview ${file.name}`}
-                                      className="h-24 w-full object-contain"
-                                    />
-                                    <Button
-                                      variant="destructive"
-                                      size="icon"
-                                      className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => handleRemoveFile(index)}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                    <div className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-[10px] text-white truncate">
-                                      {file.name}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex gap-2">
-                            <Input
-                              id="dieFiles"
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              onChange={handleFileChange}
-                              className="hidden"
-                            />
-                            <label htmlFor="dieFiles">
-                              <Button variant="outline" size="sm" asChild>
-                                <span>Thêm ảnh</span>
-                              </Button>
-                            </label>
+                          <div className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-[9px] text-white text-center truncate">
+                            Ảnh đã lưu
                           </div>
                         </div>
                       )}
+
+                      {/* New Image Previews */}
+                      {dieFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="relative group border rounded-lg bg-muted/30 overflow-hidden w-24 h-24 flex-shrink-0"
+                        >
+                          <img
+                            src={imagePreviews[index]}
+                            alt={`Preview ${file.name}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                            onClick={() => handleRemoveFile(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                          <div className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-[9px] text-white text-center truncate">
+                            {file.name}
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Upload Button Box */}
+                      <div className="flex-shrink-0">
+                        <Input
+                          id="dieFiles"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="dieFiles"
+                          className="cursor-pointer border-2 border-dashed border-muted-foreground/20 rounded-lg w-24 h-24 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                        >
+                          <Plus className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <span className="text-[10px] text-muted-foreground font-medium group-hover:text-primary transition-colors text-center px-1">
+                            Thêm ảnh
+                          </span>
+                        </label>
+                      </div>
                     </div>
                   </div>
 
@@ -1584,69 +1554,62 @@ export function DieExportDialog({
                       </h4>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="estimatedReceiveAt" className="text-xs">
+                      <div className="flex items-center justify-between gap-4 py-1">
+                        <Label htmlFor="estimatedReceiveAt" className="text-sm font-medium whitespace-nowrap">
                           Dự kiến nhận khuôn
                         </Label>
-                        <Input
-                          id="estimatedReceiveAt"
-                          type="datetime-local"
-                          value={receivedAtManual}
-                          onChange={(e) => setReceivedAtManual(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                        {receivedAt && (
-                          <p className="text-[11px] text-muted-foreground">
-                            Dự kiến:{" "}
-                            {new Date(receivedAt).toLocaleString("vi-VN", {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-3 py-2 rounded-md border bg-muted/30 px-3">
-                        <div className="space-y-0.5">
-                          <Label
-                            htmlFor="isReusable"
-                            className="text-xs font-medium"
-                          >
-                            {isReusable
-                              ? dieUsageTypeLabels.reusable
-                              : dieUsageTypeLabels.one_time}
-                          </Label>
-                          <p className="text-[11px] text-muted-foreground">
-                            {isReusable
-                              ? "Khuôn này có thể dùng lại cho các đơn hàng khác"
-                              : "Khuôn này chỉ dùng 1 lần"}
-                          </p>
+                        <div className="flex-1 max-w-[240px] space-y-1">
+                          <Input
+                            id="estimatedReceiveAt"
+                            type="datetime-local"
+                            value={receivedAtManual}
+                            onChange={(e) => setReceivedAtManual(e.target.value)}
+                            className="h-9 text-sm"
+                          />
+                          {receivedAt && (
+                            <p className="text-[10px] text-muted-foreground text-right">
+                              Dự kiến:{" "}
+                              {new Date(receivedAt).toLocaleString("vi-VN", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          )}
                         </div>
-                        <Switch
-                          id="isReusable"
-                          checked={isReusable}
-                          onCheckedChange={setIsReusable}
-                        />
+                      </div>
+
+                      <div className="space-y-2 py-2">
+                        <Label className="text-xs font-medium">Tùy chọn Lưu Khuôn</Label>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={isReusable ? "default" : "outline"}
+                            onClick={() => setIsReusable(true)}
+                            className="flex-1 h-9 text-sm"
+                          >
+                            Lưu Khuôn
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={!isReusable ? "destructive" : "outline"}
+                            onClick={() => setIsReusable(false)}
+                            className="flex-1 h-9 text-sm"
+                          >
+                            Dùng 1 lần
+                          </Button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {isReusable 
+                            ? "✓ Lưu vào kho để tái sử dụng." 
+                            : "⚠ Khuôn dùng một lần."}
+                        </p>
                       </div>
                     </div>
                   </div>
-                </>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-                  <p className="max-w-xs">
-                    Đang ở chế độ{" "}
-                    <span className="font-medium text-foreground">
-                      Chọn khuôn có sẵn
-                    </span>
-                    . Khi cần làm khuôn mới, hãy bấm nút{" "}
-                    <span className="font-medium">Tạo khuôn mới</span> ở panel
-                    bên trái. Form tạo khuôn sẽ hiển thị tại đây.
-                  </p>
                 </div>
-              )}
-            </div>
 
             <DialogFooter className="border-t px-4 py-3 flex items-center justify-between gap-3">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1656,10 +1619,10 @@ export function DieExportDialog({
                 onClick={handleSubmit}
                 disabled={
                   isSubmitting ||
+                  (!vendorId && !vendorName.trim()) ||
                   (dieAction === "create" &&
                     dieFiles.length === 0 &&
                     !existingImageUrl) ||
-                  (dieAction === "create" && !vendorId && !vendorName.trim()) ||
                   (dieAction === "select" &&
                     (selectedDieIds.length === 0 ||
                       selectedDieIds.length !== dieCount))
