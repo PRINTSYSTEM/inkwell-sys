@@ -153,3 +153,47 @@ All colors MUST be HSL.
     stroke-dashoffset: 0;
   }
 }
+@keyframes bell-shake {
+  0% { transform: rotate(0deg); }
+  0.5% { transform: rotate(15deg); }
+  1% { transform: rotate(-15deg); }
+  1.5% { transform: rotate(15deg); }
+  2% { transform: rotate(-15deg); }
+  2.5% { transform: rotate(15deg); }
+  3% { transform: rotate(-15deg); }
+  3.5% { transform: rotate(15deg); }
+  4% { transform: rotate(-15deg); }
+  4.5% { transform: rotate(10deg); }
+  5% { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-bell-shake {
+  animation: bell-shake 60s infinite;
+  transform-origin: top center;
+}
+
+/* Force Toast Close Button Styles - Bolder Red X, No Background */
+[data-sonner-toast] [data-close-button] {
+  background-color: transparent !important;
+  color: #dc2626 !important; /* red-600 - Bolder red */
+  border: none !important;
+  opacity: 0.7 !important;
+  top: 4px !important;
+  left: 4px !important;
+  right: auto !important;
+  transform: none !important;
+  transition: all 0.2s !important;
+  box-shadow: none !important;
+}
+
+[data-sonner-toast] [data-close-button] svg {
+  stroke-width: 4px !important;
+  scale: 1.2 !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  opacity: 1 !important;
+  color: #991b1b !important; /* red-800 - Even darker on hover */
+  background-color: transparent !important;
+}

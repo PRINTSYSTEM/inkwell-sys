@@ -62,12 +62,18 @@ function NotificationBell() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <div
-          className="relative transition-all hover:bg-accent cursor-pointer flex items-center justify-center h-10 w-10 rounded-full"
+          className="relative transition-all hover:bg-secondary/80 cursor-pointer flex items-center justify-center h-10 w-10 rounded-full bg-secondary select-none outline-none"
           title="Thông báo"
         >
-          <Bell className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+          <Bell 
+            fill="currentColor"
+            className={cn(
+              "h-5 w-5 text-foreground",
+              unreadCount > 0 && "animate-bell-shake"
+            )} 
+          />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-background animate-in zoom-in duration-300">
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[11px] font-bold text-destructive-foreground animate-in zoom-in duration-300 leading-none tabular-nums text-center select-none cursor-pointer">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
