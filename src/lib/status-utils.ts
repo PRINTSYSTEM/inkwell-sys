@@ -213,6 +213,19 @@ export const processClassificationLabels: Record<string, string> =
 export const vendorTypeLabels: Record<string, string> =
   ENTITY_CONFIG.vendorTypes.values;
 
+// Hình thức sản xuất (ProductionMethod)
+export const productionMethodLabels: Record<string, string> =
+  ENTITY_CONFIG.productionMethods.values;
+
+/**
+ * Get Vietnamese label for vendor type
+ */
+export function getVendorTypeLabel(type: string | null | undefined): string {
+  if (!type) return "—";
+  const normalized = type.toLowerCase();
+  return vendorTypeLabels[normalized] || type;
+}
+
 // Vai trò người dùng (Role)
 export const roleLabels: Record<string, string> = ENTITY_CONFIG.roles.values;
 
@@ -470,6 +483,7 @@ export const statusColorMap: Record<string, string> = {
   // ===== VENDOR TYPES =====
   plate: "bg-blue-50 text-blue-700 border-blue-200",
   die: "bg-violet-50 text-violet-700 border-violet-200",
+  printing: "bg-orange-50 text-orange-700 border-orange-200",
 
   // ===== DELIVERY NOTE STATUSES =====
   draft: "bg-slate-100 text-slate-800 border-slate-200",

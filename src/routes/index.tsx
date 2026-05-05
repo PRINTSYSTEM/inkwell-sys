@@ -250,6 +250,9 @@ const AttendanceReports = lazy(
 const NotificationCenter = lazy(
   () => import("@/pages/notifications/NotificationCenter")
 );
+const DebtNotificationPreviewPage = lazy(
+  () => import("@/pages/notifications/DebtNotificationPreviewPage")
+);
 
 // Misc
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -1212,11 +1215,24 @@ export const router = createBrowserRouter([
       // ===== NOTIFICATIONS =====
       {
         path: lastSegment(ROUTE_PATHS.NOTIFICATIONS), // "notifications"
-        element: (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <NotificationCenter />
-          </Suspense>
-        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <NotificationCenter />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id/preview",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DebtNotificationPreviewPage />
+              </Suspense>
+            ),
+          },
+        ],
       },
 
       // ===== PROFILE =====

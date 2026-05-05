@@ -1041,6 +1041,7 @@ export type UserListParams = z.infer<typeof UserListParamsSchema>;
 export const VendorListParamsSchema = PagedParamsSchema.extend({
   search: z.string().nullable().optional(),
   isActive: z.boolean().nullable().optional(),
+  vendorType: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });

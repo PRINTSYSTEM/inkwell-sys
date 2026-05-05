@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useVendor, useUpdateVendor } from "@/hooks/use-vendor";
 import type { UpdateVendorRequest } from "@/Schema/vendor.schema";
-import { vendorTypeLabels } from "@/lib/status-utils";
+import { vendorTypeLabels, getVendorTypeLabel } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -98,7 +98,7 @@ export default function VendorDetailPage() {
               <div className="space-y-2">
                 <Label className="text-muted-foreground">Loại nhà cung cấp</Label>
                 <p className="font-medium text-base">
-                  {vendor?.vendorType ? vendorTypeLabels[vendor.vendorType] || vendor.vendorType : "—"}
+                  {getVendorTypeLabel(vendor?.vendorType)}
                 </p>
               </div>
 

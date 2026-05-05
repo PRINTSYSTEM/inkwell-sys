@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Package, Edit, History, Loader2, Info } from "lucide-react";
 import { format } from "date-fns";
+import { productionMethodLabels, formatCurrency } from "@/lib/status-utils";
 
 interface DetailPlateExportCardProps {
   order: any;
@@ -126,6 +127,35 @@ export function DetailPlateExportCard({
                         {exportItem?.plateCount || 0} bản
                       </span>
                     </div>
+
+                    <div className="flex items-center gap-1 col-span-2">
+                      <span className="text-muted-foreground">Hình thức:</span>
+                      <span className="font-semibold text-foreground">
+                        {exportItem?.productionMethod === "outsource" ? (
+                          <span className="text-orange-600 dark:text-orange-400">
+                            {exportItem?.productionMethodName || productionMethodLabels.outsource || "In ngoài"}
+                          </span>
+                        ) : (
+                          <span className="text-blue-600 dark:text-blue-400">
+                            {exportItem?.productionMethodName || productionMethodLabels.in_house || "In tại xưởng"}
+                          </span>
+                        )}
+                        {exportItem?.productionMethod === "outsource" && (exportItem?.printingVendorName || exportItem?.printingVendor?.name) && (
+                          <span className="ml-1 text-muted-foreground font-normal">
+                            ({exportItem.printingVendorName || exportItem.printingVendor?.name})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    {exportItem?.productionMethod === "outsource" && (exportItem?.outsourceCost > 0) && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">Chi phí:</span>
+                        <span className="font-semibold text-orange-600">
+                          {formatCurrency(exportItem.outsourceCost)}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-1 col-span-2">
                       <span className="text-muted-foreground">Ngày tạo:</span>

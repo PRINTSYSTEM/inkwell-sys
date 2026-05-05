@@ -45,6 +45,7 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-4 flex-shrink-0">
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2">

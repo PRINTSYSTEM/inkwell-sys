@@ -21,8 +21,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Eye, Edit, Trash2, Filter, RefreshCw, Loader2, Users } from "lucide-react";
 import { useVendors, useDeleteVendor } from "@/hooks/use-vendor";
-import { vendorTypeLabels } from "@/lib/status-utils";
+import { vendorTypeLabels, getVendorTypeLabel } from "@/lib/status-utils";
 import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
+import { cn } from "@/lib/utils";
 
 export default function VendorListPage() {
   const navigate = useNavigate();
@@ -153,7 +154,7 @@ export default function VendorListPage() {
                       <TableHead className="font-semibold text-slate-700">Điện thoại</TableHead>
                       <TableHead className="font-semibold text-slate-700">Email</TableHead>
                       <TableHead className="font-semibold text-slate-700">Địa chỉ</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Trạng thái</TableHead>
+                      <TableHead className="font-semibold text-slate-700 w-[140px]">Trạng thái</TableHead>
                       <TableHead className="font-semibold text-slate-700 text-right">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -167,10 +168,7 @@ export default function VendorListPage() {
                         {vendor.name || "—"}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
-                        {vendor.vendorType
-                          ? vendorTypeLabels[vendor.vendorType] ||
-                            vendor.vendorType
-                          : "—"}
+                        {getVendorTypeLabel(vendor.vendorType)}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">{vendor.phone || "—"}</TableCell>
                       <TableCell className="text-sm text-slate-600">{vendor.email || "—"}</TableCell>
@@ -180,7 +178,10 @@ export default function VendorListPage() {
                       <TableCell>
                         <Badge
                           variant={vendor.isActive ? "default" : "secondary"}
-                          className={vendor.isActive ? "bg-green-100 text-green-700 border-green-200" : ""}
+                          className={cn(
+                            "whitespace-nowrap",
+                            vendor.isActive ? "bg-green-100 text-green-700 border-green-200" : ""
+                          )}
                         >
                           {vendor.isActive ? "Hoạt động" : "Ngừng hoạt động"}
                         </Badge>

@@ -10,8 +10,14 @@ import {
 } from "./generated";
 
 // ===== PlateExportResponse =====
-export const PlateExportResponseSchema =
-  GenPlateExportResponseSchema.passthrough();
+export const PlateExportResponseSchema = GenPlateExportResponseSchema.extend({
+  productionMethod: z.string().nullable().optional(),
+  productionMethodName: z.string().nullable().optional(),
+  printingVendorId: z.number().nullable().optional(),
+  printingVendorName: z.string().nullable().optional(),
+  outsourceCost: z.number().nullable().optional(),
+  completedAt: z.string().nullable().optional(),
+}).passthrough();
 export type PlateExportResponse = z.infer<typeof PlateExportResponseSchema>;
 
 // ===== PagedResponse =====

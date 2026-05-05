@@ -64,6 +64,7 @@ import {
   useApproveDebt,
   useCreateAccountingForOrder,
 } from "@/hooks/use-accounting";
+import { useCreateDebtNotification } from "@/hooks/use-debt-notification";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
 import { useUpdateCustomer } from "@/hooks/use-customer";
 import { useCashReceipts } from "@/hooks/use-cash";
@@ -254,6 +255,7 @@ export default function AccountingOrderDetail() {
   const generateExcelMutation = useGenerateOrderExcel();
   const exportPDFMutation = useExportOrderPDF();
   const approveDebtMutation = useApproveDebt();
+  const createDebtNotificationMutation = useCreateDebtNotification();
   const createAccountingMutation = useCreateAccountingForOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
@@ -639,14 +641,28 @@ export default function AccountingOrderDetail() {
     }
   };
 
-  const handleUpdatePayment = () => {
+  const handleUpdatePayment = async () => {
     if (!order) return;
 
     if (order.customer?.type === "retail") {
       setDepositAmount("");
       setIsDepositDialogOpen(true);
     } else {
-      approveDebtMutation.mutate(order.id);
+      try {
+        await approveDebtMutation.mutate(order.id);
+        
+        // Sau khi duyệt công nợ, tạo thông báo công nợ
+        if (order.customerId || order.customer?.id) {
+          createDebtNotificationMutation.mutate({
+            type: "DebtApproved",
+            subject: `Duyệt công nợ đơn hàng #${order.orderCode || order.id}`,
+            body: `Đơn hàng #${order.orderCode || order.id} đã được duyệt công nợ thành công.`,
+            customerIds: [order.customerId || order.customer?.id || 0],
+          }).catch(err => console.error("Notification error:", err));
+        }
+      } catch (error) {
+        // Lỗi đã được handle trong hook
+      }
     }
   };
 
@@ -671,10 +687,21 @@ export default function AccountingOrderDetail() {
     setIsConfirmingDeposit(true);
 
     try {
-      await updateOrderForAccounting(order.id, {
+      const result = await updateOrderForAccounting(order.id, {
         depositAmount: amount,
         paymentMethodId: 2,
       } as UpdateOrderForAccountingRequest);
+
+      // Sau khi nhận cọc, tạo thông báo công nợ
+      const targetCustomerId = order.customerId || order.customer?.id || result?.customerId;
+      if (targetCustomerId) {
+        createDebtNotificationMutation.mutate({
+          type: "DebtApproved",
+          subject: `Xác nhận nhận cọc đơn hàng #${order.orderCode || order.id}`,
+          body: `Đơn hàng #${order.orderCode || order.id} đã được xác nhận nhận cọc số tiền ${formatCurrency(amount)} thành công.`,
+          customerIds: [targetCustomerId],
+        }).catch(err => console.error("Notification error:", err));
+      }
 
       showRetailDepositThresholdWarning(amount, order.totalAmount);
 
