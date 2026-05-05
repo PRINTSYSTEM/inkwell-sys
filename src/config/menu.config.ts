@@ -40,6 +40,7 @@ import {
   AlertTriangle,
   Activity,
   FileSpreadsheet,
+  MapPin,
 } from "lucide-react";
 import type { UserRole } from "@/Schema";
 import { ROLE, ROUTE_PATHS } from "@/constants";
@@ -72,20 +73,20 @@ export const MENU_ITEMS: MenuItem[] = [
   // ==== Phòng ban thiết kế ====
   {
     id: "design-dept",
-    title: "Phòng ban thiết kế",
+    title: "Thiết kế",
     icon: Palette,
     allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN, ROLE.DESIGN_LEAD],
     children: [
       {
         id: "design-staff",
-        title: "Tất cả nhân viên",
+        title: "Nhân viên thiết kế",
         icon: User,
         path: ROUTE_PATHS.DESIGN.MANAGEMENT,
         allowedRoles: [ROLE.ADMIN, ROLE.DESIGN_LEAD, ROLE.MANAGER],
       },
       {
         id: "design-all",
-        title: "Tất cả thiết kế",
+        title: "Danh sách thiết kế",
         icon: Eye,
         path: ROUTE_PATHS.DESIGN.ALL,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD],
@@ -103,27 +104,27 @@ export const MENU_ITEMS: MenuItem[] = [
   // ==== Sale (Bán hàng) ====
   {
     id: "sales",
-    title: "Sale",
+    title: "Bán hàng",
     icon: ShoppingCart,
     allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
     children: [
       {
         id: "sale-orders",
-        title: "Đơn hàng",
+        title: "Đơn hàng( Báo giá)",
         icon: FileText,
         path: ROUTE_PATHS.ORDERS.SALE_ORDERS,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
       {
         id: "sale-quotes",
-        title: "Báo giá",
+        title: "Báo giá cần xử lí",
         icon: FileText,
-        path: ROUTE_PATHS.ACCOUNTING.PAYMENT + "?context=sale",
+        path: ROUTE_PATHS.SALES.QUOTE,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
       {
         id: "sale-receipts",
-        title: "Phiếu thu",
+        title: "Quản lí phiếu thu",
         icon: Banknote,
         path: ROUTE_PATHS.ACCOUNTING.CASH_RECEIPTS,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
@@ -141,7 +142,7 @@ export const MENU_ITEMS: MenuItem[] = [
   // ==== Khách hàng & Đơn hàng ====
   {
     id: "customer",
-    title: "Khách hàng",
+    title: "Quản lý khách hàng",
     icon: Users,
     allowedRoles: [
       ROLE.ADMIN,
@@ -158,7 +159,7 @@ export const MENU_ITEMS: MenuItem[] = [
   },
   {
     id: "orders",
-    title: "Đơn hàng",
+    title: "Đơn hàng ( Tổng quan)",
     icon: FileText,
     path: ROUTE_PATHS.ORDERS.ROOT,
     allowedRoles: [
@@ -188,20 +189,7 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.PROOFING.ROOT,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
       },
-      {
-        id: "dies-management",
-        title: "Quản lý khuôn bế",
-        icon: Layers,
-        path: ROUTE_PATHS.DIES.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      },
-      {
-        id: "plate-exports",
-        title: "Danh sách xuất kẽm",
-        icon: Package,
-        path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      },
+     
     ],
   },
   {
@@ -226,6 +214,20 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.PRODUCTION,
           ROLE.PRODUCTION_LEAD,
         ],
+      },
+       {
+        id: "dies-management",
+        title: "Danh sách khuôn bế",
+        icon: Layers,
+        path: ROUTE_PATHS.DIES.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
+      {
+        id: "plate-exports",
+        title: "Danh sách xuất kẽm",
+        icon: Package,
+        path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
       },
     ],
   },
@@ -318,6 +320,13 @@ export const MENU_ITEMS: MenuItem[] = [
         icon: Users,
         path: ROUTE_PATHS.ADMIN.USERS,
         allowedRoles: [ROLE.ADMIN],
+      },
+      {
+        id: "shared-addresses",
+        title: "Địa chỉ giao hàng",
+        icon: MapPin,
+        path: ROUTE_PATHS.ADMIN.SHARED_ADDRESSES,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
       },
       // {
       //   id: "admin-roles",

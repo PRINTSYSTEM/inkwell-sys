@@ -1871,7 +1871,7 @@ function AddressBookManager({
           </div>
           
           <div className="flex items-center gap-1">
-            <Button
+            {/* <Button
               variant="outline"
               size="icon"
               className="h-8 w-8 text-primary border-primary/20 bg-primary/5 hover:bg-primary/10"
@@ -1886,7 +1886,7 @@ function AddressBookManager({
               }}
             >
               <Plus className="h-4 w-4" />
-            </Button>
+            </Button> */}
             {selectedId != null && (
                <Button
                 variant="outline"
@@ -2024,7 +2024,7 @@ function AddressBookManager({
                 >
                   <Edit2 className="h-4 w-4" />
                 </Button>
-                <Button
+                {/* <Button
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
@@ -2032,7 +2032,7 @@ function AddressBookManager({
                   onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(addr.id); }}
                 >
                   <Trash2 className="h-4 w-4" />
-                </Button>
+                </Button> */}
               </div>
             </div>
           ))

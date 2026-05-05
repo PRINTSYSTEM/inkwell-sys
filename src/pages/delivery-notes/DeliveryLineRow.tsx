@@ -227,21 +227,6 @@ export default function DeliveryLineRow({
                 </span>
               );
             })()}
-            {typeof line.orderedQty === "number" && (
-              <span className="text-[10px] text-muted-foreground">
-                {(() => {
-                  const scrap =
-                    typeof line.scrapQty === "number"
-                      ? line.scrapQty
-                      : typeof line.orderedQty === "number" &&
-                          typeof line.netQtyTotal === "number"
-                        ? line.orderedQty - line.netQtyTotal
-                        : null;
-                  if (scrap == null || !line.orderedQty) return "";
-                  return `${((scrap / line.orderedQty) * 100).toFixed(2).replace(/\.00$/, "")}%`;
-                })()}
-              </span>
-            )}
           </div>
         </TableCell>
 
@@ -249,18 +234,10 @@ export default function DeliveryLineRow({
         <TableCell className="text-right">
           <div className="flex flex-col items-end">
             <span className="font-bold text-sm text-primary">
-              {typeof line.netQtyTotal === "number"
-                ? line.netQtyTotal.toLocaleString("vi-VN")
-                : typeof line.actualDeliveredQty === "number"
-                  ? line.actualDeliveredQty.toLocaleString("vi-VN")
-                  : "—"}
+              {typeof line.actualDeliveredQty === "number"
+                ? line.actualDeliveredQty.toLocaleString("vi-VN")
+                : "—"}
             </span>
-            {typeof line.actualDeliveredQty === "number" &&
-              line.actualDeliveredQty !== line.netQtyTotal && (
-                <span className="text-[10px] text-green-600 font-medium">
-                  Thực giao: {line.actualDeliveredQty.toLocaleString("vi-VN")}
-                </span>
-              )}
           </div>
         </TableCell>
 

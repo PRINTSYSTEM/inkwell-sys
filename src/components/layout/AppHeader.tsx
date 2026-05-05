@@ -23,6 +23,7 @@ const roleNames = {
   designer: "Thiết kế",
   prepress: "Bình bài",
   operator: "Vận hành",
+  sale: "Sale",
 };
 
 export function AppHeader() {

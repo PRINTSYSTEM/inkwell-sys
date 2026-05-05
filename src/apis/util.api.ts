@@ -49,11 +49,13 @@ export const API_SUFFIX = {
 
   ORDERS_FOR_DESIGNER: "/orders/for-designer",
   ORDERS_FOR_ACCOUNTING: "/orders/for-accounting",
+  ORDERS_FOR_SALE: "/orders/for-sale",
 
   ORDER_ADD_DESIGN: (id: number) => `/orders/${id}/add-design`,
   ORDER_REMOVE_DESIGN: (orderId: number, orderDetailId: number) =>
     `/orders/${orderId}/designs/${orderDetailId}`,
   ORDER_UPDATE_FOR_ACCOUNTING: (id: number) => `/orders/${id}/accounting`,
+  ORDER_UPDATE_FOR_SALE: (id: number) => `/orders/${id}/sale`,
   ORDER_EXPORT_INVOICE: (id: number) => `/orders/${id}/export-invoice`,
   ORDER_EXPORT_DELIVERY_NOTE: (id: number) =>
     `/orders/${id}/export-delivery-note`,
@@ -375,4 +377,7 @@ export const API_SUFFIX = {
 
   // ========== VENDORS (EXTRA) ==========
   VENDORS_PLATE_COUNT_OPTIONS: "/vendors/plate-count-options",
+  // ========== SHARED ADDRESSES ==========
+  SHARED_ADDRESSES: "/shared-addresses",
+  SHARED_ADDRESS_BY_ID: (id: number) => `/shared-addresses/${id}`,
 };

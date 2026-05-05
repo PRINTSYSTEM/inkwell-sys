@@ -228,12 +228,6 @@ function PlateTab() {
       {/* Filters */}
       <Card className="border-slate-200/60 shadow-sm">
         <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60 py-3 px-5">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-[#93631F]" />
-            <CardTitle className="text-sm font-semibold text-slate-700">
-              Bộ lọc
-            </CardTitle>
-          </div>
         </CardHeader>
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3">
@@ -476,12 +470,6 @@ function DieTab() {
       {/* Filters */}
       <Card className="border-slate-200/60 shadow-sm">
         <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60 py-3 px-5">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-[#93631F]" />
-            <CardTitle className="text-sm font-semibold text-slate-700">
-              Bộ lọc
-            </CardTitle>
-          </div>
         </CardHeader>
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-3">
@@ -748,9 +736,6 @@ export default function CostPricingPage() {
               <h1 className="text-3xl font-bold text-foreground">
                 Bảng kê chi phí Khuôn / Kẽm
               </h1>
-              <p className="text-muted-foreground mt-1">
-                Cập nhật và chốt giá chi phí gia công với nhà cung cấp
-              </p>
             </div>
             <div className="flex items-center gap-2">
               <CircleDollarSign className="h-8 w-8 text-[#93631F]" />
@@ -765,14 +750,14 @@ export default function CostPricingPage() {
                 className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#93631F]"
               >
                 <Layers className="h-4 w-4" />
-                Kẽm (Plate Exports)
+                Kẽm
               </TabsTrigger>
               <TabsTrigger
                 value="dies"
                 className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#93631F]"
               >
                 <Scissors className="h-4 w-4" />
-                Khuôn bế (Dies)
+                Khuôn bế
               </TabsTrigger>
             </TabsList>
 

@@ -133,6 +133,7 @@ export const ROUTE_PATHS = {
     USERS_DETAIL: "/admin/users/:id" as const,
     ROLES: "/admin/roles" as const,
     ANALYTICS: "/admin/analytics" as const,
+    SHARED_ADDRESSES: "/admin/shared-addresses" as const,
   },
 
   MANAGER: {
@@ -155,7 +156,7 @@ export const ROUTE_PATHS = {
       STOCK_CARD: "/reports/inventory/stock-card" as const,
     },
     // Sales Reports
-    SALES: {
+  SALES: {
       BY_PERIOD: "/reports/sales/by-period" as const,
       BY_CUSTOMER: "/reports/sales/by-customer" as const,
       BY_DIMENSION: "/reports/sales/by-dimension" as const,
@@ -168,4 +169,10 @@ export const ROUTE_PATHS = {
   },
   NOTIFICATIONS: "/notifications" as const,
   PROFILE: "/profile" as const,
+SALES: {
+      ROOT: "/sales" as const,
+      QUOTE: "/sales/quote" as const,
+}
 } as const;
+
+  

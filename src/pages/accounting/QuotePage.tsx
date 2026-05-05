@@ -4,49 +4,10 @@ import { CreditCard, TrendingUp, Clock, AlertCircle } from "lucide-react";
 import { PaymentList } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
 import type { OrderResponse } from "@/Schema/order.schema";
-// Note: This page is accounting-only (Thanh toán)
 
-// Helper to calculate summary stats from orders
-const calculateSummaryStats = (orders: OrderResponse[]) => {
-  const now = new Date();
-
-  const payment = {
-    pending: 0,
-    pendingAmount: 0,
-    overdueCount: 0,
-  };
-
-  orders.forEach((order) => {
-    if (order.isDebtApproved !== false) return;
-
-    const totalAmount = order.totalAmount || 0;
-    const depositAmount = order.depositAmount || 0;
-    const remaining = totalAmount - depositAmount;
-
-    // Payment stats
-    if (remaining > 0) {
-      payment.pending++;
-      payment.pendingAmount += remaining;
-
-      // Check if overdue (delivery date passed)
-      if (order.deliveryDate) {
-        try {
-          const deliveryDate = new Date(order.deliveryDate);
-          if (deliveryDate < now) {
-            payment.overdueCount++;
-          }
-        } catch (e) {
-          // Invalid date, skip
-        }
-      }
-    }
-  });
-
-  return payment;
-};
-
-export default function PaymentPage() {
-  const pageTitle = "Thanh toán";
+// Quote page for Sales
+export default function QuotePage() {
+  const pageTitle = "Báo giá";
 
   // Build params for API
   const ordersParams = useMemo(() => {
@@ -65,6 +26,45 @@ export default function PaymentPage() {
 
   // Fetch all orders for accounting to calculate summary stats
   const { data: allOrdersData } = useOrdersForAccounting(ordersParams);
+
+  // Helper to calculate summary stats from orders
+  const calculateSummaryStats = (orders: OrderResponse[]) => {
+    const now = new Date();
+
+    const payment = {
+      pending: 0,
+      pendingAmount: 0,
+      overdueCount: 0,
+    };
+
+    orders.forEach((order) => {
+      if (order.isDebtApproved !== false) return;
+
+      const totalAmount = order.totalAmount || 0;
+      const depositAmount = order.depositAmount || 0;
+      const remaining = totalAmount - depositAmount;
+
+      // Payment stats
+      if (remaining > 0) {
+        payment.pending++;
+        payment.pendingAmount += remaining;
+
+        // Check if overdue (delivery date passed)
+        if (order.deliveryDate) {
+          try {
+            const deliveryDate = new Date(order.deliveryDate);
+            if (deliveryDate < now) {
+              payment.overdueCount++;
+            }
+          } catch (e) {
+            // Invalid date, skip
+          }
+        }
+      }
+    });
+
+    return payment;
+  };
 
   // Calculate summary stats from orders
   const summaryStats = useMemo(() => {
@@ -115,9 +115,7 @@ export default function PaymentPage() {
                   <Clock className="h-4 w-4 text-warning" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">
-                    Chờ thanh toán
-                  </p>
+                  <p className="text-xs text-muted-foreground">Chờ thanh toán</p>
                   <p className="text-xl font-bold">{summaryStats.pending}</p>
                 </div>
               </div>
@@ -129,9 +127,7 @@ export default function PaymentPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Tổng còn nợ</p>
-                  <p className="text-xl font-bold">
-                    {formatCurrency(summaryStats.pendingAmount)}
-                  </p>
+                  <p className="text-xl font-bold">{formatCurrency(summaryStats.pendingAmount)}</p>
                 </div>
               </div>
             </div>
@@ -142,16 +138,14 @@ export default function PaymentPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Quá hạn</p>
-                  <p className="text-xl font-bold">
-                    {summaryStats.overdueCount}
-                  </p>
+                  <p className="text-xl font-bold">{summaryStats.overdueCount}</p>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex-1 flex flex-col min-h-0">
-            <PaymentList />
+            <PaymentList listFilterType="" />
           </div>
         </div>
       </div>

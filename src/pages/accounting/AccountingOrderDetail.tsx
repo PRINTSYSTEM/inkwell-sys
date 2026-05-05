@@ -56,7 +56,10 @@ import {
   useGenerateOrderExcel,
   useExportOrderPDF,
   useUpdateOrderForAccounting,
+  useUpdateOrderForSale,
 } from "@/hooks/use-order";
+import { useAuth } from "@/hooks/use-auth";
+import { ROLE } from "@/constants/role.constant";
 import {
   useApproveDebt,
   useCreateAccountingForOrder,
@@ -174,13 +177,14 @@ export default function AccountingOrderDetail() {
   const navigate = useNavigate();
 
   // Fetch order from API
+  // Pass `null` when `id` is not yet available to avoid an initial fetch for id=0
   const {
     data: order,
     isLoading,
     isError,
     error,
     refetch: refetchOrder,
-  } = useOrder(Number(id || "0"));
+  } = useOrder(id ? Number(id) : null);
 
   // Fetch invoices for this order
   const { data: invoicesData } = useInvoicesByOrder(
@@ -253,6 +257,9 @@ export default function AccountingOrderDetail() {
   const createAccountingMutation = useCreateAccountingForOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
+  const { mutate: updateOrderForSale, loading: isUpdatingForSale } =
+    useUpdateOrderForSale();
+  const { user } = useAuth();
   const createInvoiceMutation = useCreateInvoice();
   const { mutateAsync: updateCustomer } = useUpdateCustomer();
 
@@ -370,9 +377,24 @@ export default function AccountingOrderDetail() {
     ];
 
     try {
-      await updateOrderForAccounting(order.id, {
-        orderDetails: orderDetailsUpdates,
-      } as UpdateOrderForAccountingRequest);
+      // If current user is admin or sale, call sale endpoint and include deliveryAddress if present
+      const isSaleUser = user?.role === ROLE.ADMIN || user?.role === ROLE.SALE;
+
+      if (isSaleUser) {
+        // include deliveryAddress if the edit values contain it
+        const salePayload = {
+          orderDetails: orderDetailsUpdates.map((od) => ({
+            ...od,
+            deliveryAddress:
+              (orderDetailEditValues as any).deliveryAddress ?? undefined,
+          })),
+        };
+        await updateOrderForSale(order.id, salePayload);
+      } else {
+        await updateOrderForAccounting(order.id, {
+          orderDetails: orderDetailsUpdates,
+        } as UpdateOrderForAccountingRequest);
+      }
       setEditingOrderDetailId(null);
       setOrderDetailEditValues({});
     } catch (error) {
@@ -694,7 +716,7 @@ export default function AccountingOrderDetail() {
     return (
       <div className="min-h-screen bg-muted/30">
         <div className="sticky top-0 z-10 bg-background border-b">
-          <div className="container max-w-7xl mx-auto px-4 py-4">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full">
             <div className="flex items-center gap-4">
               <Skeleton className="h-10 w-10 rounded-md" />
               <div className="space-y-2">
@@ -704,13 +726,13 @@ export default function AccountingOrderDetail() {
             </div>
           </div>
         </div>
-        <div className="container max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-3 space-y-6">
               <Skeleton className="h-48 w-full rounded-lg" />
               <Skeleton className="h-64 w-full rounded-lg" />
             </div>
-            <div className="space-y-6">
+            <div className="lg:col-span-1 space-y-6">
               <Skeleton className="h-48 w-full rounded-lg" />
               <Skeleton className="h-32 w-full rounded-lg" />
             </div>
@@ -786,7 +808,7 @@ export default function AccountingOrderDetail() {
       <div className="min-h-screen bg-muted/30">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background border-b">
-          <div className="container max-w-7xl mx-auto px-4 py-4">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" onClick={handleBack}>
@@ -858,105 +880,16 @@ export default function AccountingOrderDetail() {
                       Duyệt đơn hàng
                     </Button>
                   )}
-                {invoiceStatus === "not_issued" &&
-                  hasBeenDelivered(order.status) &&
-                  (() => {
-                    const customerInfoCheck = isCustomerInfoComplete(order);
-                    const isDisabled =
-                      !customerInfoCheck.isValid ||
-                      exportInvoiceMutation.loading;
-                    const disableReason =
-                      customerInfoCheck.missingFields.length > 0
-                        ? `Vui lòng điền đầy đủ thông tin khách hàng: ${customerInfoCheck.missingFields.join(", ")}`
-                        : "";
-
-                    const button = (
-                      <Button
-                        size="sm"
-                        onClick={handleExportInvoice}
-                        disabled={isDisabled}
-                      >
-                        {exportInvoiceMutation.loading ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <FileText className="h-4 w-4 mr-2" />
-                        )}
-                        Xuất hóa đơn
-                      </Button>
-                    );
-
-                    if (isDisabled && disableReason) {
-                      return (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="inline-block">{button}</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs">{disableReason}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      );
-                    }
-
-                    return button;
-                  })()}
-                {invoiceStatus === "issued" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportDeliveryNote}
-                    disabled={exportDeliveryNoteMutation.loading}
-                  >
-                    {exportDeliveryNoteMutation.loading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Truck className="h-4 w-4 mr-2" />
-                    )}
-                    Xuất phiếu giao hàng
-                  </Button>
-                )}
-                {order.status === "production_completed" && (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleUpdateStatusToDelivering}
-                    disabled={isUpdatingForAccounting}
-                  >
-                    {isUpdatingForAccounting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Truck className="h-4 w-4 mr-2" />
-                    )}
-                    Chuyển sang đang giao hàng
-                  </Button>
-                )}
-                {order.status === "delivering" && (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleUpdateStatusToCompleted}
-                    disabled={isUpdatingForAccounting}
-                  >
-                    {isUpdatingForAccounting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Chuyển thành đã giao hàng
-                  </Button>
-                )}
               </div>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="container max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Left Column - Main Info */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-3 space-y-6">
               {/* Payment Summary Card */}
               <Card>
                 <CardHeader className="pb-3">
@@ -1301,6 +1234,7 @@ export default function AccountingOrderDetail() {
                       <TableRow className="bg-muted/30">
                         <TableHead className="w-[60px]">Ảnh</TableHead>
                         <TableHead>Sản phẩm</TableHead>
+                        <TableHead className="text-center">Địa chỉ giao hàng</TableHead>
                         <TableHead className="text-center">
                           Người thiết kế
                         </TableHead>
@@ -1328,9 +1262,12 @@ export default function AccountingOrderDetail() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="min-w-0">
                             <div className="space-y-1">
-                              <p className="font-medium">
+                              <p
+                                className="font-medium max-w-[320px] truncate"
+                                title={item.design?.designName || undefined}
+                              >
                                 {item.design?.designName || "—"}
                               </p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1361,7 +1298,28 @@ export default function AccountingOrderDetail() {
                                   Yêu cầu: {item.requirements}
                                 </p>
                               )}
+                              {/* delivery address moved to its own column */}
                             </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-[280px]">
+                            {item.deliveryAddress || item.deliveryAddressLabel ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <span className="inline-block max-w-[220px] truncate">
+                                      {item.deliveryAddress || item.deliveryAddressLabel}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    <p className="max-w-xs break-words">
+                                      {item.deliveryAddress || item.deliveryAddressLabel}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="text-xs">
@@ -1415,7 +1373,9 @@ export default function AccountingOrderDetail() {
                               />
                             ) : (
                               <span className="tabular-nums">
-                                {formatCurrency(item.unitPrice || 0)}
+                                {item.unitPrice && item.unitPrice > 0
+                                  ? formatCurrency(item.unitPrice)
+                                  : "—"}
                               </span>
                             )}
                           </TableCell>
@@ -1475,7 +1435,7 @@ export default function AccountingOrderDetail() {
                       )) || (
                         <TableRow>
                           <TableCell
-                            colSpan={7}
+                            colSpan={8}
                             className="text-center text-muted-foreground py-8"
                           >
                             Không có sản phẩm nào
@@ -1506,7 +1466,7 @@ export default function AccountingOrderDetail() {
             </div>
 
             {/* Right Column - Sidebar */}
-            <div className="space-y-6">
+            <div className="lg:col-span-1 space-y-6">
               {/* Customer Info */}
               <Card>
                 <CardHeader className="pb-3">
@@ -1813,362 +1773,6 @@ export default function AccountingOrderDetail() {
                 </CardContent>
               </Card>
 
-              {/* Delivery Info */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-primary" />
-                      Thông tin giao hàng
-                    </CardTitle>
-                    {editingCard === "orderInfo" ? (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleSaveCard("orderInfo")}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          {isUpdatingForAccounting ? (
-                            <>
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              Đang lưu...
-                            </>
-                          ) : (
-                            "Lưu"
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEditingCard}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          Hủy
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          startEditingCard("orderInfo", {
-                            deliveryDate: formatDateTimeForInput(
-                              order.deliveryDate,
-                            ),
-                            deliveryAddress: order.deliveryAddress || "",
-                            note: order.note || "",
-                          })
-                        }
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Sửa
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {editingCard === "orderInfo" ? (
-                    /* Edit Mode */
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Ngày giao</Label>
-                        <Input
-                          type="datetime-local"
-                          value={cardEditValues.deliveryDate || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              deliveryDate: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Địa chỉ giao hàng</Label>
-                        <Textarea
-                          value={cardEditValues.deliveryAddress || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              deliveryAddress: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập địa chỉ giao hàng"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Ghi chú</Label>
-                        <Textarea
-                          value={cardEditValues.note || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              note: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập ghi chú"
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    /* View Mode */
-                    <>
-                      <div className="flex items-start gap-3">
-                        <Calendar
-                          className={`h-4 w-4 mt-0.5 ${
-                            isDeliveryDatePassed
-                              ? "text-orange-600 dark:text-orange-400"
-                              : "text-muted-foreground"
-                          }`}
-                        />
-                        <div>
-                          <p
-                            className={`text-sm ${
-                              isDeliveryDatePassed
-                                ? "text-orange-700 dark:text-orange-300 font-semibold"
-                                : "text-muted-foreground"
-                            }`}
-                          >
-                            Ngày giao dự kiến
-                            {isDeliveryDatePassed && " (Đã quá hạn)"}
-                          </p>
-                          <p
-                            className={`font-medium ${
-                              isDeliveryDatePassed
-                                ? "text-orange-900 dark:text-orange-100"
-                                : ""
-                            }`}
-                          >
-                            {formatDateTime(order.deliveryDate)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Địa chỉ giao hàng
-                          </p>
-                          <p className="font-medium">
-                            {order.deliveryAddress || "—"}
-                          </p>
-                        </div>
-                      </div>
-                      {order.note && (
-                        <div className="pt-2">
-                          <p className="text-muted-foreground text-xs mb-1">
-                            Ghi chú:
-                          </p>
-                          <p className="text-sm whitespace-pre-wrap">
-                            {order.note}
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Recipient Info Card - Only visible to accounting */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <User className="h-4 w-4 text-primary" />
-                      Thông tin nhận hàng
-                    </CardTitle>
-                    {editingCard === "recipientInfo" ? (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleSaveCard("recipientInfo")}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          {isUpdatingForAccounting ? (
-                            <>
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              Đang lưu...
-                            </>
-                          ) : (
-                            "Lưu"
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEditingCard}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          Hủy
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          startEditingCard("recipientInfo", {
-                            recipientName: order.recipientName || "",
-                            recipientPhone: order.recipientPhone || "",
-                            recipientAddress: order.recipientAddress || "",
-                          })
-                        }
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Sửa
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Warning if missing info */}
-                  {(!order.recipientName ||
-                    !order.recipientPhone ||
-                    !order.recipientAddress) &&
-                    editingCard !== "recipientInfo" && (
-                      <div
-                        className={`rounded-lg p-3 border-2 ${
-                          isDeliveryDatePassed
-                            ? "bg-red-50 dark:bg-red-950/30 border-red-400 dark:border-red-700"
-                            : "bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700"
-                        }`}
-                      >
-                        <div className="flex items-start gap-2">
-                          {isDeliveryDatePassed ? (
-                            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                          ) : (
-                            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                          )}
-                          <div className="flex-1">
-                            <p
-                              className={`text-xs font-semibold ${
-                                isDeliveryDatePassed
-                                  ? "text-red-900 dark:text-red-100"
-                                  : "text-amber-900 dark:text-amber-100"
-                              }`}
-                            >
-                              {isDeliveryDatePassed ? "🚨 " : "⚠️ "}
-                              Thiếu thông tin người nhận
-                              {isDeliveryDatePassed && " - Đã quá ngày giao!"}
-                            </p>
-                            <ul
-                              className={`text-xs mt-1 list-disc list-inside space-y-0.5 ${
-                                isDeliveryDatePassed
-                                  ? "text-red-700 dark:text-red-300"
-                                  : "text-amber-700 dark:text-amber-300"
-                              }`}
-                            >
-                              {!order.recipientName && <li>Tên người nhận</li>}
-                              {!order.recipientPhone && <li>Số điện thoại</li>}
-                              {!order.recipientAddress && <li>Địa chỉ</li>}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                  {editingCard === "recipientInfo" ? (
-                    /* Edit Mode */
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Tên người nhận</Label>
-                        <Input
-                          value={cardEditValues.recipientName || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              recipientName: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập tên người nhận"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Số điện thoại</Label>
-                        <Input
-                          value={cardEditValues.recipientPhone || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              recipientPhone: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập số điện thoại"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Địa chỉ</Label>
-                        <Textarea
-                          value={cardEditValues.recipientAddress || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              recipientAddress: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập địa chỉ người nhận"
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    /* View Mode */
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
-                          Tên người nhận
-                          {!order.recipientName && (
-                            <span className="text-destructive ml-1">*</span>
-                          )}
-                        </Label>
-                        <p className="text-sm font-medium">
-                          {order.recipientName || (
-                            <span className="text-muted-foreground italic">
-                              Chưa có thông tin
-                            </span>
-                          )}
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
-                          Số điện thoại
-                          {!order.recipientPhone && (
-                            <span className="text-destructive ml-1">*</span>
-                          )}
-                        </Label>
-                        <p className="text-sm font-medium">
-                          {order.recipientPhone || (
-                            <span className="text-muted-foreground italic">
-                              Chưa có thông tin
-                            </span>
-                          )}
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
-                          Địa chỉ
-                          {!order.recipientAddress && (
-                            <span className="text-destructive ml-1">*</span>
-                          )}
-                        </Label>
-                        <p className="text-sm font-medium">
-                          {order.recipientAddress || (
-                            <span className="text-muted-foreground italic">
-                              Chưa có thông tin
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
