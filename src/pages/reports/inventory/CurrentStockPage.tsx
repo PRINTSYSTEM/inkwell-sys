@@ -24,9 +24,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCurrentStock } from "@/hooks/use-inventory-report";
 import { formatCurrency } from "@/lib/status-utils";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function CurrentStockPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedMaterialType, setSelectedMaterialType] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -42,9 +52,9 @@ export default function CurrentStockPage() {
     search: searchQuery || "",
   });
 
-  const totalItems = stockData?.items?.length || 0;
-  const totalQuantity = stockData?.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
-  const totalValue = stockData?.items?.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0) || 0;
+  const totalItems = stockData?.total || 0;
+  const totalQuantity = stockData?.items?.reduce((sum, item) => sum + (item.currentQuantity || 0), 0) || 0;
+  const totalValue = stockData?.items?.reduce((sum, item) => sum + (item.stockValue || 0), 0) || 0;
 
   return (
     <>
@@ -136,9 +146,23 @@ export default function CurrentStockPage() {
               placeholder="Tìm kiếm theo mã, tên vật tư..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 rounded-md"
             />
           </div>
+          
+          <Select value={selectedMaterialType} onValueChange={setSelectedMaterialType}>
+            <SelectTrigger className="w-full sm:w-[200px] rounded-md">
+              <SelectValue placeholder="Loại vật liệu" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả vật liệu</SelectItem>
+              <SelectItem value="paper">Giấy</SelectItem>
+              <SelectItem value="decal">Decal</SelectItem>
+              <SelectItem value="ink">Mực</SelectItem>
+              <SelectItem value="plate">Kẽm</SelectItem>
+              <SelectItem value="other">Khác</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Table */}
@@ -146,21 +170,22 @@ export default function CurrentStockPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã vật tư</TableHead>
-                <TableHead>Tên vật tư</TableHead>
-                <TableHead>Loại thiết kế</TableHead>
-                <TableHead className="text-right">Số lượng tồn</TableHead>
-                <TableHead className="text-right">Đã đặt</TableHead>
-                <TableHead className="text-right">Có sẵn</TableHead>
-                <TableHead className="text-right">Đơn giá</TableHead>
-                <TableHead className="text-right">Thành tiền</TableHead>
+                <TableHead className="w-[120px]">Mã vật tư</TableHead>
+                <TableHead className="min-w-[180px]">Tên vật tư</TableHead>
+                <TableHead>Loại vật liệu</TableHead>
+                <TableHead>Kích thước</TableHead>
+                <TableHead className="text-right">Số lượng</TableHead>
+                <TableHead className="text-right">Đơn vị</TableHead>
+                <TableHead className="text-right">Định mức</TableHead>
+                <TableHead className="text-right">Giá trị tồn</TableHead>
+                <TableHead className="text-right">Trạng thái</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -170,23 +195,59 @@ export default function CurrentStockPage() {
               ) : !stockData?.items || stockData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu tồn kho nào.
                   </TableCell>
                 </TableRow>
-              ) : (
-                stockData.items.map((item) => (
-                  <TableRow key={item.materialTypeCode || item.materialTypeId}>
+              ) : (() => {
+                const filteredItems = stockData.items.filter((item) => {
+                  if (selectedMaterialType === "all") return true;
+                  const name = item.itemName?.toLowerCase() || "";
+                  const code = item.itemCode?.toLowerCase() || "";
+                  if (selectedMaterialType === "paper") return name.includes("giấy") || name.includes("ivory") || name.includes("duplex") || name.includes("couche");
+                  if (selectedMaterialType === "decal") return name.includes("decal");
+                  if (selectedMaterialType === "ink") return code.includes("ink") || name.includes("mực");
+                  if (selectedMaterialType === "plate") return code.includes("plate") || name.includes("kẽm");
+                  if (selectedMaterialType === "other") return !name.includes("decal") && !name.includes("giấy") && !code.includes("ink") && !code.includes("plate");
+                  return true;
+                });
+
+                if (filteredItems.length === 0) {
+                  return (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                        Không tìm thấy vật tư nào khớp với bộ lọc.
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+
+                return filteredItems.map((item) => (
+                  <TableRow 
+                    key={item.itemCode || item.itemName}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/reports/inventory/stock-card/${item.itemCode}`)}
+                  >
                     <TableCell className="font-medium font-mono text-sm">
-                      {item.materialTypeCode || "—"}
+                      {item.itemCode || "—"}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {item.materialTypeName || "—"}
+                      {item.itemName || "—"}
                     </TableCell>
                     <TableCell>
-                      {item.designTypeName || item.designTypeCode || "—"}
+                      <Badge variant="outline" className="font-normal">
+                        {item.itemName?.toLowerCase().includes("decal") ? "Decal" : 
+                         item.itemName?.toLowerCase().includes("ivory") ? "Giấy Ivory" : 
+                         item.itemName?.toLowerCase().includes("duplex") ? "Giấy Duplex" : 
+                         item.itemName?.toLowerCase().includes("couche") ? "Giấy Couche" : 
+                         item.itemCode?.includes("INK") ? "Mực" : 
+                         item.itemCode?.includes("PLATE") ? "Kẽm" : "Giấy"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {item.itemName?.match(/\d+x\d+/)?.[0] || "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {item.currentQuantity !== undefined
@@ -194,28 +255,26 @@ export default function CurrentStockPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.reservedQuantity !== undefined
-                        ? item.reservedQuantity.toLocaleString()
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {item.availableQuantity !== undefined
-                        ? item.availableQuantity.toLocaleString()
-                        : "—"}
+                      {item.unit || "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.unitPrice !== undefined
-                        ? formatCurrency(item.unitPrice)
+                      {item.minStock !== undefined
+                        ? item.minStock.toLocaleString()
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">
-                      {item.totalValue !== undefined
-                        ? formatCurrency(item.totalValue)
+                      {item.stockValue !== undefined
+                        ? formatCurrency(item.stockValue)
                         : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant={item.status === "Active" ? "default" : "secondary"}>
+                        {item.status || "—"}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))
-              )}
+              })()}
             </TableBody>
           </Table>
         </div>
