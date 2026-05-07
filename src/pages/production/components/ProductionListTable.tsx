@@ -64,6 +64,9 @@ import {
 } from "@/components/ui/popover";
 import { useState } from "react";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { useMaterialTypeList } from "@/hooks/use-material-type";
 
 interface ProductionListTableProps {
   isLoading: boolean;
@@ -152,6 +155,7 @@ function ProductionTableRow({
   const [openDiePopover, setOpenDiePopover] = useState(false);
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showMaterialExportDialog, setShowMaterialExportDialog] = useState(false);
 
   const isDraft = !prod.id;
   const isCreating = React.useRef(false);
@@ -467,38 +471,6 @@ function ProductionTableRow({
                 ? updates.defectQty
                 : Number(defectQty) || 0,
           },
-        }).then(() => {
-          // XUẤT NL thành công thì gọi api xuất kho
-          if (
-            step.stepType === "material_export" &&
-            updates.status === "done" &&
-            step.status !== "done" &&
-            prod.id
-          ) {
-            const qty = Number(inputQty) || defaultPrintQty || 1;
-            const matName = proofingOrder?.materialType?.name || "Nguyên liệu";
-            const matCode = proofingOrder?.materialType?.code || "NL";
-
-            createStockOutForProduction({
-              productionOrderId: prod.id,
-              itemType: "material",
-              notes: "Xuất NL tự động khi hoàn thành công đoạn",
-              stockOutDate: new Date().toISOString(),
-              items: [
-                {
-                  itemName: matName,
-                  itemCode: matCode,
-                  unit: "Tờ",
-                  quantity: qty,
-                  notes: "",
-                  materialId: proofingOrder?.materialTypeId || null,
-                  orderDetailId: proofingOrder?.orderDetailId || null
-                }
-              ]
-            }).catch(err => {
-              console.error("Lỗi tự động xuất kho NL:", err);
-            });
-          }
         }).catch(err => {
           console.error("Lỗi cập nhật bước:", err);
         });
@@ -518,45 +490,58 @@ function ProductionTableRow({
           </span>
         )}
         {!hideStatus && (
-          <Select
-            value={
-              !step.status || step.status === "pending" ? "ready" : step.status
-            }
-            onValueChange={(val: any) => handleUpdate({ status: val })}
-            disabled={!isEnabled}
-          >
-            <SelectTrigger
-              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""}`}
+          <>
+            <Select
+              value={
+                !step.status || step.status === "pending" ? "ready" : step.status
+              }
+              onValueChange={(val: any) => handleUpdate({ status: val })}
+              disabled={!isEnabled}
             >
-              <SelectValue placeholder="Trạng thái" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                value="ready"
-                className="text-xs font-semibold cursor-pointer"
+              <SelectTrigger
+                className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""}`}
               >
-                Sẵn sàng
-              </SelectItem>
-              <SelectItem
-                value="in_progress"
-                className="text-xs font-semibold cursor-pointer"
+                <SelectValue placeholder="Trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  value="ready"
+                  className="text-xs font-semibold cursor-pointer"
+                >
+                  Sẵn sàng
+                </SelectItem>
+                <SelectItem
+                  value="in_progress"
+                  className="text-xs font-semibold cursor-pointer"
+                >
+                  Đang thực hiện
+                </SelectItem>
+                <SelectItem
+                  value="done"
+                  className="text-xs font-semibold cursor-pointer"
+                >
+                  Hoàn thành
+                </SelectItem>
+                <SelectItem
+                  value="blocked"
+                  className="text-xs font-semibold cursor-pointer"
+                >
+                  Bị chặn/Lỗi
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {step.stepType === "material_export" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 mt-1 text-[10px] w-full bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
+                disabled={!isEnabled}
+                onClick={() => setShowMaterialExportDialog(true)}
               >
-                Đang thực hiện
-              </SelectItem>
-              <SelectItem
-                value="done"
-                className="text-xs font-semibold cursor-pointer"
-              >
-                Hoàn thành
-              </SelectItem>
-              <SelectItem
-                value="blocked"
-                className="text-xs font-semibold cursor-pointer"
-              >
-                Bị chặn/Lỗi
-              </SelectItem>
-            </SelectContent>
-          </Select>
+                Xuất nguyên liệu
+              </Button>
+            )}
+          </>
         )}
 
         {isCheckStep && !isEditing && (
@@ -668,6 +653,8 @@ function ProductionTableRow({
       </div>
     );
   };
+
+
 
   const StepCell = ({
     step,
@@ -1243,6 +1230,29 @@ function ProductionTableRow({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {showMaterialExportDialog && materialExportStep && prod.id && (
+        <MaterialExportDialog
+          isOpen={showMaterialExportDialog}
+          onOpenChange={setShowMaterialExportDialog}
+          productionOrderId={prod.id}
+          proofingOrder={proofingOrder}
+          defaultPrintQty={Number(materialExportStep.inputQty) || defaultPrintQty || 1}
+          onExportSuccess={() => {
+            if (materialExportStep && materialExportStep.id && materialExportStep.status !== "done") {
+              updateStep({
+                stepId: materialExportStep.id,
+                data: {
+                  status: "done",
+                  inputQty: materialExportStep.inputQty || undefined,
+                  outputQty: materialExportStep.outputQty || undefined,
+                  defectQty: materialExportStep.defectQty || undefined,
+                }
+              });
+            }
+          }}
+        />
+      )}
     </>
   );
 }
@@ -1436,5 +1446,105 @@ export function ProductionListTable({
         </div>
       )}
     </div>
+  );
+}
+
+export function MaterialExportDialog({
+  isOpen,
+  onOpenChange,
+  productionOrderId,
+  proofingOrder,
+  defaultPrintQty,
+  onExportSuccess,
+}: {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  productionOrderId: number;
+  proofingOrder: any;
+  defaultPrintQty: number;
+  onExportSuccess?: () => void;
+}) {
+  const { data: materialsData, isLoading: isMaterialsLoading } = useMaterialTypeList(
+    { pageSize: 100 }
+  );
+  const materials = (materialsData as any)?.items || [];
+  
+  const { mutateAsync: createStockOutForProduction, isPending } = useCreateStockOutForProduction();
+  const [quantity, setQuantity] = useState(defaultPrintQty?.toString() || "1");
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string>(
+    proofingOrder?.materialTypeId?.toString() || ""
+  );
+
+  const handleConfirm = async () => {
+    if (!selectedMaterialId) {
+      toast.error("Vui lòng chọn loại giấy");
+      return;
+    }
+    const mat = materials.find((m: any) => m.id?.toString() === selectedMaterialId);
+    
+    try {
+      await createStockOutForProduction({
+        productionOrderId,
+        itemType: "material",
+        notes: "Xuất NL cho lệnh sản xuất",
+        stockOutDate: new Date().toISOString(),
+        items: [
+          {
+            itemName: mat?.name || proofingOrder?.materialType?.name || "Nguyên liệu",
+            itemCode: mat?.code || proofingOrder?.materialType?.code || "NL",
+            unit: "Tờ",
+            quantity: Number(quantity) || 1,
+            notes: "",
+            materialId: Number(selectedMaterialId) || proofingOrder?.materialTypeId || null,
+            orderDetailId: proofingOrder?.orderDetailId || null
+          }
+        ]
+      });
+      onOpenChange(false);
+      onExportSuccess?.();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Xuất Nguyên Liệu</DialogTitle>
+          <DialogDescription>Chọn số lượng và loại giấy cần xuất</DialogDescription>
+        </DialogHeader>
+        {isMaterialsLoading ? (
+          <div className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : (
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Loại giấy</Label>
+              <Select value={selectedMaterialId} onValueChange={setSelectedMaterialId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn loại giấy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {materials.map((m: any) => (
+                    <SelectItem key={m.id} value={m.id!.toString()}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Số lượng (tờ)</Label>
+              <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Hủy</Button>
+          <Button onClick={handleConfirm} disabled={isPending}>
+            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Xác nhận xuất
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
