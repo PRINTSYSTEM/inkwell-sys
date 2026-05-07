@@ -49,6 +49,7 @@ import {
   useUpdateProductionOrderItem,
   useProductionOrder,
 } from "@/hooks/use-production";
+import { useCreateStockOutForProduction } from "@/hooks/use-stock";
 import {
   Select,
   SelectContent,
@@ -177,6 +178,7 @@ function ProductionTableRow({
 
   const { mutate: updateStep } = useUpdateProductionStep();
   const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
+  const { mutateAsync: createStockOutForProduction } = useCreateStockOutForProduction();
 
   const steps = prod.steps || [];
 
@@ -465,6 +467,40 @@ function ProductionTableRow({
                 ? updates.defectQty
                 : Number(defectQty) || 0,
           },
+        }).then(() => {
+          // XUẤT NL thành công thì gọi api xuất kho
+          if (
+            step.stepType === "material_export" &&
+            updates.status === "done" &&
+            step.status !== "done" &&
+            prod.id
+          ) {
+            const qty = Number(inputQty) || defaultPrintQty || 1;
+            const matName = proofingOrder?.materialType?.name || "Nguyên liệu";
+            const matCode = proofingOrder?.materialType?.code || "NL";
+
+            createStockOutForProduction({
+              productionOrderId: prod.id,
+              itemType: "material",
+              notes: "Xuất NL tự động khi hoàn thành công đoạn",
+              stockOutDate: new Date().toISOString(),
+              items: [
+                {
+                  itemName: matName,
+                  itemCode: matCode,
+                  unit: "Tờ",
+                  quantity: qty,
+                  notes: "",
+                  materialId: proofingOrder?.materialTypeId || null,
+                  orderDetailId: proofingOrder?.orderDetailId || null
+                }
+              ]
+            }).catch(err => {
+              console.error("Lỗi tự động xuất kho NL:", err);
+            });
+          }
+        }).catch(err => {
+          console.error("Lỗi cập nhật bước:", err);
         });
       }
 

@@ -373,12 +373,11 @@ function NotificationCenter() {
             return (
               <Card
                 key={notification.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${
+                className={`transition-all hover:shadow-md ${
                   !notification.isRead
-                    ? "border-l-4 border-l-primary bg-primary/5"
+                    ? "bg-primary/5"
                     : "opacity-75"
                 }`}
-                onClick={() => handleNotificationClick(notification)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
@@ -407,9 +406,6 @@ function NotificationCenter() {
                               Mới
                             </Badge>
                           )}
-                          <Badge variant="outline" className="text-xs">
-                            {notification.type}
-                          </Badge>
                         </div>
                       </div>
 

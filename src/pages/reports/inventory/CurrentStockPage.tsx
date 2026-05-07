@@ -104,34 +104,34 @@ export default function CurrentStockPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card className="shadow-sm">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-tight">
                 Tổng số mặt hàng
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalItems}</div>
+            <CardContent className="p-3 pt-1">
+              <div className="text-xl font-bold">{totalItems}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card className="shadow-sm">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-tight">
                 Tổng số lượng
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalQuantity.toLocaleString()}</div>
+            <CardContent className="p-3 pt-1">
+              <div className="text-xl font-bold">{totalQuantity.toLocaleString()}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card className="shadow-sm">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-tight">
                 Tổng giá trị
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="p-3 pt-1">
+              <div className="text-xl font-bold">
                 {formatCurrency(totalValue)}
               </div>
             </CardContent>

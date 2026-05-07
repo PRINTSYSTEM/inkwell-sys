@@ -600,16 +600,12 @@ export const formatCurrency = (
 
   try {
     const formatOptions: Intl.NumberFormatOptions = {
-      style: "currency",
-      currency,
+      style: "decimal",
+      minimumFractionDigits: minimumFractionDigits || 0,
+      maximumFractionDigits: minimumFractionDigits || 0,
     };
-    // Only set fraction digits if explicitly provided and > 0
-    // Don't set minimumFractionDigits to 0 as it can cause display issues
-    if (minimumFractionDigits !== undefined && minimumFractionDigits > 0) {
-      formatOptions.minimumFractionDigits = minimumFractionDigits;
-      formatOptions.maximumFractionDigits = minimumFractionDigits;
-    }
-    const result = new Intl.NumberFormat("vi-VN", formatOptions).format(val);
+    
+    const result = new Intl.NumberFormat("de-DE", formatOptions).format(val);
     return result;
   } catch {
     // fallback đơn giản nếu Intl lỗi

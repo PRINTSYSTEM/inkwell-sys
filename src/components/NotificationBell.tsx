@@ -41,10 +41,6 @@ function NotificationBell() {
           description: latest.body,
           duration: 5000,
           icon: <Bell className="h-4 w-4 text-primary" />,
-          action: {
-            label: "Xem ngay",
-            onClick: () => handleNavigate(`/notifications/${latest.id}/preview`),
-          },
           className: "rounded-xl shadow-2xl border border-slate-800 bg-slate-900/95 text-white backdrop-blur-md p-4",
           descriptionClassName: "text-slate-400",
         });
@@ -145,8 +141,7 @@ function NotificationBell() {
               notifications.map((notif) => (
                 <div
                   key={notif.id}
-                  onClick={() => handleNavigate(`/notifications/${notif.id}/preview`)}
-                  className="group relative flex gap-3 p-3 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                  className="group relative flex gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex-1 space-y-1 pr-4">
                     <p className={cn(

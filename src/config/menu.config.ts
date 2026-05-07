@@ -704,18 +704,6 @@ export const MENU_ITEMS: MenuItem[] = [
         ],
       },
       {
-        id: "top-products",
-        title: "Sản phẩm bán chạy",
-        icon: ShoppingCart,
-        path: ROUTE_PATHS.REPORTS.SALES.TOP_PRODUCTS,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING_LEAD,
-          ROLE.SALE,
-        ],
-      },
-      {
         id: "returns-discounts",
         title: "Trả hàng & giảm giá",
         icon: FileText,

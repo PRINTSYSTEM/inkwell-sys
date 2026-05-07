@@ -788,9 +788,9 @@ export function DieExportDialog({
         </DialogHeader>
 
         {/* MAIN SPLIT LAYOUT */}
-        <div className="flex-1 grid grid-cols-[7fr,5fr] gap-4 overflow-hidden">
+        <div className={cn("flex-1 gap-4 overflow-hidden", dieAction === "create" ? "grid grid-cols-[7fr,5fr]" : "flex")}>
           {/* LEFT: EXISTING DIE SELECTION + OVERVIEW */}
-          <div className="flex flex-col overflow-hidden border rounded-lg bg-background">
+          <div className="flex-1 flex flex-col overflow-hidden border rounded-lg bg-background">
             <div className="border-b px-4 py-3 flex items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-sm font-medium">Chọn khuôn bế</p>
@@ -1100,8 +1100,8 @@ export function DieExportDialog({
             </div>
           </div>
 
-          {/* RIGHT: CREATE DIE + VENDOR + META (SCROLLABLE COLUMN) */}
-          <div className="flex flex-col overflow-hidden border rounded-lg bg-background">
+          {/* RIGHT: CREATE DIE + VENDOR + META (SCROLLABLE COLUMN) - only shown when creating new die */}
+          <div className={cn("flex flex-col overflow-hidden border rounded-lg bg-background", dieAction !== "create" && "hidden")}>
             <div className="border-b px-4 py-3">
               <p className="text-sm font-medium">
                 Thông tin khuôn &amp; đơn vị làm khuôn
@@ -1610,36 +1610,33 @@ export function DieExportDialog({
                     </div>
                   </div>
                 </div>
-
-            <DialogFooter className="border-t px-4 py-3 flex items-center justify-between gap-3">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Hủy
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={
-                  isSubmitting ||
-                  (!vendorId && !vendorName.trim()) ||
-                  (dieAction === "create" &&
-                    dieFiles.length === 0 &&
-                    !existingImageUrl) ||
-                  (dieAction === "select" &&
-                    (selectedDieIds.length === 0 ||
-                      selectedDieIds.length !== dieCount))
-                }
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Đang lưu...
-                  </>
-                ) : (
-                  "Lưu thông tin"
-                )}
-              </Button>
-            </DialogFooter>
           </div>
         </div>
+
+        {/* Footer: always visible */}
+        <DialogFooter className="border-t px-4 py-3 flex items-center justify-between gap-3">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Hủy
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              isSubmitting ||
+              (dieAction === "create" && !vendorId && !vendorName.trim()) ||
+              (dieAction === "create" && dieFiles.length === 0 && !existingImageUrl) ||
+              (dieAction === "select" && (selectedDieIds.length === 0 || selectedDieIds.length !== dieCount))
+            }
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Đang lưu...
+              </>
+            ) : (
+              "Lưu thông tin"
+            )}
+          </Button>
+        </DialogFooter>
 
         {/* Image Preview Dialog */}
         {previewImageUrl && (

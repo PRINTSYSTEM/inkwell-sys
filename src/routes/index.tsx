@@ -205,7 +205,6 @@ const SalesByCustomer = lazy(
 const SalesByDimension = lazy(
   () => import("@/pages/reports/sales/SalesByDimensionPage")
 );
-const TopProducts = lazy(() => import("@/pages/reports/sales/TopProductsPage"));
 const ReturnsDiscounts = lazy(
   () => import("@/pages/reports/sales/ReturnsDiscountsPage")
 );
@@ -1141,14 +1140,6 @@ export const router = createBrowserRouter([
                 element: (
                   <Suspense fallback={<PageLoadingFallback />}>
                     <SalesByDimension />
-                  </Suspense>
-                ),
-              },
-              {
-                path: "top-products",
-                element: (
-                  <Suspense fallback={<PageLoadingFallback />}>
-                    <TopProducts />
                   </Suspense>
                 ),
               },

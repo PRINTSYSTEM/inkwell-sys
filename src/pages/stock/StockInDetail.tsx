@@ -171,10 +171,10 @@ export default function StockInDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/20 flex items-center justify-center">
         <div className="text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-          <p className="text-slate-600">Đang tải phiếu nhập kho...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-emerald-600" />
+          <p className="text-slate-600 font-medium">Đang tải phiếu nhập kho...</p>
         </div>
       </div>
     );
@@ -218,7 +218,7 @@ export default function StockInDetailPage() {
           Phiếu nhập kho #{stockIn.code || stockIn.id} | Inkwell System
         </title>
       </Helmet>
-      <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 overflow-hidden">
+      <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/20 overflow-hidden">
         {/* Modern Header */}
         <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex-shrink-0 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -235,8 +235,8 @@ export default function StockInDetailPage() {
                 </Button>
                 <div className="h-6 w-px bg-slate-300" />
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-                    <Package className="h-5 w-5 text-white" />
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Package className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <h1 className="text-xl font-bold text-slate-900">
@@ -320,10 +320,10 @@ export default function StockInDetailPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-3">
             {/* Items Table Card - Moved to top */}
             <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden flex-1 flex flex-col min-h-[500px]">
-              <CardHeader className="bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 px-4 py-3 border-b border-slate-200/60 flex-shrink-0">
+              <CardHeader className="bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5 px-4 py-3 border-b border-slate-200/60 flex-shrink-0">
                 <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
-                    <Package className="h-4 w-4 text-indigo-600" />
+                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                    <Package className="h-4 w-4 text-emerald-600" />
                   </div>
                   <div className="min-w-0">
                     <CardTitle className="text-base font-semibold text-slate-900">
@@ -421,13 +421,13 @@ export default function StockInDetailPage() {
             {/* Status and Summary Cards - Compact */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-3 py-2 border-b border-slate-200/60">
-                  <CardTitle className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                <CardHeader className="bg-gradient-to-r from-emerald-500/5 to-teal-500/5 px-3 py-2 border-b border-slate-200/60">
+                  <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                     <Hash className="h-3 w-3" />
                     Trạng thái
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-3 py-2">
+                <CardContent className="px-3 py-2.5">
                   {stockIn.status && (
                     <StatusBadge
                       status={stockIn.status}
@@ -438,13 +438,13 @@ export default function StockInDetailPage() {
               </Card>
 
               <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-3 py-2 border-b border-slate-200/60">
-                  <CardTitle className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                <CardHeader className="bg-gradient-to-r from-emerald-500/5 to-teal-500/5 px-3 py-2 border-b border-slate-200/60">
+                  <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                     <Box className="h-3 w-3" />
                     Tổng số lượng
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-3 py-2">
+                <CardContent className="px-3 py-2.5">
                   <p className="text-base font-bold text-slate-900">
                     {totalQuantity.toLocaleString("vi-VN")}
                   </p>
@@ -452,13 +452,13 @@ export default function StockInDetailPage() {
               </Card>
 
               <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-3 py-2 border-b border-slate-200/60">
-                  <CardTitle className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
+                <CardHeader className="bg-gradient-to-r from-emerald-500/5 to-teal-500/5 px-3 py-2 border-b border-slate-200/60">
+                  <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                     <FileText className="h-3 w-3" />
                     Tổng giá trị
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-3 py-2">
+                <CardContent className="px-3 py-2.5">
                   <p className="text-base font-bold text-slate-900">
                     {formatCurrency(totalAmount)}
                   </p>
@@ -468,13 +468,13 @@ export default function StockInDetailPage() {
 
             {/* Main Information Card - Compact */}
             <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 px-3 py-2 border-b border-slate-200/60">
+              <CardHeader className="bg-gradient-to-r from-emerald-500/5 to-teal-500/5 px-3 py-2 border-b border-slate-200/60">
                 <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                    <FileText className="h-3.5 w-3.5 text-blue-600" />
+                  <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-3.5 w-3.5 text-emerald-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-xs font-semibold text-slate-900">
+                    <CardTitle className="text-xs font-bold text-slate-700 uppercase tracking-tight">
                       Thông tin phiếu nhập kho
                     </CardTitle>
                   </div>
@@ -485,8 +485,8 @@ export default function StockInDetailPage() {
                   {/* Column 1: Thông tin cơ bản */}
                   <div className="space-y-2.5">
                     <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="h-3.5 w-3.5 text-blue-600" />
+                      <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                        <Calendar className="h-3.5 w-3.5 text-emerald-600" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium text-slate-500 mb-0.5">
@@ -652,13 +652,13 @@ export default function StockInDetailPage() {
                 className={`h-10 w-10 rounded-full flex items-center justify-center ${
                   confirmDialog.confirmVariant === "destructive"
                     ? "bg-red-100"
-                    : "bg-blue-100"
+                    : "bg-emerald-100"
                 }`}
               >
                 {confirmDialog.confirmVariant === "destructive" ? (
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                 ) : (
-                  <AlertCircle className="h-5 w-5 text-blue-600" />
+                  <AlertCircle className="h-5 w-5 text-emerald-600" />
                 )}
               </div>
               <DialogTitle className="text-lg font-semibold text-slate-900">
@@ -692,7 +692,7 @@ export default function StockInDetailPage() {
               className={`cursor-pointer transition-colors duration-200 ${
                 confirmDialog.confirmVariant === "destructive"
                   ? "bg-red-600 hover:bg-red-700"
-                  : "bg-blue-600 hover:bg-blue-700"
+                  : "bg-emerald-600 hover:bg-emerald-700"
               }`}
             >
               {(confirmDialog.type === "complete" && isCompleting) ||
