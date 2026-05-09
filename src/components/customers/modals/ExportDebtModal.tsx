@@ -61,28 +61,7 @@ export function ExportDebtModal({
         </DialogHeader>
 
         <div className="space-y-5 pt-2">
-          {/* Filter Type */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Loại công nợ</Label>
-            <div className="flex bg-muted rounded-lg p-1">
-              <Button
-                variant={filterType === "payment" ? "secondary" : "ghost"}
-                size="sm"
-                className="flex-1 h-8"
-                onClick={() => setFilterType("payment")}
-              >
-                Thanh toán
-              </Button>
-              <Button
-                variant={filterType === "invoice" ? "secondary" : "ghost"}
-                size="sm"
-                className="flex-1 h-8"
-                onClick={() => setFilterType("invoice")}
-              >
-                Hóa đơn
-              </Button>
-            </div>
-          </div>
+         
 
           {/* Date Range */}
           <div className="grid grid-cols-2 gap-3">

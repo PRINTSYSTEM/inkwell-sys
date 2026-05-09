@@ -51,7 +51,6 @@ const App = () => (
               expand={true} 
               visibleToasts={6}
               gap={10}
-              richColors 
               closeButton 
             />
           </NotificationProvider>

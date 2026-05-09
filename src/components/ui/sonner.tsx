@@ -8,18 +8,21 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="light"
       className="toaster group"
       closeButton
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+            "group toast group-[.toaster]:bg-white group-[.toaster]:border-slate-200 group-[.toaster]:shadow-xl",
+          title: "group-[.toast]:text-slate-900 group-data-[type=success]:!text-green-600 group-data-[type=error]:!text-red-600 font-medium",
+          description: "group-[.toast]:text-slate-500",
+          actionButton: "group-[.toast]:bg-slate-900 group-[.toast]:text-white",
           closeButton:
-            "group-[.toast]:bg-background group-[.toast]:text-primary group-[.toast]:border-border group-[.toast]:hover:bg-muted group-[.toast]:hover:text-primary transition-colors !left-auto !right-2 !top-2",
-          success: "group-[.toast]:text-green-600",
+            "group-[.toast]:bg-white group-[.toast]:text-slate-900 group-[.toast]:border-slate-200 group-[.toast]:hover:bg-slate-50 transition-colors !left-auto !right-2 !top-2",
+          success: "!text-green-600",
+          error: "!text-red-600",
+          icon: "group-data-[type=success]:!text-green-600 group-data-[type=error]:!text-red-600",
         },
       }}
       {...props}
