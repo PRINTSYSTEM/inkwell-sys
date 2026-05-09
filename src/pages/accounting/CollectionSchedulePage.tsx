@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
-import { addDays } from "date-fns";
+import { addDays, differenceInDays, startOfDay } from "date-fns";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -37,10 +37,7 @@ const formatDate = (dateStr: string | null | undefined) => {
 
 export default function CollectionSchedulePage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: addDays(new Date(), 30),
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -53,11 +50,9 @@ export default function CollectionSchedulePage() {
   } = useCollectionSchedule({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    fromDate: dateRange?.from
-      ? dateRange.from.toISOString()
-      : undefined,
-    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
+    dueDateFrom: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    dueDateTo: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    searchTerm: searchQuery || undefined,
   });
 
   return (
@@ -159,15 +154,13 @@ export default function CollectionSchedulePage() {
                 scheduleData.items.map((item, index) => {
                   // Calculate days until due from dueDate
                   const daysUntilDue = item.dueDate
-                    ? Math.ceil(
-                        (new Date(item.dueDate).getTime() - new Date().getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      )
+                    ? differenceInDays(startOfDay(new Date(item.dueDate)), startOfDay(new Date()))
                     : undefined;
                   
                   // Use documentNumber for both order and invoice codes
-                  const orderCode = item.documentType === "order" ? item.documentNumber : null;
-                  const invoiceNumber = item.documentType === "invoice" ? item.documentNumber : null;
+                  const docType = item.documentType?.toLowerCase();
+                  const orderCode = docType === "order" ? item.documentNumber : (docType !== "invoice" ? `${item.documentNumber || ""} [${item.documentType || "null"}]` : null);
+                  const invoiceNumber = docType === "invoice" ? item.documentNumber : null;
                   
                   return (
                     <TableRow key={item.documentId || item.customerId || index}>

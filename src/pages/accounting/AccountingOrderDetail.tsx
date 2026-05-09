@@ -550,6 +550,7 @@ export default function AccountingOrderDetail() {
               type: order.customer?.type ?? "retail",
               scrapRate: order.customer?.scrapRate ?? 0,
             },
+            suppressToast: true,
           });
         } catch (err) {
           console.error("Failed to update central customer record:", err);
@@ -1643,21 +1644,19 @@ export default function AccountingOrderDetail() {
                           placeholder="Nhập email"
                         />
                       </div>
-                      {customerType === "company" && (
-                        <div className="space-y-2">
-                          <Label>Mã số thuế</Label>
-                          <Input
-                            value={cardEditValues.customerTaxCode || ""}
-                            onChange={(e) =>
-                              setCardEditValues({
-                                ...cardEditValues,
-                                customerTaxCode: e.target.value,
-                              })
-                            }
-                            placeholder="Nhập mã số thuế"
-                          />
-                        </div>
-                      )}
+                      <div className="space-y-2">
+                        <Label>Mã số thuế</Label>
+                        <Input
+                          value={cardEditValues.customerTaxCode || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerTaxCode: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập mã số thuế"
+                        />
+                      </div>
                       <div className="space-y-2">
                         <Label>Địa chỉ *</Label>
                         <Textarea
@@ -1735,20 +1734,18 @@ export default function AccountingOrderDetail() {
                           </div>
                         </div>
                       )}
-                      {/* Hiển thị mã số thuế cho khách hàng công ty */}
-                      {customerType === "company" && (
-                        <div className="flex items-start gap-3">
-                          <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              Mã số thuế
-                            </p>
-                            <p className="font-medium font-mono">
-                              {order.customerTaxCode || "—"}
-                            </p>
-                          </div>
+                      {/* Hiển thị mã số thuế cho khách hàng */}
+                      <div className="flex items-start gap-3">
+                        <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Mã số thuế
+                          </p>
+                          <p className="font-medium font-mono">
+                            {order.customerTaxCode || "—"}
+                          </p>
                         </div>
-                      )}
+                      </div>
                       {order.customerAddress && (
                         <div className="flex items-start gap-3">
                           <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />

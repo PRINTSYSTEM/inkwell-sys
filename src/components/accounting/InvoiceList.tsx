@@ -176,27 +176,6 @@ function getInvoiceDisableReason(
   return null;
 }
 
-// Generate invoice number from order code(s)
-// Format: "INV{orderCode}" - uses first order's code if multiple orders
-function generateInvoiceNumber(
-  selectedOrderIds: Set<number>,
-  orders: OrderResponse[]
-): string {
-  if (selectedOrderIds.size === 0) {
-    return "INV000";
-  }
-
-  // Find first selected order
-  const firstOrderId = Array.from(selectedOrderIds)[0];
-  const firstOrder = orders.find((o) => o.id === firstOrderId);
-
-  if (!firstOrder || !firstOrder.code) {
-    return "INV000";
-  }
-
-  // Format: INV{orderCode}
-  return `INV${firstOrder.code}`;
-}
 
 export function InvoiceList() {
   const navigate = useNavigate();
@@ -477,11 +456,11 @@ export function InvoiceList() {
     if (selectedOrderIds.size === 0) return;
 
     try {
-      // Generate invoice number from first order's code
-      const invoiceNumber = generateInvoiceNumber(
-        selectedOrderIds,
-        filteredOrders
-      );
+      // Generate a unique invoice number to avoid DB conflicts and NOT NULL constraints
+      const firstOrderId = Array.from(selectedOrderIds)[0];
+      const firstOrder = filteredOrders.find((o) => o.id === firstOrderId);
+      const uniqueSuffix = Date.now().toString().slice(-6);
+      const invoiceNumber = firstOrder?.code ? `INV${firstOrder.code}-${uniqueSuffix}` : `INV-${uniqueSuffix}`;
 
       const result = await createInvoiceMutation.mutateAsync({
         orderIds: Array.from(selectedOrderIds),
