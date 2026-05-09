@@ -22,9 +22,13 @@ export const orderStatusDescription: Record<string, string> = {
   waiting_for_production: "Chờ tạo lệnh sản xuất.",
   in_production: "Đơn đang được xử lý tại xưởng.",
   production_completed: "Sản xuất xong, chờ giao hàng / tất toán.",
-  invoice_issued: "Đã xuất hóa đơn cho đơn hàng.",
+  waiting_for_delivery: "Sản phẩm đã sẵn sàng, chờ giao hàng.",
+  waiting_for_redelivery: "Chờ giao lại hàng sau lần giao trước.",
   delivering: "Đang giao hàng cho khách.",
+  delivered: "Đã giao hàng thành công cho khách.",
+  invoice_issued: "Đã xuất hóa đơn cho đơn hàng.",
   completed: "Đơn hàng đã hoàn tất.",
+  return_processing: "Đang xử lý trả/đổi hàng từ khách.",
   cancelled: "Đơn hàng bị hủy.",
 };
 
@@ -224,6 +228,70 @@ export const deliveryLineStatusLabels: Record<string, string> =
 export const debtStatusLabels: Record<string, string> =
   ENTITY_CONFIG.debtStatuses.values;
 
+// Loại công đoạn sản xuất (ProductionStepType)
+export const productionStepTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.productionStepTypes.values;
+
+// Trạng thái công đoạn sản xuất (ProductionStepStatus)
+export const productionStepStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.productionStepStatuses.values;
+
+// Nguồn nhập kho (StockInSource)
+export const stockInSourceLabels: Record<string, string> =
+  ENTITY_CONFIG.stockInSources.values;
+
+// Loại vật phẩm nhập kho (StockInItemType)
+export const stockInItemTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.stockInItemTypes.values;
+
+// Trạng thái nhập kho (StockInStatus)
+export const stockInStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.stockInStatuses.values;
+
+// Mục đích xuất kho (StockOutPurpose)
+export const stockOutPurposeLabels: Record<string, string> =
+  ENTITY_CONFIG.stockOutPurposes.values;
+
+// Loại vật phẩm xuất kho (StockOutItemType)
+export const stockOutItemTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.stockOutItemTypes.values;
+
+// Trạng thái xuất kho (StockOutStatus)
+export const stockOutStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.stockOutStatuses.values;
+
+// Loại tìm kiếm khuôn (DieSearchRelevance)
+export const dieSearchRelevanceLabels: Record<string, string> =
+  ENTITY_CONFIG.dieSearchRelevances.values;
+
+// Loại lý do giao hàng thất bại (DeliveryFailureType)
+export const deliveryFailureTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.deliveryFailureTypes.values;
+
+// Trạng thái hóa đơn VAT (InvoiceStatus)
+export const invoiceStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.invoiceStatuses.values;
+
+// Loại thanh toán (PaymentType)
+export const paymentTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.paymentTypes.values;
+
+// Loại thay đổi công nợ (DebtChangeType)
+export const debtChangeTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.debtChangeTypes.values;
+
+// Loại sử dụng khuôn bế (DieUsageType)
+export const dieUsageTypeLabels: Record<string, string> =
+  ENTITY_CONFIG.dieUsageTypes.values;
+
+// Trạng thái khuôn bế (DieStatus)
+export const dieStatusLabels: Record<string, string> =
+  ENTITY_CONFIG.dieStatuses.values;
+
+// Vị trí khuôn bế (DieLocation)
+export const dieLocationLabels: Record<string, string> =
+  ENTITY_CONFIG.dieLocations.values;
+
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
 
@@ -237,28 +305,33 @@ export const designStatusConfig: Record<
 > = {
   received_info: {
     label: ENTITY_CONFIG.designStatuses.values.received_info,
-    color: "bg-slate-100 text-slate-700 border-slate-300",
+    color: "bg-slate-200 text-slate-900 border-slate-400 border-2",
     bgColor: "bg-slate-50",
   },
   designing: {
     label: ENTITY_CONFIG.designStatuses.values.designing,
-    color: "bg-blue-100 text-blue-700 border-blue-300",
+    color: "bg-blue-200 text-blue-900 border-blue-400 border-2",
     bgColor: "bg-blue-50",
   },
   editing: {
     label: ENTITY_CONFIG.designStatuses.values.editing,
-    color: "bg-amber-100 text-amber-700 border-amber-300",
+    color: "bg-amber-200 text-amber-900 border-amber-400 border-2",
     bgColor: "bg-amber-50",
   },
   waiting_for_customer_approval: {
     label: ENTITY_CONFIG.designStatuses.values.waiting_for_customer_approval,
-    color: "bg-orange-100 text-orange-700 border-orange-300",
+    color: "bg-orange-200 text-orange-900 border-orange-400 border-2",
     bgColor: "bg-orange-50",
   },
   confirmed_for_printing: {
     label: ENTITY_CONFIG.designStatuses.values.confirmed_for_printing,
-    color: "bg-green-100 text-green-700 border-green-300",
+    color: "bg-green-200 text-green-900 border-green-400 border-2",
     bgColor: "bg-green-50",
+  },
+  returned: {
+    label: ENTITY_CONFIG.designStatuses.values.returned,
+    color: "bg-red-200 text-red-900 border-red-400 border-2",
+    bgColor: "bg-red-50",
   },
 };
 
@@ -274,6 +347,8 @@ export function getStatusVariant(
     "waiting_for_customer_approval",
     "waiting_for_proofing",
     "waiting_for_production",
+    "waiting_for_delivery",
+    "waiting_for_redelivery",
     "waiting_for_file",
     "waiting_for_deposit",
     "not_paid",
@@ -298,6 +373,7 @@ export function getStatusVariant(
     "in_production",
     "deposit_received",
     "delivering",
+    "return_processing",
     "confirmed",
     "ready_to_ship",
     "handed_over",
@@ -335,9 +411,13 @@ export const statusColorMap: Record<string, string> = {
   waiting_for_production: "bg-indigo-50 text-indigo-700 border-indigo-200",
   in_production: "bg-cyan-50 text-cyan-700 border-cyan-200",
   production_completed: "bg-green-50 text-green-700 border-green-200",
-  invoice_issued: "bg-teal-50 text-teal-700 border-teal-200",
+  waiting_for_delivery: "bg-amber-50 text-amber-700 border-amber-200",
+  waiting_for_redelivery: "bg-orange-50 text-orange-700 border-orange-200",
   delivering: "bg-blue-50 text-blue-700 border-blue-200",
+  delivered: "bg-green-100 text-green-800 border-green-200",
+  invoice_issued: "bg-teal-50 text-teal-700 border-teal-200",
   completed: "bg-green-100 text-green-800 border-green-200",
+  return_processing: "bg-purple-50 text-purple-700 border-purple-200",
   cancelled: "bg-red-50 text-red-700 border-red-200",
 
   // ===== DESIGN STATUSES (dùng chung với Order) =====
@@ -377,6 +457,7 @@ export const statusColorMap: Record<string, string> = {
   // ===== LAMINATION TYPES =====
   glossy: "bg-blue-50 text-blue-700 border-blue-200",
   matte: "bg-slate-50 text-slate-700 border-slate-200",
+  none: "bg-gray-50 text-gray-700 border-gray-200",
 
   // ===== SIDES CLASSIFICATION =====
   one_side: "bg-indigo-50 text-indigo-700 border-indigo-200",
@@ -397,12 +478,15 @@ export const statusColorMap: Record<string, string> = {
   handed_over: "bg-indigo-50 text-indigo-700 border-indigo-200",
   in_transit: "bg-blue-50 text-blue-700 border-blue-200",
   partially_completed: "bg-amber-50 text-amber-700 border-amber-200",
+  partial: "bg-amber-50 text-amber-700 border-amber-200",
+  failed: "bg-red-50 text-red-700 border-red-200",
+  failure: "bg-red-50 text-red-700 border-red-200",
   // completed đã được định nghĩa ở ORDER STATUSES ở trên
   // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
 
   // ===== DELIVERY LINE STATUSES =====
   // pending đã được định nghĩa ở ORDER STATUSES ở trên
-  // delivered: sử dụng màu xanh lá cho thành công (tương tự completed)
+  // delivered đã được định nghĩa ở ORDER STATUSES ở trên (sử dụng màu xanh lá cho thành công)
   failed_reschedule: "bg-orange-50 text-orange-700 border-orange-200",
   returned: "bg-rose-50 text-rose-700 border-rose-200",
   // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
@@ -411,6 +495,71 @@ export const statusColorMap: Record<string, string> = {
   normal: "bg-green-50 text-green-700 border-green-200",
   warning: "bg-amber-50 text-amber-700 border-amber-200",
   exceeded: "bg-red-50 text-red-700 border-red-200",
+
+  // ===== PRODUCTION STEP TYPES =====
+  // Note: cut và die_cut đã được định nghĩa ở PROCESS CLASSIFICATION ở trên
+  material_export: "bg-slate-50 text-slate-700 border-slate-200",
+  print: "bg-blue-50 text-blue-700 border-blue-200",
+  lamination: "bg-purple-50 text-purple-700 border-purple-200",
+  glue: "bg-orange-50 text-orange-700 border-orange-200",
+  packaging: "bg-green-50 text-green-700 border-green-200",
+
+  // ===== PRODUCTION STEP STATUSES =====
+  // pending đã được định nghĩa ở ORDER STATUSES ở trên
+  ready: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  in_progress: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  done: "bg-green-50 text-green-700 border-green-200", // tương tự completed
+  blocked: "bg-red-50 text-red-700 border-red-200",
+
+  // ===== STOCK IN STATUSES =====
+  // pending đã được định nghĩa ở ORDER STATUSES ở trên
+  // completed đã được định nghĩa ở ORDER STATUSES ở trên
+  // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
+
+  // ===== STOCK OUT STATUSES =====
+  // pending đã được định nghĩa ở ORDER STATUSES ở trên
+  // completed đã được định nghĩa ở ORDER STATUSES ở trên
+  // returned đã được định nghĩa ở DELIVERY LINE STATUSES ở trên
+  partially_returned: "bg-amber-50 text-amber-700 border-amber-200",
+  // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
+
+  // ===== DELIVERY FAILURE TYPES =====
+  customer_refused: "bg-red-50 text-red-700 border-red-200",
+  company_issue: "bg-orange-50 text-orange-700 border-orange-200",
+
+  // ===== INVOICE STATUSES =====
+  pending_issue: "bg-amber-50 text-amber-700 border-amber-200",
+  rejected: "bg-red-50 text-red-700 border-red-200",
+  voided: "bg-slate-100 text-slate-800 border-slate-200",
+  adjusted: "bg-blue-50 text-blue-700 border-blue-200",
+  replaced: "bg-purple-50 text-purple-700 border-purple-200",
+  // draft đã được định nghĩa ở DELIVERY NOTE STATUSES ở trên
+  // issued đã được định nghĩa ở INVOICE ở trên
+
+  // ===== PAYMENT TYPES =====
+  deposit: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  payment: "bg-green-50 text-green-700 border-green-200",
+
+  // ===== DEBT CHANGE TYPES =====
+  order_created: "bg-blue-50 text-blue-700 border-blue-200",
+  payment_received: "bg-green-50 text-green-700 border-green-200",
+  // deposit_received đã được định nghĩa ở ORDER STATUSES ở trên
+  debt_adjustment: "bg-amber-50 text-amber-700 border-amber-200",
+
+  // ===== DIE USAGE TYPES =====
+  one_time: "bg-orange-50 text-orange-700 border-orange-200",
+  reusable: "bg-green-50 text-green-700 border-green-200",
+
+  // ===== DIE STATUSES =====
+  new: "bg-blue-50 text-blue-700 border-blue-200",
+  // ready đã được định nghĩa ở PRODUCTION STEP STATUSES ở trên
+  // in_production đã được định nghĩa ở ORDER STATUSES ở trên
+  broken: "bg-red-50 text-red-700 border-red-200",
+  disposed: "bg-slate-100 text-slate-800 border-slate-200",
+
+  // ===== DIE LOCATIONS =====
+  InStock: "bg-green-50 text-green-700 border-green-200",
+  InUse: "bg-blue-50 text-blue-700 border-blue-200",
 };
 
 // Hàm helper: trả về class tailwind cho badge
@@ -433,15 +582,21 @@ export const formatCurrency = (
   }
 ): string => {
   const val = typeof value === "number" ? value : 0;
-  const { currency = "VND", minimumFractionDigits = 0 } = options || {};
+  const { currency = "VND", minimumFractionDigits } = options || {};
 
   try {
-    return new Intl.NumberFormat("vi-VN", {
+    const formatOptions: Intl.NumberFormatOptions = {
       style: "currency",
       currency,
-      minimumFractionDigits,
-      maximumFractionDigits: minimumFractionDigits,
-    }).format(val);
+    };
+    // Only set fraction digits if explicitly provided and > 0
+    // Don't set minimumFractionDigits to 0 as it can cause display issues
+    if (minimumFractionDigits !== undefined && minimumFractionDigits > 0) {
+      formatOptions.minimumFractionDigits = minimumFractionDigits;
+      formatOptions.maximumFractionDigits = minimumFractionDigits;
+    }
+    const result = new Intl.NumberFormat("vi-VN", formatOptions).format(val);
+    return result;
   } catch {
     // fallback đơn giản nếu Intl lỗi
     return `${val.toLocaleString("vi-VN")} ${currency}`;

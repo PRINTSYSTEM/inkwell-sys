@@ -1,4 +1,5 @@
-﻿import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +41,9 @@ import {
   ChevronsUpDown,
   Plus,
   Search,
+  Copy,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRecordDieExportWithFile } from "@/hooks/use-proofing-order";
@@ -65,6 +68,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDieSize } from "@/utils/format-die-size";
+import {
+  dieUsageTypeLabels,
+  dieStatusLabels,
+  dieLocationLabels,
+} from "@/lib/status-utils";
 
 interface DieExportDialogProps {
   open: boolean;
@@ -100,19 +108,23 @@ export function DieExportDialog({
   const [selectedDieIds, setSelectedDieIds] = useState<number[]>([]);
   const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [copiedProofingOrderCode, setCopiedProofingOrderCode] = useState<
+    string | null
+  >(null);
 
   // For creating new die
   const [dieName, setDieName] = useState<string>("");
   const [dieCode, setDieCode] = useState<string>("");
   const [dieType, setDieType] = useState<string>("");
   const [dieSize, setDieSize] = useState<string>("");
-  const [diePrice, setDiePrice] = useState<number | undefined>(undefined);
   const [dieLength, setDieLength] = useState<number | undefined>(undefined);
   const [dieWidth, setDieWidth] = useState<number | undefined>(undefined);
   const [dieHeight, setDieHeight] = useState<number | undefined>(undefined);
   const [dieImage, setDieImage] = useState<File | null>(null);
   const [dieImagePreview, setDieImagePreview] = useState<string | null>(null);
+  const [isReusable, setIsReusable] = useState<boolean>(true);
 
+  const queryClient = useQueryClient();
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordDie, isPending: recordingDie } =
@@ -122,72 +134,44 @@ export function DieExportDialog({
     useAssignDieToProofingOrder();
 
   // Get dies - use search when there's a search term, otherwise use list
-  const { data: searchDiesData, isLoading: loadingSearchDies } = useSearchDies(
+  const searchParams =
     open && dieSearchTerm.trim()
       ? {
-          dieName: dieSearchTerm.trim(),
+          dieName: dieSearchTerm.trim() || "",
           isUsable: true,
           pageSize: 100,
         }
-      : undefined
-  );
+      : undefined;
 
-  const { data: diesData, isLoading: loadingDies } = useDies(
+  const listParams =
     open && !dieSearchTerm.trim()
       ? {
           isUsable: true,
           pageSize: 100,
         }
-      : undefined
-  );
+      : undefined;
+
+  const {
+    data: searchDiesData,
+    isLoading: loadingSearchDies,
+    isError: searchError,
+  } = useSearchDies(searchParams);
+  const {
+    data: diesData,
+    isLoading: loadingDies,
+    isError: listError,
+  } = useDies(listParams);
 
   const searchDies = searchDiesData?.items || [];
   const listDies = diesData?.items || [];
   const allDies = dieSearchTerm.trim() ? searchDies : listDies;
   const isLoadingDies = dieSearchTerm.trim() ? loadingSearchDies : loadingDies;
-  // #region agent log
-  useEffect(() => {
-    if (open) {
-      fetch(
-        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "DieExportDialog.tsx:138",
-            message: "API data received",
-            data: {
-              searchDiesCount: searchDies.length,
-              listDiesCount: listDies.length,
-              allDiesCount: allDies.length,
-              isLoadingDies,
-              dieSearchTerm,
-              open,
-              hasSearchTerm: !!dieSearchTerm.trim(),
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "A",
-          }),
-        }
-      ).catch(() => {});
-    }
-  }, [
-    open,
-    searchDies.length,
-    listDies.length,
-    allDies.length,
-    isLoadingDies,
-    dieSearchTerm,
-  ]);
-  // #endregion
 
   // Fetch dies already assigned to this proofing order
   const { data: assignedDies } = useDiesByProofingOrder(proofingOrderId, open);
   const assignedDieIds = useMemo(
     () => new Set(assignedDies?.map((ad) => ad.dieId).filter(Boolean) || []),
-    [assignedDies]
+    [assignedDies],
   );
 
   // Extract design types and dimensions from proofing order
@@ -238,15 +222,33 @@ export function DieExportDialog({
       }
       return `${length}x${height}`;
     },
-    []
+    [],
   );
+
+  // All designs with their dimension info for reference display
+  const allDesignDimensions = useMemo(() => {
+    return proofingOrderDesigns
+      .filter((d) => d != null)
+      .map((design) => ({
+        code: design!.code || "",
+        designTypeName: design!.designType?.name || "",
+        length: design!.length ?? undefined,
+        width: design!.width ?? undefined,
+        height: design!.height ?? undefined,
+        sizeStr: formatDimensions(
+          design!.length || 0,
+          design!.width ?? undefined,
+          design!.height || 0,
+        ),
+      }));
+  }, [proofingOrderDesigns, formatDimensions]);
 
   // Helper function to check if die matches design type
   const matchesDesignType = useCallback(
     (
       dieName: string | null | undefined,
       dieType: string | null | undefined,
-      designTypes: string[]
+      designTypes: string[],
     ): boolean => {
       if (designTypes.length === 0) return true; // No filter if no design types
       if (!dieName && !dieType) return false; // No match if die has no name or type
@@ -263,29 +265,9 @@ export function DieExportDialog({
           dt.includes(dieTypeLower)
         );
       });
-      // #region agent log
-      if (designTypes.length > 0) {
-        fetch(
-          "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "DieExportDialog.tsx:203",
-              message: "matchesDesignType check",
-              data: { dieName, dieType, designTypes, matches },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "post-fix",
-              hypothesisId: "C",
-            }),
-          }
-        ).catch(() => {});
-      }
-      // #endregion
       return matches;
     },
-    []
+    [],
   );
 
   // Helper function to check if die size matches dimensions
@@ -297,7 +279,7 @@ export function DieExportDialog({
         width?: number;
         height: number;
         designTypeName: string;
-      }>
+      }>,
     ): boolean => {
       if (!dieSize || dimensions.length === 0) return true; // No filter if no dimensions
       // Normalize die size: remove spaces, handle "x0x" patterns
@@ -311,216 +293,39 @@ export function DieExportDialog({
         const formattedLower = formatted.toLowerCase();
         // Check if normalized die size contains the formatted dimension
         const result = dieSizeNormalized.includes(formattedLower);
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "DieExportDialog.tsx:295",
-              message: "Dimension match check",
-              data: {
-                dieSize,
-                dieSizeNormalized,
-                formatted,
-                formattedLower,
-                result,
-                dim,
-              },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "post-fix",
-              hypothesisId: "D",
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
         return result;
       });
       return matches;
     },
-    [formatDimensions]
+    [formatDimensions],
   );
 
-  // Filter out already assigned dies and filter by design type and size
+  // Filter out already assigned dies only (design type/dimensions are used for sorting/prioritization, not filtering)
   const availableDies = useMemo(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "DieExportDialog.tsx:230",
-        message: "Filtering starts",
-        data: {
-          allDiesCount: allDies.length,
-          assignedDieIdsCount: assignedDieIds.size,
-          designTypesCount: designTypes.length,
-          designDimensionsCount: designDimensions.length,
-          designTypes: designTypes,
-          designDimensions: designDimensions,
-          assignedDieIds: Array.from(assignedDieIds),
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "A",
-      }),
-    }).catch(() => {});
-    // #endregion
+    // Only filter out assigned dies - allow users to select any available die
     let filtered = allDies.filter(
-      (die) => die.id && !assignedDieIds.has(die.id)
+      (die) => die.id && !assignedDieIds.has(die.id),
     );
-    // #region agent log
-    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "DieExportDialog.tsx:233",
-        message: "After assigned filter",
-        data: {
-          filteredCount: filtered.length,
-          filteredIds: filtered.map((d) => d.id),
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "B",
-      }),
-    }).catch(() => {});
-    // #endregion
 
-    // Filter by design type if we have design types
-    if (designTypes.length > 0) {
-      const beforeDesignTypeFilter = filtered.length;
-      filtered = filtered.filter((die) => {
-        const matches = matchesDesignType(die.name, die.type, designTypes);
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "DieExportDialog.tsx:240",
-              message: "Design type check",
-              data: {
-                dieId: die.id,
-                dieName: die.name,
-                dieType: die.type,
-                matches,
-                designTypes,
-              },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "post-fix",
-              hypothesisId: "C",
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
-        return matches;
-      });
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "DieExportDialog.tsx:245",
-            message: "After design type filter",
-            data: {
-              beforeCount: beforeDesignTypeFilter,
-              afterCount: filtered.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "C",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
-    }
-
-    // Filter by dimensions if we have dimensions
+    // Sort dies: prioritize dies that match design dimensions
     if (designDimensions.length > 0) {
-      const beforeDimensionsFilter = filtered.length;
-      filtered = filtered.filter((die) => {
-        const matches = matchesDimensions(die.size, designDimensions);
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              location: "DieExportDialog.tsx:252",
-              message: "Dimensions check",
-              data: {
-                dieId: die.id,
-                dieSize: die.size,
-                matches,
-                designDimensions,
-              },
-              timestamp: Date.now(),
-              sessionId: "debug-session",
-              runId: "run1",
-              hypothesisId: "D",
-            }),
-          }
-        ).catch(() => {});
-        // #endregion
-        return matches;
+      filtered = filtered.sort((a, b) => {
+        const aMatchesDim =
+          designDimensions.length > 0
+            ? matchesDimensions(a.size, designDimensions)
+            : false;
+        const bMatchesDim =
+          designDimensions.length > 0
+            ? matchesDimensions(b.size, designDimensions)
+            : false;
+
+        // Prioritize: matches dim > no match
+        const aScore = aMatchesDim ? 1 : 0;
+        const bScore = bMatchesDim ? 1 : 0;
+        return bScore - aScore;
       });
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "DieExportDialog.tsx:257",
-            message: "After dimensions filter",
-            data: {
-              beforeCount: beforeDimensionsFilter,
-              afterCount: filtered.length,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "run1",
-            hypothesisId: "D",
-          }),
-        }
-      ).catch(() => {});
-      // #endregion
     }
 
-    // #region agent log
-    fetch("http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: "DieExportDialog.tsx:262",
-        message: "Final availableDies",
-        data: {
-          finalCount: filtered.length,
-          finalIds: filtered.map((d) => d.id),
-          allDiesSample: allDies.slice(0, 3).map((d) => ({
-            id: d.id,
-            name: d.name,
-            type: d.type,
-            size: d.size,
-          })),
-        },
-        timestamp: Date.now(),
-        sessionId: "debug-session",
-        runId: "run1",
-        hypothesisId: "E",
-      }),
-    }).catch(() => {});
-    // #endregion
     return filtered;
   }, [
     allDies,
@@ -532,37 +337,37 @@ export function DieExportDialog({
   ]);
 
   // Auto-fill die name, code, type and size when creating new die based on proofing order designs
-  useEffect(() => {
-    if (
-      open &&
-      dieAction === "create" &&
-      proofingOrderDesigns.length > 0 &&
-      !dieName &&
-      !dieCode &&
-      !dieType &&
-      !dieSize
-    ) {
-      // Get first design to auto-fill
-      const firstDesign = proofingOrderDesigns[0];
-      if (firstDesign) {
-        // Auto-generate die name: Mã số + kích thước
-        const designTypeName = firstDesign.designType?.name || "";
-        const dimensions = formatDimensions(
-          firstDesign.length || 0,
-          firstDesign.width,
-          firstDesign.height || 0
-        );
-        const suggestedName = `${designTypeName} ${dimensions}`;
-        // Auto-generate code from design code
-        const suggestedCode = firstDesign.code || "";
-        // Auto-generate type from design type
+  useEffect(() => {      if (proofingOrderDesigns.length > 0) {
+        // Aggregate all types and sizes
+        const allTypes = Array.from(new Set(allDesignDimensions.map(d => d.designTypeName))).filter(Boolean);
+        const allSizes = allDesignDimensions.map(d => d.sizeStr).filter(Boolean);
+        
+        const combinedTypes = allTypes.join(", ");
+        const combinedSizes = allSizes.join(", ");
+        const suggestedName = `${combinedTypes} ${combinedSizes}`.trim();
+
+        setDieName(suggestedName);
+        setDieSize(combinedSizes);
+        setDieType(combinedTypes);
+        
+        // Code from first design as prefix or main ref
+        const firstDesign = proofingOrderDesigns[0];
+        if (firstDesign?.code) {
+          setDieCode(firstDesign.code);
+        }
+
+        // Individual numeric dimensions from first design (as a fallback/primary reference)
+        if (firstDesign) {
+          setDieLength(firstDesign.length || undefined);
+          setDieWidth(firstDesign.width || undefined);
+          setDieHeight(firstDesign.height || undefined);
+        }
       }
-    }
   }, [
     open,
     dieAction,
     proofingOrderDesigns,
-    formatDimensions,
+    allDesignDimensions,
     dieName,
     dieCode,
     dieType,
@@ -590,12 +395,12 @@ export function DieExportDialog({
       setDieSearchTerm("");
       setDieName("");
       setDieSize("");
-      setDiePrice(undefined);
       setDieLength(undefined);
       setDieWidth(undefined);
       setDieHeight(undefined);
       setDieImage(null);
       setDieImagePreview(null);
+      setIsReusable(true);
     }
   }, [open]);
 
@@ -634,7 +439,7 @@ export function DieExportDialog({
       const date = new Date(localDateTime);
       return formatLocalDateTimeWithOffset(date);
     },
-    [formatLocalDateTimeWithOffset]
+    [formatLocalDateTimeWithOffset],
   );
 
   const receivedAt = useMemo(() => {
@@ -674,7 +479,7 @@ export function DieExportDialog({
             description: getErrorMessage(error, "Không thể tạo nhà cung cấp"),
           });
         },
-      }
+      },
     );
   };
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -754,6 +559,23 @@ export function DieExportDialog({
     });
   };
 
+  const handleCopyProofingOrderCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedProofingOrderCode(code);
+      toast.success("Đã sao chép mã bài", {
+        description: `Mã bài "${code}" đã được sao chép vào clipboard`,
+      });
+      setTimeout(() => {
+        setCopiedProofingOrderCode(null);
+      }, 2000);
+    } catch (error) {
+      toast.error("Không thể sao chép mã bài", {
+        description: "Đã xảy ra lỗi khi sao chép vào clipboard",
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     // Validate vendor - chỉ khi tạo khuôn mới
     if (dieAction === "create" && !vendorId && !vendorName.trim()) {
@@ -766,8 +588,8 @@ export function DieExportDialog({
       const firstDieExport = proofingOrder?.dieExports?.[0];
       if (
         dieFiles.length === 0 &&
-        !firstDieExport?.imageUrl &&
-        (!firstDieExport || (firstDieExport && !firstDieExport.imageUrl))
+        !firstDieExport?.die?.imageUrl &&
+        (!firstDieExport || (firstDieExport && !firstDieExport.die?.imageUrl))
       ) {
         toast.error("Vui lòng chọn ít nhất một ảnh khuôn bế");
         return;
@@ -782,21 +604,14 @@ export function DieExportDialog({
       }
       if (selectedDieIds.length !== dieCount) {
         toast.error(
-          `Số lượng khuôn đã chọn (${selectedDieIds.length}) không khớp với số lượng khuôn (${dieCount})`
+          `Số lượng khuôn đã chọn (${selectedDieIds.length}) không khớp với số lượng khuôn (${dieCount})`,
         );
         return;
       }
     }
 
     if (dieAction === "create") {
-      if (!dieCode.trim()) {
-        toast.error("Vui lòng nhập mã khuôn bế");
-        return;
-      }
-      if (!dieType.trim()) {
-        toast.error("Vui lòng nhập loại khuôn bế");
-        return;
-      }
+      // No validation required - all fields are optional per schema
     }
 
     try {
@@ -821,34 +636,56 @@ export function DieExportDialog({
               onError: (error) => {
                 reject(error);
               },
-            }
+            },
           );
         });
       }
 
-      // Step 2: Create die if needed
-      let createdDieIds: number[] = [];
+      // Step 2: Create die if needed (but don't assign yet)
       if (dieAction === "create") {
+        // Get image from dieFiles (first file) or dieImage
+        const imageToUpload =
+          dieFiles.length > 0 ? dieFiles[0] : dieImage || undefined;
+
         // Create die first
         await new Promise<void>((resolve, reject) => {
+          const estimatedReceiveAt = receivedAtManual
+            ? convertLocalDateTimeToISO(receivedAtManual)
+            : undefined;
+
           createDie(
             {
-              name: dieName.trim() || undefined,
-              code: dieCode.trim(),
-              type: dieType.trim(),
-              size: dieSize.trim() || undefined,
-              price: diePrice ?? undefined,
               vendorId: finalVendorId || undefined,
-              notes: notes.trim() || undefined,
-              image: dieImage || undefined,
+              estimatedReceiveAt: estimatedReceiveAt,
+              isReusable: isReusable,
+              image: imageToUpload,
+              FirstProofingOrderId: proofingOrderId,
+              name: dieName || undefined,
+              code: dieCode || undefined,
+              type: dieType || undefined,
+              size: dieSize || undefined,
               length: dieLength,
               width: dieWidth,
               height: dieHeight,
-            },
+            } as any,
             {
               onSuccess: (newDie) => {
                 if (newDie.id) {
-                  createdDieIds = [newDie.id];
+                  // Invalidate and refetch dies list to show newly created die
+                  queryClient.invalidateQueries({ queryKey: ["dies"] });
+                  queryClient.invalidateQueries({
+                    queryKey: ["dies", "search"],
+                  });
+
+                  // Auto-select the newly created die
+                  setSelectedDieIds([newDie.id]);
+
+                  // Switch back to select mode so user can see and confirm the new die
+                  setDieAction("select");
+
+                  toast.success(
+                    "Đã tạo khuôn bế thành công. Vui lòng chọn khuôn và bấm 'Lưu thông tin' để xuất khuôn.",
+                  );
                 }
                 resolve();
               },
@@ -858,66 +695,47 @@ export function DieExportDialog({
                 });
                 reject(error);
               },
-            }
+            },
           );
         });
 
-        // Assign created die to proofing order
-        if (createdDieIds.length > 0) {
-          for (const dieId of createdDieIds) {
-            await new Promise<void>((resolve, reject) => {
-              assignDie(
-                {
-                  proofingOrderId,
-                  data: {
-                    dieId,
-                    isNewDie: true,
-                    notes: notes.trim() || undefined,
-                  },
-                },
-                {
-                  onSuccess: () => resolve(),
-                  onError: (error) => {
-                    toast.error("Không thể gán khuôn bế vào bình bài", {
-                      description: getErrorMessage(error),
-                    });
-                    reject(error);
-                  },
-                }
-              );
-            });
-          }
-        }
-      } else {
-        // Step 3: Assign selected dies to proofing order
-        for (const dieId of selectedDieIds) {
-          await new Promise<void>((resolve, reject) => {
-            assignDie(
-              {
-                proofingOrderId,
-                data: {
-                  dieId,
-                  isNewDie: false,
-                  notes: notes.trim() || undefined,
-                },
+        // After creating die, return early - user needs to select and submit
+        return;
+      }
+
+      // Step 3: Assign selected dies to proofing order
+      if (selectedDieIds.length === 0) {
+        toast.error("Vui lòng chọn ít nhất một khuôn bế");
+        return;
+      }
+
+      for (const dieId of selectedDieIds) {
+        await new Promise<void>((resolve, reject) => {
+          assignDie(
+            {
+              proofingOrderId,
+              data: {
+                dieId,
+                isNewDie: false,
+                notes: notes.trim() || undefined,
               },
-              {
-                onSuccess: () => resolve(),
-                onError: (error) => {
-                  toast.error("Không thể gán khuôn bế vào bình bài", {
-                    description: getErrorMessage(error),
-                  });
-                  reject(error);
-                },
-              }
-            );
-          });
-        }
+            },
+            {
+              onSuccess: () => resolve(),
+              onError: (error) => {
+                toast.error("Không thể gán khuôn bế vào bình bài", {
+                  description: getErrorMessage(error),
+                });
+                reject(error);
+              },
+            },
+          );
+        });
       }
 
       // Step 4: Record die export
-      // Collect all die IDs (either created or selected)
-      const allDieIds = dieAction === "create" ? createdDieIds : selectedDieIds;
+      // Use selected die IDs
+      const allDieIds = selectedDieIds;
 
       if (allDieIds.length === 0) {
         toast.error("Không có khuôn bế nào để ghi nhận xuất");
@@ -941,7 +759,7 @@ export function DieExportDialog({
               });
               reject(error);
             },
-          }
+          },
         );
       });
 
@@ -956,15 +774,15 @@ export function DieExportDialog({
 
   const selectedVendor = vendors?.find((v) => v.id === vendorId);
   const firstDieExport = proofingOrder?.dieExports?.[0];
-  const existingImages: string[] = []; // dieExports doesn't have images array, use imageUrl instead
-  const existingImageUrl = firstDieExport?.imageUrl;
+  const existingImages: string[] = []; // dieExports doesn't have images array, use imageUrl from die instead
+  const existingImageUrl = firstDieExport?.die?.imageUrl;
 
   const isSubmitting =
     recordingDie || creatingDie || assigningDie || creatingVendor;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[80vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-6xl h-[88vh] flex flex-col overflow-hidden">
         <DialogHeader className="pb-2">
           <DialogTitle>Xuất khuôn bế</DialogTitle>
         </DialogHeader>
@@ -1029,7 +847,7 @@ export function DieExportDialog({
                     setSelectedDieIds([]);
                   }}
                 >
-                  Chọn khuôn có sẵn
+                  Chọn khuôn cũ
                 </Button>
                 <Button
                   variant={dieAction === "create" ? "default" : "outline"}
@@ -1039,7 +857,7 @@ export function DieExportDialog({
                     setSelectedDieIds([]);
                   }}
                 >
-                  Tạo khuôn mới
+                  Đặt khuôn mới
                 </Button>
               </div>
             </div>
@@ -1074,88 +892,163 @@ export function DieExportDialog({
                         </div>
                       </div>
                     ) : (
-                      <div className="h-full overflow-y-auto border rounded-md">
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-background z-10">
-                            <TableRow>
-                              <TableHead className="w-20">Ảnh</TableHead>
-                              <TableHead>Mã khuôn</TableHead>
-                              <TableHead>Kích thước</TableHead>
-                              <TableHead>Nhà cung cấp</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {availableDies.map((die) => {
-                              const isSelected = die.id
-                                ? selectedDieIds.includes(die.id)
-                                : false;
-                              const canSelect =
-                                !isSelected && selectedDieIds.length < dieCount;
-                              const selectionIndex = isSelected
-                                ? selectedDieIds.indexOf(die.id!) + 1
-                                : null;
+                      <div className="h-full overflow-y-auto">
+                        <div className="grid grid-cols-1 gap-2 p-1">
+                          {availableDies.map((die) => {
+                            const isSelected = die.id
+                              ? selectedDieIds.includes(die.id)
+                              : false;
+                            const canSelect =
+                              !isSelected && selectedDieIds.length < dieCount;
+                            const selectionIndex = isSelected
+                              ? selectedDieIds.indexOf(die.id!) + 1
+                              : null;
 
-                              return (
-                                <TableRow
-                                  key={die.id}
-                                  className={cn(
-                                    "cursor-pointer transition-colors",
-                                    isSelected
-                                      ? "bg-primary/5 hover:bg-primary/10"
-                                      : canSelect
-                                        ? "hover:bg-muted/50"
-                                        : "opacity-50 cursor-not-allowed"
-                                  )}
-                                  onClick={() => {
-                                    if (die.id && (canSelect || isSelected)) {
-                                      toggleDieSelection(die.id);
-                                    }
-                                  }}
-                                >
-                                  <TableCell className="w-20">
-                                    <div className="relative w-16 h-16 bg-muted/50 rounded flex items-center justify-center overflow-hidden">
-                                      {die.imageUrl ? (
-                                        <>
-                                          <img
-                                            src={die.imageUrl}
-                                            alt={die.name || "Khuôn bế"}
-                                            className="w-full h-full object-contain cursor-zoom-in"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setPreviewImageUrl(
-                                                die.imageUrl || null
-                                              );
-                                            }}
-                                          />
-                                          {selectionIndex && (
-                                            <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-lg">
-                                              {selectionIndex}
-                                            </div>
-                                          )}
-                                        </>
-                                      ) : (
-                                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                                      )}
+                            // Check if die matches design dimensions for highlighting
+                            const matchesDim =
+                              designDimensions.length > 0
+                                ? matchesDimensions(die.size, designDimensions)
+                                : false;
+                            const isRecommended = matchesDim;
+
+                            return (
+                              <div
+                                key={die.id}
+                                className={cn(
+                                  "group relative flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer",
+                                  isSelected
+                                    ? "border-primary bg-primary/5 shadow-sm"
+                                    : canSelect
+                                      ? "border-border bg-background hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm"
+                                      : "border-border bg-muted/20 opacity-50 cursor-not-allowed",
+                                  isRecommended &&
+                                    !isSelected &&
+                                    canSelect &&
+                                    "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30",
+                                )}
+                                onClick={() => {
+                                  if (die.id && (canSelect || isSelected)) {
+                                    toggleDieSelection(die.id);
+                                  }
+                                }}
+                              >
+                                {/* Selection indicator */}
+                                {selectionIndex && (
+                                  <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg z-10">
+                                    {selectionIndex}
+                                  </div>
+                                )}
+
+                                {/* Recommended badge */}
+                                {isRecommended && !isSelected && (
+                                  <div className="absolute top-2 right-2 px-2 py-0.5 bg-blue-500 text-white text-[10px] font-medium rounded-full">
+                                    Gợi ý
+                                  </div>
+                                )}
+
+                                {/* Image */}
+                                <div className="relative flex-shrink-0 w-20 h-20 bg-muted/50 rounded-md overflow-hidden border">
+                                  {die.imageUrl ? (
+                                    <img
+                                      src={die.imageUrl}
+                                      alt={die.code || "Khuôn bế"}
+                                      className="w-full h-full object-contain cursor-zoom-in"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPreviewImageUrl(
+                                          die.imageUrl || null,
+                                        );
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
                                     </div>
-                                  </TableCell>
-                                  <TableCell className="font-medium">
-                                    {die.code || "—"}
-                                  </TableCell>
-                                  <TableCell>
-                                    <span className="text-sm">
-                                      {formatDieSize(die)}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell>
-                                    <span className="text-sm text-muted-foreground truncate max-w-[150px] block">
-                                      {die.vendorName || "—"}
-                                    </span>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
+                                  )}
+                                </div>
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-semibold text-sm truncate">
+                                        {die.code || "—"}
+                                      </h4>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-medium">
+                                        Kích thước:
+                                      </span>
+                                      <span className="text-foreground">
+                                        {formatDieSize(die) || "—"}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {die.vendorName && (
+                                    <div className="mt-1.5 text-xs text-muted-foreground truncate">
+                                      <span className="font-medium">NCC:</span>{" "}
+                                      <span className="text-foreground">
+                                        {die.vendorName}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {die.firstProofingOrderCode && (
+                                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                      <span className="font-medium">
+                                        Được sử dụng trong mã bài:
+                                      </span>{" "}
+                                      <span className="text-foreground font-semibold">
+                                        {die.firstProofingOrderCode}
+                                      </span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 p-0 hover:bg-primary/10"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopyProofingOrderCode(
+                                            die.firstProofingOrderCode || "",
+                                          );
+                                        }}
+                                        title="Sao chép mã bài"
+                                      >
+                                        {copiedProofingOrderCode ===
+                                        die.firstProofingOrderCode ? (
+                                          <Check className="h-3 w-3 text-green-600" />
+                                        ) : (
+                                          <Copy className="h-3 w-3 text-muted-foreground" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Selection checkbox */}
+                                <div className="flex-shrink-0">
+                                  <div
+                                    className={cn(
+                                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                                      isSelected
+                                        ? "bg-primary border-primary"
+                                        : canSelect
+                                          ? "border-muted-foreground/30 group-hover:border-primary/50"
+                                          : "border-muted-foreground/20",
+                                    )}
+                                  >
+                                    {isSelected && (
+                                      <Check className="h-3 w-3 text-primary-foreground" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1174,9 +1067,7 @@ export function DieExportDialog({
                               key={dieId}
                               className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px]"
                             >
-                              <span>
-                                {die?.code || die?.name || `Khuôn #${dieId}`}
-                              </span>
+                              <span>{die?.code || `Khuôn #${dieId}`}</span>
                               <button
                                 type="button"
                                 className="inline-flex h-3 w-3 items-center justify-center rounded-full bg-muted text-muted-foreground"
@@ -1223,260 +1114,247 @@ export function DieExportDialog({
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
               {dieAction === "create" ? (
                 <>
-                  {/* Thông tin cơ bản */}
+                  {/* Die Dimensions - Reference table + editable inputs */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 pb-1 border-b">
                       <h4 className="text-sm font-semibold">
-                        Thông tin cơ bản
+                        Kích thước mã hàng (tham chiếu)
                       </h4>
                     </div>
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieCode">
-                          Mã khuôn bế{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="dieCode"
-                          placeholder="VD: KB-1234"
-                          value={dieCode}
-                          onChange={(e) => setDieCode(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieType">
-                          Loại khuôn bế{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="dieType"
-                          placeholder="VD: Khuôn bế hộp cứng"
-                          value={dieType}
-                          onChange={(e) => setDieType(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieName">Tên khuôn bế</Label>
-                        <Input
-                          id="dieName"
-                          placeholder="Tên gợi nhớ (tự động gợi ý từ mã bài)"
-                          value={dieName}
-                          onChange={(e) => setDieName(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Kích thước */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b">
-                      <h4 className="text-sm font-semibold">Kích thước</h4>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieLength" className="text-xs">
-                          Dài (mm)
-                        </Label>
-                        <Input
-                          id="dieLength"
-                          type="number"
-                          min={0}
-                          value={dieLength ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const next = value ? Number(value) : undefined;
-                            setDieLength(next);
-                            const length = next;
-                            const width = dieWidth;
-                            const height = dieHeight;
-                            if (length && height) {
-                              setDieSize(
-                                formatDimensions(length, width ?? 0, height)
-                              );
-                            }
-                          }}
-                          className="h-9 text-sm"
-                          placeholder="0"
-                        />
+                    {/* Reference table: all designs' dimensions */}
+                    {allDesignDimensions.length > 0 ? (
+                      <div className="rounded-md border bg-muted/30 overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="text-left px-2 py-1.5 font-semibold text-[13px] text-muted-foreground">
+                                Mã hàng
+                              </th>
+                              <th className="text-left px-2 py-1.5 font-semibold text-[13px] text-muted-foreground">
+                                Loại
+                              </th>
+                              <th className="text-center px-2 py-1.5 font-semibold text-[13px] text-muted-foreground">
+                                D × R × C (mm)
+                              </th>
+                              <th className="px-1 py-1.5"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {allDesignDimensions.map((d, idx) => (
+                              <tr
+                                key={idx}
+                                className="border-b last:border-0 hover:bg-muted/40 transition-colors"
+                              >
+                                <td className="px-2 py-1.5">
+                                  <span className="font-mono font-bold text-[13px]">
+                                    {d.code || "—"}
+                                  </span>
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <span className="text-[13px] text-muted-foreground">
+                                    {d.designTypeName || "—"}
+                                  </span>
+                                </td>
+                                <td className="px-2 py-1.5 text-center">
+                                  <span className="font-medium text-[13px] tabular-nums">
+                                    {d.length ?? "?"} × {d.width ?? "—"} ×{" "}
+                                    {d.height ?? "?"}
+                                  </span>
+                                </td>
+                                <td className="px-1 py-1 text-right">
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieWidth" className="text-xs">
-                          Rộng (mm)
-                        </Label>
-                        <Input
-                          id="dieWidth"
-                          type="number"
-                          min={0}
-                          value={dieWidth ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const next = value ? Number(value) : undefined;
-                            setDieWidth(next);
-                            const length = dieLength;
-                            const width = next;
-                            const height = dieHeight;
-                            if (length && height) {
-                              setDieSize(
-                                formatDimensions(length, width ?? 0, height)
-                              );
-                            }
-                          }}
-                          className="h-9 text-sm"
-                          placeholder="0"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="dieHeight" className="text-xs">
-                          Cao (mm)
-                        </Label>
-                        <Input
-                          id="dieHeight"
-                          type="number"
-                          min={0}
-                          value={dieHeight ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const next = value ? Number(value) : undefined;
-                            setDieHeight(next);
-                            const length = dieLength;
-                            const width = dieWidth;
-                            const height = next;
-                            if (length && height) {
-                              setDieSize(
-                                formatDimensions(length, width ?? 0, height)
-                              );
-                            }
-                          }}
-                          className="h-9 text-sm"
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground italic">
+                        Không có thông tin kích thước từ mã hàng
+                      </p>
+                    )}
+
+                    {/* Editable die dimension inputs */}
                     <div className="space-y-1.5">
-                      <Label
-                        htmlFor="dieSize"
-                        className="text-xs text-muted-foreground"
-                      >
-                        Kích thước tổng hợp
+                      <Label className="text-[11px] text-muted-foreground">
+                        Kích thước khuôn (có thể chỉnh)
                       </Label>
-                      <Input
-                        id="dieSize"
-                        placeholder="Tự động từ Dài × Rộng × Cao"
-                        value={dieSize}
-                        onChange={(e) => setDieSize(e.target.value)}
-                        className="h-9 text-sm font-mono bg-muted/50"
-                        readOnly
-                      />
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground/70">
+                            Dài (mm)
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="Dài"
+                            value={dieLength || ""}
+                            onChange={(e) =>
+                              setDieLength(
+                                e.target.value
+                                  ? Number(e.target.value)
+                                  : undefined,
+                              )
+                            }
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground/70">
+                            Rộng (mm)
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="Rộng"
+                            value={dieWidth || ""}
+                            onChange={(e) =>
+                              setDieWidth(
+                                e.target.value
+                                  ? Number(e.target.value)
+                                  : undefined,
+                              )
+                            }
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground/70">
+                            Cao (mm)
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="Cao"
+                            value={dieHeight || ""}
+                            onChange={(e) =>
+                              setDieHeight(
+                                e.target.value
+                                  ? Number(e.target.value)
+                                  : undefined,
+                              )
+                            }
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
+                </>
+              ) : (
+                <div className="rounded-md border-2 border-dashed bg-muted/20 p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Chế độ <span className="font-bold text-foreground">Chọn khuôn có sẵn</span>.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vui lòng chọn khuôn bên trái và điền thông tin bên dưới.
+                  </p>
+                </div>
+              )}
 
-                  {/* Vendor selection / creation */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b">
-                      <h4 className="text-sm font-semibold">
-                        Đơn vị làm khuôn{" "}
-                        <span className="text-destructive">*</span>
-                      </h4>
-                    </div>
+              {/* Vendor selection / creation */}
+              <div className="space-y-3 pt-4 border-t">
                     <div className="space-y-1.5">
                       {!isCreatingVendor ? (
-                        <div className="flex gap-2">
-                          <Popover
-                            open={vendorSearchOpen}
-                            onOpenChange={setVendorSearchOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                className="flex-1 justify-between h-8"
-                                disabled={loadingVendors}
-                              >
-                                {selectedVendor
-                                  ? selectedVendor.name
-                                  : "Chọn nhà cung cấp..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[360px] p-0">
-                              <Command>
-                                <CommandInput placeholder="Tìm kiếm nhà cung cấp..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    <div className="py-4 text-center text-sm">
-                                      <p className="mb-2">
-                                        Không tìm thấy nhà cung cấp
-                                      </p>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
+                        <div className="flex items-center justify-between gap-4">
+                          <Label className="text-sm font-medium whitespace-nowrap">
+                            Đơn vị làm khuôn <span className="text-destructive">*</span>
+                          </Label>
+                          <div className="flex-1 max-w-[240px] flex gap-2">
+                            <Popover
+                              open={vendorSearchOpen}
+                              onOpenChange={setVendorSearchOpen}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  className="flex-1 justify-between h-8 text-sm px-2 overflow-hidden"
+                                  disabled={loadingVendors}
+                                >
+                                  <span className="truncate">
+                                    {selectedVendor
+                                      ? selectedVendor.name
+                                      : "Chọn nhà cung cấp..."}
+                                  </span>
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[360px] p-0">
+                                <Command>
+                                  <CommandInput placeholder="Tìm kiếm nhà cung cấp..." />
+                                  <CommandList>
+                                    <CommandEmpty>
+                                      <div className="py-4 text-center text-sm">
+                                        <p className="mb-2">
+                                          Không tìm thấy nhà cung cấp
+                                        </p>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            setIsCreatingVendor(true);
+                                            setVendorSearchOpen(false);
+                                          }}
+                                          className="gap-2"
+                                        >
+                                          <Plus className="h-4 w-4" />
+                                          Tạo mới
+                                        </Button>
+                                      </div>
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      {vendors?.map((vendor) => (
+                                        <CommandItem
+                                          key={vendor.id}
+                                          value={vendor.name || ""}
+                                          onSelect={() => {
+                                            setVendorId(vendor.id);
+                                            setVendorSearchOpen(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              vendorId === vendor.id
+                                                ? "opacity-100"
+                                                : "opacity-0",
+                                            )}
+                                          />
+                                          <div className="flex flex-col">
+                                            <span className="text-sm font-medium">
+                                              {vendor.name}
+                                            </span>
+                                            {vendor.phone && (
+                                              <span className="text-[10px] text-muted-foreground">
+                                                {vendor.phone}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </CommandItem>
+                                      ))}
+                                      <CommandItem
+                                        onSelect={() => {
                                           setIsCreatingVendor(true);
                                           setVendorSearchOpen(false);
                                         }}
-                                        className="gap-2"
+                                        className="text-primary"
                                       >
-                                        <Plus className="h-4 w-4" />
-                                        Tạo mới
-                                      </Button>
-                                    </div>
-                                  </CommandEmpty>
-                                  <CommandGroup>
-                                    {vendors?.map((vendor) => (
-                                      <CommandItem
-                                        key={vendor.id}
-                                        value={vendor.name || ""}
-                                        onSelect={() => {
-                                          setVendorId(vendor.id);
-                                          setVendorSearchOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            vendorId === vendor.id
-                                              ? "opacity-100"
-                                              : "opacity-0"
-                                          )}
-                                        />
-                                        <div className="flex flex-col">
-                                          <span className="text-sm font-medium">
-                                            {vendor.name}
-                                          </span>
-                                          {vendor.phone && (
-                                            <span className="text-[10px] text-muted-foreground">
-                                              {vendor.phone}
-                                            </span>
-                                          )}
-                                        </div>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Tạo nhà cung cấp mới
                                       </CommandItem>
-                                    ))}
-                                    <CommandItem
-                                      onSelect={() => {
-                                        setIsCreatingVendor(true);
-                                        setVendorSearchOpen(false);
-                                      }}
-                                      className="text-primary"
-                                    >
-                                      <Plus className="mr-2 h-4 w-4" />
-                                      Tạo nhà cung cấp mới
-                                    </CommandItem>
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setIsCreatingVendor(true)}
-                            className="h-8 w-8"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => setIsCreatingVendor(true)}
+                              className="h-8 w-8 flex-shrink-0"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-3 rounded-md border bg-muted/40 px-3 py-2">
@@ -1594,111 +1472,81 @@ export function DieExportDialog({
                           </div>
                           <p className="text-[11px] text-muted-foreground">
                             Sau khi tạo, nhà cung cấp sẽ xuất hiện trong danh
-                            sách để tái sử dụng.
+                            sách.
                           </p>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Die images */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 pb-1 border-b">
                       <h4 className="text-sm font-semibold">Ảnh khuôn bế</h4>
                     </div>
-                    <div className="space-y-1.5">
-                      {dieFiles.length === 0 && !existingImageUrl ? (
-                        <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                          <Input
-                            id="dieFiles"
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleFileChange}
-                            className="hidden"
+                    <div className="flex flex-wrap gap-3 items-start">
+                      {/* Existing Image */}
+                      {existingImageUrl && (
+                        <div className="relative group border rounded-lg bg-muted/30 overflow-hidden w-24 h-24 flex-shrink-0">
+                          <img
+                            src={existingImageUrl}
+                            alt="Ảnh khuôn bế"
+                            className="w-full h-full object-cover"
                           />
-                          <label
-                            htmlFor="dieFiles"
-                            className="cursor-pointer flex flex-col items-center gap-1"
-                          >
-                            <Upload className="h-6 w-6 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">
-                              Click để chọn ảnh hoặc kéo thả vào đây
-                            </span>
-                            <span className="text-[11px] text-muted-foreground">
-                              File ảnh (JPG, PNG, ...) - tối đa 10MB mỗi file
-                            </span>
-                          </label>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {existingImageUrl && (
-                            <div className="space-y-1.5">
-                              <Label className="text-[11px] text-muted-foreground">
-                                Ảnh đã lưu:
-                              </Label>
-                              <div className="border rounded-md bg-muted/30 overflow-hidden">
-                                <img
-                                  src={existingImageUrl}
-                                  alt="Ảnh khuôn bế"
-                                  className="h-28 w-full object-contain"
-                                />
-                              </div>
-                            </div>
-                          )}
-                          {dieFiles.length > 0 && (
-                            <div className="space-y-1.5">
-                              <Label className="text-[11px] text-muted-foreground">
-                                Ảnh mới:
-                              </Label>
-                              <div className="grid grid-cols-2 gap-2">
-                                {dieFiles.map((file, index) => (
-                                  <div
-                                    key={index}
-                                    className="relative group border rounded-md bg-muted/30 overflow-hidden"
-                                  >
-                                    <img
-                                      src={imagePreviews[index]}
-                                      alt={`Preview ${file.name}`}
-                                      className="h-24 w-full object-contain"
-                                    />
-                                    <Button
-                                      variant="destructive"
-                                      size="icon"
-                                      className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => handleRemoveFile(index)}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                    <div className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-[10px] text-white truncate">
-                                      {file.name}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex gap-2">
-                            <Input
-                              id="dieFiles"
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              onChange={handleFileChange}
-                              className="hidden"
-                            />
-                            <label htmlFor="dieFiles">
-                              <Button variant="outline" size="sm" asChild>
-                                <span>Thêm ảnh</span>
-                              </Button>
-                            </label>
+                          <div className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-[9px] text-white text-center truncate">
+                            Ảnh đã lưu
                           </div>
                         </div>
                       )}
+
+                      {/* New Image Previews */}
+                      {dieFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="relative group border rounded-lg bg-muted/30 overflow-hidden w-24 h-24 flex-shrink-0"
+                        >
+                          <img
+                            src={imagePreviews[index]}
+                            alt={`Preview ${file.name}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                            onClick={() => handleRemoveFile(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                          <div className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-[9px] text-white text-center truncate">
+                            {file.name}
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Upload Button Box */}
+                      <div className="flex-shrink-0">
+                        <Input
+                          id="dieFiles"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="dieFiles"
+                          className="cursor-pointer border-2 border-dashed border-muted-foreground/20 rounded-lg w-24 h-24 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                        >
+                          <Plus className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <span className="text-[10px] text-muted-foreground font-medium group-hover:text-primary transition-colors text-center px-1">
+                            Thêm ảnh
+                          </span>
+                        </label>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Time & notes */}
+                  {/* Estimated Receive At & Is Reusable */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 pb-1 border-b">
                       <h4 className="text-sm font-semibold">
@@ -1706,60 +1554,62 @@ export function DieExportDialog({
                       </h4>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="receivedAt" className="text-xs">
-                          Thời gian có khuôn
+                      <div className="flex items-center justify-between gap-4 py-1">
+                        <Label htmlFor="estimatedReceiveAt" className="text-sm font-medium whitespace-nowrap">
+                          Dự kiến nhận khuôn
                         </Label>
-                        <Input
-                          id="receivedAt"
-                          type="datetime-local"
-                          value={receivedAtManual}
-                          onChange={(e) => setReceivedAtManual(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                        {receivedAt && (
-                          <p className="text-[11px] text-muted-foreground">
-                            Dự kiến:{" "}
-                            {new Date(receivedAt).toLocaleString("vi-VN", {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        )}
+                        <div className="flex-1 max-w-[240px] space-y-1">
+                          <Input
+                            id="estimatedReceiveAt"
+                            type="datetime-local"
+                            value={receivedAtManual}
+                            onChange={(e) => setReceivedAtManual(e.target.value)}
+                            className="h-9 text-sm"
+                          />
+                          {receivedAt && (
+                            <p className="text-[10px] text-muted-foreground text-right">
+                              Dự kiến:{" "}
+                              {new Date(receivedAt).toLocaleString("vi-VN", {
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="notes" className="text-xs">
-                          Ghi chú
-                        </Label>
-                        <Textarea
-                          id="notes"
-                          placeholder="Nhập ghi chú về khuôn bế, yêu cầu gia công..."
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                          rows={3}
-                          className="min-h-[80px] text-sm"
-                        />
+
+                      <div className="space-y-2 py-2">
+                        <Label className="text-xs font-medium">Tùy chọn Lưu Khuôn</Label>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant={isReusable ? "default" : "outline"}
+                            onClick={() => setIsReusable(true)}
+                            className="flex-1 h-9 text-sm"
+                          >
+                            Lưu Khuôn
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={!isReusable ? "destructive" : "outline"}
+                            onClick={() => setIsReusable(false)}
+                            className="flex-1 h-9 text-sm"
+                          >
+                            Dùng 1 lần
+                          </Button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {isReusable 
+                            ? "✓ Lưu vào kho để tái sử dụng." 
+                            : "⚠ Khuôn dùng một lần."}
+                        </p>
                       </div>
                     </div>
                   </div>
-                </>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-                  <p className="max-w-xs">
-                    Đang ở chế độ{" "}
-                    <span className="font-medium text-foreground">
-                      Chọn khuôn có sẵn
-                    </span>
-                    . Khi cần làm khuôn mới, hãy bấm nút{" "}
-                    <span className="font-medium">Tạo khuôn mới</span> ở panel
-                    bên trái. Form tạo khuôn sẽ hiển thị tại đây.
-                  </p>
                 </div>
-              )}
-            </div>
 
             <DialogFooter className="border-t px-4 py-3 flex items-center justify-between gap-3">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1769,12 +1619,10 @@ export function DieExportDialog({
                 onClick={handleSubmit}
                 disabled={
                   isSubmitting ||
+                  (!vendorId && !vendorName.trim()) ||
                   (dieAction === "create" &&
                     dieFiles.length === 0 &&
                     !existingImageUrl) ||
-                  (dieAction === "create" && !vendorId && !vendorName.trim()) ||
-                  (dieAction === "create" &&
-                    (!dieCode.trim() || !dieType.trim())) ||
                   (dieAction === "select" &&
                     (selectedDieIds.length === 0 ||
                       selectedDieIds.length !== dieCount))

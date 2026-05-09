@@ -10,8 +10,14 @@ export const normalizeParams = (filters: Record<string, unknown>) => {
     }
   }
 
+  // Remove null, undefined, and empty string values
+  // Note: Empty strings are removed to avoid sending empty query params
   const removeEmptyValueParams = Object.fromEntries(
-    Object.entries(normalized).filter(([_, v]) => v != null)
+    Object.entries(normalized).filter(([_, v]) => {
+      // Keep non-null, non-undefined values
+      // Remove empty strings (they will be sent as empty query params which may not be desired)
+      return v != null && v !== "";
+    })
   );
   return removeEmptyValueParams;
 };
@@ -34,21 +40,8 @@ export const API_SUFFIX = {
   USER_DEPARTMENT_RESET_PASSWORD: (id: number) =>
     `/users/${id}/department-reset-password`,
   USERS_DESIGNERS: "/users/designers",
-  USER_KPI: (id: number, fromDate?: string, toDate?: string) => {
-    const base = `/users/${id}/kpi`;
-    const params = new URLSearchParams();
-    if (fromDate) params.append("fromDate", fromDate);
-    if (toDate) params.append("toDate", toDate);
-    return params.toString() ? `${base}?${params.toString()}` : base;
-  },
-  USER_KPI_TEAM: (fromDate?: string, toDate?: string, role?: string) => {
-    const base = "/users/kpi/team";
-    const params = new URLSearchParams();
-    if (fromDate) params.append("fromDate", fromDate);
-    if (toDate) params.append("toDate", toDate);
-    if (role) params.append("role", role);
-    return params.toString() ? `${base}?${params.toString()}` : base;
-  },
+  USER_KPI: (id: number) => `/users/${id}/kpi`,
+  USER_KPI_TEAM: "/users/kpi/team",
 
   // ========== ORDERS ==========
   ORDERS: "/orders",
@@ -56,16 +49,20 @@ export const API_SUFFIX = {
 
   ORDERS_FOR_DESIGNER: "/orders/for-designer",
   ORDERS_FOR_ACCOUNTING: "/orders/for-accounting",
-  ORDERS_WITH_EXISTING_DESIGNS: "/orders/with-existing-designs",
+  ORDERS_FOR_SALE: "/orders/for-sale",
 
   ORDER_ADD_DESIGN: (id: number) => `/orders/${id}/add-design`,
   ORDER_REMOVE_DESIGN: (orderId: number, orderDetailId: number) =>
     `/orders/${orderId}/designs/${orderDetailId}`,
   ORDER_UPDATE_FOR_ACCOUNTING: (id: number) => `/orders/${id}/accounting`,
+  ORDER_UPDATE_FOR_SALE: (id: number) => `/orders/${id}/sale`,
   ORDER_EXPORT_INVOICE: (id: number) => `/orders/${id}/export-invoice`,
   ORDER_EXPORT_DELIVERY_NOTE: (id: number) =>
     `/orders/${id}/export-delivery-note`,
   ORDER_EXPORT_PDF: (id: number) => `/orders/${id}/export-pdf`,
+  ORDER_EXPORT_DATA: (id: number) => `/orders/${id}/export-data`,
+  ORDER_RECALCULATE_TOTAL: (id: number) => `/orders/${id}/recalculate-total`,
+  ORDER_VALIDATE_EXPORT: (id: number) => `/orders/${id}/validate-export`,
   ORDER_GENERATE_EXCEL: (id: number) => `/orders/${id}/generate-excel`,
 
   ORDERS_MY: "/orders/my",
@@ -87,31 +84,37 @@ export const API_SUFFIX = {
     `/customers/${id}/export-debt-comparison`,
 
   // ========== ACCOUNTING ==========
-  ACCOUNTING_BY_ORDER: (orderId: number) => `/accountings/order/${orderId}`,
+  ACCOUNTING_BY_ORDER: (orderId: number) => `/accounting/order/${orderId}`,
   ACCOUNTING_CONFIRM_PAYMENT: (accountingId: number) =>
-    `/accountings/${accountingId}/confirm-payment`,
-  ACCOUNTING_CONFIRM_DEPOSIT: (orderId: number, depositAmount?: number) => {
-    const base = `/accountings/order/${orderId}/confirm-deposit`;
-    return depositAmount != null
-      ? `${base}?depositAmount=${depositAmount}`
-      : base;
-  },
+    `/accounting/${accountingId}/confirm-payment`,
+  ACCOUNTING_CONFIRM_DEPOSIT: (orderId: number) =>
+    `/accounting/order/${orderId}/confirm-deposit`,
   ACCOUNTING_APPROVE_DEBT: (orderId: number) =>
-    `/accountings/order/${orderId}/approve-debt`,
-  ACCOUNTING_EXPORT_DEBT: "/accountings/export-debt",
+    `/accounting/order/${orderId}/approve-debt`,
+  ACCOUNTING_EXPORT_DEBT: "/accounting/export-debt",
 
   // ========== CUSTOMERS ==========
   CUSTOMERS: "/customers",
   CUSTOMER_BY_ID: (id: number) => `/customers/${id}`,
-  CUSTOMER_CHECK_DUPLICATE_COMPANY: (name: string) =>
-    `/customers/check-duplicate-company?companyName=${encodeURIComponent(
-      name
-    )}`,
+  // DEPRECATED: Endpoint not found in OpenAPI schema
+  // CUSTOMER_CHECK_DUPLICATE_COMPANY: (name: string) =>
+  //   `/customers/check-duplicate-company?companyName=${encodeURIComponent(
+  //     name
+  //   )}`,
   CUSTOMER_DEBT_HISTORY: (id: number) => `/customers/${id}/debt-history`,
   CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
   CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
   CUSTOMER_STATISTICS: (id: number) => `/customers/${id}/statistics`,
   CUSTOMER_ORDERS: (id: number) => `/customers/${id}/order-history`,
+
+  // ========== CUSTOMER ADDRESSES ==========
+  CUSTOMER_ADDRESSES: (customerId: number) =>
+    `/customers/${customerId}/addresses`,
+  CUSTOMER_ADDRESS_BY_ID: (customerId: number, addressId: number) =>
+    `/customers/${customerId}/addresses/${addressId}`,
+  // Note: Không có set-default endpoint riêng.
+  // Dùng PUT CUSTOMER_ADDRESS_BY_ID với { isDefault: true } để đặt mặc định.
+  // Dùng PUT CUSTOMER_ADDRESS_BY_ID với { isActive: false } để "xóa" địa chỉ.
 
   // ========== DESIGN TYPES ==========
   DESIGN_TYPES: "/designs/types",
@@ -123,6 +126,8 @@ export const API_SUFFIX = {
   MATERIAL_TYPES_BY_DESIGN_TYPE: (designTypeId: number) =>
     `/designs/materials/design-type/${designTypeId}`,
   MATERIAL_TYPES_BULK: "/designs/materials/bulk",
+  MATERIALS: "/materials",
+  MATERIAL_BY_ID: (id: number) => `/materials/${id}`,
 
   // ========== DESIGNS ==========
   DESIGNS: "/designs",
@@ -131,6 +136,7 @@ export const API_SUFFIX = {
   DESIGN_BY_USER: (userId: number) => `/designs/user/${userId}`,
   DESIGN_BY_CUSTOMER: (customerId: number) =>
     `/designs/by-customer/${customerId}`,
+  DESIGNS_SALE: "/designs/sale",
 
   DESIGN_TIMELINE: (id: number) => `/designs/${id}/timeline`,
   DESIGN_UPLOAD_FILE: (id: number) => `/designs/${id}/upload-design-file`,
@@ -154,16 +160,18 @@ export const API_SUFFIX = {
   PAPER_SIZES: "/paper-sizes",
   PROOFING_RECORD_PLATE: (id: number) => `/proofing-orders/${id}/plate-export`,
   PROOFING_RECORD_DIE: (id: number) => `/proofing-orders/${id}/die-export`,
+
+  // ========== PLATE EXPORTS ==========
+  PLATE_EXPORTS: "/plate-exports",
+  PLATE_EXPORT_BY_ID: (id: number) => `/plate-exports/${id}`,
+  PLATE_EXPORT_UPDATE: (id: number) => `/plate-exports/${id}`,
   PROOFING_UPDATE_FILE: (id: number) => `/proofing-orders/${id}/update-file`,
   PROOFING_UPDATE_IMAGE: (id: number) => `/proofing-orders/${id}/update-image`,
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
   PROOFING_COMPLETE: (id: number) => `/proofing-orders/${id}/complete`,
-  PROOFING_APPROVE: (id: number) => `/proofing-orders/${id}/approve`,
-  PROOFING_START_PRODUCTION: (id: number) =>
-    `/proofing-orders/${id}/start-production`,
-  PROOFING_COMPLETE_PRODUCTION: (id: number) =>
-    `/proofing-orders/${id}/complete-production`,
+  PROOFING_CANCEL: (id: number) => `/proofing-orders/${id}/cancel`,
+  PROOFING_PAUSE: (id: number) => `/proofing-orders/${id}/pause`,
   PROOFING_HAND_TO_PRODUCTION: (id: number) =>
     `/proofing-orders/${id}/hand-to-production`,
   PROOFING_AVAILABLE_QUANTITY: (designId: number) =>
@@ -171,6 +179,9 @@ export const API_SUFFIX = {
   PROOFING_ADD_DESIGNS: (id: number) => `/proofing-orders/${id}/designs`,
   PROOFING_REMOVE_DESIGN: (id: number, designId: number) =>
     `/proofing-orders/${id}/designs/${designId}`,
+  PROOFING_DESIGN_TYPE_SUMMARY:
+    "/proofing-orders/available-order-details/design-type-summary",
+  PROOFING_REJECT_DESIGN: "/proofing-orders/designs/reject",
 
   // ========== VENDORS ==========
   VENDORS: "/vendors",
@@ -181,37 +192,65 @@ export const API_SUFFIX = {
   DIES: "/dies",
   DIE_BY_ID: (id: number) => `/dies/${id}`,
   DIE_IMAGE: (id: number) => `/dies/${id}/image`,
+  DIE_UPDATE_STATUS: (id: number) => `/dies/${id}/status`,
+  DIES_RELATED: "/dies/related",
+  DIES_RELATED_BY_PROOFING_ORDER: (proofingOrderId: number) =>
+    `/dies/related/proofing-order/${proofingOrderId}`,
   DIE_FROM_DIE_EXPORT: (dieExportId: number) =>
     `/dies/from-die-export/${dieExportId}`,
-  DIE_SEARCH: "/dies/search",
+  // DIE_SEARCH: "/dies/search", // Endpoint removed - use regular DIES endpoint with q parameter
   DIES_BY_PROOFING_ORDER: (proofingOrderId: number) =>
     `/dies/proofing-order/${proofingOrderId}`,
   DIE_ASSIGN_TO_PROOFING_ORDER: (proofingOrderId: number) =>
     `/dies/proofing-order/${proofingOrderId}/assign`,
   DIE_REMOVE_FROM_PROOFING_ORDER: (proofingOrderId: number, dieId: number) =>
     `/dies/proofing-order/${proofingOrderId}/die/${dieId}`,
-  DIE_PROOFING_ORDER_DIE_RETURN: (proofingOrderDieId: number) =>
-    `/dies/proofing-order-die/${proofingOrderDieId}/return`,
-  DIE_PROOFING_ORDER_DIE_TAKE_OUT: (proofingOrderDieId: number) =>
-    `/dies/proofing-order-die/${proofingOrderDieId}/take-out`,
+  DIE_REPLACE: (proofingOrderId: number, currentDieId: number) =>
+    `/dies/proofing-order/${proofingOrderId}/die/${currentDieId}`,
+  DIE_PROOFING_ORDER_DIE_RETURN: (dieExportId: number) =>
+    `/dies/die-export/${dieExportId}/return`,
+  DIE_PROOFING_ORDER_DIE_TAKE_OUT: (dieExportId: number) =>
+    `/dies/die-export/${dieExportId}/take-out`,
 
   // ========== STOCK ==========
   STOCK_INS: "/stock-ins",
   STOCK_IN_BY_ID: (id: number) => `/stock-ins/${id}`,
   STOCK_IN_CANCEL: (id: number) => `/stock-ins/${id}/cancel`,
   STOCK_IN_COMPLETE: (id: number) => `/stock-ins/${id}/complete`,
+  STOCK_IN_FROM_VENDOR: "/stock-ins/from-vendor",
+  STOCK_IN_FROM_PRODUCTION: "/stock-ins/from-production",
+  STOCK_IN_FROM_DELIVERY_RETURN: "/stock-ins/from-delivery-return",
+  STOCK_IN_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>
+    `/stock-ins/by-delivery-note/${deliveryNoteId}`,
+  STOCK_IN_BY_PRODUCTION_ORDER: (productionOrderId: number) =>
+    `/stock-ins/by-production-order/${productionOrderId}`,
+  STOCK_IN_BY_VENDOR: (vendorId: number) =>
+    `/stock-ins/by-vendor/${vendorId}`,
+  STOCK_IN_SUMMARY: "/stock-ins/summary",
   STOCK_OUTS: "/stock-outs",
   STOCK_OUT_BY_ID: (id: number) => `/stock-outs/${id}`,
   STOCK_OUT_CANCEL: (id: number) => `/stock-outs/${id}/cancel`,
   STOCK_OUT_COMPLETE: (id: number) => `/stock-outs/${id}/complete`,
+  STOCK_OUT_FOR_PRODUCTION: "/stock-outs/for-production",
+  STOCK_OUT_FOR_DELIVERY: "/stock-outs/for-delivery",
+  STOCK_OUT_PROCESS_RETURN: "/stock-outs/process-return",
+  STOCK_OUT_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>
+    `/stock-outs/by-delivery-note/${deliveryNoteId}`,
+  STOCK_OUT_BY_PRODUCTION_ORDER: (productionOrderId: number) =>
+    `/stock-outs/by-production-order/${productionOrderId}`,
+  STOCK_OUT_RETURNABLE_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>
+    `/stock-outs/returnable/by-delivery-note/${deliveryNoteId}`,
+  STOCK_OUT_SUMMARY: "/stock-outs/summary",
 
   // ========== PRODUCTIONS ==========
-  PRODUCTIONS: "/productions",
-  PRODUCTION_BY_ID: (id: number) => `/productions/${id}`,
-  PRODUCTIONS_BY_PROOFING_ORDER: (proofingOrderId: number) =>
-    `/productions/proofing-order/${proofingOrderId}`,
-  PRODUCTION_START: (id: number) => `/productions/${id}/start`,
-  PRODUCTION_COMPLETE: (id: number) => `/productions/${id}/complete`,
+  PRODUCTION_ORDERS: "/production-orders",
+  PRODUCTION_ORDER_BY_ID: (id: number) => `/production-orders/${id}`,
+  PRODUCTION_ORDERS_BY_ORDER: (orderId: number) =>
+    `/production-orders/by-order/${orderId}`,
+  PRODUCTION_STEP_ASSIGN: (id: number) =>
+    `/production-orders/steps/${id}/assign`,
+  PRODUCTION_STEP_STATUS: (id: number) =>
+    `/production-orders/steps/${id}/status`,
 
   // ========== DELIVERY NOTES ==========
   DELIVERY_NOTES: "/delivery-notes",
@@ -220,23 +259,26 @@ export const API_SUFFIX = {
   DELIVERY_NOTE_EXPORT_PDF: (id: number) => `/delivery-notes/${id}/export-pdf`,
   DELIVERY_NOTE_RECREATE: "/delivery-notes/recreate",
   DELIVERY_NOTE_AVAILABLE_ORDERS: "/delivery-notes/available-orders",
+  DELIVERY_NOTE_AVAILABLE_ORDER_DETAILS: "/delivery-notes/available-order-details",
   DELIVERY_NOTE_FAILURE_REASONS: "/delivery-notes/failure-reasons",
   DELIVERY_NOTE_LINE_RESULT: (lineId: number) =>
     `/delivery-notes/lines/${lineId}/result`,
 
   // ========== CASH MANAGEMENT ==========
-  CASH_FUNDS: "/categories/cash-funds",
-  CASH_FUND_BY_ID: (id: number) => `/categories/cash-funds/${id}`,
   CASH_PAYMENTS: "/cash-payments",
   CASH_PAYMENT_BY_ID: (id: number) => `/cash-payments/${id}`,
   CASH_PAYMENT_APPROVE: (id: number) => `/cash-payments/${id}/approve`,
   CASH_PAYMENT_CANCEL: (id: number) => `/cash-payments/${id}/cancel`,
   CASH_PAYMENT_POST: (id: number) => `/cash-payments/${id}/post`,
+  CASH_PAYMENT_EXPORT_PDF: (id: number) => `/cash-payments/${id}/export-pdf`,
+  CASH_PAYMENT_EXPORT: "/cash-payments/export",
   CASH_RECEIPTS: "/cash-receipts",
   CASH_RECEIPT_BY_ID: (id: number) => `/cash-receipts/${id}`,
   CASH_RECEIPT_APPROVE: (id: number) => `/cash-receipts/${id}/approve`,
   CASH_RECEIPT_CANCEL: (id: number) => `/cash-receipts/${id}/cancel`,
   CASH_RECEIPT_POST: (id: number) => `/cash-receipts/${id}/post`,
+  CASH_RECEIPT_EXPORT_PDF: (id: number) => `/cash-receipts/${id}/export-pdf`,
+  CASH_RECEIPT_EXPORT: "/cash-receipts/export",
   CASH_BOOK: "/cash-book",
 
   // ========== BANK MANAGEMENT ==========
@@ -251,17 +293,54 @@ export const API_SUFFIX = {
   PAYMENT_METHODS: "/categories/payment-methods",
   PAYMENT_METHOD_BY_ID: (id: number) => `/categories/payment-methods/${id}`,
 
+  // ========== DEBT NOTIFICATIONS ==========
+  DEBT_NOTIFICATIONS: "/debt-notifications",
+  DEBT_NOTIFICATION_BY_ID: (id: number) => `/debt-notifications/${id}`,
+  DEBT_NOTIFICATION_PREVIEW: (id: number) => `/debt-notifications/${id}/preview`,
+
+  // ========== DEBT RECONCILIATIONS ==========
+  DEBT_RECONCILIATION_AP: "/debt-reconciliations/ap",
+  DEBT_RECONCILIATION_AP_DOWNLOAD: (id: number) =>
+    `/debt-reconciliations/ap/${id}/download`,
+  DEBT_RECONCILIATION_AR: "/debt-reconciliations/ar",
+  DEBT_RECONCILIATION_AR_DOWNLOAD: (id: number) =>
+    `/debt-reconciliations/ar/${id}/download`,
+
   // ========== AR/AP REPORTS ==========
   AR_SUMMARY: "/debt-reports/ar-summary",
   AR_SUMMARY_EXPORT: "/debt-reports/ar-summary/export",
   AR_DETAIL: "/debt-reports/ar-detail",
   AR_AGING: "/debt-reports/ar-aging",
   AR_AGING_EXPORT: "/debt-reports/ar-aging/export",
+  AR_AGING_EXPORT_PDF: "/debt-reports/ar-aging/export-pdf",
+  AR_BY_ITEM: "/debt-reports/ar-by-item",
+  AR_DETAIL_BY_INVOICE: "/debt-reports/ar-detail-by-invoice",
+  AR_DETAIL_LEDGER: (customerId: number) =>
+    `/debt-reports/ar-detail-ledger/${customerId}`,
+  AR_DETAIL_LEDGER_EXPORT: (customerId: number) =>
+    `/debt-reports/ar-detail-ledger/${customerId}/export`,
+  AR_OVERDUE: "/debt-reports/ar-overdue",
+  AR_OVERDUE_EXPORT: "/debt-reports/ar-overdue/export",
+  AR_SUMMARY_BY_BRANCH: "/debt-reports/ar-summary-by-branch",
+  AR_SUMMARY_BY_CUSTOMER_GROUP: "/debt-reports/ar-summary-by-customer-group",
+  AR_SUMMARY_EXPORT_PDF: "/debt-reports/ar-summary/export-pdf",
+  AR_UNDERDUE: "/debt-reports/ar-underdue",
   AP_SUMMARY: "/debt-reports/ap-summary",
   AP_SUMMARY_EXPORT: "/debt-reports/ap-summary/export",
   AP_DETAIL: "/debt-reports/ap-detail",
   AP_AGING: "/debt-reports/ap-aging",
   AP_AGING_EXPORT: "/debt-reports/ap-aging/export",
+  AP_BY_PURCHASE_INVOICE: "/debt-reports/ap-by-purchase-invoice",
+  AP_DETAIL_LEDGER: (vendorId: number) =>
+    `/debt-reports/ap-detail-ledger/${vendorId}`,
+  AP_DETAIL_LEDGER_EXPORT: (vendorId: number) =>
+    `/debt-reports/ap-detail-ledger/${vendorId}/export`,
+  AP_OVERDUE: "/debt-reports/ap-overdue",
+  CUSTOMER_RECONCILIATION_EXPORT: "/debt-reports/customer-reconciliation/export",
+  CUSTOMER_RECONCILIATION_EXPORT_PDF:
+    "/debt-reports/customer-reconciliation/export-pdf",
+  CUSTOMER_RECONCILIATION_EXPORT_WORD:
+    "/debt-reports/customer-reconciliation/export-word",
   COLLECTION_SCHEDULE: "/debt-reports/collection-schedule",
 
   // ========== INVENTORY REPORTS ==========
@@ -278,11 +357,27 @@ export const API_SUFFIX = {
   SALES_BY_DIMENSION: "/sales-reports/by-dimension",
   TOP_PRODUCTS: "/sales-reports/top-products",
   RETURNS_DISCOUNTS: "/sales-reports/returns-discounts",
-  ORDER_DRILL_DOWN: "/sales-reports/orders-by-customer",
+  ORDER_DRILL_DOWN: (customerId: number) =>
+    `/sales-reports/orders-by-customer/${customerId}`,
   ORDER_DRILL_DOWN_BY_PERIOD: "/sales-reports/orders-by-period",
+  SALES_INVOICE_LIST_EXPORT: "/sales-reports/invoice-list/export",
+  SALES_INVOICE_LIST_EXPORT_PDF: "/sales-reports/invoice-list/export-pdf",
+  SALES_DETAIL_LEDGER: "/sales-reports/sales-detail-ledger",
+  SALES_DETAIL_LEDGER_EXPORT: "/sales-reports/sales-detail-ledger/export",
+  SALES_DETAIL_LEDGER_EXPORT_PDF:
+    "/sales-reports/sales-detail-ledger/export-pdf",
+  SALES_SUMMARY: "/sales-reports/sales-summary",
+  SALES_SUMMARY_EXPORT: "/sales-reports/sales-summary/export",
+  SALES_SUMMARY_EXPORT_PDF: "/sales-reports/sales-summary/export-pdf",
 
   // ========== REPORT EXPORTS ==========
   REPORT_EXPORTS: "/report-exports",
   REPORT_EXPORT_BY_ID: (id: number) => `/report-exports/${id}`,
   REPORT_EXPORT_DOWNLOAD: (id: number) => `/report-exports/${id}/download`,
+
+  // ========== VENDORS (EXTRA) ==========
+  VENDORS_PLATE_COUNT_OPTIONS: "/vendors/plate-count-options",
+  // ========== SHARED ADDRESSES ==========
+  SHARED_ADDRESSES: "/shared-addresses",
+  SHARED_ADDRESS_BY_ID: (id: number) => `/shared-addresses/${id}`,
 };

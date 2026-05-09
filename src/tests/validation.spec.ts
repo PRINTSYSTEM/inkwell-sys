@@ -7,8 +7,6 @@ import {
   CreateDesignRequestSchema,
   CreateOrderRequestSchema,
   CreateOrderWithExistingDesignsRequestSchema,
-  CreateProofingOrderRequestSchema,
-  CreateProofingOrderFromDesignsRequestSchema,
 } from "@/Schema";
 import { ChangePasswordRequestSchema } from "@/Schema/auth.schema";
 
@@ -137,23 +135,9 @@ export async function runValidationTests() {
     designs: [],
   });
 
-  // Proofing Order
-  expectPass(CreateProofingOrderRequestSchema, {
-    materialTypeId: 1,
-    designIds: [1, 2],
-  });
-  expectFail(CreateProofingOrderRequestSchema, {
-    materialTypeId: 1,
-    designIds: [],
-  });
-
-  // Proofing from designs
-  expectPass(CreateProofingOrderFromDesignsRequestSchema, {
-    designIds: [1],
-  });
-  expectFail(CreateProofingOrderFromDesignsRequestSchema, {
-    designIds: [],
-  });
+  // Note: CreateProofingOrderFromDesignsRequestSchema was removed from the API
+  // The endpoint /proofing-orders/from-designs was removed
+  // Use the two-step approach: create proofing order, then add designs
 
   // Change password
   expectPass(ChangePasswordRequestSchema, {

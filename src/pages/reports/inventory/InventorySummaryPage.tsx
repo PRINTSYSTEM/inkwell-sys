@@ -49,8 +49,7 @@ export default function InventorySummaryPage() {
     pageNumber: currentPage,
     pageSize: itemsPerPage,
     search: searchQuery || undefined,
-    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
-    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    asOfDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
   });
 
   const totalValue = summaryData?.items?.reduce((sum, item) => sum + (item.totalValue || 0), 0) || 0;

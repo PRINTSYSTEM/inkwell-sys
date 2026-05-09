@@ -187,9 +187,63 @@ export type FrequentProductResponse = z.infer<
   typeof FrequentProductResponseSchema
 >;
 
+
 // ===== CustomerStatisticsResponse =====
 export const CustomerStatisticsResponseSchema =
   GenCustomerStatisticsResponseSchema.passthrough();
 export type CustomerStatisticsResponse = z.infer<
   typeof CustomerStatisticsResponseSchema
 >;
+
+// ===== CustomerAddress =====
+// Địa chỉ giao hàng của từng khách hàng (Sổ địa chỉ)
+export const CustomerAddressSchema = z
+  .object({
+    id: z.number().int(),
+    customerId: z.number().int().optional(),
+    label: z.string().nullable().optional(),
+    recipientName: z.string().nullable().optional(),
+    recipientPhone: z.string().nullable().optional(),
+    address: z.string().nullable().optional(),
+    isDefault: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().nullable().optional(),
+  })
+  .passthrough();
+export type CustomerAddress = z.infer<typeof CustomerAddressSchema>;
+
+export const CustomerAddressResponsePaginateSchema = z.object({
+  size: z.number().int().optional(),
+  page: z.number().int().optional(),
+  total: z.number().int().optional(),
+  totalPages: z.number().int().optional(),
+  items: z.array(CustomerAddressSchema).nullable().optional(),
+});
+export type CustomerAddressResponsePaginate = z.infer<
+  typeof CustomerAddressResponsePaginateSchema
+>;
+
+export const CreateCustomerAddressRequestSchema = z.object({
+  label: z.string().min(1, "Nhãn là bắt buộc"),
+  recipientName: z.string().optional().nullable(),
+  recipientPhone: z.string().optional().nullable(),
+  address: z.string().min(1, "Địa chỉ là bắt buộc"),
+  isDefault: z.boolean().optional().default(false),
+});
+export type CreateCustomerAddressRequest = z.infer<
+  typeof CreateCustomerAddressRequestSchema
+>;
+
+export const UpdateCustomerAddressRequestSchema = z.object({
+  label: z.string().optional().nullable(),
+  recipientName: z.string().optional().nullable(),
+  recipientPhone: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  isDefault: z.boolean().optional().nullable(),
+  isActive: z.boolean().optional().nullable(),
+});
+export type UpdateCustomerAddressRequest = z.infer<
+  typeof UpdateCustomerAddressRequestSchema
+>;
+

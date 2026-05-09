@@ -1,5 +1,5 @@
 // src/hooks/use-delivery-note.ts
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
@@ -11,20 +11,19 @@ import type {
   RecreateDeliveryNoteRequest,
   CreateDeliveryNoteRequest,
   OrderForDeliveryResponse,
+  OrderDetailForDeliveryResponse,
   FailureReasonResponse,
   DeliveryNoteLineResponse,
   UpdateDeliveryLineResultRequest,
 } from "@/Schema/delivery-note.schema";
+import type {
+  DeliveryNoteListParams,
+  DeliveryNoteFailureReasonsListParams,
+} from "@/Schema";
 
 // ================== GET DELIVERY NOTES ==================
 // GET /delivery-notes
-export interface DeliveryNotesParams {
-  pageNumber?: number;
-  pageSize?: number;
-  status?: string;
-}
-
-export const useDeliveryNotes = (params?: DeliveryNotesParams) => {
+export const useDeliveryNotes = (params?: DeliveryNoteListParams) => {
   return useQuery({
     queryKey: ["deliveryNotes", params],
     queryFn: async () => {
@@ -57,30 +56,37 @@ export const useDeliveryNote = (id: number | null, enabled: boolean = true) => {
 
 // ================== UPDATE DELIVERY NOTE STATUS ==================
 // PUT /delivery-notes/{id}/status
-export const useUpdateDeliveryNoteStatus = () => {
+export const useUpdateDeliveryNoteStatus = (
+  options?: UseMutationOptions<DeliveryNoteResponse, Error, { id: number; data: UpdateDeliveryStatusRequest }>
+) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: UpdateDeliveryStatusRequest;
-    }) => {
+  return useMutation<DeliveryNoteResponse, Error, { id: number; data: UpdateDeliveryStatusRequest }>({
+    ...options,
+    mutationFn: async ({ id, data }) => {
       const res = await apiRequest.put<DeliveryNoteResponse>(
         API_SUFFIX.DELIVERY_NOTE_STATUS(id),
         data
       );
       return res.data;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["deliveryNote", variables.id] });
+    onSuccess: (updatedData, variables, context) => {
+      const deliveryNoteId = Number(variables.id);
+      
+      // Update the cache for the specific delivery note immediately
+      queryClient.setQueryData(["deliveryNote", deliveryNoteId], updatedData);
+      
+      // Also invalidate using the number ID and the general lists to be safe
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote", deliveryNoteId] });
       queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
-      toast.success("Cập nhật trạng thái phiếu giao hàng thành công");
+      
+      if (options?.onSuccess) options.onSuccess(updatedData, variables, context as any);
     },
-    onError: (error: Error) => {
-      toast.error(`Lỗi: ${error.message}`);
+    onError: (error: Error, variables, context) => {
+      if (options?.onError) options.onError(error, variables, context as any);
+    },
+    onSettled: (data, error, variables, context) => {
+      if (options?.onSettled) options.onSettled(data as any, error as any, variables as any, context as any);
     },
   });
 };
@@ -161,37 +167,13 @@ export const useRecreateDeliveryNote = () => {
   });
 };
 
-// ================== GET AVAILABLE ORDERS FOR DELIVERY ==================
-// GET /delivery-notes/available-orders
-export interface AvailableOrdersForDeliveryParams {
-  customerId?: number;
-}
 
-export const useAvailableOrdersForDelivery = (
-  params?: AvailableOrdersForDeliveryParams
-) => {
-  return useQuery({
-    queryKey: ["availableOrdersForDelivery", params],
-    queryFn: async () => {
-      const normalizedParams = normalizeParams(
-        (params ?? {}) as Record<string, unknown>
-      );
-      const res = await apiRequest.get<OrderForDeliveryResponse[]>(
-        API_SUFFIX.DELIVERY_NOTE_AVAILABLE_ORDERS,
-        { params: normalizedParams }
-      );
-      return res.data;
-    },
-  });
-};
 
 // ================== GET FAILURE REASONS ==================
 // GET /delivery-notes/failure-reasons
-export interface FailureReasonsParams {
-  allowRedeliveryOnly?: boolean;
-}
-
-export const useFailureReasons = (params?: FailureReasonsParams) => {
+export const useFailureReasons = (
+  params?: DeliveryNoteFailureReasonsListParams
+) => {
   return useQuery({
     queryKey: ["failureReasons", params],
     queryFn: async () => {
@@ -237,3 +219,24 @@ export const useUpdateDeliveryLineResult = () => {
   });
 };
 
+// ================== GET AVAILABLE ORDERS FOR DELIVERY ==================
+// GET /delivery-notes/available-orders
+export const useAvailableOrdersForDelivery = (
+  params?: { customerId?: number },
+  options?: { enabled?: boolean }
+) => {
+  return useQuery({
+    queryKey: ["availableOrdersForDelivery", params],
+    enabled: options?.enabled ?? true,
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<OrderForDeliveryResponse[]>(
+        API_SUFFIX.DELIVERY_NOTE_AVAILABLE_ORDERS,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+  });
+};

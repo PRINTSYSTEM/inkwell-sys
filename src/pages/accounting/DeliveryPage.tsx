@@ -29,13 +29,24 @@ const calculateDeliveryStats = (orders: OrderResponse[]) => {
 };
 
 export default function DeliveryPage() {
+  // Build params for API
+  const ordersParams = useMemo(() => {
+    return {
+      pageNumber: 1,
+      pageSize: 100, // Reduced from 1000 - enough for stats calculation
+      filterType: "delivery",
+      status: "",
+      orderCode: "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, []);
+
   // Fetch orders with reasonable page size for stats calculation
   // We only need enough data to get accurate stats, not all orders
-  const { data: allOrdersData } = useOrdersForAccounting({
-    pageNumber: 1,
-    pageSize: 100, // Reduced from 1000 - enough for stats calculation
-    filterType: "delivery",
-  });
+  const { data: allOrdersData } = useOrdersForAccounting(ordersParams);
 
   // Calculate summary stats from orders
   const summaryStats = useMemo(() => {
@@ -60,58 +71,56 @@ export default function DeliveryPage() {
       </Helmet>
 
       <div className="h-full flex flex-col overflow-hidden">
-        <div className="container mx-auto px-4 max-w-7xl">
+        <div className="container mx-auto px-4 max-w-7xl h-full flex flex-col">
           {/* Header */}
-          <div className="mb-4 shrink-0 pt-6">
+          <div className="mb-3 shrink-0 pt-4">
             <h1 className="text-2xl font-bold tracking-tight">Giao hàng</h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Quản lý giao hàng và xuất phiếu giao hàng cho đơn hàng đã hoàn
               thành sản xuất
             </p>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 shrink-0">
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-warning/10">
-                  <Package className="h-5 w-5 text-warning" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3 shrink-0">
+            <div className="rounded-lg border bg-card p-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-warning/10">
+                  <Package className="h-4 w-4 text-warning" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Sẵn sàng giao</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xs text-muted-foreground">Sẵn sàng giao</p>
+                  <p className="text-xl font-bold">
                     {summaryStats.readyForDelivery}
                   </p>
                 </div>
               </div>
             </div>
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-info/10">
-                  <Truck className="h-5 w-5 text-info" />
+            <div className="rounded-lg border bg-card p-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-info/10">
+                  <Truck className="h-4 w-4 text-info" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Đang giao</p>
-                  <p className="text-2xl font-bold">
-                    {summaryStats.delivering}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Đang giao</p>
+                  <p className="text-xl font-bold">{summaryStats.delivering}</p>
                 </div>
               </div>
             </div>
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-success/10">
-                  <Clock className="h-5 w-5 text-success" />
+            <div className="rounded-lg border bg-card p-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-success/10">
+                  <Clock className="h-4 w-4 text-success" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Đã giao</p>
-                  <p className="text-2xl font-bold">{summaryStats.delivered}</p>
+                  <p className="text-xs text-muted-foreground">Đã giao</p>
+                  <p className="text-xl font-bold">{summaryStats.delivered}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0 pb-6">
+          <div className="flex-1 flex flex-col min-h-0 pb-4">
             <DeliveryList />
           </div>
         </div>

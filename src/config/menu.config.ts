@@ -40,6 +40,7 @@ import {
   AlertTriangle,
   Activity,
   FileSpreadsheet,
+  MapPin,
 } from "lucide-react";
 import type { UserRole } from "@/Schema";
 import { ROLE, ROUTE_PATHS } from "@/constants";
@@ -72,20 +73,20 @@ export const MENU_ITEMS: MenuItem[] = [
   // ==== Phòng ban thiết kế ====
   {
     id: "design-dept",
-    title: "Phòng ban thiết kế",
+    title: "Thiết kế",
     icon: Palette,
     allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN, ROLE.DESIGN_LEAD],
     children: [
       {
         id: "design-staff",
-        title: "Tất cả nhân viên",
+        title: "Nhân viên thiết kế",
         icon: User,
         path: ROUTE_PATHS.DESIGN.MANAGEMENT,
         allowedRoles: [ROLE.ADMIN, ROLE.DESIGN_LEAD, ROLE.MANAGER],
       },
       {
         id: "design-all",
-        title: "Tất cả thiết kế",
+        title: "Danh sách thiết kế",
         icon: Eye,
         path: ROUTE_PATHS.DESIGN.ALL,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD],
@@ -100,10 +101,48 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
+  // ==== Sale (Bán hàng) ====
+  {
+    id: "sales",
+    title: "Bán hàng",
+    icon: ShoppingCart,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
+    children: [
+      {
+        id: "sale-orders",
+        title: "Đơn hàng( Báo giá)",
+        icon: FileText,
+        path: ROUTE_PATHS.ORDERS.SALE_ORDERS,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
+      },
+      {
+        id: "sale-quotes",
+        title: "Báo giá cần xử lí",
+        icon: FileText,
+        path: ROUTE_PATHS.SALES.QUOTE,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
+      },
+      {
+        id: "sale-receipts",
+        title: "Quản lí phiếu thu",
+        icon: Banknote,
+        path: ROUTE_PATHS.ACCOUNTING.CASH_RECEIPTS,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
+      },
+      {
+        id: "sale-design-lookup",
+        title: "Tra cứu thiết kế",
+        icon: PackageSearch,
+        path: ROUTE_PATHS.DESIGN.SALE_LOOKUP,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
+      },
+    ],
+  },
+
   // ==== Khách hàng & Đơn hàng ====
   {
     id: "customer",
-    title: "Khách hàng",
+    title: "Quản lý khách hàng",
     icon: Users,
     allowedRoles: [
       ROLE.ADMIN,
@@ -114,12 +153,13 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.DESIGN_LEAD,
       ROLE.PRODUCTION,
       ROLE.PRODUCTION_LEAD,
+      ROLE.SALE,
     ],
     path: ROUTE_PATHS.CUSTOMERS.ROOT,
   },
   {
     id: "orders",
-    title: "Đơn hàng",
+    title: "Đơn hàng ( Tổng quan)",
     icon: FileText,
     path: ROUTE_PATHS.ORDERS.ROOT,
     allowedRoles: [
@@ -131,10 +171,11 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.PRODUCTION_LEAD,
       ROLE.DESIGN,
       ROLE.DESIGN_LEAD,
+      ROLE.SALE,
     ],
   },
 
-  // ==== Sản xuất ====
+  // ==== Bình bài ====
   {
     id: "proofing",
     title: "Bình bài",
@@ -142,26 +183,13 @@ export const MENU_ITEMS: MenuItem[] = [
     allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
     children: [
       {
-        id: "proofing",
+        id: "proofing-list",
         title: "Danh sách bình bài",
         icon: Layers,
         path: ROUTE_PATHS.PROOFING.ROOT,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
       },
-      // {
-      //   id: "proofing-create-print-order",
-      //   title: "Tạo mã bài",
-      //   icon: Layers,
-      //   path: ROUTE_PATHS.PROOFING.CREATE,
-      //   allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      // },
-      {
-        id: "dies-management",
-        title: "Quản lý khuôn bế",
-        icon: Layers,
-        path: ROUTE_PATHS.DIES.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      },
+     
     ],
   },
   {
@@ -176,8 +204,8 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     children: [
       {
-        id: "production",
-        title: "Danh sách sản xuất",
+        id: "production-process",
+        title: "Quy trình sản xuất",
         icon: Layers,
         path: ROUTE_PATHS.PRODUCTION.ROOT,
         allowedRoles: [
@@ -186,6 +214,20 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.PRODUCTION,
           ROLE.PRODUCTION_LEAD,
         ],
+      },
+       {
+        id: "dies-management",
+        title: "Danh sách khuôn bế",
+        icon: Layers,
+        path: ROUTE_PATHS.DIES.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
+      {
+        id: "plate-exports",
+        title: "Danh sách xuất kẽm",
+        icon: Package,
+        path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
       },
     ],
   },
@@ -279,6 +321,13 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ADMIN.USERS,
         allowedRoles: [ROLE.ADMIN],
       },
+      {
+        id: "shared-addresses",
+        title: "Địa chỉ giao hàng",
+        icon: MapPin,
+        path: ROUTE_PATHS.ADMIN.SHARED_ADDRESSES,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
       // {
       //   id: "admin-roles",
       //   title: "Quản lý vai trò",
@@ -332,18 +381,6 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
-      {
-        id: "invoices-list",
-        title: "Danh sách hóa đơn",
-        icon: FileText,
-        path: ROUTE_PATHS.INVOICES.ROOT,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
       // {
       //   id: "accounting-delivery",
       //   title: "Giao hàng",
@@ -358,7 +395,7 @@ export const MENU_ITEMS: MenuItem[] = [
       // },
       {
         id: "delivery-notes-list",
-        title: "Danh sách phiếu giao hàng",
+        title: "Phiếu giao hàng",
         icon: Truck,
         path: ROUTE_PATHS.DELIVERY_NOTES.ROOT,
         allowedRoles: [
@@ -380,12 +417,18 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
-      // Cash Management
       {
-        id: "cash-funds",
-        title: "Quỹ tiền mặt",
-        icon: Wallet,
-        path: ROUTE_PATHS.ACCOUNTING.CASH_FUNDS,
+        id: "accounting-cost-pricing",
+        title: "Giá thành",
+        icon: Calculator,
+        path: ROUTE_PATHS.ACCOUNTING.COST_PRICING,
+        allowedRoles: [ROLE.ADMIN, ROLE.ACCOUNTING, ROLE.ACCOUNTING_LEAD],
+      },
+      {
+        id: "accounting-vendors",
+        title: "Nhà cung cấp",
+        icon: Building2,
+        path: ROUTE_PATHS.VENDORS.ROOT,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,
@@ -393,6 +436,20 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
+      // Cash Management
+      // Cash fund endpoints removed from API
+      // {
+      //   id: "cash-funds",
+      //   title: "Quỹ tiền mặt",
+      //   icon: Wallet,
+      //   path: ROUTE_PATHS.ACCOUNTING.CASH_FUNDS,
+      //   allowedRoles: [
+      //     ROLE.ADMIN,
+      //     ROLE.MANAGER,
+      //     ROLE.ACCOUNTING,
+      //     ROLE.ACCOUNTING_LEAD,
+      //   ],
+      // },
       {
         id: "cash-payments",
         title: "Phiếu chi",
@@ -435,18 +492,6 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Tài khoản ngân hàng",
         icon: Landmark,
         path: ROUTE_PATHS.ACCOUNTING.BANK_ACCOUNTS,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "bank-ledger",
-        title: "Sổ ngân hàng",
-        icon: BookOpen,
-        path: ROUTE_PATHS.ACCOUNTING.BANK_LEDGER,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,
@@ -579,6 +624,7 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.ACCOUNTING_LEAD,
       ROLE.PRODUCTION_LEAD,
       ROLE.DESIGN_LEAD,
+      ROLE.SALE,
     ],
     children: [
       // Inventory Reports
@@ -626,42 +672,72 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Doanh số theo kỳ",
         icon: LineChart,
         path: ROUTE_PATHS.REPORTS.SALES.BY_PERIOD,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "sales-by-customer",
         title: "Doanh số theo khách hàng",
         icon: Users,
         path: ROUTE_PATHS.REPORTS.SALES.BY_CUSTOMER,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "sales-by-dimension",
         title: "Doanh số theo chiều",
         icon: PieChart,
         path: ROUTE_PATHS.REPORTS.SALES.BY_DIMENSION,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "top-products",
         title: "Sản phẩm bán chạy",
         icon: ShoppingCart,
         path: ROUTE_PATHS.REPORTS.SALES.TOP_PRODUCTS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "returns-discounts",
         title: "Trả hàng & giảm giá",
         icon: FileText,
         path: ROUTE_PATHS.REPORTS.SALES.RETURNS_DISCOUNTS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       {
         id: "order-drill-down",
         title: "Chi tiết đơn hàng",
         icon: FileSpreadsheet,
         path: ROUTE_PATHS.REPORTS.SALES.ORDER_DRILL_DOWN,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
       // Report Exports
       {
@@ -669,7 +745,12 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Báo cáo đã xuất",
         icon: FileSpreadsheet,
         path: ROUTE_PATHS.REPORTS.EXPORTS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING_LEAD],
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
+        ],
       },
     ],
   },

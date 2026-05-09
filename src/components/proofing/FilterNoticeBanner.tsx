@@ -12,7 +12,7 @@ export function FilterNoticeBanner({
   onClear,
 }: FilterNoticeBannerProps) {
   return (
-    <Alert className="bg-primary/5 border-primary/20">
+    <Alert className="bg-primary/5 border-primary/20 relative">
       <Search className="h-4 w-4" />
       <AlertDescription className="flex items-center justify-between w-full">
         <span>

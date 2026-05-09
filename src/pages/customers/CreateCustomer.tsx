@@ -5,8 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   useCreateCustomer,
   useFormValidation,
-  useCheckDuplicateCompany,
+  useAuth,
+  // useCheckDuplicateCompany, // DEPRECATED: Endpoint not found in OpenAPI
 } from "@/hooks";
+import { ROLE } from "@/constants";
 import { CreateCustomerRequest, CreateCustomerRequestSchema } from "@/Schema";
 import { FormFieldError } from "@/components/ui/form-field-error";
 import {
@@ -29,6 +31,12 @@ import { useNavigate } from "react-router-dom";
 
 export default function CreateCustomer() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canEditDebt =
+    user?.role === ROLE.ACCOUNTING ||
+    user?.role === ROLE.ACCOUNTING_LEAD ||
+    user?.role === ROLE.ADMIN;
+
   const [form, setForm] = useState<CreateCustomerRequest>({
     name: "",
     companyName: "",
@@ -37,14 +45,16 @@ export default function CreateCustomer() {
     phone: "",
     email: "",
     address: "",
+    scrapRate: 0.005,
     type: "company",
     maxDebt: 50000000,
   });
 
   const [generatedCode, setGeneratedCode] = useState("");
   const [duplicateCompany, setDuplicateCompany] = useState<string | null>(null);
-  const { check: checkDuplicate, loading: checkingDuplicate } =
-    useCheckDuplicateCompany();
+  // DEPRECATED: Endpoint not found in OpenAPI
+  // const { check: checkDuplicate, loading: checkingDuplicate } =
+  //   useCheckDuplicateCompany();
   const {
     mutateAsync: createCustomer,
     isPending,
@@ -89,18 +99,19 @@ export default function CreateCustomer() {
   const handleBlur = async (field: keyof CreateCustomerRequest) => {
     touchField(field as string);
 
-    if (field === "companyName" && form.companyName?.trim()) {
-      try {
-        const isDuplicate = await checkDuplicate(form.companyName.trim());
-        if (isDuplicate) {
-          setDuplicateCompany(form.companyName.trim());
-        } else {
-          setDuplicateCompany(null);
-        }
-      } catch (err) {
-        console.error("Error checking duplicate company:", err);
-      }
-    }
+    // DEPRECATED: Endpoint not found in OpenAPI
+    // if (field === "companyName" && form.companyName?.trim()) {
+    //   try {
+    //     const isDuplicate = await checkDuplicate(form.companyName.trim());
+    //     if (isDuplicate) {
+    //       setDuplicateCompany(form.companyName.trim());
+    //     } else {
+    //       setDuplicateCompany(null);
+    //     }
+    //   } catch (err) {
+    //     console.error("Error checking duplicate company:", err);
+    //   }
+    // }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -116,8 +127,13 @@ export default function CreateCustomer() {
       taxCode: form.taxCode?.trim() || undefined,
       address: form.address?.trim() || undefined,
       type: form.type || undefined,
-      currentDebt: form.currentDebt,
-      maxDebt: Number(form.maxDebt) || 0,
+      // Ensure scrapRate is sent to API. Default to 0.005 when not provided.
+      scrapRate: form.scrapRate ?? 0.005,
+      // Only send debt fields if user has permission
+      ...(canEditDebt && {
+        currentDebt: form.currentDebt,
+        maxDebt: Number(form.maxDebt) || 0,
+      }),
     };
 
     // Validate and parse form data
@@ -132,6 +148,8 @@ export default function CreateCustomer() {
     }
 
     try {
+      // Debug: log payload to verify scrapRate value sent
+      console.debug("CreateCustomer payload:", payload);
       await createCustomer(payload);
       setTimeout(() => navigate("/customers"), 2000);
     } catch (error) {
@@ -274,21 +292,25 @@ export default function CreateCustomer() {
                       }
                       onBlur={() => handleBlur("companyName")}
                       className={
-                        duplicateCompany === form.companyName?.trim() &&
-                        duplicateCompany !== null
-                          ? "border-amber-500 bg-amber-50/50"
-                          : getError("companyName")
+                        // DEPRECATED: duplicateCompany check removed
+                        // duplicateCompany === form.companyName?.trim() &&
+                        // duplicateCompany !== null
+                        //   ? "border-amber-500 bg-amber-50/50"
+                        //   : 
+                        getError("companyName")
                           ? "border-destructive"
                           : ""
                       }
                     />
-                    {checkingDuplicate && (
+                    {/* DEPRECATED: Endpoint not found in OpenAPI */}
+                  {/* {checkingDuplicate && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                       </div>
-                    )}
+                    )} */}
                   </div>
-                  {duplicateCompany === form.companyName?.trim() &&
+                  {/* DEPRECATED: Endpoint not found in OpenAPI */}
+                  {/* {duplicateCompany === form.companyName?.trim() &&
                     duplicateCompany !== null && (
                       <div className="flex items-center gap-2 text-amber-600 text-xs mt-1 animate-in fade-in slide-in-from-top-1">
                         <AlertCircle className="h-3.5 w-3.5" />
@@ -296,7 +318,7 @@ export default function CreateCustomer() {
                           Tên công ty "{duplicateCompany}" đã có trong hệ thống!
                         </span>
                       </div>
-                    )}
+                    )} */}
                   <FormFieldError error={getError("companyName")} />
                 </div>
 
@@ -483,50 +505,52 @@ export default function CreateCustomer() {
                 </p>
               </div>
               <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                Mã tự động tạo từ tên người đại diện
+                Mã tự động tạo từ tên công ty
               </p>
             </div>
 
-            {/* Credit Limit */}
-            <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-6 border-b">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Hạn mức công nợ</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Giới hạn tín dụng
-                    </p>
+            {/* Credit Limit - Only show if user has permission */}
+            {canEditDebt && (
+              <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-6 border-b">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Hạn mức công nợ</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Giới hạn tín dụng
+                      </p>
+                    </div>
                   </div>
                 </div>
+                <div className="p-6 space-y-2">
+                  <Label htmlFor="maxDebt" className="text-sm font-medium">
+                    Số tiền (VNĐ)
+                  </Label>
+                  <Input
+                    id="maxDebt"
+                    type="number"
+                    placeholder="50000000"
+                    value={form.maxDebt}
+                    onChange={(e) =>
+                      handleInput("maxDebt", Number(e.target.value))
+                    }
+                    onBlur={() => handleBlur("maxDebt")}
+                    className={`text-lg font-semibold ${
+                      getError("maxDebt") ? "border-destructive" : ""
+                    }`}
+                  />
+                  <FormFieldError error={getError("maxDebt")} />
+                  <p className="text-xs text-muted-foreground">
+                    ≈{" "}
+                    {new Intl.NumberFormat("vi-VN").format(Number(form.maxDebt))}{" "}
+                    đ
+                  </p>
+                </div>
               </div>
-              <div className="p-6 space-y-2">
-                <Label htmlFor="maxDebt" className="text-sm font-medium">
-                  Số tiền (VNĐ)
-                </Label>
-                <Input
-                  id="maxDebt"
-                  type="number"
-                  placeholder="50000000"
-                  value={form.maxDebt}
-                  onChange={(e) =>
-                    handleInput("maxDebt", Number(e.target.value))
-                  }
-                  onBlur={() => handleBlur("maxDebt")}
-                  className={`text-lg font-semibold ${
-                    getError("maxDebt") ? "border-destructive" : ""
-                  }`}
-                />
-                <FormFieldError error={getError("maxDebt")} />
-                <p className="text-xs text-muted-foreground">
-                  ≈{" "}
-                  {new Intl.NumberFormat("vi-VN").format(Number(form.maxDebt))}{" "}
-                  đ
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* Submit Button */}
             <Button

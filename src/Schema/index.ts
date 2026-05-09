@@ -7,6 +7,7 @@ export * from "./notification.schema";
 export * from "./design.schema";
 export * from "./design-type.schema";
 export * from "./material-type.schema";
+export * from "./material.schema";
 export * from "./order.schema";
 export * from "./proofing-order.schema";
 export * from "./production.schema";
@@ -22,7 +23,9 @@ export * from "./die-export.schema";
 export * from "./die.schema";
 export * from "./vendor.schema";
 export * from "./stock.schema";
+export * from "./shared-address.schema";
 export * from "./report.schema";
+export * from "./generated-form-body";
 
 // Re-export zod for convenience
 import { z } from "zod";

@@ -38,9 +38,30 @@ import {
   Palette,
   Plus,
   Trash2,
+  ChevronsUpDown,
+  History,
+  FileCheck,
+  ChevronDown,
+  UserPlus,
+  RefreshCw,
+  Search,
+  Check,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -97,6 +118,7 @@ import type {
   UserRole,
   ProofingOrderResponse,
   OrderDetailResponse,
+  UpdateOrderRequest,
   UpdateOrderForAccountingRequest,
   UpdateOrderDetailForAccountingRequest,
 } from "@/Schema";
@@ -111,9 +133,16 @@ import {
   useAddDesignToOrder,
   useRemoveOrderDetail,
   useDesigns,
+  useCustomers,
+  customerApi,
+  useOrders,
+  orderCrudApi,
+  useProductionOrdersByOrder,
 } from "@/hooks";
+import { useExportOrderPDF } from "@/hooks/use-order";
+import { useSharedAddresses } from "@/hooks/use-shared-address";
 import { useQueryClient } from "@tanstack/react-query";
-import { ROLE } from "@/constants";
+import { ROLE, ROUTE_PATHS } from "@/constants";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { toast } from "sonner";
 export default function OrderDetailPage() {
@@ -125,6 +154,12 @@ export default function OrderDetailPage() {
 
   const role = user?.role as UserRole;
 
+  const { data: sharedAddressesData } = useSharedAddresses({
+    pageNumber: 1,
+    pageSize: 1000,
+  });
+  const sharedAddresses = sharedAddressesData?.items || [];
+
   // Dialog states
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -134,9 +169,8 @@ export default function OrderDetailPage() {
     useState(false);
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
-  const [cardEditValues, setCardEditValues] = useState<
-    Record<string, string | number | null>
-  >({});
+  const [cardEditValues, setCardEditValues] = useState<any>({});
+
   // OrderDetail item-level editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -144,6 +178,17 @@ export default function OrderDetailPage() {
   const [orderDetailEditValues, setOrderDetailEditValues] = useState<
     Record<string, string | number | null>
   >({});
+  // Customer search logic (by Customers)
+  const [isChangingCustomer, setIsChangingCustomer] = useState(false);
+  const [customerComboOpen, setCustomerComboOpen] = useState(false);
+  const [customerSearchText, setCustomerSearchText] = useState("");
+  const { data: searchCustomersData, isLoading: loadingSearchCustomers } =
+    useCustomers({
+      pageNumber: 1,
+      pageSize: 20,
+      search: customerSearchText,
+    });
+  const searchCustomersList = searchCustomersData?.items || [];
 
   const [viewingImage, setViewingImage] = useState<{
     url: string;
@@ -159,27 +204,34 @@ export default function OrderDetailPage() {
 
   const canViewPrice = role !== ROLE.DESIGN && role !== ROLE.DESIGN_LEAD;
   const canViewDesigner =
-    role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD || role === ROLE.ADMIN;
+    role === ROLE.DESIGN ||
+    role === ROLE.DESIGN_LEAD ||
+    role === ROLE.ADMIN ||
+    role === ROLE.SALE;
 
   const canExportExcel =
     role === ROLE.ACCOUNTING_LEAD ||
     role === ROLE.ADMIN ||
+    role === ROLE.SALE ||
     role === ROLE.ACCOUNTING;
 
   const canUpdateRecipient =
     role === ROLE.ACCOUNTING ||
     role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.SALE ||
     role === ROLE.ADMIN;
 
   const canUpdateOrderForAccounting =
     role === ROLE.ACCOUNTING ||
     role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.SALE ||
     role === ROLE.ADMIN;
 
   // Can view payment step in flow diagram: ACCOUNTING, ACCOUNTING_LEAD, or ADMIN
   const canViewPayment =
     role === ROLE.ACCOUNTING ||
     role === ROLE.ACCOUNTING_LEAD ||
+    role === ROLE.SALE ||
     role === ROLE.ADMIN;
 
   // Can change designer: DESIGN_LEAD or ADMIN
@@ -209,16 +261,27 @@ export default function OrderDetailPage() {
   const canAddRemoveProducts =
     canUpdateOrderForAccounting && !isOrderRestricted;
 
-  // Can edit order detail - only unitPrice if restricted, all fields if not
-  const canEditOrderDetail = canUpdateOrderForAccounting;
+  // Can edit quantity - designer roles can edit quantity only
+  const canEditQuantity =
+    role === ROLE.DESIGN ||
+    role === ROLE.DESIGN_LEAD ||
+    canUpdateOrderForAccounting;
 
-  const { mutate: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
-  const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
+  // Can edit order detail - accounting can edit all fields, designer can only edit quantity
+  const canEditOrderDetail = canUpdateOrderForAccounting || canEditQuantity;
+
+  // Check if current user is designer (not accounting/admin)
+  const isDesignerRole = role === ROLE.DESIGN || role === ROLE.DESIGN_LEAD;
+
+  const { mutateAsync: updateOrder, isPending: isUpdatingOrder } =
+    useUpdateOrder();
+  const { execute: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const { mutate: addDesignToOrder, loading: isAddingDesign } =
     useAddDesignToOrder();
   const { mutate: removeOrderDetail, loading: isRemovingDetail } =
     useRemoveOrderDetail();
+  const exportPDFMutation = useExportOrderPDF();
 
   // Helper to format date for input
   const formatDateTimeForInput = (dateStr: string | null | undefined) => {
@@ -233,7 +296,7 @@ export default function OrderDetailPage() {
   // Helper to start editing a card
   const startEditingCard = (
     cardName: string,
-    initialValues: Record<string, string | number | null>
+    initialValues: Record<string, string | number | null>,
   ) => {
     setEditingCard(cardName);
     setCardEditValues(initialValues);
@@ -248,13 +311,23 @@ export default function OrderDetailPage() {
   // Helper to start editing an orderDetail item
   const startEditingOrderDetail = (
     orderDetailId: number,
-    orderDetail: OrderDetailResponse
+    orderDetail: OrderDetailResponse,
   ) => {
     setEditingOrderDetailId(orderDetailId);
-    // If order is restricted (from waiting_for_proofing onwards), only allow editing unitPrice
+
+    // Designer can only edit quantity
+    if (isDesignerRole) {
+      setOrderDetailEditValues({
+        quantity: orderDetail.quantity?.toString() || "",
+      });
+      return;
+    }
+
+    // Accounting roles: If order is restricted (from waiting_for_proofing onwards), only allow editing unitPrice and address
     if (isOrderRestricted) {
       setOrderDetailEditValues({
         unitPrice: orderDetail.unitPrice?.toString() || "",
+        sharedAddressId: (orderDetail as any).sharedAddressId,
       });
     } else {
       setOrderDetailEditValues({
@@ -262,6 +335,7 @@ export default function OrderDetailPage() {
         unitPrice: orderDetail.unitPrice?.toString() || "",
         requirements: orderDetail.requirements || "",
         additionalNotes: orderDetail.additionalNotes || "",
+        sharedAddressId: (orderDetail as any).sharedAddressId,
       });
     }
   };
@@ -277,37 +351,57 @@ export default function OrderDetailPage() {
     if (!order) return;
 
     const orderDetail = order.orderDetails?.find(
-      (od) => od.id === orderDetailId
+      (od) => od.id === orderDetailId,
     );
     if (!orderDetail) return;
 
-    // If order is restricted (from waiting_for_proofing onwards), only update unitPrice
     const updateData: UpdateOrderDetailForAccountingRequest = {
       orderDetailId: orderDetail.id,
-      unitPrice:
-        orderDetailEditValues.unitPrice === "" ||
-        orderDetailEditValues.unitPrice === null
-          ? null
-          : Number(orderDetailEditValues.unitPrice),
     };
 
-    // Only include other fields if order is NOT restricted
-    if (!isOrderRestricted) {
+    // Designer can only update quantity
+    if (isDesignerRole) {
       updateData.quantity =
         orderDetailEditValues.quantity === "" ||
         orderDetailEditValues.quantity === null
           ? null
           : Number(orderDetailEditValues.quantity);
-      updateData.requirements =
-        orderDetailEditValues.requirements === "" ||
-        orderDetailEditValues.requirements === null
-          ? null
-          : String(orderDetailEditValues.requirements).trim();
-      updateData.additionalNotes =
-        orderDetailEditValues.additionalNotes === "" ||
-        orderDetailEditValues.additionalNotes === null
-          ? null
-          : String(orderDetailEditValues.additionalNotes).trim();
+    } else {
+      // Accounting roles: If order is restricted (from waiting_for_proofing onwards), only update unitPrice
+      if (isOrderRestricted) {
+        updateData.unitPrice =
+          orderDetailEditValues.unitPrice === "" ||
+          orderDetailEditValues.unitPrice === null
+            ? null
+            : Number(orderDetailEditValues.unitPrice);
+      } else {
+        // Include all fields if order is NOT restricted
+        updateData.unitPrice =
+          orderDetailEditValues.unitPrice === "" ||
+          orderDetailEditValues.unitPrice === null
+            ? null
+            : Number(orderDetailEditValues.unitPrice);
+        updateData.quantity =
+          orderDetailEditValues.quantity === "" ||
+          orderDetailEditValues.quantity === null
+            ? null
+            : Number(orderDetailEditValues.quantity);
+        updateData.requirements =
+          orderDetailEditValues.requirements === "" ||
+          orderDetailEditValues.requirements === null
+            ? null
+            : String(orderDetailEditValues.requirements).trim();
+        updateData.additionalNotes =
+          orderDetailEditValues.additionalNotes === "" ||
+          orderDetailEditValues.additionalNotes === null
+            ? null
+            : String(orderDetailEditValues.additionalNotes).trim();
+      }
+      
+      // Address can be updated regardless of restriction status
+      if (orderDetailEditValues.sharedAddressId !== undefined) {
+        (updateData as any).sharedAddressId = orderDetailEditValues.sharedAddressId;
+      }
     }
 
     const orderDetailsUpdates: UpdateOrderDetailForAccountingRequest[] = [
@@ -345,7 +439,7 @@ export default function OrderDetailPage() {
         });
       }
     },
-    [order, updateOrder]
+    [order, updateOrder],
   );
 
   // Helper to save card changes
@@ -386,6 +480,11 @@ export default function OrderDetailPage() {
         cardEditValues.customerAddress === null
           ? null
           : String(cardEditValues.customerAddress).trim();
+
+      // Send customerId if it was changed
+      if (cardEditValues.customerId) {
+        (payload as any).customerId = Number(cardEditValues.customerId);
+      }
     } else if (cardName === "orderInfo") {
       payload.deliveryDate =
         cardEditValues.deliveryDate === "" ||
@@ -446,12 +545,12 @@ export default function OrderDetailPage() {
         if (key.startsWith("orderDetail_")) {
           const [_, detailId, detailField] = key.split("_");
           const orderDetail = order.orderDetails?.find(
-            (od) => od.id === Number(detailId)
+            (od) => od.id === Number(detailId),
           );
           if (!orderDetail) continue;
 
           let existingUpdate = orderDetailsUpdates.find(
-            (u) => u.orderDetailId === orderDetail.id
+            (u) => u.orderDetailId === orderDetail.id,
           );
           if (!existingUpdate) {
             existingUpdate = { orderDetailId: orderDetail.id };
@@ -475,14 +574,54 @@ export default function OrderDetailPage() {
     }
 
     try {
-      await updateOrderForAccounting(
-        order.id,
-        payload as UpdateOrderForAccountingRequest
-      );
+      if (
+        cardName === "customerInfo" ||
+        cardName === "orderInfo" ||
+        cardName === "recipientInfo"
+      ) {
+        await updateOrder({
+          id: order.id,
+          data: payload as UpdateOrderRequest,
+        });
+      } else {
+        await updateOrderForAccounting(
+          order.id,
+          payload as UpdateOrderForAccountingRequest,
+        );
+      }
+
+      // Cập nhật thông tin khách hàng vào danh mục khách hàng master
+      if (cardName === "customerInfo" && cardEditValues.customerId) {
+        try {
+          await customerApi.update(Number(cardEditValues.customerId), {
+            name: String(cardEditValues.customerName || ""),
+            companyName: String(cardEditValues.customerCompanyName || ""),
+            phone: String(cardEditValues.customerPhone || ""),
+            email: String(cardEditValues.customerEmail || ""),
+            taxCode: String(cardEditValues.customerTaxCode || ""),
+            address: String(cardEditValues.customerAddress || ""),
+          });
+        } catch (customerError) {
+          console.error(
+            "Failed to update customer master data:",
+            customerError,
+          );
+          toast.warning(
+            "Lưu danh mục khách hàng thất bại, đơn hàng vẫn được lưu.",
+          );
+        }
+      }
+
+      // Close editing mode early for better responsiveness
       setEditingCard(null);
       setCardEditValues({});
+      setIsChangingCustomer(false);
+
+      // Refresh data in background
+      await refetch();
     } catch (error) {
-      // Keep editing mode on error
+      console.error("Save failed:", error);
+      toast.error("Lưu thông tin thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -496,15 +635,12 @@ export default function OrderDetailPage() {
 
   const relatedProofing: ProofingOrderResponse[] = relatedProofingOrders ?? [];
 
-  // Extract productions from proofing orders (they are already included in the response)
-  const relatedProductions: ProductionResponse[] = relatedProofing
-    .flatMap((proof) => proof.productions ?? [])
-    .filter(
-      (prod): prod is ProductionResponse => prod !== null && prod !== undefined
-    );
+  const { data: productionOrdersData, isLoading: isLoadingProductions } =
+    useProductionOrdersByOrder(orderId, { pageSize: 50 });
+  const relatedProductions = productionOrdersData?.items ?? [];
 
   // Fetch users for assignedToUserId select
-  const { data: usersData } = useUsers({ pageSize: 1000 });
+  const { data: usersData } = useUsers({ pageSize: 100 });
   const users = usersData?.items || [];
 
   // Fetch designers for designer assignment
@@ -512,11 +648,11 @@ export default function OrderDetailPage() {
     data: designersData,
     isLoading: isLoadingDesigners,
     isFetching: isFetchingDesigners,
-  } = useUsers({ role: "design", pageSize: 1000 });
+  } = useUsers({ role: "design", pageSize: 100 });
   // Memoize designers array to prevent unnecessary re-renders
   const designers = useMemo(
     () => designersData?.items || [],
-    [designersData?.items]
+    [designersData?.items],
   );
 
   // Check if any design in order is confirmed for printing (locked)
@@ -525,7 +661,7 @@ export default function OrderDetailPage() {
       order?.orderDetails?.some(
         (od) =>
           od.design?.status === "confirmed_for_printing" ||
-          od.derivedStatus === "confirmed_for_printing"
+          od.derivedStatus === "confirmed_for_printing",
       ) || false
     );
   }, [order?.orderDetails]);
@@ -533,7 +669,7 @@ export default function OrderDetailPage() {
   // Can change designer only if no design is confirmed for printing - MEMOIZED
   const canChangeDesignerForOrder = useMemo(
     () => canChangeDesigner && !hasDesignConfirmedForPrinting,
-    [canChangeDesigner, hasDesignConfirmedForPrinting]
+    [canChangeDesigner, hasDesignConfirmedForPrinting],
   );
 
   // ===== LOADING =====
@@ -581,20 +717,12 @@ export default function OrderDetailPage() {
   // - address (địa chỉ) - bắt buộc
   // - email (email) - bắt buộc cho company, không bắt buộc cho retail
   // - taxCode (mã số thuế) - bắt buộc cho company nếu field tồn tại
-  const customerName = typeof customer?.name === "string" ? customer.name : "";
-  const customerPhone =
-    typeof customer?.phone === "string" ? customer.phone : "";
-  const customerAddress =
-    typeof customer?.address === "string" ? customer.address : "";
-  const customerEmail =
-    typeof customer?.email === "string" ? customer.email : "";
-  const customerCompanyName =
-    typeof customer?.companyName === "string" ? customer.companyName : "";
-  // taxCode may not exist in CustomerSummaryResponse (used in OrderResponse)
-  const customerTaxCode =
-    "taxCode" in customer && typeof customer.taxCode === "string"
-      ? customer.taxCode
-      : "";
+  const customerName = order.customerName || "";
+  const customerPhone = order.customerPhone || "";
+  const customerAddress = order.customerAddress || "";
+  const customerEmail = order.customerEmail || "";
+  const customerCompanyName = order.customerCompanyName || "";
+  const customerTaxCode = order.customerTaxCode || "";
 
   const isCompany = !!customerCompanyName;
   const customerType = isCompany ? "company" : "retail";
@@ -621,6 +749,23 @@ export default function OrderDetailPage() {
   }
 
   const isCustomerInfoComplete = missingFields.length === 0;
+
+  // Check for warnings and critical issues
+  const now = new Date();
+  const isPaymentDueOverdue = order.paymentDueDate
+    ? new Date(order.paymentDueDate) < now
+    : false;
+  const isDeliveryDatePassed =
+    order.deliveryDate &&
+    order.status !== "completed" &&
+    order.status !== "delivered"
+      ? new Date(order.deliveryDate) < now
+      : false;
+  const isDebtOverLimit = Boolean(
+    order.customer?.currentDebt &&
+    order.customer?.maxDebt &&
+    order.customer.currentDebt > order.customer.maxDebt,
+  );
 
   return (
     <div className="space-y-6">
@@ -667,14 +812,33 @@ export default function OrderDetailPage() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
+            {(role === ROLE.SALE ||
+              role === ROLE.ADMIN ||
+              role === ROLE.MANAGER) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() =>
+                  navigate(`/accounting/orders/${order.id}?tab=payment`)
+                }
+              >
+                Báo giá
+              </Button>
+            )}
             {canExportExcel && (
               <Button
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={() => setPrintDialogOpen(true)}
+                onClick={() => order && exportPDFMutation.mutate(order.id)}
+                disabled={exportPDFMutation.loading}
               >
-                <Printer className="w-4 h-4" />
+                {exportPDFMutation.loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Printer className="w-4 h-4" />
+                )}
                 In đơn
               </Button>
             )}
@@ -891,13 +1055,11 @@ export default function OrderDetailPage() {
                                   <StatusBadge
                                     status={statusValue || ""}
                                     label={
-                                      designStatusLabels[statusValue || ""] ||
-                                      statusValue ||
-                                      "N/A"
+                                      designStatusLabels[design?.status || ""]
                                     }
                                   />
                                 </div>
-                                <h4 className="font-medium">
+                                <h4 className="font-medium break-all">
                                   {design?.designName || "Chưa đặt tên"}
                                 </h4>
                                 <p className="text-sm text-muted-foreground">
@@ -915,7 +1077,7 @@ export default function OrderDetailPage() {
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleSaveOrderDetail(
-                                            orderDetail.id!
+                                            orderDetail.id!,
                                           );
                                         }}
                                         disabled={isUpdatingForAccounting}
@@ -950,7 +1112,7 @@ export default function OrderDetailPage() {
                                           e.stopPropagation();
                                           startEditingOrderDetail(
                                             orderDetail.id!,
-                                            orderDetail
+                                            orderDetail,
                                           );
                                         }}
                                       >
@@ -965,7 +1127,7 @@ export default function OrderDetailPage() {
                                             e.stopPropagation();
                                             if (
                                               confirm(
-                                                "Bạn có chắc chắn muốn xóa sản phẩm này khỏi đơn hàng?"
+                                                "Bạn có chắc chắn muốn xóa sản phẩm này khỏi đơn hàng?",
                                               )
                                             ) {
                                               removeOrderDetail({
@@ -998,10 +1160,10 @@ export default function OrderDetailPage() {
                                   Kích thước
                                 </p>
                                 <p className="font-medium">
-                                  {design?.dimensions ||
-                                    (design?.width && design?.height
-                                      ? `${design.width}x${design.height} cm`
-                                      : "—")}
+                                  {design.width
+                                    ? `${design.length} x ${design.width} x ${design.height}`
+                                    : `${design.length} x ${design.height} `}{" "}
+                                  mm
                                 </p>
                               </div>
                               {/* Số lượng */}
@@ -1010,7 +1172,7 @@ export default function OrderDetailPage() {
                                   Số lượng
                                 </p>
                                 {editingOrderDetailId === orderDetail.id &&
-                                !isOrderRestricted ? (
+                                (isDesignerRole || !isOrderRestricted) ? (
                                   <Input
                                     type="number"
                                     min="1"
@@ -1036,48 +1198,91 @@ export default function OrderDetailPage() {
                                   </p>
                                 )}
                               </div>
-                              {design?.laminationType && (
-                                <div>
-                                  <p className="text-muted-foreground text-xs">
-                                    Cán màng
-                                  </p>
-                                  <p className="font-medium">
-                                    {laminationTypeLabels[
-                                      design.laminationType
-                                    ] ||
-                                      design.laminationType ||
-                                      "—"}
-                                  </p>
-                                </div>
-                              )}
-                              {design?.sidesClassification && (
-                                <div>
-                                  <p className="text-muted-foreground text-xs">
-                                    Mặt cắt
-                                  </p>
-                                  <p className="font-medium">
-                                    {sidesClassificationLabels[
-                                      design.sidesClassification
-                                    ] ||
-                                      design.sidesClassification ||
-                                      "—"}
-                                  </p>
-                                </div>
-                              )}
-                              {design?.processClassification && (
-                                <div>
-                                  <p className="text-muted-foreground text-xs">
-                                    Quy trình sản xuất
-                                  </p>
-                                  <p className="font-medium">
-                                    {processClassificationLabels[
-                                      design.processClassification
-                                    ] ||
-                                      design.processClassification ||
-                                      "—"}
-                                  </p>
-                                </div>
-                              )}
+                              {(() => {
+                                const specs =
+                                  design?.specification ||
+                                  (design as any)?.specifications;
+                                const hasSpecs =
+                                  (Array.isArray(specs) && specs.length > 0) ||
+                                  (typeof specs === "string" &&
+                                    specs.trim().length > 0);
+
+                                if (hasSpecs) {
+                                  return (
+                                    <div className="col-span-2">
+                                      <p className="text-muted-foreground text-xs">
+                                        Quy cách đầy đủ
+                                      </p>
+                                      <p className="font-medium text-amber-600">
+                                        {Array.isArray(specs)
+                                          ? specs.join(", ")
+                                          : specs}
+                                      </p>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <>
+                                    {design?.laminationType && (
+                                      <div>
+                                        <p className="text-muted-foreground text-xs">
+                                          Cán màng
+                                        </p>
+                                        <p className="font-medium">
+                                          {laminationTypeLabels[
+                                            design.laminationType
+                                          ] ||
+                                            design.laminationType ||
+                                            "—"}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {design?.sidesClassification && (
+                                      <div>
+                                        <p className="text-muted-foreground text-xs">
+                                          Mặt in
+                                        </p>
+                                        <p className="font-medium">
+                                          {sidesClassificationLabels[
+                                            design.sidesClassification
+                                          ] ||
+                                            design.sidesClassification ||
+                                            "—"}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {design?.processClassification && (
+                                      <div>
+                                        <p className="text-muted-foreground text-xs">
+                                          Quy cách sản xuất
+                                        </p>
+                                        <p className="font-medium">
+                                          {processClassificationLabels[
+                                            design.processClassification
+                                          ] ||
+                                            design.processClassification ||
+                                            "—"}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                              {design?.adhesiveOffset != null &&
+                                typeof design.adhesiveOffset === "number" &&
+                                design.adhesiveOffset > 0 && (
+                                  <>
+                                    <div>
+                                      <p className="text-muted-foreground text-xs">
+                                        Mép dán
+                                      </p>
+                                      <p className="font-medium">
+                                        {design.adhesiveOffset} mm
+                                      </p>
+                                    </div>
+                                  </>
+                                )}
                               {canViewPrice && (
                                 <>
                                   {/* Đơn giá */}
@@ -1085,7 +1290,8 @@ export default function OrderDetailPage() {
                                     <p className="text-muted-foreground text-xs">
                                       Đơn giá
                                     </p>
-                                    {editingOrderDetailId === orderDetail.id ? (
+                                    {editingOrderDetailId === orderDetail.id &&
+                                    !isDesignerRole ? (
                                       <Input
                                         type="number"
                                         min="0"
@@ -1110,7 +1316,7 @@ export default function OrderDetailPage() {
                                     ) : (
                                       <p className="font-medium">
                                         {formatCurrency(
-                                          orderDetail.unitPrice || 0
+                                          orderDetail.unitPrice || 0,
                                         )}
                                       </p>
                                     )}
@@ -1121,7 +1327,7 @@ export default function OrderDetailPage() {
                                     </p>
                                     <p className="font-semibold text-primary">
                                       {formatCurrency(
-                                        orderDetail.totalPrice || 0
+                                        orderDetail.totalPrice || 0,
                                       )}
                                     </p>
                                   </div>
@@ -1148,12 +1354,56 @@ export default function OrderDetailPage() {
                               )}
                             </div>
 
-                            {/* Requirements */}
+                            {/* Requirements & Address */}
                             {(editingOrderDetailId === orderDetail.id ||
+                              (orderDetail as any).sharedAddressId ||
                               orderDetail.requirements ||
                               orderDetail.additionalNotes) && (
-                              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm space-y-2">
+                              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm space-y-3">
                                 {editingOrderDetailId === orderDetail.id &&
+                                !isDesignerRole && (
+                                  <div className="space-y-2">
+                                    <Label className="text-xs">Địa chỉ giao hàng</Label>
+                                    <div onClick={(e) => e.stopPropagation()}>
+                                      <Select
+                                        value={orderDetailEditValues.sharedAddressId ? orderDetailEditValues.sharedAddressId.toString() : "0"}
+                                        onValueChange={(v) => {
+                                          setOrderDetailEditValues({
+                                            ...orderDetailEditValues,
+                                            sharedAddressId: v && v !== "0" ? Number(v) : null,
+                                          });
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-9 text-sm bg-background">
+                                          <SelectValue placeholder="Chọn địa chỉ giao hàng..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="0">Không chọn</SelectItem>
+                                          {sharedAddresses.map((sa: any) => (
+                                            <SelectItem key={sa.id} value={sa.id.toString()} className="text-sm">
+                                              {sa.label} {sa.address ? `- ${sa.address}` : ""}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {editingOrderDetailId !== orderDetail.id && (orderDetail as any).sharedAddressId && (
+                                  <div>
+                                    <span className="text-muted-foreground">Địa chỉ giao hàng: </span>
+                                    <span className="font-medium">
+                                      {sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.label || "Đã chọn địa chỉ"}
+                                      {sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.address 
+                                        ? ` - ${sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.address}` 
+                                        : ""}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {editingOrderDetailId === orderDetail.id &&
+                                !isDesignerRole &&
                                 !isOrderRestricted ? (
                                   <>
                                     <div className="space-y-2">
@@ -1245,7 +1495,7 @@ export default function OrderDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Package className="w-4 h-4 text-primary" />
-                mã bài
+                Mã bài
                 {relatedProofing.length > 0 && (
                   <Badge variant="secondary" className="ml-1">
                     {relatedProofing.length}
@@ -1383,13 +1633,15 @@ export default function OrderDetailPage() {
                                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
                                   <Box className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                                   <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
-                                    Khuôn: {proof.dieExports[0].vendorName}
+                                    Khuôn:{" "}
+                                    {proof.dieExports[0].die?.vendorName ||
+                                      "N/A"}
                                   </span>
                                   <Badge
                                     variant="secondary"
                                     className="ml-1 text-xs h-5 px-1.5"
                                   >
-                                    {proof.dieExports[0].dieCount} khuôn
+                                    {proof.dieExports.length} khuôn
                                   </Badge>
                                 </div>
                               )}
@@ -1461,7 +1713,11 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {relatedProductions.length > 0 ? (
+              {isLoadingProductions ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : relatedProductions.length > 0 ? (
                 <div className="space-y-3">
                   {relatedProductions.map((prod) => (
                     <div
@@ -1470,43 +1726,161 @@ export default function OrderDetailPage() {
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div className="space-y-2 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">SP-{prod.id}</span>
-                            <span className="text-sm text-muted-foreground">
-                              Trạng thái hiện tại:
-                            </span>{" "}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-lg text-primary">
+                                SP-{prod.id}
+                              </span>
+                              {prod.proofingOrderCode && (
+                                <Badge variant="outline" className="font-mono bg-muted/50 text-xs h-6">
+                                  {prod.proofingOrderCode}
+                                </Badge>
+                              )}
+                            </div>
                             <StatusBadge
                               status={prod.status}
+                              className="h-7 text-xs px-3"
                               label={
                                 productionStatusLabels[prod.status || ""] ||
                                 "N/A"
                               }
                             />
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            Phụ trách: {prod.productionLead?.fullName || "—"}
-                          </p>
-                          {/* Progress bar */}
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                              <div
-                                className="bg-primary h-2 rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${prod.progressPercent || 0}%`,
-                                }}
-                              />
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground min-w-[100px]">
+                                Mã bình bài:
+                              </span>
+                              <span className="font-mono font-bold text-foreground">
+                                {prod.proofingOrderCode || "—"}
+                              </span>
                             </div>
-                            <span className="text-sm font-medium w-12 text-right">
-                              {prod.progressPercent || 0}%
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground min-w-[100px]">
+                                Phụ trách:
+                              </span>
+                              <span className="font-bold text-foreground">
+                                {prod.productionLeadName || "—"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground min-w-[100px]">
+                                Đã sản xuất:
+                              </span>
+                              <span className="font-bold text-emerald-600 text-base">
+                                {prod.producedQty?.toLocaleString() || "0"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground min-w-[100px]">
+                                Khách hàng:
+                              </span>
+                              <span className="font-bold text-foreground truncate max-w-[200px]">
+                                {prod.customerName || "—"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Production Steps Process Flow - Compact but Readable */}
+                          {prod.steps && prod.steps.length > 0 && (
+                            <div className="pt-4 mt-2 border-t border-dashed">
+                              <div className="relative flex items-center justify-between w-full px-2">
+                                {/* Connection line background */}
+                                <div className="absolute top-[12px] left-0 right-0 h-0.5 bg-muted -translate-y-1/2 z-0 mx-8" />
+
+                                {prod.steps
+                                  .sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0))
+                                  .map((step, index) => {
+                                    const isCompleted = step.status === "completed" || step.status === "done";
+                                    const isCurrent = step.status === "in_progress";
+
+                                    return (
+                                      <div key={step.id} className="relative z-10 flex flex-col items-center">
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div
+                                                className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                                                  isCompleted
+                                                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                                                    : isCurrent
+                                                      ? "bg-blue-500 border-blue-500 text-white animate-pulse"
+                                                      : "bg-background border-muted-foreground/30 text-muted-foreground"
+                                                }`}
+                                              >
+                                                {isCompleted ? (
+                                                  <Check className="w-3.5 h-3.5" />
+                                                ) : (
+                                                  <span className="text-[10px] font-bold">{index + 1}</span>
+                                                )}
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top">
+                                              <div className="space-y-1 p-1">
+                                                <p className="font-bold text-xs">{step.stepTypeName}</p>
+                                                <p className="text-[10px]">
+                                                  Trạng thái:{" "}
+                                                  {isCompleted ? "Đã xong" : isCurrent ? "Đang làm" : "Chờ"}
+                                                </p>
+                                                {step.assignedToName && (
+                                                  <p className="text-[10px] opacity-80 italic">
+                                                    Phụ trách: {step.assignedToName}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <span
+                                          className={`mt-1.5 text-[11px] font-bold whitespace-nowrap px-1 ${
+                                            isCurrent ? "text-blue-600" : isCompleted ? "text-emerald-600" : "text-muted-foreground"
+                                          }`}
+                                        >
+                                          {step.stepTypeName}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex flex-col gap-2 pt-1">
+                            <div className="flex items-center justify-between text-sm mb-1">
+                              <span className="text-muted-foreground">
+                                Tiến độ sản xuất:
+                              </span>
+                              <span className="font-bold">
+                                {prod.progressPercent || 0}%
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 bg-muted rounded-full h-2.5 overflow-hidden border border-muted-foreground/10">
+                                <div
+                                  className="bg-primary h-full rounded-full transition-all duration-500 shadow-sm"
+                                  style={{
+                                    width: `${prod.progressPercent || 0}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right text-sm text-muted-foreground">
-                          {prod.completedAt
-                            ? `Hoàn thành: ${formatDate(prod.completedAt)}`
-                            : prod.startedAt
-                              ? `Bắt đầu: ${formatDate(prod.startedAt)}`
-                              : "Chưa bắt đầu"}
+                        <div className="flex flex-col items-end justify-between self-stretch py-1">
+                          <div className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+                            {prod.completedAt
+                              ? "Đã hoàn thành"
+                              : prod.startedAt
+                                ? "Đang thực hiện"
+                                : "Chưa bắt đầu"}
+                          </div>
+                          <div className="text-right text-sm font-semibold">
+                            {prod.completedAt
+                              ? formatDate(prod.completedAt)
+                              : prod.startedAt
+                                ? formatDate(prod.startedAt)
+                                : "—"}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1538,34 +1912,40 @@ export default function OrderDetailPage() {
                   )}
                   Khách hàng
                 </CardTitle>
-                {canUpdateOrderForAccounting &&
-                  (editingCard === "customerInfo" ? (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => handleSaveCard("customerInfo")}
-                        disabled={isUpdatingForAccounting}
-                      >
-                        {isUpdatingForAccounting ? (
-                          <>
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            Đang lưu...
-                          </>
-                        ) : (
-                          "Lưu"
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={cancelEditingCard}
-                        disabled={isUpdatingForAccounting}
-                      >
-                        Hủy
-                      </Button>
-                    </div>
-                  ) : (
+                {editingCard === "customerInfo" ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => {
+                        handleSaveCard("customerInfo");
+                        setIsChangingCustomer(false);
+                      }}
+                      disabled={isUpdatingForAccounting}
+                    >
+                      {isUpdatingForAccounting ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Đang lưu...
+                        </>
+                      ) : (
+                        "Lưu"
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        cancelEditingCard();
+                        setIsChangingCustomer(false);
+                      }}
+                      disabled={isUpdatingForAccounting}
+                    >
+                      Hủy
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -1577,24 +1957,45 @@ export default function OrderDetailPage() {
                           customerEmail: customerEmail || "",
                           customerTaxCode: customerTaxCode || "",
                           customerAddress: customerAddress || "",
+                          customerId: customer?.id, // Keep current customer ID
                         })
                       }
                     >
                       <Edit className="h-3 w-3 mr-1" />
-                      Sửa
+                      Cập nhật thông tin
                     </Button>
-                  ))}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsChangingCustomer(true);
+                        startEditingCard("customerInfo", {
+                          customerName: customerName || "",
+                          customerCompanyName: customer?.companyName || "",
+                          customerPhone: customerPhone || "",
+                          customerEmail: customerEmail || "",
+                          customerTaxCode: customerTaxCode || "",
+                          customerAddress: customerAddress || "",
+                          customerId: customer?.id,
+                        });
+                      }}
+                    >
+                      <User className="h-3 w-3 mr-1" />
+                      Thay đổi khách hàng
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Warning banner if customer info is incomplete */}
               {!isCustomerInfoComplete && editingCard !== "customerInfo" && (
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-2">
+                <div className="bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-300 dark:border-amber-700 rounded-lg p-3 space-y-2">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                        Thông tin khách hàng chưa đầy đủ
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                        ⚠️ Thông tin khách hàng chưa đầy đủ
                       </p>
                       <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                         Cần cập nhật để có thể xuất hóa đơn:
@@ -1609,9 +2010,122 @@ export default function OrderDetailPage() {
                 </div>
               )}
 
+              {/* Critical warning if debt over limit */}
+              {isDebtOverLimit && editingCard !== "customerInfo" && (
+                <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-400 dark:border-red-700 rounded-lg p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-red-900 dark:text-red-100">
+                        🚨 Công nợ vượt hạn mức
+                      </p>
+                      <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                        Khách hàng đang nợ{" "}
+                        {formatCurrency(order.customer?.currentDebt || 0)}, vượt
+                        quá hạn mức cho phép{" "}
+                        {formatCurrency(order.customer?.maxDebt || 0)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {editingCard === "customerInfo" ? (
                 /* Edit Mode */
                 <div className="space-y-4">
+                  {isChangingCustomer && (
+                    <div className="space-y-2">
+                      <Label className="text-primary font-semibold">
+                        Tìm khách hàng để thay đổi
+                      </Label>
+                      <Popover
+                        open={customerComboOpen}
+                        onOpenChange={setCustomerComboOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between bg-background h-10 px-3 text-sm border-2 border-primary/30"
+                          >
+                            <span className="truncate text-left text-primary font-medium">
+                              {customerSearchText ||
+                                "Tìm theo tên, mã, số điện thoại..."}
+                            </span>
+                            <Search className="ml-2 h-4 w-4 shrink-0 opacity-50 text-primary" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-[350px] p-0 bg-popover shadow-xl border-primary/20"
+                          align="start"
+                        >
+                          <Command>
+                            <CommandInput
+                              placeholder="Tìm tên, mã, SĐT khách hàng..."
+                              className="h-10 text-sm"
+                              value={customerSearchText}
+                              onValueChange={setCustomerSearchText}
+                            />
+                            <CommandList className="max-h-[300px]">
+                              <CommandEmpty className="p-4 text-center text-sm">
+                                {loadingSearchCustomers
+                                  ? "Đang tải..."
+                                  : "Không tìm thấy khách hàng này"}
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {searchCustomersList.map((c: any) => (
+                                  <CommandItem
+                                    key={c.id}
+                                    onSelect={() => {
+                                      setCustomerComboOpen(false);
+                                      setIsChangingCustomer(false);
+                                      setCustomerSearchText("");
+                                      setCardEditValues({
+                                        ...cardEditValues,
+                                        customerId: c.id,
+                                        customerName: c.name || "",
+                                        customerCompanyName:
+                                          c.companyName || "",
+                                        customerPhone: c.phone || "",
+                                        customerEmail: c.email || "",
+                                        customerTaxCode: c.taxCode || "",
+                                        customerAddress: c.address || "",
+                                      });
+                                      toast.info(
+                                        `Đã chọn khách hàng ${c.name}`,
+                                      );
+                                    }}
+                                    className="py-3 text-sm border-b last:border-0"
+                                  >
+                                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-bold text-primary">
+                                          {c.name}
+                                        </span>
+                                        <span className="text-xs font-mono text-muted-foreground bg-muted px-1 rounded">
+                                          {c.code}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        {c.phone && <span>{c.phone}</span>}
+                                        {c.companyName && (
+                                          <span className="truncate max-w-[200px] border-l pl-2">
+                                            {c.companyName}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <Separator className="my-4" />
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label>Tên khách hàng *</Label>
                     <Input
@@ -1625,7 +2139,8 @@ export default function OrderDetailPage() {
                       placeholder="Nhập tên khách hàng"
                     />
                   </div>
-                  {customerType === "company" && (
+                  {(customerType === "company" ||
+                    cardEditValues.customerCompanyName) && (
                     <div className="space-y-2">
                       <Label>Tên công ty</Label>
                       <Input
@@ -1654,7 +2169,12 @@ export default function OrderDetailPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Email {customerType === "company" && "*"}</Label>
+                    <Label>
+                      Email{" "}
+                      {(customerType === "company" ||
+                        cardEditValues.customerCompanyName) &&
+                        "*"}
+                    </Label>
                     <Input
                       type="email"
                       value={cardEditValues.customerEmail || ""}
@@ -1699,12 +2219,10 @@ export default function OrderDetailPage() {
                         </p>
                       </div>
                       {/* Customer Company Name */}
-                      {customer?.companyName && (
+                      {customerCompanyName && (
                         <div className="flex items-center gap-2 group mt-1">
                           <p className="text-sm text-muted-foreground truncate">
-                            {typeof customer.companyName === "string"
-                              ? customer.companyName
-                              : ""}
+                            {customerCompanyName}
                           </p>
                         </div>
                       )}
@@ -1720,11 +2238,15 @@ export default function OrderDetailPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground w-20">Mã KH:</span>
                       <span className="font-medium">
-                        {typeof customer?.code === "string"
-                          ? customer.code
-                          : "—"}
+                        {customer?.code || "—"}
                       </span>
                     </div>
+                    {customerTaxCode && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground w-20">MST:</span>
+                        <span className="font-medium">{customerTaxCode}</span>
+                      </div>
+                    )}
                     {/* Customer Phone */}
                     <div className="flex items-center gap-2">
                       <Phone className="w-4 h-4 text-muted-foreground" />
@@ -1758,618 +2280,8 @@ export default function OrderDetailPage() {
           </Card>
 
           {/* Order Info */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary" />
-                  ĐƠN ĐẶT HÀNG
-                </CardTitle>
-                {canUpdateOrderForAccounting &&
-                  (editingCard === "orderInfo" ? (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => handleSaveCard("orderInfo")}
-                        disabled={isUpdatingForAccounting}
-                      >
-                        {isUpdatingForAccounting ? (
-                          <>
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            Đang lưu...
-                          </>
-                        ) : (
-                          "Lưu"
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={cancelEditingCard}
-                        disabled={isUpdatingForAccounting}
-                      >
-                        Hủy
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        startEditingCard("orderInfo", {
-                          deliveryDate: formatDateTimeForInput(
-                            order.deliveryDate
-                          ),
-                          deliveryAddress: order.deliveryAddress || "",
-                          note: order.note || "",
-                          assignedToUserId:
-                            order.assignedTo !== null &&
-                            order.assignedTo !== undefined
-                              ? order.assignedTo
-                              : undefined,
-                        });
-                      }}
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Sửa
-                    </Button>
-                  ))}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Designer Assignment - Only for DESIGN_LEAD and ADMIN */}
-              {canChangeDesignerForOrder && (
-                <div className="space-y-2 pb-4 border-b">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">
-                      Designer phụ trách
-                    </Label>
-                    {hasDesignConfirmedForPrinting && (
-                      <span className="text-xs text-muted-foreground">
-                        (Đã chốt in - không thể thay đổi)
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      {order.assignedUser ? (
-                        <p className="text-sm font-medium">
-                          {order.assignedUser.fullName}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Chưa phân công
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setAssignDesignerDialogOpen(true)}
-                      disabled={
-                        isUpdatingOrder || hasDesignConfirmedForPrinting
-                      }
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Phân công
-                    </Button>
-                  </div>
-                </div>
-              )}
 
-              {editingCard === "orderInfo" ? (
-                /* Edit Mode */
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Ngày giao</Label>
-                    <Input
-                      type="datetime-local"
-                      value={cardEditValues.deliveryDate || ""}
-                      onChange={(e) =>
-                        setCardEditValues({
-                          ...cardEditValues,
-                          deliveryDate: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Địa chỉ giao hàng</Label>
-                    <Textarea
-                      value={cardEditValues.deliveryAddress || ""}
-                      onChange={(e) =>
-                        setCardEditValues({
-                          ...cardEditValues,
-                          deliveryAddress: e.target.value,
-                        })
-                      }
-                      placeholder="Nhập địa chỉ giao hàng"
-                      rows={3}
-                    />
-                  </div>
-                  {!isAccountingRole && (
-                    <div className="space-y-2">
-                      <Label>Phụ trách</Label>
-                      <Select
-                        value={
-                          cardEditValues.assignedToUserId?.toString() || "none"
-                        }
-                        onValueChange={(value) =>
-                          setCardEditValues({
-                            ...cardEditValues,
-                            assignedToUserId:
-                              value === "none" ? null : Number(value),
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn người phụ trách" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Không có</SelectItem>
-                          {users.map((user) => (
-                            <SelectItem
-                              key={user.id}
-                              value={user.id?.toString() || ""}
-                            >
-                              {user.fullName ||
-                                user.username ||
-                                `User ${user.id}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    <Label>Ghi chú</Label>
-                    <Textarea
-                      value={cardEditValues.note || ""}
-                      onChange={(e) =>
-                        setCardEditValues({
-                          ...cardEditValues,
-                          note: e.target.value,
-                        })
-                      }
-                      placeholder="Nhập ghi chú"
-                      rows={3}
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* View Mode */
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Ngày giao:</span>
-                    <span className="font-medium">
-                      {order.deliveryDate
-                        ? formatDate(order.deliveryDate)
-                        : "—"}
-                    </span>
-                  </div>
-                  {!isAccountingRole && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Phụ trách:</span>
-                      <span className="font-medium">
-                        {order.assignedUser?.fullName ||
-                          order.creator?.fullName ||
-                          "—"}
-                      </span>
-                    </div>
-                  )}
-                  <div className="pt-2">
-                    <p className="text-muted-foreground text-xs mb-1">
-                      Địa chỉ giao hàng:
-                    </p>
-                    <p className="text-sm">
-                      {order.deliveryAddress || "Chưa có địa chỉ"}
-                    </p>
-                  </div>
-                  {order.note && (
-                    <div className="pt-2">
-                      <p className="text-muted-foreground text-xs mb-1">
-                        Ghi chú:
-                      </p>
-                      <p className="text-sm whitespace-pre-wrap">
-                        {order.note}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recipient Info Card - Only visible to admin and accounting */}
-          {canUpdateRecipient && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <User className="w-4 h-4 text-primary" />
-                    Thông tin nhận hàng
-                  </CardTitle>
-                  {canUpdateRecipient &&
-                    (editingCard === "recipientInfo" ? (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleSaveCard("recipientInfo")}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          {isUpdatingForAccounting ? (
-                            <>
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              Đang lưu...
-                            </>
-                          ) : (
-                            "Lưu"
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEditingCard}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          Hủy
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          startEditingCard("recipientInfo", {
-                            recipientName: order.recipientName || "",
-                            recipientPhone: order.recipientPhone || "",
-                            recipientAddress: order.recipientAddress || "",
-                          })
-                        }
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Sửa
-                      </Button>
-                    ))}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Warning if missing info */}
-                {(!order.recipientName ||
-                  !order.recipientPhone ||
-                  !order.recipientAddress) &&
-                  editingCard !== "recipientInfo" && (
-                    <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-                            Thiếu thông tin người nhận
-                          </p>
-                          <ul className="text-xs text-amber-700 dark:text-amber-300 mt-1 list-disc list-inside space-y-0.5">
-                            {!order.recipientName && <li>Tên người nhận</li>}
-                            {!order.recipientPhone && <li>Số điện thoại</li>}
-                            {!order.recipientAddress && <li>Địa chỉ</li>}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                {editingCard === "recipientInfo" ? (
-                  /* Edit Mode */
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Tên người nhận</Label>
-                      <Input
-                        value={cardEditValues.recipientName || ""}
-                        onChange={(e) =>
-                          setCardEditValues({
-                            ...cardEditValues,
-                            recipientName: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập tên người nhận"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Số điện thoại</Label>
-                      <Input
-                        value={cardEditValues.recipientPhone || ""}
-                        onChange={(e) =>
-                          setCardEditValues({
-                            ...cardEditValues,
-                            recipientPhone: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập số điện thoại"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Địa chỉ</Label>
-                      <Textarea
-                        value={cardEditValues.recipientAddress || ""}
-                        onChange={(e) =>
-                          setCardEditValues({
-                            ...cardEditValues,
-                            recipientAddress: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập địa chỉ người nhận"
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  /* View Mode */
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">
-                        Tên người nhận
-                        {!order.recipientName && (
-                          <span className="text-destructive ml-1">*</span>
-                        )}
-                      </Label>
-                      <p className="text-sm font-medium">
-                        {order.recipientName || (
-                          <span className="text-muted-foreground italic">
-                            Chưa có thông tin
-                          </span>
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">
-                        Số điện thoại
-                        {!order.recipientPhone && (
-                          <span className="text-destructive ml-1">*</span>
-                        )}
-                      </Label>
-                      <p className="text-sm font-medium">
-                        {order.recipientPhone || (
-                          <span className="text-muted-foreground italic">
-                            Chưa có thông tin
-                          </span>
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">
-                        Địa chỉ
-                        {!order.recipientAddress && (
-                          <span className="text-destructive ml-1">*</span>
-                        )}
-                      </Label>
-                      <p className="text-sm font-medium">
-                        {order.recipientAddress || (
-                          <span className="text-muted-foreground italic">
-                            Chưa có thông tin
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Payment Summary - only for allowed roles */}
-          {canViewPrice && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Package className="w-4 h-4 text-primary" />
-                    Thanh toán
-                  </CardTitle>
-                  {canUpdateOrderForAccounting &&
-                    (editingCard === "paymentInfo" ? (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleSaveCard("paymentInfo")}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          {isUpdatingForAccounting ? (
-                            <>
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              Đang lưu...
-                            </>
-                          ) : (
-                            "Lưu"
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEditingCard}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          Hủy
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          startEditingCard("paymentInfo", {
-                            totalAmount: order.totalAmount?.toString() || "",
-                            depositAmount:
-                              order.depositAmount?.toString() || "",
-                            paymentDueDate: formatDateTimeForInput(
-                              order.paymentDueDate
-                            ),
-                          })
-                        }
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Sửa
-                      </Button>
-                    ))}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {editingCard === "paymentInfo" ? (
-                  /* Edit Mode */
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-muted-foreground" />
-                        Tổng tiền
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1000"
-                        value={cardEditValues.totalAmount || ""}
-                        onChange={(e) =>
-                          setCardEditValues({
-                            ...cardEditValues,
-                            totalAmount: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập tổng tiền"
-                        className="text-lg font-medium"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-muted-foreground" />
-                        Đã cọc
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1000"
-                        value={cardEditValues.depositAmount || ""}
-                        onChange={(e) =>
-                          setCardEditValues({
-                            ...cardEditValues,
-                            depositAmount: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập số tiền đã cọc"
-                        className="text-lg font-medium"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        Hạn thanh toán
-                      </Label>
-                      <Input
-                        type="datetime-local"
-                        value={cardEditValues.paymentDueDate || ""}
-                        onChange={(e) =>
-                          setCardEditValues({
-                            ...cardEditValues,
-                            paymentDueDate: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  /* View Mode */
-                  <div className="space-y-3">
-                    {/* Total Amount */}
-                    <div className="flex items-center justify-between py-2">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          Tổng tiền
-                        </span>
-                      </div>
-                      <span className="text-base font-semibold">
-                        {formatCurrency(order.totalAmount || 0)}
-                      </span>
-                    </div>
-
-                    {/* Deposit Amount */}
-                    <div className="flex items-center justify-between py-2">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          Đã cọc
-                        </span>
-                      </div>
-                      <span className="text-base font-semibold text-green-600 dark:text-green-400">
-                        {formatCurrency(order.depositAmount || 0)}
-                      </span>
-                    </div>
-
-                    {/* Remaining Amount */}
-                    <div className="flex items-center justify-between py-2 border-t">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          Còn lại
-                        </span>
-                      </div>
-                      <span className="text-base font-semibold text-amber-600 dark:text-amber-400">
-                        {formatCurrency(remainingAmount)}
-                      </span>
-                    </div>
-
-                    {/* Payment Progress Bar */}
-                    {order.totalAmount && order.totalAmount > 0 && (
-                      <div className="pt-2 border-t">
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Tiến độ thanh toán</span>
-                            <span>
-                              {Math.round(
-                                ((order.depositAmount || 0) /
-                                  order.totalAmount) *
-                                  100
-                              )}
-                              %
-                            </span>
-                          </div>
-                          <div className="relative h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="absolute inset-y-0 left-0 bg-primary rounded-full"
-                              style={{
-                                width: `${
-                                  ((order.depositAmount || 0) /
-                                    order.totalAmount) *
-                                  100
-                                }%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Payment Due Date */}
-                    {order.paymentDueDate && (
-                      <div className="pt-2 border-t">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          <div className="flex-1">
-                            <span className="text-xs text-muted-foreground">
-                              Hạn thanh toán:{" "}
-                            </span>
-                            <span className="text-sm font-medium">
-                              {formatDateTime(order.paymentDueDate)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+        
         </div>
       </div>
 
@@ -2496,7 +2408,7 @@ function AddDesignToOrderForm({
   const [selectedDesignId, setSelectedDesignId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState<string>("1");
   const { mutate: addDesignToOrder, loading: isAdding } = useAddDesignToOrder();
-  const { data: designsData } = useDesigns({ pageNumber: 1, pageSize: 1000 });
+  const { data: designsData } = useDesigns({ pageNumber: 1, pageSize: 100 });
 
   const designs = designsData?.items || [];
 

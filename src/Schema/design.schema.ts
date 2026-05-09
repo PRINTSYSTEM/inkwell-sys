@@ -23,6 +23,7 @@ import {
   UpdateDesignRequestSchema as GenUpdateDesignRequestSchema,
   postApidesignsIdtimeline_BodySchema as GenPostApidesignsIdtimelineBodySchema,
   RevertDesignRequestSchema as GenRevertDesignRequestSchema,
+  RejectDesignRequestSchema as GenRejectDesignRequestSchema,
 } from "./generated";
 
 // ===== DesignTimelineEntryResponse =====
@@ -33,9 +34,7 @@ export type DesignTimelineEntryResponse = z.infer<
 >;
 
 // Re-export generated paginate schema for compatibility
-export {
-  GenDesignTimelineEntryResponsePaginateSchema as DesignTimelineEntryResponsePaginateSchema,
-};
+export { GenDesignTimelineEntryResponsePaginateSchema as DesignTimelineEntryResponsePaginateSchema };
 export type DesignTimelineEntryResponsePaginate = z.infer<
   typeof GenDesignTimelineEntryResponsePaginateSchema
 >;
@@ -68,12 +67,13 @@ export const CreateDesignRequestSchema = GenCreateDesignRequestSchema.refine(
     }
     return true;
   },
-  { message: "Kích thước không hợp lệ" }
+  { message: "Kích thước không hợp lệ" },
 );
 export type CreateDesignRequest = z.infer<typeof CreateDesignRequestSchema>;
 
 // ===== UpdateDesignRequest =====
-export const UpdateDesignRequestSchema = GenUpdateDesignRequestSchema.passthrough();
+export const UpdateDesignRequestSchema =
+  GenUpdateDesignRequestSchema.passthrough();
 export type UpdateDesignRequest = z.infer<typeof UpdateDesignRequestSchema>;
 
 // ===== DesignResponseForDesigner =====
@@ -131,6 +131,9 @@ export type CreateDesignTimelineEntryRequest = z.infer<
 // ===== RevertDesignRequest =====
 export const RevertDesignRequestSchema =
   GenRevertDesignRequestSchema.passthrough();
-export type RevertDesignRequest = z.infer<
-  typeof RevertDesignRequestSchema
->;
+export type RevertDesignRequest = z.infer<typeof RevertDesignRequestSchema>;
+
+// ===== RejectDesignRequest =====
+export const RejectDesignRequestSchema =
+  GenRejectDesignRequestSchema.passthrough();
+export type RejectDesignRequest = z.infer<typeof RejectDesignRequestSchema>;

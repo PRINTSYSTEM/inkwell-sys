@@ -1,0 +1,47 @@
+# Danh sách API sử dụng trong [ProductionDetail.tsx](file:///w:/DevPool/PrintSytem/inkwell-sys/src/pages/production/ProductionDetail.tsx)
+
+File [src/pages/production/ProductionDetail.tsx](file:///w:/DevPool/PrintSytem/inkwell-sys/src/pages/production/ProductionDetail.tsx) đóng vai trò là màn hình trung tâm để điều phối và quản lý một Lệnh Sản Xuất cụ thể. Để làm được việc này, component gọi rất nhiều API khác nhau thông qua các custom hooks (thường được bọc bằng React Query). Dưới đây là danh sách chi tiết các API được sử dụng trong file này:
+
+## 1. Lấy chi tiết Lệnh Sản Xuất (Production Order)
+**Hook sử dụng:** [useProductionOrder(id, options)](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-production.ts#52-54)
+- **Đường dẫn API tương ứng:** `GET /api/production-orders/{id}`
+- **Mục đích:** Lấy toàn bộ thông tin gốc của lệnh sản xuất hiện tại dựa trên ID trên URL. Dữ liệu trả về bao gồm thông tin cơ bản của lệnh in, tiến độ (`progressPercent`), tổng số lượng lỗi (`totalWastage`), số lượng hoàn thành (`producedQty`), và quan trọng nhất là danh sách các công đoạn sản xuất chi tiết (`production.steps`).
+- **Cách hoạt động trong UI:** Từ dữ liệu này, file xác định được bước nào đang `ready`, bước nào đang `in_progress`, và tính toán thanh tiến độ tổng thể.
+
+## 2. Lấy thông tin Bình Bài (Proofing Order)
+**Hook sử dụng:** [useProofingOrder(proofingOrderId, options)](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-proofing-order.ts#77-79)
+- **Đường dẫn API tương ứng:** `GET /api/proofing-orders/{id}`
+- **Mục đích:** Khi đã có ID của bình bài từ API lệnh sản xuất ở trên (`production.proofingOrderId`), file tiếp tục gọi API này để lấy thông tin sâu hơn về bình bài.
+- **Dữ liệu hiển thị:** Mã bình bài, chất liệu yêu cầu, số lượng giấy in, thông tin người tạo, và danh sách các thiết kế con (`proofingOrderDesigns`) được gắn kèm trong bình bài này. Dữ liệu này hiển thị ở góc bên phải của UI thông qua thẻ "Thông tin bình bài".
+
+## 3. Quản lý Thợ (Users)
+**Hook sử dụng:** `useUsers(params)`
+- **Đường dẫn API tương ứng:** `GET /api/users`
+- **Mục đích:** Lên danh sách các nhân sự để phân công việc. API này được truyền filter `{ role: "production", isActive: true }` để chỉ lấy ra các thợ sản xuất đang làm việc. Nó cũng nhận tham số `search` (từ thanh tìm kiếm thợ đã được debounce) để người quản lý gõ tên thợ.
+- **Hiển thị:** Danh sách để gắn "Người phụ trách" (Assigned User) cho mỗi công đoạn cắt, bế, dán,...
+
+## 4. Cập nhật và Hoàn thành Công đoạn Sản xuất
+**Hook sử dụng:** [useUpdateProductionStep()](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-production.ts#57-109) trả về hàm `updateStep(stepId, data)`
+- **Đường dẫn API tương ứng:** `PUT /api/production-steps/{id}` (hoặc tương tự theo định nghĩa hook)
+- **Mục đích:** Đây là API thao tác cốt lõi nhất trong file. Nó được dùng cho 3 hành động chính:
+  1. **Bắt đầu công đoạn:** Chuyển status của một bước từ `ready` sang `in_progress`.
+  2. **Cập nhật tiến độ:** Khi thợ đang làm dở, gọi API này để gửi lên số lượng đầu ra hiện thời (`outputQty`), lỗi (`defectQty`), và ghi chú (`defectNotes`) nhưng giữ nguyên trạng thái `in_progress`.
+  3. **Hoàn thành công đoạn:** Gửi `status: "done"`, đẩy outputQty và ghi chú lần cuối. Khi 1 bước `done`, hệ thống backend tự động đẩy bước tiếp theo thành `ready`.
+
+## 5. Phân công Công đoạn cho Thợ
+**Hook sử dụng:** [useAssignProductionWorker()](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-production.ts#110-163)
+- **Đường dẫn API tương ứng:** Hàm `assignWorker(stepId, userId)`
+- **Mục đích:** Gắn ID của một thợ sản xuất cụ thể vào một công đoạn nhất định (cột `assignedToId`). Việc này được thực thi khi quản lý chọn một nhân viên từ dropdown gắn với từng bước sản xuất riêng biệt.
+
+## 6. Lấy danh sách Phiếu Xuất Kho (Stock Outs)
+**Hook sử dụng:** `useStockOutsByProductionOrder(productionOrderId)`
+- **Đường dẫn API tương ứng:** `GET /api/stock-outs?productionOrderId={id}`
+- **Mục đích:** Kiểm tra xem lệnh sản xuất này đã có Phiếu Xuất Kho nguyên vật liệu nào chưa. File sử dụng dữ liệu này để theo dõi tiến độ cấp vật tư cho thợ (đặc biệt liên quan tới công đoạn "Xuất nguyên liệu" - `material_export`).
+
+## 7. Hoàn thành Phiếu Xuất Kho
+**Hook sử dụng:** `useCompleteStockOut()` trả về hàm `completeStockOutAsync(stockOutId)`
+- **Đường dẫn API tương ứng:** Thao tác chuyển đổi trạng thái (Complete) cho một Stock Out.
+- **Mục đích:** Khi người dùng bấm "Hoàn thành" ở bước "Xuất nguyên liệu" (Material Export step), hệ thống UI sẽ tìm phiếu xuất kho đang `pending` tương ứng và gọi API này để chốt phiếu xuất kho đó. Sau khi chốt phiếu xuất kho thành công, UI mới tiếp tục gọi API `updateStep` để báo hoàn thành bước xuất nguyên liệu.
+
+---
+**Tóm lại:** File này quản lý cả đọc và ghi thông qua 7 hooks API chính. Luồng làm việc (workflow) được thiết kế xoay quanh mảng `production.steps`, lấy thông tin chi tiết qua [useProductionOrder](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-production.ts#52-54) & [useProofingOrder](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-proofing-order.ts#77-79), và thao tác tiến độ (Bắt đầu / Cập nhật / Hoàn thành) thông qua [useUpdateProductionStep](file:///w:/DevPool/PrintSytem/inkwell-sys/src/hooks/use-production.ts#57-109).

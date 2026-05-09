@@ -6,12 +6,15 @@
 // 4. Validate changes with CI guard (optional)
 
 import { mkdir, writeFile, readFile, unlink, copyFile } from "node:fs/promises";
-import { execSync } from "node:child_process";
+import { execSync, exec } from "node:child_process";
+import { promisify } from "node:util";
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createHash } from "node:crypto";
 import { glob } from "glob";
+
+const execAsync = promisify(exec);
 
 dotenv.config({ path: ".env.development" });
 
@@ -29,6 +32,11 @@ const OUT_DIR = "src/generated";
 const SWAGGER_FILE = "swagger.json";
 const OUT_FILE = `${OUT_DIR}/openapi.zod.ts`;
 const COMPAT_FILE = join(rootDir, "src/Schema/generated.ts");
+const GENERATED_PARAMS_FILE = join(rootDir, "src/Schema/generated-params.ts");
+const GENERATED_FORM_BODY_FILE = join(
+  rootDir,
+  "src/Schema/generated-form-body.ts"
+);
 const CACHE_FILE = join(rootDir, ".schema-cache.json");
 const SNAPSHOT_FILE = join(rootDir, ".cursor/openapi.endpoints.snapshot.json");
 const PREV_SNAPSHOT_FILE = join(
@@ -36,6 +44,275 @@ const PREV_SNAPSHOT_FILE = join(
   ".cursor/openapi.endpoints.snapshot.prev.json"
 );
 const SCHEMA_CHANGES_FILE = join(rootDir, ".cursor/schema-route-changes.json");
+
+// ============================================
+// Cache Helpers (schemas + params + others)
+// ============================================
+/**
+ * Cache file format (new):
+ * {
+ *   schemas: { [SchemaName]: { hash: string } },
+ *   params: { [ParamSchemaName]: { hash: string } }
+ * }
+ *
+ * Backward compatible with old format:
+ * { [SchemaName]: { hash: string } }
+ */
+async function readSchemaCache() {
+  try {
+    const cacheContent = await readFile(CACHE_FILE, "utf8");
+    const parsed = JSON.parse(cacheContent);
+    if (parsed && typeof parsed === "object" && parsed.schemas) {
+      return {
+        schemas: parsed.schemas || {},
+        params: parsed.params || {},
+        formBodies: parsed.formBodies || {},
+      };
+    }
+    // Old flat cache: treat everything as schemas
+    return {
+      schemas: parsed || {},
+      params: {},
+      formBodies: {},
+    };
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.warn(`⚠️  Could not read cache file: ${err.message}`);
+    }
+    return { schemas: {}, params: {}, formBodies: {} };
+  }
+}
+
+async function writeSchemaCache(cache) {
+  const next = {
+    schemas: cache?.schemas || {},
+    params: cache?.params || {},
+    formBodies: cache?.formBodies || {},
+  };
+  await writeFile(CACHE_FILE, JSON.stringify(next, null, 2), "utf8");
+}
+
+// ============================================
+// Generic Resource Mapping Utilities
+// ============================================
+
+/**
+ * Singularize a resource name (plural -> singular)
+ * Examples: customers -> customer, orders -> order, proofing-orders -> proofing-order
+ */
+function singularizeResource(resource) {
+  // Handle compound resources
+  if (resource.includes("-")) {
+    const parts = resource.split("-");
+    const lastPart = parts[parts.length - 1];
+    if (lastPart.endsWith("s") && lastPart !== "status") {
+      parts[parts.length - 1] = lastPart.slice(0, -1);
+    }
+    return parts.join("-");
+  }
+
+  // Simple singularization
+  if (resource.endsWith("ies")) {
+    return resource.slice(0, -3) + "y";
+  }
+  if (resource.endsWith("es") && !["status", "process"].includes(resource)) {
+    return resource.slice(0, -2);
+  }
+  if (resource.endsWith("s") && resource.length > 1) {
+    return resource.slice(0, -1);
+  }
+  return resource;
+}
+
+/**
+ * Extract resource name from endpoint path
+ * Examples: /api/customers -> customers, /api/orders/:id -> orders
+ */
+function pathToResource(path) {
+  const parts = path
+    .replace("/api/", "")
+    .split("/")
+    .filter((p) => p && !p.startsWith(":"));
+  return parts[0] || null;
+}
+
+/**
+ * Convert resource name to hook file name
+ * Examples: customer -> use-customer.ts, proofing-order -> use-proofing-order.ts
+ */
+function resourceToHookFile(resource) {
+  if (!resource) return null;
+  const singular = singularizeResource(resource);
+  return `use-${singular}.ts`;
+}
+
+/**
+ * Convert kebab-case to PascalCase
+ * Examples: customer-debt-history -> CustomerDebtHistory
+ */
+function kebabToPascalCase(str) {
+  return str
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
+}
+
+/**
+ * Convert resource name to PascalCase (singular)
+ * Examples: customers -> Customer, proofing-orders -> ProofingOrder
+ */
+function resourceToPascalCase(resource) {
+  const singular = singularizeResource(resource);
+  return kebabToPascalCase(singular);
+}
+
+/**
+ * Generate param name from endpoint path (pattern-based, generic)
+ * Examples:
+ *   /api/customers -> CustomerListParams
+ *   /api/customers/:id/debt-history -> CustomerDebtHistoryParams
+ *   /api/orders/for-designer -> OrdersForDesignerListParams
+ */
+function generateParamName(path, httpMethod) {
+  // Remove /api prefix and split path
+  const pathParts = path.replace("/api/", "").split("/");
+  const parts = pathParts.filter((p) => p && !p.startsWith(":"));
+  const hasIdParam = pathParts.some((p) => p.startsWith(":"));
+
+  if (parts.length === 0) return null;
+
+  // For non-GET methods, use simple path-based naming
+  if (httpMethod !== "GET") {
+    const name = parts.map(kebabToPascalCase).join("");
+    return `${name}Params`;
+  }
+
+  const resource = parts[0];
+
+  // Special handling for compound resources that need singular form
+  // production-orders -> Production (not ProductionOrder)
+  let resourcePascal;
+  if (resource === "production-orders") {
+    resourcePascal = "Production";
+  } else {
+    resourcePascal = resourceToPascalCase(resource);
+  }
+
+  // Pattern 1: Simple list endpoint (/api/resource)
+  if (parts.length === 1) {
+    // Special case: dies -> Die (singular)
+    if (resource === "dies") {
+      return "DieListParams";
+    }
+    return `${resourcePascal}ListParams`;
+  }
+
+  // Pattern 2: Resource with ID param (/api/resource/:id/action)
+  if (hasIdParam && parts.length === 2) {
+    const action = parts[1];
+    // Special cases
+    if (resource === "customers" && action === "order-history") {
+      return "CustomerOrdersParams"; // Alias for order-history
+    }
+    const actionPascal = kebabToPascalCase(action);
+    return `${resourcePascal}${actionPascal}Params`;
+  }
+
+  // Pattern 3: Nested resource (/api/resource/sub-resource)
+  if (parts.length === 2 && !hasIdParam) {
+    const subResource = parts[1];
+
+    // Special cases for specific patterns
+    if (resource === "designs") {
+      if (subResource === "types") return "DesignTypeListParams"; // Singular Type
+      if (subResource === "materials") return "MaterialTypeListParams";
+      if (subResource === "my") return "MyDesignListParams";
+      if (subResource === "by-customer") return "DesignByCustomerListParams";
+      if (subResource === "user") return "DesignByUserListParams";
+    }
+
+    // Handle /api/designs/by-customer/:customerId (has ID param but we're checking non-ID case)
+    if (resource === "designs" && subResource === "by-customer" && hasIdParam) {
+      return "DesignByCustomerListParams";
+    }
+
+    if (resource === "orders") {
+      if (subResource === "for-designer") return "OrdersForDesignerListParams"; // Plural Orders
+      if (subResource === "for-accounting")
+        return "OrdersForAccountingListParams";
+      if (subResource === "my") return "OrdersMyListParams";
+    }
+
+    if (resource === "categories") {
+      const subPascal = kebabToPascalCase(subResource);
+      return `${subPascal}ListParams`;
+    }
+
+    // Check if it's a list endpoint (common patterns)
+    const listPatterns = [
+      "types",
+      "materials",
+      "designers",
+      "available-orders",
+      "failure-reasons",
+    ];
+    if (listPatterns.includes(subResource)) {
+      // For types, use singular
+      if (subResource === "types") {
+        return `${resourcePascal}TypeListParams`;
+      }
+      const subPascal = kebabToPascalCase(subResource);
+      return `${resourcePascal}${subPascal}ListParams`;
+    }
+
+    // Check if it's a filtered list
+    if (
+      subResource.startsWith("for-") ||
+      subResource.startsWith("by-") ||
+      subResource === "my"
+    ) {
+      const subPascal = kebabToPascalCase(subResource);
+      // For orders, keep plural
+      if (resource === "orders") {
+        return `Orders${subPascal}ListParams`;
+      }
+      return `${resourcePascal}${subPascal}ListParams`;
+    }
+
+    // Generic sub-resource
+    const subPascal = kebabToPascalCase(subResource);
+    return `${resourcePascal}${subPascal}Params`;
+  }
+
+  // Pattern 4: Deeply nested (/api/resource/:id/sub-resource/action)
+  if (hasIdParam && parts.length >= 2) {
+    // Special case: /api/designs/by-customer/:customerId
+    if (
+      resource === "designs" &&
+      parts[0] === "designs" &&
+      parts[1] === "by-customer"
+    ) {
+      return "DesignByCustomerListParams";
+    }
+    const subParts = parts.slice(1).map(kebabToPascalCase).join("");
+    return `${resourcePascal}${subParts}Params`;
+  }
+
+  // Pattern 5: Multi-level path (/api/resource/sub-resource/action)
+  if (parts.length >= 2) {
+    const actionParts = parts.slice(1).map(kebabToPascalCase).join("");
+    // Check for export pattern
+    if (parts[parts.length - 1] === "export") {
+      const baseName = parts.slice(0, -1).map(kebabToPascalCase).join("");
+      return `${baseName}ExportParams`;
+    }
+    return `${resourcePascal}${actionParts}Params`;
+  }
+
+  // Fallback: convert all parts to PascalCase
+  const name = parts.map(kebabToPascalCase).join("");
+  return `${name}Params`;
+}
 
 // ============================================
 // Step 1: Generate OpenAPI Zod Schema
@@ -182,15 +459,8 @@ async function generateCompatLayer(openApiContent) {
     }
   }
 
-  let prevCache = {};
-  try {
-    const cacheContent = await readFile(CACHE_FILE, "utf8");
-    prevCache = JSON.parse(cacheContent);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.warn(`⚠️  Could not read cache file: ${err.message}`);
-    }
-  }
+  const cache = await readSchemaCache();
+  const prevSchemasCache = cache.schemas || {};
 
   const lines = [];
   lines.push(`/* AUTO-GENERATED FILE. DO NOT EDIT. */`);
@@ -230,7 +500,7 @@ async function generateCompatLayer(openApiContent) {
   const modified = [];
   for (const key of existing) {
     const current = currentSchemas.get(key);
-    const prev = prevCache[key];
+    const prev = prevSchemasCache[key];
     if (current && prev && current.hash !== prev.hash) {
       modified.push(key);
     }
@@ -250,11 +520,12 @@ async function generateCompatLayer(openApiContent) {
     console.log("  ✓ No changes detected");
   }
 
-  const newCache = {};
+  const newSchemasCache = {};
   for (const [key, value] of currentSchemas.entries()) {
-    newCache[key] = { hash: value.hash };
+    newSchemasCache[key] = { hash: value.hash };
   }
-  await writeFile(CACHE_FILE, JSON.stringify(newCache, null, 2), "utf8");
+  cache.schemas = newSchemasCache;
+  await writeSchemaCache(cache);
 
   await writeFile(COMPAT_FILE, lines.join("\n"), "utf8");
   console.log(`✅ Generated ${COMPAT_FILE.replace(rootDir + "/", "")}`);
@@ -270,6 +541,301 @@ async function generateCompatLayer(openApiContent) {
   }
 
   return { added, removed, modified };
+}
+
+// ============================================
+// Step 3.5: Generate Params Schemas
+// ============================================
+function convertZodSchemaToParams(zodSchemaStr) {
+  // Convert zod schema string to params schema format
+  // Remove .default() calls
+  zodSchemaStr = zodSchemaStr.replace(/\.default\([^)]+\)/g, "");
+
+  // Add .nullable() before .optional() if not already nullable
+  if (
+    zodSchemaStr.includes(".optional()") &&
+    !zodSchemaStr.includes(".nullable()")
+  ) {
+    zodSchemaStr = zodSchemaStr.replace(
+      /\.optional\(\)/,
+      ".nullable().optional()"
+    );
+  }
+
+  return zodSchemaStr;
+}
+
+// generateParamName is now defined above in Generic Resource Mapping Utilities
+
+async function generateParamsSchemas(endpoints) {
+  console.log("📝 Generating params schemas...");
+
+  const paramsMap = new Map();
+
+  // Group endpoints by param name
+  for (const endpoint of endpoints) {
+    if (!endpoint.queryParams || endpoint.queryParams.length === 0) {
+      continue;
+    }
+
+    const paramName = generateParamName(endpoint.path, endpoint.httpMethod);
+    if (!paramName) continue;
+
+    if (!paramsMap.has(paramName)) {
+      paramsMap.set(paramName, {
+        name: paramName,
+        path: endpoint.path,
+        method: endpoint.httpMethod,
+        queryParams: [],
+      });
+    }
+
+    // Merge query params (avoid duplicates)
+    const existing = paramsMap.get(paramName);
+    for (const qp of endpoint.queryParams) {
+      if (!existing.queryParams.find((p) => p.name === qp.name)) {
+        existing.queryParams.push(qp);
+      }
+    }
+  }
+
+  const lines = [];
+  lines.push(`/* AUTO-GENERATED FILE. DO NOT EDIT. */`);
+  lines.push(`/* Source: src/generated/openapi.zod.ts */`);
+  lines.push(`/* Generated at: ${new Date().toISOString()} */\n`);
+  lines.push(`import { z } from "zod";`);
+  lines.push(`import { IdSchema, PagedParamsSchema } from "./Common";\n`);
+  lines.push(`// ===== Generated Params Schemas =====\n`);
+
+  // Sort by name
+  const sortedParams = Array.from(paramsMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  // Detect params schema changes (added/removed/modified) using a cache
+  // Keyed by exported schema constant name: `${ParamName}Schema`
+  const currentParamsCache = {};
+  for (const param of sortedParams) {
+    const hasPageNumber = param.queryParams.some(
+      (p) => p.name === "pageNumber" || p.name === "PageNumber"
+    );
+    const hasPageSize = param.queryParams.some(
+      (p) => p.name === "pageSize" || p.name === "PageSize"
+    );
+    const hasPagination = hasPageNumber && hasPageSize;
+
+    const normalizedQueryParams = [...param.queryParams]
+      .filter((p) => p.name !== "pageNumber" && p.name !== "PageNumber")
+      .filter((p) => p.name !== "pageSize" && p.name !== "PageSize")
+      .map((p) => ({
+        name: p.name,
+        schema: convertZodSchemaToParams(p.schema),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const hashInput = JSON.stringify({
+      hasPagination,
+      queryParams: normalizedQueryParams,
+    });
+    currentParamsCache[`${param.name}Schema`] = { hash: hashString(hashInput) };
+  }
+
+  const cache = await readSchemaCache();
+  const prevParamsCache = cache.params || {};
+  const prevParamKeys = Object.keys(prevParamsCache);
+  const nextParamKeys = Object.keys(currentParamsCache);
+
+  const paramsAdded = nextParamKeys.filter((k) => !prevParamsCache[k]);
+  const paramsRemoved = prevParamKeys.filter((k) => !currentParamsCache[k]);
+  const paramsModified = nextParamKeys.filter(
+    (k) =>
+      prevParamsCache[k] &&
+      currentParamsCache[k] &&
+      prevParamsCache[k].hash !== currentParamsCache[k].hash
+  );
+
+  console.log("\n🔍 Params schema changes detected:");
+  if (paramsAdded.length > 0) {
+    console.log(`  ➕ Added (${paramsAdded.length}):`, paramsAdded.join(", "));
+  }
+  if (paramsRemoved.length > 0) {
+    console.log(
+      `  ➖ Removed (${paramsRemoved.length}):`,
+      paramsRemoved.join(", ")
+    );
+  }
+  if (paramsModified.length > 0) {
+    console.log(
+      `  🔄 Modified (${paramsModified.length}):`,
+      paramsModified.join(", ")
+    );
+  }
+  if (
+    paramsAdded.length === 0 &&
+    paramsRemoved.length === 0 &&
+    paramsModified.length === 0
+  ) {
+    console.log("  ✓ No params changes detected");
+  }
+
+  for (const param of sortedParams) {
+    const hasPageNumber = param.queryParams.some(
+      (p) => p.name === "pageNumber" || p.name === "PageNumber"
+    );
+    const hasPageSize = param.queryParams.some(
+      (p) => p.name === "pageSize" || p.name === "PageSize"
+    );
+    const hasPagination = hasPageNumber && hasPageSize;
+
+    lines.push(`// ==== ${param.name} (${param.method} ${param.path}) ====`);
+
+    if (hasPagination) {
+      lines.push(
+        `export const ${param.name}Schema = PagedParamsSchema.extend({`
+      );
+    } else {
+      lines.push(`export const ${param.name}Schema = z.object({`);
+    }
+
+    // Add non-pagination params
+    for (const qp of param.queryParams) {
+      if (qp.name === "pageNumber" || qp.name === "PageNumber") continue;
+      if (qp.name === "pageSize" || qp.name === "PageSize") continue;
+
+      const convertedSchema = convertZodSchemaToParams(qp.schema);
+      const paramName = qp.name;
+      lines.push(`  ${paramName}: ${convertedSchema},`);
+    }
+
+    if (hasPagination) {
+      lines.push(`});`);
+    } else {
+      lines.push(`}).passthrough();`);
+    }
+
+    const typeName = param.name.replace("Schema", "");
+    lines.push(
+      `export type ${typeName} = z.infer<typeof ${param.name}Schema>;\n`
+    );
+  }
+
+  await writeFile(GENERATED_PARAMS_FILE, lines.join("\n"), "utf8");
+  console.log(
+    `✅ Generated ${GENERATED_PARAMS_FILE.replace(rootDir + "/", "")}`
+  );
+  console.log(`   Exported ${paramsMap.size} params schemas`);
+
+  // Persist params cache after file generation (so cache reflects actual output)
+  cache.params = currentParamsCache;
+  await writeSchemaCache(cache);
+
+  return {
+    count: paramsMap.size,
+    changes: {
+      added: paramsAdded,
+      removed: paramsRemoved,
+      modified: paramsModified,
+    },
+  };
+}
+
+// ============================================
+// Step 3.6: Generate Form Body Schemas (multipart/form-data bodies)
+// ============================================
+function hasFileUploadInSchemaDefinition(definition) {
+  if (!definition) return false;
+  // openapi-zod-client uses z.instanceof(File) for file uploads
+  return definition.includes("instanceof(File)");
+}
+
+async function generateFormBodySchemas(openApiContent, endpoints) {
+  console.log("🧾 Generating form body schemas...");
+
+  // Collect body schema names used by endpoints
+  const bodySchemaNames = Array.from(
+    new Set(
+      endpoints
+        .map((e) => e.requestSchema)
+        .filter((x) => typeof x === "string" && x.length > 0)
+    )
+  );
+
+  const fileUploadBodySchemas = [];
+  for (const schemaName of bodySchemaNames) {
+    const definition = extractSchemaDefinition(openApiContent, schemaName);
+    if (hasFileUploadInSchemaDefinition(definition)) {
+      fileUploadBodySchemas.push(schemaName);
+    }
+  }
+
+  fileUploadBodySchemas.sort();
+
+  const lines = [];
+  lines.push(`/* AUTO-GENERATED FILE. DO NOT EDIT. */`);
+  lines.push(`/* Source: src/generated/openapi.zod.ts */`);
+  lines.push(`/* Generated at: ${new Date().toISOString()} */\n`);
+  lines.push(`import { z } from "zod";`);
+  lines.push(`import { schemas } from "./generated";\n`);
+  lines.push(`// ===== Generated Form Body Schemas (file uploads) =====`);
+  lines.push(
+    `// These schemas are request bodies that include File fields (multipart/form-data).\n`
+  );
+
+  for (const key of fileUploadBodySchemas) {
+    lines.push(`export const ${key}Schema = schemas.${key};`);
+    lines.push(`export type ${key} = z.infer<typeof ${key}Schema>;\n`);
+  }
+
+  await writeFile(GENERATED_FORM_BODY_FILE, lines.join("\n"), "utf8");
+  console.log(
+    `✅ Generated ${GENERATED_FORM_BODY_FILE.replace(rootDir + "/", "")}`
+  );
+  console.log(`   Exported ${fileUploadBodySchemas.length} form body schemas`);
+
+  // Detect changes for form-body schemas (multipart/form-data bodies)
+  // Keyed by exported schema constant name: `${BodySchemaName}Schema`
+  const currentFormBodiesCache = {};
+  for (const key of fileUploadBodySchemas) {
+    const definition = extractSchemaDefinition(openApiContent, key);
+    // Hash the extracted schema definition to detect changes over time
+    currentFormBodiesCache[`${key}Schema`] = { hash: hashString(definition) };
+  }
+
+  const cache = await readSchemaCache();
+  const prevFormBodiesCache = cache.formBodies || {};
+  const prevKeys = Object.keys(prevFormBodiesCache);
+  const nextKeys = Object.keys(currentFormBodiesCache);
+
+  const added = nextKeys.filter((k) => !prevFormBodiesCache[k]);
+  const removed = prevKeys.filter((k) => !currentFormBodiesCache[k]);
+  const modified = nextKeys.filter(
+    (k) =>
+      prevFormBodiesCache[k] &&
+      currentFormBodiesCache[k] &&
+      prevFormBodiesCache[k].hash !== currentFormBodiesCache[k].hash
+  );
+
+  console.log("\n🔍 Form-body schema changes detected:");
+  if (added.length > 0) {
+    console.log(`  ➕ Added (${added.length}):`, added.join(", "));
+  }
+  if (removed.length > 0) {
+    console.log(`  ➖ Removed (${removed.length}):`, removed.join(", "));
+  }
+  if (modified.length > 0) {
+    console.log(`  🔄 Modified (${modified.length}):`, modified.join(", "));
+  }
+  if (added.length === 0 && removed.length === 0 && modified.length === 0) {
+    console.log("  ✓ No form-body changes detected");
+  }
+
+  cache.formBodies = currentFormBodiesCache;
+  await writeSchemaCache(cache);
+
+  return {
+    count: fileUploadBodySchemas.length,
+    changes: { added, removed, modified },
+  };
 }
 
 // ============================================
@@ -353,6 +919,150 @@ async function extractEndpointsSnapshot(openApiContent) {
       const responseMatch = endpointBlock.match(/response:\s*(\w+)/);
       const responseSchema = responseMatch ? responseMatch[1] : null;
 
+      // Extract query parameters
+      const queryParams = [];
+      const paramsBlockMatch = endpointBlock.match(
+        /parameters:\s*\[([\s\S]*?)\]/
+      );
+      if (paramsBlockMatch) {
+        const paramsBlock = paramsBlockMatch[1];
+        // Find all parameter objects
+        let paramPos = 0;
+        while (paramPos < paramsBlock.length) {
+          const paramStart = paramsBlock.indexOf("{", paramPos);
+          if (paramStart === -1) break;
+
+          // Find matching closing brace for this parameter
+          let depth = 0;
+          let inString = false;
+          let stringChar = null;
+          let paramEnd = paramStart;
+
+          for (let i = paramStart; i < paramsBlock.length; i++) {
+            const char = paramsBlock[i];
+            const prevChar = i > 0 ? paramsBlock[i - 1] : "";
+
+            if (!inString && (char === '"' || char === "'" || char === "`")) {
+              inString = true;
+              stringChar = char;
+            } else if (inString && char === stringChar && prevChar !== "\\") {
+              inString = false;
+              stringChar = null;
+            }
+
+            if (inString) continue;
+
+            if (char === "{") depth++;
+            else if (char === "}") {
+              depth--;
+              if (depth === 0) {
+                paramEnd = i + 1;
+                break;
+              }
+            }
+          }
+
+          const paramBlock = paramsBlock.substring(paramStart, paramEnd);
+
+          // Check if it's a Query parameter
+          const typeMatch = paramBlock.match(/type:\s*"Query"/);
+          if (typeMatch) {
+            const nameMatch = paramBlock.match(/name:\s*"([^"]+)"/);
+
+            if (nameMatch) {
+              const paramName = nameMatch[1];
+
+              // Extract schema - need to find schema: and capture until next property or end of object
+              const schemaStart = paramBlock.indexOf("schema:");
+              if (schemaStart !== -1) {
+                let schemaPos = schemaStart + 7; // length of "schema:"
+                // Skip whitespace
+                while (
+                  schemaPos < paramBlock.length &&
+                  /\s/.test(paramBlock[schemaPos])
+                ) {
+                  schemaPos++;
+                }
+
+                // Find the end of the schema expression
+                // Schema can be: z.string(), z.number().int(), z.string().datetime({ offset: true }).optional(), etc.
+                let depth = 0;
+                let inString = false;
+                let stringChar = null;
+                let schemaEnd = schemaPos;
+                let started = false;
+
+                for (let i = schemaPos; i < paramBlock.length; i++) {
+                  const char = paramBlock[i];
+                  const prevChar = i > 0 ? paramBlock[i - 1] : "";
+
+                  if (
+                    !inString &&
+                    (char === '"' || char === "'" || char === "`")
+                  ) {
+                    inString = true;
+                    stringChar = char;
+                  } else if (
+                    inString &&
+                    char === stringChar &&
+                    prevChar !== "\\"
+                  ) {
+                    inString = false;
+                    stringChar = null;
+                  }
+
+                  if (inString) continue;
+
+                  if (char === "(" || char === "{" || char === "[") {
+                    depth++;
+                    started = true;
+                  } else if (char === ")" || char === "}" || char === "]") {
+                    depth--;
+                  }
+
+                  // Check if we've reached the end of the schema expression
+                  // End when we hit a comma at depth 0 (after we've started parsing)
+                  if (started && depth === 0) {
+                    if (char === ",") {
+                      schemaEnd = i;
+                      break;
+                    }
+                    // Also check for next property (name: or type: or closing brace)
+                    const remaining = paramBlock.substring(i);
+                    if (
+                      remaining.match(/^\s*[,}]/) ||
+                      remaining.match(/^\s*(name|type|schema):/)
+                    ) {
+                      schemaEnd = i;
+                      break;
+                    }
+                  }
+
+                  // If we haven't started but hit a comma, it's a simple schema
+                  if (!started && char === ",") {
+                    schemaEnd = i;
+                    break;
+                  }
+                }
+
+                let paramSchema = paramBlock
+                  .substring(schemaPos, schemaEnd)
+                  .trim();
+
+                // Clean up schema string (remove trailing commas, etc)
+                paramSchema = paramSchema.replace(/,\s*$/, "").trim();
+
+                if (paramSchema) {
+                  queryParams.push({ name: paramName, schema: paramSchema });
+                }
+              }
+            }
+          }
+
+          paramPos = paramEnd;
+        }
+      }
+
       endpoints.push({
         clientMethod:
           clientMethod ||
@@ -361,6 +1071,7 @@ async function extractEndpointsSnapshot(openApiContent) {
         path,
         requestSchema,
         responseSchema,
+        queryParams,
       });
     }
 
@@ -389,7 +1100,12 @@ function indexBy(list, fn) {
   return new Map(list.map((x) => [fn(x), x]));
 }
 
-async function diffEndpoints(newSnap, schemaChanges) {
+async function diffEndpoints(
+  newSnap,
+  schemaChanges,
+  paramsChanges,
+  formBodyChanges
+) {
   console.log("🔀 Comparing endpoints...");
 
   let oldSnap = [];
@@ -436,6 +1152,7 @@ async function diffEndpoints(newSnap, schemaChanges) {
   console.log(`➕ Added: ${added.length}`);
   console.log(`🔄 Modified: ${modified.length}`);
   console.log(`➖ Removed: ${removed.length}`);
+  console.log(`   (Missing hooks will be detected by validate-hooks.mjs)`);
 
   if (added.length === 0 && modified.length === 0 && removed.length === 0) {
     console.log("✓ No endpoint changes detected");
@@ -444,10 +1161,13 @@ async function diffEndpoints(newSnap, schemaChanges) {
   const result = {
     generatedAt: new Date().toISOString(),
     schemas: schemaChanges,
+    params: paramsChanges || { added: [], removed: [], modified: [] },
+    formBodies: formBodyChanges || { added: [], removed: [], modified: [] },
     endpoints: {
       added,
       modified,
       removed,
+      missingHooks: [], // Will be populated by validate-hooks
     },
   };
 
@@ -562,7 +1282,102 @@ async function main() {
     // Step 3: Extract Endpoints Snapshot
     const endpointsSnapshot = await extractEndpointsSnapshot(openApiContent);
 
-    // Step 4: Copy snapshot to previous (local dev only)
+    // Step 3.5: Generate Params Schemas
+    const paramsResult = await generateParamsSchemas(endpointsSnapshot);
+    const paramsChanges = paramsResult?.changes || {
+      added: [],
+      removed: [],
+      modified: [],
+    };
+
+    // Step 3.6: Generate Form Body Schemas (file uploads)
+    const formBodyResult = await generateFormBodySchemas(
+      openApiContent,
+      endpointsSnapshot
+    );
+    const formBodyChanges = formBodyResult?.changes || {
+      added: [],
+      removed: [],
+      modified: [],
+    };
+
+    // Step 4: Diff Endpoints (MUST do this BEFORE copying snapshot to prev)
+    const changes = await diffEndpoints(
+      endpointsSnapshot,
+      schemaChanges,
+      paramsChanges,
+      formBodyChanges
+    );
+
+    // Step 4.5: Run validate-hooks to detect ALL missing hooks (including existing endpoints)
+    console.log("\n🔍 Running hook validation to detect missing hooks...");
+    let missingHooksFromValidation = [];
+    try {
+      const { stdout } = await execAsync(
+        `node scripts/validate-hooks.mjs --json`,
+        { cwd: rootDir }
+      );
+      // validate-hooks --json must output clean JSON ONLY
+      const validationResult = JSON.parse(stdout.trim());
+      missingHooksFromValidation = validationResult.missingHooks || [];
+
+      if (missingHooksFromValidation.length > 0) {
+        console.log(
+          `   ⚠️  Found ${missingHooksFromValidation.length} missing hooks (including existing endpoints)`
+        );
+      } else {
+        console.log("   ✅ All endpoints have corresponding hooks");
+      }
+    } catch (err) {
+      // If validate-hooks fails, continue anyway (might be first run)
+      console.warn(`   ⚠️  Could not run validate-hooks: ${err.message}`);
+    }
+
+    // Merge missing hooks from validation into changes
+    // Add endpoints that are missing hooks but not in "added" (they're existing endpoints)
+    const addedEndpointKeys = new Set(
+      changes.endpoints.added.map((e) => `${e.httpMethod} ${e.path}`)
+    );
+
+    for (const missing of missingHooksFromValidation) {
+      const key = `${missing.method} ${missing.path}`;
+      if (!addedEndpointKeys.has(key)) {
+        // This is an existing endpoint that's missing a hook
+        // Add it to a new "missingHooks" array in changes
+        if (!changes.endpoints.missingHooks) {
+          changes.endpoints.missingHooks = [];
+        }
+        // Find full endpoint details from snapshot
+        const fullEndpoint = endpointsSnapshot.find(
+          (e) => e.httpMethod === missing.method && e.path === missing.path
+        );
+        if (fullEndpoint) {
+          changes.endpoints.missingHooks.push({
+            ...fullEndpoint,
+            missingReason: missing.issue,
+            expectedSuffix: missing.suffix,
+          });
+        }
+      }
+    }
+
+    // Persist merged missingHooks back to schema-route-changes.json
+    try {
+      await writeFile(
+        SCHEMA_CHANGES_FILE,
+        JSON.stringify(changes, null, 2),
+        "utf8"
+      );
+      console.log(
+        `✅ Updated ${SCHEMA_CHANGES_FILE.replace(rootDir + "/", "")} with endpoints.missingHooks (${changes.endpoints.missingHooks?.length ?? 0})`
+      );
+    } catch (err) {
+      console.warn(
+        `⚠️  Could not update ${SCHEMA_CHANGES_FILE}: ${err.message}`
+      );
+    }
+
+    // Step 5: Copy snapshot to previous (local dev only) - AFTER diff is done
     if (!process.env.CI) {
       try {
         await copyFile(SNAPSHOT_FILE, PREV_SNAPSHOT_FILE);
@@ -573,9 +1388,6 @@ async function main() {
         }
       }
     }
-
-    // Step 5: Diff Endpoints
-    const changes = await diffEndpoints(endpointsSnapshot, schemaChanges);
 
     // Step 6: Run CI Guard (if requested)
     if (runGuard && !skipGuard) {

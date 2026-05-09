@@ -6,4 +6,4 @@
 export { apiRequest, authUtils } from "@/lib/http";
 
 // API constants
-export { API_SUFFIX } from "./util.api";
+export { API_SUFFIX, normalizeParams } from "./util.api";

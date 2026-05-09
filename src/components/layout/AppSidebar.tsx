@@ -130,6 +130,7 @@ function renderGroup(
     <Collapsible open={isOpen} onOpenChange={() => toggleSubmenu(item.id)}>
       <CollapsibleTrigger asChild>
         <SidebarMenuButton
+          type="button"
           className={`w-full justify-between ${
             hasActiveChild
               ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
@@ -150,25 +151,104 @@ function renderGroup(
       <CollapsibleContent>
         <SidebarMenuSub>
           {visibleChildren.map((child) => {
-            return (
-              <SidebarMenuSubItem key={child.id}>
-                <SidebarMenuSubButton asChild>
-                  <NavLink
-                    to={child.path}
-                    className={() => {
-                      // Always use our custom check
-                      const active = checkIsActive(child.path);
-                      return active
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50";
-                    }}
-                  >
-                    <child.icon className="h-4 w-4" />
-                    <span>{child.title}</span>
-                  </NavLink>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
-            );
+            // Check if child is a group (has children, no path) or leaf (has path)
+            const isGroup = "children" in child && child.children && !("path" in child && child.path);
+            const isLeaf = "path" in child && child.path;
+            
+            // If it's a group, render as a nested Collapsible within submenu
+            if (isGroup && "children" in child && child.children) {
+              const nestedGroup = child as MenuItemGroup;
+              const nestedVisibleChildren = nestedGroup.children.filter((c) =>
+                hasAccess(c.allowedRoles, role)
+              );
+              if (nestedVisibleChildren.length === 0) return null;
+              
+              const nestedIsOpen = openSubmenus.includes(nestedGroup.id);
+              const nestedHasActiveChild = nestedVisibleChildren.some((c) => {
+                const path = c.path;
+                return (
+                  location.pathname === path ||
+                  (path !== "/" && location.pathname.startsWith(path + "/"))
+                );
+              });
+              
+              return (
+                <SidebarMenuSubItem key={child.id}>
+                  <Collapsible open={nestedIsOpen} onOpenChange={() => {
+                    toggleSubmenu(nestedGroup.id);
+                  }}>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuSubButton
+                        type="button"
+                        className={`w-full justify-between min-w-0 ${
+                          nestedHasActiveChild
+                            ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <nestedGroup.icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{nestedGroup.title}</span>
+                        </div>
+                        <ChevronRight
+                          className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                            nestedIsOpen ? "rotate-90" : ""
+                          }`}
+                        />
+                      </SidebarMenuSubButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {nestedVisibleChildren.map((nestedChild) => (
+                          <SidebarMenuSubItem key={nestedChild.id}>
+                            <SidebarMenuSubButton asChild>
+                              <NavLink
+                                to={nestedChild.path}
+                                className={() => {
+                                  const active = checkIsActive(nestedChild.path);
+                                  return active
+                                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                                    : "text-sidebar-foreground hover:bg-sidebar-accent/50";
+                                }}
+                              >
+                                <nestedChild.icon className="h-4 w-4" />
+                                <span>{nestedChild.title}</span>
+                              </NavLink>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </SidebarMenuSubItem>
+              );
+            }
+            
+            // If it's a leaf, render as NavLink
+            if (isLeaf && "path" in child && child.path) {
+              return (
+                <SidebarMenuSubItem key={child.id}>
+                  <SidebarMenuSubButton asChild>
+                    <NavLink
+                      to={child.path}
+                      className={() => {
+                        // Always use our custom check
+                        const active = checkIsActive(child.path);
+                        return active
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50";
+                      }}
+                    >
+                      <child.icon className="h-4 w-4" />
+                      <span>{child.title}</span>
+                    </NavLink>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              );
+            }
+            
+            // Fallback: should not happen, but render nothing if neither group nor leaf
+            return null;
           })}
         </SidebarMenuSub>
       </CollapsibleContent>
@@ -181,12 +261,11 @@ export function AppSidebar() {
   const location = useLocation();
   const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
 
-  if (!user) return null;
-
-  const role = user.role as UserRole;
+  const role = user?.role as UserRole | undefined;
 
   // Auto-expand submenus that have active children
   useEffect(() => {
+    if (!role) return;
     const activeSubmenuIds: string[] = [];
 
     MENU_ITEMS.forEach((item) => {
@@ -213,6 +292,8 @@ export function AppSidebar() {
       });
     }
   }, [location.pathname, role]);
+
+  if (!user || !role) return null;
 
   const toggleSubmenu = (id: string) => {
     setOpenSubmenus((prev) =>

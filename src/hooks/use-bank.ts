@@ -11,17 +11,14 @@ import type {
   UpdateBankAccountRequest,
   BankLedgerResponse,
 } from "@/Schema/accounting.schema";
+import type {
+  BankAccountsListParams,
+  BankLedgerListParams,
+} from "@/Schema";
 
 // ================== BANK ACCOUNT ==================
 
-export interface BankAccountsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  isActive?: boolean;
-  search?: string;
-}
-
-export const useBankAccounts = (params?: BankAccountsParams) => {
+export const useBankAccounts = (params?: BankAccountsListParams) => {
   return useQuery({
     queryKey: ["bank-accounts", params],
     queryFn: async () => {
@@ -117,13 +114,7 @@ export const useDeleteBankAccount = () => {
 
 // ================== BANK LEDGER ==================
 
-export interface BankLedgerParams {
-  fromDate?: string;
-  toDate?: string;
-  bankAccountId?: number;
-}
-
-export const useBankLedger = (params?: BankLedgerParams) => {
+export const useBankLedger = (params?: BankLedgerListParams) => {
   return useQuery({
     queryKey: ["bank-ledger", params],
     queryFn: async () => {

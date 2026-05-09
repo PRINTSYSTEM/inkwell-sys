@@ -121,6 +121,7 @@ const departments: SidebarDepartment[] = [
       { title: "Báo cáo công nợ", href: "/accounting/debt-report" },
       { title: "Doanh thu", href: "/accounting/revenue" },
       { title: "Chi phí", href: "/accounting/expenses" },
+      { title: "Nhà cung cấp", href: "/vendors" },
     ],
   },
   {
@@ -169,7 +170,7 @@ export function Sidebar({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex h-full w-64 flex-col bg-background border-r",
+        "flex h-full w-80 flex-col bg-background border-r",
         className
       )}
     >

@@ -49,10 +49,9 @@ export default function SalesByDimensionPage() {
       ? dateRange.from.toISOString()
       : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
   });
 
-  const totalRevenue = salesData?.items?.reduce((sum, item) => sum + (item.totalRevenue || 0), 0) || 0;
+  const totalRevenue = salesData?.items?.reduce((sum, item) => sum + (item.netRevenue || 0), 0) || 0;
 
   return (
     <>
@@ -112,7 +111,7 @@ export default function SalesByDimensionPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -135,17 +134,16 @@ export default function SalesByDimensionPage() {
               <TableRow className="bg-muted/50">
                 <TableHead>Chiều</TableHead>
                 <TableHead className="text-right">Số đơn hàng</TableHead>
-                <TableHead className="text-right">Số lượng</TableHead>
-                <TableHead className="text-right">Doanh thu</TableHead>
-                <TableHead className="text-right">Lợi nhuận</TableHead>
-                <TableHead className="text-right">Tỷ lệ lợi nhuận</TableHead>
+                <TableHead className="text-right">Giảm giá</TableHead>
+                <TableHead className="text-right">Trả hàng</TableHead>
+                <TableHead className="text-right">Doanh thu ròng</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 5 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -155,7 +153,7 @@ export default function SalesByDimensionPage() {
               ) : !salesData?.items || salesData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={5}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu doanh số nào.
@@ -163,14 +161,10 @@ export default function SalesByDimensionPage() {
                 </TableRow>
               ) : (
                 salesData.items.map((item) => {
-                  const profit = (item.totalRevenue || 0) - (item.totalCost || 0);
-                  const profitMargin = item.totalRevenue && item.totalRevenue > 0
-                    ? (profit / item.totalRevenue * 100)
-                    : (item.profitMargin || 0);
                   return (
-                    <TableRow key={item.dimensionValue || item.dimensionCode}>
+                    <TableRow key={item.dimensionValue || String(item.dimensionId)}>
                       <TableCell className="font-medium">
-                        {item.dimensionValue || item.dimensionCode || "—"}
+                        {item.dimensionValue || "—"}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
                         {item.orderCount !== undefined
@@ -178,22 +172,19 @@ export default function SalesByDimensionPage() {
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {item.totalQuantity !== undefined
-                          ? item.totalQuantity.toLocaleString()
+                        {item.discount !== undefined
+                          ? formatCurrency(item.discount)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {item.returns !== undefined
+                          ? formatCurrency(item.returns)
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-bold tabular-nums">
-                        {item.totalRevenue !== undefined
-                          ? formatCurrency(item.totalRevenue)
+                        {item.netRevenue !== undefined
+                          ? formatCurrency(item.netRevenue)
                           : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums text-green-600">
-                        {item.totalProfit !== undefined
-                          ? formatCurrency(item.totalProfit)
-                          : profit > 0 ? formatCurrency(profit) : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {profitMargin > 0 ? `${profitMargin.toFixed(2)}%` : "—"}
                       </TableCell>
                     </TableRow>
                   );

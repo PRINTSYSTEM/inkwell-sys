@@ -23,11 +23,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks";
 import { ROLE } from "@/constants";
 import { CustomerResponse } from "@/Schema";
+import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
 export default function Customers() {
   const { user } = useAuth();
@@ -37,11 +39,14 @@ export default function Customers() {
   const canViewFinancialInfo =
     userRole === ROLE.ACCOUNTING ||
     userRole === ROLE.ACCOUNTING_LEAD ||
+    userRole === ROLE.SALE ||
     userRole === ROLE.ADMIN;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const itemsPerPage = 10;
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +61,9 @@ export default function Customers() {
     pageNumber: currentPage,
     pageSize: itemsPerPage,
     search: debouncedSearch || "",
+    ...(sortColumn.trim()
+      ? { sortColumn: sortColumn.trim(), sortOrder: sortOrder }
+      : {}),
   });
   const [exportingId, setExportingId] = useState<number | null>(null);
   const customers: CustomerResponse[] = customersResponse?.items || [];
@@ -97,11 +105,12 @@ export default function Customers() {
   const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
   // Auto-adjust currentPage if it exceeds totalPages (e.g., after search/filter)
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (customersResponse && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, customersResponse]);
 
   // Scroll to top of table when page changes
   useEffect(() => {
@@ -109,17 +118,6 @@ export default function Customers() {
       tableContainerRef.current.scrollTop = 0;
     }
   }, [currentPage]);
-
-  // Add loading and error states
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">
-          Đang tải danh sách khách hàng...
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -293,15 +291,42 @@ export default function Customers() {
       {/* Search and Filter */}
       <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <CardHeader className="p-4 pb-3 shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+            <div className="relative flex-1 min-w-0 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 ref={searchInputRef}
                 placeholder="Tìm kiếm theo tên, mã KH, người đại diện, SĐT, mã số thuế..."
-                className="pl-10 h-9 text-sm"
+                className="pl-10 h-10 sm:h-9 text-sm"
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
+            <div className="w-full lg:w-[420px] min-w-0">
+              <SortControls
+                sortColumn={sortColumn}
+                sortOrder={sortOrder}
+                onSortColumnChange={(v) => {
+                  setSortColumn(v);
+                  setCurrentPage(1);
+                }}
+                onSortOrderChange={(v) => {
+                  setSortOrder(v);
+                  setCurrentPage(1);
+                }}
+                onClear={() => {
+                  setSortColumn("");
+                  setSortOrder("asc");
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: "code", label: "Mã KH" },
+                  { value: "name", label: "Tên khách hàng" },
+                  { value: "companyName", label: "Tên công ty" },
+                  { value: "currentDebt", label: "Công nợ hiện tại" },
+                  { value: "maxDebt", label: "Hạn mức nợ" },
+                ]}
+                placeholder="Sắp xếp theo"
               />
             </div>
           </div>
@@ -336,17 +361,11 @@ export default function Customers() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={canViewFinancialInfo ? 6 : 5}
-                        className="text-center py-8"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                          Đang tải...
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <TableSkeleton
+                      cols={canViewFinancialInfo ? 6 : 5}
+                      rows={10}
+                      rowHeight="h-11"
+                    />
                   ) : customers.length === 0 ? (
                     <TableRow>
                       <TableCell
@@ -372,15 +391,15 @@ export default function Customers() {
                             <div className="flex items-center gap-1.5">
                               <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
                               <span className="font-mono text-sm">
-                                {customer.code}
+                                {customer.code ?? ""}
                               </span>
                             </div>
                           </TableCell>
                           <TableCell className="py-2">
-                            {customer.name}
+                            {customer.name ?? ""}
                           </TableCell>
                           <TableCell className="py-2">
-                            {customer.companyName
+                            {customer.companyName && customer.type === "company"
                               ? customer.companyName
                               : "Cá nhân"}
                           </TableCell>
@@ -388,13 +407,13 @@ export default function Customers() {
                             <TableCell className="py-2">
                               <span
                                 className={`font-medium text-sm ${
-                                  (customer.currentDebt || 0) >
-                                  (customer.maxDebt || 0)
+                                  (customer.currentDebt ?? 0) >
+                                  (customer.maxDebt ?? 0)
                                     ? "text-red-600"
                                     : "text-green-600"
                                 }`}
                               >
-                                {(customer.currentDebt || 0).toLocaleString(
+                                {(customer.currentDebt ?? 0).toLocaleString(
                                   "vi-VN"
                                 )}{" "}
                                 ₫
@@ -403,7 +422,7 @@ export default function Customers() {
                           )}
                           <TableCell className="py-2">
                             <span className="font-medium text-sm">
-                              {(customer.maxDebt || 0).toLocaleString("vi-VN")}{" "}
+                              {(customer.maxDebt ?? 0).toLocaleString("vi-VN")}{" "}
                               ₫
                             </span>
                           </TableCell>

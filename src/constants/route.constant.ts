@@ -7,17 +7,21 @@ export const ROUTE_PATHS = {
     LOGIN: "/login" as const,
   },
 
+  DASHBOARD: "/dashboard" as const,
+
   DESIGN: {
     ROOT: "/design" as const,
     ALL: "/design/all" as const,
     MY_WORK: "/design/my-work" as const,
     MANAGEMENT: "/design/management" as const,
+    SALE_LOOKUP: "/design/sale-lookup" as const,
     DETAIL_BASE: "/design/detail" as const, // prefix cho /design/detail/:id
     DESIGNER_DETAIL: "/design/designer" as const, // prefix cho /design/designer/:id
   },
 
   ORDERS: {
     ROOT: "/orders" as const, // list
+    SALE_ORDERS: "/orders/sale" as const,
     NEW: "/orders/new" as const,
     DETAIL_BASE: "/orders" as const, // prefix cho /orders/:id
   },
@@ -34,11 +38,16 @@ export const ROUTE_PATHS = {
 
   PROOFING: {
     ROOT: "/proofing" as const,
+    WAITING_DESIGNS: "/proofing/waiting-designs" as const,
     CREATE_PRINT_ORDER: "/proofing/create-print-order" as const,
     CREATE: "/proofing/create" as const,
   },
   DIES: {
     ROOT: "/proofing/dies" as const,
+  },
+  PLATE_EXPORTS: {
+    ROOT: "/plate-exports" as const,
+    DETAIL_BASE: "/plate-exports" as const, // prefix cho /plate-exports/:id
   },
   PRODUCTION: {
     ROOT: "/productions" as const,
@@ -78,6 +87,7 @@ export const ROUTE_PATHS = {
     DEBT_REPORT: "/accounting/debt-report" as const,
     REVENUE: "/accounting/revenue" as const,
     EXPENSES: "/accounting/expenses" as const,
+    COST_PRICING: "/accounting/cost-pricing" as const,
     // Cash Management
     CASH_FUNDS: "/accounting/cash-funds" as const,
     CASH_PAYMENTS: "/accounting/cash-payments" as const,
@@ -85,11 +95,20 @@ export const ROUTE_PATHS = {
     CASH_BOOK: "/accounting/cash-book" as const,
     // Bank Management
     BANK_ACCOUNTS: "/accounting/bank-accounts" as const,
-    BANK_LEDGER: "/accounting/bank-ledger" as const,
     // AR/AP
     AR: "/accounting/ar" as const,
+    AR_BY_ITEM: "/accounting/ar/by-item" as const,
+    AR_UNDERDUE: "/accounting/ar/underdue" as const,
+    AR_SUMMARY_BY_CUSTOMER_GROUP: "/accounting/ar/summary-by-customer-group" as const,
+    AR_SUMMARY_BY_BRANCH: "/accounting/ar/summary-by-branch" as const,
     AP: "/accounting/ap" as const,
+    AP_BY_PURCHASE_INVOICE: "/accounting/ap/by-purchase-invoice" as const,
+    AP_OVERDUE: "/accounting/ap/overdue" as const,
     COLLECTION_SCHEDULE: "/accounting/collection-schedule" as const,
+    // Debt Notifications & Reconciliations
+    DEBT_NOTIFICATIONS: "/accounting/debt-notifications" as const,
+    DEBT_RECONCILIATION_AR: "/accounting/debt-reconciliations/ar" as const,
+    DEBT_RECONCILIATION_AP: "/accounting/debt-reconciliations/ap" as const,
     // Expense & Payment Method
     EXPENSE_CATEGORIES: "/accounting/expense-categories" as const,
     PAYMENT_METHODS: "/accounting/payment-methods" as const,
@@ -101,8 +120,7 @@ export const ROUTE_PATHS = {
   },
 
   INVOICES: {
-    ROOT: "/invoices" as const,
-    DETAIL_BASE: "/invoices" as const, // prefix cho /invoices/:id
+    DETAIL_BASE: "/accounting/invoice" as const, // prefix cho /invoices/:id
   },
 
   ATTENDANCE: {
@@ -115,6 +133,7 @@ export const ROUTE_PATHS = {
     USERS_DETAIL: "/admin/users/:id" as const,
     ROLES: "/admin/roles" as const,
     ANALYTICS: "/admin/analytics" as const,
+    SHARED_ADDRESSES: "/admin/shared-addresses" as const,
   },
 
   MANAGER: {
@@ -137,7 +156,7 @@ export const ROUTE_PATHS = {
       STOCK_CARD: "/reports/inventory/stock-card" as const,
     },
     // Sales Reports
-    SALES: {
+  SALES: {
       BY_PERIOD: "/reports/sales/by-period" as const,
       BY_CUSTOMER: "/reports/sales/by-customer" as const,
       BY_DIMENSION: "/reports/sales/by-dimension" as const,
@@ -150,4 +169,10 @@ export const ROUTE_PATHS = {
   },
   NOTIFICATIONS: "/notifications" as const,
   PROFILE: "/profile" as const,
+SALES: {
+      ROOT: "/sales" as const,
+      QUOTE: "/sales/quote" as const,
+}
 } as const;
+
+  

@@ -52,6 +52,23 @@ export const ConstantsResponseSchema = z
     vendorTypes: ConstantGroupSchema.optional(),
     deliveryNoteStatuses: ConstantGroupSchema.optional(),
     deliveryLineStatuses: ConstantGroupSchema.optional(),
+    debtStatuses: ConstantGroupSchema.optional(),
+    productionStepTypes: ConstantGroupSchema.optional(),
+    productionStepStatuses: ConstantGroupSchema.optional(),
+    stockInSources: ConstantGroupSchema.optional(),
+    stockInItemTypes: ConstantGroupSchema.optional(),
+    stockInStatuses: ConstantGroupSchema.optional(),
+    stockOutPurposes: ConstantGroupSchema.optional(),
+    stockOutItemTypes: ConstantGroupSchema.optional(),
+    stockOutStatuses: ConstantGroupSchema.optional(),
+    dieSearchRelevances: ConstantGroupSchema.optional(),
+    deliveryFailureTypes: ConstantGroupSchema.optional(),
+    invoiceStatuses: ConstantGroupSchema.optional(),
+    paymentTypes: ConstantGroupSchema.optional(),
+    debtChangeTypes: ConstantGroupSchema.optional(),
+    dieUsageTypes: ConstantGroupSchema.optional(),
+    dieStatuses: ConstantGroupSchema.optional(),
+    dieLocations: ConstantGroupSchema.optional(),
   })
   .passthrough();
 

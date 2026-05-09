@@ -57,11 +57,10 @@ export default function ReturnsDiscountsPage() {
       ? dateRange.from.toISOString()
       : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
   });
 
-  const totalReturns = data?.items?.filter(item => item.type === "return").reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-  const totalDiscounts = data?.items?.filter(item => item.type === "discount").reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+  const totalReturns = data?.items?.reduce((sum, item) => sum + (item.adjustmentValue || 0), 0) || 0;
+  const totalDiscounts = data?.items?.reduce((sum, item) => sum + (item.voucherCount || 0), 0) || 0;
 
   return (
     <>
@@ -121,7 +120,7 @@ export default function ReturnsDiscountsPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -158,20 +157,17 @@ export default function ReturnsDiscountsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã đơn</TableHead>
-                <TableHead className="w-[140px]">Mã KH</TableHead>
-                <TableHead>Tên khách hàng</TableHead>
-                <TableHead className="text-center">Ngày</TableHead>
-                <TableHead className="text-right">Số tiền</TableHead>
-                <TableHead>Lý do</TableHead>
-                <TableHead className="text-center">Loại</TableHead>
+                <TableHead className="w-[140px]">Kỳ</TableHead>
+                <TableHead className="text-right">Số voucher</TableHead>
+                <TableHead className="text-right">Giá trị điều chỉnh</TableHead>
+                <TableHead>Lý do hàng đầu</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 4 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -181,43 +177,30 @@ export default function ReturnsDiscountsPage() {
               ) : !data?.items || data.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={4}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu nào.
                   </TableCell>
                 </TableRow>
               ) : (
-                data.items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-mono text-sm">
-                      {item.orderCode || "—"}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {item.customerCode || "—"}
-                    </TableCell>
+                data.items.map((item, index) => (
+                  <TableRow key={index}>
                     <TableCell className="font-medium">
-                      {item.customerName || "—"}
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {item.date ? formatDate(item.date) : "—"}
+                      {item.period || "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.amount !== undefined
-                        ? formatCurrency(item.amount)
+                      {item.voucherCount !== undefined
+                        ? item.voucherCount.toLocaleString()
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {item.adjustmentValue !== undefined
+                        ? formatCurrency(item.adjustmentValue)
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      {item.reason || item.description || "—"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {item.type === "return" ? (
-                        <Badge variant="destructive">Trả hàng</Badge>
-                      ) : item.type === "discount" ? (
-                        <Badge variant="default">Giảm giá</Badge>
-                      ) : (
-                        "—"
-                      )}
+                      {item.topReason || "—"}
                     </TableCell>
                   </TableRow>
                 ))

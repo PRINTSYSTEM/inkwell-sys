@@ -6,9 +6,8 @@ import {
   Plus,
   Loader2,
   AlertCircle,
-  Edit,
-  Trash2,
-  Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { PaymentMethodModal } from "@/components/accounting/payment-method/PaymentMethodModal";
@@ -23,13 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +56,10 @@ export default function PaymentMethodListPage() {
 
   const deleteMethodMutation = useDeletePaymentMethod();
 
-  const handleDelete = async (id: number | undefined) => {
+  const handleDelete = async (id: number | undefined, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     if (!id) return;
     if (
       window.confirm("Bạn có chắc chắn muốn xóa phương thức thanh toán này?")
@@ -74,6 +69,16 @@ export default function PaymentMethodListPage() {
       } catch (error) {
         // Error is handled by the hook
       }
+    }
+  };
+
+  const handleEdit = (id: number | undefined, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    if (id) {
+      setEditingMethodId(id);
+      setModalOpen(true);
     }
   };
 
@@ -87,191 +92,175 @@ export default function PaymentMethodListPage() {
         />
       </Helmet>
 
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Phương thức thanh toán
-            </h1>
-            <p className="text-muted-foreground">
-              Quản lý và theo dõi các phương thức thanh toán
-            </p>
+      <div className="h-screen flex flex-col overflow-hidden">
+        {/* Header - Compact */}
+        <div className="flex-shrink-0 px-6 py-3 border-b bg-background">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">
+                Phương thức thanh toán
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Quản lý và theo dõi các phương thức thanh toán
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingMethodId(null);
+                setModalOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Tạo phương thức mới
+            </Button>
           </div>
-          <Button
-            onClick={() => {
-              setEditingMethodId(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Tạo phương thức mới
-          </Button>
         </div>
 
         {/* Error Alert */}
         {isError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Lỗi kết nối</AlertTitle>
-            <AlertDescription>
-              {error instanceof Error
-                ? error.message
-                : "Không thể tải dữ liệu. Vui lòng thử lại."}
-            </AlertDescription>
-          </Alert>
+          <div className="flex-shrink-0 px-6 py-2">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Lỗi kết nối</AlertTitle>
+              <AlertDescription>
+                {error instanceof Error
+                  ? error.message
+                  : "Không thể tải dữ liệu. Vui lòng thử lại."}
+              </AlertDescription>
+            </Alert>
+          </div>
         )}
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Tìm kiếm theo mã, tên phương thức..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-            />
-          </Button>
-        </div>
-
-        {/* Table */}
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã phương thức</TableHead>
-                <TableHead>Tên phương thức</TableHead>
-                <TableHead>Mô tả</TableHead>
-                <TableHead className="text-center">Trạng thái</TableHead>
-                <TableHead className="text-center">Ngày tạo</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-5 w-full" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : !methodsData?.items || methodsData.items.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    Không tìm thấy phương thức thanh toán nào.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                methodsData.items.map((method) => (
-                  <TableRow key={method.id} className="group">
-                    <TableCell className="font-medium font-mono text-sm">
-                      {method.code || `#${method.id}`}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {method.name || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-muted-foreground max-w-md truncate">
-                        {method.description || "—"}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {method.isActive ? (
-                        <Badge variant="default">Đang hoạt động</Badge>
-                      ) : (
-                        <Badge variant="secondary">Ngừng hoạt động</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {method.createdAt ? formatDate(method.createdAt) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditingMethodId(method.id || null);
-                              setModalOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Chỉnh sửa
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(method.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Xóa
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination */}
-        {methodsData && methodsData.totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Trang {currentPage} / {methodsData.totalPages} (
-              {methodsData.total} phương thức)
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1 || isLoading}
-              >
-                <RefreshCw className="h-4 w-4 rotate-180" />
-              </Button>
-              <span className="text-sm font-medium px-2">
-                {currentPage} / {methodsData.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(methodsData.totalPages, p + 1))
-                }
-                disabled={currentPage === methodsData.totalPages || isLoading}
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+        {/* Filters - Compact */}
+        <div className="flex-shrink-0 px-6 py-2 border-b bg-background">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm kiếm theo mã, tên phương thức..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-9 text-sm"
+              />
             </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
           </div>
-        )}
+        </div>
+
+        {/* Table - Expanded to fill space */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-auto border-t">
+            <Table className="min-w-full">
+              <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                <TableRow>
+                  <TableHead className="w-[140px] font-semibold">Mã phương thức</TableHead>
+                  <TableHead className="font-semibold">Tên phương thức</TableHead>
+                  <TableHead className="font-semibold">Mô tả</TableHead>
+                  <TableHead className="text-center font-semibold">Trạng thái</TableHead>
+                  <TableHead className="text-center font-semibold">Ngày tạo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 5 }).map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-6 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : !methodsData?.items || methodsData.items.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      Không tìm thấy phương thức thanh toán nào.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  methodsData.items.map((method) => (
+                    <TableRow
+                      key={method.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleEdit(method.id)}
+                    >
+                      <TableCell className="font-semibold font-mono text-sm">
+                        {method.code || `#${method.id}`}
+                      </TableCell>
+                      <TableCell className="font-semibold text-sm">
+                        {method.name || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-medium text-muted-foreground max-w-md truncate">
+                          {method.description || "—"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {method.isActive ? (
+                          <Badge variant="default" className="font-medium">Đang hoạt động</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="font-medium">Ngừng hoạt động</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center text-sm font-medium text-muted-foreground">
+                        {method.createdAt ? formatDate(method.createdAt) : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination - Compact */}
+          {methodsData && methodsData.totalPages > 1 && (
+            <div className="flex-shrink-0 flex items-center justify-between px-6 py-2 border-t bg-background">
+              <p className="text-xs text-muted-foreground">
+                Trang {currentPage} / {methodsData.totalPages} (
+                {methodsData.total} phương thức)
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || isLoading}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs font-medium px-2">
+                  {currentPage} / {methodsData.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(methodsData.totalPages, p + 1))
+                  }
+                  disabled={currentPage === methodsData.totalPages || isLoading}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Payment Method Modal */}
         <PaymentMethodModal

@@ -47,7 +47,6 @@ export default function TopProductsPage() {
     pageSize: itemsPerPage,
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
   });
 
   return (
@@ -105,7 +104,7 @@ export default function TopProductsPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -115,20 +114,19 @@ export default function TopProductsPage() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="w-[60px]">#</TableHead>
-                <TableHead className="w-[140px]">Mã thiết kế</TableHead>
-                <TableHead>Tên thiết kế</TableHead>
-                <TableHead className="w-[180px]">Chất liệu</TableHead>
+                <TableHead className="w-[140px]">Mã sản phẩm</TableHead>
+                <TableHead>Tên sản phẩm</TableHead>
+                <TableHead className="w-[180px]">Nhóm sản phẩm</TableHead>
                 <TableHead className="text-right">Số lượng bán</TableHead>
-                <TableHead className="text-right">Doanh thu</TableHead>
+                <TableHead className="text-right">Doanh thu ròng</TableHead>
                 <TableHead className="text-right">Số đơn hàng</TableHead>
-                <TableHead className="text-center">Xếp hạng</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -138,7 +136,7 @@ export default function TopProductsPage() {
               ) : !productsData?.items || productsData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={7}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu sản phẩm nào.
@@ -146,34 +144,27 @@ export default function TopProductsPage() {
                 </TableRow>
               ) : (
                 productsData.items.map((item, index) => (
-                  <TableRow key={item.designId || item.designCode}>
+                  <TableRow key={item.productCode || index}>
                     <TableCell className="text-center font-medium">
                       {(currentPage - 1) * itemsPerPage + index + 1}
                     </TableCell>
                     <TableCell className="font-medium font-mono text-sm">
-                      {item.designCode || "—"}
+                      {item.productCode || "—"}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {item.designName || "—"}
+                      {item.productName || "—"}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        {item.materialTypeName || "—"}
-                      </div>
-                      {item.materialTypeCode && (
-                        <div className="text-xs text-muted-foreground">
-                          {item.materialTypeCode}
-                        </div>
-                      )}
+                      {item.productGroup || "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.totalQuantity !== undefined
-                        ? item.totalQuantity.toLocaleString()
+                      {item.soldQuantity !== undefined
+                        ? item.soldQuantity.toLocaleString()
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">
-                      {item.totalRevenue !== undefined
-                        ? formatCurrency(item.totalRevenue)
+                      {item.netRevenue !== undefined
+                        ? formatCurrency(item.netRevenue)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">

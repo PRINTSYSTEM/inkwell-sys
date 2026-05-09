@@ -11,6 +11,9 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  Building2,
+  User,
+  Hash,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
@@ -88,8 +91,8 @@ export default function OrderCreatePage() {
     isLoading: loadingCustomers,
     refetch: refetchCustomers,
   } = useCustomers({
-    page: 1,
-    size: 1000, // Get all customers
+    pageNumber: 1,
+    pageSize: 1000, // Get all customers
   });
   const customers = customersData?.items || [];
 
@@ -118,12 +121,16 @@ export default function OrderCreatePage() {
 
   // Auto-select customer from URL params
   useEffect(() => {
-    if (
-      parsedCustomerId &&
-      !loadingCustomers &&
-      customers.length > 0 &&
-      !selectedCustomer
-    ) {
+    // If URL contains a customerId, ensure customers are loaded and try to auto-select
+    if (!parsedCustomerId || selectedCustomer) return;
+
+    // If customers haven't been fetched yet, trigger a refetch once
+    if (!loadingCustomers && customers.length === 0) {
+      refetchCustomers();
+      return;
+    }
+
+    if (!loadingCustomers && customers.length > 0) {
       const customer = customers.find((c) => c.id === parsedCustomerId);
       if (customer) {
         setSelectedCustomer(customer);
@@ -134,12 +141,8 @@ export default function OrderCreatePage() {
           ? `${window.location.pathname}?${newSearchParams.toString()}`
           : window.location.pathname;
         window.history.replaceState({}, "", newUrl);
-      } else if (
-        parsedCustomerId &&
-        !loadingCustomers &&
-        customers.length > 0
-      ) {
-        // Customer not found, show warning and remove from URL
+      } else {
+        // Customer not found in loaded list, warn and remove param
         toast.warning("Không tìm thấy khách hàng với ID đã cho");
         const newSearchParams = new URLSearchParams(searchParams);
         newSearchParams.delete("customerId");
@@ -155,6 +158,7 @@ export default function OrderCreatePage() {
     customers,
     selectedCustomer,
     searchParams,
+    refetchCustomers,
   ]);
 
   // Search state for existing designs
@@ -203,8 +207,10 @@ export default function OrderCreatePage() {
   const [newCustomerForm, setNewCustomerForm] = useState({
     name: "",
     representativeName: "",
+    type: "company" as "company" | "retail",
     companyName: "",
     address: "",
+    scrapRate: 0.005,
   });
   const { mutateAsync: createCustomer, isPending: isCreatingCustomer } =
     useCreateCustomer();
@@ -232,23 +238,27 @@ export default function OrderCreatePage() {
   };
 
   const handleCreateCustomer = async () => {
-    if (
-      !newCustomerForm.name.trim() ||
-      !newCustomerForm.representativeName.trim()
-    ) {
+    if (!newCustomerForm.name.trim()) {
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
 
     try {
-      const result = await createCustomer({
+      const createPayload = {
         name: newCustomerForm.name.trim(),
-        representativeName: newCustomerForm.representativeName.trim(),
+        representativeName: newCustomerForm.representativeName.trim() || null,
         companyName: newCustomerForm.companyName.trim() || null,
         address: newCustomerForm.address.trim() || null,
-        type: newCustomerForm.companyName.trim() ? "company" : "individual",
-        maxDebt: 50000000, // Set 50tr, không hiển thị
-      });
+        type: newCustomerForm.type,
+        maxDebt: 50000000,
+        // Use form value when available, otherwise default to 0.005
+        scrapRate: newCustomerForm.scrapRate ?? 0.005,
+      };
+
+      // Debug: log payload to verify scrapRate value sent
+      console.debug("OrderCreate quick-create payload:", createPayload);
+
+      const result = await createCustomer(createPayload);
 
       if (result?.id) {
         // Invalidate and refetch customers list
@@ -268,8 +278,10 @@ export default function OrderCreatePage() {
         setNewCustomerForm({
           name: "",
           representativeName: "",
+          type: "company",
           companyName: "",
           address: "",
+          scrapRate: 0.005,
         });
       }
     } catch (error) {
@@ -330,7 +342,8 @@ export default function OrderCreatePage() {
   const handleConfirmExistingDesign = (
     design: DesignResponse,
     quantity: number,
-    laminationType: string
+    laminationType: string,
+    sharedAddressId?: number | null
   ) => {
     const newDesign: CreateDesignRequestUI = {
       id: `existing-${design.id}-${Date.now()}`,
@@ -344,7 +357,10 @@ export default function OrderCreatePage() {
       length: design.length || 0,
       width: design.width || 0,
       height: design.height || 0,
+      adhesiveOffset:
+        (design.adhesiveOffset as number | undefined) || undefined,
       laminationType: laminationType,
+      sharedAddressId: sharedAddressId ?? undefined,
     };
     setDesigns((prev) => [...prev, newDesign]);
     toast.success("Đã thêm thiết kế có sẵn");
@@ -449,6 +465,7 @@ export default function OrderCreatePage() {
             designId: design.designId,
             quantity: design.quantity,
             laminationType: design.laminationType, // Bắt buộc, không null
+            sharedAddressId: design.sharedAddressId ?? null,
           };
         } else {
           // New design: include all fields
@@ -465,12 +482,17 @@ export default function OrderCreatePage() {
             length: design.length && design.length > 0 ? design.length : null,
             width: design.width && design.width > 0 ? design.width : null,
             height: design.height && design.height > 0 ? design.height : null,
+            adhesiveOffset:
+              design.adhesiveOffset != null && design.adhesiveOffset > 0
+                ? design.adhesiveOffset
+                : null,
             sidesClassification: design.sidesClassification || null,
             processClassification: design.processClassification || null,
             requirements: design.requirements?.trim() || null,
             additionalNotes: design.additionalNotes?.trim() || null,
             quantity: design.quantity,
             laminationType: design.laminationType || null,
+            sharedAddressId: design.sharedAddressId ?? null,
           };
         }
       });
@@ -568,12 +590,16 @@ export default function OrderCreatePage() {
                           role="combobox"
                           className="w-full justify-between bg-background h-10 px-3 text-sm"
                         >
-                          {selectedCustomer
-                            ? `${selectedCustomer.name} - ${selectedCustomer.code}` +
-                              (selectedCustomer.companyName
-                                ? ` - ${selectedCustomer.companyName}`
-                                : "")
-                            : "Tìm và chọn khách hàng..."}
+                          <span className="truncate text-left">
+                            {selectedCustomer
+                              ? `${selectedCustomer.name ?? ""} - ${
+                                  selectedCustomer.code ?? ""
+                                }` +
+                                (selectedCustomer.companyName
+                                  ? ` - ${selectedCustomer.companyName}`
+                                  : "")
+                              : "Tìm và chọn khách hàng..."}
+                          </span>
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -606,14 +632,14 @@ export default function OrderCreatePage() {
                                   disabled={loadingCustomers}
                                 >
                                   <Check
-                                    className={`mr-2 h-4 w-4 ${
+                                    className={`mr-2 h-4 w-4 shrink-0 ${
                                       selectedCustomer?.id === customer.id
                                         ? "opacity-100"
                                         : "opacity-0"
                                     }`}
                                   />
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="font-medium">
+                                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                    <span className="font-medium truncate">
                                       {customer.name || ""} -{" "}
                                       {customer.code || ""}
                                       {customer.companyName
@@ -621,7 +647,7 @@ export default function OrderCreatePage() {
                                         : ""}
                                     </span>
                                     {customer.phone && (
-                                      <span className="text-xs text-muted-foreground">
+                                      <span className="text-xs text-muted-foreground truncate">
                                         {customer.phone}
                                       </span>
                                     )}
@@ -983,15 +1009,21 @@ export default function OrderCreatePage() {
                   {/* Customer info */}
                   {selectedCustomer && (
                     <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-                      <p className="text-sm font-medium">
-                        {selectedCustomer.companyName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedCustomer.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedCustomer.phone}
-                      </p>
+                      {selectedCustomer.companyName && (
+                        <p className="text-sm font-medium">
+                          {selectedCustomer.companyName}
+                        </p>
+                      )}
+                      {selectedCustomer.name && (
+                        <p className="text-xs text-muted-foreground">
+                          {selectedCustomer.name}
+                        </p>
+                      )}
+                      {selectedCustomer.phone && (
+                        <p className="text-xs text-muted-foreground">
+                          {selectedCustomer.phone}
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -1107,7 +1139,7 @@ export default function OrderCreatePage() {
             </div>
             <div className="space-y-2">
               <Label>
-                Người đại diện <span className="text-destructive">*</span>
+                Người đại diện
               </Label>
               <Input
                 placeholder="Nhập tên người đại diện"
@@ -1121,9 +1153,82 @@ export default function OrderCreatePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Tên công ty</Label>
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Hash className="h-4 w-4 text-muted-foreground" />
+                Loại khách hàng
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewCustomerForm((prev) => ({ ...prev, type: "company" }))
+                  }
+                  className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center ${
+                    newCustomerForm.type === "company"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <Building2
+                    className={`h-4 w-4 mb-1 ${
+                      newCustomerForm.type === "company"
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                  <p
+                    className={`text-xs font-medium ${
+                      newCustomerForm.type === "company"
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    Khách công ty
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewCustomerForm((prev) => ({ ...prev, type: "retail" }))
+                  }
+                  className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center ${
+                    newCustomerForm.type === "retail"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <User
+                    className={`h-4 w-4 mb-1 ${
+                      newCustomerForm.type === "retail"
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                  <p
+                    className={`text-xs font-medium ${
+                      newCustomerForm.type === "retail"
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    Khách lẻ
+                  </p>
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>
+                Tên công ty{" "}
+                {newCustomerForm.type === "company" && (
+                  <span className="text-destructive">*</span>
+                )}
+              </Label>
               <Input
-                placeholder="Nhập tên công ty (nếu có)"
+                placeholder={
+                  newCustomerForm.type === "company"
+                    ? "Nhập tên công ty (bắt buộc)"
+                    : "Nhập tên công ty (nếu có)"
+                }
                 value={newCustomerForm.companyName}
                 onChange={(e) =>
                   setNewCustomerForm((prev) => ({
@@ -1157,8 +1262,10 @@ export default function OrderCreatePage() {
                 setNewCustomerForm({
                   name: "",
                   representativeName: "",
+                  type: "company",
                   companyName: "",
                   address: "",
+                  scrapRate: 0.005,
                 });
               }}
             >

@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useAPAging } from "@/hooks/use-ar-ap";
+import { useAPAging, useExportAPAging } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 
@@ -48,16 +48,20 @@ export default function APAgingPage() {
     search: searchQuery || undefined,
   });
 
-  const totalCurrent = apData?.items?.reduce((sum, item) => sum + (item.current || 0), 0) || 0;
-  const totalDays30 = apData?.items?.reduce((sum, item) => sum + (item.days30 || 0), 0) || 0;
-  const totalDays60 = apData?.items?.reduce((sum, item) => sum + (item.days60 || 0), 0) || 0;
-  const totalDays90 = apData?.items?.reduce((sum, item) => sum + (item.days90 || 0), 0) || 0;
-  const totalOver90 = apData?.items?.reduce((sum, item) => sum + (item.over90 || 0), 0) || 0;
+  const totalCurrent = apData?.items?.reduce((sum, item) => sum + (item.notDue || 0), 0) || 0;
+  const totalDays30 = apData?.items?.reduce((sum, item) => sum + (item.days0_30 || 0), 0) || 0;
+  const totalDays60 = apData?.items?.reduce((sum, item) => sum + (item.days31_60 || 0), 0) || 0;
+  const totalDays90 = apData?.items?.reduce((sum, item) => sum + (item.days61_90 || 0), 0) || 0;
+  const totalOver90 = apData?.items?.reduce((sum, item) => sum + (item.daysOver90 || 0), 0) || 0;
   const grandTotal = apData?.items?.reduce((sum, item) => sum + (item.total || 0), 0) || 0;
 
+  const { mutate: exportAging, loading: isExporting } = useExportAPAging();
+
   const handleExportExcel = async () => {
-    // TODO: Implement export Excel when API endpoint is available
-    toast.info("Chức năng xuất Excel đang được phát triển");
+    await exportAging({
+      asOfDate: asOfDate ? new Date(asOfDate).toISOString() : undefined,
+      search: searchQuery || undefined,
+    });
   };
 
   const handleVendorClick = (vendorId: number | null | undefined) => {
@@ -74,8 +78,16 @@ export default function APAgingPage() {
           <RefreshCw className="h-4 w-4 mr-2" />
           Làm mới
         </Button>
-        <Button variant="outline" onClick={handleExportExcel}>
-          <Download className="h-4 w-4 mr-2" />
+        <Button 
+          variant="outline" 
+          onClick={handleExportExcel}
+          disabled={isExporting}
+        >
+          {isExporting ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
           Xuất Excel
         </Button>
       </div>
@@ -243,28 +255,28 @@ export default function APAgingPage() {
                       {item.vendorName || "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.current !== undefined && item.current > 0
-                        ? formatCurrency(item.current)
+                      {item.notDue !== undefined && item.notDue > 0
+                        ? formatCurrency(item.notDue)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.days30 !== undefined && item.days30 > 0
-                        ? formatCurrency(item.days30)
+                      {item.days0_30 !== undefined && item.days0_30 > 0
+                        ? formatCurrency(item.days0_30)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-orange-600">
-                      {item.days60 !== undefined && item.days60 > 0
-                        ? formatCurrency(item.days60)
+                      {item.days31_60 !== undefined && item.days31_60 > 0
+                        ? formatCurrency(item.days31_60)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-red-600">
-                      {item.days90 !== undefined && item.days90 > 0
-                        ? formatCurrency(item.days90)
+                      {item.days61_90 !== undefined && item.days61_90 > 0
+                        ? formatCurrency(item.days61_90)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-destructive">
-                      {item.over90 !== undefined && item.over90 > 0
-                        ? formatCurrency(item.over90)
+                      {item.daysOver90 !== undefined && item.daysOver90 > 0
+                        ? formatCurrency(item.daysOver90)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">

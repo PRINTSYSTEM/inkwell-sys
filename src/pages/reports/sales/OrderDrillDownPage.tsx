@@ -38,6 +38,7 @@ const formatDate = (dateStr: string | null | undefined) => {
 
 export default function OrderDrillDownPage() {
   const navigate = useNavigate();
+  const [customerIdText, setCustomerIdText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
@@ -46,23 +47,28 @@ export default function OrderDrillDownPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const customerIdValue = Number(customerIdText);
+  const customerIdValid =
+    customerIdText.trim().length > 0 && !Number.isNaN(customerIdValue);
+
   const {
     data: ordersData,
     isLoading,
     isError,
     error,
     refetch,
-  } = useOrderDrillDown({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    fromDate: dateRange?.from
-      ? dateRange.from.toISOString()
-      : undefined,
-    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
-  });
+  } = useOrderDrillDown(
+    customerIdValid ? customerIdValue : null,
+    {
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+      toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    },
+    customerIdValid
+  );
 
-  const totalRevenue = ordersData?.items?.reduce((sum, item) => sum + (item.totalAmount || 0), 0) || 0;
+  const totalRevenue = ordersData?.items?.reduce((sum, item) => sum + (item.netAmount || 0), 0) || 0;
   const totalOrders = ordersData?.items?.length || 0;
 
   return (
@@ -113,6 +119,17 @@ export default function OrderDrillDownPage() {
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
+          <div className="w-full sm:w-[180px]">
+            <Input
+              placeholder="Customer ID"
+              value={customerIdText}
+              onChange={(e) => {
+                setCustomerIdText(e.target.value);
+                setCurrentPage(1);
+              }}
+              inputMode="numeric"
+            />
+          </div>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -123,7 +140,7 @@ export default function OrderDrillDownPage() {
             />
           </div>
           <div className="flex-1">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -159,10 +176,8 @@ export default function OrderDrillDownPage() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="w-[140px]">Mã đơn</TableHead>
-                <TableHead className="w-[140px]">Mã KH</TableHead>
                 <TableHead>Tên khách hàng</TableHead>
-                <TableHead className="text-center">Ngày đặt</TableHead>
-                <TableHead className="text-right">Số lượng</TableHead>
+                <TableHead className="text-center">Ngày hoàn thành</TableHead>
                 <TableHead className="text-right">Tổng tiền</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
               </TableRow>
@@ -193,23 +208,15 @@ export default function OrderDrillDownPage() {
                     <TableCell className="font-medium font-mono text-sm">
                       {item.orderCode || "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {item.customerCode || "—"}
-                    </TableCell>
                     <TableCell className="font-medium">
                       {item.customerName || "—"}
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
-                      {item.orderDate ? formatDate(item.orderDate) : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.quantity !== undefined
-                        ? item.quantity.toLocaleString()
-                        : "—"}
+                      {item.completedAt ? formatDate(item.completedAt) : "—"}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">
-                      {item.totalAmount !== undefined
-                        ? formatCurrency(item.totalAmount)
+                      {item.netAmount !== undefined
+                        ? formatCurrency(item.netAmount)
                         : "—"}
                     </TableCell>
                     <TableCell>

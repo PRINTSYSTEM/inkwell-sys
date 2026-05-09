@@ -9,8 +9,10 @@ import type {
   DesignTimelineEntryResponse,
   DesignTimelineEntryResponsePaginate,
   UpdateDesignRequest,
-  DesignByCustomerListParams,
+  DesignByCustomerParams,
+  DesignSaleParams,
   RevertDesignRequest,
+  DesignUserParams,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -70,13 +72,7 @@ export const useMyDesigns = (params?: MyDesignListParams) => {
 // GET /api/designs/user/{userId}
 export const useDesignsByUser = (
   userId: number | null,
-  params?: {
-    status?: string;
-    pageNumber?: number;
-    pageSize?: number;
-    month?: number;
-    year?: number;
-  },
+  params?: DesignUserParams,
   enabled = true
 ) => {
   return useQuery({
@@ -345,7 +341,7 @@ export const useGenerateDesignExcel = () => {
 };
 
 // GET /api/designs/by-customer/:id
-export const useDesignsByCustomer = (params?: DesignByCustomerListParams) => {
+export const useDesignsByCustomer = (params?: DesignByCustomerParams) => {
   return useQuery({
     queryKey: [designKeys.all[0], "by-customer", params ?? {}],
     enabled: !!params?.customerId, // Only query when customerId is provided
@@ -417,4 +413,18 @@ export const useRevertDesign = () => {
     mutate,
     reset,
   };
+};
+// GET /api/designs/sale
+export const useDesignsSale = (params?: DesignSaleParams) => {
+  return useQuery({
+    queryKey: [designKeys.all[0], "sale", params ?? {}],
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignResponsePaginate>(
+        API_SUFFIX.DESIGNS_SALE,
+        { params }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 };

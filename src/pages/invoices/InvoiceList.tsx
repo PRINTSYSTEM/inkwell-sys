@@ -47,6 +47,7 @@ import { useInvoices, useExportInvoice } from "@/hooks/use-invoice";
 import { formatCurrency } from "@/lib/status-utils";
 import { CreateInvoiceFromLinesDialog } from "@/components/accounting";
 import { Plus } from "lucide-react";
+import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -63,6 +64,8 @@ export default function InvoiceListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isCreateFromLinesDialogOpen, setIsCreateFromLinesDialogOpen] =
     useState(false);
   const itemsPerPage = 10;
@@ -74,10 +77,14 @@ export default function InvoiceListPage() {
     error,
     refetch,
   } = useInvoices({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    status: statusFilter === "all" ? undefined : statusFilter,
-    search: searchQuery || undefined,
+    // NOTE: invoices list endpoint uses PascalCase query params per OpenAPI
+    PageNumber: currentPage,
+    PageSize: itemsPerPage,
+    Status: statusFilter === "all" ? undefined : statusFilter,
+    Search: searchQuery || undefined,
+    ...(sortColumn.trim()
+      ? { SortColumn: sortColumn.trim(), SortOrder: sortOrder }
+      : {}),
   });
 
   const exportInvoiceMutation = useExportInvoice();
@@ -145,10 +152,37 @@ export default function InvoiceListPage() {
             placeholder="Tìm kiếm theo số HĐ, tên khách, MST..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 h-10 sm:h-9 text-sm"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2 flex-wrap">
+          <div className="w-full lg:w-[420px] min-w-0">
+            <SortControls
+              sortColumn={sortColumn}
+              sortOrder={sortOrder}
+              onSortColumnChange={(v) => {
+                setSortColumn(v);
+                setCurrentPage(1);
+              }}
+              onSortOrderChange={(v) => {
+                setSortOrder(v);
+                setCurrentPage(1);
+              }}
+              onClear={() => {
+                setSortColumn("");
+                setSortOrder("desc");
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: "CreatedAt", label: "Ngày tạo" },
+                { value: "IssuedAt", label: "Ngày xuất" },
+                { value: "InvoiceNumber", label: "Số hóa đơn" },
+                { value: "GrandTotal", label: "Tổng tiền" },
+                { value: "Status", label: "Trạng thái" },
+              ]}
+              placeholder="Sắp xếp theo"
+            />
+          </div>
           <Button
             onClick={() => setIsCreateFromLinesDialogOpen(true)}
             className="gap-2"
@@ -157,7 +191,7 @@ export default function InvoiceListPage() {
             Tạo từ dòng hàng
           </Button>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] h-10 sm:h-9 text-sm">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
@@ -173,6 +207,7 @@ export default function InvoiceListPage() {
             size="icon"
             onClick={() => refetch()}
             disabled={isLoading}
+            className="h-10 w-10 sm:h-9 sm:w-9"
           >
             <RefreshCw
               className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
@@ -216,7 +251,11 @@ export default function InvoiceListPage() {
               </TableRow>
             ) : (
               filteredInvoices.map((invoice) => (
-                <TableRow key={invoice.id} className="group">
+                <TableRow
+                  key={invoice.id}
+                  className={`group ${!invoice.buyerTaxCode ? "bg-rose-50" : ""}`}
+                  title={!invoice.buyerTaxCode ? "Thiếu MST (không thể xuất hóa đơn VAT)" : undefined}
+                >
                   <TableCell className="font-medium font-mono text-sm">
                     {invoice.invoiceNumber || `#${invoice.id}`}
                   </TableCell>
@@ -225,9 +264,12 @@ export default function InvoiceListPage() {
                       <div className="font-medium text-sm">
                         {invoice.buyerCompanyName || invoice.buyerName || "—"}
                       </div>
-                      {invoice.buyerTaxCode && (
-                        <div className="text-xs text-muted-foreground">
-                          MST: {invoice.buyerTaxCode}
+                      {invoice.buyerTaxCode ? (
+                        <div className="text-xs text-muted-foreground">MST: {invoice.buyerTaxCode}</div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-xs text-rose-700">
+                          <AlertCircle className="h-3 w-3" />
+                          Thiếu MST
                         </div>
                       )}
                     </div>

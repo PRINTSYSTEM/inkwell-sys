@@ -2,46 +2,12 @@
 // Mock data for Cash Management APIs
 
 import type {
-  CashFundResponse,
-  CashFundResponseIPaginate,
   CashPaymentResponse,
   CashPaymentResponseIPaginate,
   CashReceiptResponse,
   CashReceiptResponseIPaginate,
   CashBookResponse,
 } from "@/Schema/accounting.schema";
-
-// Mock Cash Funds
-export const mockCashFunds: CashFundResponse[] = [
-  {
-    id: 1,
-    code: "CF001",
-    name: "Quỹ tiền mặt chính",
-    description: "Quỹ tiền mặt chính của công ty",
-    openingBalance: 50000000,
-    isActive: true,
-    createdAt: "2025-01-01T00:00:00+07:00",
-    updatedAt: null,
-  },
-  {
-    id: 2,
-    code: "CF002",
-    name: "Quỹ tiền mặt phụ",
-    description: "Quỹ tiền mặt phụ",
-    openingBalance: 10000000,
-    isActive: true,
-    createdAt: "2025-01-01T00:00:00+07:00",
-    updatedAt: null,
-  },
-];
-
-export const mockCashFundsPaginate: CashFundResponseIPaginate = {
-  size: 10,
-  page: 1,
-  total: 2,
-  totalPages: 1,
-  items: mockCashFunds,
-};
 
 // Mock Cash Payments
 export const mockCashPayments: CashPaymentResponse[] = [
@@ -192,8 +158,8 @@ export const mockCashBook: CashBookResponse = {
       voucherCode: "PT001",
       description: "Thu tiền đơn hàng",
       objectName: "Công ty TNHH Hóa Nông",
-      debitAmount: 0,
-      creditAmount: 10000000,
+      receiptAmount: 10000000,
+      paymentAmount: 0,
       runningBalance: 60000000,
       reference: "DH25-1",
       voucherType: "CashReceipt",
@@ -204,16 +170,16 @@ export const mockCashBook: CashBookResponse = {
       voucherCode: "PC001",
       description: "Thanh toán vật tư in ấn",
       objectName: "Công ty Vật tư In ấn ABC",
-      debitAmount: 5000000,
-      creditAmount: 0,
+      receiptAmount: 0,
+      paymentAmount: 5000000,
       runningBalance: 55000000,
       reference: "PC001",
       voucherType: "CashPayment",
       voucherId: 1,
     },
   ],
-  totalDebit: 5000000,
-  totalCredit: 10000000,
+  totalReceipt: 10000000,
+  totalPayment: 5000000,
   closingBalance: 55000000,
 };
 

@@ -61,7 +61,14 @@ import { toast } from 'sonner';
 
 import { DesignAssignment, DesignAssignmentStatus, DesignAssignmentPriority } from '@/types/design-monitoring';
 import { Employee } from '@/types/employee';
-import { DesignAssignmentService } from '@/services/designAssignmentService';
+// TODO: DesignAssignmentService needs to be implemented
+// import { DesignAssignmentService } from '@/services/designAssignmentService';
+const DesignAssignmentService = {
+  getAssignments: async () => Promise.resolve([]),
+  createAssignment: async (data: any) => Promise.resolve({} as any),
+  updateAssignment: async (id: string, data: any) => Promise.resolve({} as any),
+  deleteAssignment: async (id: string) => Promise.resolve()
+};
 
 // Type alias to handle unknown structure
 type AssignmentData = Record<string, unknown>;
@@ -122,7 +129,7 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
 
     // Apply designer filter
     if (designerFilter !== 'all') {
-      filtered = filtered.filter(assignment => assignment.designerId === designerFilter);
+      filtered = filtered.filter(assignment => assignment.assignedTo === designerFilter);
     }
 
     // Apply sorting
@@ -132,34 +139,34 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
       
       switch (sortBy) {
         case 'title': {
-          aValue = (a as AssignmentData).title as string || '';
-          bValue = (b as AssignmentData).title as string || '';
+          aValue = a.title || '';
+          bValue = b.title || '';
           break;
         }
         case 'deadline': {
-          aValue = new Date((a as AssignmentData).deadline as string || 0);
-          bValue = new Date((b as AssignmentData).deadline as string || 0);
+          aValue = new Date(a.deadline || 0);
+          bValue = new Date(b.deadline || 0);
           break;
         }
         case 'assignedAt': {
-          aValue = new Date((a as AssignmentData).assignedAt as string || 0);
-          bValue = new Date((b as AssignmentData).assignedAt as string || 0);
+          aValue = new Date(a.createdAt || 0);
+          bValue = new Date(b.createdAt || 0);
           break;
         }
         case 'priority': {
           const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-          aValue = priorityOrder[(a as AssignmentData).priority as keyof typeof priorityOrder] || 0;
-          bValue = priorityOrder[(b as AssignmentData).priority as keyof typeof priorityOrder] || 0;
+          aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
+          bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
           break;
         }
         case 'progress': {
-          aValue = (a as AssignmentData).progressPercentage as number || 0;
-          bValue = (b as AssignmentData).progressPercentage as number || 0;
+          aValue = a.progress || 0;
+          bValue = b.progress || 0;
           break;
         }
         default:
-          aValue = a.assignedAt;
-          bValue = b.assignedAt;
+          aValue = new Date(a.createdAt || 0);
+          bValue = new Date(b.createdAt || 0);
       }
 
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
@@ -183,7 +190,7 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
       if (onStatusUpdate) {
         onStatusUpdate(assignmentId, status);
       } else {
-        await DesignAssignmentService.updateAssignmentStatus(assignmentId, { status });
+        await DesignAssignmentService.updateAssignment(assignmentId, { status });
         toast.success("Thành công", {
           description: "Đã cập nhật trạng thái assignment",
         });
@@ -382,7 +389,7 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
         // Card View
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAssignments.map((assignment) => {
-            const deadlineStatus = getDeadlineStatus(assignment.deadline);
+            const deadlineStatus = getDeadlineStatus(new Date(assignment.deadline));
             return (
               <Card 
                 key={assignment.id} 
@@ -396,7 +403,7 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg line-clamp-2">{assignment.title}</h3>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {getDesignerName(assignment.designerId)}
+                          {assignment.assignedTo ? getDesignerName(assignment.assignedTo) : 'Chưa phân công'}
                         </p>
                       </div>
                       {showActions && (
@@ -443,9 +450,9 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span>Tiến độ</span>
-                        <span className="font-medium">{assignment.progressPercentage}%</span>
+                        <span className="font-medium">{assignment.progress}%</span>
                       </div>
-                      <Progress value={assignment.progressPercentage} className="h-2" />
+                      <Progress value={assignment.progress} className="h-2" />
                     </div>
 
                     {/* Deadline */}
@@ -500,7 +507,7 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
               </TableHeader>
               <TableBody>
                 {filteredAssignments.map((assignment) => {
-                  const deadlineStatus = getDeadlineStatus(assignment.deadline);
+                  const deadlineStatus = getDeadlineStatus(new Date(assignment.deadline));
                   return (
                     <TableRow 
                       key={assignment.id}
@@ -521,10 +528,10 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-xs">
-                              {getDesignerName(assignment.designerId).split(' ').map(n => n[0]).join('')}
+                              {assignment.assignedTo ? getDesignerName(assignment.assignedTo).split(' ').map(n => n[0]).join('') : 'N/A'}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm">{getDesignerName(assignment.designerId)}</span>
+                          <span className="text-sm">{assignment.assignedTo ? getDesignerName(assignment.assignedTo) : 'Chưa phân công'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -535,8 +542,8 @@ const DesignAssignmentList: React.FC<DesignAssignmentListProps> = ({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Progress value={assignment.progressPercentage} className="w-16 h-2" />
-                          <span className="text-sm font-medium">{assignment.progressPercentage}%</span>
+                          <Progress value={assignment.progress} className="w-16 h-2" />
+                          <span className="text-sm font-medium">{assignment.progress}%</span>
                         </div>
                       </TableCell>
                       <TableCell>

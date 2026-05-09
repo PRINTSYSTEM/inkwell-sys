@@ -29,11 +29,13 @@ const DesignManagement = lazy(() => import("@/pages/design/Designers"));
 const DesignerDetailPage = lazy(
   () => import("@/pages/design/DesignerDetailView")
 );
+const SaleDesignSearch = lazy(() => import("@/pages/design/SaleDesignSearch"));
 
 // Orders
 const Orders = lazy(() => import("@/pages/orders/OrderList"));
 const OrderDetail = lazy(() => import("@/pages/orders/OrderDetail"));
 const CreateOrder = lazy(() => import("@/pages/orders/OrderCreate"));
+const OrderQuote = lazy(() => import("@/pages/orders/OrderQuote"));
 
 // Customers
 const Customers = lazy(() => import("@/pages/customers/CustomerList"));
@@ -44,13 +46,20 @@ const DesignTypes = lazy(() => import("@/pages/design-types/DesignTypeList"));
 
 // Proofing (prepress)
 const ProofingList = lazy(() => import("@/pages/prepress/PrepressList"));
-const ProofingCreate = lazy(() => import("@/pages/prepress/ProofingCreate"));
 const ProofingCreatePrintOrder = lazy(
   () => import("@/pages/prepress/CreatePrintOrder")
 );
 
 //die management
 const DieManagement = lazy(() => import("@/pages/dies/DieListPage"));
+
+// Plate Exports
+const PlateExportList = lazy(
+  () => import("@/pages/plate-exports/PlateExportListPage")
+);
+const PlateExportDetail = lazy(
+  () => import("@/pages/plate-exports/PlateExportDetailPage")
+);
 
 // Proofing
 const ProofingDetail = lazy(() => import("@/pages/prepress/PrepressDetail"));
@@ -76,13 +85,19 @@ const ProductTemplates = lazy(
 // Stock Management
 const StockInList = lazy(() => import("@/pages/stock/StockInList"));
 const StockInCreate = lazy(() => import("@/pages/stock/StockInCreate"));
+const StockInDetail = lazy(() => import("@/pages/stock/StockInDetail"));
 const StockOutList = lazy(() => import("@/pages/stock/StockOutList"));
 const StockOutCreate = lazy(() => import("@/pages/stock/StockOutCreate"));
+const StockOutDetail = lazy(() => import("@/pages/stock/StockOutDetail"));
 
 // Vendors
 const VendorList = lazy(() => import("@/pages/vendors/VendorList"));
+const VendorCreate = lazy(() => import("@/pages/vendors/VendorCreate"));
+const VendorEdit = lazy(() => import("@/pages/vendors/VendorEdit"));
+const VendorDetail = lazy(() => import("@/pages/vendors/VendorDetail"));
 
 const PaymentPage = lazy(() => import("@/pages/accounting/PaymentPage"));
+const QuotePage = lazy(() => import("@/pages/accounting/QuotePage"));
 const InvoicePage = lazy(() => import("@/pages/accounting/InvoicePage"));
 const DeliveryPage = lazy(() => import("@/pages/accounting/DeliveryPage"));
 const AccountingOrderDetail = lazy(
@@ -105,9 +120,10 @@ const CashPaymentList = lazy(
 const CashPaymentDetail = lazy(
   () => import("@/pages/accounting/cash/CashPaymentDetailPage")
 );
-const CashFundList = lazy(
-  () => import("@/pages/accounting/cash/CashFundListPage")
-);
+// Cash fund endpoints removed from API
+// const CashFundList = lazy(
+//   () => import("@/pages/accounting/cash/CashFundListPage")
+// );
 const CashReceiptList = lazy(
   () => import("@/pages/accounting/cash/CashReceiptListPage")
 );
@@ -120,14 +136,38 @@ const CashBook = lazy(() => import("@/pages/accounting/cash/CashBookPage"));
 const BankAccountList = lazy(
   () => import("@/pages/accounting/bank/BankAccountListPage")
 );
-const BankLedger = lazy(() => import("@/pages/accounting/bank/BankLedgerPage"));
 
 // AR/AP
 const AR = lazy(() => import("@/pages/accounting/ar/ARPage"));
+const ARByItem = lazy(() => import("@/pages/accounting/ar/ARByItemPage"));
+const ARUnderdue = lazy(() => import("@/pages/accounting/ar/ARUnderduePage"));
+const ARSummaryByCustomerGroup = lazy(
+  () => import("@/pages/accounting/ar/ARSummaryByCustomerGroupPage")
+);
+const ARSummaryByBranch = lazy(
+  () => import("@/pages/accounting/ar/ARSummaryByBranchPage")
+);
 const AP = lazy(() => import("@/pages/accounting/ap/APPage"));
+const APByPurchaseInvoice = lazy(
+  () => import("@/pages/accounting/ap/APByPurchaseInvoicePage")
+);
+const APOverdue = lazy(() => import("@/pages/accounting/ap/APOverduePage"));
 const CollectionSchedule = lazy(
   () => import("@/pages/accounting/CollectionSchedulePage")
 );
+
+// Debt Notifications & Reconciliations
+const DebtNotificationList = lazy(
+  () => import("@/pages/accounting/debt-notifications/DebtNotificationListPage")
+);
+const DebtReconciliationAR = lazy(
+  () => import("@/pages/accounting/debt-reconciliations/DebtReconciliationARPage")
+);
+const DebtReconciliationAP = lazy(
+  () => import("@/pages/accounting/debt-reconciliations/DebtReconciliationAPPage")
+);
+
+const SharedAddressListPage = lazy(() => import("@/pages/shared-addresses/SharedAddressListPage"));
 
 // Expense & Payment Method
 const ExpenseCategoryList = lazy(
@@ -135,6 +175,11 @@ const ExpenseCategoryList = lazy(
 );
 const PaymentMethodList = lazy(
   () => import("@/pages/accounting/payment-method/PaymentMethodListPage")
+);
+
+// Accounting - Cost Pricing (Phase 2)
+const CostPricingPage = lazy(
+  () => import("@/pages/accounting/CostPricingPage")
 );
 
 // Inventory Reports
@@ -193,7 +238,6 @@ const DeliveryNoteDetail = lazy(
 );
 
 // Invoices
-const InvoiceList = lazy(() => import("@/pages/invoices/InvoiceList"));
 const InvoiceDetail = lazy(() => import("@/pages/invoices/InvoiceDetail"));
 
 // Attendance
@@ -238,10 +282,30 @@ export const router = createBrowserRouter([
       // redirect "/" -> "/dashboard"
       {
         index: true,
-        element: <Navigate to={ROUTE_PATHS.AUTH.LOGIN} replace />,
+        element: <Navigate to={ROUTE_PATHS.DASHBOARD} replace />,
       },
 
       // ===== DASHBOARD =====
+      {
+        path: lastSegment(ROUTE_PATHS.DASHBOARD), // "dashboard"
+        element: (
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Dashboard />
+          </Suspense>
+        ),
+      },
+
+      // ===== SALES (legacy sales URL for quote) =====
+      {
+        path: "sales/quote",
+        element: (
+          <Suspense fallback={<PageLoadingFallback />}>
+            <QuotePage />
+          </Suspense>
+        ),
+      },
+
+      // ===== LOGIN (redirect case) =====
       {
         path: lastSegment(ROUTE_PATHS.AUTH.LOGIN), // "login"
         element: (
@@ -289,6 +353,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: lastSegment(ROUTE_PATHS.DESIGN.SALE_LOOKUP), // "sale-lookup"
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <SaleDesignSearch />
+              </Suspense>
+            ),
+          },
+          {
             // /design/designer/:id
             path: "designer/:id",
             element: (
@@ -306,6 +378,14 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <Orders />
+              </Suspense>
+            ),
+          },
+          {
+            path: "sale",
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <Orders />
@@ -392,14 +472,6 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: lastSegment(ROUTE_PATHS.PROOFING.CREATE),
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <ProofingCreate />
-              </Suspense>
-            ),
-          },
-          {
             path: lastSegment(ROUTE_PATHS.PROOFING.CREATE_PRINT_ORDER), // "create-print-order"
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
@@ -459,6 +531,29 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <ProductionDetailPage />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
+      // ===== PLATE EXPORTS =====
+      {
+        path: lastSegment(ROUTE_PATHS.PLATE_EXPORTS.ROOT), // "plate-exports"
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PlateExportList />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PlateExportDetail />
               </Suspense>
             ),
           },
@@ -527,6 +622,14 @@ export const router = createBrowserRouter([
                   </Suspense>
                 ),
               },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <StockInDetail />
+                  </Suspense>
+                ),
+              },
             ],
           },
           {
@@ -548,6 +651,14 @@ export const router = createBrowserRouter([
                   </Suspense>
                 ),
               },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <StockOutDetail />
+                  </Suspense>
+                ),
+              },
             ],
           },
         ],
@@ -562,6 +673,30 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <VendorList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "create",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <VendorCreate />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <VendorDetail />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id/edit",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <VendorEdit />
               </Suspense>
             ),
           },
@@ -580,13 +715,34 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
+              {
+                path: "quote",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <QuotePage />
+                  </Suspense>
+                ),
+              },
           {
             path: "invoice",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <InvoicePage />
-              </Suspense>
-            ),
+            children: [
+              {
+                index: true,
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <InvoicePage />
+                  </Suspense>
+                ),
+              },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <InvoiceDetail />
+                  </Suspense>
+                ),
+              },
+            ],
           },
           {
             path: "delivery",
@@ -628,6 +784,14 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
+          {
+            path: lastSegment(ROUTE_PATHS.ACCOUNTING.COST_PRICING), // "cost-pricing"
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <CostPricingPage />
+              </Suspense>
+            ),
+          },
           // Cash Management
           {
             path: "cash-payments",
@@ -645,11 +809,20 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
+          // Cash fund endpoints removed from API
+          // {
+          //   path: "cash-funds",
+          //   element: (
+          //     <Suspense fallback={<PageLoadingFallback />}>
+          //       <CashFundList />
+          //     </Suspense>
+          //   ),
+          // },
           {
-            path: "cash-funds",
+            path: ":id/quote",
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
-                <CashFundList />
+                <OrderQuote />
               </Suspense>
             ),
           },
@@ -686,15 +859,7 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          {
-            path: "bank-ledger",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <BankLedger />
-              </Suspense>
-            ),
-          },
-          // AR
+          // AR - Công nợ phải thu
           {
             path: "ar",
             element: (
@@ -703,7 +868,39 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-          // AP
+          {
+            path: "ar/by-item",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ARByItem />
+              </Suspense>
+            ),
+          },
+          {
+            path: "ar/underdue",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ARUnderdue />
+              </Suspense>
+            ),
+          },
+          {
+            path: "ar/summary-by-customer-group",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ARSummaryByCustomerGroup />
+              </Suspense>
+            ),
+          },
+          {
+            path: "ar/summary-by-branch",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ARSummaryByBranch />
+              </Suspense>
+            ),
+          },
+          // AP - Công nợ phải trả
           {
             path: "ap",
             element: (
@@ -713,10 +910,51 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "ap/by-purchase-invoice",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <APByPurchaseInvoice />
+              </Suspense>
+            ),
+          },
+          {
+            path: "ap/overdue",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <APOverdue />
+              </Suspense>
+            ),
+          },
+          {
             path: "collection-schedule",
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <CollectionSchedule />
+              </Suspense>
+            ),
+          },
+          // Debt Notifications & Reconciliations
+          {
+            path: "debt-notifications",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DebtNotificationList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "debt-reconciliations/ar",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DebtReconciliationAR />
+              </Suspense>
+            ),
+          },
+          {
+            path: "debt-reconciliations/ap",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DebtReconciliationAP />
               </Suspense>
             ),
           },
@@ -757,29 +995,6 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <DeliveryNoteDetail />
-              </Suspense>
-            ),
-          },
-        ],
-      },
-
-      // ===== INVOICES =====
-      {
-        path: lastSegment(ROUTE_PATHS.INVOICES.ROOT), // "invoices"
-        children: [
-          {
-            index: true,
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <InvoiceList />
-              </Suspense>
-            ),
-          },
-          {
-            path: ":id",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <InvoiceDetail />
               </Suspense>
             ),
           },
@@ -834,6 +1049,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <EmployeeDetail />
+              </Suspense>
+            ),
+          },
+          {
+            path: "shared-addresses",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <SharedAddressListPage />
               </Suspense>
             ),
           },

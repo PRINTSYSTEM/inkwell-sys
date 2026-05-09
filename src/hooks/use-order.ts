@@ -10,11 +10,12 @@ import type {
   CreateOrderRequest,
   UpdateOrderRequest,
   UpdateOrderForAccountingRequest,
-  CreateOrderWithExistingDesignsRequest,
   AddDesignToOrderRequest,
   OrderResponseForDesignerPaginate,
   UserRole,
   OrdersMyListParams,
+  OrderExportResponse,
+  CashReceiptResponseIPaginate,
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
@@ -47,8 +48,16 @@ const {
   },
 });
 
-export const useOrders = (params?: OrderListParams) =>
-  useOrderListBase(params ?? ({} as OrderListParams));
+export const useOrders = (params?: OrderListParams) => {
+  // IMPORTANT: normalizeParams handles empty strings correctly
+  // String params should already be "" not undefined when passed to hook
+  // Note: useOrderListBase uses crudApi.list which doesn't normalize,
+  // so we normalize here before passing to the base hook
+  const normalizedParams = params
+    ? (normalizeParams(params as Record<string, unknown>) as OrderListParams)
+    : ({} as OrderListParams);
+  return useOrderListBase(normalizedParams);
+};
 
 // Wrapper for admin/base list with enabled parameter
 const useOrderListBaseWithEnabled = (
@@ -59,7 +68,14 @@ const useOrderListBaseWithEnabled = (
     queryKey: orderKeys.list(params ?? ({} as OrderListParams)),
     enabled,
     queryFn: async () => {
-      const res = await orderCrudApi.list(params ?? ({} as OrderListParams));
+      // IMPORTANT: normalizeParams handles empty strings correctly
+      // String params should already be "" not undefined when passed to hook
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await orderCrudApi.list(
+        normalizedParams as OrderListParams
+      );
       return res;
     },
     staleTime: 5 * 60 * 1000, // 5 phút
@@ -131,63 +147,6 @@ export const useGenerateOrderExcel = () => {
 };
 
 export { orderCrudApi, orderKeys };
-// ================== ORDER: TẠO TỪ EXISTING DESIGNS ==================
-// POST /orders/with-existing-designs
-
-export const useCreateOrderWithExistingDesigns = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    OrderResponse,
-    [CreateOrderWithExistingDesignsRequest]
-  >(async (payload) => {
-    const res = await apiRequest.post<OrderResponse>(
-      API_SUFFIX.ORDERS_WITH_EXISTING_DESIGNS,
-      payload
-    );
-    return res.data;
-  });
-
-  const mutate = async (payload: CreateOrderWithExistingDesignsRequest) => {
-    try {
-      const result = await execute(payload);
-
-      // Cập nhật cache
-      if (result.id != null) {
-        queryClient.invalidateQueries({
-          queryKey: orderKeys.detail(result.id),
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: orderKeys.all });
-
-      toast.success("Thành công", {
-        description: "Đã tạo đơn hàng từ thiết kế có sẵn",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể tạo đơn hàng từ thiết kế có sẵn",
-      });
-      throw err;
-    }
-  };
-
-  return {
-    data,
-    loading,
-    error,
-    mutate,
-    reset,
-  };
-};
 
 // ================== ORDER: THÊM THIẾT KẾ VÀO ĐƠN ==================
 // PUT /orders/{id}/add-design
@@ -319,12 +278,18 @@ const useOrdersForDesigner = (
     queryKey: [orderKeys.all[0], "for-designer", params],
     enabled,
     queryFn: async () => {
+      // IMPORTANT: normalizeParams handles empty strings correctly
+      // String params should already be "" not undefined when passed to hook
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
       const res = await apiRequest.get<OrderResponseForDesignerPaginate>(
         API_SUFFIX.ORDERS_FOR_DESIGNER,
-        { params }
+        { params: normalizedParams }
       );
       return res.data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -339,12 +304,41 @@ export const useOrdersForAccounting = (
     queryKey: [orderKeys.all[0], "for-accounting", params],
     enabled,
     queryFn: async () => {
+      // IMPORTANT: normalizeParams handles empty strings correctly
+      // String params should already be "" not undefined when passed to hook
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
       const res = await apiRequest.get<OrderResponsePaginate>(
         API_SUFFIX.ORDERS_FOR_ACCOUNTING,
-        { params }
+        { params: normalizedParams }
       );
       return res.data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// ================== ORDER: LIST FOR SALE (QUOTES) ==================
+// GET /orders/for-sale
+export const useOrdersForSale = (
+  params?: OrdersForAccountingListParams,
+  enabled = true
+) => {
+  return useQuery<OrderResponsePaginate>({
+    queryKey: [orderKeys.all[0], "for-sale", params],
+    enabled,
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<OrderResponsePaginate>(
+        API_SUFFIX.ORDERS_FOR_SALE,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -365,12 +359,97 @@ export const useUpdateOrderForAccounting = () => {
     return res.data;
   });
 
+  const sleep = (ms: number) =>
+    new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+
+  const postApprovedCashReceiptForOrder = async (
+    orderId: number,
+    customerId: number | null | undefined
+  ): Promise<"posted" | "missing_customer" | "not_found"> => {
+    if (!customerId) return "missing_customer";
+
+    const MAX_RETRIES = 3;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const receiptsRes = await apiRequest.get<CashReceiptResponseIPaginate>(
+        API_SUFFIX.CASH_RECEIPTS,
+        {
+          params: {
+            customerId,
+            status: "approved",
+            pageNumber: 1,
+            pageSize: 50,
+          },
+        }
+      );
+
+      const matchedReceipts = (receiptsRes.data.items ?? []).filter(
+        (receipt) => receipt.orderId === orderId && receipt.id != null
+      );
+
+      if (matchedReceipts.length > 0) {
+        const receiptToPost = [...matchedReceipts].sort((a, b) => {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          if (bTime !== aTime) return bTime - aTime;
+          return (b.id ?? 0) - (a.id ?? 0);
+        })[0];
+
+        if (receiptToPost?.id != null) {
+          await apiRequest.post(API_SUFFIX.CASH_RECEIPT_POST(receiptToPost.id));
+          queryClient.invalidateQueries({ queryKey: ["cash-receipts"] });
+          queryClient.invalidateQueries({ queryKey: ["cash-book"] });
+          return "posted";
+        }
+      }
+
+      if (attempt < MAX_RETRIES) {
+        await sleep(500);
+      }
+    }
+
+    return "not_found";
+  };
+
   const mutate = async (
     id: number,
     payload: UpdateOrderForAccountingRequest
   ) => {
     try {
       const result = await execute(id, payload);
+      const shouldPostCashReceipt =
+        (payload.depositAmount != null && payload.depositAmount > 0) ||
+        payload.paymentMethodId != null;
+      let postReceiptResult: "posted" | "missing_customer" | "not_found" =
+        "missing_customer";
+
+      if (shouldPostCashReceipt) {
+        try {
+          postReceiptResult = await postApprovedCashReceiptForOrder(
+            id,
+            result.customerId
+          );
+
+          if (postReceiptResult === "missing_customer") {
+            toast.warning("Đã cập nhật đơn hàng", {
+              description:
+                "Không xác định được khách hàng để tìm phiếu thu duyệt và ghi sổ tự động.",
+            });
+          } else if (postReceiptResult === "not_found") {
+            toast.warning("Đã cập nhật đơn hàng", {
+              description:
+                "Chưa tìm thấy phiếu thu ở trạng thái duyệt để ghi sổ. Vui lòng thử lại sau.",
+            });
+          }
+        } catch {
+          toast.warning("Đã cập nhật đơn hàng", {
+            description:
+              "Không thể ghi sổ phiếu thu tự động. Vui lòng vào Phiếu thu để ghi sổ thủ công.",
+          });
+        }
+      }
 
       // Invalidate order detail
       queryClient.invalidateQueries({
@@ -388,7 +467,10 @@ export const useUpdateOrderForAccounting = () => {
       });
 
       toast.success("Thành công", {
-        description: "Đã cập nhật đơn hàng thành công",
+        description:
+          shouldPostCashReceipt && postReceiptResult === "posted"
+            ? "Đã cập nhật đơn hàng và ghi sổ phiếu thu"
+            : "Đã cập nhật đơn hàng thành công",
       });
 
       return result;
@@ -402,6 +484,59 @@ export const useUpdateOrderForAccounting = () => {
           error?.response?.data?.message ||
           error?.message ||
           "Không thể cập nhật đơn hàng",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
+// ================== ORDER: UPDATE FOR SALE ==================
+// PUT /orders/{id}/sale
+
+export const useUpdateOrderForSale = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    any,
+    [number, any]
+  >(async (id: number, payload: any) => {
+    const res = await apiRequest.put<OrderResponse>(
+      API_SUFFIX.ORDER_UPDATE_FOR_SALE(id),
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number, payload: any) => {
+    try {
+      const result = await execute(id, payload);
+
+      // Invalidate order detail
+      queryClient.invalidateQueries({
+        queryKey: orderKeys.detail(id),
+      });
+
+      // Invalidate orders list
+      queryClient.invalidateQueries({
+        queryKey: ["orders"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật đơn hàng (sale) thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message || error?.message ||
+          "Không thể cập nhật đơn hàng (sale)",
       });
       throw err;
     }
@@ -563,6 +698,128 @@ export const useExportOrderPDF = () => {
   return { loading, error, mutate, reset };
 };
 
+// ================== ORDER: EXPORT DATA ==================
+// GET /orders/{id}/export-data
+
+export const useGetOrderExportData = () => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderExportResponse,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.get<OrderExportResponse>(
+      API_SUFFIX.ORDER_EXPORT_DATA(id)
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể lấy dữ liệu xuất",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
+// ================== ORDER: RECALCULATE TOTAL ==================
+// POST /orders/{id}/recalculate-total
+
+export const useRecalculateOrderTotal = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderResponse,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.post<OrderResponse>(
+      API_SUFFIX.ORDER_RECALCULATE_TOTAL(id)
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: orderKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+
+      toast.success("Thành công", {
+        description: "Đã tính lại tổng tiền đơn hàng",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể tính lại tổng tiền",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
+// ================== ORDER: VALIDATE EXPORT ==================
+// GET /orders/{id}/validate-export
+
+export const useValidateOrderExport = () => {
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    unknown,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.get<unknown>(
+      API_SUFFIX.ORDER_VALIDATE_EXPORT(id)
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể validate xuất",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
 export const useMyOrders = (
   params?: OrdersMyListParams,
   enabled: boolean = true
@@ -571,12 +828,18 @@ export const useMyOrders = (
     queryKey: [orderKeys.all[0], "my", params ?? {}],
     enabled,
     queryFn: async () => {
+      // IMPORTANT: normalizeParams handles empty strings correctly
+      // String params should already be "" not undefined when passed to hook
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
       const res = await apiRequest.get<OrderResponsePaginate>(
         API_SUFFIX.ORDERS_MY,
-        { params }
+        { params: normalizedParams }
       );
       return res.data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
@@ -589,24 +852,49 @@ export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
     role === ROLE.PRODUCTION ||
     role === ROLE.PRODUCTION_LEAD ||
     role === ROLE.ACCOUNTING_LEAD ||
-    role === ROLE.ACCOUNTING;
+    role === ROLE.ACCOUNTING ||
+    role === ROLE.SALE;
   const isDesignerRole = role === ROLE.DESIGN;
   const isDesignerLeadRole = role === ROLE.DESIGN_LEAD;
 
-  // Normalize and convert params based on role
-  const adminParams = normalizeParams(params ?? ({} as OrderListParams));
+  // Convert params based on role - ensure string params use empty strings, not undefined
+  // normalizeParams will be called inside each hook
+  const adminParams: OrderListParams = {
+    pageNumber: params?.pageNumber,
+    pageSize: params?.pageSize,
+    customerId: params?.customerId,
+    status: params?.status || "",
+    search: params?.search || "",
+    startDate: params?.startDate || "",
+    endDate: params?.endDate || "",
+    sortColumn: params?.sortColumn || "",
+    sortOrder: params?.sortOrder || "",
+  };
+
   const designerParams: OrdersForDesignerListParams = {
     pageNumber: params?.pageNumber,
     pageSize: params?.pageSize,
-    status: params?.status,
-    startDate: params?.startDate,
-    endDate: params?.endDate,
+    status: params?.status || "",
+    search: params?.search || "",
+    sortColumn: params?.sortColumn || "",
+    sortOrder: params?.sortOrder || "",
+  };
+
+  const myOrdersParams: OrdersMyListParams = {
+    pageNumber: params?.pageNumber,
+    pageSize: params?.pageSize,
+    status: params?.status || "",
+    search: params?.search || "",
+    startDate: params?.startDate || "",
+    endDate: params?.endDate || "",
+    sortColumn: params?.sortColumn || "",
+    sortOrder: params?.sortOrder || "",
   };
 
   // Call all hooks unconditionally to satisfy Rules of Hooks
   // But only enable the query for the current role to optimize performance
   const adminResult = useOrderListBaseWithEnabled(adminParams, isAdminRole);
-  const designerResult = useMyOrders(designerParams, isDesignerRole);
+  const designerResult = useMyOrders(myOrdersParams, isDesignerRole);
 
   const designerLeadResult = useOrdersForDesigner(
     designerParams,

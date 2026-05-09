@@ -39,12 +39,15 @@ import {
   Check,
   ChevronsUpDown,
   Plus,
+  Copy,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useActiveDieVendors, useCreateVendor } from "@/hooks/use-vendor";
 import { useCreateDie, useUpdateDie, useUploadDieImage } from "@/hooks/use-die";
 import type { DieResponse } from "@/Schema";
+import { dieUsageTypeLabels, dieStatusLabels } from "@/lib/status-utils";
 
 interface DieDialogProps {
   open: boolean;
@@ -60,9 +63,7 @@ export function DieDialog({
   onSuccess,
 }: DieDialogProps) {
   const isEdit = !!die;
-  const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [type, setType] = useState("");
   const [size, setSize] = useState("");
   const [price, setPrice] = useState<number | undefined>(0);
   const [location, setLocation] = useState("");
@@ -74,6 +75,8 @@ export function DieDialog({
   const [vendorSearchOpen, setVendorSearchOpen] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [estimatedReceiveAt, setEstimatedReceiveAt] = useState<string>("");
+  const [isReusable, setIsReusable] = useState<boolean>(true);
 
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
@@ -86,9 +89,7 @@ export function DieDialog({
   useEffect(() => {
     if (open) {
       if (die) {
-        setName(die.name || "");
         setCode(die.code || "");
-        setType(die.type || "");
         setSize(die.size || "");
         setPrice(die.price ?? 0);
         setLocation(die.location || "");
@@ -98,9 +99,7 @@ export function DieDialog({
         setImagePreview(die.imageUrl || null);
         setImage(null);
       } else {
-        setName("");
         setCode("");
-        setType("");
         setSize("");
         setPrice(0);
         setLocation("");
@@ -109,6 +108,8 @@ export function DieDialog({
         setVendorId(null);
         setImagePreview(null);
         setImage(null);
+        setEstimatedReceiveAt("");
+        setIsReusable(true);
       }
       setVendorName("");
       setIsCreatingVendor(false);
@@ -185,9 +186,7 @@ export function DieDialog({
         {
           id: die.id,
           data: {
-            name: name.trim() || null,
             code: code.trim() || null,
-            type: type.trim() || null,
             size: size.trim() || null,
             price: price ?? null,
             location: location.trim() || null,
@@ -216,30 +215,43 @@ export function DieDialog({
         }
       );
     } else {
-      // Create die
-      if (!code.trim()) {
-        toast.error("Vui lòng nhập mã khuôn bế");
-        return;
-      }
-      if (!type.trim()) {
-        toast.error("Vui lòng nhập loại khuôn bế");
-        return;
-      }
+      // Create die - chỉ yêu cầu: vendorId, price (optional), estimatedReceiveAt (optional), isReusable (optional), image
       if (!vendorId) {
         toast.error("Vui lòng chọn nhà cung cấp");
         return;
       }
+      if (!image) {
+        toast.error("Vui lòng chọn ảnh khuôn bế");
+        return;
+      }
+
+      // Convert estimatedReceiveAt to ISO format if provided
+      const estimatedReceiveAtISO = estimatedReceiveAt
+        ? (() => {
+            const date = new Date(estimatedReceiveAt);
+            const pad = (n: number) => String(n).padStart(2, "0");
+            const year = date.getFullYear();
+            const month = pad(date.getMonth() + 1);
+            const day = pad(date.getDate());
+            const hours = pad(date.getHours());
+            const minutes = pad(date.getMinutes());
+            const seconds = pad(date.getSeconds());
+            const offsetMinutes = date.getTimezoneOffset();
+            const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+            const offsetMins = Math.abs(offsetMinutes) % 60;
+            const offsetSign = offsetMinutes <= 0 ? "+" : "-";
+            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${pad(offsetHours)}:${pad(offsetMins)}`;
+          })()
+        : undefined;
 
       createDie(
         {
-          name: name.trim() || undefined,
-          code: code.trim(),
-          type: type.trim(),
-          size: size.trim() || undefined,
           price: price ?? undefined,
           vendorId,
-          notes: notes.trim() || undefined,
-          image: image || undefined,
+          size: size.trim() || undefined,
+          estimatedReceiveAt: estimatedReceiveAtISO,
+          isReusable: isReusable,
+          image: image,
         },
         {
           onSuccess: () => {
@@ -269,50 +281,6 @@ export function DieDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Mã khuôn bế - chỉ hiển thị khi tạo mới */}
-          {!isEdit && (
-            <div className="space-y-2">
-              <Label htmlFor="code">
-                Mã khuôn bế <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Nhập mã khuôn bế..."
-              />
-            </div>
-          )}
-
-          {/* Loại khuôn bế - chỉ hiển thị khi tạo mới */}
-          {!isEdit && (
-            <div className="space-y-2">
-              <Label htmlFor="type">
-                Loại khuôn bế <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="type"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                placeholder="Nhập loại khuôn bế..."
-              />
-            </div>
-          )}
-
-          {/* Tên khuôn bế */}
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              Tên khuôn bế{" "}
-              {!isEdit && <span className="text-destructive">*</span>}
-            </Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nhập tên khuôn bế..."
-            />
-          </div>
-
           {/* Nhà cung cấp - chỉ hiển thị khi tạo mới */}
           {!isEdit && (
             <div className="space-y-2">
@@ -465,19 +433,102 @@ export function DieDialog({
                 onValueChange={(value) => setIsUsable(value === "usable")}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {isUsable
+                      ? die.status && dieStatusLabels[die.status]
+                        ? dieStatusLabels[die.status]
+                        : "Sử dụng được"
+                      : die.status && dieStatusLabels[die.status]
+                        ? dieStatusLabels[die.status]
+                        : "Không sử dụng được"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="usable">Sử dụng được</SelectItem>
-                  <SelectItem value="unusable">Không sử dụng được</SelectItem>
+                  <SelectItem value="usable">
+                    {die.status && dieStatusLabels[die.status]
+                      ? dieStatusLabels[die.status]
+                      : "Sử dụng được"}
+                  </SelectItem>
+                  <SelectItem value="unusable">
+                    {die.status && dieStatusLabels[die.status]
+                      ? dieStatusLabels[die.status]
+                      : "Không sử dụng được"}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           )}
 
+          {/* Mã bài đầu tiên - chỉ hiển thị khi edit và có giá trị */}
+          {isEdit && die?.firstProofingOrderCode && (
+            <div className="space-y-2">
+              <Label>Được sử dụng trong mã bài</Label>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground flex-1">
+                  {die.firstProofingOrderCode}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 hover:bg-primary/10"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(
+                        die.firstProofingOrderCode || ""
+                      );
+                      toast.success("Đã sao chép mã bài", {
+                        description: `Mã bài "${die.firstProofingOrderCode}" đã được sao chép vào clipboard`,
+                      });
+                    } catch (error) {
+                      toast.error("Không thể sao chép mã bài", {
+                        description: "Đã xảy ra lỗi khi sao chép vào clipboard",
+                      });
+                    }
+                  }}
+                  title="Sao chép mã bài"
+                >
+                  <Copy className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Kích thước và Giá - chỉ hiển thị khi tạo mới */}
+          {!isEdit && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="size">Kích thước</Label>
+                <Input
+                  id="size"
+                  value={size}
+                  onChange={(e) => setSize(e.target.value)}
+                  placeholder="Nhập kích thước..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Giá khuôn bế</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={price ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPrice(value ? Number(value) : undefined);
+                  }}
+                  placeholder="Nhập giá khuôn bế..."
+                />
+              </div>
+            </div>
+          )}
+
           {/* Ảnh khuôn bế */}
           <div className="space-y-2">
-            <Label htmlFor="image">Ảnh khuôn bế</Label>
+            <Label htmlFor="image">
+              Ảnh khuôn bế
+              {!isEdit && <span className="text-destructive"> *</span>}
+            </Label>
             {!imagePreview ? (
               <div className="border-2 border-dashed rounded-lg p-6 text-center">
                 <Input
@@ -521,17 +572,53 @@ export function DieDialog({
             )}
           </div>
 
-          {/* Ghi chú */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Ghi chú</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Nhập ghi chú..."
-              rows={3}
-            />
-          </div>
+          {/* Dự kiến nhận khuôn và Khuôn tái sử dụng - chỉ hiển thị khi tạo mới */}
+          {!isEdit && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="estimatedReceiveAt">Dự kiến nhận khuôn</Label>
+                <Input
+                  id="estimatedReceiveAt"
+                  type="datetime-local"
+                  value={estimatedReceiveAt}
+                  onChange={(e) => setEstimatedReceiveAt(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 py-2 rounded-md border bg-muted/30 px-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isReusable" className="text-sm font-medium">
+                    {isReusable
+                      ? dieUsageTypeLabels.reusable
+                      : dieUsageTypeLabels.one_time}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {isReusable
+                      ? "Khuôn này có thể tái sử dụng cho các đơn hàng khác"
+                      : "Khuôn này chỉ dùng 1 lần"}
+                  </p>
+                </div>
+                <Switch
+                  id="isReusable"
+                  checked={isReusable}
+                  onCheckedChange={setIsReusable}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Ghi chú - chỉ hiển thị khi edit */}
+          {isEdit && (
+            <div className="space-y-2">
+              <Label htmlFor="notes">Ghi chú</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Nhập ghi chú..."
+                rows={3}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>

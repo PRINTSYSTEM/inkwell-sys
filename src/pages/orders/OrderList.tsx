@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { DateRange } from "react-day-picker";
+import { useDebounce } from "use-debounce";
 import {
   Plus,
   Search,
@@ -10,8 +11,11 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  AlertTriangle,
   Calendar,
   Loader2,
+  Image as ImageIcon,
+  FileText,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,45 +38,73 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TruncatedText } from "@/components/ui/truncated-text";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import {
   orderStatusLabels,
+  designStatusLabels,
   formatCurrency,
   formatDate,
 } from "@/lib/status-utils";
-import type { OrderListParams, UserRole, OrderResponse } from "@/Schema";
+import type {
+  OrderListParams,
+  UserRole,
+  OrderResponse,
+  OrderDetailResponse,
+} from "@/Schema";
 import { useAuth } from "@/hooks";
 import { useOrdersByRole } from "@/hooks/use-order";
-import { ROLE } from "@/constants";
+import { ROLE, ROUTE_PATHS } from "@/constants";
+import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
 export default function OrderList() {
   const { user } = useAuth();
   const role = user?.role as UserRole;
   const navigate = useNavigate();
+  const location = useLocation();
+  const isSalePath = location.pathname === ROUTE_PATHS.ORDERS.SALE_ORDERS;
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
   const [pageInput, setPageInput] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  // Reset to page 1 when filters change
+  // Handle filter changes - reset to page 1
   const handleFilterChange = () => {
     setCurrentPage(1);
     setPageInput("1");
   };
 
+  // Reset to page 1 when filters change (except pagination)
+  useEffect(() => {
+    setCurrentPage(1);
+    setPageInput("1");
+  }, [statusFilter, dateRange, debouncedSearchTerm, sortColumn, sortOrder]);
+
   // Build params for API
   const listParams: OrderListParams = useMemo(() => {
+    const searchValue = debouncedSearchTerm.trim();
+
     const params: OrderListParams = {
       pageNumber: currentPage,
       pageSize: pageSize,
-      status: statusFilter === "all" ? "" : statusFilter,
+      status: statusFilter === "all" ? "" : statusFilter || "",
+      // Search term for all relevant fields
+      search: searchValue || "",
+      customerId: undefined,
       startDate: "",
       endDate: "",
+      sortColumn: "",
+      sortOrder: "",
     };
 
     // Add date range if selected
@@ -90,8 +122,21 @@ export default function OrderList() {
       params.endDate = endDate.toISOString();
     }
 
+    if (sortColumn.trim()) {
+      params.sortColumn = sortColumn.trim();
+      params.sortOrder = sortOrder || "";
+    }
+
     return params;
-  }, [statusFilter, dateRange, currentPage, pageSize]);
+  }, [
+    statusFilter,
+    dateRange,
+    currentPage,
+    pageSize,
+    sortColumn,
+    sortOrder,
+    debouncedSearchTerm,
+  ]);
 
   // Call API
   const { data, isLoading, isError, error } = useOrdersByRole(role, listParams);
@@ -113,33 +158,16 @@ export default function OrderList() {
   }, [currentPage]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (data && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
       setPageInput("1");
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, data]);
 
-  // Client-side search filter (since API doesn't support search parameter)
-  const filteredOrders = useMemo(() => {
-    if (!searchTerm.trim()) return orders;
-    const searchLower = searchTerm.toLowerCase();
-    return orders.filter((order) => {
-      // Use nested customer object if available, otherwise fall back to flat fields
-      const orderResponse = order as OrderResponse;
-      const customerName =
-        orderResponse.customer?.name || orderResponse.customerName || "";
-      const customerCompanyName =
-        orderResponse.customer?.companyName ||
-        orderResponse.customerCompanyName ||
-        "";
-      return (
-        order.code?.toLowerCase().includes(searchLower) ||
-        customerName.toLowerCase().includes(searchLower) ||
-        customerCompanyName.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [orders, searchTerm]);
+  // Orders are already filtered by API, no need for client-side filtering
+  // Use orders directly from API response
 
   // Calculate stats from orders
   const stats = useMemo(() => {
@@ -148,7 +176,7 @@ export default function OrderList() {
       total: totalOrders,
       pending: allOrders.filter((o) => o.status === "pending").length,
       inProgress: allOrders.filter((o) =>
-        ["designing", "production", "in_progress"].includes(o.status || "")
+        ["designing", "production", "in_progress"].includes(o.status || ""),
       ).length,
       completed: allOrders.filter((o) => o.status === "completed").length,
       totalRevenue: allOrders.reduce((sum, o) => {
@@ -199,7 +227,36 @@ export default function OrderList() {
   };
 
   const handleOrderClick = (orderId: number) => {
-    navigate(`/orders/${orderId}`);
+    // Nếu là role SALE, hoặc Admin/Manager đang ở route /orders/sale
+    const isSaleView =
+      role === ROLE.SALE ||
+      ((role === ROLE.ADMIN || role === ROLE.MANAGER) && isSalePath);
+
+    if (isSaleView) {
+      navigate(`/accounting/orders/${orderId}?tab=payment`);
+    } else {
+      navigate(`/orders/${orderId}`);
+    }
+  };
+
+  const handleDesignClick = (
+    designId: number | null | undefined,
+    e: React.MouseEvent,
+  ) => {
+    e.stopPropagation();
+    if (designId) {
+      navigate(`/design/detail/${designId}`);
+    }
+  };
+
+  const handleImageClick = (
+    imageUrl: string | null | undefined,
+    e: React.MouseEvent,
+  ) => {
+    e.stopPropagation();
+    if (imageUrl) {
+      setPreviewImageUrl(imageUrl);
+    }
   };
 
   // Permissions
@@ -240,7 +297,7 @@ export default function OrderList() {
                   placeholder="Tìm theo mã đơn, tên khách hàng..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 bg-muted/50 border-0 focus-visible:ring-1"
+                  className="pl-9 h-10 sm:h-9 text-sm bg-muted/50 border-0 focus-visible:ring-1"
                 />
               </div>
               <div className="flex items-center gap-3">
@@ -251,7 +308,7 @@ export default function OrderList() {
                     handleFilterChange();
                   }}
                 >
-                  <SelectTrigger className="w-[180px] bg-muted/50 border-0">
+                  <SelectTrigger className="w-full sm:w-[180px] h-10 sm:h-9 text-sm bg-muted/50 border-0">
                     <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
                     <SelectValue placeholder="Trạng thái" />
                   </SelectTrigger>
@@ -272,8 +329,35 @@ export default function OrderList() {
                   }}
                   placeholder="Chọn khoảng thời gian"
                   showClear
-                  className="w-[240px]"
+                  className="w-full sm:w-[240px] h-10 sm:h-9"
                 />
+                <div className="w-full lg:w-[360px] min-w-0">
+                  <SortControls
+                    sortColumn={sortColumn}
+                    sortOrder={sortOrder}
+                    onSortColumnChange={(v) => {
+                      setSortColumn(v);
+                      handleFilterChange();
+                    }}
+                    onSortOrderChange={(v) => {
+                      setSortOrder(v);
+                      handleFilterChange();
+                    }}
+                    onClear={() => {
+                      setSortColumn("");
+                      setSortOrder("desc");
+                      handleFilterChange();
+                    }}
+                    options={[
+                      { value: "createdAt", label: "Ngày tạo" },
+                      { value: "deliveryDate", label: "Ngày giao" },
+                      { value: "code", label: "Mã đơn" },
+                      { value: "status", label: "Trạng thái" },
+                      { value: "totalAmount", label: "Tổng tiền" },
+                    ]}
+                    placeholder="Sắp xếp theo"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>
@@ -315,19 +399,11 @@ export default function OrderList() {
               <TableBody>
                 {/* Loading */}
                 {isLoading && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={canViewPrice ? 7 : 5}
-                      className="h-32 text-center"
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        <p className="text-muted-foreground">
-                          Đang tải danh sách đơn hàng...
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <TableSkeleton
+                    cols={canViewPrice ? 7 : 5}
+                    rows={8}
+                    rowHeight="h-14"
+                  />
                 )}
 
                 {/* Error */}
@@ -353,7 +429,7 @@ export default function OrderList() {
                 {/* Data */}
                 {!isLoading &&
                   !isError &&
-                  filteredOrders.map((order) => {
+                  orders.map((order) => {
                     // Use OrderResponse type which includes customer object
                     const orderResponse = order as OrderResponse;
 
@@ -372,95 +448,248 @@ export default function OrderList() {
                     const depositAmount =
                       (orderResponse.depositAmount as number | undefined) ?? 0;
                     const remaining = totalAmount - depositAmount;
+                    const orderDetails = orderResponse.orderDetails ?? [];
+
+                    // Determine if customer invoice info is complete
+                    const customerNameField =
+                      orderResponse.customer &&
+                      typeof orderResponse.customer.name === "string"
+                        ? orderResponse.customer.name
+                        : orderResponse.customerName || "";
+                    const customerPhoneField =
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).phone === "string"
+                        ? (orderResponse.customer as any).phone
+                        : orderResponse.customerPhone || "";
+                    const customerAddressField =
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).address ===
+                        "string"
+                        ? (orderResponse.customer as any).address
+                        : orderResponse.customerAddress || "";
+                    const customerEmailField =
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).email === "string"
+                        ? (orderResponse.customer as any).email
+                        : orderResponse.customerEmail || "";
+                    const customerCompanyField =
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).companyName ===
+                        "string"
+                        ? (orderResponse.customer as any).companyName
+                        : orderResponse.customerCompanyName || "";
+                    const customerTaxCodeField =
+                      orderResponse.customer &&
+                      typeof (orderResponse.customer as any).taxCode ===
+                        "string"
+                        ? (orderResponse.customer as any).taxCode
+                        : orderResponse.customerTaxCode || "";
+
+                    const isCustomerInfoComplete =
+                      !!customerNameField.trim() &&
+                      !!customerPhoneField.trim() &&
+                      !!customerAddressField.trim() &&
+                      !!customerEmailField.trim() &&
+                      (!customerCompanyField.trim() ||
+                        !!customerTaxCodeField.trim());
+
+                    const highlightMissingInfo = !isCustomerInfoComplete;
 
                     return (
-                      <TableRow
-                        key={order.id}
-                        className="h-14 cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleOrderClick(order.id)}
-                      >
-                        <TableCell className="py-3">
-                          <div className="font-bold text-sm text-primary">
-                            {order.code || `ORD-${order.id}`}
-                          </div>
-                          {order.createdAt && (
-                            <p className="text-xs font-medium text-muted-foreground mt-0.5">
-                              {formatDate(order.createdAt)}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted shrink-0">
-                              {isCompany ? (
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
-                              ) : (
-                                <User className="h-4 w-4 text-muted-foreground" />
-                              )}
+                      <>
+                        <TableRow
+                          key={order.id}
+                          className={`h-14 cursor-pointer border-x-2 border-t-2 border-border border-l-4 shadow-sm ${highlightMissingInfo ? "bg-rose-50 hover:bg-rose-100 border-l-rose-500" : "bg-card hover:bg-muted/40 border-l-primary"}`}
+                          onClick={() => handleOrderClick(order.id ?? 0)}
+                          title={
+                            highlightMissingInfo
+                              ? "Thiếu thông tin để xuất hóa đơn"
+                              : undefined
+                          }
+                        >
+                          <TableCell className="py-3">
+                            <div className="font-bold text-sm text-primary">
+                              {order.code || `ORD-${order.id}`}
                             </div>
-                            <div className="min-w-0">
-                              <TruncatedText
-                                text={customerName || "-"}
-                                className="font-semibold text-sm"
-                              />
-                              {customerCompanyName && (
-                                <TruncatedText
-                                  text={customerCompanyName}
-                                  className="text-xs font-medium text-muted-foreground"
-                                />
-                              )}
+                            {order.createdAt && (
+                              <p className="text-xs font-medium text-muted-foreground mt-0.5">
+                                {formatDate(order.createdAt)}
+                              </p>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted shrink-0">
+                                {isCompany ? (
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <TruncatedText
+                                    text={customerName || "-"}
+                                    className="font-semibold text-sm"
+                                  />
+                                  {highlightMissingInfo && (
+                                    <AlertTriangle className="h-4 w-4 text-rose-700" />
+                                  )}
+                                </div>
+                                {customerCompanyName && (
+                                  <TruncatedText
+                                    text={customerCompanyName}
+                                    className="text-xs font-medium text-muted-foreground"
+                                  />
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-3">
-                          <StatusBadge
-                            status={order.status}
-                            label={
-                              orderStatusLabels[order.status || ""] || "N/A"
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className="text-center py-3">
-                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-bold">
-                            {order.orderDetails?.length || 0}
-                          </span>
-                        </TableCell>
-                        <TableCell className="py-3">
-                          {order.deliveryDate ? (
-                            <div className="flex items-center gap-1.5 text-sm font-semibold">
-                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                              {formatDate(order.deliveryDate)}
-                            </div>
-                          ) : (
-                            <span className="text-sm font-medium text-muted-foreground">
-                              -
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <StatusBadge
+                              status={order.status}
+                              label={
+                                orderStatusLabels[order.status || ""] || "N/A"
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="text-center py-3">
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-bold">
+                              {order.orderDetails?.length || 0}
                             </span>
-                          )}
-                        </TableCell>
-                        {canViewPrice && (
-                          <>
-                            <TableCell className="text-right py-3 font-bold text-sm">
-                              {formatCurrency(totalAmount)}
-                            </TableCell>
-                            <TableCell className="text-right py-3">
-                              <span
-                                className={`text-sm font-bold ${
-                                  remaining > 0
-                                    ? "text-amber-600"
-                                    : "text-muted-foreground"
-                                }`}
-                              >
-                                {formatCurrency(remaining)}
+                          </TableCell>
+                          <TableCell className="py-3">
+                            {order.deliveryDate ? (
+                              <div className="flex items-center gap-1.5 text-sm font-semibold">
+                                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                {formatDate(order.deliveryDate)}
+                              </div>
+                            ) : (
+                              <span className="text-sm font-medium text-muted-foreground">
+                                -
                               </span>
+                            )}
+                          </TableCell>
+                          {canViewPrice && (
+                            <>
+                              <TableCell className="text-right py-3 font-bold text-sm">
+                                {formatCurrency(totalAmount)}
+                              </TableCell>
+                              <TableCell className="text-right py-3">
+                                <span
+                                  className={`text-sm font-bold ${
+                                    remaining > 0
+                                      ? "text-amber-600"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {formatCurrency(remaining)}
+                                </span>
+                              </TableCell>
+                            </>
+                          )}
+                        </TableRow>
+                        {/* Expanded Design Rows - Always shown */}
+                        {orderDetails.length > 0 && (
+                          <TableRow key={`designs-${order.id}`}>
+                            <TableCell
+                              colSpan={canViewPrice ? 7 : 5}
+                              className="p-0 bg-muted/20 border-x-2 border-b-2 border-border border-l-4 border-l-primary"
+                            >
+                              <div className="px-4 py-3 pl-6">
+                                <div className="overflow-hidden rounded-md border border-border/70 bg-background">
+                                  <Table className="mb-0">
+                                    <TableBody>
+                                      {orderDetails.map((orderDetail) => {
+                                        const detail =
+                                          orderDetail as OrderDetailResponse;
+                                        const design = detail.design;
+                                        if (!design) return null;
+
+                                        return (
+                                          <TableRow
+                                            key={detail.id}
+                                            className="hover:bg-muted/40 transition-colors border-b last:border-b-0 border-border/60 cursor-pointer"
+                                            onClick={(e) =>
+                                              handleDesignClick(design.id, e)
+                                            }
+                                          >
+                                            {/* Ảnh */}
+                                            <TableCell className="w-[72px] align-middle">
+                                              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted/60 flex items-center justify-center">
+                                                {design.designImageUrl ? (
+                                                  <img
+                                                    src={design.designImageUrl}
+                                                    alt={
+                                                      design.code || "Thiết kế"
+                                                    }
+                                                    className="h-full w-full object-cover cursor-zoom-in"
+                                                    onClick={(e) =>
+                                                      handleImageClick(
+                                                        design.designImageUrl!,
+                                                        e,
+                                                      )
+                                                    }
+                                                  />
+                                                ) : (
+                                                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                                )}
+                                              </div>
+                                            </TableCell>
+
+                                            {/* Mã + tên thiết kế */}
+                                            <TableCell className="min-w-[220px] align-middle">
+                                              <div className="min-w-0 space-y-1">
+                                                <div className="flex items-center justify-between gap-2">
+                                                  <span className="truncate text-xs font-semibold uppercase tracking-wide text-primary">
+                                                    {design.code ||
+                                                      `DES-${design.id}`}
+                                                  </span>
+                                                </div>
+                                                {design.designName && (
+                                                  <p className="truncate text-xs text-muted-foreground">
+                                                    {design.designName}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </TableCell>
+
+                                            {/* Trạng thái */}
+                                            <TableCell className="w-[160px] align-middle">
+                                              <StatusBadge
+                                                status={design.status}
+                                                label={
+                                                  designStatusLabels[
+                                                    design.status || ""
+                                                  ] ||
+                                                  design.status ||
+                                                  "N/A"
+                                                }
+                                              />
+                                            </TableCell>
+
+                                            {/* Số lượng */}
+                                            <TableCell className="w-[110px] text-right align-middle">
+                                              <span className="inline-flex min-w-[56px] items-center justify-end rounded-full bg-muted px-2 py-1 text-xs font-semibold">
+                                                x{detail.quantity ?? 0}
+                                              </span>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
                             </TableCell>
-                          </>
+                          </TableRow>
                         )}
-                      </TableRow>
+                      </>
                     );
                   })}
 
                 {/* Empty */}
-                {!isLoading && !isError && filteredOrders.length === 0 && (
+                {!isLoading && !isError && orders.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={canViewPrice ? 7 : 5}
@@ -469,7 +698,7 @@ export default function OrderList() {
                       <div className="flex flex-col items-center gap-2">
                         <AlertCircle className="h-8 w-8 text-muted-foreground/50" />
                         <p className="text-muted-foreground">
-                          {searchTerm.trim()
+                          {debouncedSearchTerm.trim()
                             ? "Không tìm thấy đơn hàng phù hợp với từ khóa tìm kiếm"
                             : "Không có đơn hàng nào"}
                         </p>
@@ -485,10 +714,10 @@ export default function OrderList() {
           {!isLoading && !isError && totalOrders > 0 && (
             <div className="flex items-center justify-between border-t px-4 py-3 shrink-0 bg-background">
               <div className="text-sm font-medium text-muted-foreground">
-                {searchTerm.trim() ? (
+                {debouncedSearchTerm.trim() ? (
                   <>
-                    Hiển thị {filteredOrders.length} / {totalOrders} đơn hàng
-                    (đã lọc theo từ khóa)
+                    Hiển thị {orders.length} / {totalOrders} đơn hàng
+                    {orders.length < totalOrders && " (đã lọc theo từ khóa)"}
                   </>
                 ) : (
                   <>
@@ -557,6 +786,16 @@ export default function OrderList() {
           )}
         </Card>
       </div>
+
+      {/* Image Preview Dialog */}
+      {previewImageUrl && (
+        <ImageViewerDialog
+          open={!!previewImageUrl}
+          onOpenChange={(open) => !open && setPreviewImageUrl(null)}
+          imageUrl={previewImageUrl}
+          title="Xem ảnh thiết kế"
+        />
+      )}
     </div>
   );
 }

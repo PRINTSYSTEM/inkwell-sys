@@ -17,6 +17,7 @@ import {
   EditCustomerModal,
   ExportDebtModal,
 } from "@/components/customers";
+import { CreateCashReceiptDialog } from "@/components/customers/CreateCashReceiptDialog";
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,12 +31,14 @@ export default function CustomerDetail() {
   const [activeTab, setActiveTab] = useState("debt");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [cashReceiptModalOpen, setCashReceiptModalOpen] = useState(false);
 
   // Chỉ role accounting và admin mới thấy các section khác
   // Role design và proofer (bình bài) chỉ thấy thông tin khách hàng, công ty, hệ thống
   const canViewFinancialInfo =
     userRole === ROLE.ACCOUNTING ||
     userRole === ROLE.ACCOUNTING_LEAD ||
+    userRole === ROLE.SALE ||
     userRole === ROLE.ADMIN;
 
   // Only fetch when customerId is valid
@@ -148,6 +151,11 @@ export default function CustomerDetail() {
           customer={customer}
           onEdit={() => setEditModalOpen(true)}
           onExportDebt={() => setExportModalOpen(true)}
+          onCreateCashReceipt={
+            canViewFinancialInfo
+              ? () => setCashReceiptModalOpen(true)
+              : undefined
+          }
           canViewFinancialInfo={canViewFinancialInfo}
         />
 
@@ -244,6 +252,14 @@ export default function CustomerDetail() {
         onOpenChange={setExportModalOpen}
         customerId={customerId}
       />
+      {canViewFinancialInfo && (
+        <CreateCashReceiptDialog
+          open={cashReceiptModalOpen}
+          onOpenChange={setCashReceiptModalOpen}
+          customerId={customerId}
+          customerName={customer.name || customer.companyName || "Khách hàng"}
+        />
+      )}
     </>
   );
 }

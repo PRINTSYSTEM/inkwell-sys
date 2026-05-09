@@ -13,6 +13,7 @@ export { filterHelpers } from "./use-filters";
 export * from "./use-design-type";
 
 export * from "./use-material-type";
+export * from "./use-material";
 export * from "./use-user";
 export * from "./use-order";
 export * from "./use-proofing-order";
@@ -31,3 +32,5 @@ export * from "./use-expense";
 export * from "./use-ar-ap";
 export * from "./use-inventory-report";
 export * from "./use-sales-report";
+export * from "./use-plate-export";
+export * from "./use-debt-notification";

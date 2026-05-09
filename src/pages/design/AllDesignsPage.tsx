@@ -19,9 +19,9 @@ import {
   ChevronRight,
   Calendar,
 } from "lucide-react";
-import { useDesigns, useFilters } from "@/hooks";
+import { useDesigns, useFilters, useUsers, useUpdateDesign, useAuth } from "@/hooks";
 import type { DesignResponse } from "@/Schema";
-import { designStatusLabels } from "@/lib/status-utils";
+import { designStatusConfig, designStatusLabels } from "@/lib/status-utils";
 import {
   Table,
   TableHeader,
@@ -30,6 +30,9 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
+import { ENTITY_CONFIG } from "@/config/entities.config";
+import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
 type DesignWithSearch = DesignResponse & {
   designerFullName: string;
@@ -57,18 +60,45 @@ export default function AllDesignsPage() {
   });
 
   // gọi React Query lấy list với pagination
-  const { data, isLoading } = useDesigns({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    ...(filterState.filters["status"]?.value
-      ? { status: filterState.filters["status"].value as string }
-      : {}),
-    ...(filterState.filters["designTypeId"]?.value
-      ? { designTypeId: filterState.filters["designTypeId"].value as number }
-      : {}),
-    ...(selectedMonth ? { month: selectedMonth } : {}),
-    ...(selectedYear ? { year: selectedYear } : {}),
-  });
+  const useDesignsParams = useMemo(
+    () => ({
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      ...(filterState.filters["status"]?.value
+        ? { status: filterState.filters["status"].value as string }
+        : {}),
+      ...(filterState.filters["designTypeId"]?.value
+        ? { designTypeId: filterState.filters["designTypeId"].value as number }
+        : {}),
+      ...(selectedMonth ? { month: selectedMonth } : {}),
+      ...(selectedYear ? { year: selectedYear } : {}),
+      ...(filterState.sortBy
+        ? {
+            sortColumn: filterState.sortBy,
+            sortOrder: filterState.sortOrder,
+          }
+        : {}),
+    }),
+    [
+      currentPage,
+      itemsPerPage,
+      filterState.filters,
+      filterState.sortBy,
+      filterState.sortOrder,
+      selectedMonth,
+      selectedYear,
+    ]
+  );
+  const { data, isLoading } = useDesigns(useDesignsParams);
+
+  // Designers list for assignment
+  const { data: designersData } = useUsers({ role: "design", pageSize: 100 });
+  const designers = designersData?.items || [];
+
+  const { user } = useAuth();
+  const isDesignLeadOrAdmin = user?.role === "design_lead" || user?.role === "admin";
+
+  const { mutate: updateDesign, loading: updatingDesign } = useUpdateDesign();
 
   // Memoize designs to prevent dependency warnings
   const designs = useMemo<DesignResponse[]>(
@@ -105,11 +135,12 @@ export default function AllDesignsPage() {
   }, [designsWithSearch, filterState.searchQuery]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (data && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, data]);
 
   // Sync pageInput with currentPage
   useEffect(() => {
@@ -123,10 +154,12 @@ export default function AllDesignsPage() {
     }
   }, [currentPage]);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when search query changes
+  // Note: handleStatusChange, handleTypeChange, and month/year handlers already call setCurrentPage(1)
+  // This effect only handles search query changes (handleSearchChange doesn't reset page)
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterState.filters, filterState.searchQuery, selectedMonth, selectedYear]);
+  }, [filterState.searchQuery]);
 
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
@@ -192,6 +225,22 @@ export default function AllDesignsPage() {
     setCurrentPage(1);
   };
 
+  const handleSortColumnChange = (value: string) => {
+    const next = value.trim();
+    if (!next) {
+      filterActions.clearSort();
+    } else {
+      filterActions.setSort(next, filterState.sortOrder);
+    }
+    setCurrentPage(1);
+  };
+
+  const handleSortOrderChange = (value: SortOrder) => {
+    if (!filterState.sortBy) return;
+    filterActions.setSort(filterState.sortBy, value);
+    setCurrentPage(1);
+  };
+
   // giá trị đang chọn cho Select (đọc từ filterState)
   const statusFilterValue =
     (filterState.filters["status"]?.value as string | undefined) ?? "all";
@@ -234,7 +283,7 @@ export default function AllDesignsPage() {
       {/* Filters */}
       <Card className="p-3 mb-3 shrink-0">
         <CardContent className="p-0">
-          <div className="grid gap-3 md:grid-cols-5">
+          <div className="grid gap-3 md:grid-cols-6">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -322,8 +371,7 @@ export default function AllDesignsPage() {
                 <SelectValue placeholder="Năm" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                {Array.from({ length: 5 }, (_, i) => {
+                {Array.from({ length: 3 }, (_, i) => {
                   const year = new Date().getFullYear() - 2 + i;
                   return (
                     <SelectItem key={year} value={year.toString()}>
@@ -333,6 +381,25 @@ export default function AllDesignsPage() {
                 })}
               </SelectContent>
             </Select>
+
+            {/* Sort (server-side) */}
+            <SortControls
+              sortColumn={filterState.sortBy ?? ""}
+              sortOrder={filterState.sortOrder}
+              onSortColumnChange={handleSortColumnChange}
+              onSortOrderChange={handleSortOrderChange}
+              onClear={() => {
+                filterActions.clearSort();
+                setCurrentPage(1);
+              }}
+              options={[
+                { value: "createdAt", label: "Ngày tạo" },
+                { value: "code", label: "Mã thiết kế" },
+                { value: "status", label: "Trạng thái" },
+                { value: "designTypeId", label: "Loại thiết kế" },
+              ]}
+              placeholder="Sắp xếp theo"
+            />
           </div>
         </CardContent>
       </Card>
@@ -362,7 +429,10 @@ export default function AllDesignsPage() {
                   <TableHead className="h-9 text-sm font-bold">
                     Trạng thái
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Loại</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Người thiết kế</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">
+                    Loại
+                  </TableHead>
                   <TableHead className="h-9 text-sm font-bold">
                     Kích thước
                   </TableHead>
@@ -370,20 +440,13 @@ export default function AllDesignsPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                        Đang tải...
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <TableSkeleton cols={8} rows={10} rowHeight="h-14" />
                 ) : filteredDesigns.length > 0 ? (
                   filteredDesigns.map((design) => (
                     <TableRow
                       key={design.id}
-                      className="cursor-pointer hover:bg-muted/50 h-14"
-                      onClick={() => navigate(`/design/detail/${design.id}`)}
+                      className={`cursor-pointer hover:bg-muted/50 h-14 ${design.status === "returned" && `bg-red-50`}`}
+                        onClick={() => navigate(`/design/detail/${design.id}`)}
                     >
                       <TableCell className="py-3 font-semibold text-sm">
                         {design.code || `DES-${design.id}`}
@@ -401,19 +464,32 @@ export default function AllDesignsPage() {
                         )}
                       </TableCell>
                       <TableCell className="py-3 text-sm font-semibold max-w-[150px]">
-                        <div className="truncate" title={design.customer?.name || design.customer?.companyName || "—"}>
+                        <div
+                          className="truncate"
+                          title={
+                            design.customer?.name ||
+                            design.customer?.companyName ||
+                            "—"
+                          }
+                        >
                           {design.customer?.name ||
                             design.customer?.companyName ||
                             "—"}
                         </div>
                       </TableCell>
                       <TableCell className="py-3 text-sm font-semibold max-w-[150px]">
-                        <div className="truncate" title={design.designName || "—"}>
+                        <div
+                          className="truncate"
+                          title={design.designName || "—"}
+                        >
                           {design.designName || "—"}
                         </div>
                       </TableCell>
                       <TableCell className="py-3 text-sm font-medium text-muted-foreground max-w-[200px]">
-                        <div className="truncate" title={design.latestRequirements || "—"}>
+                        <div
+                          className="truncate"
+                          title={design.latestRequirements || "—"}
+                        >
                           {design.latestRequirements || "—"}
                         </div>
                       </TableCell>
@@ -427,12 +503,49 @@ export default function AllDesignsPage() {
                           }
                         />
                       </TableCell>
+                      <TableCell className="py-3 text-sm font-semibold max-w-[140px]">
+                        {isDesignLeadOrAdmin ? (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={
+                                design.assignedDesignerId != null
+                                  ? design.assignedDesignerId.toString()
+                                  : design.designer?.id != null
+                                  ? design.designer.id.toString()
+                                  : "__none__"
+                              }
+                              onValueChange={(val) => {
+                                const assignedId = val === "__none__" ? null : Number(val);
+                                updateDesign({ id: design.id, data: { assignedDesignerId: assignedId } } as any);
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue placeholder="Chọn designer" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">(Chưa gán)</SelectItem>
+                                {designers.map((d) => (
+                                  <SelectItem key={d.id} value={d.id.toString()}>
+                                    {d.fullName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <div className="truncate">{design.designer?.fullName || '—'}</div>
+                        )}
+                      </TableCell>
                       <TableCell className="py-3 text-sm font-semibold">
                         {design.designType?.name || "—"}
                       </TableCell>
                       <TableCell className="py-3">
                         <div className="flex items-center gap-1 font-mono text-xs font-semibold">
-                          <span>{design.dimensions || "—"}</span>
+                          <span>
+                            {design.width
+                              ? `${design.length} x ${design.width} x ${design.height}`
+                              : `${design.length} x ${design.height}`}
+                          </span>
                         </div>
                       </TableCell>
                     </TableRow>

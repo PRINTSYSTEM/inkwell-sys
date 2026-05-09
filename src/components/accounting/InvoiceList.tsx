@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -75,12 +76,13 @@ import {
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 import { StatusBadge } from "../ui/status-badge";
+import { ROUTE_PATHS } from "@/constants/route.constant";
 
 // Helper to derive customer type
 function deriveCustomerType(
-  customer: OrderResponse["customer"]
+  customerCompanyName: string | null | undefined
 ): "company" | "retail" {
-  return customer?.companyName ? "company" : "retail";
+  return customerCompanyName ? "company" : "retail";
 }
 
 // For invoice list, we check if order can have invoice issued
@@ -97,23 +99,20 @@ function canIssueInvoice(order: OrderResponse): boolean {
 
 // Check if customer information is complete for invoice issuance
 function isCustomerInfoComplete(order: OrderResponse): boolean {
-  const customer = order.customer;
-  if (!customer) return false;
-
-  const customerName = typeof customer.name === "string" ? customer.name : "";
+  const customerName =
+    typeof order.customerName === "string" ? order.customerName : "";
   const customerPhone =
-    typeof customer.phone === "string" ? customer.phone : "";
+    typeof order.customerPhone === "string" ? order.customerPhone : "";
   const customerAddress =
-    typeof customer.address === "string" ? customer.address : "";
+    typeof order.customerAddress === "string" ? order.customerAddress : "";
   const customerEmail =
-    typeof customer.email === "string" ? customer.email : "";
+    typeof order.customerEmail === "string" ? order.customerEmail : "";
   const customerCompanyName =
-    typeof customer.companyName === "string" ? customer.companyName : "";
-  // taxCode may not exist in CustomerSummaryResponse (used in OrderResponse)
-  const customerTaxCode =
-    "taxCode" in customer && typeof customer.taxCode === "string"
-      ? customer.taxCode
+    typeof order.customerCompanyName === "string"
+      ? order.customerCompanyName
       : "";
+  const customerTaxCode =
+    typeof order.customerTaxCode === "string" ? order.customerTaxCode : "";
 
   const isCompany = !!customerCompanyName;
 
@@ -127,8 +126,8 @@ function isCustomerInfoComplete(order: OrderResponse): boolean {
     return false;
   }
 
-  // For company: also need taxCode (if field exists)
-  if (isCompany && "taxCode" in customer && !customerTaxCode.trim()) {
+  // For company: also need taxCode
+  if (isCompany && !customerTaxCode.trim()) {
     return false;
   }
 
@@ -158,21 +157,16 @@ function getInvoiceDisableReason(
 
   // Check if customer information is complete
   if (!customerInfoComplete) {
-    const customer = order.customer;
     const missingFields: string[] = [];
 
-    if (!customer?.name?.trim()) missingFields.push("Tên khách hàng");
-    if (!customer?.phone?.trim()) missingFields.push("Số điện thoại");
-    if (!customer?.address?.trim()) missingFields.push("Địa chỉ");
-    if (!customer?.email?.trim()) missingFields.push("Email");
+    if (!order.customerName?.trim()) missingFields.push("Tên khách hàng");
+    if (!order.customerPhone?.trim()) missingFields.push("Số điện thoại");
+    if (!order.customerAddress?.trim()) missingFields.push("Địa chỉ");
+    if (!order.customerEmail?.trim()) missingFields.push("Email");
 
-    // Check taxCode only if field exists (may not be in CustomerSummaryResponse)
-    if (customer?.companyName && "taxCode" in customer) {
-      const taxCode =
-        typeof customer.taxCode === "string" ? customer.taxCode : "";
-      if (!taxCode.trim()) {
-        missingFields.push("Mã số thuế");
-      }
+    // Check taxCode for company customers
+    if (order.customerCompanyName && !order.customerTaxCode?.trim()) {
+      missingFields.push("Mã số thuế");
     }
 
     return `Thiếu thông tin khách hàng: ${missingFields.join(", ")}`;
@@ -207,6 +201,7 @@ function generateInvoiceNumber(
 export function InvoiceList() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("1");
@@ -220,42 +215,37 @@ export function InvoiceList() {
   const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] =
     useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const previousTotalPagesRef = useRef<number | null>(null);
 
   const itemsPerPage = 10;
 
+  // Build params for API
+  const listParams = useMemo(() => {
+    return {
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      filterType: "invoice",
+      status: invoiceStatusFilter === "all" ? "" : invoiceStatusFilter || "",
+      orderCode: debouncedSearchQuery || "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, [currentPage, itemsPerPage, invoiceStatusFilter, debouncedSearchQuery]);
+
   // Fetch orders from API - filter for invoice orders
-  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    filterType: "invoice",
-  });
+  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting(listParams);
 
   const exportInvoiceMutation = useExportOrderInvoice();
   const exportDeliveryNoteMutation = useExportOrderDeliveryNote();
   const createAccountingMutation = useCreateAccountingForOrder();
   const createInvoiceMutation = useCreateInvoice();
 
-  // Filter orders client-side
+  // Orders are already filtered by API, no need for client-side filtering
   const filteredOrders = useMemo(() => {
-    if (!data?.items) return [];
-
-    // Filter only orders that can have invoices (fully paid)
-    return data.items.filter((order) => {
-      const matchesSearch =
-        !searchQuery ||
-        order.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.companyName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.phone?.includes(searchQuery);
-
-      // For demo purposes, we'll show all orders but highlight which can have invoices
-      return matchesSearch;
-    });
-  }, [data?.items, searchQuery]);
+    return data?.items ?? [];
+  }, [data?.items]);
 
   const totalPages = data?.totalPages || 1;
   const totalItems = data?.total || 0;
@@ -266,11 +256,29 @@ export function InvoiceList() {
   }, [currentPage]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when we have valid data (not loading) and totalPages actually decreased
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
+    // Only adjust if:
+    // 1. Not loading (we have valid data)
+    // 2. Data exists
+    // 3. Current page exceeds total pages
+    // 4. Total pages is valid (> 0)
+    // 5. Total pages actually decreased from previous value (not just during initial load)
+    if (
+      !isLoading &&
+      !!data &&
+      currentPage > totalPages &&
+      totalPages > 0 &&
+      (previousTotalPagesRef.current === null || totalPages < previousTotalPagesRef.current)
+    ) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages]);
+    
+    // Update previous totalPages ref only when we have valid data
+    if (!isLoading && !!data && totalPages > 0) {
+      previousTotalPagesRef.current = totalPages;
+    }
+  }, [currentPage, totalPages, isLoading, data]);
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -422,38 +430,6 @@ export function InvoiceList() {
     });
   };
 
-  const handleSelectAll = () => {
-    if (selectedOrderIds.size === filteredOrders.length) {
-      setSelectedOrderIds(new Set());
-    } else {
-      // Only select orders from the same customer
-      // If there are already selected orders, only select from that customer
-      if (selectedOrderIds.size > 0) {
-        const firstSelectedOrder = filteredOrders.find(
-          (o) => o.id && selectedOrderIds.has(o.id)
-        );
-        if (firstSelectedOrder?.customer?.id) {
-          const customerId = firstSelectedOrder.customer.id;
-          const sameCustomerOrders = filteredOrders
-            .filter((o) => o.customer?.id === customerId && o.id)
-            .map((o) => o.id!)
-            .filter((id): id is number => !!id);
-          setSelectedOrderIds(new Set(sameCustomerOrders));
-        }
-      } else {
-        // No selection yet - select all orders from the first customer on the page
-        if (filteredOrders.length > 0 && filteredOrders[0].customer?.id) {
-          const firstCustomerId = filteredOrders[0].customer.id;
-          const sameCustomerOrders = filteredOrders
-            .filter((o) => o.customer?.id === firstCustomerId && o.id)
-            .map((o) => o.id!)
-            .filter((id): id is number => !!id);
-          setSelectedOrderIds(new Set(sameCustomerOrders));
-        }
-      }
-    }
-  };
-
   // Handle create invoice from selected orders
   const handleCreateInvoiceFromSelected = () => {
     if (selectedOrderIds.size === 0) {
@@ -520,13 +496,10 @@ export function InvoiceList() {
 
       // Navigate to invoice detail page
       if (result?.id) {
-        navigate(`/invoices/${result.id}`);
-      } else {
-        // If no ID returned, just refetch
-        refetch();
+        navigate(`${ROUTE_PATHS.ACCOUNTING.INVOICE}/${result.id}`);
       }
     } catch (error) {
-      // Error is handled by the hook
+      console.error("Error creating invoice:", error);
     }
   };
 
@@ -557,10 +530,10 @@ export function InvoiceList() {
         updatedAt: selectedOrder.updatedAt,
         customer: {
           id: selectedOrder.customer?.id || 0,
-          name: selectedOrder.customer?.name || "",
-          companyName: selectedOrder.customer?.companyName || null,
-          phone: selectedOrder.customer?.phone || "",
-          type: deriveCustomerType(selectedOrder.customer) as
+          name: selectedOrder.customerName || "",
+          companyName: selectedOrder.customerCompanyName || null,
+          phone: selectedOrder.customerPhone || "",
+          type: deriveCustomerType(selectedOrder.customerCompanyName) as
             | "company"
             | "retail",
         },
@@ -671,15 +644,7 @@ export function InvoiceList() {
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-background">
                 <TableRow className="bg-muted/50 h-10">
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={
-                        filteredOrders.length > 0 &&
-                        selectedOrderIds.size === filteredOrders.length
-                      }
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                   <TableHead className="w-[140px] font-bold text-sm">
                     Mã đơn
                   </TableHead>
@@ -722,7 +687,9 @@ export function InvoiceList() {
                   </TableRow>
                 ) : (
                   filteredOrders.map((order) => {
-                    const customerType = deriveCustomerType(order.customer);
+                    const customerType = deriveCustomerType(
+                      order.customerCompanyName
+                    );
                     const canInvoice = canIssueInvoice(order);
                     const customerInfoComplete = isCustomerInfoComplete(order);
                     // Invoice status: check if invoice has been issued
@@ -786,8 +753,8 @@ export function InvoiceList() {
                             <div className="flex items-center gap-2">
                               <TruncatedText
                                 text={
-                                  order.customer?.companyName ||
-                                  order.customer?.name ||
+                                  order.customerCompanyName ||
+                                  order.customerName ||
                                   "—"
                                 }
                                 className="font-semibold text-sm"
@@ -806,7 +773,7 @@ export function InvoiceList() {
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-muted-foreground">
-                                {order.customer?.phone || "—"}
+                                {order.customerPhone || "—"}
                               </span>
                               <CustomerTypeBadge type={customerType} />
                             </div>
@@ -938,9 +905,7 @@ export function InvoiceList() {
                     <div className="flex-1">
                       <div className="font-medium text-sm">{order.code}</div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {order.customer?.companyName ||
-                          order.customer?.name ||
-                          "—"}
+                        {order.customerCompanyName || order.customerName || "—"}
                       </div>
                     </div>
                     <div className="text-right">

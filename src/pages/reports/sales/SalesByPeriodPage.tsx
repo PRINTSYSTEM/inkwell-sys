@@ -53,12 +53,11 @@ export default function SalesByPeriodPage() {
       ? dateRange.from.toISOString()
       : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    search: searchQuery || undefined,
   });
 
-  const totalRevenue = salesData?.items?.reduce((sum, item) => sum + (item.totalRevenue || 0), 0) || 0;
-  const totalCost = salesData?.items?.reduce((sum, item) => sum + (item.totalCost || 0), 0) || 0;
-  const totalProfit = salesData?.items?.reduce((sum, item) => sum + (item.totalProfit || 0), 0) || (totalRevenue - totalCost);
+  const totalRevenue = salesData?.items?.reduce((sum, item) => sum + (item.grossRevenue || 0), 0) || 0;
+  const totalNetRevenue = salesData?.items?.reduce((sum, item) => sum + (item.netRevenue || 0), 0) || 0;
+  const totalDiscount = salesData?.items?.reduce((sum, item) => sum + (item.discount || 0), 0) || 0;
 
   const handleExportExcel = async () => {
     // TODO: Implement export Excel when API endpoint is available
@@ -151,24 +150,24 @@ export default function SalesByPeriodPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Tổng chi phí
+                Tổng giảm giá
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatCurrency(totalCost)}
+                {formatCurrency(totalDiscount)}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Tổng lợi nhuận
+                Doanh thu ròng
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {formatCurrency(totalProfit)}
+                {formatCurrency(totalNetRevenue)}
               </div>
             </CardContent>
           </Card>
@@ -181,17 +180,18 @@ export default function SalesByPeriodPage() {
               <TableRow className="bg-muted/50">
                 <TableHead>Kỳ</TableHead>
                 <TableHead className="text-right">Số đơn hàng</TableHead>
-                <TableHead className="text-right">Doanh thu</TableHead>
-                <TableHead className="text-right">Chi phí</TableHead>
-                <TableHead className="text-right">Lợi nhuận</TableHead>
-                <TableHead className="text-right">Tỷ lệ lợi nhuận</TableHead>
+                <TableHead className="text-right">Doanh thu gộp</TableHead>
+                <TableHead className="text-right">Giảm giá</TableHead>
+                <TableHead className="text-right">Trả hàng</TableHead>
+                <TableHead className="text-right">Doanh thu ròng</TableHead>
+                <TableHead className="text-right">Số khách hàng</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -201,7 +201,7 @@ export default function SalesByPeriodPage() {
               ) : !salesData?.items || salesData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu doanh số nào.
@@ -209,10 +209,6 @@ export default function SalesByPeriodPage() {
                 </TableRow>
               ) : (
                 salesData.items.map((item) => {
-                  const profit = (item.totalRevenue || 0) - (item.totalCost || 0);
-                  const profitMargin = item.totalRevenue && item.totalRevenue > 0
-                    ? (profit / item.totalRevenue * 100)
-                    : (item.profitMargin || 0);
                   return (
                     <TableRow
                       key={item.period}
@@ -228,22 +224,29 @@ export default function SalesByPeriodPage() {
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {item.totalRevenue !== undefined
-                          ? formatCurrency(item.totalRevenue)
+                        {item.grossRevenue !== undefined
+                          ? formatCurrency(item.grossRevenue)
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {item.totalCost !== undefined
-                          ? formatCurrency(item.totalCost)
+                        {item.discount !== undefined
+                          ? formatCurrency(item.discount)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {item.returns !== undefined
+                          ? formatCurrency(item.returns)
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-bold tabular-nums text-green-600">
-                        {item.totalProfit !== undefined
-                          ? formatCurrency(item.totalProfit)
-                          : profit > 0 ? formatCurrency(profit) : "—"}
+                        {item.netRevenue !== undefined
+                          ? formatCurrency(item.netRevenue)
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {profitMargin > 0 ? `${profitMargin.toFixed(2)}%` : "—"}
+                        {item.customerCount !== undefined
+                          ? item.customerCount.toLocaleString()
+                          : "—"}
                       </TableCell>
                     </TableRow>
                   );

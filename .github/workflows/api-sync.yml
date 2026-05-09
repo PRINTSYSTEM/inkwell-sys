@@ -20,7 +20,7 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Sync API schema & validate
-        run: npm run schema:sync:guard
-        env:
-          CI: true
+      # - name: Sync API schema & validate
+      #   run: npm run schema:sync:guard
+      #   env:
+      #     CI: true

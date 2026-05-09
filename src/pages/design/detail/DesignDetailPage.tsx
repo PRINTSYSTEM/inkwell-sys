@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,15 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TruncatedText } from "@/components/ui/truncated-text";
+import { CursorTooltip } from "@/components/ui/cursor-tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -28,8 +37,8 @@ import {
   useUploadDesignImage,
   useAddDesignTimelineEntry,
   useUpdateDesign,
-  useRevertDesign,
 } from "@/hooks/use-design";
+import { useMaterialsByDesignType } from "@/hooks/use-material-type";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/error-components";
 
 import {
@@ -66,7 +75,6 @@ import {
 
 import {
   type DesignStatus,
-  designStatusLabels,
   getValidNextStatuses,
   isValidStatusTransition,
   getTransitionErrorMessage,
@@ -93,6 +101,7 @@ import {
   processClassificationLabels,
   laminationTypeLabels,
   designStatusConfig,
+  designStatusLabels,
 } from "@/lib/status-utils";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
@@ -101,6 +110,108 @@ import type { OrderDetailResponse } from "@/Schema";
 import DesignCodeGeneratorComponent from "@/components/DesignCodeGenerator";
 import DesignCode from "@/components/design/design-code";
 import { downloadFile } from "@/lib/download-utils";
+
+// Helper functions to check design type
+const isNhanDesignType = (designTypeName: string | undefined): boolean => {
+  if (!designTypeName) return false;
+  return (
+    designTypeName.toLowerCase().includes("nhãn") ||
+    designTypeName.toLowerCase().includes("nhan")
+  );
+};
+
+const isHopDesignType = (designTypeName: string | undefined): boolean => {
+  if (!designTypeName) return false;
+  return (
+    designTypeName.toLowerCase().includes("hộp") ||
+    designTypeName.toLowerCase().includes("hop")
+  );
+};
+
+const isTuiXepHongDesignType = (
+  designTypeName: string | undefined
+): boolean => {
+  if (!designTypeName) return false;
+  return (
+    designTypeName.toLowerCase().includes("túi xếp hông") ||
+    designTypeName.toLowerCase().includes("tui xep hong") ||
+    designTypeName.toLowerCase().includes("túi xếp") ||
+    designTypeName.toLowerCase().includes("tui xep")
+  );
+};
+
+function getTimelineVisual(entry: DesignTimelineEntryResponse) {
+  const description = (entry.description as string | undefined) || "";
+  const normalized = description.toLowerCase();
+  const hasImage = Boolean((entry as any).imageUrl || entry.fileUrl);
+
+  if (hasImage) {
+    return {
+      variant: "image" as const,
+      badgeClass:
+        "bg-violet-50 text-violet-800 dark:bg-violet-950/40 dark:text-violet-100 border-violet-200 dark:border-violet-700",
+      dotClass:
+        "bg-gradient-to-br from-violet-500 to-violet-600 border-violet-300 dark:border-violet-700",
+      icon: ImageIcon,
+      label: "Ảnh / file",
+    };
+  }
+
+  if (normalized.includes("trạng thái") || normalized.includes("status")) {
+    return {
+      variant: "status" as const,
+      badgeClass:
+        "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 border-emerald-200 dark:border-emerald-700",
+      dotClass:
+        "bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-300 dark:border-emerald-700",
+      icon: CheckCircle2,
+      label: "Trạng thái",
+    };
+  }
+
+  return {
+    variant: "note" as const,
+    badgeClass:
+      "bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-100 border-blue-200 dark:border-blue-700",
+    dotClass:
+      "bg-gradient-to-br from-blue-500 to-blue-600 border-blue-300 dark:border-blue-700",
+    icon: FileText,
+    label: "Ghi chú",
+  };
+}
+
+function groupTimelineByDate(entries: DesignTimelineEntryResponse[]) {
+  const groups: { date: string; items: DesignTimelineEntryResponse[] }[] = [];
+  const map = new Map<string, DesignTimelineEntryResponse[]>();
+
+  entries.forEach((entry) => {
+    const createdAt = entry.createdAt as string | undefined;
+    const dateKey = createdAt ? createdAt.slice(0, 10) : "Khác";
+    if (!map.has(dateKey)) {
+      map.set(dateKey, []);
+    }
+    map.get(dateKey)?.push(entry);
+  });
+
+  for (const [date, items] of map.entries()) {
+    groups.push({ date, items });
+  }
+
+  return groups;
+}
+
+function formatTimelineDateLabel(date: string) {
+  if (date === "Khác") return "Khác";
+  try {
+    return new Date(date).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return date;
+  }
+}
 
 export default function DesignDetailPage() {
   const params = useParams();
@@ -137,18 +248,21 @@ export default function DesignDetailPage() {
   } | null>(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showTimelineDialog, setShowTimelineDialog] = useState(false);
-  const [showRevertDialog, setShowRevertDialog] = useState(false);
-  const [revertReason, setRevertReason] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState({
     designName: "",
     length: 0,
     width: 0,
     height: 0,
+    adhesiveOffset: undefined as number | undefined,
     requirements: "",
     additionalNotes: "",
+    materialTypeId: undefined as number | undefined,
     sidesClassificationOptionId: undefined as number | undefined,
     processClassificationOptionId: undefined as number | undefined,
+    sidesClassification: "" as string | undefined,
+    processClassification: "" as string | undefined,
+    laminationType: "" as string | undefined,
   });
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -162,7 +276,11 @@ export default function DesignDetailPage() {
   const { mutate: uploadFile } = useUploadDesignFile();
   const { mutate: uploadImage } = useUploadDesignImage();
   const { mutate: addTimeline } = useAddDesignTimelineEntry();
-  const { mutate: revertDesign, loading: revertingDesign } = useRevertDesign();
+
+  const { data: materialsByDesignType = [], isLoading: materialsLoading } =
+    useMaterialsByDesignType(
+      ((design as any)?.designType as any)?.id as number | undefined
+    );
 
   // ==== ORDER BY DESIGN ====
   const { data: orderDetails } = useQuery<OrderDetailResponse[]>({
@@ -213,26 +331,9 @@ export default function DesignDetailPage() {
       currentStatus === "confirmed_for_printing");
 
   const canTransitionTo = (targetStatus: DesignStatus): boolean => {
-    // Allow revert from confirmed_for_printing to waiting_for_customer_approval
-    if (
-      currentStatus === "confirmed_for_printing" &&
-      targetStatus === "waiting_for_customer_approval"
-    ) {
-      return true;
-    }
-    if (
-      currentStatus === "designing" &&
-      targetStatus === "waiting_for_customer_approval"
-    ) {
-      return !!design?.designFileUrl;
-    }
+    void targetStatus;
     return true;
   };
-
-  const needsDesignFile =
-    currentStatus === "designing" &&
-    validNextStatuses.includes("waiting_for_customer_approval") &&
-    !design?.designFileUrl;
 
   const canExportDocuments =
     (user?.role === ROLE.ACCOUNTING || user?.role === ROLE.ADMIN) &&
@@ -273,15 +374,6 @@ export default function DesignDetailPage() {
   const handleStatusTransition = async (targetStatus: DesignStatus) => {
     if (!targetStatus || !design) return;
 
-    // Handle revert from confirmed_for_printing to waiting_for_customer_approval
-    if (
-      currentStatus === "confirmed_for_printing" &&
-      targetStatus === "waiting_for_customer_approval"
-    ) {
-      setShowRevertDialog(true);
-      return;
-    }
-
     if (!isValidStatusTransition(currentStatus, targetStatus)) {
       const errorMessage = getTransitionErrorMessage(
         currentStatus,
@@ -292,19 +384,6 @@ export default function DesignDetailPage() {
         description: errorMessage,
       });
       return;
-    }
-
-    if (
-      currentStatus === "designing" &&
-      targetStatus === "waiting_for_customer_approval"
-    ) {
-      if (!design.designFileUrl) {
-        toast.error("Không thể chuyển trạng thái", {
-          description:
-            "Vui lòng tải lên file thiết kế trước khi chuyển sang trạng thái 'Chờ khách duyệt'",
-        });
-        return;
-      }
     }
 
     setUpdatingStatus(true);
@@ -329,27 +408,6 @@ export default function DesignDetailPage() {
     }
   };
 
-  const handleRevertConfirm = async () => {
-    if (!revertReason.trim()) {
-      toast.error("Lỗi", {
-        description: "Vui lòng nhập lý do hoàn nguyên",
-      });
-      return;
-    }
-
-    try {
-      await revertDesign({
-        id: designId,
-        reason: revertReason.trim(),
-      });
-      setShowRevertDialog(false);
-      setRevertReason("");
-      refetchDesign();
-    } catch {
-      // Error handled in hook
-    }
-  };
-
   // ==== HANDLERS - FILE & TIMELINE ====
   // Helper function to check if file is an image
   const isImageFile = (file: File): boolean => {
@@ -369,6 +427,13 @@ export default function DesignDetailPage() {
     const designFiles = files.filter((f) => isDesignFile(f));
     const imageFiles = files.filter((f) => isImageFile(f));
 
+    if (designFiles.length === 0 && imageFiles.length === 0) {
+      toast.error("Lỗi", {
+        description: "Vui lòng chọn ít nhất 1 file ảnh hoặc file thiết kế (.ai)",
+      });
+      return;
+    }
+
     const errors: string[] = [];
     const successes: string[] = [];
 
@@ -380,8 +445,6 @@ export default function DesignDetailPage() {
       } catch (error) {
         errors.push(`File thiết kế "${designFiles[0].name}" lỗi`);
       }
-    } else {
-      errors.push("Thiếu file thiết kế (.ai)");
     }
 
     // Upload ảnh
@@ -392,8 +455,6 @@ export default function DesignDetailPage() {
       } catch (error) {
         errors.push(`Ảnh "${imageFiles[0].name}" lỗi`);
       }
-    } else {
-      errors.push("Thiếu file ảnh");
     }
 
     setShowFileUpload(false);
@@ -401,7 +462,7 @@ export default function DesignDetailPage() {
     // Hiển thị thông báo kết quả
     if (errors.length === 0) {
       toast.success("Thành công", {
-        description: "Đã tải lên tất cả file",
+        description: "Đã tải lên file đã chọn",
       });
       refetchDesign();
     } else if (successes.length > 0) {
@@ -459,13 +520,27 @@ export default function DesignDetailPage() {
       length: design.length || 0,
       width: design.width || 0,
       height: design.height || 0,
+      adhesiveOffset:
+        (design.adhesiveOffset as number | undefined) || undefined,
       requirements: design.latestRequirements || "",
       additionalNotes: design.notes || "",
+      materialTypeId:
+        (design.materialTypeId as number | undefined) ||
+        ((design.materialType as any)?.id as number | undefined) ||
+        undefined,
       sidesClassificationOptionId:
         (design.sidesClassificationOptionId as number | undefined) || undefined,
       processClassificationOptionId:
         (design.processClassificationOptionId as number | undefined) ||
         undefined,
+      sidesClassification:
+        (design.sidesClassification as string | undefined) || "",
+      processClassification:
+        (design.processClassification as string | undefined) || "",
+      laminationType:
+        (design.laminationType as string | undefined) ||
+        (orderDetails?.[0]?.laminationType as string | undefined) ||
+        "",
     });
     setIsEditing(true);
   };
@@ -477,10 +552,15 @@ export default function DesignDetailPage() {
       length: 0,
       width: 0,
       height: 0,
+      adhesiveOffset: undefined,
       requirements: "",
       additionalNotes: "",
+      materialTypeId: undefined,
       sidesClassificationOptionId: undefined,
       processClassificationOptionId: undefined,
+      sidesClassification: "",
+      processClassification: "",
+      laminationType: "",
     });
   };
 
@@ -494,12 +574,17 @@ export default function DesignDetailPage() {
           length: editFormData.length || null,
           width: editFormData.width || null,
           height: editFormData.height || null,
+          adhesiveOffset: editFormData.adhesiveOffset ?? null,
           requirements: editFormData.requirements || null,
           additionalNotes: editFormData.additionalNotes || null,
+          materialTypeId: editFormData.materialTypeId || null,
           sidesClassificationOptionId:
             editFormData.sidesClassificationOptionId || null,
           processClassificationOptionId:
             editFormData.processClassificationOptionId || null,
+          sidesClassification: editFormData.sidesClassification || null,
+          processClassification: editFormData.processClassification || null,
+          laminationType: editFormData.laminationType || null,
         },
       });
       toast.success("Thành công", {
@@ -519,6 +604,15 @@ export default function DesignDetailPage() {
       user?.role === ROLE.DESIGN_LEAD ||
       user?.role === ROLE.ADMIN) &&
     !hasProofingOrder;
+
+  // Calculate dimensions - must be before early returns to maintain hook order
+  const calculatedDimensions = useMemo(() => {
+    if (!design) return "";
+    const d = design as DesignResponse;
+    return d.width
+      ? `${d.length ?? ""} x ${d.width ?? ""} x ${d.height ?? ""}`
+      : `${d.length ?? ""} x ${d.height ?? ""}`;
+  }, [design?.length, design?.width, design?.height]);
 
   // ==== LOADING / ERROR ====
   if (designLoading) {
@@ -576,6 +670,14 @@ export default function DesignDetailPage() {
 
   const d = design as DesignResponse;
 
+  // Check design type for conditional editing
+  const designTypeName = d.designType?.name;
+  const isNhan = isNhanDesignType(designTypeName);
+  const isHop = isHopDesignType(designTypeName);
+  const isTuiXepHong = isTuiXepHongDesignType(designTypeName);
+  const canEditWidth = isHop || isTuiXepHong; // Only box and side-fold bag can edit width
+  const canEditAdhesiveOffset = isNhan; // Only label can edit adhesive offset
+
   // ==== MAIN LAYOUT ====
   return (
     <ErrorBoundary>
@@ -593,7 +695,7 @@ export default function DesignDetailPage() {
             </Button>
 
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <h1 className="text-base font-semibold truncate">
+              <h1 className="text-base font-semibold break-all">
                 {d.code ?? `DES-${d.id}`}
               </h1>
               <StatusBadge
@@ -601,11 +703,6 @@ export default function DesignDetailPage() {
                 label={designStatusLabels[currentStatus]}
                 className="shrink-0"
               />
-              {d.designName && (
-                <span className="text-xs text-muted-foreground truncate hidden sm:block">
-                  • {d.designName}
-                </span>
-              )}
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -675,9 +772,10 @@ export default function DesignDetailPage() {
                 <DesignCode
                   code={d.code}
                   designName={d.designName}
-                  dimensions={d.dimensions}
+                  dimensions={calculatedDimensions}
                   extraNote={d.extraNote as string}
                   createdAt={d.createdAt}
+                  adhesiveOffset={d.adhesiveOffset}
                 />
 
                 {/* Designer info */}
@@ -722,30 +820,15 @@ export default function DesignDetailPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 px-4 pb-4">
-                      {needsDesignFile && (
-                        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
-                          <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                          <p className="text-amber-800 dark:text-amber-200 font-medium">
-                            Cần tải lên file thiết kế trước khi chuyển sang
-                            trạng thái &quot;Chờ khách duyệt&quot;.
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-5 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         {(
-                          Object.keys(designStatusLabels) as DesignStatus[]
+                          Object.keys(designStatusConfig) as DesignStatus[]
                         ).map((status) => {
                           const isCurrentStatus = status === currentStatus;
                           const isValidNext =
                             validNextStatuses.includes(status);
-                          // Allow revert from confirmed_for_printing to waiting_for_customer_approval
-                          const isRevertAllowed =
-                            currentStatus === "confirmed_for_printing" &&
-                            status === "waiting_for_customer_approval";
                           const isEnabled =
-                            (isValidNext && canTransitionTo(status)) ||
-                            isRevertAllowed;
+                            isValidNext && canTransitionTo(status);
                           const statusConfig = designStatusConfig[status];
 
                           return (
@@ -755,17 +838,14 @@ export default function DesignDetailPage() {
                               variant="outline"
                               onClick={() => handleStatusTransition(status)}
                               disabled={
-                                isCurrentStatus ||
-                                updatingStatus ||
-                                revertingDesign ||
-                                !isEnabled
+                                isCurrentStatus || updatingStatus || !isEnabled
                               }
-                              className={`h-11 px-3 rounded-lg text-sm font-medium transition-all border ${
+                              className={`h-11 px-3 rounded-lg text-sm font-medium transition-all ${
                                 isCurrentStatus
-                                  ? `cursor-not-allowed border-2 ${statusConfig.color} font-bold`
+                                  ? `cursor-not-allowed ${statusConfig.color} font-bold`
                                   : isEnabled
                                     ? `${statusConfig.color} hover:opacity-90 cursor-pointer shadow-sm`
-                                    : "opacity-40 cursor-not-allowed border-gray-300 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600"
+                                    : "opacity-40 cursor-not-allowed border-2 border-gray-300 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600"
                               }`}
                             >
                               {designStatusLabels[status]}
@@ -789,7 +869,9 @@ export default function DesignDetailPage() {
                   {/* Specs */}
                   {isEditing ? (
                     <div className="space-y-2">
-                      <div className="grid grid-cols-3 gap-2">
+                      <div
+                        className={`grid gap-2 ${canEditWidth ? "grid-cols-3" : "grid-cols-2"}`}
+                      >
                         <div>
                           <Label className="text-xs">Dài (mm)</Label>
                           <Input
@@ -807,23 +889,25 @@ export default function DesignDetailPage() {
                             className="h-9"
                           />
                         </div>
-                        <div>
-                          <Label className="text-xs">Rộng (mm)</Label>
-                          <Input
-                            type="number"
-                            value={editFormData.width || ""}
-                            onChange={(e) =>
-                              setEditFormData((prev) => ({
-                                ...prev,
-                                width:
-                                  e.target.value === ""
-                                    ? 0
-                                    : Number(e.target.value),
-                              }))
-                            }
-                            className="h-9"
-                          />
-                        </div>
+                        {canEditWidth && (
+                          <div>
+                            <Label className="text-xs">Rộng (mm)</Label>
+                            <Input
+                              type="number"
+                              value={editFormData.width || ""}
+                              onChange={(e) =>
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  width:
+                                    e.target.value === ""
+                                      ? 0
+                                      : Number(e.target.value),
+                                }))
+                              }
+                              className="h-9"
+                            />
+                          </div>
+                        )}
                         <div>
                           <Label className="text-xs">Cao (mm)</Label>
                           <Input
@@ -842,6 +926,30 @@ export default function DesignDetailPage() {
                           />
                         </div>
                       </div>
+                      {canEditAdhesiveOffset && (
+                        <div className="mt-2">
+                          <Label className="text-xs">Mép dán (mm)</Label>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={editFormData.adhesiveOffset || ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                adhesiveOffset:
+                                  e.target.value === ""
+                                    ? undefined
+                                    : Number(e.target.value),
+                              }))
+                            }
+                            className="h-9 max-w-xs"
+                            min="0"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Khoảng cách từ mép đến vị trí dán keo (nếu có)
+                          </p>
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -882,13 +990,37 @@ export default function DesignDetailPage() {
                       </div>
 
                       <div className="grid grid-cols-3 gap-2">
-                        <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-                          <p className="text-xl font-bold text-blue-900 dark:text-blue-100">
-                            {d.length ?? "—"}
-                          </p>
-                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5 font-semibold">
-                            Dài (mm)
-                          </p>
+                        <div className="p-2 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                          {d.adhesiveOffset != null &&
+                          typeof d.adhesiveOffset === "number" &&
+                          d.adhesiveOffset > 0 ? (
+                            <div className="text-center">
+                              <p className="text-xl font-bold text-blue-900 dark:text-blue-100">
+                                {d.length ?? "—"}
+                              </p>
+                              <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5 font-semibold">
+                                Dài (mm)
+                              </p>
+                              <div className="mt-1 pt-1 border-t border-blue-200 dark:border-blue-700">
+                                <p className="text-[10px] text-blue-600 dark:text-blue-400 leading-tight">
+                                  <span className="font-medium">Bao gồm:</span>{" "}
+                                  <span className="font-bold">
+                                    {d.adhesiveOffset}mm
+                                  </span>{" "}
+                                  mép dán
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <p className="text-xl font-bold text-blue-900 dark:text-blue-100">
+                                {d.length ?? "—"}
+                              </p>
+                              <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5 font-semibold">
+                                Dài (mm)
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <div className="p-2 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
                           <p className="text-xl font-bold text-green-900 dark:text-green-100">
@@ -908,6 +1040,19 @@ export default function DesignDetailPage() {
                         </div>
                       </div>
 
+                      {d.adhesiveOffset != null &&
+                        typeof d.adhesiveOffset === "number" &&
+                        d.adhesiveOffset > 0 && (
+                          <div className="flex items-center justify-between p-2 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 rounded-lg border border-orange-200 dark:border-orange-800 text-sm mt-2">
+                            <span className="font-semibold text-orange-900 dark:text-orange-100">
+                              Mép dán
+                            </span>
+                            <span className="font-bold text-orange-700 dark:text-orange-300">
+                              {d.adhesiveOffset} mm
+                            </span>
+                          </div>
+                        )}
+
                       {orderDetails?.[0]?.quantity && (
                         <div className="flex items-center justify-between p-2 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm">
                           <span className="font-semibold text-blue-900 dark:text-blue-100">
@@ -922,7 +1067,32 @@ export default function DesignDetailPage() {
                   )}
 
                   {/* Material */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <Card className="border-teal-200 dark:border-teal-800 bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950/30 dark:to-teal-900/20">
+                      <CardContent className="p-2.5">
+                        <p className="text-xs text-teal-700 dark:text-teal-300 uppercase mb-1.5 font-bold">
+                          Tên thiết kế
+                        </p>
+                        {isEditing && canEditDesign ? (
+                          <Input
+                            value={editFormData.designName || ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                designName: e.target.value,
+                              }))
+                            }
+                            placeholder="Nhập tên thiết kế"
+                            className="h-9 text-sm font-bold"
+                            maxLength={255}
+                          />
+                        ) : (
+                          <p className="font-bold text-sm text-teal-900 dark:text-teal-100 break-all">
+                            {d.designName ?? "—"}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
                     <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20">
                       <CardContent className="p-2.5">
                         <p className="text-xs text-purple-700 dark:text-purple-300 uppercase mb-1.5 font-bold">
@@ -934,13 +1104,49 @@ export default function DesignDetailPage() {
                       </CardContent>
                     </Card>
                     <Card className="border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/20">
-                      <CardContent className="p-2.5">
+                      <CardContent className="p-2.5 space-y-1.5">
                         <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
                           Chất liệu
                         </p>
-                        <p className="font-bold text-sm text-amber-900 dark:text-amber-100">
-                          {d.materialType?.name ?? "—"}
-                        </p>
+                        {isEditing && canEditDesign ? (
+                          <Select
+                            value={
+                              editFormData.materialTypeId
+                                ? String(editFormData.materialTypeId)
+                                : ""
+                            }
+                            onValueChange={(value) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                materialTypeId: value
+                                  ? Number(value)
+                                  : undefined,
+                              }))
+                            }
+                            disabled={materialsLoading}
+                          >
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue
+                                placeholder={
+                                  materialsLoading
+                                    ? "Đang tải chất liệu..."
+                                    : "Chọn chất liệu"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {materialsByDesignType.map((mt) => (
+                                <SelectItem key={mt.id} value={String(mt.id)}>
+                                  {mt.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="font-bold text-sm text-amber-900 dark:text-amber-100">
+                            {d.materialType?.name ?? "—"}
+                          </p>
+                        )}
                       </CardContent>
                     </Card>
                   </div>
@@ -958,19 +1164,47 @@ export default function DesignDetailPage() {
                         <Card className="flex-1 border-slate-200 dark:border-slate-800">
                           <CardContent className="p-2.5">
                             <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                              Mặt cắt
+                              Số mặt in
                             </p>
-                            <p className="text-sm font-bold">
-                              {d.sidesClassification
-                                ? sidesClassificationLabels[
-                                    d.sidesClassification
-                                  ] || d.sidesClassification
-                                : (
-                                    d.sidesClassificationOption as
-                                      | { value?: string }
-                                      | undefined
-                                  )?.value || "—"}
-                            </p>
+                            {isEditing && canEditDesign ? (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {Object.entries(sidesClassificationLabels).map(
+                                  ([value, label]) => (
+                                    <Button
+                                      key={value}
+                                      size="sm"
+                                      variant={
+                                        editFormData.sidesClassification ===
+                                        value
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                      className="h-7 px-2 text-xs rounded-full"
+                                      onClick={() =>
+                                        setEditFormData((prev) => ({
+                                          ...prev,
+                                          sidesClassification: value,
+                                        }))
+                                      }
+                                    >
+                                      {label}
+                                    </Button>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold">
+                                {d.sidesClassification
+                                  ? sidesClassificationLabels[
+                                      d.sidesClassification
+                                    ] || d.sidesClassification
+                                  : (
+                                      d.sidesClassificationOption as
+                                        | { value?: string }
+                                        | undefined
+                                    )?.value || "—"}
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -979,19 +1213,47 @@ export default function DesignDetailPage() {
                         <Card className="flex-1 border-slate-200 dark:border-slate-800">
                           <CardContent className="p-2.5">
                             <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                              Quy trình sản xuất
+                              Quy cách sản xuất
                             </p>
-                            <p className="text-sm font-bold">
-                              {d.processClassification
-                                ? processClassificationLabels[
-                                    d.processClassification
-                                  ] || d.processClassification
-                                : (
-                                    d.processClassificationOption as
-                                      | { value?: string }
-                                      | undefined
-                                  )?.value || "—"}
-                            </p>
+                            {isEditing && canEditDesign ? (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {Object.entries(
+                                  processClassificationLabels
+                                ).map(([value, label]) => (
+                                  <Button
+                                    key={value}
+                                    size="sm"
+                                    variant={
+                                      editFormData.processClassification ===
+                                      value
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    className="h-7 px-2 text-xs rounded-full"
+                                    onClick={() =>
+                                      setEditFormData((prev) => ({
+                                        ...prev,
+                                        processClassification: value,
+                                      }))
+                                    }
+                                  >
+                                    {label}
+                                  </Button>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold">
+                                {d.processClassification
+                                  ? processClassificationLabels[
+                                      d.processClassification
+                                    ] || d.processClassification
+                                  : (
+                                      d.processClassificationOption as
+                                        | { value?: string }
+                                        | undefined
+                                    )?.value || "—"}
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -1000,14 +1262,41 @@ export default function DesignDetailPage() {
                         <Card className="flex-1 border-slate-200 dark:border-slate-800">
                           <CardContent className="p-2.5">
                             <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                              Cán màn
+                              Cán màng
                             </p>
-                            <p className="text-sm font-bold">
-                              {laminationTypeLabels[
-                                (d.laminationType ||
-                                  orderDetails?.[0]?.laminationType) as string
-                              ] || "—"}
-                            </p>
+                            {isEditing && canEditDesign ? (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {Object.entries(laminationTypeLabels).map(
+                                  ([value, label]) => (
+                                    <Button
+                                      key={value}
+                                      size="sm"
+                                      variant={
+                                        editFormData.laminationType === value
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                      className="h-7 px-2 text-xs rounded-full"
+                                      onClick={() =>
+                                        setEditFormData((prev) => ({
+                                          ...prev,
+                                          laminationType: value,
+                                        }))
+                                      }
+                                    >
+                                      {label}
+                                    </Button>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold">
+                                {laminationTypeLabels[
+                                  (d.laminationType ||
+                                    orderDetails?.[0]?.laminationType) as string
+                                ] || "—"}
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -1016,7 +1305,9 @@ export default function DesignDetailPage() {
                 </div>
 
                 {/* Notes */}
-                {(d.notes || d.latestRequirements) && (
+                {(d.notes ||
+                  d.latestRequirements ||
+                  (isEditing && canEditDesign)) && (
                   <Collapsible
                     open={expandedSections.notes}
                     onOpenChange={(open) =>
@@ -1039,25 +1330,66 @@ export default function DesignDetailPage() {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <CardContent className="p-3 space-y-3 border-t border-amber-200 dark:border-amber-800">
-                          {d.notes && (
-                            <div>
-                              <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
-                                Ghi chú
-                              </p>
-                              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
-                                {d.notes}
-                              </p>
+                          {isEditing && canEditDesign ? (
+                            <div className="space-y-3">
+                              <div>
+                                <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                                  Ghi chú
+                                </p>
+                                <Textarea
+                                  value={editFormData.additionalNotes}
+                                  onChange={(e) =>
+                                    setEditFormData((prev) => ({
+                                      ...prev,
+                                      additionalNotes: e.target.value,
+                                    }))
+                                  }
+                                  rows={3}
+                                  className="text-sm"
+                                  placeholder="Nhập ghi chú nội bộ, lưu ý khi thiết kế..."
+                                />
+                              </div>
+                              <div>
+                                <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                                  Yêu cầu
+                                </p>
+                                <Textarea
+                                  value={editFormData.requirements}
+                                  onChange={(e) =>
+                                    setEditFormData((prev) => ({
+                                      ...prev,
+                                      requirements: e.target.value,
+                                    }))
+                                  }
+                                  rows={3}
+                                  className="text-sm"
+                                  placeholder="Nhập yêu cầu từ khách hàng, yêu cầu in ấn..."
+                                />
+                              </div>
                             </div>
-                          )}
-                          {d.latestRequirements && (
-                            <div>
-                              <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
-                                Yêu cầu
-                              </p>
-                              <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
-                                {d.latestRequirements}
-                              </p>
-                            </div>
+                          ) : (
+                            <>
+                              {d.notes && (
+                                <div>
+                                  <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                                    Ghi chú
+                                  </p>
+                                  <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
+                                    {d.notes}
+                                  </p>
+                                </div>
+                              )}
+                              {d.latestRequirements && (
+                                <div>
+                                  <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                                    Yêu cầu
+                                  </p>
+                                  <p className="text-sm whitespace-pre-wrap text-amber-900 dark:text-amber-100 leading-relaxed font-medium">
+                                    {d.latestRequirements}
+                                  </p>
+                                </div>
+                              )}
+                            </>
                           )}
                         </CardContent>
                       </CollapsibleContent>
@@ -1134,12 +1466,6 @@ export default function DesignDetailPage() {
                     Thêm timeline
                   </Button>
                 </div>
-                {needsDesignFile && (
-                  <p className="text-xs text-destructive flex items-center gap-1 font-semibold">
-                    <AlertCircle className="h-3 w-3" />
-                    Bắt buộc có file thiết kế để chuyển trạng thái.
-                  </p>
-                )}
               </div>
             </div>
 
@@ -1147,7 +1473,7 @@ export default function DesignDetailPage() {
             <div className="flex-1 min-h-0 flex">
               {/* File preview */}
               <div className="w-1/2 shrink-0 border-r p-4 flex flex-col gap-4 bg-muted/20">
-                {!d.designFileUrl ? (
+                {!d.designImageUrl && !d.designFileUrl && !d.excelFileUrl ? (
                   <Card
                     className="flex-1 flex flex-col items-center justify-center border-2 border-dashed cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all"
                     onClick={() => setShowFileUpload(true)}
@@ -1166,7 +1492,9 @@ export default function DesignDetailPage() {
                   <>
                     <Card className="overflow-hidden border-2 hover:border-violet-500 transition-colors">
                       <div
-                        className="relative aspect-square cursor-pointer group"
+                        className={`relative aspect-square group ${
+                          d.designImageUrl ? "cursor-pointer" : ""
+                        }`}
                         onClick={() =>
                           d.designImageUrl &&
                           setViewingImage({
@@ -1180,69 +1508,76 @@ export default function DesignDetailPage() {
                           alt="Design preview"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <div className="flex flex-col items-center gap-2">
-                            <Eye className="h-8 w-8 text-white" />
-                            <span className="text-xs text-white font-medium">
-                              Xem ảnh lớn
-                            </span>
+                        {d.designImageUrl && (
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <Eye className="h-8 w-8 text-white" />
+                              <span className="text-xs text-white font-medium">
+                                Xem ảnh lớn
+                              </span>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </Card>
 
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-semibold truncate">
-                          {d.designFileUrl?.split("/").pop()}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          {d.designFileUrl && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-9 gap-2"
-                              onClick={() =>
-                                d.designFileUrl &&
-                                downloadFile(
-                                  d.designFileUrl,
-                                  d.code || `DES-${d.id}`
-                                )
-                              }
-                            >
-                              <Download className="h-4 w-4" />
-                              AI
-                            </Button>
-                          )}
-                          {d.excelFileUrl && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-9 gap-2"
-                              onClick={() =>
-                                d.excelFileUrl &&
-                                downloadFile(
-                                  d.excelFileUrl,
-                                  `${d.code || `DES-${d.id}`}.xlsx`
-                                )
-                              }
-                            >
-                              <FileSpreadsheet className="h-4 w-4" />
-                              Excel
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                    {(d.designFileUrl || d.excelFileUrl) && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-semibold truncate">
+                            {d.designFileUrl?.split("/").pop() || "Tệp đính kèm"}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            {d.designFileUrl && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-9 gap-2"
+                                onClick={() =>
+                                  d.designFileUrl &&
+                                  downloadFile(
+                                    d.designFileUrl,
+                                    d.code || `DES-${d.id}`
+                                  )
+                                }
+                              >
+                                <Download className="h-4 w-4" />
+                                AI
+                              </Button>
+                            )}
+                            {d.excelFileUrl && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-9 gap-2"
+                                onClick={() =>
+                                  d.excelFileUrl &&
+                                  downloadFile(
+                                    d.excelFileUrl,
+                                    `${d.code || `DES-${d.id}`}.xlsx`
+                                  )
+                                }
+                              >
+                                <FileSpreadsheet className="h-4 w-4" />
+                                Excel
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </>
                 )}
               </div>
 
               {/* Timeline */}
-              <ScrollArea className="flex-1 w-1/2">
-                <div className="p-5">
+              <ScrollArea className="flex-1 w-1/2 min-w-0">
+                <div
+                  className="w-full min-w-0 max-w-full"
+                  style={{ padding: "20px", maxWidth: "100%", width: "100%" }}
+                >
                   <div className="flex items-center gap-3 mb-5 pb-3 border-b">
                     <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                       <History className="h-5 w-5 text-purple-600 dark:text-purple-400" />
@@ -1295,95 +1630,125 @@ export default function DesignDetailPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="relative">
+                    <div
+                      className="relative w-full min-w-0 max-w-full"
+                      style={{ maxWidth: "100%", width: "100%" }}
+                    >
                       {/* Line - dừng ở giữa dot cuối cùng (dot cũ nhất) */}
                       <div
-                        className="absolute left-4 top-0 w-px bg-gradient-to-b from-purple-300 via-purple-400 to-purple-300 dark:from-purple-800 dark:via-purple-600 dark:to-purple-800"
+                        className="absolute left-4 top-0 w-px bg-gradient-to-b from-violet-300 via-blue-300 to-emerald-300 dark:from-violet-800 dark:via-blue-800 dark:to-emerald-800"
                         style={{
                           height: `calc(100% - 2rem)`,
                         }}
                       />
 
-                      <div className="space-y-4 pl-2">
-                        {timelineEntries.map((entry, index) => {
-                          const timelineNumber = timelineEntries.length - index;
-                          const isLast = index === timelineEntries.length - 1;
-                          return (
-                            <div
-                              key={entry.id}
-                              className="relative flex gap-4 group"
-                            >
-                              {/* Dot */}
-                              <div className="relative z-10 shrink-0 flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-background shadow-md flex items-center justify-center">
-                                  <span className="text-[10px] font-bold text-white">
-                                    {timelineNumber}
-                                  </span>
-                                </div>
+                      <div
+                        className="space-y-6 pl-2 min-w-0 w-full max-w-full"
+                        style={{ maxWidth: "100%", width: "100%" }}
+                      >
+                        {groupTimelineByDate(timelineEntries).map((group) => (
+                          <div key={group.date} className="space-y-3 min-w-0">
+                            {/* Date header */}
+                            <div className="flex items-center gap-2 pl-6">
+                              <div className="h-px flex-1 bg-border/60" />
+                              <div className="px-3 py-1 rounded-full text-[11px] font-semibold border bg-muted/60 text-muted-foreground uppercase tracking-wide">
+                                {formatTimelineDateLabel(group.date)}
                               </div>
+                            </div>
 
-                              {/* Card */}
-                              <Card
-                                className={`flex-1 group-hover:border-purple-400/70 transition-colors ${
-                                  entry.imageUrl ? "cursor-pointer" : ""
-                                }`}
-                                onClick={() => {
-                                  if (entry.imageUrl) {
-                                    setViewingImage({
-                                      url: entry.imageUrl as string,
-                                      title:
-                                        (entry.title as string) ||
-                                        `Timeline #${timelineNumber}`,
-                                    });
-                                  }
-                                }}
-                              >
-                                <CardContent
-                                  className="p-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
-                                  onClick={() => {
-                                    if (entry.fileUrl) {
-                                      setViewingImage({
-                                        url: entry.fileUrl as string,
-                                        title:
-                                          (entry.title as string) ||
-                                          `Timeline #${timelineNumber}`,
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <div className="flex-1 min-w-0 space-y-1">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <p className="font-semibold text-sm truncate">
-                                        {entry.description}
-                                      </p>
-                                      <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
-                                        {entry.createdAt
-                                          ? new Date(
-                                              entry.createdAt
-                                            ).toLocaleString("vi-VN", {
-                                              day: "2-digit",
-                                              month: "2-digit",
-                                              hour: "2-digit",
-                                              minute: "2-digit",
-                                            })
-                                          : ""}
-                                      </span>
+                            <div className="space-y-3">
+                              {timelineEntries.map((entry, index) => {
+                                const timelineNumber =
+                                  timelineEntries.length - index;
+                                const isLast =
+                                  index === timelineEntries.length - 1;
+                                return (
+                                  <div
+                                    key={entry.id}
+                                    className="relative flex gap-4 group"
+                                  >
+                                    {/* Dot */}
+                                    <div className="relative z-10 shrink-0 flex items-center">
+                                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-background shadow-md flex items-center justify-center">
+                                        <span className="text-[10px] font-bold text-white">
+                                          {timelineNumber}
+                                        </span>
+                                      </div>
                                     </div>
 
-                                    {entry.createdByName && (
-                                      <p className="text-xs text-muted-foreground font-medium">
-                                        Người tạo:{" "}
-                                        <span className="font-semibold">
-                                          {entry.createdByName as string}
-                                        </span>
-                                      </p>
-                                    )}
+                                    {/* Card */}
+                                    <Card
+                                      className={`flex-1 group-hover:border-purple-400/70 transition-colors ${
+                                        entry.imageUrl ? "cursor-pointer" : ""
+                                      }`}
+                                      onClick={() => {
+                                        if (entry.imageUrl) {
+                                          setViewingImage({
+                                            url: entry.imageUrl as string,
+                                            title:
+                                              (entry.title as string) ||
+                                              `Timeline #${timelineNumber}`,
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <CardContent
+                                        className="p-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                                        onClick={() => {
+                                          if (entry.fileUrl) {
+                                            setViewingImage({
+                                              url: entry.fileUrl as string,
+                                              title:
+                                                (entry.title as string) ||
+                                                `Timeline #${timelineNumber}`,
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <CursorTooltip
+                                          content={entry.description}
+                                          delayDuration={200}
+                                          className="p-4 max-w-md"
+                                        >
+                                          <div className="flex-1 min-w-0 space-y-1">
+                                            <div className="flex items-center justify-between gap-2">
+                                              <p className="font-medium text-sm truncate max-w-[60px] cursor-pointer">
+                                                {entry.description}
+                                              </p>
+                                              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                                                {entry.createdAt
+                                                  ? new Date(
+                                                      entry.createdAt
+                                                    ).toLocaleString("vi-VN", {
+                                                      day: "2-digit",
+                                                      month: "2-digit",
+                                                      hour: "2-digit",
+                                                      minute: "2-digit",
+                                                    })
+                                                  : ""}
+                                              </span>
+                                            </div>
+
+                                            {entry.createdByName && (
+                                              <p className="text-[11px] text-muted-foreground">
+                                                Người tạo:{" "}
+                                                <span className="font-medium">
+                                                  {
+                                                    entry.createdByName as string
+                                                  }
+                                                </span>
+                                              </p>
+                                            )}
+                                          </div>
+                                        </CursorTooltip>
+                                      </CardContent>
+                                    </Card>
                                   </div>
-                                </CardContent>
-                              </Card>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1416,53 +1781,6 @@ export default function DesignDetailPage() {
           onOpenChange={setShowTimelineDialog}
           onAdd={handleTimelineAdd}
         />
-
-        {/* Revert Dialog */}
-        <Dialog open={showRevertDialog} onOpenChange={setShowRevertDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Hoàn nguyên thiết kế</DialogTitle>
-              <DialogDescription>
-                Bạn có chắc chắn muốn hoàn nguyên thiết kế từ trạng thái
-                &quot;Đã chốt in&quot; về trạng thái &quot;Chờ khách
-                duyệt&quot;? Vui lòng nhập lý do.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="revert-reason">
-                  Lý do hoàn nguyên <span className="text-red-500">*</span>
-                </Label>
-                <Textarea
-                  id="revert-reason"
-                  placeholder="Nhập lý do hoàn nguyên thiết kế..."
-                  value={revertReason}
-                  onChange={(e) => setRevertReason(e.target.value)}
-                  className="min-h-[100px]"
-                  rows={4}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowRevertDialog(false);
-                  setRevertReason("");
-                }}
-                disabled={revertingDesign}
-              >
-                Hủy
-              </Button>
-              <Button
-                onClick={handleRevertConfirm}
-                disabled={revertingDesign || !revertReason.trim()}
-              >
-                {revertingDesign ? "Đang xử lý..." : "Xác nhận"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </ErrorBoundary>
   );

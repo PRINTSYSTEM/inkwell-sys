@@ -9,9 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -19,6 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Package,
   Layers,
@@ -28,6 +29,7 @@ import {
   Building2,
 } from "lucide-react";
 import type { DesignResponse } from "@/Schema/design.schema";
+import { useSharedAddresses, useCreateSharedAddress, useUpdateSharedAddress } from "@/hooks/use-shared-address";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 
 type ExistingDesignModalProps = {
@@ -37,7 +39,8 @@ type ExistingDesignModalProps = {
   onConfirm: (
     design: DesignResponse,
     quantity: number,
-    laminationType: string
+    laminationType: string,
+    sharedAddressId?: number | null
   ) => void;
 };
 
@@ -49,12 +52,14 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
 }) => {
   const [quantity, setQuantity] = useState<number>(0);
   const [laminationType, setLaminationType] = useState<string>("");
+  const [sharedAddressId, setSharedAddressId] = useState<number | undefined>(undefined);
 
   // Reset quantity and laminationType when modal opens/closes
   useEffect(() => {
     if (open) {
       setQuantity(0);
       setLaminationType("");
+      setSharedAddressId(undefined);
     }
   }, [open]);
 
@@ -68,20 +73,151 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
       laminationType &&
       validLaminationTypes.includes(laminationType)
     ) {
-      onConfirm(design, quantity, laminationType);
+      onConfirm(design, quantity, laminationType, sharedAddressId ?? null);
       setQuantity(0);
       setLaminationType("");
+      setSharedAddressId(undefined);
       onOpenChange(false);
     }
   };
 
   if (!design) return null;
 
-  const sizeLabel =
-    design.width && design.height
-      ? `${design.length || 0} × ${design.width} × ${design.height} mm`
-      : "Chưa có";
+  // Shared address select helper component
+  function SharedAddressSelect() {
+    const { data, isLoading } = useSharedAddresses({ pageNumber: 1, pageSize: 1000 });
+    const items = data?.items || [];
+    const [search, setSearch] = useState<string>("");
+    const filtered = items.filter((sa: any) => {
+      const text = `${sa.label || ""} ${sa.address || ""}`.toLowerCase();
+      return text.includes(search.trim().toLowerCase());
+    });
 
+    if (isLoading) return <p className="text-sm text-muted-foreground">Đang tải địa chỉ...</p>;
+
+    // create/update hooks
+    const { mutate: createSharedAddress } = useCreateSharedAddress();
+    const { mutate: updateSharedAddress } = useUpdateSharedAddress();
+    const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+    const [addressDialogLabel, setAddressDialogLabel] = useState("");
+    const [addressDialogAddress, setAddressDialogAddress] = useState("");
+    const [addressEditingId, setAddressEditingId] = useState<number | undefined>(undefined);
+
+    useEffect(() => {
+      if (!addressDialogOpen) {
+        setAddressDialogLabel("");
+        setAddressDialogAddress("");
+        setAddressEditingId(undefined);
+      }
+    }, [addressDialogOpen]);
+
+    const openAddAddressDialog = () => {
+      setAddressEditingId(undefined);
+      setAddressDialogLabel("");
+      setAddressDialogAddress("");
+      setAddressDialogOpen(true);
+    };
+
+    const openEditAddressDialog = () => {
+      if (!sharedAddressId) return;
+      const sel = items.find((s: any) => s.id === sharedAddressId);
+      if (!sel) return;
+      setAddressEditingId(sel.id);
+      setAddressDialogLabel(sel.label || "");
+      setAddressDialogAddress(sel.address || "");
+      setAddressDialogOpen(true);
+    };
+
+    const handleAddressDialogSave = async () => {
+      if (!addressDialogLabel?.trim()) return;
+      try {
+        if (addressEditingId) {
+          await updateSharedAddress(addressEditingId, { label: addressDialogLabel.trim(), address: addressDialogAddress?.trim() });
+        } else {
+          const created = await createSharedAddress({ label: addressDialogLabel.trim(), address: addressDialogAddress?.trim() });
+          setSharedAddressId(created.id);
+        }
+        setAddressDialogOpen(false);
+      } catch (err) {}
+    };
+
+    return (
+      <>
+        <Select
+          value={sharedAddressId ? String(sharedAddressId) : undefined}
+          onValueChange={(v) => setSharedAddressId(v && v !== "0" ? Number(v) : undefined)}
+        >
+          <SelectTrigger className="h-11 bg-background">
+            <SelectValue placeholder="Chọn địa chỉ..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0">Không chọn</SelectItem>
+            {filtered.map((sa: any) => (
+              <SelectItem key={sa.id} value={sa.id.toString()}>
+                <div className="flex flex-col">
+                  <span className="font-medium">{sa.label}</span>
+                  {sa.address && (
+                    <span className="text-xs text-muted-foreground truncate">{sa.address}</span>
+                  )}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="flex gap-2 mt-2">
+          <Input
+            placeholder="Tìm địa chỉ..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1"
+          />
+          <Button onClick={openAddAddressDialog}>Thêm</Button>
+          <Button variant="outline" disabled={!sharedAddressId} onClick={openEditAddressDialog}>Sửa</Button>
+        </div>
+
+        <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{addressEditingId ? "Cập nhật địa chỉ" : "Thêm địa chỉ"}</DialogTitle>
+              <DialogDescription>
+                Thêm hoặc chỉnh sửa địa chỉ giao hàng dùng chung.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <Input placeholder="Tên địa chỉ (bắt buộc)" value={addressDialogLabel} onChange={(e) => setAddressDialogLabel(e.target.value)} className="h-11" />
+              <Textarea placeholder="Địa chỉ chi tiết (tuỳ chọn)" value={addressDialogAddress} onChange={(e) => setAddressDialogAddress(e.target.value)} className="h-24" />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddressDialogOpen(false)}>Hủy</Button>
+              <Button onClick={handleAddressDialogSave}>{addressEditingId ? "Cập nhật" : "Thêm"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  // Format dimensions: handle width = 0 or missing
+  const formatDimensions = () => {
+    if (!design.length && !design.height) return "Chưa có";
+
+    const length = design.length || 0;
+    const width = design.width;
+    const height = design.height || 0;
+
+    // Convert cm to mm (multiply by 10)
+    const lengthMm = length * 10;
+    const widthMm = width != null ? width * 10 : undefined;
+    const heightMm = height * 10;
+
+    if (widthMm != null && widthMm > 0) {
+      return `${lengthMm} × ${widthMm} × ${heightMm} mm`;
+    }
+    return `${lengthMm} × ${heightMm} mm`;
+  };
+
+  const sizeLabel = formatDimensions();
   const minQuantity = design.materialType?.minimumQuantity;
 
   return (
@@ -96,7 +232,7 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto py-4 px-1 space-y-6">
           {/* Basic Info Section */}
           <div className="space-y-4">
             <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
@@ -161,14 +297,16 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                 )}
 
                 {/* Kích thước */}
-                {(design.length || design.width || design.height) && (
+                {(design.length || design.height) && (
                   <div className="flex items-start gap-2">
                     <Ruler className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground mb-0.5">
-                        Kích thước (mm)
+                        Kích thước
                       </p>
-                      <p className="text-sm font-medium">{sizeLabel}</p>
+                      <p className="text-sm font-medium font-mono">
+                        {sizeLabel}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -182,7 +320,9 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                         Số mặt in
                       </p>
                       <p className="text-sm font-medium">
-                        {design.sidesClassification}
+                        {ENTITY_CONFIG.sidesClassification?.values?.[
+                          design.sidesClassification as keyof typeof ENTITY_CONFIG.sidesClassification.values
+                        ] || design.sidesClassification}
                       </p>
                     </div>
                   </div>
@@ -197,7 +337,9 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                         Quy trình sản xuất
                       </p>
                       <p className="text-sm font-medium">
-                        {design.processClassification}
+                        {ENTITY_CONFIG.processClassification?.values?.[
+                          design.processClassification as keyof typeof ENTITY_CONFIG.processClassification.values
+                        ] || design.processClassification}
                       </p>
                     </div>
                   </div>
@@ -229,8 +371,8 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                         Khách hàng
                       </p>
                       <p className="text-sm font-medium">
-                        {(design.customer.companyName as string) ||
-                          (design.customer.name as string) ||
+                        {design.customer.companyName ??
+                          design.customer.name ??
                           "—"}
                       </p>
                     </div>
@@ -257,8 +399,9 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
 
           <Separator />
 
-          {/* Quantity input - Only editable field */}
-          <div className="space-y-4">
+          {/* Quantity input and Lamination - Only editable fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Số lượng */}
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
@@ -273,19 +416,21 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                   </p>
                 )}
               </div>
-              <Input
-                type="number"
-                placeholder="VD: 1000"
-                value={quantity || ""}
-                onChange={(e) =>
-                  setQuantity(
-                    e.target.value === "" ? 0 : Number(e.target.value)
-                  )
-                }
-                className="h-11 w-full"
-                min={minQuantity && minQuantity > 0 ? minQuantity : 1}
-                autoFocus
-              />
+              <div className="w-full">
+                <Input
+                  type="number"
+                  placeholder="VD: 1000"
+                  value={quantity || ""}
+                  onChange={(e) =>
+                    setQuantity(
+                      e.target.value === "" ? 0 : Number(e.target.value)
+                    )
+                  }
+                  className="h-11 w-full"
+                  min={minQuantity && minQuantity > 0 ? minQuantity : 1}
+                  autoFocus
+                />
+              </div>
               {minQuantity &&
                 minQuantity > 0 &&
                 quantity > 0 &&
@@ -305,23 +450,31 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
               <Label className="text-sm font-medium">
                 Cán màng <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={laminationType}
-                onValueChange={(value) => setLaminationType(value)}
-              >
-                <SelectTrigger className="h-11 w-full">
-                  <SelectValue placeholder="Chọn loại cán màng" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(
-                    ([key, label]) => (
-                      <SelectItem key={key} value={key}>
+              <div className="flex gap-2">
+                {Object.entries(ENTITY_CONFIG.laminationTypes.values).map(
+                  ([key, label]) => {
+                    const isSelected = laminationType === key;
+                    return (
+                      <Button
+                        key={key}
+                        type="button"
+                        variant={isSelected ? "default" : "outline"}
+                        onClick={() => setLaminationType(key)}
+                        className="h-11 flex-1"
+                      >
                         {label}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
+                      </Button>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+            {/* Shared address selection */}
+            <div className="space-y-3 md:col-span-2">
+              <Label className="text-sm font-medium">Địa chỉ giao hàng dùng chung (tuỳ chọn)</Label>
+              {/* Fetch shared addresses and present a simple select */}
+              {/* Use hook to fetch first 1000 addresses */}
+              <SharedAddressSelect />
             </div>
           </div>
         </div>

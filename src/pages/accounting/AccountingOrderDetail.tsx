@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -55,9 +56,18 @@ import {
   useGenerateOrderExcel,
   useExportOrderPDF,
   useUpdateOrderForAccounting,
+  useUpdateOrderForSale,
 } from "@/hooks/use-order";
-import { useConfirmDeposit, useApproveDebt } from "@/hooks/use-accounting";
+import { useAuth } from "@/hooks/use-auth";
+import { ROLE } from "@/constants/role.constant";
+import {
+  useApproveDebt,
+  useCreateAccountingForOrder,
+} from "@/hooks/use-accounting";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
+import { useUpdateCustomer } from "@/hooks/use-customer";
+import { useCashReceipts } from "@/hooks/use-cash";
+import { useBankAccounts } from "@/hooks/use-bank";
 import type {
   UpdateOrderForAccountingRequest,
   UpdateOrderDetailForAccountingRequest,
@@ -66,14 +76,37 @@ import type {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AlertTriangle, Search } from "lucide-react";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { toast } from "sonner";
+import { usePaymentMethods } from "@/hooks/use-expense";
 
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
   totalAmount: number,
-  depositAmount: number
+  depositAmount: number,
 ): "not_paid" | "deposited" | "fully_paid" {
   if (depositAmount <= 0) return "not_paid";
   if (depositAmount >= totalAmount) return "fully_paid";
@@ -82,7 +115,7 @@ function derivePaymentStatus(
 
 // Helper to derive customer type
 function deriveCustomerType(
-  companyName: string | null | undefined
+  companyName: string | null | undefined,
 ): "company" | "retail" {
   return companyName ? "company" : "retail";
 }
@@ -113,30 +146,96 @@ function deriveInvoiceStatus(order: {
   return "not_issued";
 }
 
+// Helper to check if customer information is complete for invoice
+function isCustomerInfoComplete(order: {
+  customerName?: string | null;
+  customerTaxCode?: string | null;
+  customerAddress?: string | null;
+}): { isValid: boolean; missingFields: string[] } {
+  const missingFields: string[] = [];
+
+  if (!order.customerName || order.customerName.trim() === "") {
+    missingFields.push("Tên khách hàng");
+  }
+
+  if (!order.customerTaxCode || order.customerTaxCode.trim() === "") {
+    missingFields.push("Mã số thuế");
+  }
+
+  if (!order.customerAddress || order.customerAddress.trim() === "") {
+    missingFields.push("Địa chỉ");
+  }
+
+  return {
+    isValid: missingFields.length === 0,
+    missingFields,
+  };
+}
+
 export default function AccountingOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   // Fetch order from API
+  // Pass `null` when `id` is not yet available to avoid an initial fetch for id=0
   const {
     data: order,
     isLoading,
     isError,
     error,
-  } = useOrder(Number(id || "0"));
+    refetch: refetchOrder,
+  } = useOrder(id ? Number(id) : null);
 
   // Fetch invoices for this order
   const { data: invoicesData } = useInvoicesByOrder(
     order?.id || null,
     undefined,
-    !!order?.id
+    !!order?.id,
   );
+
+  // Fetch cash receipts for this order's customer to check if receipt exists
+  const { data: cashReceiptsData } = useCashReceipts(
+    order?.customerId
+      ? {
+          pageNumber: 1,
+          pageSize: 100,
+          customerId: order.customerId,
+        }
+      : undefined,
+  );
+
+  // Check if order has cash receipt
+  const hasCashReceipt =
+    cashReceiptsData?.items?.some((receipt) => receipt.orderId === order?.id) ||
+    false;
+
+  const { data: paymentMethodsData } = usePaymentMethods({
+    pageNumber: 1,
+    pageSize: 100,
+    isActive: true,
+  });
 
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [cardEditValues, setCardEditValues] = useState<
     Record<string, string | number | null>
   >({});
+
+  // Check if selected payment method is Bank Transfer
+  const isBankTransfer = useMemo(() => {
+    if (!cardEditValues.paymentMethodId) return false;
+    const method = paymentMethodsData?.items?.find(
+      (m: any) =>
+        m.id?.toString() === cardEditValues.paymentMethodId?.toString(),
+    );
+    return method?.name?.toLowerCase().includes("chuyển khoản") || false;
+  }, [cardEditValues.paymentMethodId, paymentMethodsData]);
+
+  // Fetch bank accounts when bank transfer is selected
+  const { data: bankAccountsData, isLoading: isLoadingBankAccounts } =
+    useBankAccounts(
+      isBankTransfer ? { pageNumber: 1, pageSize: 100 } : undefined,
+    );
   // Order detail editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -144,17 +243,25 @@ export default function AccountingOrderDetail() {
   const [orderDetailEditValues, setOrderDetailEditValues] = useState<
     Record<string, string | number | null>
   >({});
+  // Deposit dialog state
+  const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState<string>("");
+  const [isConfirmingDeposit, setIsConfirmingDeposit] = useState(false);
 
   // Mutations
   const exportInvoiceMutation = useExportOrderInvoice();
   const exportDeliveryNoteMutation = useExportOrderDeliveryNote();
   const generateExcelMutation = useGenerateOrderExcel();
   const exportPDFMutation = useExportOrderPDF();
-  const confirmDepositMutation = useConfirmDeposit();
   const approveDebtMutation = useApproveDebt();
+  const createAccountingMutation = useCreateAccountingForOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
+  const { mutate: updateOrderForSale, loading: isUpdatingForSale } =
+    useUpdateOrderForSale();
+  const { user } = useAuth();
   const createInvoiceMutation = useCreateInvoice();
+  const { mutateAsync: updateCustomer } = useUpdateCustomer();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -183,10 +290,37 @@ export default function AccountingOrderDetail() {
     }
   };
 
+  /**
+   * Kiểm tra 30% cọc cho khách lẻ.
+   * @returns true nếu hợp lệ (hoặc không phải khách lẻ), false nếu vi phạm (đã show toast).
+   */
+  const validateRetailDepositThreshold = (
+    currentDeposit: number | null | undefined,
+    currentTotalAmount: number | null | undefined,
+  ): boolean => {
+    // Dùng deriveCustomerType để xác định khách lẻ (không phụ thuộc vào field type từ API)
+    const customerType = deriveCustomerType(order?.customer?.companyName);
+    if (customerType !== "retail") return true;
+
+    const total = Number(currentTotalAmount || 0);
+    const paid = Number(currentDeposit || 0);
+    if (total <= 0) return true;
+
+    const minimumToProofing = total * 0.3;
+    if (paid < minimumToProofing) {
+      toast.error("Cọc chưa đủ 30% — không thể lưu", {
+        description: `Khách lẻ cần thanh toán tối thiểu ${formatCurrency(minimumToProofing)} (30% của ${formatCurrency(total)}). Hiện tại: ${formatCurrency(paid)}.`,
+        duration: 6000,
+      });
+      return false;
+    }
+    return true;
+  };
+
   // Helper to start editing a card
   const startEditingCard = (
     cardName: string,
-    initialValues: Record<string, string | number | null>
+    initialValues: Record<string, string | number | null>,
   ) => {
     setEditingCard(cardName);
     setCardEditValues(initialValues);
@@ -222,7 +356,7 @@ export default function AccountingOrderDetail() {
     if (!order) return;
 
     const orderDetail = order.orderDetails?.find(
-      (od) => od.id === orderDetailId
+      (od) => od.id === orderDetailId,
     );
     if (!orderDetail) return;
 
@@ -243,9 +377,24 @@ export default function AccountingOrderDetail() {
     ];
 
     try {
-      await updateOrderForAccounting(order.id, {
-        orderDetails: orderDetailsUpdates,
-      } as UpdateOrderForAccountingRequest);
+      // If current user is admin or sale, call sale endpoint and include deliveryAddress if present
+      const isSaleUser = user?.role === ROLE.ADMIN || user?.role === ROLE.SALE;
+
+      if (isSaleUser) {
+        // include deliveryAddress if the edit values contain it
+        const salePayload = {
+          orderDetails: orderDetailsUpdates.map((od) => ({
+            ...od,
+            deliveryAddress:
+              (orderDetailEditValues as any).deliveryAddress ?? undefined,
+          })),
+        };
+        await updateOrderForSale(order.id, salePayload);
+      } else {
+        await updateOrderForAccounting(order.id, {
+          orderDetails: orderDetailsUpdates,
+        } as UpdateOrderForAccountingRequest);
+      }
       setEditingOrderDetailId(null);
       setOrderDetailEditValues({});
     } catch (error) {
@@ -321,6 +470,15 @@ export default function AccountingOrderDetail() {
         cardEditValues.paymentDueDate === null
           ? null
           : new Date(cardEditValues.paymentDueDate).toISOString();
+      // Phương thức thanh toán
+      payload.paymentMethodId =
+        cardEditValues.paymentMethodId === "" ||
+        cardEditValues.paymentMethodId === null
+          ? null
+          : Number(cardEditValues.paymentMethodId);
+      // Note: cashFundId không có trong UpdateOrderForAccountingRequest schema
+      // Nếu cần thêm vào schema sau này, uncomment dòng dưới:
+      // payload.cashFundId = cardEditValues.cashFundId === "" || cardEditValues.cashFundId === null ? null : Number(cardEditValues.cashFundId);
     } else if (cardName === "recipientInfo") {
       payload.recipientName =
         cardEditValues.recipientName === "" ||
@@ -339,11 +497,93 @@ export default function AccountingOrderDetail() {
           : String(cardEditValues.recipientAddress).trim();
     }
 
+    if (cardName === "paymentInfo") {
+      if (
+        payload.depositAmount &&
+        payload.depositAmount > 0 &&
+        !payload.paymentMethodId
+      ) {
+        toast.error("Lỗi", {
+          description: "Vui lòng chọn phương thức thanh toán",
+        });
+        return;
+      }
+
+      if (isBankTransfer && !cardEditValues.bankAccountId) {
+        toast.error("Lỗi", {
+          description: "Vui lòng chọn tài khoản ngân hàng",
+        });
+        return;
+      }
+    }
+
+    // Validate 30% deposit threshold for retail customers BEFORE saving
+    if (cardName === "paymentInfo") {
+      const depositAmt =
+        payload.depositAmount != null
+          ? payload.depositAmount
+          : order.depositAmount;
+      const totalAmt =
+        payload.totalAmount != null ? payload.totalAmount : order.totalAmount;
+      if (!validateRetailDepositThreshold(depositAmt, totalAmt)) {
+        return; // Block save — user must increase deposit
+      }
+    }
+
     try {
+      // 1. Update Customer record first if it's customer info
+      if (cardName === "customerInfo" && order.customerId) {
+        try {
+          await updateCustomer({
+            id: order.customerId,
+            data: {
+              name: payload.customerName ?? order.customer?.name,
+              companyName:
+                payload.customerCompanyName ?? order.customer?.companyName,
+              representativeName: order.customer?.representativeName,
+              phone: payload.customerPhone ?? order.customer?.phone,
+              email: payload.customerEmail ?? order.customer?.email,
+              taxCode: payload.customerTaxCode ?? order.customer?.taxCode,
+              address: payload.customerAddress ?? order.customer?.address,
+              type: order.customer?.type ?? "retail",
+              scrapRate: order.customer?.scrapRate ?? 0,
+            },
+          });
+        } catch (err) {
+          console.error("Failed to update central customer record:", err);
+          // We continue anyway to update the order's snapshot
+        }
+      }
+
+      // 2. Update Order's customer info snapshot
       await updateOrderForAccounting(
         order.id,
-        payload as UpdateOrderForAccountingRequest
+        payload as UpdateOrderForAccountingRequest,
       );
+
+      // useUpdateOrderForAccounting đã tự xử lý:
+      //   GET /cash-receipts?customerId&status=approved → lọc orderId → POST .../post
+      // (xem postApprovedCashReceiptForOrder trong use-order.ts)
+
+      if (cardName === "paymentInfo" && order.customerId) {
+        // Tạo accounting record cho khách lẻ chưa duyệt nợ
+        if (
+          deriveCustomerType(order.customer?.companyName) === "retail" &&
+          order.isDebtApproved === false
+        ) {
+          try {
+            await createAccountingMutation.mutate(order.id);
+          } catch (error) {
+            console.error(
+              "[AccountingOrderDetail] Error creating accounting record:",
+              error,
+            );
+          }
+        }
+
+        await refetchOrder();
+      }
+
       setEditingCard(null);
       setCardEditValues({});
     } catch (error) {
@@ -402,15 +642,48 @@ export default function AccountingOrderDetail() {
   const handleUpdatePayment = () => {
     if (!order) return;
 
-    const isCompany = !!order.customer?.companyName;
-
-    if (isCompany) {
-      // Khách công ty: duyệt công nợ
-      approveDebtMutation.mutate(order.id);
+    if (order.customer?.type === "retail") {
+      setDepositAmount("");
+      setIsDepositDialogOpen(true);
     } else {
-      // Khách lẻ: cập nhật thanh toán (confirm deposit)
-      // Cần có dialog để nhập số tiền cọc, tạm thời gọi với depositAmount = totalAmount
-      confirmDepositMutation.mutate(order.id, order.totalAmount);
+      approveDebtMutation.mutate(order.id);
+    }
+  };
+
+  const handleConfirmDeposit = async () => {
+    if (!order) return;
+
+    const amount = parseFloat(depositAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Lỗi", {
+        description: "Vui lòng nhập số tiền cọc hợp lệ",
+      });
+      return;
+    }
+
+    if (amount > order.totalAmount) {
+      toast.error("Lỗi", {
+        description: "Số tiền cọc không được vượt quá tổng tiền đơn hàng",
+      });
+      return;
+    }
+
+    setIsConfirmingDeposit(true);
+
+    try {
+      await updateOrderForAccounting(order.id, {
+        depositAmount: amount,
+        paymentMethodId: 2,
+      } as UpdateOrderForAccountingRequest);
+
+      showRetailDepositThresholdWarning(amount, order.totalAmount);
+
+      setIsDepositDialogOpen(false);
+      setDepositAmount("");
+    } catch (error) {
+      // Error is handled by the mutation hooks
+    } finally {
+      setIsConfirmingDeposit(false);
     }
   };
 
@@ -443,7 +716,7 @@ export default function AccountingOrderDetail() {
     return (
       <div className="min-h-screen bg-muted/30">
         <div className="sticky top-0 z-10 bg-background border-b">
-          <div className="container max-w-7xl mx-auto px-4 py-4">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full">
             <div className="flex items-center gap-4">
               <Skeleton className="h-10 w-10 rounded-md" />
               <div className="space-y-2">
@@ -453,13 +726,13 @@ export default function AccountingOrderDetail() {
             </div>
           </div>
         </div>
-        <div className="container max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-3 space-y-6">
               <Skeleton className="h-48 w-full rounded-lg" />
               <Skeleton className="h-64 w-full rounded-lg" />
             </div>
-            <div className="space-y-6">
+            <div className="lg:col-span-1 space-y-6">
               <Skeleton className="h-48 w-full rounded-lg" />
               <Skeleton className="h-32 w-full rounded-lg" />
             </div>
@@ -505,10 +778,26 @@ export default function AccountingOrderDetail() {
     order.totalAmount > 0 ? (order.depositAmount / order.totalAmount) * 100 : 0;
   const paymentStatus = derivePaymentStatus(
     order.totalAmount,
-    order.depositAmount
+    order.depositAmount,
   );
   const invoiceStatus = deriveInvoiceStatus(order);
-  const customerType = deriveCustomerType(order.customer?.companyName);
+  const customerType = order.customer?.type;
+
+  // Check for warnings and critical issues
+  const now = new Date();
+  const isPaymentDueOverdue = order.paymentDueDate
+    ? new Date(order.paymentDueDate) < now
+    : false;
+  const isDeliveryDatePassed =
+    order.deliveryDate &&
+    order.status !== "completed" &&
+    order.status !== "delivered"
+      ? new Date(order.deliveryDate) < now
+      : false;
+  const isDebtOverLimit =
+    order.customer?.currentDebt &&
+    order.customer?.maxDebt &&
+    order.customer.currentDebt > order.customer.maxDebt;
 
   return (
     <>
@@ -519,7 +808,7 @@ export default function AccountingOrderDetail() {
       <div className="min-h-screen bg-muted/30">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background border-b">
-          <div className="container max-w-7xl mx-auto px-4 py-4">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" onClick={handleBack}>
@@ -576,115 +865,31 @@ export default function AccountingOrderDetail() {
                   )}
                   Xuất PDF Đơn Hàng
                 </Button>
-                {/* {remainingAmount > 0 && ( */}
-                {order.customer?.companyName &&
-                  order.status === "confirmed_for_printing" && (
+                {order.isDebtApproved === false &&
+                  order.customer?.type !== "retail" && (
                     <Button
                       size="sm"
-                      onClick={handleUpdatePayment}
-                      disabled={
-                        confirmDepositMutation.loading ||
-                        approveDebtMutation.loading
-                      }
+                      onClick={() => approveDebtMutation.mutate(order.id)}
+                      disabled={approveDebtMutation.loading}
                     >
-                      {confirmDepositMutation.loading ||
-                      approveDebtMutation.loading ? (
+                      {approveDebtMutation.loading ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
                         <CreditCard className="h-4 w-4 mr-2" />
                       )}
-                      Duyệt công nợ
+                      Duyệt đơn hàng
                     </Button>
                   )}
-                {!order.customer?.companyName && (
-                  <Button
-                    size="sm"
-                    onClick={handleUpdatePayment}
-                    disabled={
-                      confirmDepositMutation.loading ||
-                      approveDebtMutation.loading
-                    }
-                  >
-                    {confirmDepositMutation.loading ||
-                    approveDebtMutation.loading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CreditCard className="h-4 w-4 mr-2" />
-                    )}
-                    Cập nhật thanh toán
-                  </Button>
-                )}
-                {/* )} */}
-                {invoiceStatus === "not_issued" &&
-                  hasBeenDelivered(order.status) && (
-                    <Button
-                      size="sm"
-                      onClick={handleExportInvoice}
-                      disabled={exportInvoiceMutation.loading}
-                    >
-                      {exportInvoiceMutation.loading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <FileText className="h-4 w-4 mr-2" />
-                      )}
-                      Xuất hóa đơn
-                    </Button>
-                  )}
-                {invoiceStatus === "issued" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportDeliveryNote}
-                    disabled={exportDeliveryNoteMutation.loading}
-                  >
-                    {exportDeliveryNoteMutation.loading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Truck className="h-4 w-4 mr-2" />
-                    )}
-                    Xuất phiếu giao hàng
-                  </Button>
-                )}
-                {order.status === "production_completed" && (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleUpdateStatusToDelivering}
-                    disabled={isUpdatingForAccounting}
-                  >
-                    {isUpdatingForAccounting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Truck className="h-4 w-4 mr-2" />
-                    )}
-                    Chuyển sang đang giao hàng
-                  </Button>
-                )}
-                {order.status === "delivering" && (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleUpdateStatusToCompleted}
-                    disabled={isUpdatingForAccounting}
-                  >
-                    {isUpdatingForAccounting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Chuyển thành đã giao hàng
-                  </Button>
-                )}
               </div>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="container max-w-7xl mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Left Column - Main Info */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-3 space-y-6">
               {/* Payment Summary Card */}
               <Card>
                 <CardHeader className="pb-3">
@@ -721,7 +926,7 @@ export default function AccountingOrderDetail() {
                             Hủy
                           </Button>
                         </div>
-                      ) : (
+                      ) : !hasCashReceipt ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -731,106 +936,212 @@ export default function AccountingOrderDetail() {
                               depositAmount:
                                 order.depositAmount?.toString() || "",
                               paymentDueDate: formatDateTimeForInput(
-                                order.paymentDueDate
+                                order.paymentDueDate,
                               ),
+                              paymentMethodId:
+                                order.paymentMethodId?.toString() || "",
+                              // cashFundId: "", // Removed - field no longer exists in schema
                             })
                           }
                         >
                           <Edit className="h-3 w-3 mr-1" />
-                          Sửa
+                          Cọc tiền
                         </Button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-4 rounded-lg bg-muted/50">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Tổng giá trị
+                      </p>
+                      <p className="text-xl font-bold tabular-nums">
+                        {formatCurrency(order.totalAmount)}
+                      </p>
+                    </div>
+                    <div className="text-center p-4 rounded-lg bg-success/10">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Đã thanh toán
+                      </p>
+                      <p className="text-xl font-bold tabular-nums text-success">
+                        {formatCurrency(order.depositAmount)}
+                      </p>
+                    </div>
+                    <div
+                      className={`text-center p-4 rounded-lg ${
+                        remainingAmount > 0 && isPaymentDueOverdue
+                          ? "bg-red-100 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700"
+                          : remainingAmount > 0
+                            ? "bg-destructive/10"
+                            : "bg-success/10"
+                      }`}
+                    >
+                      <p
+                        className={`text-sm mb-1 ${
+                          remainingAmount > 0 && isPaymentDueOverdue
+                            ? "text-red-700 dark:text-red-300 font-semibold"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        Còn lại
+                        {remainingAmount > 0 &&
+                          isPaymentDueOverdue &&
+                          " (Quá hạn)"}
+                      </p>
+                      <p
+                        className={`text-xl font-bold tabular-nums ${
+                          remainingAmount > 0 && isPaymentDueOverdue
+                            ? "text-red-700 dark:text-red-400"
+                            : remainingAmount > 0
+                              ? "text-destructive"
+                              : "text-success"
+                        }`}
+                      >
+                        {formatCurrency(remainingAmount)}
+                        {remainingAmount > 0 && isPaymentDueOverdue && (
+                          <span className="block text-xs mt-1 bg-red-200 dark:bg-red-900/50 text-red-800 dark:text-red-200 px-2 py-1 rounded">
+                            ⚠️ Đã quá hạn thanh toán
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
                   {editingCard === "paymentInfo" ? (
                     /* Edit Mode */
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-4 border-t">
                       <div className="space-y-2">
-                        <Label>Tổng tiền</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1000"
-                          value={cardEditValues.totalAmount || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              totalAmount: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập tổng tiền"
-                          className="text-lg font-medium"
-                        />
+                        <Label>
+                          Số tiền <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="flex gap-2 items-start sm:items-center flex-col sm:flex-row">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            value={cardEditValues.depositAmount || ""}
+                            onChange={(e) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                depositAmount: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập số tiền"
+                            className="text-lg font-medium flex-1"
+                          />
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                setCardEditValues({
+                                  ...cardEditValues,
+                                  depositAmount: (
+                                    (order.totalAmount || 0) * 0.3
+                                  ).toString(),
+                                });
+                              }}
+                            >
+                              30%
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => {
+                                setCardEditValues({
+                                  ...cardEditValues,
+                                  depositAmount: (
+                                    order.totalAmount || 0
+                                  ).toString(),
+                                });
+                              }}
+                            >
+                              Điền đủ
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                       <div className="space-y-2">
-                        <Label>Đã cọc</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1000"
-                          value={cardEditValues.depositAmount || ""}
-                          onChange={(e) =>
+                        <Label>
+                          Phương thức thanh toán{" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Select
+                          value={
+                            cardEditValues.paymentMethodId?.toString() || "all"
+                          }
+                          onValueChange={(value) =>
                             setCardEditValues({
                               ...cardEditValues,
-                              depositAmount: e.target.value,
+                              paymentMethodId: value === "all" ? "" : value,
                             })
                           }
-                          placeholder="Nhập số tiền đã cọc"
-                          className="text-lg font-medium"
-                        />
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn phương thức thanh toán" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Không chọn</SelectItem>
+                            {paymentMethodsData?.items?.map((method) => (
+                              <SelectItem
+                                key={method.id}
+                                value={method.id?.toString() || ""}
+                              >
+                                {method.description ||
+                                  method.name ||
+                                  method.code}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Hạn thanh toán</Label>
-                        <Input
-                          type="datetime-local"
-                          value={cardEditValues.paymentDueDate || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              paymentDueDate: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
+                      {isBankTransfer && (
+                        <div className="space-y-2">
+                          <Label>
+                            Tài khoản thanh toán{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Select
+                            value={
+                              cardEditValues.bankAccountId?.toString() || ""
+                            }
+                            onValueChange={(val) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                bankAccountId: val,
+                              })
+                            }
+                            disabled={isLoadingBankAccounts}
+                          >
+                            <SelectTrigger>
+                              <SelectValue
+                                placeholder={
+                                  isLoadingBankAccounts
+                                    ? "Đang tải..."
+                                    : "Chọn tài khoản nhận tiền"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccountsData?.items?.map((acc: any) => (
+                                <SelectItem
+                                  key={acc.id}
+                                  value={acc.id?.toString() || ""}
+                                >
+                                  {acc.bankName ? `${acc.bankName} - ` : ""}
+                                  {acc.accountNumber} ({acc.accountName})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     /* View Mode */
                     <>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center p-4 rounded-lg bg-muted/50">
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Tổng giá trị
-                          </p>
-                          <p className="text-xl font-bold tabular-nums">
-                            {formatCurrency(order.totalAmount)}
-                          </p>
-                        </div>
-                        <div className="text-center p-4 rounded-lg bg-success/10">
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Đã thanh toán
-                          </p>
-                          <p className="text-xl font-bold tabular-nums text-success">
-                            {formatCurrency(order.depositAmount)}
-                          </p>
-                        </div>
-                        <div className="text-center p-4 rounded-lg bg-destructive/10">
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Còn lại
-                          </p>
-                          <p
-                            className={`text-xl font-bold tabular-nums ${
-                              remainingAmount > 0
-                                ? "text-destructive"
-                                : "text-success"
-                            }`}
-                          >
-                            {formatCurrency(remainingAmount)}
-                          </p>
-                        </div>
-                      </div>
-
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">
@@ -844,16 +1155,59 @@ export default function AccountingOrderDetail() {
                       </div>
 
                       {order.paymentDueDate && (
-                        <div className="pt-2 border-t">
+                        <div
+                          className={`pt-2 border-t ${isPaymentDueOverdue ? "bg-red-50 dark:bg-red-950/20 -mx-4 px-4 py-2 rounded" : ""}`}
+                        >
                           <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <Calendar
+                              className={`h-4 w-4 flex-shrink-0 ${
+                                isPaymentDueOverdue
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-muted-foreground"
+                              }`}
+                            />
                             <div className="flex-1">
-                              <span className="text-xs text-muted-foreground">
+                              <span
+                                className={`text-xs ${
+                                  isPaymentDueOverdue
+                                    ? "text-red-700 dark:text-red-300 font-semibold"
+                                    : "text-muted-foreground"
+                                }`}
+                              >
                                 Hạn thanh toán:{" "}
                               </span>
-                              <span className="text-sm font-medium">
+                              <span
+                                className={`text-sm font-medium ${
+                                  isPaymentDueOverdue
+                                    ? "text-red-900 dark:text-red-100"
+                                    : ""
+                                }`}
+                              >
                                 {formatDateTime(order.paymentDueDate)}
+                                {isPaymentDueOverdue && (
+                                  <span className="ml-2 text-xs bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 px-2 py-0.5 rounded font-semibold">
+                                    ĐÃ QUÁ HẠN
+                                  </span>
+                                )}
                               </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Delivery Date Warning */}
+                      {isDeliveryDatePassed && (
+                        <div className="bg-orange-50 dark:bg-orange-950/20 border-2 border-orange-300 dark:border-orange-700 rounded-lg p-3 mt-2">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-xs font-semibold text-orange-900 dark:text-orange-100">
+                                ⚠️ Đã quá ngày giao hàng dự kiến
+                              </p>
+                              <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                                Ngày giao: {formatDateTime(order.deliveryDate)}{" "}
+                                - Cần xử lý gấp
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -880,6 +1234,7 @@ export default function AccountingOrderDetail() {
                       <TableRow className="bg-muted/30">
                         <TableHead className="w-[60px]">Ảnh</TableHead>
                         <TableHead>Sản phẩm</TableHead>
+                        <TableHead className="text-center">Địa chỉ giao hàng</TableHead>
                         <TableHead className="text-center">
                           Người thiết kế
                         </TableHead>
@@ -907,9 +1262,12 @@ export default function AccountingOrderDetail() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="min-w-0">
                             <div className="space-y-1">
-                              <p className="font-medium">
+                              <p
+                                className="font-medium max-w-[320px] truncate"
+                                title={item.design?.designName || undefined}
+                              >
                                 {item.design?.designName || "—"}
                               </p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -940,7 +1298,28 @@ export default function AccountingOrderDetail() {
                                   Yêu cầu: {item.requirements}
                                 </p>
                               )}
+                              {/* delivery address moved to its own column */}
                             </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-[280px]">
+                            {item.deliveryAddress || item.deliveryAddressLabel ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <span className="inline-block max-w-[220px] truncate">
+                                      {item.deliveryAddress || item.deliveryAddressLabel}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    <p className="max-w-xs break-words">
+                                      {item.deliveryAddress || item.deliveryAddressLabel}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="text-xs">
@@ -994,7 +1373,9 @@ export default function AccountingOrderDetail() {
                               />
                             ) : (
                               <span className="tabular-nums">
-                                {formatCurrency(item.unitPrice || 0)}
+                                {item.unitPrice && item.unitPrice > 0
+                                  ? formatCurrency(item.unitPrice)
+                                  : "—"}
                               </span>
                             )}
                           </TableCell>
@@ -1004,7 +1385,7 @@ export default function AccountingOrderDetail() {
                                   (Number(orderDetailEditValues.quantity) ||
                                     0) *
                                     (Number(orderDetailEditValues.unitPrice) ||
-                                      0)
+                                      0),
                                 )
                               : formatCurrency(item.totalPrice || 0)}
                           </TableCell>
@@ -1054,7 +1435,7 @@ export default function AccountingOrderDetail() {
                       )) || (
                         <TableRow>
                           <TableCell
-                            colSpan={7}
+                            colSpan={8}
                             className="text-center text-muted-foreground py-8"
                           >
                             Không có sản phẩm nào
@@ -1085,7 +1466,7 @@ export default function AccountingOrderDetail() {
             </div>
 
             {/* Right Column - Sidebar */}
-            <div className="space-y-6">
+            <div className="lg:col-span-1 space-y-6">
               {/* Customer Info */}
               <Card>
                 <CardHeader className="pb-3">
@@ -1128,15 +1509,13 @@ export default function AccountingOrderDetail() {
                           variant="outline"
                           onClick={() =>
                             startEditingCard("customerInfo", {
-                              customerName: order.customer?.name || "",
+                              customerName: order.customerName || "",
                               customerCompanyName:
-                                order.customer?.companyName || "",
-                              customerPhone: order.customer?.phone || "",
-                              customerEmail: order.customer?.email || "",
-                              customerTaxCode:
-                                (order.customer as { taxCode?: string })
-                                  ?.taxCode || "",
-                              customerAddress: order.customer?.address || "",
+                                order.customerCompanyName || "",
+                              customerPhone: order.customerPhone || "",
+                              customerEmail: order.customerEmail || "",
+                              customerTaxCode: order.customerTaxCode || "",
+                              customerAddress: order.customerAddress || "",
                             })
                           }
                         >
@@ -1206,6 +1585,21 @@ export default function AccountingOrderDetail() {
                           placeholder="Nhập email"
                         />
                       </div>
+                      {customerType === "company" && (
+                        <div className="space-y-2">
+                          <Label>Mã số thuế</Label>
+                          <Input
+                            value={cardEditValues.customerTaxCode || ""}
+                            onChange={(e) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                customerTaxCode: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập mã số thuế"
+                          />
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label>Địa chỉ *</Label>
                         <Textarea
@@ -1224,7 +1618,7 @@ export default function AccountingOrderDetail() {
                   ) : (
                     /* View Mode */
                     <>
-                      {order.customer?.companyName && (
+                      {order.customerCompanyName && (
                         <div className="flex items-start gap-3">
                           <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
                           <div>
@@ -1232,7 +1626,7 @@ export default function AccountingOrderDetail() {
                               Công ty
                             </p>
                             <p className="font-medium">
-                              {order.customer.companyName}
+                              {order.customerCompanyName}
                             </p>
                           </div>
                         </div>
@@ -1244,7 +1638,7 @@ export default function AccountingOrderDetail() {
                             Liên hệ
                           </p>
                           <p className="font-medium">
-                            {order.customer?.name || "—"}
+                            {order.customerName || "—"}
                           </p>
                         </div>
                       </div>
@@ -1255,25 +1649,93 @@ export default function AccountingOrderDetail() {
                             Điện thoại
                           </p>
                           <p className="font-medium font-mono">
-                            {order.customer?.phone || "—"}
+                            {order.customerPhone || "—"}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3">
-                        <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Mã khách hàng
-                          </p>
-                          <p className="font-medium font-mono">
-                            {order.customer?.code || "—"}
-                          </p>
+                      {order.customerEmail && (
+                        <div className="flex items-start gap-3">
+                          <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Email
+                            </p>
+                            <p className="font-medium">{order.customerEmail}</p>
+                          </div>
                         </div>
-                      </div>
+                      )}
+                      {order.customer?.code && (
+                        <div className="flex items-start gap-3">
+                          <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Mã khách hàng
+                            </p>
+                            <p className="font-medium font-mono">
+                              {order.customer.code ?? ""}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Hiển thị mã số thuế cho khách hàng công ty */}
+                      {customerType === "company" && (
+                        <div className="flex items-start gap-3">
+                          <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Mã số thuế
+                            </p>
+                            <p className="font-medium font-mono">
+                              {order.customerTaxCode || "—"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {order.customerAddress && (
+                        <div className="flex items-start gap-3">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Địa chỉ
+                            </p>
+                            <p className="font-medium">
+                              {order.customerAddress}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       <Separator />
 
-                      <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                      {/* Critical warning if debt over limit */}
+                      {isDebtOverLimit && (
+                        <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-400 dark:border-red-700 rounded-lg p-3 mb-3">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-red-900 dark:text-red-100">
+                                🚨 Công nợ vượt hạn mức
+                              </p>
+                              <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                                Khách hàng đang nợ{" "}
+                                {formatCurrency(
+                                  order.customer?.currentDebt || 0,
+                                )}
+                                , vượt quá hạn mức cho phép{" "}
+                                {formatCurrency(order.customer?.maxDebt || 0)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div
+                        className={`p-3 rounded-lg space-y-2 ${
+                          isDebtOverLimit
+                            ? "bg-red-50/50 dark:bg-red-950/10 border-2 border-red-200 dark:border-red-900"
+                            : "bg-muted/50"
+                        }`}
+                      >
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">
                             Trạng thái nợ
@@ -1287,7 +1749,13 @@ export default function AccountingOrderDetail() {
                           <span className="text-muted-foreground">
                             Nợ hiện tại
                           </span>
-                          <span className="font-medium tabular-nums">
+                          <span
+                            className={`font-medium tabular-nums ${
+                              isDebtOverLimit
+                                ? "text-red-700 dark:text-red-400 font-bold"
+                                : ""
+                            }`}
+                          >
                             {formatCurrency(order.customer?.currentDebt || 0)}
                           </span>
                         </div>
@@ -1305,323 +1773,93 @@ export default function AccountingOrderDetail() {
                 </CardContent>
               </Card>
 
-              {/* Delivery Info */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-primary" />
-                      Thông tin giao hàng
-                    </CardTitle>
-                    {editingCard === "orderInfo" ? (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleSaveCard("orderInfo")}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          {isUpdatingForAccounting ? (
-                            <>
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              Đang lưu...
-                            </>
-                          ) : (
-                            "Lưu"
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEditingCard}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          Hủy
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          startEditingCard("orderInfo", {
-                            deliveryDate: formatDateTimeForInput(
-                              order.deliveryDate
-                            ),
-                            deliveryAddress: order.deliveryAddress || "",
-                            note: order.note || "",
-                          })
-                        }
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Sửa
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {editingCard === "orderInfo" ? (
-                    /* Edit Mode */
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Ngày giao</Label>
-                        <Input
-                          type="datetime-local"
-                          value={cardEditValues.deliveryDate || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              deliveryDate: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Địa chỉ giao hàng</Label>
-                        <Textarea
-                          value={cardEditValues.deliveryAddress || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              deliveryAddress: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập địa chỉ giao hàng"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Ghi chú</Label>
-                        <Textarea
-                          value={cardEditValues.note || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              note: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập ghi chú"
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    /* View Mode */
-                    <>
-                      <div className="flex items-start gap-3">
-                        <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Ngày giao dự kiến
-                          </p>
-                          <p className="font-medium">
-                            {formatDateTime(order.deliveryDate)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Địa chỉ giao hàng
-                          </p>
-                          <p className="font-medium">
-                            {order.deliveryAddress || "—"}
-                          </p>
-                        </div>
-                      </div>
-                      {order.note && (
-                        <div className="pt-2">
-                          <p className="text-muted-foreground text-xs mb-1">
-                            Ghi chú:
-                          </p>
-                          <p className="text-sm whitespace-pre-wrap">
-                            {order.note}
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Recipient Info Card - Only visible to accounting */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <User className="h-4 w-4 text-primary" />
-                      Thông tin nhận hàng
-                    </CardTitle>
-                    {editingCard === "recipientInfo" ? (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleSaveCard("recipientInfo")}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          {isUpdatingForAccounting ? (
-                            <>
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              Đang lưu...
-                            </>
-                          ) : (
-                            "Lưu"
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEditingCard}
-                          disabled={isUpdatingForAccounting}
-                        >
-                          Hủy
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          startEditingCard("recipientInfo", {
-                            recipientName: order.recipientName || "",
-                            recipientPhone: order.recipientPhone || "",
-                            recipientAddress: order.recipientAddress || "",
-                          })
-                        }
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Sửa
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Warning if missing info */}
-                  {(!order.recipientName ||
-                    !order.recipientPhone ||
-                    !order.recipientAddress) &&
-                    editingCard !== "recipientInfo" && (
-                      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                          <div className="flex-1">
-                            <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-                              Thiếu thông tin người nhận
-                            </p>
-                            <ul className="text-xs text-amber-700 dark:text-amber-300 mt-1 list-disc list-inside space-y-0.5">
-                              {!order.recipientName && <li>Tên người nhận</li>}
-                              {!order.recipientPhone && <li>Số điện thoại</li>}
-                              {!order.recipientAddress && <li>Địa chỉ</li>}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                  {editingCard === "recipientInfo" ? (
-                    /* Edit Mode */
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Tên người nhận</Label>
-                        <Input
-                          value={cardEditValues.recipientName || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              recipientName: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập tên người nhận"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Số điện thoại</Label>
-                        <Input
-                          value={cardEditValues.recipientPhone || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              recipientPhone: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập số điện thoại"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Địa chỉ</Label>
-                        <Textarea
-                          value={cardEditValues.recipientAddress || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              recipientAddress: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập địa chỉ người nhận"
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    /* View Mode */
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
-                          Tên người nhận
-                          {!order.recipientName && (
-                            <span className="text-destructive ml-1">*</span>
-                          )}
-                        </Label>
-                        <p className="text-sm font-medium">
-                          {order.recipientName || (
-                            <span className="text-muted-foreground italic">
-                              Chưa có thông tin
-                            </span>
-                          )}
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
-                          Số điện thoại
-                          {!order.recipientPhone && (
-                            <span className="text-destructive ml-1">*</span>
-                          )}
-                        </Label>
-                        <p className="text-sm font-medium">
-                          {order.recipientPhone || (
-                            <span className="text-muted-foreground italic">
-                              Chưa có thông tin
-                            </span>
-                          )}
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
-                          Địa chỉ
-                          {!order.recipientAddress && (
-                            <span className="text-destructive ml-1">*</span>
-                          )}
-                        </Label>
-                        <p className="text-sm font-medium">
-                          {order.recipientAddress || (
-                            <span className="text-muted-foreground italic">
-                              Chưa có thông tin
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Deposit Dialog */}
+      <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nhận cọc đơn hàng</DialogTitle>
+            <DialogDescription>
+              Nhập số tiền cọc cho đơn hàng {order?.code}
+            </DialogDescription>
+          </DialogHeader>
+
+          {order && (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Tổng tiền</span>
+                  <span className="font-semibold">
+                    {formatCurrency(order.totalAmount)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Đã cọc</span>
+                  <span className="font-medium text-emerald-600">
+                    {formatCurrency(order.depositAmount)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t pt-1 mt-1">
+                  <span className="text-muted-foreground">Còn lại</span>
+                  <span className="font-medium text-orange-600">
+                    {formatCurrency(order.totalAmount - order.depositAmount)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="depositAmount">
+                  Số tiền cọc <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="depositAmount"
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  placeholder="Nhập số tiền cọc"
+                  className="text-lg font-medium"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDepositDialogOpen(false);
+                setDepositAmount("");
+              }}
+              disabled={isConfirmingDeposit}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleConfirmDeposit}
+              disabled={
+                isConfirmingDeposit ||
+                !depositAmount ||
+                parseFloat(depositAmount) <= 0
+              }
+            >
+              {isConfirmingDeposit ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Xác nhận nhận cọc"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
+import { useDebounce } from "use-debounce";
 import { vi } from "date-fns/locale";
 import {
   Search,
   Filter,
-  CreditCard,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -33,16 +33,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-import {
-  PaymentStatusBadge,
-  CustomerTypeBadge,
-  PaymentUpdateModal,
-} from "@/components/accounting";
-import { useOrdersForAccounting } from "@/hooks/use-order";
-import { useConfirmDeposit } from "@/hooks/use-accounting";
+import { PaymentStatusBadge, CustomerTypeBadge } from "@/components/accounting";
+import { useOrdersForAccounting, useOrdersForSale } from "@/hooks/use-order";
 import type { OrderResponse } from "@/Schema";
 import { StatusBadge } from "../ui/status-badge";
 import { ENTITY_CONFIG } from "@/config/entities.config";
+import { useAuth } from "@/hooks/use-auth";
+import { ROLE } from "@/constants";
 
 // Helper to derive payment status from amounts
 function derivePaymentStatus(
@@ -58,62 +55,90 @@ function derivePaymentStatus(
 function deriveCustomerType(
   customer: OrderResponse["customer"]
 ): "company" | "retail" {
-  return customer?.companyName ? "company" : "retail";
+  return customer?.type as keyof typeof ENTITY_CONFIG.customerTypes.values;
 }
 
-export function PaymentList() {
+type PaymentListProps = {
+  // override API filterType (default: "payment")
+  listFilterType?: string;
+};
+
+export function PaymentList({ listFilterType }: PaymentListProps) {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const isSale = user?.role === ROLE.SALE || searchParams.get("context") === "sale";
+  const paymentLabel = isSale ? "Báo giá" : "Thanh toán";
+  const paymentStatusLabel = isSale ? "Trạng thái Báo giá" : "Trạng thái TT";
+  const orderCodeFromUrl = searchParams.get("orderCode");
+
+  const [searchQuery, setSearchQuery] = useState(orderCodeFromUrl || "");
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
+
+  // Sync search query with URL parameter
+  useEffect(() => {
+    if (orderCodeFromUrl) {
+      setSearchQuery(orderCodeFromUrl);
+    }
+  }, [orderCodeFromUrl]);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("1");
-  const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(
-    null
-  );
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const previousTotalPagesRef = useRef<number | null>(null);
 
   const itemsPerPage = 10;
+  // If parent passes an empty string for `listFilterType` (QuotePage) we
+  // can't rely on server filtering by `isDebtApproved`, so fetch a larger
+  // page and perform client-side filtering + pagination.
+  const clientSideMode = listFilterType === "";
+  const apiPageSize = clientSideMode ? 200 : itemsPerPage;
+
+  // Build params for API
+  const listParams = useMemo(() => {
+    return {
+      pageNumber: currentPage,
+      pageSize: apiPageSize,
+      filterType: listFilterType ?? "payment",
+      status: "",
+      orderCode: debouncedSearchQuery || "",
+      designCode: "",
+      customerName: "",
+      sortColumn: "",
+      sortOrder: "",
+    };
+  }, [currentPage, apiPageSize, debouncedSearchQuery, listFilterType]);
 
   // Fetch orders from API
-  const { data, isLoading, isError, error, refetch } = useOrdersForAccounting({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    filterType: "payment",
-  });
+  // If parent passed empty string (QuotePage) treat as "sale/quotes" and
+  // call the /orders/for-sale endpoint, otherwise use accounting endpoint.
+  const hook = clientSideMode ? useOrdersForSale : useOrdersForAccounting;
+  const { data, isLoading, isError, error, refetch } = hook(listParams);
 
-  const confirmDepositMutation = useConfirmDeposit();
+  // Filter orders client-side (payment status - API doesn't support payment status filter)
+  // When `clientSideMode` is true we filter the full fetched set and then
+  // paginate locally so totals/pages reflect only visible (isDebtApproved === false) items.
+  const { pagedOrders, filteredTotalItems } = useMemo(() => {
+    if (!data?.items) return { pagedOrders: [] as OrderResponse[], filteredTotalItems: 0 };
 
-  // Filter orders client-side (search and payment status)
-  const filteredOrders = useMemo(() => {
-    if (!data?.items) return [];
-
-    return data.items.filter((order) => {
-      const paymentStatus = derivePaymentStatus(
-        order.totalAmount,
-        order.depositAmount
-      );
-
-      const matchesSearch =
-        !searchQuery ||
-        order.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.companyName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        order.customer?.phone?.includes(searchQuery);
-
-      const matchesPaymentStatus =
-        paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
-
-      return matchesSearch && matchesPaymentStatus;
+    const allFiltered = data.items.filter((order) => {
+      const paymentStatus = derivePaymentStatus(order.totalAmount, order.depositAmount);
+      const matchesPaymentStatus = paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
+      return matchesPaymentStatus && order.isDebtApproved === false;
     });
-  }, [data?.items, searchQuery, paymentStatusFilter]);
 
-  const totalPages = data?.totalPages || 1;
-  const totalItems = data?.total || 0;
+    if (clientSideMode) {
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      return { pagedOrders: allFiltered.slice(start, end), filteredTotalItems: allFiltered.length };
+    }
+
+    // Server-driven pagination: data.items corresponds to current page
+    return { pagedOrders: allFiltered, filteredTotalItems: data.total ?? allFiltered.length };
+  }, [data?.items, paymentStatusFilter, clientSideMode, currentPage, itemsPerPage]);
+
+  const totalItems = clientSideMode ? filteredTotalItems : data?.total || 0;
+  const totalPages = clientSideMode ? Math.max(1, Math.ceil(totalItems / itemsPerPage)) : data?.totalPages || 1;
 
   // Sync pageInput with currentPage
   useEffect(() => {
@@ -121,11 +146,34 @@ export function PaymentList() {
   }, [currentPage]);
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when we have valid data (not loading) and totalPages actually decreased
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
+    // Only adjust if:
+    // 1. Not loading (we have valid data)
+    // 2. Data exists
+    // 3. Current page exceeds total pages
+    // 4. Total pages is valid (> 0)
+    // 5. Total pages actually decreased from previous value (not just during initial load)
+    if (
+      !isLoading &&
+      !!data &&
+      currentPage > totalPages &&
+      totalPages > 0 &&
+      (previousTotalPagesRef.current === null || totalPages < previousTotalPagesRef.current)
+    ) {
       setCurrentPage(totalPages);
     }
-  }, [currentPage, totalPages]);
+    
+    // Update previous totalPages ref only when we have valid data
+    if (!isLoading && !!data && totalPages > 0) {
+      previousTotalPagesRef.current = totalPages;
+    }
+  }, [currentPage, totalPages, isLoading, data]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, paymentStatusFilter]);
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -189,58 +237,9 @@ export function PaymentList() {
     navigate(`/accounting/orders/${order.id}?tab=payment`);
   };
 
-  const handleUpdatePayment = (order: OrderResponse, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedOrder(order);
-    setIsPaymentModalOpen(true);
-  };
-
-  const handlePaymentConfirm = async (
-    orderId: string | number,
-    amount: number,
-    note: string
-  ) => {
-    try {
-      await confirmDepositMutation.mutate(Number(orderId), amount);
-      setIsPaymentModalOpen(false);
-      refetch();
-    } catch (error) {
-      console.error("Error confirming deposit:", error);
-    }
-  };
-
   const handleRefresh = () => {
     refetch();
   };
-
-  // Convert API order to modal format
-  const selectedOrderForModal = selectedOrder
-    ? {
-        id: selectedOrder.id,
-        code: selectedOrder.code || "",
-        status: selectedOrder.status || "",
-        statusType: selectedOrder.statusType || "",
-        totalAmount: selectedOrder.totalAmount,
-        depositAmount: selectedOrder.depositAmount,
-        deliveryDate: selectedOrder.deliveryDate || "",
-        note: selectedOrder.note || "",
-        createdAt: selectedOrder.createdAt,
-        updatedAt: selectedOrder.updatedAt,
-        customer: {
-          id: selectedOrder.customer?.id || 0,
-          name: selectedOrder.customer?.name || "",
-          companyName: selectedOrder.customer?.companyName || null,
-          phone: selectedOrder.customer?.phone || "",
-          type: deriveCustomerType(selectedOrder.customer) as
-            | "company"
-            | "retail",
-        },
-        paymentStatus: derivePaymentStatus(
-          selectedOrder.totalAmount,
-          selectedOrder.depositAmount
-        ),
-      }
-    : null;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -275,7 +274,7 @@ export function PaymentList() {
           >
             <SelectTrigger className="w-[180px]">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Trạng thái TT" />
+              <SelectValue placeholder={paymentStatusLabel} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả</SelectItem>
@@ -308,7 +307,7 @@ export function PaymentList() {
         >
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-background">
-              <TableRow className="bg-muted/50 h-10">
+              <TableRow className="bg-muted/50 h-11">
                 <TableHead className="w-[140px] font-bold text-sm">
                   Mã đơn
                 </TableHead>
@@ -326,7 +325,7 @@ export function PaymentList() {
                   Trạng thái đơn
                 </TableHead>
                 <TableHead className="text-center font-bold text-sm">
-                  Thanh toán
+                  {paymentLabel}
                 </TableHead>
                 <TableHead className="text-center font-bold text-sm">
                   Ngày giao
@@ -336,7 +335,7 @@ export function PaymentList() {
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 10 }).map((_, i) => (
-                  <TableRow key={i} className="h-14">
+                  <TableRow key={i} className="h-12">
                     {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
@@ -344,18 +343,19 @@ export function PaymentList() {
                     ))}
                   </TableRow>
                 ))
-              ) : filteredOrders.length === 0 ? (
+              ) : pagedOrders.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={8}
-                    className="h-24 text-center text-muted-foreground"
+                    className="h-24 text-center text-muted-foreground font-semibold"
                   >
                     Không tìm thấy đơn hàng nào.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOrders.map((order) => {
-                  const remainingAmount = order.totalAmount - order.depositAmount;
+                pagedOrders.map((order) => {
+                  const remainingAmount =
+                    order.totalAmount - order.depositAmount;
                   const paymentStatus = derivePaymentStatus(
                     order.totalAmount,
                     order.depositAmount
@@ -365,7 +365,7 @@ export function PaymentList() {
                   return (
                     <TableRow
                       key={order.id}
-                      className="h-14 cursor-pointer hover:bg-muted/50"
+                      className="h-12 cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => handleOrderClick(order)}
                     >
                       <TableCell className="font-bold font-mono text-sm">
@@ -373,13 +373,13 @@ export function PaymentList() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="font-semibold text-sm">
+                          <div className="font-bold text-sm">
                             {order.customer?.companyName ||
                               order.customer?.name ||
                               "—"}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground font-medium">
                               {order.customer?.phone || "—"}
                             </span>
                             <CustomerTypeBadge type={customerType} />
@@ -389,7 +389,7 @@ export function PaymentList() {
                       <TableCell className="text-right font-bold tabular-nums text-sm">
                         {formatCurrency(order.totalAmount)}
                       </TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums text-sm text-success">
+                      <TableCell className="text-right font-bold tabular-nums text-sm text-success">
                         {formatCurrency(order.depositAmount)}
                       </TableCell>
                       <TableCell
@@ -416,7 +416,7 @@ export function PaymentList() {
                       <TableCell className="text-center">
                         <PaymentStatusBadge status={paymentStatus} />
                       </TableCell>
-                      <TableCell className="text-center text-sm font-semibold text-muted-foreground">
+                      <TableCell className="text-center text-sm font-bold text-muted-foreground">
                         {formatDate(order.deliveryDate)}
                       </TableCell>
                     </TableRow>
@@ -441,8 +441,8 @@ export function PaymentList() {
               {Math.min(currentPage * itemsPerPage, totalItems)}
             </span>{" "}
             trong tổng số{" "}
-            <span className="font-bold text-foreground">{totalItems}</span>{" "}
-            đơn hàng
+            <span className="font-bold text-foreground">{totalItems}</span> đơn
+            hàng
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -489,14 +489,6 @@ export function PaymentList() {
           </div>
         </div>
       )}
-
-      {/* Modals */}
-      <PaymentUpdateModal
-        open={isPaymentModalOpen}
-        onOpenChange={setIsPaymentModalOpen}
-        order={selectedOrderForModal}
-        onConfirm={handlePaymentConfirm}
-      />
     </div>
   );
 }

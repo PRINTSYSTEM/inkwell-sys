@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
+import { DesignTypeCountResponseSchema } from "@/Schema/generated";
 
 // Error type for API responses
 type ApiError = {
@@ -25,19 +26,26 @@ import {
 } from "@/Schema/paper-size.schema";
 import type {
   ProofingOrderListParams,
-  CreateProofingOrderFromDesignsRequest,
   UpdateProofingOrderRequest,
   OrderDetailResponse,
   OrderDetailResponsePaginate,
   RecordPlateExportRequest,
   RecordDieExportRequest,
   AddDesignsToProofingOrderRequest,
+  RejectDesignRequest,
+  ProofingOrderForProductionListParams,
+  ProofingOrdersPauseParams,
+  ProofingOrderAvailableOrderDetailsParams,
+  UpdatePlateExportRequest,
+  PlateExportResponse,
 } from "@/Schema";
 import { RecordDieExportRequestSchema } from "@/Schema";
 import type { DesignResponse } from "@/Schema/design.schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
 import { normalizeParams } from "@/apis/util.api";
+
+type DesignTypeCountResponse = z.infer<typeof DesignTypeCountResponseSchema>;
 
 const {
   api: proofingCrudApi,
@@ -48,7 +56,7 @@ const {
   useUpdate: useUpdateProofingOrderBase,
 } = createCrudHooks<
   ProofingOrderResponse,
-  {},
+  unknown,
   UpdateProofingOrderRequest,
   number,
   ProofingOrderListParams,
@@ -72,67 +80,25 @@ export const useProofingOrder = (id: number | null, enabled = true) =>
 export const useCreateProofingOrder = () => useCreateProofingOrderBase();
 export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();
 
-// POST /proofing-orders/from-designs
-export const useCreateProofingOrderFromDesigns = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    ProofingOrderResponse,
-    [CreateProofingOrderFromDesignsRequest]
-  >(async (payload) => {
-    const res = await apiRequest.post<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_FROM_DESIGNS,
-      payload
-    );
-    return res.data;
-  });
-
-  const mutate = async (payload: CreateProofingOrderFromDesignsRequest) => {
-    try {
-      const result = await execute(payload);
-
-      // Invalidate queries to refresh the list
-      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
-      queryClient.invalidateQueries({
-        queryKey: [proofingKeys.all[0], "available-order-details"],
-      });
-
-      toast.success("Thành công", {
-        description: "Đã tạo bình bài từ danh sách thiết kế",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể tạo bình bài",
-      });
-      throw err;
-    }
-  };
-
-  return {
-    data,
-    loading,
-    error,
-    mutate,
-    reset,
-  };
-};
+// Note: POST /proofing-orders/from-designs endpoint has been removed from the API.
+// Use the two-step approach instead:
+// 1. Create proofing order with useCreateProofingOrder
+// 2. Add designs with useAddDesignsToProofingOrder
 
 // GET /proofing-orders/available-order-details
-export const useAvailableOrderDetailsForProofing = (params?: {
-  materialTypeId?: number | null;
-}) => {
+export const useAvailableOrderDetailsForProofing = (
+  params?: ProofingOrderAvailableOrderDetailsParams,
+) => {
   return useQuery({
     // Use specific value in queryKey instead of object to ensure proper refetch
     queryKey: [
       proofingKeys.all[0],
       "available-order-details",
       params?.materialTypeId ?? null,
+      params?.designTypeId ?? null,
+      params?.designCode ?? null,
+      params?.pageNumber ?? 1,
+      params?.pageSize ?? 10,
     ],
     queryFn: async () => {
       const normalizedParams = normalizeParams(params ?? {});
@@ -140,15 +106,8 @@ export const useAvailableOrderDetailsForProofing = (params?: {
       // API returns OrderDetailResponsePaginate
       const res = await apiRequest.get<OrderDetailResponsePaginate>(
         API_SUFFIX.PROOFING_AVAILABLE_ORDER_DETAILS,
-        { params: normalizedParams }
+        { params: normalizedParams },
       );
-
-      // Debug: Log response structure
-      console.log("📦 Proofing API Response:", {
-        total: res.data.total,
-        itemsCount: res.data.items?.length ?? 0,
-        firstItem: res.data.items?.[0],
-      });
 
       // Extract items from paginate response
       const orderDetails = res.data.items ?? [];
@@ -197,22 +156,38 @@ export const useAvailableOrderDetailsForProofing = (params?: {
             designerName: design.designer?.fullName || undefined,
             // Note: accountant may not be in DesignResponse schema, but if it exists in API response, it will be mapped
             accountantName: (design as any).accountant?.fullName || undefined,
-          };
-          console.log(
-            "🚀 ~ useAvailableOrderDetailsForProofing ~ designItem:",
-            designItem
-          );
+            specification: (() => {
+              const rawSpec =
+                (od as any).specification ||
+                (design as any).specification ||
+                (od as any).specifications ||
+                (design as any).specifications;
 
-          // Debug: Log first transformed design
-          if (index === 0) {
-            console.log("✅ First transformed design:", designItem);
-          }
+              if (Array.isArray(rawSpec)) {
+                return rawSpec.filter((s) => typeof s === "string" && s.trim());
+              }
+
+              if (typeof rawSpec === "string" && rawSpec.trim()) {
+                // Check if it's a JSON array string
+                if (rawSpec.trim().startsWith("[") && rawSpec.trim().endsWith("]")) {
+                  try {
+                    const parsed = JSON.parse(rawSpec);
+                    if (Array.isArray(parsed)) {
+                      return parsed.filter((s) => typeof s === "string" && s.trim());
+                    }
+                  } catch (e) {
+                    // Not valid JSON, treat as single string
+                  }
+                }
+                return [rawSpec.trim()];
+              }
+
+              return [];
+            })(),
+          };
 
           return designItem;
         });
-
-      // Debug: Log final result
-      console.log("📊 Transformed designs count:", designs.length);
 
       // Extract unique design types with counts
       const designTypeMap = new Map<
@@ -251,13 +226,48 @@ export const useAvailableOrderDetailsForProofing = (params?: {
       });
 
       return {
+        // Pagination meta (from API)
+        size: res.data.size ?? params?.pageSize ?? designs.length,
+        page: res.data.page ?? params?.pageNumber ?? 1,
+        total: res.data.total ?? designs.length,
+        totalPages:
+          res.data.totalPages ??
+          Math.max(
+            1,
+            Math.ceil(
+              (res.data.total ?? designs.length) /
+                (res.data.size ?? params?.pageSize ?? 10),
+            ),
+          ),
         designs,
         designTypeOptions: Array.from(designTypeMap.values()),
         materialTypeOptions: Array.from(materialTypeMap.values()),
-        totalCount: designs.length,
+        // Keep old field name for backward compatibility
+        totalCount: res.data.total ?? designs.length,
       };
     },
     staleTime: 2 * 60 * 1000,
+  });
+};
+
+// GET /proofing-orders/available-order-details/design-type-summary
+export const useProofingAvailableOrderDetailsDesignTypeSummary = (
+  enabled: boolean = true,
+) => {
+  return useQuery<DesignTypeCountResponse[]>({
+    queryKey: [
+      proofingKeys.all[0],
+      "available-order-details",
+      "design-type-summary",
+    ],
+    enabled,
+    queryFn: async () => {
+      const res = await apiRequest.get<DesignTypeCountResponse[]>(
+        API_SUFFIX.PROOFING_DESIGN_TYPE_SUMMARY,
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -267,7 +277,7 @@ export { proofingCrudApi, proofingKeys };
 // GET /proofing-orders/by-order/{orderId}
 export const useProofingOrdersByOrder = (
   orderId: number | null,
-  enabled = true
+  enabled = true,
 ) => {
   return useQuery<ProofingOrderResponse[]>({
     queryKey: [proofingKeys.all[0], "by-order", orderId],
@@ -291,16 +301,15 @@ export const useProofingOrdersByOrder = (
 // ================== PROOFING FOR PRODUCTION ==================
 // GET /proofing-orders/for-production
 
-export const useProofingOrdersForProduction = (params?: {
-  pageNumber?: number;
-  pageSize?: number;
-}) => {
+export const useProofingOrdersForProduction = (
+  params?: ProofingOrderForProductionListParams,
+) => {
   return useQuery<ProofingOrderResponsePaginate>({
     queryKey: [proofingKeys.all[0], "for-production", params],
     queryFn: async () => {
       const res = await apiRequest.get<ProofingOrderResponsePaginate>(
         API_SUFFIX.PROOFING_FOR_PRODUCTION,
-        { params }
+        { params },
       );
       return res.data;
     },
@@ -328,7 +337,7 @@ export const useUploadProofingFile = () => {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return res.data;
   });
@@ -381,7 +390,7 @@ export const useUploadProofingImage = () => {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return res.data;
   });
@@ -435,7 +444,7 @@ export const useUpdateProofingFile = () => {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return res.data;
   });
@@ -489,7 +498,7 @@ export const useUpdateProofingImage = () => {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      }
+      },
     );
     return res.data;
   });
@@ -532,7 +541,7 @@ export const useDownloadProofingFile = () => {
   >(async ({ proofingOrderId, filename }) => {
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.PROOFING_DOWNLOAD_FILE(proofingOrderId),
-      { responseType: "arraybuffer" }
+      { responseType: "arraybuffer" },
     );
 
     const blob = new Blob([res.data]);
@@ -566,10 +575,8 @@ export const useDownloadProofingFile = () => {
 
   return { loading, error, mutate, reset };
 };
-// ================== COMPLETE / START / COMPLETE PRODUCTION ==================
+// ================== COMPLETE PROOFING ORDER ==================
 // PUT /proofing-orders/{id}/complete
-// PUT /proofing-orders/{id}/start-production
-// PUT /proofing-orders/{id}/complete-production
 
 export const useCompleteProofingOrder = () => {
   const queryClient = useQueryClient();
@@ -579,7 +586,7 @@ export const useCompleteProofingOrder = () => {
     [number]
   >(async (id: number) => {
     const res = await apiRequest.put<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_COMPLETE(id)
+      API_SUFFIX.PROOFING_COMPLETE(id),
     );
     return res.data;
   });
@@ -615,22 +622,27 @@ export const useCompleteProofingOrder = () => {
   return { data, loading, error, mutate, reset };
 };
 
-export const useStartProductionFromProofing = () => {
+// ================== PAUSE PROOFING ORDER ==================
+// PUT /proofing-orders/{id}/pause
+// Note: API accepts optional query parameter "reason"
+
+export const usePauseProofingOrder = () => {
   const queryClient = useQueryClient();
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     ProofingOrderResponse,
-    [number]
-  >(async (id: number) => {
-    const res = await apiRequest.put<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_START_PRODUCTION(id)
-    );
+    [{ id: number } & ProofingOrdersPauseParams]
+  >(async ({ id, ...params }) => {
+    const url = params.reason
+      ? `${API_SUFFIX.PROOFING_PAUSE(id)}?reason=${encodeURIComponent(params.reason)}`
+      : API_SUFFIX.PROOFING_PAUSE(id);
+    const res = await apiRequest.put<ProofingOrderResponse>(url);
     return res.data;
   });
 
-  const mutate = async (id: number) => {
+  const mutate = async (args: { id: number } & ProofingOrdersPauseParams) => {
     try {
-      const result = await execute(id);
+      const result = await execute(args);
 
       if (result.id != null) {
         queryClient.invalidateQueries({
@@ -640,7 +652,7 @@ export const useStartProductionFromProofing = () => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
 
       toast.success("Thành công", {
-        description: "Đã bắt đầu sản xuất cho bình bài",
+        description: "Đã tạm dừng bình bài",
       });
 
       return result;
@@ -650,99 +662,7 @@ export const useStartProductionFromProofing = () => {
         description:
           error?.response?.data?.message ||
           error?.message ||
-          "Không thể bắt đầu sản xuất",
-      });
-      throw err;
-    }
-  };
-
-  return { data, loading, error, mutate, reset };
-};
-
-export const useCompleteProductionFromProofing = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    ProofingOrderResponse,
-    [number]
-  >(async (id: number) => {
-    const res = await apiRequest.put<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_COMPLETE_PRODUCTION(id)
-    );
-    return res.data;
-  });
-
-  const mutate = async (id: number) => {
-    try {
-      const result = await execute(id);
-
-      if (result.id != null) {
-        queryClient.invalidateQueries({
-          queryKey: proofingKeys.detail(result.id),
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
-
-      toast.success("Thành công", {
-        description: "Đã hoàn tất sản xuất cho bình bài",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể hoàn tất sản xuất",
-      });
-      throw err;
-    }
-  };
-
-  return { data, loading, error, mutate, reset };
-};
-
-// ================== APPROVE PROOFING ORDER ==================
-// PUT /proofing-orders/{id}/approve
-// Note: API no longer requires a request body, only the ID
-
-export const useApproveProofingOrder = () => {
-  const queryClient = useQueryClient();
-
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    ProofingOrderResponse,
-    [number]
-  >(async (id: number) => {
-    const res = await apiRequest.put<ProofingOrderResponse>(
-      API_SUFFIX.PROOFING_APPROVE(id)
-    );
-    return res.data;
-  });
-
-  const mutate = async (id: number) => {
-    try {
-      const result = await execute(id);
-
-      if (result.id != null) {
-        queryClient.invalidateQueries({
-          queryKey: proofingKeys.detail(result.id),
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
-
-      toast.success("Thành công", {
-        description: "Đã duyệt bình bài",
-      });
-
-      return result;
-    } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể duyệt bình bài",
+          "Không thể tạm dừng bình bài",
       });
       throw err;
     }
@@ -771,7 +691,7 @@ export const useCreatePaperSize = () => {
   >(async (payload) => {
     const res = await apiRequest.post<PaperSizeResponse>(
       API_SUFFIX.PAPER_SIZES,
-      payload
+      payload,
     );
     return PaperSizeResponseSchema.parse(res.data);
   });
@@ -819,7 +739,7 @@ export const useRecordPlateExport = () => {
     }) => {
       const response = await apiRequest.post(
         API_SUFFIX.PROOFING_RECORD_PLATE(id),
-        request
+        request,
       );
 
       // Sử dụng safeParse để tránh throw error khi validation fail
@@ -831,7 +751,7 @@ export const useRecordPlateExport = () => {
         // Log warning nhưng vẫn return response.data vì API đã trả về 200
         console.warn(
           "Schema validation failed for plate export response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
@@ -849,6 +769,66 @@ export const useRecordPlateExport = () => {
       });
     },
   });
+};
+
+// ===== Update Plate Export =====
+// PUT /api/plate-exports/:id
+export const useUpdatePlateExport = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    PlateExportResponse,
+    [{ id: number; request: UpdatePlateExportRequest }]
+  >(async ({ id, request }) => {
+    const res = await apiRequest.put<PlateExportResponse>(
+      API_SUFFIX.PLATE_EXPORT_UPDATE(id),
+      request,
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number, request: UpdatePlateExportRequest) => {
+    try {
+      const result = await execute({ id, request });
+
+      // Invalidate related queries
+      queryClient.invalidateQueries({
+        queryKey: ["proofing-orders"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["plate-exports"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật thông tin xuất kẽm",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể cập nhật thông tin xuất kẽm";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };
 
 // Record die export - API expects: dieIds (array), notes
@@ -876,13 +856,13 @@ export const useRecordDieExportWithFile = () => {
         RecordDieExportRequestSchema.safeParse(requestPayload);
       if (!validationResult.success) {
         throw new Error(
-          `Invalid request payload: ${validationResult.error.message}`
+          `Invalid request payload: ${validationResult.error.message}`,
         );
       }
 
       const response = await apiRequest.post(
         API_SUFFIX.PROOFING_RECORD_DIE(id),
-        validationResult.data
+        validationResult.data,
       );
 
       // Validate response against schema
@@ -893,7 +873,7 @@ export const useRecordDieExportWithFile = () => {
         // Log warning nhưng vẫn return response.data vì API đã trả về 200
         console.warn(
           "Schema validation failed for die export response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
@@ -918,7 +898,7 @@ export const useHandToProduction = () => {
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest.put(
-        API_SUFFIX.PROOFING_HAND_TO_PRODUCTION(id)
+        API_SUFFIX.PROOFING_HAND_TO_PRODUCTION(id),
       );
 
       // Sử dụng safeParse để tránh throw error khi validation fail
@@ -929,7 +909,7 @@ export const useHandToProduction = () => {
         // Log warning nhưng vẫn return response.data vì API đã trả về 200
         console.warn(
           "Schema validation failed for hand to production response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
@@ -954,18 +934,23 @@ export const useHandToProduction = () => {
 
 export const useAvailableQuantity = (
   designId: number | null,
-  enabled: boolean = true
+  enabled: boolean = true,
 ) => {
   return useQuery({
     queryKey: [proofingKeys.all[0], "available-quantity", designId],
     enabled: enabled && !!designId,
     queryFn: async () => {
       const res = await apiRequest.get<unknown>(
-        API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId as number)
+        API_SUFFIX.PROOFING_AVAILABLE_QUANTITY(designId as number),
       );
-      // Swagger shows empty schema, but likely returns a number (quantity)
-      // Cast to number if it's a number, otherwise return as-is
-      return typeof res.data === "number" ? res.data : res.data;
+      // API response could be a number or an object with quantity field
+      // Log for debugging
+      console.log(
+        "Available quantity API response:",
+        res.data,
+        typeof res.data,
+      );
+      return res.data;
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -986,7 +971,7 @@ export const useAddDesignsToProofingOrder = () => {
     }) => {
       const response = await apiRequest.post<ProofingOrderResponse>(
         API_SUFFIX.PROOFING_ADD_DESIGNS(id),
-        request
+        request,
       );
 
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
@@ -995,16 +980,24 @@ export const useAddDesignsToProofingOrder = () => {
       } else {
         console.warn(
           "Schema validation failed for add designs response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
     },
-    onSuccess: (_, { id }) => {
+    onSuccess: (_, { id, request }) => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
       queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
+      // Invalidate available-order-details query to refresh the list
+      queryClient.invalidateQueries({
+        queryKey: [
+          proofingKeys.all[0],
+          "available-order-details",
+          request.materialTypeId ?? null,
+        ],
+      });
       toast.success("Thành công", {
-        description: "Đã thêm design vào bình bài",
+        description: "Đã Thêm thiết kế vào Bình Bài",
       });
     },
     onError: (error: ApiError) => {
@@ -1033,8 +1026,8 @@ export const useRemoveDesignFromProofingOrder = () => {
       const response = await apiRequest.delete<ProofingOrderResponse>(
         API_SUFFIX.PROOFING_REMOVE_DESIGN(
           proofingOrderId,
-          proofingOrderDesignId
-        )
+          proofingOrderDesignId,
+        ),
       );
 
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
@@ -1043,7 +1036,7 @@ export const useRemoveDesignFromProofingOrder = () => {
       } else {
         console.warn(
           "Schema validation failed for remove design response:",
-          parseResult.error
+          parseResult.error,
         );
         return response.data as ProofingOrderResponse;
       }
@@ -1063,6 +1056,69 @@ export const useRemoveDesignFromProofingOrder = () => {
           error.response?.data?.message ||
           error.message ||
           "Không thể xóa design",
+      });
+    },
+  });
+};
+
+// POST /api/proofing-orders/designs/reject
+export const useRejectDesignFromProofingOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      orderDetailId,
+      reason,
+    }: {
+      orderDetailId: number;
+      reason?: string | null;
+    }) => {
+      await apiRequest.post<void>(API_SUFFIX.PROOFING_REJECT_DESIGN, {
+        orderDetailId,
+        reason: reason ?? null,
+      } as RejectDesignRequest);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: [proofingKeys.all[0], "available-order-details"],
+      });
+      toast.success("Thành công", {
+        description: "Đã từ chối thiết kế và hoàn về phòng thiết kế",
+      });
+    },
+    onError: (error: ApiError) => {
+      toast.error("Lỗi", {
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Không thể từ chối thiết kế",
+      });
+    },
+  });
+};
+
+// ================== CANCEL PROOFING ORDER ==================
+// PUT /proofing-orders/{id}/cancel
+export const useCancelProofingOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
+      const response = await apiRequest.put<ProofingOrderResponse>(
+        API_SUFFIX.PROOFING_CANCEL(id),
+        { reason },
+      );
+      return response.data;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
+      toast.success("Hủy hình bài thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Hủy hình bài thất bại", {
+        description: error.response?.data?.message || error.message,
       });
     },
   });

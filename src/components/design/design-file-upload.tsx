@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { toast } from "sonner";
-import { Upload, X, AlertCircle } from "lucide-react";
+import { Upload, X } from "lucide-react";
 
 interface DesignFileUploadDialogProps {
   open: boolean;
@@ -127,11 +127,6 @@ export function DesignFileUploadDialog({
     }
   };
 
-  // Classify files
-  const designFile = selectedFiles.find((f) => isDesignFile(f));
-  const imageFile = selectedFiles.find((f) => isImageFile(f));
-  const hasBothFiles = designFile && imageFile;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -143,8 +138,8 @@ export function DesignFileUploadDialog({
           </DialogTitle>
           <DialogDescription>
             {mode === "create"
-              ? "Tải lên file .ai và hình ảnh chụp file thiết kế"
-              : "Thay thế file .ai và hình ảnh hiện tại"}
+              ? "Tải lên file thiết kế (.ai), ảnh, hoặc cả hai"
+              : "Cập nhật file thiết kế (.ai), ảnh, hoặc cả hai"}
           </DialogDescription>
         </DialogHeader>
 
@@ -152,7 +147,8 @@ export function DesignFileUploadDialog({
           {/* Chọn nhiều file cùng lúc */}
           <div className="space-y-2 flex-shrink-0">
             <Label htmlFor="files" className="text-sm font-medium">
-              Chọn file thiết kế và ảnh <span className="text-red-500">*</span>
+              Chọn file thiết kế và/hoặc ảnh{" "}
+              <span className="text-red-500">*</span>
             </Label>
             <div className="border-2 border-dashed rounded-lg p-4 hover:border-primary/50 transition-colors">
               <Input
@@ -164,7 +160,7 @@ export function DesignFileUploadDialog({
                 className="cursor-pointer"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Chọn 1 file .ai và 1 file ảnh (JPG, PNG, ...)
+                Có thể chọn 1 file .ai, 1 file ảnh (JPG, PNG, ...), hoặc cả 2
               </p>
             </div>
           </div>
@@ -224,12 +220,6 @@ export function DesignFileUploadDialog({
                   })}
                 </div>
               </ScrollArea>
-              {!hasBothFiles && (
-                <p className="text-xs text-amber-600 flex items-center gap-1 flex-shrink-0 mt-2">
-                  <AlertCircle className="h-3 w-3" />
-                  Cần có ít nhất 1 file .ai và 1 file ảnh
-                </p>
-              )}
             </div>
           )}
         </div>
@@ -240,7 +230,7 @@ export function DesignFileUploadDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!hasBothFiles}
+            disabled={selectedFiles.length === 0}
             className="gap-2"
           >
             <Upload className="h-4 w-4" />

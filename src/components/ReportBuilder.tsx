@@ -36,7 +36,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ReportService } from '@/services/reportService';
+// TODO: ReportService needs to be implemented
+// import { ReportService } from '@/services/reportService';
 import {
   Report,
   ReportTemplate,
@@ -46,7 +47,14 @@ import {
   ReportCategory
 } from '@/types/report';
 
-const reportService = new ReportService();
+const reportService = {
+  getTemplates: async () => Promise.resolve([]),
+  getTemplate: async (id: string) => Promise.resolve(null),
+  createReport: async (data: any) => Promise.resolve({} as any),
+  updateReport: async (id: string, data: any) => Promise.resolve({} as any),
+  getReport: async (id: string) => Promise.resolve(null),
+  deleteReport: async (id: string) => Promise.resolve()
+};
 
 interface ReportBuilderProps {
   templateId?: string;
@@ -90,7 +98,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({
 
         if (reportId) {
           // Edit existing report
-          const existingReport = await reportService.getReportById(reportId);
+          const existingReport = await reportService.getReport(reportId);
           if (existingReport) {
             setReport(existingReport);
             setSections(existingReport.template?.sections || []);

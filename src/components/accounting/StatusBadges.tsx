@@ -3,6 +3,7 @@ import {
   orderStatusLabels,
   paymentStatusLabels,
   customerTypeLabels,
+  debtStatusLabels,
 } from "@/lib/status-utils";
 import { PaymentStatus, InvoiceStatus } from "./InvoiceConfirmDialog";
 
@@ -79,13 +80,7 @@ export function DebtStatusBadge({
 }: DebtStatusBadgeProps) {
   if (!status || typeof status !== "string") return null;
 
-  const labelMap: Record<string, string> = {
-    good: "Tốt",
-    warning: "Cảnh báo",
-    blocked: "Bị chặn",
-  };
-
-  const label = labelMap[status] || status;
+  const label = debtStatusLabels[status] || status;
 
   return <StatusBadge status={status} label={label} className={className} />;
 }

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import type { DesignItem } from "@/types/proofing";
 import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
-import type { CreateProofingOrderFromDesignsRequest } from "@/Schema/proofing-order.schema";
+import type { AddProofingOrderDetailItem } from "@/Schema/proofing-order.schema";
 import {
   Dialog,
   DialogContent,
@@ -46,13 +46,20 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useCreatePaperSize } from "@/hooks/use-proofing-order";
 
 interface CreateProofingOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDesigns: DesignItem[];
   paperSizes?: PaperSizeResponse[];
-  onSubmit: (data: CreateProofingOrderFromDesignsRequest) => Promise<void>;
+  onSubmit: (data: {
+    orderDetailItems: AddProofingOrderDetailItem[];
+    totalQuantity: number;
+    notes?: string;
+    paperSizeId?: number;
+    customPaperSize?: string;
+  }) => Promise<void>;
   isSubmitting?: boolean;
   onSuccess: () => void;
 }
@@ -71,8 +78,10 @@ export function CreateProofingOrderModal({
   const [designQuantities, setDesignQuantities] = useState<
     Record<number, number>
   >({});
-  const [paperSizeId, setPaperSizeId] = useState<string>("none");
+  const [paperSizeId, setPaperSizeId] = useState<string>("custom");
   const [customPaperSize, setCustomPaperSize] = useState("");
+
+  const { mutate: createPaperSize } = useCreatePaperSize();
 
   const materialTypeName =
     selectedDesigns.length > 0 ? selectedDesigns[0].materialTypeName : "";
@@ -90,7 +99,7 @@ export function CreateProofingOrderModal({
       setNotes("");
       setProofingSheetQuantity(1);
       setDesignQuantities({});
-      setPaperSizeId("none");
+      setPaperSizeId("custom");
       setCustomPaperSize("");
     }
   }, [open, selectedDesigns]);
@@ -174,19 +183,72 @@ export function CreateProofingOrderModal({
         return;
       }
 
-      // Prepare request payload according to schema
-      const payload: CreateProofingOrderFromDesignsRequest = {
+      // Create paper size if needed (for custom paper size)
+      let finalPaperSizeId: number | undefined = undefined;
+      let finalCustomPaperSize: string | undefined = undefined;
+
+      if (paperSizeId === "custom" && customPaperSize?.trim()) {
+        // Parse custom paper size
+        const trimmed = customPaperSize.trim();
+        const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+        if (match) {
+          const width = parseInt(match[1], 10);
+          const height = parseInt(match[2], 10);
+          if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
+            // Check if paper size already exists
+            const existing = paperSizes.find(
+              (ps) => ps.width === width && ps.height === height
+            );
+
+            if (existing) {
+              finalPaperSizeId = existing.id;
+              finalCustomPaperSize = undefined;
+            } else {
+              // Create new paper size
+              try {
+                const newPaperSize = await createPaperSize({
+                  name: `${width}×${height}`,
+                  width: width,
+                  height: height,
+                  isCustom: true,
+                });
+                if (newPaperSize?.id) {
+                  finalPaperSizeId = newPaperSize.id;
+                  finalCustomPaperSize = undefined;
+                } else {
+                  finalPaperSizeId = undefined;
+                  finalCustomPaperSize = customPaperSize.trim();
+                }
+              } catch (error) {
+                toast.error("Lỗi", {
+                  description: "Không thể tạo khổ giấy mới",
+                });
+                return;
+              }
+            }
+          } else {
+            finalPaperSizeId = undefined;
+            finalCustomPaperSize = customPaperSize.trim();
+          }
+        } else {
+          finalPaperSizeId = undefined;
+          finalCustomPaperSize = customPaperSize.trim();
+        }
+      } else if (paperSizeId !== "none" && paperSizeId !== "custom") {
+        finalPaperSizeId = Number(paperSizeId);
+        finalCustomPaperSize = undefined;
+      } else {
+        finalPaperSizeId = undefined;
+        finalCustomPaperSize = undefined;
+      }
+
+      // Prepare request payload
+      const payload = {
         orderDetailItems,
         totalQuantity: proofingSheetQuantity,
         notes: notes?.trim() || undefined,
-        paperSizeId:
-          paperSizeId === "none" || paperSizeId === "custom"
-            ? undefined
-            : Number(paperSizeId),
-        customPaperSize:
-          paperSizeId === "custom" && customPaperSize?.trim()
-            ? customPaperSize.trim()
-            : undefined,
+        paperSizeId: finalPaperSizeId,
+        customPaperSize: finalCustomPaperSize,
       };
 
       // Submit to API
@@ -464,10 +526,15 @@ export function CreateProofingOrderModal({
                       >
                         <SelectTrigger id="paperSizeId" className="h-10">
                           <Maximize2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <SelectValue placeholder="Chọn khổ giấy" />
+                          <SelectValue
+                            defaultValue="custom"
+                            placeholder="Chọn khổ giấy"
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Chưa xác định</SelectItem>
+                          <SelectItem value="custom">
+                            -- Nhập thủ công --
+                          </SelectItem>
                           {paperSizes?.map((ps) => (
                             <SelectItem key={ps.id} value={ps.id.toString()}>
                               {ps.name}{" "}
@@ -476,9 +543,6 @@ export function CreateProofingOrderModal({
                                 : ""}
                             </SelectItem>
                           ))}
-                          <SelectItem value="custom">
-                            -- Nhập thủ công --
-                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -498,6 +562,7 @@ export function CreateProofingOrderModal({
                           placeholder="Ví dụ: 31×43, 65×86..."
                           value={customPaperSize}
                           onChange={(e) => setCustomPaperSize(e.target.value)}
+                          autoFocus
                         />
                       </div>
                     ) : (

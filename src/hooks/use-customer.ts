@@ -9,6 +9,10 @@ import type {
   CustomerDebtSummaryResponse,
   CustomerStatisticsResponse,
   CustomerOrdersResponsePagedResponse,
+  CustomerAddress,
+  CustomerAddressResponsePaginate,
+  CreateCustomerAddressRequest,
+  UpdateCustomerAddressRequest,
 } from "@/Schema/customer.schema";
 import { createCrudHooks } from "./use-base";
 import {
@@ -23,7 +27,7 @@ import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { normalizeParams } from "@/apis/util.api";
 
 // Không có DELETE trong swagger → vẫn dùng createCrudHooks nhưng KHÔNG export useDelete.
@@ -128,22 +132,25 @@ export const useExportDebtComparison = () => {
 };
 
 // ================== CHECK DUPLICATE COMPANY ==================
-export const useCheckDuplicateCompany = () => {
-  const { execute, loading, error } = useAsyncCallback<boolean, [string]>(
-    async (name: string) => {
-      const res = await apiRequest.get<boolean>(
-        API_SUFFIX.CUSTOMER_CHECK_DUPLICATE_COMPANY(name)
-      );
-      return res.data;
-    }
-  );
+// DEPRECATED: Endpoint not found in OpenAPI schema
+// TODO: Remove or implement when endpoint is available
+// This endpoint was commented out because it doesn't exist in the OpenAPI specification
+// export const useCheckDuplicateCompany = () => {
+//   const { execute, loading, error } = useAsyncCallback<boolean, [string]>(
+//     async (name: string) => {
+//       const res = await apiRequest.get<boolean>(
+//         API_SUFFIX.CUSTOMER_CHECK_DUPLICATE_COMPANY(name)
+//       );
+//       return res.data;
+//     }
+//   );
 
-  return {
-    check: execute,
-    loading,
-    error,
-  };
-};
+//   return {
+//     check: execute,
+//     loading,
+//     error,
+//   };
+// };
 
 // ================== GET CUSTOMER DEBT HISTORY ==================
 // GET /customers/{id}/debt-history
@@ -159,11 +166,10 @@ export const useCustomerDebtHistory = (
     queryFn: async () => {
       const normalizedParams = normalizeParams(params ?? {});
       // API returns CustomerDebtHistoryResponsePaginate
-      const res =
-        await apiRequest.get<CustomerDebtHistoryResponsePaginate>(
-          API_SUFFIX.CUSTOMER_DEBT_HISTORY(customerId as number),
-          { params: normalizedParams }
-        );
+      const res = await apiRequest.get<CustomerDebtHistoryResponsePaginate>(
+        API_SUFFIX.CUSTOMER_DEBT_HISTORY(customerId as number),
+        { params: normalizedParams }
+      );
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
@@ -281,3 +287,135 @@ export function useCustomerFavoriteStats(
     enabled: enabled && !!customerId,
   });
 }
+
+// ================== CUSTOMER ADDRESSES (Sổ địa chỉ) ==================
+
+// GET /customers/{id}/addresses  → trả về CustomerAddressResponsePaginate
+export const useCustomerAddresses = (
+  customerId: number | null,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "addresses"],
+    enabled: enabled && !!customerId,
+    queryFn: async () => {
+      const res = await apiRequest.get<CustomerAddressResponsePaginate | CustomerAddress[]>(
+        API_SUFFIX.CUSTOMER_ADDRESSES(customerId as number),
+        { params: { pageNumber: 1, pageSize: 50 } }
+      );
+      // Handle cả 2 case: server trả paginate object HOẶC plain array
+      let items: CustomerAddress[];
+      if (Array.isArray(res.data)) {
+        items = res.data as CustomerAddress[];
+      } else {
+        items = (res.data?.items ?? []) as CustomerAddress[];
+      }
+      // NOTE (backend bug): isActive luôn = false dù mới tạo → KHÔNG filter theo isActive
+      // Xem: https://checkafe.online/api/customers/{id}/addresses trả isActive=false cho tất cả
+      return items;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+// POST /customers/{id}/addresses
+export const useCreateCustomerAddress = (customerId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateCustomerAddressRequest) => {
+      const res = await apiRequest.post<CustomerAddress>(
+        API_SUFFIX.CUSTOMER_ADDRESSES(customerId),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["customers", customerId, "addresses"],
+      });
+      toast.success("Đã thêm địa chỉ giao hàng");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// PUT /customers/{id}/addresses/{addressId}
+export const useUpdateCustomerAddress = (customerId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      addressId,
+      data,
+    }: {
+      addressId: number;
+      data: UpdateCustomerAddressRequest;
+    }) => {
+      const res = await apiRequest.put<CustomerAddress>(
+        API_SUFFIX.CUSTOMER_ADDRESS_BY_ID(customerId, addressId),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["customers", customerId, "addresses"],
+      });
+      toast.success("Đã cập nhật địa chỉ giao hàng");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// "Xóa" địa chỉ: Swagger không có DELETE → dùng PUT với isActive=false
+export const useDeleteCustomerAddress = (customerId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (addressId: number) => {
+      await apiRequest.put(
+        API_SUFFIX.CUSTOMER_ADDRESS_BY_ID(customerId, addressId),
+        { isActive: false } as UpdateCustomerAddressRequest
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["customers", customerId, "addresses"],
+      });
+      toast.success("Đã xóa địa chỉ giao hàng");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+
+// Đặt mặc định: dùng PUT với isDefault=true
+export const useSetDefaultCustomerAddress = (customerId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (addressId: number) => {
+      const res = await apiRequest.put<CustomerAddress>(
+        API_SUFFIX.CUSTOMER_ADDRESS_BY_ID(customerId, addressId),
+        { isDefault: true } as UpdateCustomerAddressRequest
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["customers", customerId, "addresses"],
+      });
+      toast.success("Đã đặt địa chỉ mặc định");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+};
+

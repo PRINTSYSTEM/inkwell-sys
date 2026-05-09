@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Material, CreateMaterialSchema } from '@/Schema';
-import type { CreateMaterial } from '@/Schema';
-import { MaterialService } from '@/services/materialService';
+import { Material, MaterialType } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +43,18 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// TODO: MaterialService needs to be implemented
+// Temporary stub for MaterialService
+const MaterialService = {
+  getMaterials: async (params: any) => Promise.resolve({ data: [], totalPages: 1, total: 0 }),
+  getSuppliers: async () => Promise.resolve([]),
+  getCategoriesByType: async () => Promise.resolve([]),
+  createMaterial: async (data: any) => Promise.resolve(data),
+  updateMaterial: async (id: string, data: any) => Promise.resolve(data),
+  deleteMaterial: async (id: string) => Promise.resolve(),
+  updateStock: async (id: string, stock: number, reason: string) => Promise.resolve(),
+};
+
 // Material type options
 const MATERIAL_TYPE_OPTIONS: Array<{ value: MaterialType; label: string }> = [
   { value: 'paper', label: 'Giấy' },
@@ -58,8 +68,8 @@ const MATERIAL_TYPE_OPTIONS: Array<{ value: MaterialType; label: string }> = [
   { value: 'ribbon', label: 'Dây/Ruy băng' }
 ];
 
-// Material form data type from Zod schema
-type MaterialFormData = CreateMaterial;
+// Material form data type
+type MaterialFormData = Partial<Material>;
 
 // TODO: Update initial form data to match CreateMaterial schema structure
 const initialFormData = {

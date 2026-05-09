@@ -1,5 +1,5 @@
-import { notificationService } from '@/services/notificationService';
-import { assignmentService } from '@/services/assignmentService';
+import { notificationService } from '@/utils/notificationService';
+import { AssignmentManagementService } from '@/services/assignmentService';
 import { NotificationCategory, NotificationPriority, NotificationType } from '@/types/notification';
 
 class NotificationScheduler {
@@ -29,7 +29,7 @@ class NotificationScheduler {
 
   private async checkUpcomingDeadlines() {
     try {
-      const { assignments } = await assignmentService.getAssignments();
+      const { assignments } = await AssignmentManagementService.getAssignments();
       const now = new Date();
       
       // Check for assignments due within 24 hours
@@ -61,7 +61,7 @@ class NotificationScheduler {
 
   private async checkOverdueAssignments() {
     try {
-      const { assignments } = await assignmentService.getAssignments();
+      const { assignments } = await AssignmentManagementService.getAssignments();
       const now = new Date();
       
       // Check for overdue assignments

@@ -22,6 +22,7 @@ interface FilterSectionProps {
   onMaterialTypeChange: (ids: number[]) => void;
   onSearchChange: (search: string) => void;
   onClearFilters: () => void;
+  hasActiveFilters?: boolean;
 }
 
 export function FilterSection({
@@ -35,8 +36,9 @@ export function FilterSection({
   onMaterialTypeChange,
   onSearchChange,
   onClearFilters,
+  hasActiveFilters = false,
 }: FilterSectionProps) {
-  const hasActiveFilters =
+  const isAnyFilterActive =
     selectedDesignTypes.length > 0 ||
     selectedMaterialTypes.length > 0 ||
     searchTerm.trim().length > 0;
@@ -67,7 +69,7 @@ export function FilterSection({
     : selectedMaterialTypes;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
       {/* Filter Controls */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Design Type Button Group */}
@@ -75,6 +77,7 @@ export function FilterSection({
           <span className="text-sm font-medium text-muted-foreground">
             Loại thiết kế:
           </span>
+
           {designTypeOptions.map((option) => {
             const isSelected =
               selectedDesignTypes.length === 1 &&
@@ -87,7 +90,16 @@ export function FilterSection({
                 className="h-8 text-xs"
                 onClick={() => toggleDesignType(option.id)}
               >
-                {option.name}
+                <span className="truncate">{option.name}</span>
+                <Badge
+                  variant={option.count > 0 ? "secondary" : "outline"}
+                  className={cn(
+                    "ml-2 h-5 px-1.5 text-[10px]",
+                    isSelected && "bg-background/20 text-primary-foreground",
+                  )}
+                >
+                  {option.count}
+                </Badge>
               </Button>
             );
           })}
@@ -140,7 +152,7 @@ export function FilterSection({
       </div>
 
       {/* Active Filter Tags */}
-      {hasActiveFilters && (
+      {isAnyFilterActive && (
         <div className="flex flex-wrap items-center gap-2">
           {selectedDesignTypes.map((id) => {
             const option = designTypeOptions.find((o) => o.id === id);

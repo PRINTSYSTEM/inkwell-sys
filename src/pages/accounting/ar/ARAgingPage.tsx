@@ -6,7 +6,8 @@ import {
   Search,
   RefreshCw,
   Download,
-  Calendar,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   AlertCircle,
 } from "lucide-react";
@@ -71,21 +72,10 @@ export default function ARAgingPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Làm mới
-        </Button>
-        <Button variant="outline" onClick={handleExportExcel}>
-          <Download className="h-4 w-4 mr-2" />
-          Xuất Excel
-        </Button>
-      </div>
-
-        {/* Error Alert */}
-        {isError && (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Error Alert */}
+      {isError && (
+        <div className="flex-shrink-0 px-6 py-2">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Lỗi kết nối</AlertTitle>
@@ -95,21 +85,23 @@ export default function ARAgingPage() {
                 : "Không thể tải dữ liệu. Vui lòng thử lại."}
             </AlertDescription>
           </Alert>
-        )}
+        </div>
+      )}
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
+      {/* Filters - Compact */}
+      <div className="flex-shrink-0 px-6 py-2 space-y-2 border-b bg-background">
+        <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Tìm kiếm theo mã, tên khách hàng..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-8 h-9 text-sm"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Label htmlFor="asOfDate" className="whitespace-nowrap">
+            <Label htmlFor="asOfDate" className="whitespace-nowrap text-sm">
               Tính đến ngày:
             </Label>
             <Input
@@ -117,109 +109,134 @@ export default function ARAgingPage() {
               type="date"
               value={asOfDate}
               onChange={(e) => setAsOfDate(e.target.value)}
-              className="w-[180px]"
+              className="w-[180px] h-9 text-sm"
             />
           </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={handleExportExcel}
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
+      {/* Summary Cards - Compact */}
+      <div className="flex-shrink-0 px-6 py-2 border-b bg-background">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 0-30 ngày
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold">
                 {formatCurrency(totalCurrent)}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 31-60 ngày
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold">
                 {formatCurrency(totalDays30)}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 61-90 ngày
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-orange-600">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold text-orange-600">
                 {formatCurrency(totalDays60)}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 91-120 ngày
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-red-600">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold text-red-600">
                 {formatCurrency(totalDays90)}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 Trên 120 ngày
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold text-destructive">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold text-destructive">
                 {formatCurrency(totalOver90)}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-2">
+            <CardHeader className="pb-1 px-4 pt-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 Tổng cộng
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl font-bold">
+            <CardContent className="px-4 pb-2">
+              <div className="text-lg font-bold">
                 {formatCurrency(grandTotal)}
               </div>
             </CardContent>
           </Card>
         </div>
+      </div>
 
-        {/* Table */}
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[140px]">Mã KH</TableHead>
-                <TableHead>Tên khách hàng</TableHead>
-                <TableHead className="text-right">0-30 ngày</TableHead>
-                <TableHead className="text-right">31-60 ngày</TableHead>
-                <TableHead className="text-right">61-90 ngày</TableHead>
-                <TableHead className="text-right">91-120 ngày</TableHead>
-                <TableHead className="text-right">Trên 120 ngày</TableHead>
-                <TableHead className="text-right">Tổng cộng</TableHead>
+      {/* Table - Expanded to fill space */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-auto border-t">
+          <Table className="min-w-full">
+            <TableHeader className="sticky top-0 bg-muted/50 z-10">
+              <TableRow>
+                <TableHead className="w-[140px] font-semibold">Mã KH</TableHead>
+                <TableHead className="font-semibold">Tên khách hàng</TableHead>
+                <TableHead className="text-right font-semibold">0-30 ngày</TableHead>
+                <TableHead className="text-right font-semibold">31-60 ngày</TableHead>
+                <TableHead className="text-right font-semibold">61-90 ngày</TableHead>
+                <TableHead className="text-right font-semibold">91-120 ngày</TableHead>
+                <TableHead className="text-right font-semibold">Trên 120 ngày</TableHead>
+                <TableHead className="text-right font-semibold">Tổng cộng</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
+                Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i}>
                     {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
-                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-6 w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -237,41 +254,41 @@ export default function ARAgingPage() {
                 arData.items.map((item) => (
                   <TableRow
                     key={item.customerId}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => handleCustomerClick(item.customerId)}
                   >
-                    <TableCell className="font-mono text-sm">
+                    <TableCell className="font-semibold font-mono text-sm">
                       {item.customerCode || "—"}
                     </TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-semibold text-sm">
                       {item.customerName || "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
+                    <TableCell className="text-right font-semibold tabular-nums text-sm">
                       {item.notDue !== undefined && item.notDue > 0
                         ? formatCurrency(item.notDue)
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
+                    <TableCell className="text-right font-semibold tabular-nums text-sm">
                       {item.days0_30 !== undefined && item.days0_30 > 0
                         ? formatCurrency(item.days0_30)
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-orange-600">
+                    <TableCell className="text-right font-semibold tabular-nums text-sm text-orange-600">
                       {item.days31_60 !== undefined && item.days31_60 > 0
                         ? formatCurrency(item.days31_60)
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-red-600">
+                    <TableCell className="text-right font-semibold tabular-nums text-sm text-red-600">
                       {item.days61_90 !== undefined && item.days61_90 > 0
                         ? formatCurrency(item.days61_90)
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-destructive">
+                    <TableCell className="text-right font-semibold tabular-nums text-sm text-destructive">
                       {item.daysOver90 !== undefined && item.daysOver90 > 0
                         ? formatCurrency(item.daysOver90)
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-bold tabular-nums">
+                    <TableCell className="text-right font-semibold tabular-nums text-sm">
                       {item.total !== undefined
                         ? formatCurrency(item.total)
                         : "—"}
@@ -283,38 +300,41 @@ export default function ARAgingPage() {
           </Table>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination - Compact */}
         {arData && arData.totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Trang {currentPage} / {arData.totalPages} (
-              {arData.total} khách hàng)
+          <div className="flex-shrink-0 flex items-center justify-between px-6 py-2 border-t bg-background">
+            <p className="text-xs text-muted-foreground">
+              Trang {currentPage} / {arData.totalPages} ({arData.total} khách
+              hàng)
             </p>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1 || isLoading}
               >
-                <RefreshCw className="h-4 w-4 rotate-180" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-medium px-2">
+              <span className="text-xs font-medium px-2">
                 {currentPage} / {arData.totalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8"
                 onClick={() =>
                   setCurrentPage((p) => Math.min(arData.totalPages, p + 1))
                 }
                 disabled={currentPage === arData.totalPages || isLoading}
               >
-                <RefreshCw className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
+      </div>
     </div>
   );
 }

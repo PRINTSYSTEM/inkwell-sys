@@ -56,9 +56,10 @@ import {
   useApproveCashReceipt,
   useCancelCashReceipt,
   usePostCashReceipt,
+  useCashFunds,
+  useExportCashReceiptPDF,
 } from "@/hooks/use-cash";
 import { usePaymentMethods } from "@/hooks/use-expense";
-import { useCashFunds } from "@/hooks/use-cash";
 import {
   formatCurrency,
   getPaymentMethodLabel,
@@ -129,14 +130,14 @@ export default function CashReceiptDetailPage() {
   // Form state for creating new receipt
   const [createFormValues, setCreateFormValues] =
     useState<CreateCashReceiptRequest>({
-      voucherDate: new Date().toISOString().split("T")[0],
-      postingDate: new Date().toISOString().split("T")[0],
+      voucherDate: new Date().toISOString(),
+      postingDate: new Date().toISOString(),
       payerName: "",
       reason: "",
       amount: 0,
       notes: null,
-      paymentMethodId: null,
-      cashFundId: null,
+      paymentMethodId: 0,
+      financeAccountId: null,
       customerId: null,
     });
 
@@ -154,11 +155,8 @@ export default function CashReceiptDetailPage() {
     isActive: true,
   });
 
-  const { data: cashFundsData } = useCashFunds({
-    pageNumber: 1,
-    pageSize: 100,
-    isActive: true,
-  });
+  const { data: cashFundsData } = useCashFunds();
+
 
   const createMutation = useCreateCashReceipt();
   const updateMutation = useUpdateCashReceipt();
@@ -166,6 +164,8 @@ export default function CashReceiptDetailPage() {
   const approveMutation = useApproveCashReceipt();
   const cancelMutation = useCancelCashReceipt();
   const postMutation = usePostCashReceipt();
+  const { mutate: exportToPDF, loading: isExportingPDF } =
+    useExportCashReceiptPDF();
 
   const isDraft = receipt?.status?.toLowerCase() === "draft";
   const isApproved = receipt?.status?.toLowerCase() === "approved";
@@ -187,8 +187,8 @@ export default function CashReceiptDetailPage() {
       reason: receipt.reason || "",
       amount: receipt.amount || 0,
       notes: receipt.notes || "",
-      paymentMethodId: receipt.paymentMethodId || null,
-      cashFundId: receipt.cashFundId || null,
+      paymentMethodId: receipt.paymentMethodId || 0,
+      financeAccountId: (receipt.financeAccountId as number | null) || null,
     });
   };
 
@@ -201,15 +201,21 @@ export default function CashReceiptDetailPage() {
     if (!receipt || !editingCard) return;
 
     const payload: UpdateCashReceiptRequest = {
-      voucherDate: cardEditValues.voucherDate as string,
-      postingDate: cardEditValues.postingDate as string,
+      voucherDate: new Date(cardEditValues.voucherDate as string).toISOString(),
+      postingDate: new Date(cardEditValues.postingDate as string).toISOString(),
       payerName: cardEditValues.payerName as string,
       reason: cardEditValues.reason as string,
       amount: cardEditValues.amount as number,
       notes: (cardEditValues.notes as string) || null,
-      paymentMethodId: cardEditValues.paymentMethodId as number | null,
-      cashFundId: cardEditValues.cashFundId as number | null,
+      paymentMethodId: (cardEditValues.paymentMethodId as number) || 0,
+      financeAccountId: (cardEditValues.financeAccountId as number | null) || null,
     };
+
+    // Validation for update
+    if (!payload.paymentMethodId) {
+      toast.error("Vui lòng chọn phương thức thanh toán");
+      return;
+    }
 
     updateMutation.mutate(
       { id: receipt.id!, data: payload },
@@ -260,7 +266,27 @@ export default function CashReceiptDetailPage() {
   };
 
   const handleCreate = () => {
-    createMutation.mutate(createFormValues, {
+    // Validation
+    if (!createFormValues.payerName) {
+      toast.error("Vui lòng nhập tên người nộp");
+      return;
+    }
+    if (!createFormValues.paymentMethodId || createFormValues.paymentMethodId === 0) {
+      toast.error("Vui lòng chọn phương thức thanh toán");
+      return;
+    }
+    if (createFormValues.amount <= 0) {
+      toast.error("Số tiền phải lớn hơn 0");
+      return;
+    }
+
+    const payload: CreateCashReceiptRequest = {
+      ...createFormValues,
+      voucherDate: new Date(createFormValues.voucherDate).toISOString(),
+      postingDate: new Date(createFormValues.postingDate).toISOString(),
+    };
+
+    createMutation.mutate(payload, {
       onSuccess: (data) => {
         if (data?.id) {
           navigate(`/accounting/cash-receipts/${data.id}`);
@@ -402,7 +428,44 @@ export default function CashReceiptDetailPage() {
                 <CardTitle>Thông tin bổ sung</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
+                 <div className="space-y-2">
+                  <Label htmlFor="financeAccountId">Quỹ tiền mặt</Label>
+                  <Select
+                    value={
+                      createFormValues.financeAccountId?.toString() || "all"
+                    }
+                    onValueChange={(value) =>
+                      setCreateFormValues({
+                        ...createFormValues,
+                        financeAccountId:
+                          value === "all" ? null : Number.parseInt(value, 10),
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn quỹ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Không chọn</SelectItem>
+                      {cashFundsData?.items
+                        ?.filter(
+                          (fund) =>
+                            fund.name !== "Quỹ tiền mặt chính" &&
+                            fund.name !== "Qũy tiền lẻ" &&
+                            fund.name !== "Quỹ tiền lẻ"
+                        )
+                        ?.map((fund) => (
+                          <SelectItem
+                            key={fund.id}
+                            value={fund.id?.toString() || ""}
+                          >
+                            {fund.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                 <div className="space-y-2">
                   <Label htmlFor="paymentMethodId">
                     Phương thức thanh toán
                   </Label>
@@ -429,34 +492,6 @@ export default function CashReceiptDetailPage() {
                           value={method.id?.toString() || ""}
                         >
                           {method.description}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cashFundId">Quỹ tiền mặt</Label>
-                  <Select
-                    value={createFormValues.cashFundId?.toString() || "all"}
-                    onValueChange={(value) =>
-                      setCreateFormValues({
-                        ...createFormValues,
-                        cashFundId:
-                          value === "all" ? null : Number.parseInt(value, 10),
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn quỹ" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Không chọn</SelectItem>
-                      {cashFundsData?.items?.map((fund) => (
-                        <SelectItem
-                          key={fund.id}
-                          value={fund.id?.toString() || ""}
-                        >
-                          {fund.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -606,9 +641,17 @@ export default function CashReceiptDetailPage() {
                 Xóa
               </Button>
             )}
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Xuất Excel
+            <Button
+              variant="outline"
+              onClick={() => receipt?.id && exportToPDF(receipt.id)}
+              disabled={isExportingPDF}
+            >
+              {isExportingPDF ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4 mr-2" />
+              )}
+              Xuất PDF
             </Button>
             <Button variant="outline">
               <Printer className="h-4 w-4 mr-2" />
@@ -794,17 +837,19 @@ export default function CashReceiptDetailPage() {
                   </div>
                 )}
               </div>
-              <div className="space-y-2">
+               <div className="space-y-2">
                 <Label>Quỹ tiền mặt</Label>
                 {editingCard === "main" ? (
                   <Select
                     value={
-                      (cardEditValues.cashFundId as number)?.toString() || ""
+                      (
+                        cardEditValues.financeAccountId as number
+                      )?.toString() || "all"
                     }
                     onValueChange={(value) =>
                       setCardEditValues({
                         ...cardEditValues,
-                        cashFundId: value ? Number.parseInt(value, 10) : null,
+                        financeAccountId: value === "all" ? null : Number.parseInt(value, 10),
                       })
                     }
                   >
@@ -812,18 +857,28 @@ export default function CashReceiptDetailPage() {
                       <SelectValue placeholder="Chọn quỹ" />
                     </SelectTrigger>
                     <SelectContent>
-                      {cashFundsData?.items?.map((fund) => (
-                        <SelectItem
-                          key={fund.id}
-                          value={fund.id?.toString() || ""}
-                        >
-                          {fund.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="all">Không chọn</SelectItem>
+                      {cashFundsData?.items
+                        ?.filter(
+                          (fund) =>
+                            fund.name !== "Quỹ tiền mặt chính" &&
+                            fund.name !== "Qũy tiền lẻ" &&
+                            fund.name !== "Quỹ tiền lẻ"
+                        )
+                        ?.map((fund) => (
+                          <SelectItem
+                            key={fund.id}
+                            value={fund.id?.toString() || ""}
+                          >
+                            {fund.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <div className="text-sm">{receipt.cashFundName || "—"}</div>
+                  <div className="text-sm">
+                    {cashFundsData?.items?.find(f => f.id === receipt.financeAccountId)?.name || "—"}
+                  </div>
                 )}
               </div>
             </div>

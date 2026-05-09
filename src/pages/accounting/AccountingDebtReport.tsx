@@ -48,6 +48,8 @@ import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { toast } from "sonner";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   useCustomers,
   useExportDebtComparison,
@@ -68,6 +70,7 @@ export default function AccountingDebtReport() {
   const pageSize = 10;
   const [exportingId, setExportingId] = useState<number | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const previousTotalPagesRef = useRef<number | null>(null);
 
   // Debt history dialog state
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(
@@ -93,6 +96,16 @@ export default function AccountingDebtReport() {
   const [exportYear, setExportYear] = useState<number>(
     new Date().getFullYear()
   );
+
+  // Export debt by date range state
+  const [exportDateRange, setExportDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Export debt by quarter state
+  const [exportQuarter, setExportQuarter] = useState<number>(Math.floor(new Date().getMonth() / 3) + 1);
+  const [exportQuarterYear, setExportQuarterYear] = useState<number>(new Date().getFullYear());
+
+  // Export tab state
+  const [exportTab, setExportTab] = useState<string>("month");
 
   // Fetch customers
   const { data: customersData, isLoading } = useCustomers({
@@ -171,11 +184,29 @@ export default function AccountingDebtReport() {
   }, [pageNumber]);
 
   // Auto-adjust pageNumber if it exceeds totalPages
+  // Only adjust when we have valid data (not loading) and totalPages actually decreased
   useEffect(() => {
-    if (pageNumber > totalPages && totalPages > 0) {
+    // Only adjust if:
+    // 1. Not loading (we have valid data)
+    // 2. Data exists
+    // 3. Current page exceeds total pages
+    // 4. Total pages is valid (> 0)
+    // 5. Total pages actually decreased from previous value (not just during initial load)
+    if (
+      !isLoading &&
+      !!customersData &&
+      pageNumber > totalPages &&
+      totalPages > 0 &&
+      (previousTotalPagesRef.current === null || totalPages < previousTotalPagesRef.current)
+    ) {
       setPageNumber(totalPages);
     }
-  }, [pageNumber, totalPages]);
+    
+    // Update previous totalPages ref only when we have valid data
+    if (!isLoading && !!customersData && totalPages > 0) {
+      previousTotalPagesRef.current = totalPages;
+    }
+  }, [pageNumber, totalPages, isLoading, customersData]);
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -288,6 +319,27 @@ export default function AccountingDebtReport() {
       endDate: format(lastDay, "yyyy-MM-dd'T'23:59:59.999'Z'"),
       year: exportYear,
       month: exportMonth,
+    });
+  };
+
+  const handleExportDebtByQuarter = () => {
+    const startMonth = (exportQuarter - 1) * 3;
+    const firstDay = new Date(exportQuarterYear, startMonth, 1);
+    const lastDay = new Date(exportQuarterYear, startMonth + 3, 0);
+    exportDebt({
+      startDate: format(firstDay, "yyyy-MM-dd'T'00:00:00.000'Z'"),
+      endDate: format(lastDay, "yyyy-MM-dd'T'23:59:59.999'Z'"),
+    });
+  };
+
+  const handleExportDebtByDate = () => {
+    if (!exportDateRange?.from || !exportDateRange?.to) {
+      toast.error("Vui lòng chọn khoảng thời gian");
+      return;
+    }
+    exportDebt({
+      startDate: format(exportDateRange.from, "yyyy-MM-dd'T'00:00:00.000'Z'"),
+      endDate: format(exportDateRange.to, "yyyy-MM-dd'T'23:59:59.999'Z'"),
     });
   };
 
@@ -536,10 +588,10 @@ export default function AccountingDebtReport() {
                             <TableCell>
                               <div>
                                 <p className="font-semibold text-sm">
-                                  {customer.name}
+                                  {customer.name ?? ""}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {customer.code}
+                                  {customer.code ?? ""}
                                 </p>
                               </div>
                             </TableCell>
@@ -562,12 +614,12 @@ export default function AccountingDebtReport() {
                                     : ""
                                 }`}
                               >
-                                {formatCurrency(customer.currentDebt)}
+                                {formatCurrency(customer.currentDebt ?? 0)}
                               </span>
                             </TableCell>
                             <TableCell>
                               <span className="font-bold text-sm">
-                                {formatCurrency(customer.maxDebt)}
+                                {formatCurrency(customer.maxDebt ?? 0)}
                               </span>
                             </TableCell>
                             <TableCell>
@@ -592,7 +644,7 @@ export default function AccountingDebtReport() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <DebtStatusBadge status={customer.debtStatus} />
+                              <DebtStatusBadge status={customer.debtStatus ?? undefined} />
                             </TableCell>
                           </TableRow>
                         );
@@ -669,78 +721,182 @@ export default function AccountingDebtReport() {
           </CardContent>
         </Card>
 
-        {/* Export Debt by Month Section */}
+        {/* Export Debt Section */}
         <Card className="shrink-0 mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" />
-              Xuất công nợ theo tháng
+              Xuất báo cáo công nợ
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 items-end">
-              <div className="flex-1">
-                <Label>Tháng</Label>
-                <Select
-                  value={exportMonth.toString()}
-                  onValueChange={(v) => setExportMonth(parseInt(v))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                      (month) => (
-                        <SelectItem key={month} value={month.toString()}>
-                          Tháng {month}
-                        </SelectItem>
-                      )
+            <Tabs value={exportTab} onValueChange={setExportTab} className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="date">Theo ngày</TabsTrigger>
+                <TabsTrigger value="month">Theo tháng</TabsTrigger>
+                <TabsTrigger value="quarter">Theo quý</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="date">
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1 max-w-sm">
+                    <Label>Khoảng thời gian</Label>
+                    <DateRangePicker
+                      value={exportDateRange}
+                      onValueChange={setExportDateRange}
+                      placeholder="Từ ngày - Đến ngày"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleExportDebtByDate}
+                    disabled={exportingDebt}
+                  >
+                    {exportingDebt ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Đang xuất...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Xuất Excel
+                      </>
                     )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <Label>Năm</Label>
-                <Select
-                  value={exportYear.toString()}
-                  onValueChange={(v) => setExportYear(parseInt(v))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from(
-                      { length: 5 },
-                      (_, i) => new Date().getFullYear() - 2 + i
-                    ).map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                onClick={handleExportDebtByMonth}
-                disabled={exportingDebt}
-              >
-                {exportingDebt ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang xuất...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Xuất Excel
-                  </>
-                )}
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Xuất báo cáo công nợ từ ngày 1 đến ngày cuối tháng (bao gồm nợ và
-              thanh toán)
-            </p>
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Xuất báo cáo công nợ từ ngày bắt đầu đến ngày kết thúc đã chọn (bao gồm nợ và thanh toán).
+                </p>
+              </TabsContent>
+
+              <TabsContent value="month">
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1 max-w-[200px]">
+                    <Label>Tháng</Label>
+                    <Select
+                      value={exportMonth.toString()}
+                      onValueChange={(v) => setExportMonth(parseInt(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                          (month) => (
+                            <SelectItem key={month} value={month.toString()}>
+                              Tháng {month}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1 max-w-[200px]">
+                    <Label>Năm</Label>
+                    <Select
+                      value={exportYear.toString()}
+                      onValueChange={(v) => setExportYear(parseInt(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from(
+                          { length: 5 },
+                          (_, i) => new Date().getFullYear() - 2 + i
+                        ).map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    onClick={handleExportDebtByMonth}
+                    disabled={exportingDebt}
+                  >
+                    {exportingDebt ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Đang xuất...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Xuất Excel
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Xuất báo cáo công nợ từ ngày 1 đến ngày cuối tháng (bao gồm nợ và thanh toán).
+                </p>
+              </TabsContent>
+
+              <TabsContent value="quarter">
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1 max-w-[200px]">
+                    <Label>Quý</Label>
+                    <Select
+                      value={exportQuarter.toString()}
+                      onValueChange={(v) => setExportQuarter(parseInt(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4].map((quarter) => (
+                          <SelectItem key={quarter} value={quarter.toString()}>
+                            Quý {quarter}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1 max-w-[200px]">
+                    <Label>Năm</Label>
+                    <Select
+                      value={exportQuarterYear.toString()}
+                      onValueChange={(v) => setExportQuarterYear(parseInt(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from(
+                          { length: 5 },
+                          (_, i) => new Date().getFullYear() - 2 + i
+                        ).map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    onClick={handleExportDebtByQuarter}
+                    disabled={exportingDebt}
+                  >
+                    {exportingDebt ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Đang xuất...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Xuất Excel
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Xuất báo cáo công nợ trong suốt 3 tháng của quý đã chọn (bao gồm nợ và thanh toán).
+                </p>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -889,7 +1045,7 @@ export default function AccountingDebtReport() {
                             Công nợ đầu kỳ
                           </p>
                           <p className="text-xl font-bold">
-                            {formatCurrency(debtSummary.openingDebt ?? 0)}
+                            {formatCurrency((debtSummary.openingDebt as number | undefined) ?? 0)}
                           </p>
                         </div>
                         <div>
@@ -897,7 +1053,7 @@ export default function AccountingDebtReport() {
                             Tổng phát sinh
                           </p>
                           <p className="text-xl font-bold text-red-600">
-                            {formatCurrency(debtSummary.totalDebtIncurred ?? 0)}
+                            {formatCurrency((debtSummary.totalDebtIncurred as number | undefined) ?? 0)}
                           </p>
                         </div>
                         <div>
@@ -906,7 +1062,7 @@ export default function AccountingDebtReport() {
                           </p>
                           <p className="text-xl font-bold text-green-600">
                             {formatCurrency(
-                              debtSummary.totalPaymentReceived ?? 0
+                              (debtSummary.totalPaymentReceived as number | undefined) ?? 0
                             )}
                           </p>
                         </div>
@@ -915,7 +1071,7 @@ export default function AccountingDebtReport() {
                             Công nợ cuối kỳ
                           </p>
                           <p className="text-xl font-bold">
-                            {formatCurrency(debtSummary.closingDebt ?? 0)}
+                            {formatCurrency((debtSummary.closingDebt as number | undefined) ?? 0)}
                           </p>
                         </div>
                       </div>
@@ -976,9 +1132,7 @@ export default function AccountingDebtReport() {
                                       : "secondary"
                                   }
                                 >
-                                  {item.changeTypeDisplay ||
-                                    item.changeType ||
-                                    "—"}
+                                  {(item.changeType as string | null) || "—"}
                                 </Badge>
                               </TableCell>
                               <TableCell>{item.orderCode || "—"}</TableCell>

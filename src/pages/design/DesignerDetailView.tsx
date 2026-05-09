@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Target,
   DollarSign,
+  RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 
@@ -42,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import {
   Tooltip,
   TooltipContent,
@@ -72,6 +74,7 @@ const DESIGN_STATUS_ICONS: Record<DesignStatusKey, LucideIcon> = {
   editing: Edit3,
   waiting_for_customer_approval: AlertCircle,
   confirmed_for_printing: CheckCircle2,
+  returned: RotateCcw,
 };
 
 export default function DesignerDetailPage() {
@@ -126,12 +129,14 @@ export default function DesignerDetailPage() {
   // Fetch KPI data
   const { data: kpiData, isLoading: loadingKpi } = useUserKpi(
     designerId,
-    kpiDateRange?.from
-      ? format(kpiDateRange.from, "yyyy-MM-dd'T'00:00:00.000'Z'")
-      : undefined,
-    kpiDateRange?.to
-      ? format(kpiDateRange.to, "yyyy-MM-dd'T'23:59:59.999'Z'")
-      : undefined,
+    {
+      fromDate: kpiDateRange?.from
+        ? format(kpiDateRange.from, "yyyy-MM-dd'T'00:00:00.000'Z'")
+        : undefined,
+      toDate: kpiDateRange?.to
+        ? format(kpiDateRange.to, "yyyy-MM-dd'T'23:59:59.999'Z'")
+        : undefined,
+    },
     !!designerId && !!kpiDateRange?.from && !!kpiDateRange?.to
   );
 
@@ -185,11 +190,12 @@ export default function DesignerDetailPage() {
   const hasNextPage = currentPageNum < totalPages;
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (data && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, data]);
 
   // Sync pageInput with currentPage
   useEffect(() => {
@@ -635,16 +641,7 @@ export default function DesignerDetailPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-48">
-                    <div className="flex flex-col items-center justify-center">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-                      <p className="text-sm text-muted-foreground">
-                        Đang tải danh sách thiết kế...
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <TableSkeleton cols={9} rows={10} rowHeight="h-11" />
               ) : isError ? (
                 <TableRow>
                   <TableCell colSpan={9} className="h-48">

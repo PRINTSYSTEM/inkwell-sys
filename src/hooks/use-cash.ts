@@ -5,9 +5,8 @@ import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
 import { toast } from "sonner";
 import { createMockQueryFn } from "@/lib/mock-utils";
+import { useAsyncCallback } from "@/hooks/use-async";
 import {
-  mockCashFundsPaginate,
-  mockCashFunds,
   mockCashPaymentsPaginate,
   mockCashPayments,
   mockCashReceiptsPaginate,
@@ -15,10 +14,6 @@ import {
   mockCashBook,
 } from "@/mocks/cash.mock";
 import type {
-  CashFundResponse,
-  CashFundResponseIPaginate,
-  CreateCashFundRequest,
-  UpdateCashFundRequest,
   CashPaymentResponse,
   CashPaymentResponseIPaginate,
   CreateCashPaymentRequest,
@@ -29,129 +24,15 @@ import type {
   UpdateCashReceiptRequest,
   CashBookResponse,
 } from "@/Schema/accounting.schema";
-
-// ================== CASH FUND ==================
-
-export interface CashFundsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  isActive?: boolean;
-  search?: string;
-}
-
-export const useCashFunds = (params?: CashFundsParams) => {
-  return useQuery({
-    queryKey: ["cash-funds", params],
-    queryFn: createMockQueryFn(
-      async () => {
-        const normalizedParams = normalizeParams(
-          (params ?? {}) as Record<string, unknown>
-        );
-        const res = await apiRequest.get<CashFundResponseIPaginate>(
-          API_SUFFIX.CASH_FUNDS,
-          { params: normalizedParams }
-        );
-        return res.data;
-      },
-      mockCashFundsPaginate
-    ),
-  });
-};
-
-export const useCashFund = (id: number | null, enabled: boolean = true) => {
-  return useQuery({
-    queryKey: ["cash-fund", id],
-    enabled: enabled && !!id,
-    queryFn: createMockQueryFn(
-      async () => {
-        const res = await apiRequest.get<CashFundResponse>(
-          API_SUFFIX.CASH_FUND_BY_ID(id as number)
-        );
-        return res.data;
-      },
-      mockCashFunds.find((f) => f.id === id) || mockCashFunds[0]
-    ),
-  });
-};
-
-export const useCreateCashFund = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: CreateCashFundRequest) => {
-      const res = await apiRequest.post<CashFundResponse>(
-        API_SUFFIX.CASH_FUNDS,
-        data
-      );
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cash-funds"] });
-      toast.success("Tạo quỹ tiền mặt thành công");
-    },
-    onError: (error: Error) => {
-      toast.error(`Lỗi: ${error.message}`);
-    },
-  });
-};
-
-export const useUpdateCashFund = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: UpdateCashFundRequest;
-    }) => {
-      const res = await apiRequest.put<CashFundResponse>(
-        API_SUFFIX.CASH_FUND_BY_ID(id),
-        data
-      );
-      return res.data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["cash-fund", variables.id] });
-      queryClient.invalidateQueries({ queryKey: ["cash-funds"] });
-      toast.success("Cập nhật quỹ tiền mặt thành công");
-    },
-    onError: (error: Error) => {
-      toast.error(`Lỗi: ${error.message}`);
-    },
-  });
-};
-
-export const useDeleteCashFund = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest.delete(API_SUFFIX.CASH_FUND_BY_ID(id));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cash-funds"] });
-      toast.success("Xóa quỹ tiền mặt thành công");
-    },
-    onError: (error: Error) => {
-      toast.error(`Lỗi: ${error.message}`);
-    },
-  });
-};
+import type {
+  CashPaymentListParams,
+  CashReceiptListParams,
+  CashBookListParams,
+} from "@/Schema";
 
 // ================== CASH PAYMENT ==================
 
-export interface CashPaymentsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  fromDate?: string;
-  toDate?: string;
-  status?: string;
-  vendorId?: number;
-  paymentMethodId?: number;
-  expenseCategoryId?: number;
-  search?: string;
-}
-
-export const useCashPayments = (params?: CashPaymentsParams) => {
+export const useCashPayments = (params?: CashPaymentListParams) => {
   return useQuery({
     queryKey: ["cash-payments", params],
     queryFn: createMockQueryFn(
@@ -315,20 +196,108 @@ export const usePostCashPayment = () => {
   });
 };
 
+// ================== CASH PAYMENT: EXPORT EXCEL ==================
+
+export const useExportCashPaymentsExcel = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<
+    void,
+    [CashPaymentListParams]
+  >(async (params: CashPaymentListParams) => {
+    const normalizedParams = normalizeParams(params as Record<string, unknown>);
+    const res = await apiRequest.get<ArrayBuffer>(
+      API_SUFFIX.CASH_PAYMENT_EXPORT,
+      {
+        params: normalizedParams,
+        responseType: "arraybuffer",
+      }
+    );
+
+    const blob = new Blob([res.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cash-payments-${new Date().getTime()}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  });
+
+  const mutate = async (params: CashPaymentListParams) => {
+    try {
+      await execute(params);
+      toast.success("Thành công", {
+        description: "Đã xuất Excel phiếu chi",
+      });
+    } catch (err: unknown) {
+      const error = err as any;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể xuất Excel phiếu chi",
+      });
+      throw err;
+    }
+  };
+
+  return { loading, isPending: loading, error, mutate, reset };
+};
+
+// ================== CASH PAYMENT: EXPORT PDF ==================
+
+export const useExportCashPaymentPDF = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
+    async (id: number) => {
+      const res = await apiRequest.get<ArrayBuffer>(
+        API_SUFFIX.CASH_PAYMENT_EXPORT_PDF(id),
+        {
+          responseType: "arraybuffer",
+        }
+      );
+
+      const blob = new Blob([res.data], {
+        type: "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cash-payment-${id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    }
+  );
+
+  const mutate = async (id: number) => {
+    try {
+      await execute(id);
+      toast.success("Thành công", {
+        description: "Đã xuất PDF phiếu chi",
+      });
+    } catch (err: unknown) {
+      const error = err as any;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể xuất PDF phiếu chi",
+      });
+      throw err;
+    }
+  };
+
+  return { loading, isPending: loading, error, mutate, reset };
+};
+
 // ================== CASH RECEIPT ==================
 
-export interface CashReceiptsParams {
-  pageNumber?: number;
-  pageSize?: number;
-  fromDate?: string;
-  toDate?: string;
-  status?: string;
-  customerId?: number;
-  paymentMethodId?: number;
-  search?: string;
-}
-
-export const useCashReceipts = (params?: CashReceiptsParams) => {
+export const useCashReceipts = (params?: CashReceiptListParams) => {
   return useQuery({
     queryKey: ["cash-receipts", params],
     queryFn: createMockQueryFn(
@@ -492,15 +461,111 @@ export const usePostCashReceipt = () => {
   });
 };
 
+// ================== CASH RECEIPT: EXPORT PDF ==================
+
+export const useExportCashReceiptPDF = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
+    async (id: number) => {
+      const res = await apiRequest.get<ArrayBuffer>(
+        API_SUFFIX.CASH_RECEIPT_EXPORT_PDF(id),
+        {
+          responseType: "arraybuffer",
+        }
+      );
+
+      const blob = new Blob([res.data], {
+        type: "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cash-receipt-${id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    }
+  );
+
+  const mutate = async (id: number) => {
+    try {
+      await execute(id);
+      toast.success("Thành công", {
+        description: "Đã xuất PDF phiếu thu",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể xuất PDF phiếu thu",
+      });
+      throw err;
+    }
+  };
+
+  return { loading, isPending: loading, error, mutate, reset };
+};
+
+// ================== CASH RECEIPT: EXPORT EXCEL ==================
+
+export const useExportCashReceiptsExcel = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<
+    void,
+    [CashReceiptListParams]
+  >(async (params: CashReceiptListParams) => {
+    const normalizedParams = normalizeParams(params as Record<string, unknown>);
+    const res = await apiRequest.get<ArrayBuffer>(
+      API_SUFFIX.CASH_RECEIPT_EXPORT,
+      {
+        params: normalizedParams,
+        responseType: "arraybuffer",
+      }
+    );
+
+    const blob = new Blob([res.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cash-receipts-${new Date().getTime()}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  });
+
+  const mutate = async (params: CashReceiptListParams) => {
+    try {
+      await execute(params);
+      toast.success("Thành công", {
+        description: "Đã xuất Excel phiếu thu",
+      });
+    } catch (err: unknown) {
+      const error = err as any;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể xuất Excel phiếu thu",
+      });
+      throw err;
+    }
+  };
+
+  return { loading, isPending: loading, error, mutate, reset };
+};
+
 // ================== CASH BOOK ==================
 
-export interface CashBookParams {
-  fromDate?: string;
-  toDate?: string;
-  cashFundId?: number;
-}
-
-export const useCashBook = (params?: CashBookParams) => {
+export const useCashBook = (params?: CashBookListParams) => {
   return useQuery({
     queryKey: ["cash-book", params],
     queryFn: createMockQueryFn(
@@ -516,6 +581,28 @@ export const useCashBook = (params?: CashBookParams) => {
       },
       mockCashBook
     ),
+  });
+};
+
+// ================== CASH FUND (DUMMY/LEGACY) ==================
+
+export const useCashFunds = (params?: any) => {
+  return useQuery({
+    queryKey: ["cash-funds", params],
+    queryFn: async () => {
+      // If the endpoint was removed, we return a mock or empty list to prevent crashes
+      // Based on usage, it expects { items: [] }
+      return {
+        items: [
+          { id: 1, code: "CASH_MAIN", name: "Quỹ tiền mặt chính", isActive: true },
+          { id: 2, code: "CASH_PETTY", name: "Quỹ tiền lẻ", isActive: true },
+        ],
+        total: 2,
+        page: 1,
+        size: 1000,
+        totalPages: 1,
+      };
+    },
   });
 };
 

@@ -6,6 +6,7 @@ export const ENTITY_CONFIG = {
     description: "Vai trò người dùng trong hệ thống",
     values: {
       admin: "Quản trị viên hệ thống",
+      sale: "Nhân viên sale",
       manager: "Quản lý",
       accounting: "Nhân viên kế toán",
       accounting_lead: "Trưởng phòng kế toán",
@@ -27,13 +28,12 @@ export const ENTITY_CONFIG = {
       confirmed_for_printing: "Đã chốt in",
       waiting_for_deposit: "Chờ đặt cọc",
       deposit_received: "Đã nhận cọc",
-      debt_approved: "Đã duyệt công nợ",
       waiting_for_proofing: "Chờ bình bài",
       waiting_for_production: "Chờ sản xuất",
       in_production: "Đang sản xuất",
       production_completed: "Hoàn thành sản xuất",
       waiting_for_delivery: "Chờ giao hàng",
-      waiting_for_redelivery: "Chờ giao lại",
+      waiting_for_redelivery: "Chờ tạo phiếu giao lại",
       delivering: "Đang giao hàng",
       delivered: "Đã giao hàng",
       invoice_issued: "Xuất hóa đơn",
@@ -51,6 +51,7 @@ export const ENTITY_CONFIG = {
       editing: "Đang chỉnh sửa",
       waiting_for_customer_approval: "Chờ khách duyệt",
       confirmed_for_printing: "Đã chốt in",
+      returned: "Bị trả về",
     },
   },
   proofingOrderStatuses: {
@@ -64,14 +65,14 @@ export const ENTITY_CONFIG = {
   },
   orderDetailDerivedStatuses: {
     entityType: "OrderDetail",
-    description:
-      "Trạng thái chi tiết đơn hàng trước chốt in (đồng bộ từ Design.Status)",
+    description: "Trạng thái chi tiết đơn hàng trước chốt in (đồng bộ từ Design.Status)",
     values: {
       received_info: "Nhận thông tin",
       designing: "Đang thiết kế",
       editing: "Đang chỉnh sửa",
       waiting_for_customer_approval: "Chờ khách duyệt",
       confirmed_for_printing: "Đã chốt in",
+      returned: "Bị trả về",
     },
   },
   orderDetailItemStatuses: {
@@ -81,9 +82,11 @@ export const ENTITY_CONFIG = {
       waiting_for_proofing: "Chờ bình bài",
       waiting_for_production: "Chờ sản xuất",
       in_production: "Đang sản xuất",
-      production_completed: "Hoàn thành sản xuất",
+      production_completed: "Chờ giao hàng",
+      waiting_for_redelivery: "Chờ giao lại",
       delivering: "Đang giao hàng",
       completed: "Hoàn thành",
+      returned: "Trả về (từ bình bài)",
     },
   },
   productionStatuses: {
@@ -125,8 +128,7 @@ export const ENTITY_CONFIG = {
   },
   commonStatuses: {
     entityType: "MaterialType,DesignType",
-    description:
-      "Trạng thái chung (dùng cho MaterialType, DesignType và các entity khác)",
+    description: "Trạng thái chung (dùng cho MaterialType, DesignType và các entity khác)",
     values: {
       active: "Hoạt động",
       inactive: "Không hoạt động",
@@ -138,6 +140,7 @@ export const ENTITY_CONFIG = {
     values: {
       glossy: "Cán bóng",
       matte: "Cán mờ",
+      none: "Không cán",
     },
   },
   sidesClassification: {
@@ -162,20 +165,23 @@ export const ENTITY_CONFIG = {
     values: {
       plate: "Nhà cung cấp kẽm",
       die: "Nhà cung cấp khuôn bế",
+      material: "Nhà cung cấp vật tư",
+      paper: "Nhà cung cấp giấy",
+      ink: "Nhà cung cấp mực",
     },
   },
   deliveryNoteStatuses: {
     entityType: "DeliveryNote",
     description: "Trạng thái phiếu giao hàng",
     values: {
-      draft: "Nháp",
-      confirmed: "Đã xác nhận",
-      ready_to_ship: "Sẵn sàng giao",
-      handed_over: "Đã bàn giao ĐVVC",
+      pending: "Chờ giao hàng",
       in_transit: "Đang giao",
-      partially_completed: "Hoàn tất một phần",
-      completed: "Kết thúc",
-      cancelled: "Hủy",
+      completed: "Giao thành công",
+      partial: "Hẹn giao lại một phần",
+      cancelled: "Giao thất bại/Đã hủy",
+      failed: "Thất bại",
+      failure: "Thất bại",
+      failed_reschedule: "Thất bại - hẹn giao lại",
     },
   },
   deliveryLineStatuses: {
@@ -183,10 +189,11 @@ export const ENTITY_CONFIG = {
     description: "Trạng thái dòng giao hàng",
     values: {
       pending: "Chưa có kết quả",
+      in_transit: "Đang giao",
       delivered: "Giao thành công",
       failed_reschedule: "Thất bại - hẹn giao lại",
       returned: "Trả hàng",
-      cancelled: "Hủy món",
+      cancelled: "Hủy không giao được",
     },
   },
   debtStatuses: {
@@ -196,6 +203,162 @@ export const ENTITY_CONFIG = {
       normal: "Bình thường",
       warning: "Cảnh báo",
       exceeded: "Vượt hạn mức",
+    },
+  },
+  productionStepTypes: {
+    entityType: "ProductionStep",
+    description: "Loại công đoạn sản xuất",
+    values: {
+      material_export: "Xuất nguyên liệu",
+      print: "In",
+      lamination: "Cán màng",
+      die_cut: "Bế",
+      cut: "Cắt",
+      mounting: "Bồi",
+      glue: "Dán",
+      packaging: "Đóng gói",
+    },
+  },
+  productionStepStatuses: {
+    entityType: "ProductionStep",
+    description: "Trạng thái công đoạn sản xuất",
+    values: {
+      pending: "Chờ",
+      ready: "Sẵn sàng",
+      in_progress: "Đang thực hiện",
+      done: "Hoàn thành",
+      blocked: "Bị chặn/Lỗi",
+    },
+  },
+  stockInSources: {
+    entityType: "StockIn",
+    description: "Nguồn nhập kho",
+    values: {
+      vendor: "Nhập từ NCC",
+      production: "Nhập từ sản xuất",
+      delivery_return: "Nhập từ trả hàng",
+      adjustment: "Điều chỉnh",
+    },
+  },
+  stockInItemTypes: {
+    entityType: "StockIn",
+    description: "Loại vật phẩm nhập kho",
+    values: {
+      material: "Nguyên vật liệu",
+      product: "Thành phẩm",
+    },
+  },
+  stockInStatuses: {
+    entityType: "StockIn",
+    description: "Trạng thái nhập kho",
+    values: {
+      pending: "Chờ xử lý",
+      completed: "Hoàn thành",
+      cancelled: "Đã hủy",
+    },
+  },
+  stockOutPurposes: {
+    entityType: "StockOut",
+    description: "Mục đích xuất kho",
+    values: {
+      production: "Xuất sản xuất",
+      delivery: "Xuất giao hàng",
+      adjustment: "Điều chỉnh",
+      transfer: "Chuyển kho",
+    },
+  },
+  stockOutItemTypes: {
+    entityType: "StockOut",
+    description: "Loại vật phẩm xuất kho",
+    values: {
+      material: "Nguyên vật liệu",
+      product: "Thành phẩm",
+    },
+  },
+  stockOutStatuses: {
+    entityType: "StockOut",
+    description: "Trạng thái xuất kho",
+    values: {
+      pending: "Chờ xử lý",
+      completed: "Hoàn thành",
+      returned: "Đã trả hàng",
+      partially_returned: "Trả một phần",
+      cancelled: "Đã hủy",
+    },
+  },
+  dieSearchRelevances: {
+    entityType: "Die",
+    description: "Loại tìm kiếm khuôn (query parameter)",
+    values: {
+      exact_match: "Khớp chính xác (tất cả)",
+      related: "Liên quan (cùng/khác customer)",
+      unrelated: "Không liên quan (chỉ customer hiện tại)",
+    },
+  },
+  deliveryFailureTypes: {
+    entityType: "DeliveryNote",
+    description: "Loại lý do giao hàng thất bại",
+    values: {
+      customer_refused: "Do khách từ chối",
+      company_issue: "Do công ty",
+    },
+  },
+  invoiceStatuses: {
+    entityType: "Invoice",
+    description: "Trạng thái hóa đơn VAT",
+    values: {
+      draft: "Nháp",
+      pending_issue: "Chờ phát hành",
+      issued: "Đã phát hành",
+      rejected: "Bị từ chối",
+      voided: "Đã hủy",
+      adjusted: "Điều chỉnh",
+      replaced: "Thay thế",
+    },
+  },
+  paymentTypes: {
+    entityType: "Payment",
+    description: "Loại thanh toán",
+    values: {
+      deposit: "Đặt cọc",
+      payment: "Thanh toán",
+    },
+  },
+  debtChangeTypes: {
+    entityType: "DebtHistory",
+    description: "Loại thay đổi công nợ",
+    values: {
+      order_created: "Phát sinh đơn hàng",
+      payment_received: "Thanh toán",
+      deposit_received: "Nhận cọc",
+      debt_adjustment: "Điều chỉnh",
+    },
+  },
+  dieUsageTypes: {
+    entityType: "Die",
+    description: "Loại sử dụng khuôn bế",
+    values: {
+      one_time: "Dùng 1 lần",
+      reusable: "Tái sử dụng",
+    },
+  },
+  dieStatuses: {
+    entityType: "Die",
+    description: "Trạng thái khuôn bế",
+    values: {
+      new: "Mới tạo (chờ SX)",
+      ready: "Sẵn sàng (trong kho)",
+      in_production: "Đang sử dụng",
+      broken: "Hỏng",
+      disposed: "Đã hủy",
+    },
+  },
+  dieLocations: {
+    entityType: "Die",
+    description: "Vị trí khuôn bế",
+    values: {
+      InStock: "Trong kho",
+      InUse: "Đang sử dụng",
     },
   },
 };

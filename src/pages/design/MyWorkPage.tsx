@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Eye,
   Calendar,
+  RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableSkeleton } from "@/components/ui/skeleton-components";
 import {
   Tooltip,
   TooltipContent,
@@ -61,6 +63,7 @@ const DESIGN_STATUS_ICONS: Record<DesignStatusKey, LucideIcon> = {
   editing: Edit3,
   waiting_for_customer_approval: AlertCircle,
   confirmed_for_printing: CheckCircle2,
+  returned: RotateCcw,
 };
 
 // Main Page Component
@@ -100,11 +103,12 @@ export default function MyWorkPage() {
   const hasNextPage = currentPageNum < totalPages;
 
   // Auto-adjust currentPage if it exceeds totalPages
+  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (data && totalPages > 0 && currentPage > totalPages) {
       setCurrentPage(1);
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, data]);
 
   // Sync pageInput with currentPage
   useEffect(() => {
@@ -428,7 +432,9 @@ export default function MyWorkPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDesigns.length > 0 ? (
+              {isLoading ? (
+                <TableSkeleton cols={7} rows={10} rowHeight="h-14" />
+              ) : filteredDesigns.length > 0 ? (
                 filteredDesigns.map((design) => {
                   const { config, Icon } = getStatusInfo(design);
                   const isDownloading = downloadingId === design.id;
