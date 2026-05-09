@@ -818,7 +818,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   className={`grid gap-4 ${
                     isHop || isTuiXepHong
                       ? "grid-cols-3"
-                      : isNhan
+                      : isNhan || isDecal
                         ? "grid-cols-3"
                         : "grid-cols-2"
                   }`}
@@ -879,8 +879,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       />
                     </div>
                   )}
-                  {/* Mép dán - chỉ hiển thị cho nhãn giấy, cùng hàng với kích thước */}
-                  {isNhan && !isHop && !isTuiXepHong && (
+                  {/* Mép dán - hiển thị cho nhãn giấy và decal, cùng hàng với kích thước */}
+                  {(isNhan || isDecal) && !isHop && !isTuiXepHong && (
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">
                         Mép dán (mm)
@@ -904,8 +904,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     </div>
                   )}
                 </div>
-                {/* Tooltip cho Mép dán - chỉ hiển thị khi là nhãn giấy */}
-                {isNhan && (
+                {/* Tooltip cho Mép dán - hiển thị khi là nhãn giấy hoặc decal */}
+                {(isNhan || isDecal) && (
                   <p className="text-xs text-muted-foreground">
                     <span className="font-medium">Mép dán:</span> Khoảng cách từ
                     mép đến vị trí dán keo (nếu có)
