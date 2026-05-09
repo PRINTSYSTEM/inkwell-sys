@@ -16,13 +16,13 @@ const parseParams = (params: Record<string, unknown>) => {
       isParamTypeObject && Array.isArray(value) && value.length >= 0;
 
     if (!isParamTypeObject) {
-      options += `${key}=${value}&`;
+      options += `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}&`;
     }
 
     if (isParamTypeObject && isParamTypeArray) {
       (value as unknown[]).forEach((element: unknown) => {
         if (element !== undefined && element !== null && element !== "") {
-          options += `${key}=${element}&`;
+          options += `${encodeURIComponent(key)}=${encodeURIComponent(String(element))}&`;
         }
       });
     }

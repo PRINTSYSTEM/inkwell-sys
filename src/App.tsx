@@ -46,7 +46,14 @@ const App = () => (
         <AuthProvider>
           <NotificationProvider>
             <RouterProvider router={router} />
-            <Sonner />
+            <Sonner 
+              position="bottom-right" 
+              expand={true} 
+              visibleToasts={6}
+              gap={10}
+              richColors 
+              closeButton 
+            />
           </NotificationProvider>
         </AuthProvider>
       </TooltipProvider>

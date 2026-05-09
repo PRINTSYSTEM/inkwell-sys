@@ -49,6 +49,7 @@ import {
   useUpdateProductionOrderItem,
   useProductionOrder,
 } from "@/hooks/use-production";
+import { useCreateStockOutForProduction } from "@/hooks/use-stock";
 import {
   Select,
   SelectContent,
@@ -63,6 +64,10 @@ import {
 } from "@/components/ui/popover";
 import { useState } from "react";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { useMaterialTypeList } from "@/hooks/use-material-type";
+import { formatDieSize } from "@/utils/format-die-size";
 
 interface ProductionListTableProps {
   isLoading: boolean;
@@ -151,6 +156,7 @@ function ProductionTableRow({
   const [openDiePopover, setOpenDiePopover] = useState(false);
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showMaterialExportDialog, setShowMaterialExportDialog] = useState(false);
 
   const isDraft = !prod.id;
   const isCreating = React.useRef(false);
@@ -166,9 +172,9 @@ function ProductionTableRow({
   const { data: proofingOrderData, isLoading: isProofingLoading } =
     useProofingOrder(
       prod.proofingOrderId || null,
-      !!prod.proofingOrderId && !prod.proofingOrder,
+      !!prod.proofingOrderId,
     );
-  const proofingOrder = (prod.proofingOrder || proofingOrderData) as any;
+  const proofingOrder = (proofingOrderData || prod.proofingOrder) as any;
 
   const { data: detailedProd, isLoading: isProdDetailLoading } =
     useProductionOrder(prod.id || null, !isDraft);
@@ -177,6 +183,7 @@ function ProductionTableRow({
 
   const { mutate: updateStep } = useUpdateProductionStep();
   const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
+  const { mutateAsync: createStockOutForProduction } = useCreateStockOutForProduction();
 
   const steps = prod.steps || [];
 
@@ -195,6 +202,13 @@ function ProductionTableRow({
   const dieCutStep = getStepStatus(steps, ["bế"], "die_cut");
   const cutStep = getStepStatus(steps, ["cắt"], "cut");
   const glueStep = getStepStatus(steps, ["dán"], "glue");
+  const specialProcessStep = steps.find(
+    (s) =>
+      s.stepType === "mounting" ||
+      s.stepType === "pressing" ||
+      (s.stepTypeName &&
+        ["bồi", "ép"].some((k) => s.stepTypeName!.toLowerCase().includes(k))),
+  ) || null;
   const packagingSteps = getSteps(
     steps,
     ["đóng gói", "giao hàng"],
@@ -210,7 +224,11 @@ function ProductionTableRow({
   const isPrintEnabled = isMaterialExportEnabled && isMaterialExportDone;
   const isPrintDone = !printStep || printStep.status === "done";
 
-  const isLaminationEnabled = isPrintEnabled && isPrintDone;
+  const isSpecialProcessEnabled = isPrintEnabled && isPrintDone;
+  const isSpecialProcessDone =
+    !specialProcessStep || specialProcessStep.status === "done";
+
+  const isLaminationEnabled = isSpecialProcessEnabled && isSpecialProcessDone;
   const isLaminationDone = !laminationStep || laminationStep.status === "done";
 
   const isDieCutEnabled = isLaminationEnabled && isLaminationDone;
@@ -271,6 +289,7 @@ function ProductionTableRow({
           inputQty: step.inputQty || defaultPrintQty || undefined,
           outputQty: step.outputQty || defaultPrintQty || undefined,
           defectQty: step.defectQty || undefined,
+          notes: (step as any).notes || (step as any).defectNotes || undefined,
         },
       });
     };
@@ -373,6 +392,11 @@ function ProductionTableRow({
       : step.outputQty != null || step.defectQty != null;
 
     const [inputQty, setInputQty] = useState(initialInputQty);
+    const [notes, setNotes] = useState(
+      isPackagingItem
+        ? productionItems.find((i: any) => i.id === productionItemId)?.notes || ""
+        : step.notes || (step as any).defectNotes || "",
+    );
     const [outputQty, setOutputQty] = useState(computedOutputQty);
     const [defectQty, setDefectQty] = useState(computedDefectQty);
     const [isEditing, setIsEditing] = useState(!hasBeenSaved);
@@ -402,15 +426,23 @@ function ProductionTableRow({
           ? initialDefectQtyOverride.toString()
           : step.defectQty?.toString() || "",
       );
+      setNotes(
+        isPackagingItem
+          ? productionItems.find((i: any) => i.id === productionItemId)?.notes || ""
+          : step.notes || (step as any).defectNotes || "",
+      );
     }, [
       isEditing,
       step.inputQty,
       step.outputQty,
       step.defectQty,
+      step.notes,
       defaultPrintQty,
       isPackagingItem,
       initialOutputQtyOverride,
       initialDefectQtyOverride,
+      productionItems,
+      productionItemId,
     ]);
 
     const handleUpdate = (
@@ -440,7 +472,7 @@ function ProductionTableRow({
               updates.defectQty !== undefined
                 ? updates.defectQty
                 : Number(defectQty) || 0,
-            notes: updates.notes || "Ghi chú đóng gói",
+            notes: updates.notes !== undefined ? updates.notes : notes,
           },
         });
       }
@@ -464,7 +496,10 @@ function ProductionTableRow({
               updates.defectQty !== undefined
                 ? updates.defectQty
                 : Number(defectQty) || 0,
+            notes: updates.notes !== undefined ? updates.notes : notes,
           },
+        }).catch(err => {
+          console.error("Lỗi cập nhật bước:", err);
         });
       }
 
@@ -482,45 +517,58 @@ function ProductionTableRow({
           </span>
         )}
         {!hideStatus && (
-          <Select
-            value={
-              !step.status || step.status === "pending" ? "ready" : step.status
-            }
-            onValueChange={(val: any) => handleUpdate({ status: val })}
-            disabled={!isEnabled}
-          >
-            <SelectTrigger
-              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""}`}
+          <>
+            <Select
+              value={
+                !step.status || step.status === "pending" ? "ready" : step.status
+              }
+              onValueChange={(val: any) => handleUpdate({ status: val })}
+              disabled={!isEnabled}
             >
-              <SelectValue placeholder="Trạng thái" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                value="ready"
-                className="text-xs font-semibold cursor-pointer"
+              <SelectTrigger
+                className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""}`}
               >
-                Sẵn sàng
-              </SelectItem>
-              <SelectItem
-                value="in_progress"
-                className="text-xs font-semibold cursor-pointer"
+                <SelectValue placeholder="Trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  value="ready"
+                  className="text-xs font-semibold cursor-pointer"
+                >
+                  Sẵn sàng
+                </SelectItem>
+                <SelectItem
+                  value="in_progress"
+                  className="text-xs font-semibold cursor-pointer"
+                >
+                  Đang thực hiện
+                </SelectItem>
+                <SelectItem
+                  value="done"
+                  className="text-xs font-semibold cursor-pointer"
+                >
+                  Hoàn thành
+                </SelectItem>
+                <SelectItem
+                  value="blocked"
+                  className="text-xs font-semibold cursor-pointer"
+                >
+                  Bị chặn/Lỗi
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {step.stepType === "material_export" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 mt-1 text-[10px] w-full bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
+                disabled={!isEnabled || step.status === "done"}
+                onClick={() => setShowMaterialExportDialog(true)}
               >
-                Đang thực hiện
-              </SelectItem>
-              <SelectItem
-                value="done"
-                className="text-xs font-semibold cursor-pointer"
-              >
-                Hoàn thành
-              </SelectItem>
-              <SelectItem
-                value="blocked"
-                className="text-xs font-semibold cursor-pointer"
-              >
-                Bị chặn/Lỗi
-              </SelectItem>
-            </SelectContent>
-          </Select>
+                Xuất nguyên liệu
+              </Button>
+            )}
+          </>
         )}
 
         {isCheckStep && !isEditing && (
@@ -550,6 +598,11 @@ function ProductionTableRow({
                 {defectQty || 0}
               </span>
             </div>
+            {notes && (
+              <div className="text-[8px] italic text-muted-foreground break-words line-clamp-2 leading-tight border-l-2 border-primary/20 pl-1 mt-0.5">
+                {notes}
+              </div>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -612,6 +665,12 @@ function ProductionTableRow({
                 onChange={(e) => setDefectQty(e.target.value)}
               />
             </div>
+            <Input
+              placeholder="Ghi chú..."
+              className="h-6 w-full text-[9px] px-1.5 py-0 bg-background"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
             <Button
               variant="default"
               size="sm"
@@ -622,6 +681,7 @@ function ProductionTableRow({
                   inputQty: Number(inputQty) || 0,
                   outputQty: Number(outputQty) || 0,
                   defectQty: Number(defectQty) || 0,
+                  notes: notes,
                 });
               }}
             >
@@ -633,15 +693,19 @@ function ProductionTableRow({
     );
   };
 
+
+
   const StepCell = ({
     step,
     isCheckStep = false,
     isEnabled = true,
+    showName = false,
     info,
   }: {
     step: ProductionStepResponse | null;
     isCheckStep?: boolean;
     isEnabled?: boolean;
+    showName?: boolean;
     info?: React.ReactNode;
   }) => {
     // If no step AND no info, show empty
@@ -663,6 +727,7 @@ function ProductionTableRow({
               step={step}
               isCheckStep={isCheckStep}
               isEnabled={isEnabled}
+              showName={showName}
             />
           )}
           {info && <div className="w-full text-center">{info}</div>}
@@ -720,7 +785,7 @@ function ProductionTableRow({
                   className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 border border-red-200 hover:border-red-300 rounded-md px-2 py-1 transition-all duration-150 w-full justify-center"
                 >
                   <XCircle className="w-3 h-3 flex-shrink-0" />
-                  Hủy lệnh SX
+                  Hủy SX
                 </button>
               )}
             </div>
@@ -730,7 +795,7 @@ function ProductionTableRow({
             </div>
           )}
         </TableCell>
-        <TableCell className="py-3 align-top min-w-[300px]">
+        <TableCell className="py-3 align-top min-w-[190px]">
           {isProofingLoading ? (
             <div className="space-y-4 animate-pulse">
               <div className="h-4 bg-muted rounded w-3/4"></div>
@@ -798,29 +863,35 @@ function ProductionTableRow({
                                 pod.design?.code ||
                                 "—"}
                             </p>
-                            <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-xs">
-                              <span className="text-muted-foreground font-medium">
-                                Số lượng:
-                              </span>
-                              <span className="font-bold text-foreground text-amber-700">
-                                {pod.quantity} sản phẩm
-                              </span>
+                            <div className="flex flex-col gap-1 text-[11px]">
+                              <div className="flex justify-between items-center gap-1 border-b border-muted/50 pb-1">
+                                <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                  Số lượng:
+                                </span>
+                                <span className="font-bold text-foreground text-amber-700 text-right">
+                                  {pod.quantity} SP
+                                </span>
+                              </div>
 
-                              <span className="text-muted-foreground font-medium">
-                                Mã thiết kế:
-                              </span>
-                              <span className="font-bold text-foreground">
-                                {pod.design?.code || "—"}
-                              </span>
+                              <div className="flex justify-between items-center gap-1 border-b border-muted/50 pb-1">
+                                <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                  Mã thiết kế:
+                                </span>
+                                <span className="font-bold text-foreground text-right truncate">
+                                  {pod.design?.code || "—"}
+                                </span>
+                              </div>
 
-                              <span className="text-muted-foreground font-medium">
-                                Kích thước:
-                              </span>
-                              <span className="font-bold text-foreground break-all">
-                                {pod.design?.dimensions
-                                  ? String(pod.design.dimensions)
-                                  : "—"}
-                              </span>
+                              <div className="flex justify-between items-center gap-1">
+                                <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                  Kích thước:
+                                </span>
+                                <span className="font-bold text-foreground text-right truncate">
+                                  {pod.design?.dimensions
+                                    ? String(pod.design.dimensions)
+                                    : "—"}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         ),
@@ -831,193 +902,74 @@ function ProductionTableRow({
 
               {/* 3. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
               <div className="flex flex-row gap-2 mt-1">
-                {((proofingOrder as any).dieExports?.length > 0 ||
-                  (proofingOrder as any).proofingOrderDies?.length > 0) && (
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Popover
-                      open={openDiePopover}
-                      onOpenChange={setOpenDiePopover}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs gap-1.5 border-dashed border-slate-300 hover:border-slate-400 dark:border-slate-700 bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-900/50"
-                          onMouseEnter={() => setOpenDiePopover(true)}
-                          onMouseLeave={() => setOpenDiePopover(false)}
-                        >
-                          <Box className="w-3.5 h-3.5 text-slate-500" />
-                          Thông tin khuôn bế
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        side="top"
-                        className="w-80 p-0 shadow-lg"
-                        onMouseEnter={() => setOpenDiePopover(true)}
-                        onMouseLeave={() => setOpenDiePopover(false)}
-                      >
-                        <div className="p-3 bg-slate-50/80 dark:bg-slate-900/80 border-b border-border/50">
-                          <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
-                            <Box className="w-3.5 h-3.5" /> Thông tin khuôn bế
-                          </span>
-                        </div>
-                        <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
-                          {(
-                            (proofingOrder as any).dieExports ||
-                            (proofingOrder as any).proofingOrderDies ||
-                            []
-                          ).map((dieExport: any, i: number) => (
-                            <div
-                              key={dieExport.id || i}
-                              className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2"
-                            >
-                              <div className="flex flex-col">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Mã số khuôn
-                                </span>
-                                <span className="font-bold text-foreground">
-                                  {dieExport.die?.code || "—"}
-                                </span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Kích thước
-                                </span>
-                                <span className="font-semibold text-foreground">
-                                  {dieExport.die
-                                    ? dieExport.die.length &&
-                                      dieExport.die.width
-                                      ? `${dieExport.die.length}x${dieExport.die.width}`
-                                      : "—"
-                                    : "—"}
-                                </span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Tình trạng khuôn
-                                </span>
-                                <span className="font-semibold text-green-600">
-                                  {dieExport.die?.location || "Có thể sử dụng"}
-                                </span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                  Ngày xuất khuôn
-                                </span>
-                                <span className="font-semibold text-foreground">
-                                  {formatDate(dieExport.createdAt)}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
-
                 {(proofingOrder as any).plateExport && (
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Popover
-                      open={openPlatePopover}
-                      onOpenChange={setOpenPlatePopover}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs gap-1.5 border-dashed border-slate-300 hover:border-slate-400 dark:border-slate-700 bg-slate-50/50 hover:bg-slate-100 dark:bg-slate-900/50"
-                          onMouseEnter={() => setOpenPlatePopover(true)}
-                          onMouseLeave={() => setOpenPlatePopover(false)}
+                  <div className="flex flex-col gap-1 w-full bg-blue-50/50 dark:bg-blue-950/20 p-2 rounded border border-blue-200/50 dark:border-blue-800/50 mt-2">
+                    <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase flex items-center gap-1.5 border-b border-blue-100 dark:border-blue-900/50 pb-1 mb-1">
+                      <FileText className="w-3 h-3" /> Thông tin kẽm
+                    </div>
+                    {[(proofingOrder as any).plateExport]
+                      .filter(Boolean)
+                      .map((plateExport: any, i: number) => (
+                        <div
+                          key={plateExport.id || i}
+                          className="flex flex-col gap-1 text-[11px]"
                         >
-                          <FileText className="w-3.5 h-3.5 text-slate-500" />
-                          Thông tin kẽm
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        side="top"
-                        className="w-80 p-0 shadow-lg"
-                        onMouseEnter={() => setOpenPlatePopover(true)}
-                        onMouseLeave={() => setOpenPlatePopover(false)}
-                      >
-                        <div className="p-3 bg-slate-50/80 dark:bg-slate-900/80 border-b border-border/50">
-                          <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
-                            <FileText className="w-3.5 h-3.5" /> Thông tin kẽm
-                          </span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground font-medium">
+                              Mã kẽm:
+                            </span>
+                            <span className="font-bold text-foreground">
+                              {plateExport.id ? `ZK${plateExport.id}` : "—"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground font-medium">
+                              Số lượng:
+                            </span>
+                            <span className="font-bold text-amber-700 dark:text-amber-500">
+                              {plateExport.plateCount || "—"} bản
+                            </span>
+                          </div>
+                          <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
+                            <span className="text-muted-foreground font-medium">
+                              Nhà cung cấp:
+                            </span>
+                            <span className="font-semibold text-foreground">
+                              {plateExport.vendorName ||
+                                plateExport.plateVendor?.name ||
+                                "Tâm An"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center border-t border-blue-100/50 dark:border-blue-900/30 pt-0.5">
+                            <span className="text-muted-foreground font-medium">
+                              Ngày xuất:
+                            </span>
+                            <span className="font-semibold text-foreground">
+                              {formatDate(
+                                plateExport.createdAt || plateExport.exportedAt,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground font-medium">
+                              Tình trạng:
+                            </span>
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">
+                              Đã nhận
+                            </span>
+                          </div>
+                          {plateExport.notes && (
+                            <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
+                              <span className="text-muted-foreground font-medium">
+                                Ghi chú:
+                              </span>
+                              <span className="italic text-muted-foreground break-words">
+                                {plateExport.notes}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="p-3 max-h-[300px] overflow-y-auto space-y-2">
-                          {[(proofingOrder as any).plateExport]
-                            .filter(Boolean)
-                            .map((plateExport: any, i: number) => (
-                              <div
-                                key={plateExport.id || i}
-                                className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-md border text-xs grid grid-cols-2 gap-y-2"
-                              >
-                                <div className="flex flex-col col-span-2">
-                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                    Mã số kẽm
-                                  </span>
-                                  <span className="font-bold text-foreground">
-                                    {plateExport.id
-                                      ? `ZK${plateExport.id}`
-                                      : "—"}
-                                  </span>
-                                </div>
-
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                    Chất liệu (NCC)
-                                  </span>
-                                  <span className="font-semibold text-foreground">
-                                    {plateExport.vendorName ||
-                                      plateExport.plateVendor?.name ||
-                                      "Tâm An"}
-                                  </span>
-                                </div>
-
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                    Số lượng / Độ dày
-                                  </span>
-                                  <span className="font-bold text-amber-700">
-                                    {plateExport.plateCount || "—"} bản
-                                  </span>
-                                </div>
-
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                    Ngày xuất kẽm
-                                  </span>
-                                  <span className="font-semibold text-foreground">
-                                    {formatDate(
-                                      plateExport.createdAt ||
-                                        plateExport.exportedAt,
-                                    )}
-                                  </span>
-                                </div>
-
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                    Tình trạng kẽm
-                                  </span>
-                                  <span className="font-semibold text-blue-600">
-                                    Đã nhận
-                                  </span>
-                                </div>
-
-                                <div className="flex flex-col col-span-2 pt-1">
-                                  <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                                    Ghi chú
-                                  </span>
-                                  <span className="font-semibold italic text-muted-foreground">
-                                    {plateExport.notes || "—"}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                      ))}
                   </div>
                 )}
               </div>
@@ -1035,17 +987,105 @@ function ProductionTableRow({
         />
         <StepCell step={printStep} isEnabled={isPrintEnabled} />
         <StepCell
+          step={specialProcessStep}
+          isEnabled={isSpecialProcessEnabled}
+          info={
+            specialProcessStep?.stepTypeName && (
+              <div className="text-[13px] font-bold text-amber-600 dark:text-amber-400 italic uppercase mt-1">
+                {specialProcessStep.stepTypeName}
+              </div>
+            )
+          }
+        />
+        <StepCell
           step={laminationStep}
           isEnabled={isLaminationEnabled}
           info={
             laminationInfo && (
-              <div className="text-[10px] font-bold text-primary border border-primary/20 px-1.5 py-0.5 rounded bg-primary/5 italic uppercase leading-tight shadow-sm inline-block">
+              <div className="text-[13px] font-bold text-primary italic uppercase mt-1">
                 {laminationInfo}
               </div>
             )
           }
         />
-        <StepCell step={dieCutStep} isEnabled={isDieCutEnabled} />
+        <StepCell
+          step={dieCutStep}
+          isEnabled={isDieCutEnabled}
+          info={
+            ((proofingOrder as any)?.dieExports?.length > 0 ||
+              (proofingOrder as any)?.proofingOrderDies?.length > 0) && (
+              <div onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const allDies = [
+                ...((proofingOrder as any).dieExports || []),
+                ...((proofingOrder as any).proofingOrderDies || []),
+              ];
+              const uniqueDies = allDies.filter(
+                (die, index, self) =>
+                  index ===
+                  self.findIndex(
+                    (d) =>
+                      (d.id && d.id === die.id) ||
+                      (d.code && d.code === die.code),
+                  ),
+              );
+
+              if (uniqueDies.length === 0) return null;
+
+              return (
+                <div className="flex flex-col gap-1.5 w-full bg-slate-50 dark:bg-slate-900/50 p-2 rounded border border-slate-200 dark:border-slate-800 mt-1">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-700 pb-1 mb-1">
+                    <Box className="w-3 h-3" /> Khuôn bế
+                  </div>
+                  {uniqueDies.map((dieExport: any, i: number) => (
+                    <div
+                      key={dieExport.id || i}
+                      className="flex flex-col gap-1 text-left text-[11px] border-b border-slate-100 dark:border-slate-800 last:border-0 pb-1.5 last:pb-0"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                          Mã khuôn:
+                        </span>
+                        <span className="font-bold text-foreground">
+                          {dieExport.code || dieExport.die?.code || "—"}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                          Kích thước:
+                        </span>
+                        <span className="font-bold text-amber-700 dark:text-amber-500">
+                          {dieExport.size ||
+                            (dieExport.die
+                              ? formatDieSize(dieExport.die)
+                              : "—")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                          Tình trạng:
+                        </span>
+                        <span className="font-bold text-green-600 dark:text-green-400">
+                          {dieExport.die?.location || "Có thể dùng"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                          Ngày xuất:
+                        </span>
+                        <span className="font-bold text-foreground">
+                          {formatDate(dieExport.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+              </div>
+            )
+          }
+        />
         <StepCell step={cutStep} isEnabled={isCutEnabled} />
         <StepCell step={glueStep} isEnabled={isGlueEnabled} />
         <TableCell
@@ -1207,6 +1247,29 @@ function ProductionTableRow({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {showMaterialExportDialog && materialExportStep && prod.id && (
+        <MaterialExportDialog
+          isOpen={showMaterialExportDialog}
+          onOpenChange={setShowMaterialExportDialog}
+          productionOrderId={prod.id}
+          proofingOrder={proofingOrder}
+          defaultPrintQty={Number(materialExportStep.inputQty) || defaultPrintQty || 1}
+          onExportSuccess={() => {
+            if (materialExportStep && materialExportStep.id && materialExportStep.status !== "done") {
+              updateStep({
+                stepId: materialExportStep.id,
+                data: {
+                  status: "done",
+                  inputQty: materialExportStep.inputQty || undefined,
+                  outputQty: materialExportStep.outputQty || undefined,
+                  defectQty: materialExportStep.defectQty || undefined,
+                }
+              });
+            }
+          }}
+        />
+      )}
     </>
   );
 }
@@ -1241,34 +1304,37 @@ export function ProductionListTable({
                 <TableHead className="h-10 font-bold text-sm text-center w-[120px] bg-muted/50 border-r border-border/50">
                   MÃ BB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[240px]">
+                <TableHead className="h-10 font-bold text-sm w-[190px]">
                   LỆNH IN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   XUẤT NL
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   IN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
+                  QUY TRÌNH ĐẶC BIỆT
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   CÁN MÀNG
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   BẾ
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   CẮT
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   DÁN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   KIỂM HÀNG
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableSkeleton cols={9} rows={5} rowHeight="h-32" />
+              <TableSkeleton cols={10} rows={5} rowHeight="h-32" />
             </TableBody>
           </Table>
         ) : productions.length === 0 ? (
@@ -1285,28 +1351,31 @@ export function ProductionListTable({
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[120px] bg-muted/50 border-r border-border/50">
                   MÃ BB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[240px]">
+                <TableHead className="h-10 font-bold text-sm w-[190px]">
                   LỆNH IN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   XUẤT NL
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   IN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
+                  QUY TRÌNH ĐẶC BIỆT
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   CÁN MÀNG
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   BẾ
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   CẮT
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   DÁN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   KIỂM HÀNG
                 </TableHead>
               </TableRow>
@@ -1400,5 +1469,105 @@ export function ProductionListTable({
         </div>
       )}
     </div>
+  );
+}
+
+export function MaterialExportDialog({
+  isOpen,
+  onOpenChange,
+  productionOrderId,
+  proofingOrder,
+  defaultPrintQty,
+  onExportSuccess,
+}: {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  productionOrderId: number;
+  proofingOrder: any;
+  defaultPrintQty: number;
+  onExportSuccess?: () => void;
+}) {
+  const { data: materialsData, isLoading: isMaterialsLoading } = useMaterialTypeList(
+    { pageSize: 100 }
+  );
+  const materials = (materialsData as any)?.items || [];
+  
+  const { mutateAsync: createStockOutForProduction, isPending } = useCreateStockOutForProduction();
+  const [quantity, setQuantity] = useState(defaultPrintQty?.toString() || "1");
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string>(
+    proofingOrder?.materialTypeId?.toString() || ""
+  );
+
+  const handleConfirm = async () => {
+    if (!selectedMaterialId) {
+      toast.error("Vui lòng chọn loại giấy");
+      return;
+    }
+    const mat = materials.find((m: any) => m.id?.toString() === selectedMaterialId);
+    
+    try {
+      await createStockOutForProduction({
+        productionOrderId,
+        itemType: "material",
+        notes: "Xuất NL cho lệnh sản xuất",
+        stockOutDate: new Date().toISOString(),
+        items: [
+          {
+            itemName: mat?.name || proofingOrder?.materialType?.name || "Nguyên liệu",
+            itemCode: mat?.code || proofingOrder?.materialType?.code || "NL",
+            unit: "Tờ",
+            quantity: Number(quantity) || 1,
+            notes: "",
+            materialId: Number(selectedMaterialId) || proofingOrder?.materialTypeId || null,
+            orderDetailId: proofingOrder?.orderDetailId || null
+          }
+        ]
+      });
+      onOpenChange(false);
+      onExportSuccess?.();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Xuất Nguyên Liệu</DialogTitle>
+          <DialogDescription>Chọn số lượng và loại giấy cần xuất</DialogDescription>
+        </DialogHeader>
+        {isMaterialsLoading ? (
+          <div className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : (
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Loại giấy</Label>
+              <Select value={selectedMaterialId} onValueChange={setSelectedMaterialId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn loại giấy" />
+                </SelectTrigger>
+                <SelectContent>
+                  {materials.map((m: any) => (
+                    <SelectItem key={m.id} value={m.id!.toString()}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Số lượng (tờ)</Label>
+              <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Hủy</Button>
+          <Button onClick={handleConfirm} disabled={isPending}>
+            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Xác nhận xuất
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

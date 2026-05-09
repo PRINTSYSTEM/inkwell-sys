@@ -64,6 +64,7 @@ import {
   useApproveDebt,
   useCreateAccountingForOrder,
 } from "@/hooks/use-accounting";
+import { useCreateDebtNotification } from "@/hooks/use-debt-notification";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
 import { useUpdateCustomer } from "@/hooks/use-customer";
 import { useCashReceipts } from "@/hooks/use-cash";
@@ -254,6 +255,7 @@ export default function AccountingOrderDetail() {
   const generateExcelMutation = useGenerateOrderExcel();
   const exportPDFMutation = useExportOrderPDF();
   const approveDebtMutation = useApproveDebt();
+  const createDebtNotificationMutation = useCreateDebtNotification();
   const createAccountingMutation = useCreateAccountingForOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
@@ -582,6 +584,25 @@ export default function AccountingOrderDetail() {
         }
 
         await refetchOrder();
+
+        // TỰ ĐỘNG GỬI THÔNG BÁO NẾU LÀ CARD THANH TOÁN (PAYMENT INFO)
+        if (cardName === "paymentInfo") {
+          const targetCustomerId = order.customerId || order.customer?.id;
+          const depositAmount = parseFloat(cardEditValues.depositAmount?.toString() || "0");
+
+          if (targetCustomerId && depositAmount > 0) {
+             const customerName = order.customerName || order.customer?.name || "—";
+             const companyName = order.customerCompanyName || order.customer?.companyName || "Khách hàng lẻ";
+             const today = new Date().toLocaleDateString("vi-VN");
+
+             await createDebtNotificationMutation.mutate({
+               type: "string",
+               subject: `Xác nhận nhận cọc #${order.orderCode || order.id}`,
+               body: `Tên: ${customerName}\nCông ty: ${companyName}\n—\nChi tiết gửi\nTrạng thái: Chưa gửi\nNgày gửi: ${today}\n—\nSố tiền cọc: ${new Intl.NumberFormat("vi-VN").format(depositAmount)}đ`,
+               customerIds: [targetCustomerId],
+             });
+          }
+        }
       }
 
       setEditingCard(null);
@@ -639,14 +660,32 @@ export default function AccountingOrderDetail() {
     }
   };
 
-  const handleUpdatePayment = () => {
+  const handleUpdatePayment = async () => {
     if (!order) return;
 
     if (order.customer?.type === "retail") {
       setDepositAmount("");
       setIsDepositDialogOpen(true);
     } else {
-      approveDebtMutation.mutate(order.id);
+      try {
+        // Sau khi duyệt công nợ, tạo thông báo công nợ
+        const targetId = order.customerId || order.customer?.id;
+        
+        if (targetId) {
+          const customerName = order.customerName || order.customer?.name || "—";
+          const companyName = order.customerCompanyName || order.customer?.companyName || "Khách hàng lẻ";
+          const today = new Date().toLocaleDateString("vi-VN");
+
+          await createDebtNotificationMutation.mutate({
+            type: "string",
+            subject: `Duyệt công nợ #${order.orderCode || order.id}`,
+            body: `Tên: ${customerName}\nCông ty: ${companyName}\n—\nChi tiết gửi\nTrạng thái: Chưa gửi\nNgày gửi: ${today}\n—\nĐơn hàng đã được duyệt công nợ thành công.`,
+            customerIds: [targetId],
+          });
+        }
+      } catch (error) {
+        console.error("❌ [Approve Debt Error]:", error);
+      }
     }
   };
 
@@ -671,17 +710,36 @@ export default function AccountingOrderDetail() {
     setIsConfirmingDeposit(true);
 
     try {
-      await updateOrderForAccounting(order.id, {
+      const result = await updateOrderForAccounting(order.id, {
         depositAmount: amount,
-        paymentMethodId: 2,
+        paymentMethodId: 2, // Tiền mặt
       } as UpdateOrderForAccountingRequest);
 
-      showRetailDepositThresholdWarning(amount, order.totalAmount);
+      // Sau khi nhận cọc thành công, gọi API tạo thông báo công nợ
+      const targetCustomerId = order.customerId || order.customer?.id || (result as any)?.customerId;
+      
+      if (targetCustomerId) {
+        const customerName = order.customerName || order.customer?.name || "—";
+        const companyName = order.customerCompanyName || order.customer?.companyName || "Khách hàng lẻ";
+        const today = new Date().toLocaleDateString("vi-VN");
 
+        await createDebtNotificationMutation.mutate({
+          type: "string",
+          subject: `Xác nhận nhận cọc #${order.orderCode || order.id}`,
+          body: `Tên: ${customerName}\nCông ty: ${companyName}\n—\nChi tiết gửi\nTrạng thái: Chưa gửi\nNgày gửi: ${today}\n—\nĐơn hàng đã nhận cọc số tiền ${new Intl.NumberFormat("vi-VN").format(amount)}đ.`,
+          customerIds: [targetCustomerId],
+        });
+      }
+
+      showRetailDepositThresholdWarning(amount, order.totalAmount);
       setIsDepositDialogOpen(false);
       setDepositAmount("");
+      
+      toast.success("Thành công", {
+        description: "Đã xác nhận nhận cọc thành công",
+      });
     } catch (error) {
-      // Error is handled by the mutation hooks
+      console.error("❌ [Deposit Flow Error]:", error);
     } finally {
       setIsConfirmingDeposit(false);
     }

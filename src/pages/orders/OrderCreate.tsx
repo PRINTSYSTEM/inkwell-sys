@@ -517,10 +517,8 @@ export default function OrderCreatePage() {
 
       // Success: navigate to order detail page
       if (result?.id) {
-        toast.success("Đã tạo đơn hàng thành công!");
         navigate(`/orders/${result.id}`);
       } else {
-        toast.success("Đã tạo đơn hàng thành công!");
         navigate("/orders");
       }
     } catch (error) {

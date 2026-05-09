@@ -4,6 +4,9 @@ import * as signalR from "@microsoft/signalr";
 import { toast } from "sonner";
 import { useAuthContext } from "@/context/auth-context";
 import { NotificationContext } from "@/context/notification-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { debtNotificationKeys } from "@/hooks/use-debt-notification";
+import { orderKeys } from "@/hooks/use-order";
 
 interface NotificationMessage {
   type: string;
@@ -16,6 +19,7 @@ interface NotificationMessage {
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const queryClient = useQueryClient();
   const { accessToken, isAuthenticated } = useAuthContext();
   const [connection, setConnection] = useState<signalR.HubConnection | null>(
     null
@@ -56,12 +60,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       .configureLogging(signalR.LogLevel.Warning)
       .build();
 
-    // Handler function để có thể remove sau
+    // Handler function để xử lý thông báo real-time
     const handleNotification = (message: NotificationMessage) => {
-      // Hiển thị toast dựa trên type
+      // 1. Hiển thị Toast thông báo cho người dùng
       toast(message.title, {
         description: message.message,
-        duration: 8000, // Cảnh báo quan trọng nên hiện lâu hơn
+        duration: 8000,
         action: message.data?.customerId
           ? {
               label: "Xem khách hàng",
@@ -70,6 +74,35 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
             }
           : undefined,
       });
+
+      // 2. Tự động làm mới dữ liệu (Refetch) dựa trên loại thông báo
+      switch (message.type) {
+        case "DebtApproved":
+        case "CustomerDebtWarning":
+          // Làm mới danh sách thông báo công nợ và số lượng trên chuông
+          queryClient.invalidateQueries({ queryKey: debtNotificationKeys.all });
+          break;
+
+        case "OrderStatusChanged":
+          // Làm mới danh sách đơn hàng và chi tiết đơn hàng nếu có ID
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+          if (message.data?.orderId) {
+            queryClient.invalidateQueries({ 
+              queryKey: orderKeys.detail(Number(message.data.orderId)) 
+            });
+          }
+          break;
+
+        case "ProductionCompleted":
+        case "ProductionStarted":
+          queryClient.invalidateQueries({ queryKey: ["productions"] });
+          break;
+
+        default:
+          // Mặc định làm mới thông báo chung
+          queryClient.invalidateQueries({ queryKey: ["notifications"] });
+          break;
+      }
     };
 
     newConnection.on("ReceiveNotification", handleNotification);

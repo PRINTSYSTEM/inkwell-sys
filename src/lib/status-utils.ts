@@ -213,6 +213,19 @@ export const processClassificationLabels: Record<string, string> =
 export const vendorTypeLabels: Record<string, string> =
   ENTITY_CONFIG.vendorTypes.values;
 
+// Hình thức sản xuất (ProductionMethod)
+export const productionMethodLabels: Record<string, string> =
+  ENTITY_CONFIG.productionMethods.values;
+
+/**
+ * Get Vietnamese label for vendor type
+ */
+export function getVendorTypeLabel(type: string | null | undefined): string {
+  if (!type) return "—";
+  const normalized = type.toLowerCase();
+  return vendorTypeLabels[normalized] || type;
+}
+
 // Vai trò người dùng (Role)
 export const roleLabels: Record<string, string> = ENTITY_CONFIG.roles.values;
 
@@ -470,6 +483,7 @@ export const statusColorMap: Record<string, string> = {
   // ===== VENDOR TYPES =====
   plate: "bg-blue-50 text-blue-700 border-blue-200",
   die: "bg-violet-50 text-violet-700 border-violet-200",
+  printing: "bg-orange-50 text-orange-700 border-orange-200",
 
   // ===== DELIVERY NOTE STATUSES =====
   draft: "bg-slate-100 text-slate-800 border-slate-200",
@@ -586,16 +600,12 @@ export const formatCurrency = (
 
   try {
     const formatOptions: Intl.NumberFormatOptions = {
-      style: "currency",
-      currency,
+      style: "decimal",
+      minimumFractionDigits: minimumFractionDigits || 0,
+      maximumFractionDigits: minimumFractionDigits || 0,
     };
-    // Only set fraction digits if explicitly provided and > 0
-    // Don't set minimumFractionDigits to 0 as it can cause display issues
-    if (minimumFractionDigits !== undefined && minimumFractionDigits > 0) {
-      formatOptions.minimumFractionDigits = minimumFractionDigits;
-      formatOptions.maximumFractionDigits = minimumFractionDigits;
-    }
-    const result = new Intl.NumberFormat("vi-VN", formatOptions).format(val);
+    
+    const result = new Intl.NumberFormat("de-DE", formatOptions).format(val);
     return result;
   } catch {
     // fallback đơn giản nếu Intl lỗi

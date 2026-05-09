@@ -38,50 +38,32 @@ export default function ARPage() {
         />
       </Helmet>
 
-      <div className="h-auto flex flex-col overflow-hidden">
-        {/* Header - Compact */}
-        <div className="flex-shrink-0 px-6 py-3 border-b bg-background">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">
-              Công nợ phải thu
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Quản lý và theo dõi công nợ phải thu từ khách hàng
-            </p>
-          </div>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Công nợ phải thu
+          </h1>
+          <p className="text-muted-foreground">
+            Quản lý và theo dõi công nợ phải thu từ khách hàng
+          </p>
         </div>
 
-        {/* Content with Tabs */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <Tabs
-            value={activeTab}
-            onValueChange={handleTabChange}
-            className="flex-1 flex flex-col min-h-0 overflow-hidden"
-          >
-            {/* Tabs */}
-            <div className="flex-shrink-0 px-6 pt-3 border-b bg-background">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="summary">Tổng hợp</TabsTrigger>
-                <TabsTrigger value="aging">Phân tích tuổi nợ</TabsTrigger>
-              </TabsList>
-            </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="summary">Công nợ</TabsTrigger>
+            <TabsTrigger value="aging">Phân tích tuổi nợ</TabsTrigger>
+          </TabsList>
 
-            {/* Tab Content */}
-            <TabsContent
-              value="summary"
-              className="flex-1 mt-0 min-h-0 overflow-hidden"
-            >
-              <ARSummaryPage />
-            </TabsContent>
+          <TabsContent value="summary" className="mt-6">
+            <ARSummaryPage />
+          </TabsContent>
 
-            <TabsContent
-              value="aging"
-              className="flex-1 mt-0 min-h-0 overflow-hidden"
-            >
-              <ARAgingPage />
-            </TabsContent>
-          </Tabs>
-        </div>
+          <TabsContent value="aging" className="mt-6">
+            <ARAgingPage />
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );

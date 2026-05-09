@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import {
   Search,
   RefreshCw,
@@ -44,8 +45,8 @@ export default function APAgingPage() {
   } = useAPAging({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    asOfDate: asOfDate ? new Date(asOfDate).toISOString() : undefined,
-    search: searchQuery || undefined,
+    asOfDate: asOfDate ? format(new Date(asOfDate), "yyyy-MM-dd") : undefined,
+    searchTerm: searchQuery || undefined,
   });
 
   const totalCurrent = apData?.items?.reduce((sum, item) => sum + (item.notDue || 0), 0) || 0;
@@ -59,8 +60,8 @@ export default function APAgingPage() {
 
   const handleExportExcel = async () => {
     await exportAging({
-      asOfDate: asOfDate ? new Date(asOfDate).toISOString() : undefined,
-      search: searchQuery || undefined,
+      asOfDate: asOfDate ? format(new Date(asOfDate), "yyyy-MM-dd") : undefined,
+      searchTerm: searchQuery || undefined,
     });
   };
 
@@ -79,8 +80,10 @@ export default function APAgingPage() {
           Làm mới
         </Button>
         <Button 
-          variant="outline" 
-          onClick={handleExportExcel}
+          variant="default" 
+          size="sm" 
+          onClick={handleExportExcel} 
+          className="h-9" 
           disabled={isExporting}
         >
           {isExporting ? (

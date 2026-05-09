@@ -28,6 +28,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStockCard } from "@/hooks/use-inventory-report";
 import { formatCurrency } from "@/lib/status-utils";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -101,28 +102,32 @@ export default function StockCardPage() {
 
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/reports/inventory/current-stock")}
+              className="shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Thẻ kho - {itemCode || "—"}
-              </h1>
-              <p className="text-muted-foreground">
-                Chi tiết nhập xuất tồn của vật tư
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold tracking-tight">
+                  Thẻ kho: {stockCardData?.itemName || "—"}
+                </h1>
+                <Badge variant="outline" className="font-mono">{itemCode}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Kho: {stockCardData?.warehouse || "—"} | Đơn vị: {stockCardData?.unit || "—"}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Làm mới
+            <DateRangePicker value={dateRange} onValueChange={setDateRange} className="w-[280px]" />
+            <Button variant="outline" size="icon" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4" />
             </Button>
             <Button variant="outline" onClick={handleExportExcel}>
               <Download className="h-4 w-4 mr-2" />
@@ -144,100 +149,34 @@ export default function StockCardPage() {
           </Alert>
         )}
 
-        {/* Item Info */}
+        {/* Summary Stats */}
         {stockCardData && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Thông tin vật tư</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Mã vật tư</p>
-                  <p className="font-medium">{stockCardData.materialTypeCode || itemCode || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Tên vật tư</p>
-                  <p className="font-medium">{stockCardData.materialTypeName || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Loại thiết kế</p>
-                  <p className="font-medium">{stockCardData.designTypeName || stockCardData.designTypeCode || "—"}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-muted/30 p-3 rounded-lg border">
+              <p className="text-xs font-medium text-muted-foreground uppercase">Đầu kỳ</p>
+              <p className="text-lg font-bold">
+                {stockCardData.openingBalance?.toLocaleString() || "0"}
+              </p>
+            </div>
+            <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-100 dark:border-green-900/30">
+              <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase">Tổng nhập</p>
+              <p className="text-lg font-bold text-green-700 dark:text-green-300">
+                {stockCardData.entries?.reduce((sum, e) => sum + (e.inQuantity || 0), 0).toLocaleString() || "0"}
+              </p>
+            </div>
+            <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30">
+              <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase">Tổng xuất</p>
+              <p className="text-lg font-bold text-red-700 dark:text-red-300">
+                {stockCardData.entries?.reduce((sum, e) => sum + (e.outQuantity || 0), 0).toLocaleString() || "0"}
+              </p>
+            </div>
+            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
+              <p className="text-xs font-medium text-primary uppercase">Cuối kỳ</p>
+              <p className="text-lg font-bold text-primary">
+                {stockCardData.closingBalance?.toLocaleString() || "0"}
+              </p>
+            </div>
           </div>
-        </div>
-
-        {/* Summary */}
-        {stockCardData && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Số dư đầu kỳ
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {stockCardData.openingBalance !== undefined
-                    ? stockCardData.openingBalance.toLocaleString()
-                    : "—"}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Tổng nhập
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {stockCardData.totalIn !== undefined
-                    ? stockCardData.totalIn.toLocaleString()
-                    : "—"}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Tổng xuất
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">
-                  {stockCardData.totalOut !== undefined
-                    ? stockCardData.totalOut.toLocaleString()
-                    : "—"}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Closing Balance */}
-        {stockCardData && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Số dư cuối kỳ</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {stockCardData.closingBalance !== undefined
-                  ? stockCardData.closingBalance.toLocaleString()
-                  : "—"}
-              </div>
-            </CardContent>
-          </Card>
         )}
 
         {/* Entries Table */}
@@ -291,7 +230,7 @@ export default function StockCardPage() {
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        <div>{entry.description || "—"}</div>
+                        <div>{entry.notes || "—"}</div>
                         {entry.voucherType && (
                           <div className="text-xs text-muted-foreground">
                             {entry.voucherType === "StockIn"
@@ -304,18 +243,18 @@ export default function StockCardPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {entry.quantity !== undefined && entry.quantity > 0 && entry.transactionType === "in"
-                        ? entry.quantity.toLocaleString()
+                      {entry.inQuantity !== undefined && entry.inQuantity > 0
+                        ? entry.inQuantity.toLocaleString()
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-red-600">
-                      {entry.quantity !== undefined && entry.quantity > 0 && entry.transactionType === "out"
-                        ? entry.quantity.toLocaleString()
+                      {entry.outQuantity !== undefined && entry.outQuantity > 0
+                        ? entry.outQuantity.toLocaleString()
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {entry.runningBalance !== undefined
-                        ? entry.runningBalance.toLocaleString()
+                      {entry.balance !== undefined
+                        ? entry.balance.toLocaleString()
                         : "—"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
