@@ -269,7 +269,7 @@ export default function CurrentStockPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge variant={item.status === "Active" ? "default" : "secondary"}>
-                        {item.status || "—"}
+                        {item.status === "Active" ? "Hoạt động" : item.status === "Inactive" ? "Ngừng hoạt động" : (item.status || "—")}
                       </Badge>
                     </TableCell>
                   </TableRow>
