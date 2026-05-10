@@ -59,10 +59,10 @@ export default function CurrentStockPage() {
   return (
     <>
       <Helmet>
-        <title>Tồn kho hiện tại | Print Production ERP</title>
+        <title>Tồn kho nguyên vật liệu | Print Production ERP</title>
         <meta
           name="description"
-          content="Xem tồn kho hiện tại của các vật tư"
+          content="Xem Tồn kho nguyên vật liệu của các vật tư"
         />
       </Helmet>
 
@@ -71,10 +71,10 @@ export default function CurrentStockPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              Tồn kho hiện tại
+              Tồn kho nguyên vật liệu
             </h1>
             <p className="text-muted-foreground">
-              Xem tồn kho hiện tại của các vật tư trong kho
+              Xem Tồn kho nguyên vật liệu của các vật tư trong kho
             </p>
           </div>
           <div className="flex items-center gap-2">

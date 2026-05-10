@@ -23,6 +23,8 @@ import {
   Edit,
   XCircle,
   AlertTriangle,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -62,6 +64,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import { Label } from "@/components/ui/label";
@@ -216,30 +232,14 @@ function ProductionTableRow({
   );
   const packagingStep = packagingSteps[0] || null;
 
-  // Dependency Logic: A step is enabled if the previous step is "done" (or doesn't exist)
+  // Không ràng buộc tuần tự nữa, tất cả đều được enable nếu không phải là draft
   const isMaterialExportEnabled = !isDraft;
-  const isMaterialExportDone =
-    !materialExportStep || materialExportStep.status === "done";
-
-  const isPrintEnabled = isMaterialExportEnabled && isMaterialExportDone;
-  const isPrintDone = !printStep || printStep.status === "done";
-
-  const isSpecialProcessEnabled = isPrintEnabled && isPrintDone;
-  const isSpecialProcessDone =
-    !specialProcessStep || specialProcessStep.status === "done";
-
-  const isLaminationEnabled = isSpecialProcessEnabled && isSpecialProcessDone;
-  const isLaminationDone = !laminationStep || laminationStep.status === "done";
-
-  const isDieCutEnabled = isLaminationEnabled && isLaminationDone;
-  const isDieCutDone = !dieCutStep || dieCutStep.status === "done";
-
-  const isCutEnabled = isDieCutEnabled && isDieCutDone;
-  const isCutDone = !cutStep || cutStep.status === "done";
-
-  const isGlueEnabled = isCutEnabled && isCutDone;
-  const isGlueDone = !glueStep || glueStep.status === "done";
-
+  const isPrintEnabled = !isDraft;
+  const isSpecialProcessEnabled = !isDraft;
+  const isLaminationEnabled = !isDraft;
+  const isDieCutEnabled = !isDraft;
+  const isCutEnabled = !isDraft;
+  const isGlueEnabled = !isDraft;
   const isPackagingEnabled = !isDraft;
 
   const defaultPrintQty =
@@ -795,6 +795,10 @@ function ProductionTableRow({
             </div>
           )}
         </TableCell>
+        <StepCell
+          step={materialExportStep}
+          isEnabled={isMaterialExportEnabled}
+        />
         <TableCell className="py-3 align-top min-w-[190px]">
           {isProofingLoading ? (
             <div className="space-y-4 animate-pulse">
@@ -903,74 +907,78 @@ function ProductionTableRow({
               {/* 3. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
               <div className="flex flex-row gap-2 mt-1">
                 {(proofingOrder as any).plateExport && (
-                  <div className="flex flex-col gap-1 w-full bg-blue-50/50 dark:bg-blue-950/20 p-2 rounded border border-blue-200/50 dark:border-blue-800/50 mt-2">
-                    <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase flex items-center gap-1.5 border-b border-blue-100 dark:border-blue-900/50 pb-1 mb-1">
-                      <FileText className="w-3 h-3" /> Thông tin kẽm
-                    </div>
-                    {[(proofingOrder as any).plateExport]
-                      .filter(Boolean)
-                      .map((plateExport: any, i: number) => (
-                        <div
-                          key={plateExport.id || i}
-                          className="flex flex-col gap-1 text-[11px]"
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground font-medium">
-                              Mã kẽm:
-                            </span>
-                            <span className="font-bold text-foreground">
-                              {plateExport.id ? `ZK${plateExport.id}` : "—"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground font-medium">
-                              Số lượng:
-                            </span>
-                            <span className="font-bold text-amber-700 dark:text-amber-500">
-                              {plateExport.plateCount || "—"} bản
-                            </span>
-                          </div>
-                          <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
-                            <span className="text-muted-foreground font-medium">
-                              Nhà cung cấp:
-                            </span>
-                            <span className="font-semibold text-foreground">
-                              {plateExport.vendorName ||
-                                plateExport.plateVendor?.name ||
-                                "Tâm An"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center border-t border-blue-100/50 dark:border-blue-900/30 pt-0.5">
-                            <span className="text-muted-foreground font-medium">
-                              Ngày xuất:
-                            </span>
-                            <span className="font-semibold text-foreground">
-                              {formatDate(
-                                plateExport.createdAt || plateExport.exportedAt,
-                              )}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground font-medium">
-                              Tình trạng:
-                            </span>
-                            <span className="font-semibold text-blue-600 dark:text-blue-400">
-                              Đã nhận
-                            </span>
-                          </div>
-                          {plateExport.notes && (
-                            <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
+                  <HoverCard>
+                    <HoverCardTrigger asChild>
+                      <div className="cursor-help text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase flex items-center justify-center gap-1.5 border border-blue-200/50 dark:border-blue-800/50 rounded bg-blue-50/50 dark:bg-blue-950/20 p-1 mt-2 w-full hover:bg-blue-100/50 dark:hover:bg-blue-900/50 transition-colors">
+                        <FileText className="w-3 h-3" /> Thông tin kẽm
+                      </div>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="w-[250px] p-2 bg-blue-50/95 dark:bg-blue-950/95 border-blue-200/50 dark:border-blue-800/50" align="start">
+                      {[(proofingOrder as any).plateExport]
+                        .filter(Boolean)
+                        .map((plateExport: any, i: number) => (
+                          <div
+                            key={plateExport.id || i}
+                            className="flex flex-col gap-1 text-[11px]"
+                          >
+                            <div className="flex justify-between items-center">
                               <span className="text-muted-foreground font-medium">
-                                Ghi chú:
+                                Mã kẽm:
                               </span>
-                              <span className="italic text-muted-foreground break-words">
-                                {plateExport.notes}
+                              <span className="font-bold text-foreground">
+                                {plateExport.id ? `ZK${plateExport.id}` : "—"}
                               </span>
                             </div>
-                          )}
-                        </div>
-                      ))}
-                  </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground font-medium">
+                                Số lượng:
+                              </span>
+                              <span className="font-bold text-amber-700 dark:text-amber-500">
+                                {plateExport.plateCount || "—"} bản
+                              </span>
+                            </div>
+                            <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
+                              <span className="text-muted-foreground font-medium">
+                                Nhà cung cấp:
+                              </span>
+                              <span className="font-semibold text-foreground">
+                                {plateExport.vendorName ||
+                                  plateExport.plateVendor?.name ||
+                                  "Tâm An"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center border-t border-blue-100/50 dark:border-blue-900/30 pt-0.5">
+                              <span className="text-muted-foreground font-medium">
+                                Ngày xuất:
+                              </span>
+                              <span className="font-semibold text-foreground">
+                                {formatDate(
+                                  plateExport.createdAt || plateExport.exportedAt,
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-muted-foreground font-medium">
+                                Tình trạng:
+                              </span>
+                              <span className="font-semibold text-blue-600 dark:text-blue-400">
+                                Đã nhận
+                              </span>
+                            </div>
+                            {plateExport.notes && (
+                              <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
+                                <span className="text-muted-foreground font-medium">
+                                  Ghi chú:
+                                </span>
+                                <span className="italic text-muted-foreground break-words">
+                                  {plateExport.notes}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </HoverCardContent>
+                  </HoverCard>
                 )}
               </div>
             </div>
@@ -981,10 +989,6 @@ function ProductionTableRow({
             </div>
           )}
         </TableCell>
-        <StepCell
-          step={materialExportStep}
-          isEnabled={isMaterialExportEnabled}
-        />
         <StepCell step={printStep} isEnabled={isPrintEnabled} />
         <StepCell
           step={specialProcessStep}
@@ -1033,53 +1037,59 @@ function ProductionTableRow({
               if (uniqueDies.length === 0) return null;
 
               return (
-                <div className="flex flex-col gap-1.5 w-full bg-slate-50 dark:bg-slate-900/50 p-2 rounded border border-slate-200 dark:border-slate-800 mt-1">
-                  <div className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-700 pb-1 mb-1">
-                    <Box className="w-3 h-3" /> Khuôn bế
-                  </div>
-                  {uniqueDies.map((dieExport: any, i: number) => (
-                    <div
-                      key={dieExport.id || i}
-                      className="flex flex-col gap-1 text-left text-[11px] border-b border-slate-100 dark:border-slate-800 last:border-0 pb-1.5 last:pb-0"
-                    >
-                      <div className="flex flex-col">
-                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                          Mã khuôn:
-                        </span>
-                        <span className="font-bold text-foreground">
-                          {dieExport.code || dieExport.die?.code || "—"}
-                        </span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                          Kích thước:
-                        </span>
-                        <span className="font-bold text-amber-700 dark:text-amber-500">
-                          {dieExport.size ||
-                            (dieExport.die
-                              ? formatDieSize(dieExport.die)
-                              : "—")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
-                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                          Tình trạng:
-                        </span>
-                        <span className="font-bold text-green-600 dark:text-green-400">
-                          {dieExport.die?.location || "Có thể dùng"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                          Ngày xuất:
-                        </span>
-                        <span className="font-bold text-foreground">
-                          {formatDate(dieExport.createdAt)}
-                        </span>
-                      </div>
+                <HoverCard>
+                  <HoverCardTrigger asChild>
+                    <div className="cursor-help text-[10px] font-bold text-slate-500 uppercase flex items-center justify-center gap-1.5 mt-1 border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-900/50 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full">
+                      <Box className="w-3 h-3" /> khuôn bế
                     </div>
-                  ))}
-                </div>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-[250px] p-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" align="center">
+                    <div className="flex flex-col gap-1.5 w-full">
+                      {uniqueDies.map((dieExport: any, i: number) => (
+                        <div
+                          key={dieExport.id || i}
+                          className="flex flex-col gap-1 text-left text-[11px] border-b border-slate-100 dark:border-slate-800 last:border-0 pb-1.5 last:pb-0"
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                              Mã khuôn:
+                            </span>
+                            <span className="font-bold text-foreground">
+                              {dieExport.code || dieExport.die?.code || "—"}
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                              Kích thước:
+                            </span>
+                            <span className="font-bold text-amber-700 dark:text-amber-500">
+                              {dieExport.size ||
+                                (dieExport.die
+                                  ? formatDieSize(dieExport.die)
+                                  : "—")}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                            <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                              Tình trạng:
+                            </span>
+                            <span className="font-bold text-green-600 dark:text-green-400">
+                              {dieExport.die?.location || "Có thể dùng"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                              Ngày xuất:
+                            </span>
+                            <span className="font-bold text-foreground">
+                              {formatDate(dieExport.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
               );
             })()}
               </div>
@@ -1304,17 +1314,17 @@ export function ProductionListTable({
                 <TableHead className="h-10 font-bold text-sm text-center w-[120px] bg-muted/50 border-r border-border/50">
                   MÃ BB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[190px]">
-                  LỆNH IN
-                </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   XUẤT NL
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm w-[190px]">
+                  LỆNH IN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   IN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
-                  QUY TRÌNH ĐẶC BIỆT
+                  QUY TRÌNH ĐB
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   CÁN MÀNG
@@ -1351,17 +1361,17 @@ export function ProductionListTable({
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[120px] bg-muted/50 border-r border-border/50">
                   MÃ BB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[190px]">
-                  LỆNH IN
-                </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   XUẤT NL
+                </TableHead>
+                <TableHead className="h-10 font-bold text-sm w-[190px]">
+                  LỆNH IN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   IN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
-                  QUY TRÌNH ĐẶC BIỆT
+                  QUY TRÌNH ĐB
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   CÁN MÀNG
@@ -1497,6 +1507,7 @@ export function MaterialExportDialog({
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>(
     proofingOrder?.materialTypeId?.toString() || ""
   );
+  const [materialSearchOpen, setMaterialSearchOpen] = useState(false);
 
   const handleConfirm = async () => {
     if (!selectedMaterialId) {
@@ -1543,16 +1554,64 @@ export function MaterialExportDialog({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Loại giấy</Label>
-              <Select value={selectedMaterialId} onValueChange={setSelectedMaterialId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn loại giấy" />
-                </SelectTrigger>
-                <SelectContent>
-                  {materials.map((m: any) => (
-                    <SelectItem key={m.id} value={m.id!.toString()}>{m.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={materialSearchOpen} onOpenChange={setMaterialSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={materialSearchOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {selectedMaterialId
+                      ? materials.find((m: any) => m.id?.toString() === selectedMaterialId)?.name || "Chọn loại giấy"
+                      : "Chọn loại giấy"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[350px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Tìm kiếm loại giấy..." />
+                    <CommandList>
+                      <CommandEmpty>Không tìm thấy loại giấy nào.</CommandEmpty>
+                      <CommandGroup>
+                        {materials.map((m: any) => (
+                          <CommandItem
+                            key={m.id}
+                            value={m.name || m.code || ""}
+                            onSelect={() => {
+                              setSelectedMaterialId(m.id!.toString());
+                              setMaterialSearchOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedMaterialId === m.id!.toString() ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {m.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
+              <Label>Kích thước giấy</Label>
+              <div className="h-9 px-3 py-2 bg-muted/50 rounded-md text-sm border flex items-center text-muted-foreground">
+                {proofingOrder?.paperSize
+                  ? [
+                      proofingOrder.paperSize.name,
+                      proofingOrder.paperSize.width && proofingOrder.paperSize.height
+                        ? `(${proofingOrder.paperSize.width} x ${proofingOrder.paperSize.height} cm)`
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")
+                  : proofingOrder?.customPaperSize || "Không xác định"}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Số lượng (tờ)</Label>

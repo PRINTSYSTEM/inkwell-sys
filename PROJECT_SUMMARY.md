@@ -37,7 +37,7 @@ Hệ thống được thiết kế theo dạng module hóa cao (Domain-Driven):
 *   **Vật tư (Materials)**: Quản lý danh mục vật tư, nguyên liệu ngành in.
 *   **Nhập kho (Stock-in)**: Từ nhà cung cấp, từ sản xuất hoàn thành, hoặc hàng trả về.
 *   **Xuất kho (Stock-out)**: Xuất cho sản xuất, xuất đi giao hàng.
-*   **Báo cáo kho**: Tồn kho hiện tại, hàng chậm luân chuyển, thẻ kho.
+*   **Báo cáo kho**: Tồn kho nguyên vật liệu, hàng chậm luân chuyển, thẻ kho.
 
 ### E. Quản lý Kế toán & Công nợ (Accounting & Debt)
 *   **Hóa đơn (Invoices)**: Xuất hóa đơn, quản lý hóa đơn điện tử (E-invoice).

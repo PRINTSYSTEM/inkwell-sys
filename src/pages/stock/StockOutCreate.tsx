@@ -167,7 +167,7 @@ export default function StockOutCreatePage() {
     } else if (item.materialId) {
       const material = materials.find((m) => m.id === item.materialId);
       if (material && material.quantity !== undefined && item.quantity > material.quantity) {
-        errors.quantity = `Số lượng vượt quá tồn kho hiện tại (${material.quantity})`;
+        errors.quantity = `Số lượng vượt quá Tồn kho nguyên vật liệu (${material.quantity})`;
       }
     }
 
