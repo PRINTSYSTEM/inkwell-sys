@@ -27,10 +27,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useCashBook } from "@/hooks/use-cash";
 import { useBankAccounts, useBankLedger } from "@/hooks/use-bank";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -49,10 +55,17 @@ export default function CashBookPage() {
     to: new Date(),
   });
   const [bookType, setBookType] = useState<"cash" | "bank">("cash");
-  const [bankAccountId, setBankAccountId] = useState<string>("all");
+  const [bankAccountId, setBankAccountId] = useState<string>("");
 
   const { data: bankAccountsData } = useBankAccounts({ pageNumber: 1, pageSize: 100 });
   const bankAccounts = bankAccountsData?.items || [];
+
+  // Set default bank account if none selected and accounts are loaded
+  useEffect(() => {
+    if (bookType === "bank" && !bankAccountId && bankAccounts.length > 0) {
+      setBankAccountId(bankAccounts[0].id?.toString() || "");
+    }
+  }, [bookType, bankAccounts, bankAccountId]);
 
   const {
     data: cashBookData,
@@ -74,7 +87,7 @@ export default function CashBookPage() {
   } = useBankLedger({
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
-    bankAccountId: bankAccountId !== "all" ? Number(bankAccountId) : undefined,
+    bankAccountId: bankAccountId ? Number(bankAccountId) : undefined,
   });
 
   const displayData = bookType === "cash" ? cashBookData : bankLedgerData;
@@ -149,46 +162,51 @@ export default function CashBookPage() {
           </Alert>
         )}
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="w-full sm:w-[200px]">
-            <Select
-              value={bookType}
-              onValueChange={(v: "cash" | "bank") => setBookType(v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Loại sổ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Tiền mặt (111)</SelectItem>
-                <SelectItem value="bank">Ngân hàng (112)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Filters & Tabs */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-muted/30 p-4 rounded-xl border">
+          <Tabs 
+            value={bookType} 
+            onValueChange={(v) => setBookType(v as "cash" | "bank")}
+            className="w-full md:w-auto"
+          >
+            <TabsList className="grid w-full grid-cols-2 h-10 p-1 bg-muted/50">
+              <TabsTrigger value="cash" className="text-sm font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
+                Tiền mặt (111)
+              </TabsTrigger>
+              <TabsTrigger value="bank" className="text-sm font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
+                Ngân hàng (112)
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          {bookType === "bank" && (
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            {bookType === "bank" && (
+              <div className="w-full sm:w-[250px]">
+                <Select
+                  value={bankAccountId}
+                  onValueChange={setBankAccountId}
+                >
+                  <SelectTrigger className="h-10 bg-background border-muted-foreground/20 focus:ring-primary/20">
+                    <SelectValue placeholder="Chọn tài khoản ngân hàng" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id?.toString() || ""}>
+                        {account.bankName} - {account.accountNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="w-full sm:w-[300px]">
-              <Select
-                value={bankAccountId}
-                onValueChange={setBankAccountId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn tài khoản ngân hàng" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả tài khoản</SelectItem>
-                  {bankAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id?.toString() || ""}>
-                      {account.bankName} - {account.accountNumber}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <DateRangePicker 
+                value={dateRange} 
+                onValueChange={setDateRange}
+                className="h-10 bg-background border-muted-foreground/20"
+              />
             </div>
-          )}
-
-          <div className="flex-1">
-            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
           </div>
         </div>
 
@@ -205,7 +223,7 @@ export default function CashBookPage() {
                 <div className="text-xl font-bold truncate">
                   {bookType === "cash" 
                     ? (displayData.cashFundName || "Tiền mặt") 
-                    : (bankAccountId === "all" ? "Tất cả ngân hàng" : bankAccounts.find(a => a.id?.toString() === bankAccountId)?.bankName || "Tài khoản")}
+                    : (bankAccounts.find(a => a.id?.toString() === bankAccountId)?.bankName || "Tài khoản")}
                 </div>
               </CardContent>
             </Card>
