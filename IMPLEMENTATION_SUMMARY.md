@@ -91,8 +91,8 @@
 - [ ] `PaymentMethodCreatePage.tsx` / `PaymentMethodEditPage.tsx` - Tạo/Sửa phương thức
 
 ### 5. UI Pages - Inventory Reports
-- [ ] `CurrentStockPage.tsx` - Tồn kho hiện tại
-- [ ] `InventorySummaryPage.tsx` - Tổng hợp tồn kho
+- [ ] `CurrentStockPage.tsx` - Tồn kho nguyên vật liệu
+- [ ] `InventorySummaryPage.tsx` - Tồn kho thành phẩm
 - [ ] `LowStockPage.tsx` - Hàng tồn kho thấp
 - [ ] `SlowMovingPage.tsx` - Hàng chậm luân chuyển
 - [ ] `StockCardPage.tsx` - Thẻ kho

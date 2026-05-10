@@ -216,7 +216,7 @@ export default function CreateMaterial() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="currentStock">Tồn kho hiện tại *</Label>
+                  <Label htmlFor="currentStock">Tồn kho nguyên vật liệu *</Label>
                   <Input 
                     id="currentStock"
                     type="number"

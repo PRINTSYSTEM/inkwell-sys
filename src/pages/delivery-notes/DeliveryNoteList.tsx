@@ -73,6 +73,7 @@ import {
   useUpdateDeliveryNoteStatus,
   useDeliveryNote,
 } from "@/hooks/use-delivery-note";
+import { useCreateStockOutForDelivery } from "@/hooks/use-stock";
 import type {
   OrderForDeliveryResponse,
   OrderDetailForDeliveryResponse,
@@ -611,6 +612,7 @@ export default function DeliveryNoteListPage() {
   };
 
   const createDeliveryNoteMutation = useCreateDeliveryNote();
+  const { mutateAsync: createStockOutForDelivery } = useCreateStockOutForDelivery();
 
 
 
@@ -801,7 +803,43 @@ export default function DeliveryNoteListPage() {
         lines,
       };
 
-      await createDeliveryNoteMutation.mutateAsync(payload as any);
+      const res = await createDeliveryNoteMutation.mutateAsync(payload as any);
+
+      // AUTO STOCK OUT FOR DELIVERY
+      if (res && res.id) {
+        // Find valid selected orders that have deliveryQty > 0
+        const validOrders = selectedOrders.filter(
+          (od) => od.orderDetailId && (deliveryQtys[od.orderDetailId] || 0) > 0
+        );
+
+        const ordersGrouped = validOrders.reduce((acc, od) => {
+          if (!od.orderId) return acc;
+          if (!acc[od.orderId]) acc[od.orderId] = [];
+          acc[od.orderId].push(od);
+          return acc;
+        }, {} as Record<number, typeof selectedOrders>);
+
+        for (const [orderIdStr, ods] of Object.entries(ordersGrouped)) {
+          const orderId = Number(orderIdStr);
+          await createStockOutForDelivery({
+            deliveryNoteId: res.id,
+            customerId: ods[0].customerId || 0,
+            orderId: orderId,
+            itemType: "product",
+            notes: "Xuất kho tự động khi tạo phiếu giao hàng",
+            stockOutDate: new Date().toISOString(),
+            items: ods.map((od) => ({
+              itemName: od.designName || "Thành phẩm",
+              itemCode: od.designCode || "SP",
+              unit: "Cái",
+              quantity: deliveryQtys[od.orderDetailId!] || 0,
+              notes: lineNotes[od.orderDetailId!] || "",
+              materialId: 0,
+              orderDetailId: od.orderDetailId || 0,
+            })),
+          }).catch((err: any) => console.error("Lỗi xuất kho tự động:", err));
+        }
+      }
 
       setSelectedOrderDetailIds(new Set());
       setDeliveryQtys({});

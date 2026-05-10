@@ -27,9 +27,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useCashBook } from "@/hooks/use-cash";
+import { useBankAccounts, useBankLedger } from "@/hooks/use-bank";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -47,16 +54,47 @@ export default function CashBookPage() {
     from: addDays(new Date(), -30),
     to: new Date(),
   });
+  const [bookType, setBookType] = useState<"cash" | "bank">("cash");
+  const [bankAccountId, setBankAccountId] = useState<string>("");
+
+  const { data: bankAccountsData } = useBankAccounts({ pageNumber: 1, pageSize: 100 });
+  const bankAccounts = bankAccountsData?.items || [];
+
+  // Set default bank account if none selected and accounts are loaded
+  useEffect(() => {
+    if (bookType === "bank" && !bankAccountId && bankAccounts.length > 0) {
+      setBankAccountId(bankAccounts[0].id?.toString() || "");
+    }
+  }, [bookType, bankAccounts, bankAccountId]);
+
   const {
     data: cashBookData,
-    isLoading,
-    isError,
-    error,
-    refetch,
+    isLoading: isCashLoading,
+    isError: isCashError,
+    error: cashError,
+    refetch: refetchCash,
   } = useCashBook({
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
   });
+
+  const {
+    data: bankLedgerData,
+    isLoading: isBankLoading,
+    isError: isBankError,
+    error: bankError,
+    refetch: refetchBank,
+  } = useBankLedger({
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    bankAccountId: bankAccountId ? Number(bankAccountId) : undefined,
+  });
+
+  const displayData = bookType === "cash" ? cashBookData : bankLedgerData;
+  const isLoading = bookType === "cash" ? isCashLoading : isBankLoading;
+  const isError = bookType === "cash" ? isCashError : isBankError;
+  const error = bookType === "cash" ? cashError : bankError;
+  const refetch = bookType === "cash" ? refetchCash : refetchBank;
 
   const handleVoucherClick = (
     voucherType: string | null | undefined,
@@ -124,25 +162,68 @@ export default function CashBookPage() {
           </Alert>
         )}
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <DateRangePicker value={dateRange} onValueChange={setDateRange} />
+        {/* Filters & Tabs */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-muted/30 p-4 rounded-xl border">
+          <Tabs 
+            value={bookType} 
+            onValueChange={(v) => setBookType(v as "cash" | "bank")}
+            className="w-full md:w-auto"
+          >
+            <TabsList className="grid w-full grid-cols-2 h-10 p-1 bg-muted/50">
+              <TabsTrigger value="cash" className="text-sm font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
+                Tiền mặt (111)
+              </TabsTrigger>
+              <TabsTrigger value="bank" className="text-sm font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm">
+                Ngân hàng (112)
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            {bookType === "bank" && (
+              <div className="w-full sm:w-[250px]">
+                <Select
+                  value={bankAccountId}
+                  onValueChange={setBankAccountId}
+                >
+                  <SelectTrigger className="h-10 bg-background border-muted-foreground/20 focus:ring-primary/20">
+                    <SelectValue placeholder="Chọn tài khoản ngân hàng" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id?.toString() || ""}>
+                        {account.bankName} - {account.accountNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="w-full sm:w-[300px]">
+              <DateRangePicker 
+                value={dateRange} 
+                onValueChange={setDateRange}
+                className="h-10 bg-background border-muted-foreground/20"
+              />
+            </div>
           </div>
         </div>
 
         {/* Summary Cards */}
-        {cashBookData && (
+        {displayData && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Quỹ
+                  {bookType === "cash" ? "Quỹ" : "Tài khoản"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {String(cashBookData.cashFundName || "—")}
+                <div className="text-xl font-bold truncate">
+                  {bookType === "cash" 
+                    ? (displayData.cashFundName || "Tiền mặt") 
+                    : (bankAccounts.find(a => a.id?.toString() === bankAccountId)?.bankName || "Tài khoản")}
                 </div>
               </CardContent>
             </Card>
@@ -154,8 +235,8 @@ export default function CashBookPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {cashBookData.openingBalance !== undefined
-                    ? formatCurrency(cashBookData.openingBalance)
+                  {displayData.openingBalance !== undefined
+                    ? formatCurrency(displayData.openingBalance)
                     : "—"}
                 </div>
               </CardContent>
@@ -163,13 +244,13 @@ export default function CashBookPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Tổng thu
+                  {bookType === "cash" ? "Tổng thu" : "Tổng Nợ (Tăng)"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {cashBookData.totalReceipt !== undefined
-                    ? formatCurrency(cashBookData.totalReceipt)
+                  {((displayData as any).totalReceipt ?? (displayData as any).totalDebit) !== undefined
+                    ? formatCurrency((displayData as any).totalReceipt ?? (displayData as any).totalDebit)
                     : "—"}
                 </div>
               </CardContent>
@@ -177,13 +258,13 @@ export default function CashBookPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Tổng chi
+                  {bookType === "cash" ? "Tổng chi" : "Tổng Có (Giảm)"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">
-                  {cashBookData.totalPayment !== undefined
-                    ? formatCurrency(cashBookData.totalPayment)
+                  {((displayData as any).totalPayment ?? (displayData as any).totalCredit) !== undefined
+                    ? formatCurrency((displayData as any).totalPayment ?? (displayData as any).totalCredit)
                     : "—"}
                 </div>
               </CardContent>
@@ -192,15 +273,15 @@ export default function CashBookPage() {
         )}
 
         {/* Closing Balance */}
-        {cashBookData && (
+        {displayData && (
           <Card>
-            <CardHeader>
-              <CardTitle>Số dư cuối kỳ</CardTitle>
+            <CardHeader className="py-4">
+              <CardTitle className="text-base font-semibold">Số dư cuối kỳ</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {cashBookData.closingBalance !== undefined
-                  ? formatCurrency(cashBookData.closingBalance)
+            <CardContent className="pb-6">
+              <div className="text-3xl font-bold text-primary">
+                {displayData.closingBalance !== undefined
+                  ? formatCurrency(displayData.closingBalance)
                   : "—"}
               </div>
             </CardContent>
@@ -216,8 +297,8 @@ export default function CashBookPage() {
                 <TableHead className="w-[140px]">Số chứng từ</TableHead>
                 <TableHead>Diễn giải</TableHead>
                 <TableHead>Đối tượng</TableHead>
-                <TableHead className="text-right">Thu</TableHead>
-                <TableHead className="text-right">Chi</TableHead>
+                <TableHead className="text-right">{bookType === "cash" ? "Thu" : "Nợ (Tăng)"}</TableHead>
+                <TableHead className="text-right">{bookType === "cash" ? "Chi" : "Có (Giảm)"}</TableHead>
                 <TableHead className="text-right">Số dư</TableHead>
                 <TableHead>Tham chiếu</TableHead>
               </TableRow>
@@ -233,8 +314,8 @@ export default function CashBookPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : !cashBookData?.entries ||
-                cashBookData.entries.length === 0 ? (
+              ) : !displayData?.entries ||
+                displayData.entries.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={8}
@@ -244,7 +325,7 @@ export default function CashBookPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                cashBookData.entries.map((entry, index) => (
+                displayData.entries.map((entry: any, index: number) => (
                   <TableRow
                     key={index}
                     className="cursor-pointer hover:bg-muted/50"
@@ -261,15 +342,15 @@ export default function CashBookPage() {
                     <TableCell>{entry.description || "—"}</TableCell>
                     <TableCell>{entry.objectName || "—"}</TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {entry.receiptAmount !== undefined &&
-                      entry.receiptAmount > 0
-                        ? formatCurrency(entry.receiptAmount)
+                      {((entry as any).receiptAmount ?? (entry as any).debitAmount) !== undefined &&
+                      ((entry as any).receiptAmount ?? (entry as any).debitAmount) > 0
+                        ? formatCurrency((entry as any).receiptAmount ?? (entry as any).debitAmount)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums text-red-600">
-                      {entry.paymentAmount !== undefined &&
-                      entry.paymentAmount > 0
-                        ? formatCurrency(entry.paymentAmount)
+                      {((entry as any).paymentAmount ?? (entry as any).creditAmount) !== undefined &&
+                      ((entry as any).paymentAmount ?? (entry as any).creditAmount) > 0
+                        ? formatCurrency((entry as any).paymentAmount ?? (entry as any).creditAmount)
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">

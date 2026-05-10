@@ -27,11 +27,14 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  useNotifications,
   useMarkNotificationAsRead,
   useMarkAllNotificationsAsRead,
   useDeleteNotification,
 } from "@/hooks/use-notifications";
+import {
+  useDebtNotifications,
+  useDebtNotificationPreview,
+} from "@/hooks/use-debt-notification";
 import { useNotification } from "@/hooks/use-notification";
 import { toast } from "sonner";
 import type { NotificationType } from "@/Schema/notification.schema";
@@ -115,13 +118,10 @@ function NotificationCenter() {
     }));
   }, []);
 
-  // Use mock data for now
-  const { data, isLoading, refetch } = useNotifications({
+  // Use real debt notifications
+  const { data: debtData, isLoading: isLoadingDebt, refetch } = useDebtNotifications({
     pageNumber: currentPage,
     pageSize,
-    isRead: activeTab === "all" ? undefined : activeTab === "read",
-    type: selectedType === "all" ? undefined : (selectedType as NotificationType),
-    search: searchQuery || undefined,
   });
 
   const markAsRead = useMarkNotificationAsRead();
@@ -147,16 +147,30 @@ function NotificationCenter() {
     };
   }, [connection, refetch]);
 
-  // Filter notifications
+  // Filter and format notifications
   const filteredNotifications = useMemo(() => {
-    let filtered = [...mockNotificationsData];
+    if (!debtData?.items) return [];
 
-    // Filter by tab
-    if (activeTab === "unread") {
-      filtered = filtered.filter((n) => !n.isRead);
-    } else if (activeTab === "read") {
-      filtered = filtered.filter((n) => n.isRead);
-    }
+    let filtered = debtData.items.map(item => ({
+      id: item.id,
+      type: (item.type || "alert") as NotificationType,
+      title: item.subject || "Thông báo công nợ",
+      message: item.body || "",
+      summary: undefined,
+      recipientId: 0,
+      recipientType: "user" as const,
+      relatedEntityType: "customer",
+      relatedEntityId: undefined,
+      status: "delivered" as const,
+      isRead: false, // Debt notifications don't seem to have isRead in the schema yet
+      readAt: undefined,
+      createdAt: item.createdAt || new Date().toISOString(),
+      updatedAt: item.createdAt || new Date().toISOString(),
+      channels: ["in_app" as const],
+      actions: [],
+      data: {},
+      tags: [],
+    }));
 
     // Filter by type
     if (selectedType !== "all") {
@@ -174,9 +188,9 @@ function NotificationCenter() {
     }
 
     return filtered;
-  }, [mockNotificationsData, activeTab, selectedType, searchQuery]);
+  }, [debtData, selectedType, searchQuery]);
 
-  const unreadCount = mockNotificationsData.filter((n) => !n.isRead).length;
+  const unreadCount = debtData?.total ?? 0;
 
   const handleMarkAsRead = async (id: number) => {
     try {
@@ -208,25 +222,9 @@ function NotificationCenter() {
     }
   };
 
-  const handleNotificationClick = (notification: typeof mockNotificationsData[0]) => {
-    // Mark as read if unread
-    if (!notification.isRead && notification.id) {
-      handleMarkAsRead(notification.id);
-    }
-
-    // Navigate to related entity if exists
-    if (notification.relatedEntityType && notification.relatedEntityId) {
-      const entityType = notification.relatedEntityType;
-      const entityId = notification.relatedEntityId;
-
-      if (entityType === "order") {
-        navigate(`/orders/${entityId}`);
-      } else if (entityType === "production") {
-        navigate(`/productions/${entityId}`);
-      } else if (entityType === "payment") {
-        navigate(`/payments/${entityId}`);
-      }
-    }
+  const handleNotificationClick = (notification: any) => {
+    // Open preview if it's a debt notification
+    navigate(`/notifications/${notification.id}/preview`);
   };
 
   const formatTime = (dateString: string) => {
@@ -347,7 +345,7 @@ function NotificationCenter() {
 
       {/* Notifications List */}
       <div className="space-y-3">
-        {isLoading ? (
+        {isLoadingDebt ? (
           <Card>
             <CardContent className="p-6 text-center text-muted-foreground">
               Đang tải...
@@ -375,12 +373,11 @@ function NotificationCenter() {
             return (
               <Card
                 key={notification.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${
+                className={`transition-all hover:shadow-md ${
                   !notification.isRead
-                    ? "border-l-4 border-l-primary bg-primary/5"
+                    ? "bg-primary/5"
                     : "opacity-75"
                 }`}
-                onClick={() => handleNotificationClick(notification)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
@@ -409,9 +406,6 @@ function NotificationCenter() {
                               Mới
                             </Badge>
                           )}
-                          <Badge variant="outline" className="text-xs">
-                            {notification.type}
-                          </Badge>
                         </div>
                       </div>
 

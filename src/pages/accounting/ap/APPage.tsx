@@ -29,13 +29,15 @@ export default function APPage() {
 
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Công nợ phải trả
-          </h1>
-          <p className="text-muted-foreground">
-            Quản lý và theo dõi công nợ phải trả cho nhà cung cấp
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Công nợ phải trả
+            </h1>
+            <p className="text-muted-foreground">
+              Quản lý và theo dõi công nợ phải trả cho nhà cung cấp
+            </p>
+          </div>
         </div>
 
         {/* Tabs */}

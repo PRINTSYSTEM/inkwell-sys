@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Package, Edit, History, Loader2, Info } from "lucide-react";
 import { format } from "date-fns";
+import { productionMethodLabels, formatCurrency } from "@/lib/status-utils";
 
 interface DetailPlateExportCardProps {
   order: any;
@@ -128,6 +129,35 @@ export function DetailPlateExportCard({
                     </div>
 
                     <div className="flex items-center gap-1 col-span-2">
+                      <span className="text-muted-foreground">Hình thức:</span>
+                      <span className="font-semibold text-foreground">
+                        {exportItem?.productionMethod === "outsource" ? (
+                          <span className="text-orange-600 dark:text-orange-400">
+                            {exportItem?.productionMethodName || productionMethodLabels.outsource || "In ngoài"}
+                          </span>
+                        ) : (
+                          <span className="text-blue-600 dark:text-blue-400">
+                            {exportItem?.productionMethodName || productionMethodLabels.in_house || "In tại xưởng"}
+                          </span>
+                        )}
+                        {exportItem?.productionMethod === "outsource" && (exportItem?.printingVendorName || exportItem?.printingVendor?.name) && (
+                          <span className="ml-1 text-muted-foreground font-normal">
+                            ({exportItem.printingVendorName || exportItem.printingVendor?.name})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    {exportItem?.productionMethod === "outsource" && (exportItem?.outsourceCost > 0) && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">Chi phí:</span>
+                        <span className="font-semibold text-orange-600">
+                          {formatCurrency(exportItem.outsourceCost)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1 col-span-2">
                       <span className="text-muted-foreground">Ngày tạo:</span>
                       <span className="font-medium text-foreground">
                         {exportItem?.createdAt || exportItem?.exportedAt
@@ -143,11 +173,11 @@ export function DetailPlateExportCard({
                   </div>
 
                   {exportItem?.notes && (
-                    <div className="pt-1.5 mt-1.5 border-t border-muted-foreground/5 items-start gap-1">
-                      <p className="text-muted-foreground text-[10px] mb-0.5">
+                    <div className="pt-2 mt-2 border-t border-muted-foreground/10 flex flex-col gap-1">
+                      <span className="font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tighter text-[9px]">
                         Ghi chú:
-                      </p>
-                      <p className="italic text-foreground/80 break-words line-clamp-2">
+                      </span>
+                      <p className="text-foreground/90 font-medium break-words leading-normal text-xs bg-amber-50/30 dark:bg-amber-900/10 p-2 rounded border border-amber-100/50 dark:border-amber-800/30">
                         {exportItem.notes}
                       </p>
                     </div>

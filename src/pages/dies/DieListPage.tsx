@@ -21,10 +21,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useDies, useDeleteDie, useUpdateDie } from "@/hooks/use-die";
 import { DieDialog } from "@/components/dies/DieDialog";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { DieResponse } from "@/Schema";
 import { dieStatusLabels, dieLocationLabels } from "@/lib/status-utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 import {
   Layers,
@@ -41,6 +43,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function DieListPage() {
   const [page, setPage] = useState(1);
@@ -320,10 +323,11 @@ export default function DieListPage() {
                         <TableHead>Kích thước</TableHead>
                         <TableHead>Nhà cung cấp</TableHead>
                         <TableHead>Vị trí</TableHead>
-                        <TableHead>Trạng thái</TableHead>
+                        <TableHead className="text-right">Giá tiền</TableHead>
+                        <TableHead className="text-center">Trạng thái</TableHead>
                         <TableHead>Mã bài</TableHead>
                         <TableHead>Ngày tạo</TableHead>
-                        <TableHead className="text-right">Thao tác</TableHead>
+                        <TableHead className="text-center">Thao tác</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -354,16 +358,20 @@ export default function DieListPage() {
                               ? dieLocationLabels[die.location]
                               : "—"}
                           </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={die.isUsable ? "default" : "destructive"}
-                            >
-                              {die.status && dieStatusLabels[die.status]
-                                ? dieStatusLabels[die.status]
-                                : die.isUsable
-                                  ? "Sử dụng được"
-                                  : "Không sử dụng được"}
-                            </Badge>
+                          <TableCell className="text-right font-medium text-primary">
+                            {die.price ? formatCurrency(die.price) : "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <StatusBadge
+                              status={die.status || (die.isUsable ? "ready" : "broken")}
+                              label={
+                                die.status && dieStatusLabels[die.status]
+                                  ? dieStatusLabels[die.status]
+                                  : die.isUsable
+                                    ? "Sử dụng được"
+                                    : "Không sử dụng được"
+                              }
+                            />
                           </TableCell>
                           <TableCell>
                             {die.firstProofingOrderCode ? (
@@ -408,30 +416,37 @@ export default function DieListPage() {
                                 )
                               : "—"}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
+                          <TableCell className="text-center py-4">
+                            <div className="flex flex-col items-center gap-1.5">
                               <Button
                                 variant="outline"
                                 size="sm"
+                                className="h-8 px-3 text-blue-600 border-blue-200 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50 transition-all w-[140px] justify-start font-medium"
                                 onClick={() => handleEdit(die)}
                               >
-                                <Edit className="h-4 w-4 mr-1" />
-                                Sửa
+                                <Edit className="h-4 w-4 mr-2" />
+                                Sửa thông tin
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
+                                className={cn(
+                                  "h-8 px-3 transition-all w-[140px] justify-start font-medium",
+                                  die.isUsable 
+                                    ? "text-orange-600 border-orange-200 hover:border-orange-400 hover:text-orange-700 hover:bg-orange-50" 
+                                    : "text-emerald-600 border-emerald-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50"
+                                )}
                                 onClick={() => handleToggleUsable(die)}
                               >
                                 {die.isUsable ? (
                                   <>
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Đánh dấu hỏng
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Báo hỏng
                                   </>
                                 ) : (
                                   <>
-                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                    Đánh dấu dùng được
+                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                    Dùng lại
                                   </>
                                 )}
                               </Button>

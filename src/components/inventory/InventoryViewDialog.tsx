@@ -92,7 +92,7 @@ export function InventoryViewDialog({
         <DialogHeader className="pb-2">
           <DialogTitle>Xem kho hàng</DialogTitle>
           <DialogDescription>
-            Danh sách tồn kho hiện tại của các vật liệu
+            Danh sách Tồn kho nguyên vật liệu của các vật liệu
           </DialogDescription>
         </DialogHeader>
 

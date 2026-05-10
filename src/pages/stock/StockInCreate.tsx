@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +45,21 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  LayoutGrid,
+  List,
+  Check,
+  ChevronsUpDown,
+  Search,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useCreateStockInFromVendor } from "@/hooks/use-stock";
 import type { StockInItemRequest } from "@/Schema/stock.schema";
 import { useVendors, useCreateVendor } from "@/hooks/use-vendor";
@@ -73,6 +100,83 @@ const generateMaterialCode = (name: string): string => {
 
   return code;
 };
+
+interface MaterialSelectorProps {
+  value?: number;
+  onSelect: (id: string) => void;
+  materials: MaterialResponse[];
+  placeholder?: string;
+  className?: string;
+}
+
+function MaterialSelector({
+  value,
+  onSelect,
+  materials,
+  placeholder = "Chọn chất liệu",
+  className,
+}: MaterialSelectorProps) {
+  const [open, setOpen] = useState(false);
+  const selectedMaterial = materials.find((m) => m.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "h-8 w-full justify-between text-xs bg-slate-50/50 font-normal",
+            className
+          )}
+        >
+          <span className="truncate">
+            {selectedMaterial
+              ? selectedMaterial.name || selectedMaterial.materialTypeName
+              : placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command>
+          <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <CommandInput
+              placeholder="Tìm chất liệu..."
+              className="h-8 border-none focus:ring-0"
+            />
+          </div>
+          <CommandList className="max-h-[300px]">
+            <CommandEmpty>Không tìm thấy chất liệu nào.</CommandEmpty>
+            <CommandGroup>
+              {materials.map((m) => (
+                <CommandItem
+                  key={m.id}
+                  value={m.name || m.materialTypeName || ""}
+                  onSelect={() => {
+                    onSelect(m.id?.toString() || "");
+                    setOpen(false);
+                  }}
+                  className="text-xs"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-3 w-3",
+                      value === m.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {m.name || m.materialTypeName}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function StockInCreatePage() {
   const navigate = useNavigate();
@@ -128,6 +232,29 @@ export default function StockInCreatePage() {
       quantity: undefined,
     }
   );
+
+  // Helper to update generated name
+  const updateMaterialName = (typeId: number, length: number, width: number | undefined) => {
+    const type = materialTypes.find(t => t.id === typeId);
+    const typeName = type ? (type.name || type.code) : "";
+    
+    let dims = "";
+    if (length > 0) {
+      dims = width !== undefined && width > 0 ? `${length}x${width}` : `${length}`;
+    }
+    
+    if (typeName && dims) return `${typeName} - ${dims}`;
+    return typeName || dims || "";
+  };
+
+  const [layoutMode, setLayoutMode] = useState<"grid" | "table">(() => {
+    const saved = localStorage.getItem("stockInLayoutMode");
+    return (saved as "grid" | "table") || "grid";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("stockInLayoutMode", layoutMode);
+  }, [layoutMode]);
 
   const [items, setItems] = useState<StockInItemRequest[]>([
     {
@@ -370,24 +497,19 @@ export default function StockInCreatePage() {
     <div className="min-h-screen bg-background">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Standard Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Quay lại
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Tạo phiếu nhập kho</h1>
-              <p className="text-muted-foreground mt-1">Thêm vật phẩm mới vào kho</p>
-            </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Tạo phiếu nhập kho</h1>
+            <p className="text-sm text-muted-foreground">Thêm vật phẩm mới vào kho một cách nhanh chóng</p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => navigate(-1)}
-              className="cursor-pointer transition-colors duration-200 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+              size="sm"
+              className="text-red-600 border-red-200 hover:bg-red-50"
             >
               Hủy
             </Button>
@@ -395,419 +517,330 @@ export default function StockInCreatePage() {
               type="submit"
               form="stock-in-form"
               disabled={isPending}
-              className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-[#93631F] to-[#7a521a] hover:opacity-90 shadow-lg shadow-[#93631F]/25 text-white border-none"
+              size="sm"
+              className="bg-[#93631F] hover:bg-[#7a521a] text-white"
             >
-              {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Đang tạo...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Tạo phiếu nhập kho
-                </>
-              )}
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              {isPending ? "Đang tạo..." : "Tạo phiếu nhập kho"}
             </Button>
           </div>
         </div>
 
-        <form id="stock-in-form" onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-          <div className="xl:col-span-5 space-y-6 flex flex-col">
-          {/* Main Information Card */}
-          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden flex-1">
-            <div className="bg-gradient-to-r bg-[#93631F]/5 px-6 py-5 border-b border-slate-200/60">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-[#93631F]/10 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-[#93631F]" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">
-                    Thông tin phiếu nhập kho
-                  </h2>
-                  <p className="text-sm text-slate-500">
-                    Điền thông tin cơ bản cho phiếu nhập kho
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label
-                      htmlFor="vendorId"
-                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
-                    >
-                      <Building2 className="h-4 w-4 text-slate-500" />
-                      Nhà cung cấp <span className="text-red-500">*</span>
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setNewVendorData({
-                          name: "",
-                          vendorType: "material",
-                          phone: "",
-                          email: "",
-                          address: "",
-                          note: "",
-                        });
-                        setIsCreateVendorDialogOpen(true);
-                      }}
-                      className="h-7 text-xs cursor-pointer transition-colors duration-200"
-                    >
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      Tạo mới
-                    </Button>
-                  </div>
+        <form id="stock-in-form" onSubmit={handleSubmit} className="space-y-6">
+          {/* Compact Main Information */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 sticky top-0 z-10 backdrop-blur-sm bg-white/95">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+              <div className="md:col-span-3 space-y-1.5">
+                <Label htmlFor="vendorId" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                  <Building2 className="h-3 w-3" /> Nhà cung cấp *
+                </Label>
+                <div className="flex gap-1">
                   <Select
                     value={formData.vendorId?.toString() || ""}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        vendorId: value ? Number(value) : null,
-                      })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, vendorId: Number(value) })}
                   >
-                    <SelectTrigger
-                      id="vendorId"
-                      className="h-11 cursor-pointer transition-colors duration-200"
-                    >
-                      <SelectValue placeholder="Chọn nhà cung cấp" />
+                    <SelectTrigger id="vendorId" className="h-9">
+                      <SelectValue placeholder="Chọn NCC" />
                     </SelectTrigger>
                     <SelectContent>
-                      {allVendors.length === 0 ? (
-                        <div className="px-2 py-1.5 text-sm text-slate-500">
-                          Không có nhà cung cấp nào
-                        </div>
-                      ) : (
-                        allVendors.map((vendor) => (
-                          <SelectItem
-                            key={vendor.id}
-                            value={vendor.id?.toString() || "0"}
-                          >
-                            {vendor.name}
-                          </SelectItem>
-                        ))
-                      )}
+                      {allVendors.map((v) => (
+                        <SelectItem key={v.id} value={v.id?.toString() || "0"}>{v.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="stockInDate"
-                    className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => setIsCreateVendorDialogOpen(true)}
                   >
-                    <Calendar className="h-4 w-4 text-slate-500" />
-                    Ngày nhập kho
-                  </Label>
-                  <Input
-                    id="stockInDate"
-                    type="datetime-local"
-                    value={
-                      formData.stockInDate
-                        ? formData.stockInDate.includes("T")
-                          ? formData.stockInDate.slice(0, 16)
-                          : formData.stockInDate + "T00:00"
-                        : new Date().toISOString().slice(0, 16)
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setFormData({
-                        ...formData,
-                        stockInDate:
-                          value || new Date().toISOString().slice(0, 16),
-                      });
-                    }}
-                    className="h-11 transition-colors duration-200"
-                  />
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label
-                  htmlFor="notes"
-                  className="text-sm font-medium text-slate-700"
-                >
-                  Ghi chú
+              <div className="md:col-span-2 space-y-1.5">
+                <Label htmlFor="stockInDate" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                  <Calendar className="h-3 w-3" /> Ngày nhập
                 </Label>
-                <Textarea
+                <Input
+                  id="stockInDate"
+                  type="datetime-local"
+                  value={formData.stockInDate.slice(0, 16)}
+                  onChange={(e) => setFormData({ ...formData, stockInDate: e.target.value })}
+                  className="h-9"
+                />
+              </div>
+
+              <div className="md:col-span-5 space-y-1.5">
+                <Label htmlFor="notes" className="text-xs font-semibold text-slate-600">Ghi chú phiếu</Label>
+                <Input
                   id="notes"
                   value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  placeholder="Nhập ghi chú cho phiếu nhập kho..."
-                  rows={3}
-                  className="resize-none transition-colors duration-200"
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Nhập ghi chú nhanh..."
+                  className="h-9"
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <Button type="button" onClick={handleAddItem} className="w-full h-9 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-sm transition-all active:scale-95 font-medium">
+                  <Plus className="h-4 w-4 mr-2" /> Thêm vật phẩm
+                </Button>
               </div>
             </div>
           </div>
-          </div>
 
-          {/* Items Card */}
-          <div className="xl:col-span-7 space-y-6 flex flex-col">
-          <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden flex-1 flex flex-col">
-            <div className="bg-gradient-to-r bg-[#93631F]/5 px-6 py-5 border-b border-slate-200/60">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-[#93631F]/10 flex items-center justify-center">
-                    <Package className="h-6 w-6 text-[#93631F]" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      Danh sách vật phẩm
-                    </h2>
-                    <p className="text-sm text-slate-500">
-                      Thêm các vật phẩm cần nhập kho
-                    </p>
-                  </div>
-                </div>
+          {/* Items Grid/Table Layout */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-[#93631F]" />
+                <h2 className="font-bold text-slate-900">Danh sách vật phẩm ({items.length})</h2>
+              </div>
+              <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={handleAddItem}
-                  className="cursor-pointer transition-colors duration-200 hover:bg-indigo-50 hover:border-indigo-300"
+                  variant={layoutMode === "grid" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setLayoutMode("grid")}
+                  className={`h-8 w-8 p-0 ${layoutMode === "grid" ? "bg-white shadow-sm text-[#93631F] hover:bg-white" : "text-slate-500 hover:text-slate-900"}`}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Thêm vật phẩm
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={layoutMode === "table" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setLayoutMode("table")}
+                  className={`h-8 w-8 p-0 ${layoutMode === "table" ? "bg-white shadow-sm text-[#93631F] hover:bg-white" : "text-slate-500 hover:text-slate-900"}`}
+                >
+                  <List className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
-              {items.map((item, index) => (
-                <div
-                  key={index}
-                  className="bg-slate-50/50 rounded-xl border border-slate-200/60 p-5 space-y-4 hover:border-slate-300/60 transition-colors duration-200"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                        <span className="text-sm font-semibold text-indigo-600">
+            {layoutMode === "grid" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map((item, index) => (
+                  <div key={index} className="group relative bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-[#93631F]/30 transition-all duration-200 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-[10px] font-bold text-slate-500">
                           {index + 1}
                         </span>
+                        <span className="text-sm font-bold text-slate-700 truncate max-w-[150px]">
+                          {item.itemName || "Sản phẩm mới"}
+                        </span>
                       </div>
-                      <span className="text-sm font-medium text-slate-700">
-                        Vật phẩm {index + 1}
-                      </span>
-                    </div>
-                    {items.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveItem(index)}
-                        className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors duration-200"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Row 1: Chọn chất liệu | Mã vật phẩm */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs font-medium text-slate-600">
-                          Chọn chất liệu
-                        </Label>
+                      {items.length > 1 && (
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setCreatingMaterialIndex(index);
-                            setNewMaterialData({
-                              name: "",
-                              materialTypeId: 0,
-                              length: 0,
-                              width: undefined,
-                              height: 0,
-                              quantity: undefined,
-                            });
-                            setIsCreateMaterialDialogOpen(true);
-                          }}
-                          className="h-7 text-xs cursor-pointer transition-colors duration-200"
+                          size="icon"
+                          onClick={() => handleRemoveItem(index)}
+                          className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50"
                         >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Tạo mới
+                          <Trash2 className="h-4 w-4" />
                         </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 gap-2">
+                        <div className="flex gap-1">
+                          <MaterialSelector
+                            value={item.materialId}
+                            onSelect={(v) => handleMaterialSelect(index, v)}
+                            materials={materials}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 hover:bg-[#93631F]/10 text-[#93631F] border-[#93631F]/20"
+                            onClick={() => {
+                              setCreatingMaterialIndex(index);
+                              setNewMaterialData({ name: "", materialTypeId: 0, length: 0, width: undefined, height: 0, quantity: undefined });
+                              setIsCreateMaterialDialogOpen(true);
+                            }}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <Input
+                          value={item.itemName}
+                          onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
+                          placeholder="Tên vật phẩm *"
+                          className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
+                        />
                       </div>
-                      <Select
-                        value={items[index].materialId?.toString() || ""}
-                        onValueChange={(value) =>
-                          handleMaterialSelect(index, value)
-                        }
-                      >
-                        <SelectTrigger className="h-10 cursor-pointer transition-colors duration-200">
-                          <SelectValue placeholder="Chọn chất liệu để tự động điền thông tin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {materials.length === 0 ? (
-                            <div className="px-2 py-1.5 text-sm text-slate-500">
-                              Không có chất liệu nào
-                            </div>
-                          ) : (
-                            materials.map((material) => (
-                              <SelectItem
-                                key={material.id}
-                                value={material.id?.toString() || ""}
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] uppercase font-bold text-slate-400">Số lượng</Label>
+                          <Input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
+                            className={`h-8 text-sm ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn vị</Label>
+                          <Input
+                            value={item.unit || ""}
+                            onChange={(e) => handleItemChange(index, "unit", e.target.value)}
+                            placeholder="vị"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
+                          <Input
+                            type="number"
+                            value={item.unitPrice ?? ""}
+                            onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? parseFloat(e.target.value) : undefined)}
+                            placeholder="0.00"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <Input
+                          value={item.notes || ""}
+                          onChange={(e) => handleItemChange(index, "notes", e.target.value)}
+                          placeholder="Ghi chú..."
+                          className="h-8 text-xs italic"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                <button 
+                  type="button"
+                  onClick={handleAddItem}
+                  className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 text-slate-400 hover:border-[#93631F]/30 hover:text-[#93631F] hover:bg-[#93631F]/5 transition-all group active:scale-95 min-h-[220px]"
+                >
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-[#93631F]/10 transition-colors">
+                    <Plus className="h-6 w-6" />
+                  </div>
+                  <span className="font-medium text-sm">Thêm dòng mới</span>
+                </button>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/50">
+                        <TableHead className="w-12 text-center">#</TableHead>
+                        <TableHead className="w-[200px]">Chất liệu</TableHead>
+                        <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
+                        <TableHead className="w-[100px] text-right">Số lượng</TableHead>
+                        <TableHead className="w-[80px]">ĐVT</TableHead>
+                        <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
+                        <TableHead>Ghi chú</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item, index) => (
+                        <TableRow key={index} className="group">
+                          <TableCell className="text-center font-medium text-slate-400">{index + 1}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <MaterialSelector
+                                value={item.materialId}
+                                onSelect={(v) => handleMaterialSelect(index, v)}
+                                materials={materials}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 text-[#93631F] hover:bg-[#93631F]/10"
+                                onClick={() => {
+                                  setCreatingMaterialIndex(index);
+                                  setNewMaterialData({ name: "", materialTypeId: 0, length: 0, width: undefined, height: 0, quantity: undefined });
+                                  setIsCreateMaterialDialogOpen(true);
+                                }}
                               >
-                                {material.name ||
-                                  material.materialTypeName ||
-                                  `Chất liệu #${material.id}`}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-600">
-                        Mã vật phẩm
-                      </Label>
-                      <Input
-                        value={item.itemCode || ""}
-                        onChange={(e) =>
-                          handleItemChange(index, "itemCode", e.target.value)
-                        }
-                        placeholder="Mã (tùy chọn)"
-                      />
-                    </div>
-
-                    {/* Row 2: Tên vật phẩm | Số lượng */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-600">
-                        Tên vật phẩm <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        value={item.itemName}
-                        onChange={(e) =>
-                          handleItemChange(index, "itemName", e.target.value)
-                        }
-                        onBlur={() => handleItemBlur(index)}
-                        placeholder="Nhập tên vật phẩm"
-                        className={
-                          itemErrors[index]?.itemName
-                            ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                            : ""
-                        }
-                      />
-                      {itemErrors[index]?.itemName && (
-                        <p className="text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {itemErrors[index].itemName}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-600">
-                        Số lượng <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="2147483647"
-                        step="1"
-                        value={item.quantity}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === "" || val === "0") {
-                            handleItemChange(index, "quantity", 1);
-                          } else {
-                            const num = parseInt(val, 10);
-                            if (!isNaN(num) && num >= 1 && num <= 2147483647) {
-                              handleItemChange(index, "quantity", num);
-                            }
-                          }
-                        }}
-                        onBlur={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          if (isNaN(val) || val < 1) {
-                            handleItemChange(index, "quantity", 1);
-                          } else if (val > 2147483647) {
-                            handleItemChange(index, "quantity", 2147483647);
-                          }
-                          handleItemBlur(index);
-                        }}
-                        className={
-                          itemErrors[index]?.quantity
-                            ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                            : ""
-                        }
-                      />
-                      {itemErrors[index]?.quantity && (
-                        <p className="text-xs text-red-500 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          {itemErrors[index].quantity}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Row 3: Đơn vị | Đơn giá */}
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-600">
-                        Đơn vị
-                      </Label>
-                      <Input
-                        value={item.unit || ""}
-                        onChange={(e) =>
-                          handleItemChange(index, "unit", e.target.value)
-                        }
-                        placeholder="Đơn vị (tùy chọn)"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-600">
-                        Đơn giá
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unitPrice ?? ""}
-                        onChange={(e) =>
-                          handleItemChange(
-                            index,
-                            "unitPrice",
-                            e.target.value
-                              ? parseFloat(e.target.value)
-                              : undefined
-                          )
-                        }
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-slate-600">
-                      Ghi chú vật phẩm
-                    </Label>
-                    <Textarea
-                      value={item.notes || ""}
-                      onChange={(e) =>
-                        handleItemChange(index, "notes", e.target.value)
-                      }
-                      placeholder="Ghi chú về vật phẩm này..."
-                      rows={2}
-                      className="resize-none text-sm"
-                    />
-                  </div>
+                                <Plus className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={item.itemName}
+                              onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
+                              placeholder="Tên..."
+                              className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
+                              className={`h-8 text-sm text-right ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={item.unit || ""}
+                              onChange={(e) => handleItemChange(index, "unit", e.target.value)}
+                              placeholder="vị"
+                              className="h-8 text-sm"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.unitPrice ?? ""}
+                              onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? parseFloat(e.target.value) : undefined)}
+                              placeholder="0"
+                              className="h-8 text-sm text-right"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={item.notes || ""}
+                              onChange={(e) => handleItemChange(index, "notes", e.target.value)}
+                              placeholder="..."
+                              className="h-8 text-sm"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {items.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveItem(index)}
+                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="hover:bg-slate-50/50 cursor-pointer" onClick={handleAddItem}>
+                        <TableCell colSpan={8} className="py-3 text-center text-[#93631F] font-bold text-xs uppercase tracking-wider">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Plus className="h-4 w-4" /> Thêm dòng vật phẩm mới
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
           </div>
         </form>
       </div>
@@ -958,7 +991,7 @@ export default function StockInCreatePage() {
                 );
               }}
               disabled={isCreatingVendor}
-              className="cursor-pointer transition-colors duration-200"
+              className="cursor-pointer transition-colors duration-200 bg-[#93631F] hover:bg-[#7a521a]"
             >
               {isCreatingVendor ? "Đang tạo..." : "Tạo nhà cung cấp"}
             </Button>
@@ -986,13 +1019,9 @@ export default function StockInCreatePage() {
               <Input
                 id="materialName"
                 value={newMaterialData.name}
-                onChange={(e) =>
-                  setNewMaterialData({
-                    ...newMaterialData,
-                    name: e.target.value,
-                  })
-                }
-                placeholder="Nhập tên chất liệu (ví dụ: Hộp Duplex 350 - 20x15x10cm)"
+                readOnly
+                className="bg-slate-50 font-medium"
+                placeholder="Tên sẽ được tự động tạo từ loại và kích thước"
               />
               {newMaterialData.name &&
                 generateMaterialCode(newMaterialData.name) && (
@@ -1001,7 +1030,7 @@ export default function StockInCreatePage() {
                       <span className="text-xs font-medium text-slate-600">
                         Mã tự động:
                       </span>
-                      <code className="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                      <code className="text-xs font-mono text-[#93631F] bg-[#93631F]/5 px-2 py-0.5 rounded">
                         {generateMaterialCode(newMaterialData.name)}
                       </code>
                     </div>
@@ -1014,12 +1043,14 @@ export default function StockInCreatePage() {
               </Label>
               <Select
                 value={newMaterialData.materialTypeId?.toString() || ""}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
+                  const typeId = Number(value);
                   setNewMaterialData({
                     ...newMaterialData,
-                    materialTypeId: Number(value),
-                  })
-                }
+                    materialTypeId: typeId,
+                    name: updateMaterialName(typeId, newMaterialData.length, newMaterialData.width)
+                  });
+                }}
               >
                 <SelectTrigger id="materialTypeId">
                   <SelectValue placeholder="Chọn loại chất liệu" />
@@ -1042,7 +1073,7 @@ export default function StockInCreatePage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="materialLength">
                   Chiều dài (m) <span className="text-red-500">*</span>
@@ -1053,12 +1084,14 @@ export default function StockInCreatePage() {
                   min="0"
                   step="0.01"
                   value={newMaterialData.length || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const length = parseFloat(e.target.value) || 0;
                     setNewMaterialData({
                       ...newMaterialData,
-                      length: parseFloat(e.target.value) || 0,
-                    })
-                  }
+                      length,
+                      name: updateMaterialName(newMaterialData.materialTypeId, length, newMaterialData.width)
+                    });
+                  }}
                   placeholder="0"
                 />
               </div>
@@ -1070,35 +1103,15 @@ export default function StockInCreatePage() {
                   min="0"
                   step="0.01"
                   value={newMaterialData.width || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const width = e.target.value === "" ? undefined : parseFloat(e.target.value) || 0;
                     setNewMaterialData({
                       ...newMaterialData,
-                      width:
-                        e.target.value === ""
-                          ? undefined
-                          : parseFloat(e.target.value) || undefined,
-                    })
-                  }
+                      width,
+                      name: updateMaterialName(newMaterialData.materialTypeId, newMaterialData.length, width)
+                    });
+                  }}
                   placeholder="0 (tùy chọn)"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="materialHeight">
-                  Chiều cao (m) <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="materialHeight"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={newMaterialData.height || ""}
-                  onChange={(e) =>
-                    setNewMaterialData({
-                      ...newMaterialData,
-                      height: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  placeholder="0"
                 />
               </div>
             </div>
@@ -1158,10 +1171,6 @@ export default function StockInCreatePage() {
                 }
                 if (newMaterialData.length <= 0) {
                   toast.error("Vui lòng nhập chiều dài lớn hơn 0");
-                  return;
-                }
-                if (!newMaterialData.height || newMaterialData.height <= 0) {
-                  toast.error("Vui lòng nhập chiều cao lớn hơn 0");
                   return;
                 }
                 createMaterial(

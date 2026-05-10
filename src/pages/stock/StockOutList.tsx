@@ -198,6 +198,9 @@ export default function StockOutListPage() {
     if (statusLower === "draft" || statusLower.includes("draft")) {
       return <StatusBadge status="draft" label="Nháp" />;
     }
+    if (statusLower === "pending" || statusLower.includes("pending")) {
+      return <StatusBadge status="pending" label="Chờ xử lý" />;
+    }
     if (statusLower === "completed" || statusLower.includes("completed")) {
       return <StatusBadge status="completed" label="Hoàn thành" />;
     }

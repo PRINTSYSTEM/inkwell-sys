@@ -21161,6 +21161,9 @@
           "processClassification": {
             "$ref": "#/components/schemas/ConstantGroup"
           },
+          "productionMethods": {
+            "$ref": "#/components/schemas/ConstantGroup"
+          },
           "vendorTypes": {
             "$ref": "#/components/schemas/ConstantGroup"
           },
@@ -26598,6 +26601,36 @@
           "isActive": {
             "type": "boolean"
           },
+          "productionMethod": {
+            "type": "string",
+            "nullable": true
+          },
+          "productionMethodName": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "printingVendorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "printingVendor": {
+            "$ref": "#/components/schemas/VendorResponse"
+          },
+          "printingVendorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "outsourceCost": {
+            "type": "number",
+            "format": "double"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "sentAt": {
             "type": "string",
             "format": "date-time",
@@ -27623,6 +27656,15 @@
           },
           "notes": {
             "type": "string",
+            "nullable": true
+          },
+          "productionMethod": {
+            "type": "string",
+            "nullable": true
+          },
+          "printingVendorId": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           }
         },
@@ -29765,6 +29807,17 @@
             "nullable": true
           },
           "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "outsourceCost": {
+            "minimum": 0,
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "completedAt": {
             "type": "string",
             "format": "date-time",
             "nullable": true

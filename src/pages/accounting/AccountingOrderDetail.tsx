@@ -64,9 +64,10 @@ import {
   useApproveDebt,
   useCreateAccountingForOrder,
 } from "@/hooks/use-accounting";
+import { useCreateDebtNotification } from "@/hooks/use-debt-notification";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
 import { useUpdateCustomer } from "@/hooks/use-customer";
-import { useCashReceipts } from "@/hooks/use-cash";
+import { useCashReceipts, useCashFunds } from "@/hooks/use-cash";
 import { useBankAccounts } from "@/hooks/use-bank";
 import type {
   UpdateOrderForAccountingRequest,
@@ -93,7 +94,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -231,11 +234,27 @@ export default function AccountingOrderDetail() {
     return method?.name?.toLowerCase().includes("chuyển khoản") || false;
   }, [cardEditValues.paymentMethodId, paymentMethodsData]);
 
+  // Check if selected payment method is Cash
+  const isCash = useMemo(() => {
+    if (!cardEditValues.paymentMethodId) return false;
+    const method = paymentMethodsData?.items?.find(
+      (m: any) =>
+        m.id?.toString() === cardEditValues.paymentMethodId?.toString(),
+    );
+    return method?.name?.toLowerCase().includes("tiền mặt") || false;
+  }, [cardEditValues.paymentMethodId, paymentMethodsData]);
+
   // Fetch bank accounts when bank transfer is selected
   const { data: bankAccountsData, isLoading: isLoadingBankAccounts } =
     useBankAccounts(
       isBankTransfer ? { pageNumber: 1, pageSize: 100 } : undefined,
     );
+
+  // Fetch cash funds (111) or bank funds (112)
+  const { data: cashFundsData } = useCashFunds(
+    isCash ? "111" : isBankTransfer ? "112" : undefined,
+  );
+
   // Order detail editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -254,6 +273,7 @@ export default function AccountingOrderDetail() {
   const generateExcelMutation = useGenerateOrderExcel();
   const exportPDFMutation = useExportOrderPDF();
   const approveDebtMutation = useApproveDebt();
+  const createDebtNotificationMutation = useCreateDebtNotification();
   const createAccountingMutation = useCreateAccountingForOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
@@ -476,9 +496,12 @@ export default function AccountingOrderDetail() {
         cardEditValues.paymentMethodId === null
           ? null
           : Number(cardEditValues.paymentMethodId);
-      // Note: cashFundId không có trong UpdateOrderForAccountingRequest schema
-      // Nếu cần thêm vào schema sau này, uncomment dòng dưới:
-      // payload.cashFundId = cardEditValues.cashFundId === "" || cardEditValues.cashFundId === null ? null : Number(cardEditValues.cashFundId);
+      // Tài khoản/Quỹ
+      if (isCash) {
+        (payload as any).financeAccountId = cardEditValues.financeAccountId ? Number(cardEditValues.financeAccountId) : undefined;
+      } else if (isBankTransfer) {
+        (payload as any).bankAccountId = cardEditValues.bankAccountId ? Number(cardEditValues.bankAccountId) : undefined;
+      }
     } else if (cardName === "recipientInfo") {
       payload.recipientName =
         cardEditValues.recipientName === "" ||
@@ -515,6 +538,13 @@ export default function AccountingOrderDetail() {
         });
         return;
       }
+
+      if (isCash && !cardEditValues.financeAccountId) {
+        toast.error("Lỗi", {
+          description: "Vui lòng chọn quỹ tiền mặt",
+        });
+        return;
+      }
     }
 
     // Validate 30% deposit threshold for retail customers BEFORE saving
@@ -548,6 +578,7 @@ export default function AccountingOrderDetail() {
               type: order.customer?.type ?? "retail",
               scrapRate: order.customer?.scrapRate ?? 0,
             },
+            suppressToast: true,
           });
         } catch (err) {
           console.error("Failed to update central customer record:", err);
@@ -582,6 +613,25 @@ export default function AccountingOrderDetail() {
         }
 
         await refetchOrder();
+
+        // TỰ ĐỘNG GỬI THÔNG BÁO NẾU LÀ CARD THANH TOÁN (PAYMENT INFO)
+        if (cardName === "paymentInfo") {
+          const targetCustomerId = order.customerId || order.customer?.id;
+          const depositAmount = parseFloat(cardEditValues.depositAmount?.toString() || "0");
+
+          if (targetCustomerId && depositAmount > 0) {
+             const customerName = order.customerName || order.customer?.name || "—";
+             const companyName = order.customerCompanyName || order.customer?.companyName || "Khách hàng lẻ";
+             const today = new Date().toLocaleDateString("vi-VN");
+
+             await createDebtNotificationMutation.mutate({
+               type: "string",
+               subject: `Xác nhận nhận cọc #${order.orderCode || order.id}`,
+               body: `Tên: ${customerName}\nCông ty: ${companyName}\n—\nChi tiết gửi\nTrạng thái: Chưa gửi\nNgày gửi: ${today}\n—\nSố tiền cọc: ${new Intl.NumberFormat("vi-VN").format(depositAmount)}đ`,
+               customerIds: [targetCustomerId],
+             });
+          }
+        }
       }
 
       setEditingCard(null);
@@ -639,14 +689,32 @@ export default function AccountingOrderDetail() {
     }
   };
 
-  const handleUpdatePayment = () => {
+  const handleUpdatePayment = async () => {
     if (!order) return;
 
     if (order.customer?.type === "retail") {
       setDepositAmount("");
       setIsDepositDialogOpen(true);
     } else {
-      approveDebtMutation.mutate(order.id);
+      try {
+        // Sau khi duyệt công nợ, tạo thông báo công nợ
+        const targetId = order.customerId || order.customer?.id;
+        
+        if (targetId) {
+          const customerName = order.customerName || order.customer?.name || "—";
+          const companyName = order.customerCompanyName || order.customer?.companyName || "Khách hàng lẻ";
+          const today = new Date().toLocaleDateString("vi-VN");
+
+          await createDebtNotificationMutation.mutate({
+            type: "string",
+            subject: `Duyệt công nợ #${order.orderCode || order.id}`,
+            body: `Tên: ${customerName}\nCông ty: ${companyName}\n—\nChi tiết gửi\nTrạng thái: Chưa gửi\nNgày gửi: ${today}\n—\nĐơn hàng đã được duyệt công nợ thành công.`,
+            customerIds: [targetId],
+          });
+        }
+      } catch (error) {
+        console.error("❌ [Approve Debt Error]:", error);
+      }
     }
   };
 
@@ -671,17 +739,36 @@ export default function AccountingOrderDetail() {
     setIsConfirmingDeposit(true);
 
     try {
-      await updateOrderForAccounting(order.id, {
+      const result = await updateOrderForAccounting(order.id, {
         depositAmount: amount,
-        paymentMethodId: 2,
+        paymentMethodId: 2, // Tiền mặt
       } as UpdateOrderForAccountingRequest);
 
-      showRetailDepositThresholdWarning(amount, order.totalAmount);
+      // Sau khi nhận cọc thành công, gọi API tạo thông báo công nợ
+      const targetCustomerId = order.customerId || order.customer?.id || (result as any)?.customerId;
+      
+      if (targetCustomerId) {
+        const customerName = order.customerName || order.customer?.name || "—";
+        const companyName = order.customerCompanyName || order.customer?.companyName || "Khách hàng lẻ";
+        const today = new Date().toLocaleDateString("vi-VN");
 
+        await createDebtNotificationMutation.mutate({
+          type: "string",
+          subject: `Xác nhận nhận cọc #${order.orderCode || order.id}`,
+          body: `Tên: ${customerName}\nCông ty: ${companyName}\n—\nChi tiết gửi\nTrạng thái: Chưa gửi\nNgày gửi: ${today}\n—\nĐơn hàng đã nhận cọc số tiền ${new Intl.NumberFormat("vi-VN").format(amount)}đ.`,
+          customerIds: [targetCustomerId],
+        });
+      }
+
+      showRetailDepositThresholdWarning(amount, order.totalAmount);
       setIsDepositDialogOpen(false);
       setDepositAmount("");
+      
+      toast.success("Thành công", {
+        description: "Đã xác nhận nhận cọc thành công",
+      });
     } catch (error) {
-      // Error is handled by the mutation hooks
+      console.error("❌ [Deposit Flow Error]:", error);
     } finally {
       setIsConfirmingDeposit(false);
     }
@@ -1098,40 +1185,93 @@ export default function AccountingOrderDetail() {
                         </Select>
                       </div>
                       {isBankTransfer && (
+                        <>
+                          <div className="space-y-2">
+                            <Label>
+                              Tài khoản ngân hàng <span className="text-destructive">*</span>
+                            </Label>
+                            <Select
+                              value={cardEditValues.bankAccountId?.toString() || ""}
+                              onValueChange={(val) =>
+                                setCardEditValues({
+                                  ...cardEditValues,
+                                  bankAccountId: val,
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Chọn tài khoản ngân hàng" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {bankAccountsData?.items?.map((acc: any) => (
+                                  <SelectItem
+                                    key={acc.id}
+                                    value={acc.id?.toString() || ""}
+                                  >
+                                    {acc.bankName ? `${acc.bankName} - ` : ""}
+                                    {acc.accountNumber} ({acc.accountName})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>
+                              Sổ quỹ (112) <span className="text-destructive">*</span>
+                            </Label>
+                            <Select
+                              value={cardEditValues.bankAccountId?.toString() || ""}
+                              onValueChange={(val) =>
+                                setCardEditValues({
+                                  ...cardEditValues,
+                                  bankAccountId: val,
+                                  financeAccountId: null,
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Chọn tài khoản ngân hàng" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {bankAccountsData?.items?.map((acc: any) => (
+                                  <SelectItem
+                                    key={acc.id}
+                                    value={acc.id?.toString() || ""}
+                                  >
+                                    {acc.bankName ? `${acc.bankName} - ` : ""}
+                                    {acc.accountNumber} ({acc.accountName})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
+
+                      {isCash && (
                         <div className="space-y-2">
                           <Label>
-                            Tài khoản thanh toán{" "}
-                            <span className="text-destructive">*</span>
+                            Sổ quỹ (111) <span className="text-destructive">*</span>
                           </Label>
                           <Select
-                            value={
-                              cardEditValues.bankAccountId?.toString() || ""
-                            }
+                            value={cardEditValues.financeAccountId?.toString() || ""}
                             onValueChange={(val) =>
                               setCardEditValues({
                                 ...cardEditValues,
-                                bankAccountId: val,
+                                financeAccountId: val,
                               })
                             }
-                            disabled={isLoadingBankAccounts}
                           >
                             <SelectTrigger>
-                              <SelectValue
-                                placeholder={
-                                  isLoadingBankAccounts
-                                    ? "Đang tải..."
-                                    : "Chọn tài khoản nhận tiền"
-                                }
-                              />
+                              <SelectValue placeholder="Chọn sổ quỹ tiền mặt" />
                             </SelectTrigger>
                             <SelectContent>
-                              {bankAccountsData?.items?.map((acc: any) => (
+                              {cashFundsData?.items?.map((fund: any) => (
                                 <SelectItem
-                                  key={acc.id}
-                                  value={acc.id?.toString() || ""}
+                                  key={fund.id}
+                                  value={fund.id?.toString() || ""}
                                 >
-                                  {acc.bankName ? `${acc.bankName} - ` : ""}
-                                  {acc.accountNumber} ({acc.accountName})
+                                  {fund.code} - {fund.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1209,6 +1349,46 @@ export default function AccountingOrderDetail() {
                                 - Cần xử lý gấp
                               </p>
                             </div>
+                          </div>
+                        </div>
+                      )}
+                      {/* Linked Receipts List */}
+                      {cashReceiptsData?.items && cashReceiptsData.items.filter(r => r.orderId === order?.id).length > 0 && (
+                        <div className="pt-4 mt-2 border-t space-y-3">
+                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                            <Receipt className="h-3 w-3" />
+                            Phiếu thu liên quan
+                          </h4>
+                          <div className="space-y-2">
+                            {cashReceiptsData.items
+                              .filter(r => r.orderId === order?.id)
+                              .map((receipt) => (
+                                <div 
+                                  key={receipt.id}
+                                  className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer group"
+                                  onClick={() => navigate(`/accounting/cash-receipts/${receipt.id}`)}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-primary group-hover:underline">
+                                      {receipt.code}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {formatDate(receipt.createdAt)}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-sm font-semibold">
+                                      {formatCurrency(receipt.totalAmount || 0)}
+                                    </span>
+                                    <Badge 
+                                      variant={receipt.status === "posted" ? "success" : "secondary"}
+                                      className="text-[10px] h-4 px-1"
+                                    >
+                                      {receipt.status === "posted" ? "Đã ghi sổ" : receipt.status === "approved" ? "Đã duyệt" : "Bản thảo"}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
                           </div>
                         </div>
                       )}
@@ -1585,21 +1765,19 @@ export default function AccountingOrderDetail() {
                           placeholder="Nhập email"
                         />
                       </div>
-                      {customerType === "company" && (
-                        <div className="space-y-2">
-                          <Label>Mã số thuế</Label>
-                          <Input
-                            value={cardEditValues.customerTaxCode || ""}
-                            onChange={(e) =>
-                              setCardEditValues({
-                                ...cardEditValues,
-                                customerTaxCode: e.target.value,
-                              })
-                            }
-                            placeholder="Nhập mã số thuế"
-                          />
-                        </div>
-                      )}
+                      <div className="space-y-2">
+                        <Label>Mã số thuế</Label>
+                        <Input
+                          value={cardEditValues.customerTaxCode || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerTaxCode: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập mã số thuế"
+                        />
+                      </div>
                       <div className="space-y-2">
                         <Label>Địa chỉ *</Label>
                         <Textarea
@@ -1677,20 +1855,18 @@ export default function AccountingOrderDetail() {
                           </div>
                         </div>
                       )}
-                      {/* Hiển thị mã số thuế cho khách hàng công ty */}
-                      {customerType === "company" && (
-                        <div className="flex items-start gap-3">
-                          <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              Mã số thuế
-                            </p>
-                            <p className="font-medium font-mono">
-                              {order.customerTaxCode || "—"}
-                            </p>
-                          </div>
+                      {/* Hiển thị mã số thuế cho khách hàng */}
+                      <div className="flex items-start gap-3">
+                        <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Mã số thuế
+                          </p>
+                          <p className="font-medium font-mono">
+                            {order.customerTaxCode || "—"}
+                          </p>
                         </div>
-                      )}
+                      </div>
                       {order.customerAddress && (
                         <div className="flex items-start gap-3">
                           <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />

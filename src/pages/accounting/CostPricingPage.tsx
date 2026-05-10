@@ -42,6 +42,7 @@ import {
   AlertCircle,
   CircleDollarSign,
   Users,
+  Printer,
 } from "lucide-react";
 import { usePlateExports, useUpdatePlateExport } from "@/hooks/use-plate-export";
 import { useDies, useUpdateDie } from "@/hooks/use-die";
@@ -342,6 +343,9 @@ function PlateTab() {
                       <TableHead className="font-semibold text-slate-700 text-right">
                         Thành tiền
                       </TableHead>
+                      <TableHead className="font-semibold text-slate-700 text-center">
+                        Trạng thái giá
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -388,6 +392,21 @@ function PlateTab() {
                           </TableCell>
                           <TableCell className="text-right font-semibold text-slate-800 tabular-nums">
                             {formatVND(totalCost)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {(plate as { unitPrice?: number }).unitPrice ? (
+                              <Badge className="bg-green-100 text-green-700 border-green-200 border">
+                                Đã có giá
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-orange-600 border-orange-300 bg-orange-50"
+                                title="Đang dùng giá mặc định"
+                              >
+                                Giá mặc định
+                              </Badge>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -715,6 +734,257 @@ function DieTab() {
 
 
 // ───────────────────────────────────────────────────────
+// Nhà in (Printer) Tab
+// ───────────────────────────────────────────────────────
+function PrinterTab() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [vendorId, setVendorId] = useState<string>("");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [savingId, setSavingId] = useState<number | null>(null);
+
+  const { data: vendorsData } = useActiveVendors();
+  // Fetch plate exports, but we will filter client-side for print vendors if API doesn't support it directly.
+  // Actually, some plate exports are used to track printing outsource cost.
+  const { data, isLoading, refetch } = usePlateExports({
+    pageNumber: page,
+    pageSize: 100, // Fetch more since we filter client side
+    search: search || undefined,
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+  } as any);
+  const { mutateAsync: updatePlate } = useUpdatePlateExport();
+
+  // Lọc chỉ những bản ghi có thuê ngoài in
+  const allItems = data?.items ?? [];
+  const items = allItems.filter(
+    (p: any) => p.productionMethod === "outsource" || p.printingVendorId || p.printingVendorName
+  );
+  
+  // Filter by selected vendor
+  const displayItems = items.filter((p: any) => {
+    if (!vendorId || vendorId === "all") return true;
+    return p.printingVendorId?.toString() === vendorId;
+  });
+
+  // Calculate local pagination
+  const pageSize = 15;
+  const totalPages = Math.max(1, Math.ceil(displayItems.length / pageSize));
+  const currentItems = displayItems.slice((page - 1) * pageSize, page * pageSize);
+
+  const handleSavePrice = async (id: number, price: number) => {
+    const plate = items.find((p: any) => p.id === id);
+    if (!plate) return;
+
+    setSavingId(id);
+    try {
+      await updatePlate({
+        id,
+        data: {
+          plateCount: plate.plateCount ?? 0,
+          unitPrice: plate.unitPrice ?? 0,
+          outsourceCost: price,
+          estimatedReceiveAt: plate.estimatedReceiveAt || undefined,
+          receivedAt: plate.receivedAt || undefined,
+        } as any,
+      });
+      toast.success(`Đã cập nhật chi phí nhà in: ${formatVND(price)}`);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <Card className="border-slate-200/60 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Tìm theo mã bình bài..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9 h-10"
+              />
+            </div>
+            <Select
+              value={vendorId || "all"}
+              onValueChange={(v) => {
+                setVendorId(v === "all" ? "" : v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-10 w-48">
+                <SelectValue placeholder="Nhà in" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả Nhà in</SelectItem>
+                {vendorsData?.filter(v => v.type === "printing" || !v.type).map((v) => (
+                  <SelectItem key={v.id} value={String(v.id)}>
+                    {v.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+              className="w-[140px] h-10"
+              title="Từ ngày"
+            />
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+              className="w-[140px] h-10"
+              title="Đến ngày"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10"
+              onClick={() => refetch()}
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
+              />
+              Làm mới
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card className="border-slate-200/60 shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-7 w-7 animate-spin text-[#93631F]" />
+              <span className="ml-3 text-slate-500">Đang tải...</span>
+            </div>
+          ) : currentItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+              <Printer className="h-12 w-12 mb-3 text-slate-300" />
+              <p className="font-medium">Không có dữ liệu nhà in</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-[#93631F]/5 border-b border-slate-200/60">
+                      <TableHead className="font-semibold text-slate-700">
+                        Mã bình bài
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700">
+                        Nhà in
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700">
+                        Ngày nhận
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700 w-[280px]">
+                        Chi phí thuê ngoài
+                      </TableHead>
+                      <TableHead className="font-semibold text-slate-700 text-center">
+                        Trạng thái giá
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentItems.map((plate: any) => {
+                      const cost = plate.outsourceCost ?? 0;
+                      return (
+                        <TableRow
+                          key={plate.id}
+                          className="group hover:bg-[#93631F]/5 transition-colors border-b border-slate-100"
+                        >
+                          <TableCell className="font-mono font-medium text-sm">
+                            <Link 
+                              to={`/proofing/${plate.proofingOrderId}`} 
+                              className="text-[#93631F] hover:text-[#7A521A] hover:underline transition-colors"
+                              target="_blank"
+                            >
+                              {plate.proofingOrderCode || `BB-${plate.proofingOrderId}`}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-700">
+                            {plate.printingVendorName || "—"}
+                          </TableCell>
+                          <TableCell className="text-sm text-slate-600">
+                            {formatDateTime(plate.receivedAt || plate.estimatedReceiveAt)}
+                          </TableCell>
+                          <TableCell>
+                            <InlinePriceCell
+                              id={plate.id!}
+                              currentPrice={cost}
+                              defaultValue={0}
+                              onSave={handleSavePrice}
+                              isSaving={savingId === plate.id}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {cost > 0 ? (
+                              <Badge className="bg-green-100 text-green-700 border-green-200 border">
+                                Đã có giá
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-orange-600 border-orange-300 bg-orange-50"
+                              >
+                                Chưa có giá
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Pagination */}
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 bg-slate-50/50">
+                <span className="text-sm text-slate-500">
+                  Trang <strong>{page}</strong> / <strong>{totalPages}</strong>
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    Trước
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={page === totalPages}
+                  >
+                    Sau
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────
 // Main Page
 // ───────────────────────────────────────────────────────
 export default function CostPricingPage() {
@@ -759,6 +1029,13 @@ export default function CostPricingPage() {
                 <Scissors className="h-4 w-4" />
                 Khuôn bế
               </TabsTrigger>
+              <TabsTrigger
+                value="printers"
+                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#93631F]"
+              >
+                <Printer className="h-4 w-4" />
+                Nhà in
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="plates" className="mt-6">
@@ -766,6 +1043,9 @@ export default function CostPricingPage() {
             </TabsContent>
             <TabsContent value="dies" className="mt-6">
               <DieTab />
+            </TabsContent>
+            <TabsContent value="printers" className="mt-6">
+              <PrinterTab />
             </TabsContent>
           </Tabs>
         </div>

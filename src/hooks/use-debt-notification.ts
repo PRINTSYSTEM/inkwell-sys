@@ -81,10 +81,6 @@ export const useCreateDebtNotification = () => {
         queryKey: debtNotificationKeys.all,
       });
 
-      toast.success("Thành công", {
-        description: "Đã tạo thông báo công nợ",
-      });
-
       return result;
     } catch (err: unknown) {
       const error = err as {

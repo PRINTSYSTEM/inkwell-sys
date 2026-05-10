@@ -98,6 +98,7 @@ export const useCreateInvoice = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] }); // Refresh orders to update not_issued count
       if (data.orders?.[0]?.orderId) {
         queryClient.invalidateQueries({
           queryKey: ["invoices", "by-order", data.orders[0].orderId],

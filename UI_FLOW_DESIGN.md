@@ -130,21 +130,21 @@ Dựa trên các schema mới được cập nhật, hệ thống cần các flo
 
 ## 5. Inventory Reports (Báo cáo tồn kho)
 
-### 5.1 Current Stock (Tồn kho hiện tại)
+### 5.1 Current Stock (Tồn kho nguyên vật liệu)
 - **Route**: `/reports/inventory/current-stock`
 - **Pages**:
-  - `CurrentStockPage.tsx` - Tồn kho hiện tại
+  - `CurrentStockPage.tsx` - Tồn kho nguyên vật liệu
 - **Features**:
   - Danh sách tồn kho theo materialType, designType
   - Filter và search
   - Export Excel
 
-### 5.2 Inventory Summary (Tổng hợp tồn kho)
+### 5.2 Inventory Summary (Tồn kho thành phẩm)
 - **Route**: `/reports/inventory/summary`
 - **Pages**:
-  - `InventorySummaryPage.tsx` - Tổng hợp tồn kho
+  - `InventorySummaryPage.tsx` - Tồn kho thành phẩm
 - **Features**:
-  - Tổng hợp tồn kho theo ngày
+  - Tồn kho thành phẩm theo ngày
   - Filter theo materialType, designType, asOfDate
 
 ### 5.3 Low Stock (Hàng tồn kho thấp)
@@ -266,8 +266,8 @@ Kế toán
 
 Báo cáo
 ├── Tồn kho
-│   ├── Tồn kho hiện tại
-│   ├── Tổng hợp tồn kho
+│   ├── Tồn kho nguyên vật liệu
+│   ├── Tồn kho thành phẩm
 │   ├── Hàng tồn kho thấp
 │   ├── Hàng chậm luân chuyển
 │   └── Thẻ kho

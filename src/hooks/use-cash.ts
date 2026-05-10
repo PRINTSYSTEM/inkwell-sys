@@ -584,23 +584,32 @@ export const useCashBook = (params?: CashBookListParams) => {
   });
 };
 
-// ================== CASH FUND (DUMMY/LEGACY) ==================
+// ================== FINANCE ACCOUNTS ==================
 
-export const useCashFunds = (params?: any) => {
+export const useFinanceAccountTree = (params?: { fromDate?: string; toDate?: string }) => {
   return useQuery({
-    queryKey: ["cash-funds", params],
+    queryKey: ["finance-account-tree", params],
     queryFn: async () => {
-      // If the endpoint was removed, we return a mock or empty list to prevent crashes
-      // Based on usage, it expects { items: [] }
+      const res = await apiRequest.get<any[]>(API_SUFFIX.FINANCE_ACCOUNTS_TREE, {
+        params,
+      });
+      return res.data;
+    },
+  });
+};
+
+export const useCashFunds = (q: string = "111") => {
+  return useQuery({
+    queryKey: ["cash-funds", q],
+    queryFn: async () => {
+      const res = await apiRequest.get<any[]>(API_SUFFIX.FINANCE_ACCOUNTS_SEARCH, {
+        params: { q },
+      });
+      // Filter leaf accounts: 1111 for cash, 1121 for bank transfers
+      const leafAccounts = res.data.filter(acc => acc.code === "1111" || acc.code === "1121");
       return {
-        items: [
-          { id: 1, code: "CASH_MAIN", name: "Quỹ tiền mặt chính", isActive: true },
-          { id: 2, code: "CASH_PETTY", name: "Quỹ tiền lẻ", isActive: true },
-        ],
-        total: 2,
-        page: 1,
-        size: 1000,
-        totalPages: 1,
+        items: leafAccounts,
+        total: leafAccounts.length,
       };
     },
   });

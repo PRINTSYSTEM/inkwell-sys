@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  useCustomerDebtHistory,
   useCustomerMonthlyDebt,
+  useCustomerDebtHistory,
+  useCustomerStatistics,
 } from "@/hooks/use-customer";
 import type { CustomerMonthlyDebtResponse } from "@/Schema/customer.schema";
 
-type DebtFilterType = "payment" | "invoice";
 
 interface DebtTabProps {
   customerId: number;
@@ -26,7 +26,6 @@ interface DebtTabProps {
 }
 
 export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
-  const [filterType, setFilterType] = useState<DebtFilterType>("payment");
   const [dateRange, setDateRange] = useState<"3m" | "6m" | "12m" | "custom">(
     "6m"
   );
@@ -43,11 +42,14 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
 
   const { startDate, endDate } = getDateRange();
 
+  const { data: customerStats, isLoading: isLoadingStats } =
+    useCustomerStatistics(customerId, isActive);
+
   const { data: debtHistoryData, isLoading: isLoadingHistory } =
     useCustomerDebtHistory(
       customerId,
       {
-        filterType,
+        filterType: "payment",
         startDate,
         endDate,
       },
@@ -57,9 +59,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   const { data: monthlyDebtData, isLoading: isLoadingMonthly } =
     useCustomerMonthlyDebt(
       customerId,
-      {
-        year: new Date().getFullYear(),
-      },
+      {}, // Remove hardcoded current year to show all available monthly data
       isActive
     );
 
@@ -78,57 +78,54 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   // Handle monthlyDebtData - could be array or single object
   // Note: API might return array when month is not specified, but schema says single object
   // Handle both cases for safety
-  const monthlyDebtArray: CustomerMonthlyDebtResponse[] = Array.isArray(monthlyDebtData)
-    ? monthlyDebtData
-    : monthlyDebtData
-    ? [monthlyDebtData]
-    : [];
+  const monthlyDebtArray: CustomerMonthlyDebtResponse[] = useMemo(() => {
+    const arr = Array.isArray(monthlyDebtData)
+      ? monthlyDebtData
+      : monthlyDebtData
+      ? [monthlyDebtData]
+      : [];
 
-  // Calculate summary stats from monthlyDebtArray
-  const totalIncrease = monthlyDebtArray.reduce((sum: number, m: CustomerMonthlyDebtResponse) => {
-    const changeInMonth = m.changeInMonth ?? 0;
-    return sum + (changeInMonth > 0 ? changeInMonth : 0);
-  }, 0);
-  const totalDecrease = monthlyDebtArray.reduce((sum: number, m: CustomerMonthlyDebtResponse) => {
-    const changeInMonth = m.changeInMonth ?? 0;
-    return sum + (changeInMonth < 0 ? Math.abs(changeInMonth) : 0);
-  }, 0);
-  const lastItem = monthlyDebtArray[monthlyDebtArray.length - 1];
-  const closingBalance = lastItem
-    ? Number(lastItem.closingDebt ?? lastItem.closingBalance ?? 0)
-    : 0;
+    // Sort by year and month descending (newest first)
+    return [...arr].sort((a, b) => {
+      if (a.year !== b.year) return (b.year ?? 0) - (a.year ?? 0);
+      return (b.month ?? 0) - (a.month ?? 0);
+    });
+  }, [monthlyDebtData]);
+
+  // Use customer statistics for the top summary cards if available
+  // otherwise fallback to calculations from monthly debt
+  const closingBalance =
+    customerStats?.currentDebt ??
+    (monthlyDebtArray.length > 0
+      ? Number(
+          monthlyDebtArray[monthlyDebtArray.length - 1].closingDebt ??
+            monthlyDebtArray[monthlyDebtArray.length - 1].closingBalance ??
+            0
+        )
+      : 0);
+
+  const totalIncrease =
+    customerStats?.totalOrderAmount ??
+    monthlyDebtArray.reduce((sum: number, m: CustomerMonthlyDebtResponse) => {
+      const changeInMonth = m.changeInMonth ?? 0;
+      return sum + (changeInMonth > 0 ? changeInMonth : 0);
+    }, 0);
+
+  const totalDecrease =
+    customerStats?.totalPaidAmount ??
+    monthlyDebtArray.reduce((sum: number, m: CustomerMonthlyDebtResponse) => {
+      const changeInMonth = m.changeInMonth ?? 0;
+      return sum + (changeInMonth < 0 ? Math.abs(changeInMonth) : 0);
+    }, 0);
+
+  const isLoading = isLoadingMonthly || isLoadingHistory || isLoadingStats;
 
   return (
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex bg-muted rounded-lg p-1 gap-1">
-            <Button
-              variant={filterType === "payment" ? "default" : "ghost"}
-              size="sm"
-              className={`h-7 text-xs ${
-                filterType === "payment"
-                  ? "bg-blue-500 hover:bg-blue-600 text-white"
-                  : "hover:bg-muted-foreground/10"
-              }`}
-              onClick={() => setFilterType("payment")}
-            >
-              Thanh toán
-            </Button>
-            <Button
-              variant={filterType === "invoice" ? "default" : "ghost"}
-              size="sm"
-              className={`h-7 text-xs ${
-                filterType === "invoice"
-                  ? "bg-green-500 hover:bg-green-600 text-white"
-                  : "hover:bg-muted-foreground/10"
-              }`}
-              onClick={() => setFilterType("invoice")}
-            >
-              Hóa đơn
-            </Button>
-          </div>
+          <h3 className="text-sm font-medium">Lịch sử thanh toán</h3>
         </div>
 
         <div className="flex items-center gap-1">
@@ -151,9 +148,13 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
         <Card className="border-0 bg-muted/50">
           <CardContent className="p-3">
             <p className="text-[11px] text-muted-foreground">Số dư cuối kỳ</p>
-            <p className="text-lg font-semibold">
-              {formatCurrency(closingBalance)}
-            </p>
+            {isLoadingStats ? (
+              <Skeleton className="h-7 w-24 mt-1" />
+            ) : (
+              <p className="text-lg font-semibold">
+                {formatCurrency(closingBalance)}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className="border-0 bg-success/10">
@@ -162,9 +163,13 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
               <TrendingUp className="h-3.5 w-3.5 text-success" />
               <p className="text-[11px] text-muted-foreground">Tăng</p>
             </div>
-            <p className="text-lg font-semibold text-success">
-              {formatCurrency(totalIncrease)}
-            </p>
+            {isLoadingStats ? (
+              <Skeleton className="h-7 w-24 mt-1" />
+            ) : (
+              <p className="text-lg font-semibold text-success">
+                {formatCurrency(totalIncrease)}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className="border-0 bg-destructive/10">
@@ -173,9 +178,13 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
               <TrendingDown className="h-3.5 w-3.5 text-destructive" />
               <p className="text-[11px] text-muted-foreground">Giảm</p>
             </div>
-            <p className="text-lg font-semibold text-destructive">
-              {formatCurrency(totalDecrease)}
-            </p>
+            {isLoadingStats ? (
+              <Skeleton className="h-7 w-24 mt-1" />
+            ) : (
+              <p className="text-lg font-semibold text-destructive">
+                {formatCurrency(totalDecrease)}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -224,8 +233,12 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                         changeInMonth < 0 ? Math.abs(changeInMonth) : 0;
                       return (
                         <TableRow key={item.month || item.id}>
-                          <TableCell className="text-xs py-2">
-                            {item.month ? `Tháng ${item.month}` : "-"}
+                          <TableCell className="text-xs py-2 font-medium">
+                            {item.month && item.year
+                              ? `Tháng ${item.month}/${item.year}`
+                              : item.month
+                              ? `Tháng ${item.month}`
+                              : "-"}
                           </TableCell>
                           <TableCell className="text-xs py-2 text-right">
                             {formatCurrency(

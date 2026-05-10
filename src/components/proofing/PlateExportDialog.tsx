@@ -35,8 +35,9 @@ import { Check, ChevronsUpDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRecordPlateExport, useUpdatePlateExport } from "@/hooks/use-proofing-order";
-import { useActivePlateVendors, useCreateVendor } from "@/hooks/use-vendor";
+import { useActivePlateVendors, useCreateVendor, useActivePrintingVendors } from "@/hooks/use-vendor";
 import type { RecordPlateExportRequest, PlateExportResponse, UpdatePlateExportRequest } from "@/Schema";
+import { productionMethodLabels } from "@/lib/status-utils";
 
 interface PlateExportDialogProps {
   open: boolean;
@@ -60,8 +61,12 @@ export function PlateExportDialog({
   const [vendorSearchOpen, setVendorSearchOpen] = useState(false);
   const [receivedAtManual, setReceivedAtManual] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [productionMethod, setProductionMethod] = useState<"in_house" | "outsource">("in_house");
+  const [printingVendorId, setPrintingVendorId] = useState<number | null>(null);
+  const [printingVendorSearchOpen, setPrintingVendorSearchOpen] = useState(false);
 
   const { data: vendors, isLoading: loadingVendors } = useActivePlateVendors();
+  const { data: printingVendors, isLoading: loadingPrintingVendors } = useActivePrintingVendors();
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordPlate, isPending: recordingPlate } =
     useRecordPlateExport();
@@ -133,6 +138,8 @@ export function PlateExportDialog({
           convertISOToLocalDateTime(plateExport.receivedAt ?? plateExport.estimatedReceiveAt)
         );
         setNotes(plateExport.notes ?? "");
+        setProductionMethod((plateExport as any).productionMethod ?? "in_house");
+        setPrintingVendorId((plateExport as any).printingVendorId ?? null);
       } else {
         // Reset to default when creating new
         setPlateCount(1);
@@ -142,6 +149,8 @@ export function PlateExportDialog({
         setVendorSearchOpen(false);
         setReceivedAtManual("");
         setNotes("");
+        setProductionMethod("in_house");
+        setPrintingVendorId(null);
       }
     }
   }, [open, plateExport, convertISOToLocalDateTime]);
@@ -193,6 +202,11 @@ export function PlateExportDialog({
       return;
     }
 
+    if (productionMethod === "outsource" && !printingVendorId) {
+      toast.error("Vui lòng chọn đơn vị in ngoài");
+      return;
+    }
+
     // estimatedReceiveAt is same as receivedAt for now
     const estimatedReceiveAt = receivedAt;
 
@@ -205,7 +219,9 @@ export function PlateExportDialog({
         estimatedReceiveAt: estimatedReceiveAt || undefined,
         receivedAt: receivedAt || undefined,
         notes: notes.trim() || undefined,
-      };
+        productionMethod,
+        printingVendorId: productionMethod === "outsource" ? (printingVendorId || undefined) : undefined,
+      } as any;
 
       updatePlate(plateExport.id, updateRequest).then(() => {
           onSuccess?.();
@@ -224,7 +240,9 @@ export function PlateExportDialog({
         estimatedReceiveAt: estimatedReceiveAt || undefined,
         receivedAt: receivedAt || undefined,
         notes: notes.trim() || undefined,
-      };
+        productionMethod,
+        printingVendorId: productionMethod === "outsource" ? (printingVendorId || undefined) : undefined,
+      } as any;
 
       recordPlate(
         {
@@ -408,6 +426,86 @@ export function PlateExportDialog({
               </div>
             )}
           </div>
+
+          {/* Hình thức sản xuất */}
+          <div className="space-y-2">
+            <Label htmlFor="productionMethod">Hình thức sản xuất</Label>
+            <Select
+              value={productionMethod}
+              onValueChange={(value: "in_house" | "outsource") => {
+                setProductionMethod(value);
+                if (value === "in_house") setPrintingVendorId(null);
+              }}
+            >
+              <SelectTrigger id="productionMethod">
+                <SelectValue placeholder="Chọn hình thức sản xuất" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(productionMethodLabels).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Đơn vị in ngoài (Chỉ hiện khi chọn outsource) */}
+          {productionMethod === "outsource" && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+              <Label>
+                Đơn vị in ngoài <span className="text-destructive">*</span>
+              </Label>
+              <Popover
+                open={printingVendorSearchOpen}
+                onOpenChange={setPrintingVendorSearchOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                    disabled={loadingPrintingVendors}
+                  >
+                    {printingVendorId
+                      ? printingVendors?.find((v) => v.id === printingVendorId)?.name
+                      : "Chọn nhà in ngoài..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Tìm kiếm nhà in..." />
+                    <CommandList>
+                      <CommandEmpty>Không tìm thấy nhà in</CommandEmpty>
+                      <CommandGroup>
+                        {printingVendors?.map((vendor) => (
+                          <CommandItem
+                            key={vendor.id}
+                            value={vendor.name || ""}
+                            onSelect={() => {
+                              setPrintingVendorId(vendor.id);
+                              setPrintingVendorSearchOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                printingVendorId === vendor.id
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            {vendor.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
 
           {/* Thời gian có kẽm */}
           <div className="space-y-2">

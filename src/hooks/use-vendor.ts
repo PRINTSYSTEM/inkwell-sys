@@ -63,7 +63,7 @@ export const useDeleteVendor = () => useDeleteVendorBase();
 // Lấy danh sách nhà cung cấp đang hoạt động theo loại
 // Note: Sử dụng endpoint /vendors với query params thay vì /vendors/active
 // vì endpoint /vendors/active không có trong OpenAPI schema
-export const useActiveVendors = (vendorType?: "plate" | "die") => {
+export const useActiveVendors = (vendorType?: "plate" | "die" | "printing") => {
   return useQuery({
     queryKey: [vendorKeys.all[0], "active", vendorType],
     queryFn: async () => {
@@ -73,12 +73,9 @@ export const useActiveVendors = (vendorType?: "plate" | "die") => {
         pageSize: 100, // Lấy tất cả vendors active
       };
 
-      // Note: vendorType không có trong OpenAPI schema của /vendors endpoint
-      // Có thể cần filter ở client side hoặc backend cần thêm query param này
-      // Tạm thời comment lại để tránh lỗi
-      // if (vendorType) {
-      //   params.vendorType = vendorType;
-      // }
+      if (vendorType) {
+        params.vendorType = vendorType;
+      }
 
       const normalizedParams = normalizeParams(params);
       const res = await apiRequest.get<VendorResponsePaginate>(
@@ -104,6 +101,9 @@ export const useActivePlateVendors = () => useActiveVendors("plate");
 
 // Alias for die vendors
 export const useActiveDieVendors = () => useActiveVendors("die");
+
+// Alias for printing vendors
+export const useActivePrintingVendors = () => useActiveVendors("printing");
 
 // GET /vendors/plate-count-options
 export const usePlateCountOptions = (enabled: boolean = true) => {

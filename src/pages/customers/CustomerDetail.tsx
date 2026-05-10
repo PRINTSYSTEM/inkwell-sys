@@ -14,6 +14,7 @@ import {
   DebtTab,
   OrdersTab,
   FavoritesTab,
+  InvoicesTab,
   EditCustomerModal,
   ExportDebtModal,
 } from "@/components/customers";
@@ -195,6 +196,9 @@ export default function CustomerDetail() {
                     <TabsTrigger value="debt" className="text-sm">
                       Công nợ
                     </TabsTrigger>
+                    <TabsTrigger value="invoices" className="text-sm">
+                      Hóa đơn
+                    </TabsTrigger>
                     <TabsTrigger value="orders" className="text-sm">
                       Đơn hàng
                     </TabsTrigger>
@@ -210,6 +214,16 @@ export default function CustomerDetail() {
                     <DebtTab
                       customerId={customerId}
                       isActive={activeTab === "debt"}
+                    />
+                  </TabsContent>
+
+                  <TabsContent
+                    value="invoices"
+                    className="flex-1 mt-0 min-w-0 overflow-hidden"
+                  >
+                    <InvoicesTab
+                      customerId={customerId}
+                      isActive={activeTab === "invoices"}
                     />
                   </TabsContent>
 

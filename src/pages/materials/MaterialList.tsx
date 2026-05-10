@@ -475,7 +475,7 @@ export default function MaterialManagement() {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="currentStock">Tồn kho hiện tại</Label>
+                        <Label htmlFor="currentStock">Tồn kho nguyên vật liệu</Label>
                         <Input
                           id="currentStock"
                           type="number"

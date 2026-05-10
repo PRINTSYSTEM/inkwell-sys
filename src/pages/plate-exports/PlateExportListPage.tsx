@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePlateExports } from "@/hooks/use-plate-export";
 import { useVendors } from "@/hooks/use-vendor";
 import type { PlateExportResponse, PlateExportListParams } from "@/Schema";
+import { productionMethodLabels, formatCurrency } from "@/lib/status-utils";
 
 export default function PlateExportListPage() {
   const navigate = useNavigate();
@@ -314,6 +315,7 @@ export default function PlateExportListPage() {
                         <TableHead className="w-[140px]">Mã bài</TableHead>
                         <TableHead>Nhà cung cấp</TableHead>
                         <TableHead className="text-center">Số lượng kẽm</TableHead>
+                        <TableHead>Hình thức in</TableHead>
                         <TableHead className="text-center">Trạng thái</TableHead>
                         <TableHead>Ngày gửi</TableHead>
                         <TableHead>Ngày nhận dự kiến</TableHead>
@@ -343,6 +345,23 @@ export default function PlateExportListPage() {
                           </TableCell>
                           <TableCell className="text-center font-medium">
                             {plateExport.plateCount ?? "—"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              <span className={plateExport.productionMethod === "outsource" ? "text-orange-600 font-medium" : "text-blue-600 font-medium"}>
+                                {plateExport.productionMethodName || (plateExport.productionMethod === "outsource" ? "In ngoài" : "In tại xưởng")}
+                              </span>
+                              {plateExport.productionMethod === "outsource" && plateExport.printingVendorName && (
+                                <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                  {plateExport.printingVendorName}
+                                </span>
+                              )}
+                              {plateExport.productionMethod === "outsource" && (plateExport.outsourceCost ?? 0) > 0 && (
+                                <span className="text-xs text-orange-500">
+                                  {formatCurrency(plateExport.outsourceCost ?? 0)}
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge

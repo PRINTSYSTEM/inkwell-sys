@@ -136,21 +136,112 @@ export const useARAging = (params?: DebtReportArAgingParams) => {
   });
 };
 
-export const useExportARAging = (params?: DebtReportArAgingParams) => {
-  return useQuery({
-    queryKey: ["ar-aging-export", params],
-    enabled: false,
-    queryFn: async () => {
-      const normalizedParams = normalizeParams(
-        (params ?? {}) as Record<string, unknown>
-      );
-      const res = await apiRequest.get<Blob>(API_SUFFIX.AR_AGING_EXPORT, {
-        params: normalizedParams,
-        responseType: "blob",
-      });
-      return res.data;
-    },
+export const useExportARSummary = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<
+    ArrayBuffer,
+    [DebtReportArSummaryParams?]
+  >(async (params?: DebtReportArSummaryParams) => {
+    const normalizedParams = normalizeParams(
+      (params ?? {}) as Record<string, unknown>
+    );
+    const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AR_SUMMARY_EXPORT, {
+      params: normalizedParams,
+      responseType: "arraybuffer",
+    });
+    return res.data;
   });
+
+  const mutate = async (params?: DebtReportArSummaryParams) => {
+    try {
+      const blob = await execute(params);
+      const fileBlob = new Blob([blob], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ar-summary-export.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Thành công", {
+        description: "Đã xuất báo cáo tổng hợp công nợ phải thu",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể xuất báo cáo tổng hợp công nợ phải thu";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return { loading, error, mutate, reset };
+};
+
+export const useExportARAging = () => {
+  const { loading, error, execute, reset } = useAsyncCallback<
+    ArrayBuffer,
+    [DebtReportArAgingParams?]
+  >(async (params?: DebtReportArAgingParams) => {
+    const normalizedParams = normalizeParams(
+      (params ?? {}) as Record<string, unknown>
+    );
+    const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AR_AGING_EXPORT, {
+      params: normalizedParams,
+      responseType: "arraybuffer",
+    });
+    return res.data;
+  });
+
+  const mutate = async (params?: DebtReportArAgingParams) => {
+    try {
+      const blob = await execute(params);
+      const fileBlob = new Blob([blob], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ar-aging-export.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Thành công", {
+        description: "Đã xuất báo cáo phân tích tuổi nợ phải thu",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể xuất báo cáo phân tích tuổi nợ phải thu";
+
+      toast.error("Lỗi", {
+        description: message,
+      });
+
+      throw err;
+    }
+  };
+
+  return { loading, error, mutate, reset };
 };
 
 // ================== AP (Accounts Payable) ==================
@@ -1163,9 +1254,11 @@ export const useExportAPDetailLedger = () => {
     ArrayBuffer,
     [number, DebtReportApDetailLedgerExportParams?]
   >(async (vendorId: number, params?: DebtReportApDetailLedgerExportParams) => {
-    const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
-    );
+    const normalizedParams = normalizeParams({
+      ...(params ?? {}),
+      vendorId: vendorId,
+    } as Record<string, unknown>);
+    
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.AP_DETAIL_LEDGER_EXPORT(vendorId),
       {
@@ -1236,3 +1329,5 @@ export const useAPOverdue = (params?: DebtReportApOverdueParams) => {
     },
   });
 };
+
+

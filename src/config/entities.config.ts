@@ -165,6 +165,7 @@ export const ENTITY_CONFIG = {
     values: {
       plate: "Nhà cung cấp kẽm",
       die: "Nhà cung cấp khuôn bế",
+      printing: "Nhà in",
       material: "Nhà cung cấp vật tư",
       paper: "Nhà cung cấp giấy",
       ink: "Nhà cung cấp mực",
@@ -359,6 +360,14 @@ export const ENTITY_CONFIG = {
     values: {
       InStock: "Trong kho",
       InUse: "Đang sử dụng",
+    },
+  },
+  productionMethods: {
+    entityType: "PlateExport",
+    description: "Hình thức sản xuất",
+    values: {
+      in_house: "In tại xưởng",
+      outsource: "Thuê in ngoài",
     },
   },
 };

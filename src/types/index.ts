@@ -657,7 +657,7 @@ export interface Material {
   unitPrice: number; // Giá đơn vị
   supplier: string; // Nhà cung cấp
   minStock: number; // Mức tồn kho tối thiểu
-  currentStock: number; // Tồn kho hiện tại
+  currentStock: number; // Tồn kho nguyên vật liệu
   location: string; // Vị trí trong kho
   notes?: string;
   createdAt: string;

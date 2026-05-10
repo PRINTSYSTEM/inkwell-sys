@@ -54,35 +54,6 @@ import { formatCurrency } from "@/lib/status-utils";
 import { CreateInvoiceFromLinesDialog } from "@/components/accounting";
 import { ROUTE_PATHS } from "@/constants";
 
-// Helper to calculate summary stats from orders
-const calculateInvoiceStats = (orders: OrderResponse[]) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const invoice = {
-    notIssued: 0,
-    issuedToday: 0,
-  };
-
-  orders.forEach((order) => {
-    // Invoice stats
-    if (order.invoiceStatus === "not_issued") {
-      invoice.notIssued++;
-    } else if (order.invoiceStatus === "issued" && order.updatedAt) {
-      try {
-        const updatedDate = new Date(order.updatedAt);
-        updatedDate.setHours(0, 0, 0, 0);
-        if (updatedDate.getTime() === today.getTime()) {
-          invoice.issuedToday++;
-        }
-      } catch (e) {
-        // Invalid date, skip
-      }
-    }
-  });
-
-  return invoice;
-};
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -458,34 +429,46 @@ function CreatedInvoicesTab() {
 export default function InvoicePage() {
   const [activeTab, setActiveTab] = useState("orders");
 
-  // Build params for API
-  const ordersParams = useMemo(() => {
+  // Fetch not issued orders for stats
+  const { data: notIssuedOrders } = useOrdersForAccounting({
+    pageNumber: 1,
+    pageSize: 1,
+    filterType: "invoice",
+    status: "not_issued",
+  });
+
+  // Calculate start and end of today in ISO string
+  const { startOfTodayStr, endOfTodayStr } = useMemo(() => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(today);
+    end.setHours(23, 59, 59, 999);
     return {
-      pageNumber: 1,
-      pageSize: 100, // Get all orders for stats calculation
-      filterType: "invoice",
-      status: "",
-      orderCode: "",
-      designCode: "",
-      customerName: "",
-      sortColumn: "",
-      sortOrder: "",
+      startOfTodayStr: start.toISOString(),
+      endOfTodayStr: end.toISOString(),
     };
   }, []);
 
-  // Fetch all orders for accounting to calculate summary stats
-  const { data: allOrdersData } = useOrdersForAccounting(ordersParams);
+  // Fetch issued invoices today for stats
+  const { data: issuedTodayInvoices } = useInvoices({
+    pageNumber: 1,
+    pageSize: 1,
+    status: "issued",
+    FromDate: startOfTodayStr,
+    ToDate: endOfTodayStr,
+    // Add camelCase versions to ensure compatibility with useInvoices hook normalizer
+    fromDate: startOfTodayStr,
+    toDate: endOfTodayStr,
+  } as any);
 
-  // Calculate summary stats from orders
+  // Summary stats
   const summaryStats = useMemo(() => {
-    if (!allOrdersData?.items) {
-      return {
-        notIssued: 0,
-        issuedToday: 0,
-      };
-    }
-    return calculateInvoiceStats(allOrdersData.items);
-  }, [allOrdersData]);
+    return {
+      notIssued: notIssuedOrders?.total || 0,
+      issuedToday: issuedTodayInvoices?.total || 0,
+    };
+  }, [notIssuedOrders?.total, issuedTodayInvoices?.total]);
 
   return (
     <>

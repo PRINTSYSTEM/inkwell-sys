@@ -430,7 +430,33 @@ export const DesignModal: React.FC<DesignModalProps> = ({
 
     // Apply updates if any
     if (Object.keys(updates).length > 0) {
-      setFormData((prev) => ({ ...prev, ...updates }));
+      setFormData((prev) => {
+        const finalUpdates = { ...updates };
+        
+        // Decal cho phép người dùng chọn Cắt/Bế ở Step 2, nên ta không ghi đè nếu đã có giá trị
+        // (để giữ lại lựa chọn của người dùng khi edit thiết kế)
+        if (isDecal && !isDecalCuon) {
+          if (prev.processClassification && finalUpdates.processClassification) {
+            delete finalUpdates.processClassification;
+          }
+          if (prev.sidesClassification && finalUpdates.sidesClassification) {
+            delete finalUpdates.sidesClassification;
+          }
+        }
+        
+        // Thẻ treo cho phép chọn mặt, không ghi đè nếu đã có giá trị
+        if (isTheTreo && isNhan) {
+          if (prev.sidesClassification && finalUpdates.sidesClassification) {
+            delete finalUpdates.sidesClassification;
+          }
+        }
+
+        const hasChanges = Object.keys(finalUpdates).some(
+          (k) => prev[k as keyof CreateDesignRequestUI] !== finalUpdates[k as keyof Partial<CreateDesignRequestUI>]
+        );
+        
+        return hasChanges ? { ...prev, ...finalUpdates } : prev;
+      });
     }
   }, [
     selectedDesignType,
@@ -792,7 +818,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                   className={`grid gap-4 ${
                     isHop || isTuiXepHong
                       ? "grid-cols-3"
-                      : isNhan
+                      : isNhan || isDecal
                         ? "grid-cols-3"
                         : "grid-cols-2"
                   }`}
@@ -853,8 +879,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       />
                     </div>
                   )}
-                  {/* Mép dán - chỉ hiển thị cho nhãn giấy, cùng hàng với kích thước */}
-                  {isNhan && !isHop && !isTuiXepHong && (
+                  {/* Mép dán - hiển thị cho nhãn giấy và decal, cùng hàng với kích thước */}
+                  {(isNhan || isDecal) && !isHop && !isTuiXepHong && (
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">
                         Mép dán (mm)
@@ -878,8 +904,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     </div>
                   )}
                 </div>
-                {/* Tooltip cho Mép dán - chỉ hiển thị khi là nhãn giấy */}
-                {isNhan && (
+                {/* Tooltip cho Mép dán - hiển thị khi là nhãn giấy hoặc decal */}
+                {(isNhan || isDecal) && (
                   <p className="text-xs text-muted-foreground">
                     <span className="font-medium">Mép dán:</span> Khoảng cách từ
                     mép đến vị trí dán keo (nếu có)
@@ -952,7 +978,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
           {currentStep === 2 && (
             <div className="space-y-6">
 
-              {/* Địa chỉ giao hàng dùng chung (moved here from Step 1) */}
+              {/* Địa chỉ giao hàng dùng chung (moved here from Step 1)
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Địa chỉ giao hàng</Label>
                 {loadingSharedAddresses ? (
@@ -1015,7 +1041,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     </Dialog>
                   </div>
                 )}
-              </div>
+              </div> */}
               {/* Classifications và Cán màng - Số mặt in, Quy trình sản xuất, Cán màng */}
               {(shouldShowSidesClassification ||
                 shouldShowProcessClassification ||

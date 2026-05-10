@@ -266,6 +266,7 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.MANAGER,
       ROLE.PRODUCTION_LEAD,
       ROLE.PRODUCTION,
+      ROLE.ACCOUNTING_LEAD,
     ],
     children: [
       {
@@ -303,6 +304,37 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.PRODUCTION_LEAD,
           ROLE.PROOFER,
         ],
+      },
+      {
+        id: "inventory-current-stock",
+        title: "Tồn kho nguyên vật liệu",
+        icon: PackageSearch,
+        path: ROUTE_PATHS.REPORTS.INVENTORY.CURRENT_STOCK,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION_LEAD,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
+        id: "inventory-summary",
+        title: "Tồn kho thành phẩm",
+        icon: FileBarChart,
+        path: ROUTE_PATHS.REPORTS.INVENTORY.SUMMARY,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION_LEAD,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
+        id: "inventory-low-stock",
+        title: "Hàng tồn kho thấp",
+        icon: AlertTriangle,
+        path: ROUTE_PATHS.REPORTS.INVENTORY.LOW_STOCK,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION_LEAD],
       },
     ],
   },
@@ -419,7 +451,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
       {
         id: "accounting-cost-pricing",
-        title: "Giá thành",
+        title: "Chi phí nhà cung cấp",
         icon: Calculator,
         path: ROUTE_PATHS.ACCOUNTING.COST_PRICING,
         allowedRoles: [ROLE.ADMIN, ROLE.ACCOUNTING, ROLE.ACCOUNTING_LEAD],
@@ -629,37 +661,6 @@ export const MENU_ITEMS: MenuItem[] = [
     children: [
       // Inventory Reports
       {
-        id: "inventory-current-stock",
-        title: "Tồn kho hiện tại",
-        icon: PackageSearch,
-        path: ROUTE_PATHS.REPORTS.INVENTORY.CURRENT_STOCK,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.PRODUCTION_LEAD,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "inventory-summary",
-        title: "Tổng hợp tồn kho",
-        icon: FileBarChart,
-        path: ROUTE_PATHS.REPORTS.INVENTORY.SUMMARY,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.PRODUCTION_LEAD,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "inventory-low-stock",
-        title: "Hàng tồn kho thấp",
-        icon: AlertTriangle,
-        path: ROUTE_PATHS.REPORTS.INVENTORY.LOW_STOCK,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION_LEAD],
-      },
-      {
         id: "inventory-slow-moving",
         title: "Hàng chậm luân chuyển",
         icon: Activity,
@@ -696,18 +697,6 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Doanh số theo chiều",
         icon: PieChart,
         path: ROUTE_PATHS.REPORTS.SALES.BY_DIMENSION,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING_LEAD,
-          ROLE.SALE,
-        ],
-      },
-      {
-        id: "top-products",
-        title: "Sản phẩm bán chạy",
-        icon: ShoppingCart,
-        path: ROUTE_PATHS.REPORTS.SALES.TOP_PRODUCTS,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,

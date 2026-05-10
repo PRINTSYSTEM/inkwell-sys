@@ -205,7 +205,6 @@ const SalesByCustomer = lazy(
 const SalesByDimension = lazy(
   () => import("@/pages/reports/sales/SalesByDimensionPage")
 );
-const TopProducts = lazy(() => import("@/pages/reports/sales/TopProductsPage"));
 const ReturnsDiscounts = lazy(
   () => import("@/pages/reports/sales/ReturnsDiscountsPage")
 );
@@ -249,6 +248,9 @@ const AttendanceReports = lazy(
 // Reports / Notifications
 const NotificationCenter = lazy(
   () => import("@/pages/notifications/NotificationCenter")
+);
+const DebtNotificationPreviewPage = lazy(
+  () => import("@/pages/notifications/DebtNotificationPreviewPage")
 );
 
 // Misc
@@ -1142,14 +1144,6 @@ export const router = createBrowserRouter([
                 ),
               },
               {
-                path: "top-products",
-                element: (
-                  <Suspense fallback={<PageLoadingFallback />}>
-                    <TopProducts />
-                  </Suspense>
-                ),
-              },
-              {
                 path: "returns-discounts",
                 element: (
                   <Suspense fallback={<PageLoadingFallback />}>
@@ -1212,11 +1206,24 @@ export const router = createBrowserRouter([
       // ===== NOTIFICATIONS =====
       {
         path: lastSegment(ROUTE_PATHS.NOTIFICATIONS), // "notifications"
-        element: (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <NotificationCenter />
-          </Suspense>
-        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <NotificationCenter />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id/preview",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DebtNotificationPreviewPage />
+              </Suspense>
+            ),
+          },
+        ],
       },
 
       // ===== PROFILE =====

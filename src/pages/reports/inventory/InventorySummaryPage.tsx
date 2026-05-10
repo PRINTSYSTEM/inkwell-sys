@@ -68,10 +68,10 @@ export default function InventorySummaryPage() {
   return (
     <>
       <Helmet>
-        <title>Tổng hợp tồn kho | Print Production ERP</title>
+        <title>Tồn kho thành phẩm | Print Production ERP</title>
         <meta
           name="description"
-          content="Tổng hợp tồn kho theo nhóm vật tư"
+          content="Tồn kho thành phẩm theo nhóm vật tư"
         />
       </Helmet>
 
@@ -80,10 +80,10 @@ export default function InventorySummaryPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              Tổng hợp tồn kho
+              Tồn kho thành phẩm
             </h1>
             <p className="text-muted-foreground">
-              Tổng hợp tồn kho theo nhóm vật tư
+              Tồn kho thành phẩm theo nhóm vật tư
             </p>
           </div>
           <div className="flex items-center gap-2">
