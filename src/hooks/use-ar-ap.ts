@@ -1260,7 +1260,7 @@ export const useExportAPDetailLedger = () => {
     } as Record<string, unknown>);
     
     const res = await apiRequest.get<ArrayBuffer>(
-      API_SUFFIX.AP_SUMMARY_EXPORT,
+      API_SUFFIX.AP_DETAIL_LEDGER_EXPORT(vendorId),
       {
         params: normalizedParams,
         responseType: "arraybuffer",

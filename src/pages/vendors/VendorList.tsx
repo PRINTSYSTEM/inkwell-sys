@@ -32,6 +32,7 @@ export default function VendorListPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [vendorTypeFilter, setVendorTypeFilter] = useState<string>("");
+  const [isActiveFilter, setIsActiveFilter] = useState<string>("all");
   const [sortColumn, setSortColumn] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const itemsPerPage = 10;
@@ -43,7 +44,8 @@ export default function VendorListPage() {
     pageNumber: currentPage,
     pageSize: itemsPerPage,
     search: debouncedSearch || "",
-    vendorType: vendorTypeFilter || "",
+    vendorType: vendorTypeFilter || undefined,
+    isActive: isActiveFilter === "active" ? true : isActiveFilter === "inactive" ? false : undefined,
     ...(sortColumn.trim()
       ? { sortColumn: sortColumn.trim(), sortOrder: sortOrder }
       : {}),
@@ -207,7 +209,7 @@ export default function VendorListPage() {
                 onChange={(e) => handleSearchChange(e.target.value)}
               />
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
               <Select
                 value={vendorTypeFilter || "all"}
                 onValueChange={(v) => {
@@ -215,11 +217,11 @@ export default function VendorListPage() {
                   setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="w-full sm:w-[180px] h-10 sm:h-9 text-sm">
-                  <SelectValue placeholder="Loại nhà cung cấp" />
+                <SelectTrigger className="w-full sm:w-[160px] h-9 text-xs">
+                  <SelectValue placeholder="Loại" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="all">Tất cả loại</SelectItem>
                   {Object.entries(vendorTypeLabels).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label}
@@ -227,6 +229,40 @@ export default function VendorListPage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select
+                value={isActiveFilter}
+                onValueChange={(v) => {
+                  setIsActiveFilter(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[140px] h-9 text-xs">
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                  <SelectItem value="active">Hoạt động</SelectItem>
+                  <SelectItem value="inactive">Ngừng hoạt động</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {(vendorTypeFilter || isActiveFilter !== "all" || searchTerm) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setVendorTypeFilter("");
+                    setIsActiveFilter("all");
+                    setSearchTerm("");
+                    setDebouncedSearch("");
+                    setCurrentPage(1);
+                  }}
+                  className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Xóa lọc
+                </Button>
+              )}
             </div>
             <div className="w-full lg:w-[420px] min-w-0">
               <SortControls

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAPDetailLedger } from "@/hooks/use-ar-ap";
+import { useAPDetailLedger, useExportAPDetailLedger } from "@/hooks/use-ar-ap";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
@@ -24,15 +24,30 @@ export function VendorHistoryTab({ vendorId }: VendorHistoryTabProps) {
     pageSize: 100, // Lấy 100 giao dịch gần nhất
   });
 
+  const { mutate: exportLedger, loading: isExporting } = useExportAPDetailLedger();
+
+  const handleExport = async () => {
+    try {
+      await exportLedger(vendorId);
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
+  };
+
   const items = data?.items || [];
 
   return (
     <div className="h-full flex flex-col gap-4 overflow-hidden">
       <div className="flex items-center justify-between shrink-0">
         <h2 className="text-lg font-semibold tracking-tight">Sổ chi tiết công nợ</h2>
-        <Button variant="outline" size="sm">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleExport}
+          disabled={isExporting}
+        >
           <Download className="h-4 w-4 mr-2" />
-          Xuất dữ liệu
+          {isExporting ? "Đang xuất..." : "Xuất dữ liệu"}
         </Button>
       </div>
 
