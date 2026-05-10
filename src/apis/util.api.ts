@@ -377,6 +377,10 @@ export const API_SUFFIX = {
 
   // ========== VENDORS (EXTRA) ==========
   VENDORS_PLATE_COUNT_OPTIONS: "/vendors/plate-count-options",
+  // ========== FINANCE ACCOUNTS ==========
+  FINANCE_ACCOUNTS_TREE: "/finance-accounts/tree",
+  FINANCE_ACCOUNTS_SEARCH: "/finance-accounts/search",
+
   // ========== SHARED ADDRESSES ==========
   SHARED_ADDRESSES: "/shared-addresses",
   SHARED_ADDRESS_BY_ID: (id: number) => `/shared-addresses/${id}`,

@@ -598,11 +598,6 @@ function ProductionTableRow({
                 {defectQty || 0}
               </span>
             </div>
-            {notes && (
-              <div className="text-[8px] italic text-muted-foreground break-words line-clamp-2 leading-tight border-l-2 border-primary/20 pl-1 mt-0.5">
-                {notes}
-              </div>
-            )}
             <Button
               variant="outline"
               size="sm"
@@ -626,6 +621,11 @@ function ProductionTableRow({
             >
               <Edit className="w-3 h-3 mr-1" /> Sửa
             </Button>
+            {notes && (
+              <div className="text-[11px] font-medium text-amber-700 dark:text-amber-500 break-words leading-tight border-l-2 border-amber-500/50 pl-1.5 mt-1.5 bg-amber-50/30 dark:bg-amber-900/10 py-1">
+                {notes}
+              </div>
+            )}
           </div>
         )}
 
@@ -665,12 +665,6 @@ function ProductionTableRow({
                 onChange={(e) => setDefectQty(e.target.value)}
               />
             </div>
-            <Input
-              placeholder="Ghi chú..."
-              className="h-6 w-full text-[9px] px-1.5 py-0 bg-background"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
             <Button
               variant="default"
               size="sm"
@@ -687,6 +681,12 @@ function ProductionTableRow({
             >
               <Save className="w-3 h-3 mr-1" /> Lưu
             </Button>
+            <Input
+              placeholder="Ghi chú..."
+              className="h-7 w-full text-[11px] px-1.5 py-0 bg-background mt-1.5 border-amber-200 focus:border-amber-500"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
           </div>
         )}
       </div>

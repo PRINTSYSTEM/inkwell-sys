@@ -13,6 +13,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -34,7 +47,11 @@ import {
   Loader2,
   LayoutGrid,
   List,
+  Check,
+  ChevronsUpDown,
+  Search,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -83,6 +100,83 @@ const generateMaterialCode = (name: string): string => {
 
   return code;
 };
+
+interface MaterialSelectorProps {
+  value?: number;
+  onSelect: (id: string) => void;
+  materials: MaterialResponse[];
+  placeholder?: string;
+  className?: string;
+}
+
+function MaterialSelector({
+  value,
+  onSelect,
+  materials,
+  placeholder = "Chọn chất liệu",
+  className,
+}: MaterialSelectorProps) {
+  const [open, setOpen] = useState(false);
+  const selectedMaterial = materials.find((m) => m.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "h-8 w-full justify-between text-xs bg-slate-50/50 font-normal",
+            className
+          )}
+        >
+          <span className="truncate">
+            {selectedMaterial
+              ? selectedMaterial.name || selectedMaterial.materialTypeName
+              : placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command>
+          <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <CommandInput
+              placeholder="Tìm chất liệu..."
+              className="h-8 border-none focus:ring-0"
+            />
+          </div>
+          <CommandList className="max-h-[300px]">
+            <CommandEmpty>Không tìm thấy chất liệu nào.</CommandEmpty>
+            <CommandGroup>
+              {materials.map((m) => (
+                <CommandItem
+                  key={m.id}
+                  value={m.name || m.materialTypeName || ""}
+                  onSelect={() => {
+                    onSelect(m.id?.toString() || "");
+                    setOpen(false);
+                  }}
+                  className="text-xs"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-3 w-3",
+                      value === m.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {m.name || m.materialTypeName}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function StockInCreatePage() {
   const navigate = useNavigate();
@@ -556,19 +650,11 @@ export default function StockInCreatePage() {
                     <div className="space-y-3">
                       <div className="grid grid-cols-1 gap-2">
                         <div className="flex gap-1">
-                          <Select
-                            value={item.materialId?.toString() || ""}
-                            onValueChange={(v) => handleMaterialSelect(index, v)}
-                          >
-                            <SelectTrigger className="h-8 text-xs bg-slate-50/50">
-                              <SelectValue placeholder="Chọn chất liệu" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {materials.map((m) => (
-                                <SelectItem key={m.id} value={m.id?.toString() || ""}>{m.name || m.materialTypeName}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <MaterialSelector
+                            value={item.materialId}
+                            onSelect={(v) => handleMaterialSelect(index, v)}
+                            materials={materials}
+                          />
                           <Button
                             type="button"
                             variant="outline"
@@ -667,19 +753,11 @@ export default function StockInCreatePage() {
                           <TableCell className="text-center font-medium text-slate-400">{index + 1}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Select
-                                value={item.materialId?.toString() || ""}
-                                onValueChange={(v) => handleMaterialSelect(index, v)}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Chọn" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {materials.map((m) => (
-                                    <SelectItem key={m.id} value={m.id?.toString() || ""}>{m.name || m.materialTypeName}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <MaterialSelector
+                                value={item.materialId}
+                                onSelect={(v) => handleMaterialSelect(index, v)}
+                                materials={materials}
+                              />
                               <Button
                                 type="button"
                                 variant="ghost"

@@ -38,6 +38,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -59,6 +61,7 @@ import {
   useCashFunds,
   useExportCashPaymentPDF,
 } from "@/hooks/use-cash";
+import { useBankAccounts } from "@/hooks/use-bank";
 import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
 import {
   formatCurrency,
@@ -139,6 +142,7 @@ export default function CashPaymentDetailPage() {
       paymentMethodId: 0,
       expenseCategoryId: 0,
       financeAccountId: null,
+      bankAccountId: null,
       vendorId: null,
     });
 
@@ -163,6 +167,8 @@ export default function CashPaymentDetailPage() {
   });
 
   const { data: cashFundsData } = useCashFunds();
+  const { data: bankAccountsData } = useBankAccounts({ pageNumber: 1, pageSize: 100 });
+  const bankAccounts = bankAccountsData?.items || [];
 
   const createMutation = useCreateCashPayment();
   const updateMutation = useUpdateCashPayment();
@@ -196,6 +202,7 @@ export default function CashPaymentDetailPage() {
       paymentMethodId: payment.paymentMethodId || 0,
       expenseCategoryId: payment.expenseCategoryId || 0,
       financeAccountId: (payment.financeAccountId as number | null) || null,
+      bankAccountId: (payment.bankAccountId as number | null) || null,
     });
   };
 
@@ -217,6 +224,7 @@ export default function CashPaymentDetailPage() {
       paymentMethodId: (cardEditValues.paymentMethodId as number) || 0,
       expenseCategoryId: (cardEditValues.expenseCategoryId as number) || 0,
       financeAccountId: (cardEditValues.financeAccountId as number | null) || null,
+      bankAccountId: (cardEditValues.bankAccountId as number | null) || null,
     };
 
     // Validation for update
@@ -480,40 +488,72 @@ export default function CashPaymentDetailPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="financeAccountId">Quỹ tiền mặt</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="fundSource">Quỹ / Tài khoản thanh toán *</Label>
                   <Select
                     value={
-                      createFormValues.financeAccountId?.toString() || "all"
+                      createFormValues.financeAccountId
+                        ? `cash-${createFormValues.financeAccountId}`
+                        : createFormValues.bankAccountId
+                        ? `bank-${createFormValues.bankAccountId}`
+                        : "none"
                     }
-                    onValueChange={(value) =>
-                      setCreateFormValues({
-                        ...createFormValues,
-                        financeAccountId:
-                          value === "all" ? null : Number.parseInt(value, 10),
-                      })
-                    }
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setCreateFormValues({
+                          ...createFormValues,
+                          financeAccountId: null,
+                          bankAccountId: null,
+                        });
+                      } else if (value.startsWith("cash-")) {
+                        const id = Number.parseInt(value.replace("cash-", ""), 10);
+                        setCreateFormValues({
+                          ...createFormValues,
+                          financeAccountId: id,
+                          bankAccountId: null,
+                        });
+                      } else if (value.startsWith("bank-")) {
+                        const id = Number.parseInt(value.replace("bank-", ""), 10);
+                        setCreateFormValues({
+                          ...createFormValues,
+                          financeAccountId: null,
+                          bankAccountId: id,
+                        });
+                      }
+                    }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Chọn quỹ" />
+                      <SelectValue placeholder="Chọn nguồn tiền thanh toán" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Không chọn</SelectItem>
-                      {cashFundsData?.items
-                        ?.filter(
-                          (fund) =>
-                            fund.name !== "Quỹ tiền mặt chính" &&
-                            fund.name !== "Qũy tiền lẻ" &&
-                            fund.name !== "Quỹ tiền lẻ"
-                        )
-                        ?.map((fund) => (
+                      <SelectItem value="none">Chưa chọn</SelectItem>
+                      <SelectGroup>
+                        <SelectLabel className="flex items-center gap-2">
+                          <DollarSign className="h-3 w-3" /> Tiền mặt (111)
+                        </SelectLabel>
+                        {cashFundsData?.items?.map((fund) => (
                           <SelectItem
-                            key={fund.id}
-                            value={fund.id?.toString() || ""}
+                            key={`cash-${fund.id}`}
+                            value={`cash-${fund.id}`}
                           >
                             {fund.name}
                           </SelectItem>
                         ))}
+                      </SelectGroup>
+                      <Separator className="my-1" />
+                      <SelectGroup>
+                        <SelectLabel className="flex items-center gap-2">
+                          <Building2 className="h-3 w-3" /> Ngân hàng (112)
+                        </SelectLabel>
+                        {bankAccounts.map((account) => (
+                          <SelectItem
+                            key={`bank-${account.id}`}
+                            value={`bank-${account.id}`}
+                          >
+                            {account.bankName} - {account.accountNumber}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
@@ -807,6 +847,91 @@ export default function CashPaymentDetailPage() {
                   />
                 ) : (
                   <div className="text-sm">{payment.receiverName || "—"}</div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Quỹ / Tài khoản thanh toán</Label>
+                {editingCard === "main" ? (
+                  <Select
+                    value={
+                      cardEditValues.financeAccountId
+                        ? `cash-${cardEditValues.financeAccountId}`
+                        : cardEditValues.bankAccountId
+                        ? `bank-${cardEditValues.bankAccountId}`
+                        : "none"
+                    }
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setCardEditValues({
+                          ...cardEditValues,
+                          financeAccountId: null,
+                          bankAccountId: null,
+                        });
+                      } else if (value.startsWith("cash-")) {
+                        const id = Number.parseInt(value.replace("cash-", ""), 10);
+                        setCardEditValues({
+                          ...cardEditValues,
+                          financeAccountId: id,
+                          bankAccountId: null,
+                        });
+                      } else if (value.startsWith("bank-")) {
+                        const id = Number.parseInt(value.replace("bank-", ""), 10);
+                        setCardEditValues({
+                          ...cardEditValues,
+                          financeAccountId: null,
+                          bankAccountId: id,
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn nguồn tiền thanh toán" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Chưa chọn</SelectItem>
+                      <SelectGroup>
+                        <SelectLabel className="flex items-center gap-2 text-muted-foreground">
+                          Tiền mặt (111)
+                        </SelectLabel>
+                        {cashFundsData?.items?.map((fund) => (
+                          <SelectItem
+                            key={`cash-${fund.id}`}
+                            value={`cash-${fund.id}`}
+                          >
+                            {fund.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                      <Separator className="my-1" />
+                      <SelectGroup>
+                        <SelectLabel className="flex items-center gap-2 text-muted-foreground">
+                          Ngân hàng (112)
+                        </SelectLabel>
+                        {bankAccounts.map((account) => (
+                          <SelectItem
+                            key={`bank-${account.id}`}
+                            value={`bank-${account.id}`}
+                          >
+                            {account.bankName} - {account.accountNumber}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="text-sm font-medium">
+                    {payment.financeAccountId ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                        {cashFundsData?.items?.find(f => f.id === payment.financeAccountId)?.name || "Tiền mặt"}
+                      </span>
+                    ) : payment.bankAccountId ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {bankAccounts.find(a => a.id === payment.bankAccountId)?.bankName || "Ngân hàng"} - {bankAccounts.find(a => a.id === payment.bankAccountId)?.accountNumber}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </div>
                 )}
               </div>
               <div className="space-y-2">
