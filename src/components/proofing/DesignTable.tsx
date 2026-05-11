@@ -65,6 +65,7 @@ export function DesignTable({
               </TableHead>
               <TableHead className="h-10 text-sm font-bold">Số mặt</TableHead>
               <TableHead className="h-10 text-sm font-bold">Quy cách</TableHead>
+              <TableHead className="h-10 text-sm font-bold">Ngày tạo</TableHead>
               <TableHead className="h-10 text-sm font-bold text-right sticky right-0 bg-background z-20">
                 Thao tác
               </TableHead>
@@ -348,6 +349,11 @@ export function DesignTable({
                           );
                         })()}
                       </div>
+                    </TableCell>
+                    <TableCell className="py-3 text-[11px] text-muted-foreground whitespace-nowrap">
+                      {design.createdAt
+                        ? new Date(design.createdAt).toLocaleDateString("vi-VN")
+                        : "—"}
                     </TableCell>
                     <TableCell
                       className={cn(

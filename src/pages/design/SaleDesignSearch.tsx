@@ -272,6 +272,7 @@ export default function SaleDesignSearch() {
                     <th className="px-4 py-3">Loại</th>
                     <th className="px-4 py-3">Chất liệu</th>
                     <th className="px-4 py-3">Kích thước</th>
+                    <th className="px-4 py-3">Ngày tạo</th>
                     <th className="px-4 py-3">Giá</th>
                   </tr>
                 </thead>
@@ -324,6 +325,13 @@ export default function SaleDesignSearch() {
                       <td className="px-4 py-3 align-top">
                         {design.dimensions ||
                           `${design.length || ""} x ${design.width || ""} x ${design.height || ""}`}
+                      </td>
+                      <td className="px-4 py-3 align-top text-slate-500 text-xs">
+                        {design.createdAt
+                          ? new Date(design.createdAt).toLocaleDateString(
+                              "vi-VN",
+                            )
+                          : "—"}
                       </td>
                       <td className="px-4 py-3 align-top font-black text-primary">
                         {design.latestUnitPrice
