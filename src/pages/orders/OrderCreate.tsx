@@ -6,7 +6,7 @@ import {
   Plus,
   Check,
   ChevronsUpDown,
-  Calendar,
+
   Image as ImageIcon,
   FileText,
   ChevronDown,
@@ -14,6 +14,8 @@ import {
   Building2,
   User,
   Hash,
+  MapPin,
+  Calendar,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
@@ -223,6 +225,10 @@ export default function OrderCreatePage() {
   // Handlers
   const handleCustomerSelect = (customer: CustomerSummaryResponse) => {
     setSelectedCustomer(customer);
+    setFormData((prev) => ({
+      ...prev,
+      deliveryAddress: (customer as any).address || "",
+    }));
     setDesigns([]);
     setDesignSearchQuery(""); // Reset search when customer changes
     setCustomerComboOpen(false);
@@ -669,6 +675,46 @@ export default function OrderCreatePage() {
                     </Button>
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Ngày giao hàng</Label>
+                      <div className="relative">
+                        <Input
+                          type="date"
+                          value={formData.deliveryDate}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              deliveryDate: e.target.value,
+                            }))
+                          }
+                          className="bg-background text-sm pl-10"
+                        />
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Địa chỉ giao hàng</Label>
+                      <div className="relative">
+                        <Input
+                          placeholder="Nhập địa chỉ giao hàng..."
+                          value={formData.deliveryAddress}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              deliveryAddress: e.target.value,
+                            }))
+                          }
+                          className="bg-background text-sm pl-10"
+                        />
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  </div>
+
+
+
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Ghi chú đơn</Label>
                     <Textarea
@@ -1006,21 +1052,40 @@ export default function OrderCreatePage() {
                 <CardContent className="space-y-4 pt-0 pb-4">
                   {/* Customer info */}
                   {selectedCustomer && (
-                    <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-                      {selectedCustomer.companyName && (
-                        <p className="text-sm font-medium">
-                          {selectedCustomer.companyName}
-                        </p>
-                      )}
-                      {selectedCustomer.name && (
-                        <p className="text-xs text-muted-foreground">
-                          {selectedCustomer.name}
-                        </p>
-                      )}
-                      {selectedCustomer.phone && (
-                        <p className="text-xs text-muted-foreground">
-                          {selectedCustomer.phone}
-                        </p>
+                    <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+                      <div className="space-y-1">
+                        {selectedCustomer.companyName && (
+                          <p className="text-sm font-medium">
+                            {selectedCustomer.companyName}
+                          </p>
+                        )}
+                        {selectedCustomer.name && (
+                          <p className="text-xs text-muted-foreground">
+                            {selectedCustomer.name}
+                          </p>
+                        )}
+                        {selectedCustomer.phone && (
+                          <p className="text-xs text-muted-foreground">
+                            {selectedCustomer.phone}
+                          </p>
+                        )}
+                      </div>
+
+                      {(formData.deliveryDate || formData.deliveryAddress) && (
+                        <div className="pt-2 border-t border-muted-foreground/10 space-y-1.5">
+                          {formData.deliveryDate && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              <span>Giao: {new Date(formData.deliveryDate).toLocaleDateString('vi-VN')}</span>
+                            </div>
+                          )}
+                          {formData.deliveryAddress && (
+                            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3 mt-0.5" />
+                              <span className="line-clamp-2">{formData.deliveryAddress}</span>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}

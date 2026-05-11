@@ -978,25 +978,30 @@ export const DesignModal: React.FC<DesignModalProps> = ({
           {currentStep === 2 && (
             <div className="space-y-6">
 
-              {/* Địa chỉ giao hàng dùng chung (moved here from Step 1)
+              {/* Địa chỉ giao hàng dùng chung */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Địa chỉ giao hàng</Label>
                 {loadingSharedAddresses ? (
                   <p className="text-sm text-muted-foreground">Đang tải địa chỉ...</p>
                 ) : (
-                  <div>
-                    <div className="flex gap-2 mt-2">
-                      <Input
-                        placeholder="Tìm địa chỉ..."
-                        value={sharedAddressSearch}
-                        onChange={(e) => setSharedAddressSearch(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button onClick={openAddAddressDialog}>Thêm</Button>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          placeholder="Tìm địa chỉ..."
+                          value={sharedAddressSearch}
+                          onChange={(e) => setSharedAddressSearch(e.target.value)}
+                          className="h-11 pl-9"
+                        />
+                        <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <Button type="button" onClick={openAddAddressDialog} className="h-11">Thêm</Button>
                       <Button
+                        type="button"
                         variant="outline"
                         disabled={!formData.sharedAddressId}
                         onClick={openEditAddressDialog}
+                        className="h-11"
                       >
                         Sửa
                       </Button>
@@ -1007,7 +1012,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       disabled={!!isExistingDesign}
                     >
                       <SelectTrigger className="h-11 bg-background">
-                        <SelectValue placeholder="Chọn địa chỉ..." />
+                        <SelectValue placeholder="Chọn địa chỉ giao hàng..." />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0">Không chọn</SelectItem>
@@ -1023,6 +1028,8 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                         ))}
                       </SelectContent>
                     </Select>
+
+                    {/* Address Dialog */}
                     <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
                       <DialogContent className="max-w-md">
                         <DialogHeader>
@@ -1030,8 +1037,14 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                           <DialogDescription>Thêm hoặc chỉnh sửa địa chỉ giao hàng dùng chung.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-3 py-2">
-                          <Input placeholder="Tên địa chỉ (bắt buộc)" value={addressDialogLabel} onChange={(e) => setAddressDialogLabel(e.target.value)} className="h-11" />
-                          <Textarea placeholder="Địa chỉ chi tiết (tuỳ chọn)" value={addressDialogAddress} onChange={(e) => setAddressDialogAddress(e.target.value)} className="h-24" />
+                          <div className="space-y-2">
+                            <Label className="text-xs">Tên gợi nhớ (VD: Kho A, Cửa hàng B)</Label>
+                            <Input placeholder="Tên địa chỉ (bắt buộc)" value={addressDialogLabel} onChange={(e) => setAddressDialogLabel(e.target.value)} className="h-11" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Địa chỉ chi tiết</Label>
+                            <Textarea placeholder="Địa chỉ chi tiết (tuỳ chọn)" value={addressDialogAddress} onChange={(e) => setAddressDialogAddress(e.target.value)} className="h-24 resize-none" />
+                          </div>
                         </div>
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setAddressDialogOpen(false)}>Hủy</Button>
@@ -1041,7 +1054,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     </Dialog>
                   </div>
                 )}
-              </div> */}
+              </div>
               {/* Classifications và Cán màng - Số mặt in, Quy trình sản xuất, Cán màng */}
               {(shouldShowSidesClassification ||
                 shouldShowProcessClassification ||
