@@ -6,7 +6,7 @@ import {
   Plus,
   Check,
   ChevronsUpDown,
-  Calendar,
+
   Image as ImageIcon,
   FileText,
   ChevronDown,
@@ -669,6 +669,8 @@ export default function OrderCreatePage() {
                     </Button>
                   </div>
 
+
+
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Ghi chú đơn</Label>
                     <Textarea
@@ -1006,22 +1008,26 @@ export default function OrderCreatePage() {
                 <CardContent className="space-y-4 pt-0 pb-4">
                   {/* Customer info */}
                   {selectedCustomer && (
-                    <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-                      {selectedCustomer.companyName && (
-                        <p className="text-sm font-medium">
-                          {selectedCustomer.companyName}
-                        </p>
-                      )}
-                      {selectedCustomer.name && (
-                        <p className="text-xs text-muted-foreground">
-                          {selectedCustomer.name}
-                        </p>
-                      )}
-                      {selectedCustomer.phone && (
-                        <p className="text-xs text-muted-foreground">
-                          {selectedCustomer.phone}
-                        </p>
-                      )}
+                    <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+                      <div className="space-y-1">
+                        {selectedCustomer.companyName && (
+                          <p className="text-sm font-medium">
+                            {selectedCustomer.companyName}
+                          </p>
+                        )}
+                        {selectedCustomer.name && (
+                          <p className="text-xs text-muted-foreground">
+                            {selectedCustomer.name}
+                          </p>
+                        )}
+                        {selectedCustomer.phone && (
+                          <p className="text-xs text-muted-foreground">
+                            {selectedCustomer.phone}
+                          </p>
+                        )}
+                      </div>
+
+
                     </div>
                   )}
 
@@ -1236,21 +1242,7 @@ export default function OrderCreatePage() {
                 }
               />
             </div>
-            <div className="space-y-2">
-              <Label>Địa chỉ</Label>
-              <Textarea
-                placeholder="Nhập địa chỉ"
-                value={newCustomerForm.address}
-                onChange={(e) =>
-                  setNewCustomerForm((prev) => ({
-                    ...prev,
-                    address: e.target.value,
-                  }))
-                }
-                rows={3}
-                className="resize-none"
-              />
-            </div>
+
           </div>
           <DialogFooter>
             <Button
