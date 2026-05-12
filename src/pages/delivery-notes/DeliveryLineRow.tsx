@@ -97,8 +97,8 @@ export default function DeliveryLineRow({
     currentStatus === "returned" ||
     currentStatus === "failed_reschedule";
 
-  // Chỉ phụ thuộc vào trạng thái của CHÍNH LINE này, không phụ thuộc noteStatus
-  const showButtons = !isSettled;
+  // Chỉ hiện nút khi line chưa kết thúc VÀ phiếu đang trong quá trình giao
+  const showButtons = !isSettled && noteIsShipping;
 
   // ── Handlers ──
 
@@ -255,9 +255,9 @@ export default function DeliveryLineRow({
 
         {/* Cột Thao tác */}
         <TableCell>
-          {showButtons && (
+          {!isSettled && (
             <div className="flex flex-col gap-1.5 w-fit">
-              {nextStatus && (
+              {nextStatus && noteIsShipping && (
                 <Button
                   size="sm"
                   variant="default"
@@ -282,7 +282,7 @@ export default function DeliveryLineRow({
                 disabled={updateLineResultMutation.isPending}
               >
                 <XCircle className="h-3 w-3" />
-                Thất bại
+                Hủy/Thất bại
               </Button>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -42,6 +42,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 import {
   PaymentStatusBadge,
@@ -178,6 +184,14 @@ function isCustomerInfoComplete(order: {
 export default function AccountingOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get("tab") || "order";
+
+  const handleTabChange = (value: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("tab", value);
+    setSearchParams(newParams);
+  };
 
   // Fetch order from API
   // Pass `null` when `id` is not yet available to avoid an initial fetch for id=0
@@ -217,6 +231,20 @@ export default function AccountingOrderDetail() {
     pageSize: 100,
     isActive: true,
   });
+
+  // Aggregate items from all invoices for this order
+  const invoiceItems = useMemo(() => {
+    if (!invoicesData?.items) return [];
+    return invoicesData.items.flatMap((invoice) =>
+      (invoice.items || []).map((item) => ({
+        ...item,
+        // Find matching order detail for image/design info
+        orderDetail: order?.orderDetails?.find(
+          (od) => od.id === item.orderDetailId,
+        ),
+      })),
+    );
+  }, [invoicesData, order?.orderDetails]);
 
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
@@ -1397,235 +1425,365 @@ export default function AccountingOrderDetail() {
                 </CardContent>
               </Card>
 
-              {/* Order Items */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Package className="h-4 w-4 text-primary" />
-                    Sản phẩm trong đơn
-                    <Badge variant="secondary" className="ml-2">
-                      {order.orderDetails?.length || 0} sản phẩm
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30">
-                        <TableHead className="w-[60px]">Ảnh</TableHead>
-                        <TableHead>Sản phẩm</TableHead>
-                        <TableHead className="text-center">Địa chỉ giao hàng</TableHead>
-                        <TableHead className="text-center">
-                          Người thiết kế
-                        </TableHead>
-                        <TableHead className="text-center">SL</TableHead>
-                        <TableHead className="text-right">Đơn giá</TableHead>
-                        <TableHead className="text-right">Thành tiền</TableHead>
-                        <TableHead className="w-[100px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {order.orderDetails?.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <div className="w-12 h-12 rounded-md bg-muted overflow-hidden">
-                              {item.design?.designImageUrl ? (
-                                <img
-                                  src={item.design.designImageUrl}
-                                  alt={item.design?.designName || ""}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                                  <Package className="h-5 w-5" />
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="min-w-0">
-                            <div className="space-y-1">
-                              <p
-                                className="font-medium max-w-[320px] truncate"
-                                title={item.design?.designName || undefined}
-                              >
-                                {item.design?.designName || "—"}
-                              </p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span className="font-mono">
-                                  {item.design?.code}
-                                </span>
-                                {item.design?.dimensions && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{item.design.dimensions}</span>
-                                  </>
-                                )}
-                              </div>
-                              <div className="flex gap-1.5 mt-1">
-                                {item.design?.designType?.name && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {item.design.designType.name}
-                                  </Badge>
-                                )}
-                                {item.design?.materialType?.name && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {item.design.materialType.name}
-                                  </Badge>
-                                )}
-                              </div>
-                              {item.requirements && (
-                                <p className="text-xs text-amber-600 mt-1">
-                                  Yêu cầu: {item.requirements}
-                                </p>
-                              )}
-                              {/* delivery address moved to its own column */}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground max-w-[280px]">
-                            {item.deliveryAddress || item.deliveryAddressLabel ? (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <span className="inline-block max-w-[220px] truncate">
-                                      {item.deliveryAddress || item.deliveryAddressLabel}
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top">
-                                    <p className="max-w-xs break-words">
-                                      {item.deliveryAddress || item.deliveryAddressLabel}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="text-xs">
-                              {item.design?.designer?.fullName ? (
-                                <p className="font-medium">
-                                  {item.design.designer.fullName}
-                                </p>
-                              ) : order.assignedUser?.fullName ? (
-                                <p className="font-medium">
-                                  {order.assignedUser.fullName}
-                                </p>
-                              ) : (
-                                <p className="text-muted-foreground">—</p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {editingOrderDetailId === item.id ? (
-                              <Input
-                                type="number"
-                                min="1"
-                                value={orderDetailEditValues.quantity || ""}
-                                onChange={(e) =>
-                                  setOrderDetailEditValues({
-                                    ...orderDetailEditValues,
-                                    quantity: e.target.value,
-                                  })
-                                }
-                                className="w-20 text-center font-medium tabular-nums"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">
-                                {item.quantity.toLocaleString("vi-VN")}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {editingOrderDetailId === item.id ? (
-                              <Input
-                                type="number"
-                                min="0"
-                                step="1000"
-                                value={orderDetailEditValues.unitPrice || ""}
-                                onChange={(e) =>
-                                  setOrderDetailEditValues({
-                                    ...orderDetailEditValues,
-                                    unitPrice: e.target.value,
-                                  })
-                                }
-                                className="w-32 text-right tabular-nums"
-                              />
-                            ) : (
-                              <span className="tabular-nums">
-                                {item.unitPrice && item.unitPrice > 0
-                                  ? formatCurrency(item.unitPrice)
-                                  : "—"}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-medium tabular-nums">
-                            {editingOrderDetailId === item.id
-                              ? formatCurrency(
-                                  (Number(orderDetailEditValues.quantity) ||
-                                    0) *
-                                    (Number(orderDetailEditValues.unitPrice) ||
-                                      0),
-                                )
-                              : formatCurrency(item.totalPrice || 0)}
-                          </TableCell>
-                          <TableCell>
-                            {editingOrderDetailId === item.id ? (
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => handleSaveOrderDetail(item.id)}
-                                  disabled={isUpdatingForAccounting}
-                                >
-                                  {isUpdatingForAccounting ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
+              {/* Order / Invoice Items */}
+              <Tabs value={currentTab} onValueChange={handleTabChange}>
+                <div className="flex items-center justify-between mb-2">
+                  <TabsList>
+                    <TabsTrigger value="order">Sản phẩm trong đơn</TabsTrigger>
+                    <TabsTrigger value="invoice" disabled={!invoicesData?.items?.length}>
+                      Sản phẩm trong hóa đơn
+                      {invoicesData?.items?.length ? (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 min-w-[20px]">
+                          {invoiceItems.length}
+                        </Badge>
+                      ) : null}
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <TabsContent value="order" className="mt-0">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Package className="h-4 w-4 text-primary" />
+                        Sản phẩm trong đơn
+                        <Badge variant="secondary" className="ml-2">
+                          {order.orderDetails?.length || 0} sản phẩm
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/30">
+                            <TableHead className="w-[60px]">Ảnh</TableHead>
+                            <TableHead>Sản phẩm</TableHead>
+                            <TableHead className="text-center">
+                              Địa chỉ giao hàng
+                            </TableHead>
+                            <TableHead className="text-center">
+                              Người thiết kế
+                            </TableHead>
+                            <TableHead className="text-center">SL</TableHead>
+                            <TableHead className="text-right">Đơn giá</TableHead>
+                            <TableHead className="text-right">
+                              Thành tiền
+                            </TableHead>
+                            <TableHead className="w-[100px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {order.orderDetails?.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <div className="w-12 h-12 rounded-md bg-muted overflow-hidden">
+                                  {item.design?.designImageUrl ? (
+                                    <img
+                                      src={item.design.designImageUrl}
+                                      alt={item.design?.designName || ""}
+                                      className="w-full h-full object-cover"
+                                    />
                                   ) : (
-                                    "Lưu"
+                                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                      <Package className="h-5 w-5" />
+                                    </div>
                                   )}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={cancelEditingOrderDetail}
-                                  disabled={isUpdatingForAccounting}
-                                >
-                                  Hủy
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  if (item.id && item.quantity) {
-                                    startEditingOrderDetail({
-                                      id: item.id,
-                                      quantity: item.quantity,
-                                      unitPrice: item.unitPrice,
-                                    });
-                                  }
-                                }}
+                                </div>
+                              </TableCell>
+                              <TableCell className="min-w-0">
+                                <div className="space-y-1">
+                                  <p
+                                    className="font-medium max-w-[320px] truncate"
+                                    title={item.design?.designName || undefined}
+                                  >
+                                    {item.design?.designName || "—"}
+                                  </p>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="font-mono">
+                                      {item.design?.code}
+                                    </span>
+                                    {item.design?.dimensions && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{item.design.dimensions}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-1.5 mt-1">
+                                    {item.design?.designType?.name && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        {item.design.designType.name}
+                                      </Badge>
+                                    )}
+                                    {item.design?.materialType?.name && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        {item.design.materialType.name}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {item.requirements && (
+                                    <p className="text-xs text-amber-600 mt-1">
+                                      Yêu cầu: {item.requirements}
+                                    </p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground max-w-[280px]">
+                                {item.deliveryAddress ||
+                                item.deliveryAddressLabel ? (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <span className="inline-block max-w-[220px] truncate">
+                                          {item.deliveryAddress ||
+                                            item.deliveryAddressLabel}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">
+                                        <p className="max-w-xs break-words">
+                                          {item.deliveryAddress ||
+                                            item.deliveryAddressLabel}
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    —
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="text-xs">
+                                  {item.design?.designer?.fullName ? (
+                                    <p className="font-medium">
+                                      {item.design.designer.fullName}
+                                    </p>
+                                  ) : order.assignedUser?.fullName ? (
+                                    <p className="font-medium">
+                                      {order.assignedUser.fullName}
+                                    </p>
+                                  ) : (
+                                    <p className="text-muted-foreground">—</p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {editingOrderDetailId === item.id ? (
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={
+                                      orderDetailEditValues.quantity || ""
+                                    }
+                                    onChange={(e) =>
+                                      setOrderDetailEditValues({
+                                        ...orderDetailEditValues,
+                                        quantity: e.target.value,
+                                      })
+                                    }
+                                    className="w-20 text-center font-medium tabular-nums"
+                                  />
+                                ) : (
+                                  <span className="font-medium tabular-nums">
+                                    {item.quantity.toLocaleString("vi-VN")}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {editingOrderDetailId === item.id ? (
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="1000"
+                                    value={
+                                      orderDetailEditValues.unitPrice || ""
+                                    }
+                                    onChange={(e) =>
+                                      setOrderDetailEditValues({
+                                        ...orderDetailEditValues,
+                                        unitPrice: e.target.value,
+                                      })
+                                    }
+                                    className="w-32 text-right tabular-nums"
+                                  />
+                                ) : (
+                                  <span className="tabular-nums">
+                                    {item.unitPrice && item.unitPrice > 0
+                                      ? formatCurrency(item.unitPrice)
+                                      : "—"}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-medium tabular-nums">
+                                {editingOrderDetailId === item.id
+                                  ? formatCurrency(
+                                      (Number(
+                                        orderDetailEditValues.quantity,
+                                      ) || 0) *
+                                        (Number(
+                                          orderDetailEditValues.unitPrice,
+                                        ) || 0),
+                                    )
+                                  : formatCurrency(item.totalPrice || 0)}
+                              </TableCell>
+                              <TableCell>
+                                {editingOrderDetailId === item.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() =>
+                                        handleSaveOrderDetail(item.id)
+                                      }
+                                      disabled={isUpdatingForAccounting}
+                                    >
+                                      {isUpdatingForAccounting ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        "Lưu"
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={cancelEditingOrderDetail}
+                                      disabled={isUpdatingForAccounting}
+                                    >
+                                      Hủy
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      if (item.id && item.quantity) {
+                                        startEditingOrderDetail({
+                                          id: item.id,
+                                          quantity: item.quantity,
+                                          unitPrice: item.unitPrice,
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          )) || (
+                            <TableRow>
+                              <TableCell
+                                colSpan={8}
+                                className="text-center text-muted-foreground py-8"
                               >
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )) || (
-                        <TableRow>
-                          <TableCell
-                            colSpan={8}
-                            className="text-center text-muted-foreground py-8"
-                          >
-                            Không có sản phẩm nào
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                                Không có sản phẩm nào
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="invoice" className="mt-0">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Receipt className="h-4 w-4 text-primary" />
+                        Sản phẩm trong hóa đơn
+                        <Badge variant="secondary" className="ml-2">
+                          {invoiceItems.length} dòng hàng
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/30">
+                            <TableHead className="w-[60px]">Ảnh</TableHead>
+                            <TableHead>Mô tả</TableHead>
+                            <TableHead className="text-center">ĐVT</TableHead>
+                            <TableHead className="text-center">Số lượng</TableHead>
+                            <TableHead className="text-right">Đơn giá</TableHead>
+                            <TableHead className="text-right">Thành tiền</TableHead>
+                            <TableHead className="text-right">Chiết khấu</TableHead>
+                            <TableHead className="text-right">Tổng cộng</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {invoiceItems.length > 0 ? (
+                            invoiceItems.map((item, idx) => (
+                              <TableRow key={item.id || idx}>
+                                <TableCell>
+                                  <div className="w-12 h-12 rounded-md bg-muted overflow-hidden">
+                                    {item.orderDetail?.design?.designImageUrl ? (
+                                      <img
+                                        src={item.orderDetail.design.designImageUrl}
+                                        alt={item.orderDetail.design?.designName || ""}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                        <Package className="h-5 w-5" />
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <p className="font-medium">
+                                    {item.description || item.orderDetail?.design?.designName || "—"}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground font-mono">
+                                    {item.orderDetail?.design?.code || "—"}
+                                  </p>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {item.unit || "—"}
+                                </TableCell>
+                                <TableCell className="text-center font-medium tabular-nums">
+                                  {item.quantity?.toLocaleString("vi-VN")}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  {formatCurrency(item.unitPrice || 0)}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  {formatCurrency(item.amount || 0)}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums text-destructive">
+                                  {item.discountAmount && item.discountAmount > 0
+                                    ? `-${formatCurrency(item.discountAmount)}`
+                                    : "—"}
+                                </TableCell>
+                                <TableCell className="text-right font-bold tabular-nums">
+                                  {formatCurrency(item.amountAfterDiscount || 0)}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell
+                                colSpan={8}
+                                className="text-center text-muted-foreground py-8"
+                              >
+                                Không có sản phẩm nào trong hóa đơn
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
 
               {/* Notes */}
               {order.note && (
