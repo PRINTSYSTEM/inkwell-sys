@@ -2525,6 +2525,27 @@
           }
         }
       },
+      "delete": {
+        "tags": [
+          "Customer"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      },
       "get": {
         "tags": [
           "Customer"
@@ -9881,7 +9902,22 @@
             }
           },
           {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "materialTypeId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "quantityMin",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -10072,6 +10108,198 @@
       "delete": {
         "tags": [
           "Material"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/material-cuts": {
+      "post": {
+        "tags": [
+          "MaterialCut"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMaterialCutRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMaterialCutRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMaterialCutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialCutResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialCutResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialCutResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "MaterialCut"
+        ],
+        "parameters": [
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "inputMaterialId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "sortColumn",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/material-cuts/{id}/complete": {
+      "post": {
+        "tags": [
+          "MaterialCut"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/material-cuts/{id}/cancel": {
+      "post": {
+        "tags": [
+          "MaterialCut"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/material-cuts/{id}": {
+      "get": {
+        "tags": [
+          "MaterialCut"
         ],
         "parameters": [
           {
@@ -21528,6 +21756,11 @@
             "minimum": 0,
             "type": "number",
             "format": "double"
+          },
+          "parentCustomerId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -21804,6 +22037,11 @@
               "$ref": "#/components/schemas/InvoiceLineInput"
             }
           },
+          "billToCustomerId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
           "discountPercent": {
             "maximum": 100,
             "minimum": 0,
@@ -21870,6 +22108,11 @@
               "format": "int32"
             }
           },
+          "billToCustomerId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
           "invoiceNumber": {
             "type": "string",
             "nullable": true
@@ -21883,6 +22126,47 @@
           "notes": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateMaterialCutRequest": {
+        "required": [
+          "inputMaterialId",
+          "outputs"
+        ],
+        "type": "object",
+        "properties": {
+          "inputMaterialId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantityUsed": {
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantityWasted": {
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer",
+            "format": "int32"
+          },
+          "cutAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaterialCutOutputLineRequest"
+            }
           }
         },
         "additionalProperties": false
@@ -23103,6 +23387,11 @@
           },
           "isComplete": {
             "type": "boolean"
+          },
+          "parentCustomerId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           },
           "createdAt": {
             "type": "string",
@@ -25063,6 +25352,118 @@
             },
             "nullable": true,
             "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MaterialCutOutputLineRequest": {
+        "required": [
+          "outputMaterialId"
+        ],
+        "type": "object",
+        "properties": {
+          "outputMaterialId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantityProduced": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MaterialCutOutputLineResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "outputMaterialId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "outputMaterialName": {
+            "type": "string",
+            "nullable": true
+          },
+          "quantityProduced": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "outputStockBefore": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MaterialCutResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "inputMaterialId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inputMaterialName": {
+            "type": "string",
+            "nullable": true
+          },
+          "quantityUsed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantityWasted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inputStockBefore": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "cutAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/UserInfo"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaterialCutOutputLineResponse"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -28513,6 +28914,11 @@
         ],
         "type": "object",
         "properties": {
+          "lineKind": {
+            "maxLength": 32,
+            "type": "string",
+            "nullable": true
+          },
           "itemName": {
             "minLength": 1,
             "type": "string"
@@ -29018,6 +29424,11 @@
             "minimum": 0,
             "type": "number",
             "format": "double",
+            "nullable": true
+          },
+          "parentCustomerId": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           }
         },
@@ -29809,6 +30220,10 @@
           "receivedAt": {
             "type": "string",
             "format": "date-time",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
             "nullable": true
           },
           "outsourceCost": {

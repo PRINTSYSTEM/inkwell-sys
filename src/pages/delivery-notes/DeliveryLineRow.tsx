@@ -255,9 +255,9 @@ export default function DeliveryLineRow({
 
         {/* Cột Thao tác */}
         <TableCell>
-          {!isSettled && (
+          {!isSettled && noteIsShipping && (
             <div className="flex flex-col gap-1.5 w-fit">
-              {nextStatus && noteIsShipping && (
+              {nextStatus && (
                 <Button
                   size="sm"
                   variant="default"
@@ -282,7 +282,7 @@ export default function DeliveryLineRow({
                 disabled={updateLineResultMutation.isPending}
               >
                 <XCircle className="h-3 w-3" />
-                Hủy/Thất bại
+                Thất bại
               </Button>
             </div>
           )}

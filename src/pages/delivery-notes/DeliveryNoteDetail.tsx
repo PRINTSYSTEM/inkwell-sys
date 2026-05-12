@@ -758,7 +758,7 @@ export default function DeliveryNoteDetailPage() {
                         {orderCode || "—"}
                       </span>
                       <Badge variant="secondary" className="text-xs">
-                        {count} dòng
+                        {count} đơn
                       </Badge>
                     </div>
                   ))}

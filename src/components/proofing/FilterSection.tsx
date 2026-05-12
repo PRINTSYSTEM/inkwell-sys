@@ -143,7 +143,7 @@ export function FilterSection({
         <div className="relative flex-1 min-w-[200px] max-w-[300px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Tìm theo mã hàng..."
+            placeholder="Tìm mã thiết kế..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10 h-8 text-sm"

@@ -349,6 +349,9 @@ export default function StockInDetailPage() {
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-24">
                           Đơn vị
                         </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-28">
+                          Loại hàng
+                        </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 text-right w-28">
                           Số lượng
                         </TableHead>
@@ -367,7 +370,7 @@ export default function StockInDetailPage() {
                       {items.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={8}
+                            colSpan={9}
                             className="text-center py-12 text-slate-500 text-sm"
                           >
                             Không có vật phẩm nào
@@ -393,6 +396,16 @@ export default function StockInDetailPage() {
                               </TableCell>
                               <TableCell className="text-slate-600 text-sm py-3 px-4">
                                 {item.unit || "Không có"}
+                              </TableCell>
+                              <TableCell className="text-slate-600 text-sm py-3 px-4">
+                                {item.lineKind ? (
+                                  <Badge variant="outline" className="text-[10px] font-normal uppercase">
+                                    {item.lineKind === "sheet" ? "Tờ" : 
+                                     item.lineKind === "roll" ? "Cuộn" : 
+                                     item.lineKind === "service" ? "Dịch vụ" : 
+                                     item.lineKind === "custom" ? "Tùy chỉnh" : item.lineKind}
+                                  </Badge>
+                                ) : "—"}
                               </TableCell>
                               <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
                                 {(item.quantity || 0).toLocaleString("vi-VN")}

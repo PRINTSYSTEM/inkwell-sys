@@ -49,7 +49,7 @@ export function PrepressOrderRow({
       regex.test(part) ? (
         <span
           key={index}
-          className="bg-red-500 text-white font-semibold px-0.5 rounded"
+          className="bg-emerald-500 text-white font-semibold px-0.5 rounded"
         >
           {part}
         </span>
@@ -237,7 +237,7 @@ export function PrepressOrderRow({
           <div className="flex flex-col gap-1">
             {designs.map((pod: any, idx: number) => (
               <span key={pod.id || idx}>
-                {pod.design?.code || "—"}
+                {highlightText(pod.design?.code || "—", debouncedSearchTerm.trim())}
               </span>
             ))}
           </div>

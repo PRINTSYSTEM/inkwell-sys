@@ -298,6 +298,7 @@ export function PrepressOrdersHeader({
                 isRejecting={isRejecting}
                 onFindDie={onFindDie}
                 isSelectionEnabled={isSelectionEnabled}
+                searchTerm={searchTerm}
               />
               {/* Designs Pagination */}
               {designsTotalCount > itemsPerPage &&
