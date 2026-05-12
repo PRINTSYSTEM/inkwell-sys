@@ -133,16 +133,11 @@ export function DetailPlateExportCard({
                       <span className="font-semibold text-foreground">
                         {exportItem?.productionMethod === "outsource" ? (
                           <span className="text-orange-600 dark:text-orange-400">
-                            {exportItem?.productionMethodName || productionMethodLabels.outsource || "In ngoài"}
+                            {exportItem?.printingVendorName || exportItem?.printingVendor?.name || exportItem?.productionMethodName || "In ngoài"}
                           </span>
                         ) : (
                           <span className="text-blue-600 dark:text-blue-400">
                             {exportItem?.productionMethodName || productionMethodLabels.in_house || "In tại xưởng"}
-                          </span>
-                        )}
-                        {exportItem?.productionMethod === "outsource" && (exportItem?.printingVendorName || exportItem?.printingVendor?.name) && (
-                          <span className="ml-1 text-muted-foreground font-normal">
-                            ({exportItem.printingVendorName || exportItem.printingVendor?.name})
                           </span>
                         )}
                       </span>

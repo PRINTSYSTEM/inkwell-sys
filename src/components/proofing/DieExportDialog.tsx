@@ -101,7 +101,7 @@ export function DieExportDialog({
   const [dieFiles, setDieFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [receivedAtManual, setReceivedAtManual] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
+  const [dieNotes, setDieNotes] = useState<Record<number, string>>({});
   const [dieAction, setDieAction] = useState<"select" | "create">("select");
 
   // For selecting existing dies
@@ -389,7 +389,7 @@ export function DieExportDialog({
       setDieFiles([]);
       setImagePreviews([]);
       setReceivedAtManual("");
-      setNotes("");
+      setDieNotes({});
       setDieAction("select");
       setSelectedDieIds([]);
       setDieSearchTerm("");
@@ -717,7 +717,7 @@ export function DieExportDialog({
               data: {
                 dieId,
                 isNewDie: false,
-                notes: notes.trim() || undefined,
+                notes: dieNotes[dieId]?.trim() || undefined,
               },
             },
             {
@@ -732,36 +732,6 @@ export function DieExportDialog({
           );
         });
       }
-
-      // Step 4: Record die export
-      // Use selected die IDs
-      const allDieIds = selectedDieIds;
-
-      if (allDieIds.length === 0) {
-        toast.error("Không có khuôn bế nào để ghi nhận xuất");
-        return;
-      }
-
-      await new Promise<void>((resolve, reject) => {
-        recordDie(
-          {
-            id: proofingOrderId,
-            dieIds: allDieIds,
-            notes: notes.trim() || undefined,
-          },
-          {
-            onSuccess: () => {
-              resolve();
-            },
-            onError: (error) => {
-              toast.error("Không thể ghi nhận xuất khuôn bế", {
-                description: getErrorMessage(error),
-              });
-              reject(error);
-            },
-          },
-        );
-      });
 
       toast.success("Đã ghi nhận xuất khuôn bế thành công");
       onSuccess?.();
@@ -782,13 +752,13 @@ export function DieExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[88vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-7xl h-[88vh] flex flex-col overflow-hidden">
         <DialogHeader className="pb-2">
           <DialogTitle>Xuất khuôn bế</DialogTitle>
         </DialogHeader>
 
         {/* MAIN SPLIT LAYOUT */}
-        <div className={cn("flex-1 gap-4 overflow-hidden", dieAction === "create" ? "grid grid-cols-[7fr,5fr]" : "flex")}>
+        <div className="flex-1 gap-4 overflow-hidden grid grid-cols-[7fr,5fr]">
           {/* LEFT: EXISTING DIE SELECTION + OVERVIEW */}
           <div className="flex-1 flex flex-col overflow-hidden border rounded-lg bg-background">
             <div className="border-b px-4 py-3 flex items-center justify-between gap-3">
@@ -836,12 +806,13 @@ export function DieExportDialog({
               </div>
             </div>
 
-            {/* toggle select/create - compact, always visible */}
+            {/* toggle select/create and actions - compact, always visible */}
             <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-3 border-b bg-muted/40">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Button
                   variant={dieAction === "select" ? "default" : "outline"}
                   size="sm"
+                  className="rounded-full font-medium"
                   onClick={() => {
                     setDieAction("select");
                     setSelectedDieIds([]);
@@ -852,6 +823,7 @@ export function DieExportDialog({
                 <Button
                   variant={dieAction === "create" ? "default" : "outline"}
                   size="sm"
+                  className="rounded-full font-medium"
                   onClick={() => {
                     setDieAction("create");
                     setSelectedDieIds([]);
@@ -860,6 +832,18 @@ export function DieExportDialog({
                   Đặt khuôn mới
                 </Button>
               </div>
+              
+              {dieAction === "select" && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsBrowsingDie(true)}
+                  className="h-8 text-xs rounded-full font-semibold bg-primary/10 text-primary hover:bg-primary/20"
+                >
+                  <Search className="h-3.5 w-3.5 mr-1.5" />
+                  Duyệt kho khuôn
+                </Button>
+              )}
             </div>
 
             {/* CONTENT AREA LEFT: either die grid or compact hint when creating */}
@@ -893,7 +877,7 @@ export function DieExportDialog({
                       </div>
                     ) : (
                       <div className="h-full overflow-y-auto">
-                        <div className="grid grid-cols-1 gap-2 p-1">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-1">
                           {availableDies.map((die) => {
                             const isSelected = die.id
                               ? selectedDieIds.includes(die.id)
@@ -915,7 +899,7 @@ export function DieExportDialog({
                               <div
                                 key={die.id}
                                 className={cn(
-                                  "group relative flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer",
+                                  "group relative flex items-center gap-2.5 p-2 rounded-lg border transition-all cursor-pointer",
                                   isSelected
                                     ? "border-primary bg-primary/5 shadow-sm"
                                     : canSelect
@@ -947,7 +931,7 @@ export function DieExportDialog({
                                 )}
 
                                 {/* Image */}
-                                <div className="relative flex-shrink-0 w-20 h-20 bg-muted/50 rounded-md overflow-hidden border">
+                                <div className="relative flex-shrink-0 w-16 h-16 bg-muted/50 rounded-md overflow-hidden border">
                                   {die.imageUrl ? (
                                     <img
                                       src={die.imageUrl}
@@ -1100,14 +1084,14 @@ export function DieExportDialog({
             </div>
           </div>
 
-          {/* RIGHT: CREATE DIE + VENDOR + META (SCROLLABLE COLUMN) - only shown when creating new die */}
-          <div className={cn("flex flex-col overflow-hidden border rounded-lg bg-background", dieAction !== "create" && "hidden")}>
+          {/* RIGHT: CREATE DIE + VENDOR + META or NOTES (SCROLLABLE COLUMN) */}
+          <div className="flex flex-col overflow-hidden border rounded-lg bg-background">
             <div className="border-b px-4 py-3">
               <p className="text-sm font-medium">
-                Thông tin khuôn &amp; đơn vị làm khuôn
+                {dieAction === "create" ? "Thông tin khuôn & đơn vị làm khuôn" : "Ghi chú xuất khuôn"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Thiết kế form gọn, chia nhóm để tránh scroll quá dài.
+                {dieAction === "create" ? "Thiết kế form gọn, chia nhóm để tránh scroll quá dài." : "Thêm ghi chú cho từng khuôn bế đã chọn."}
               </p>
             </div>
 
@@ -1238,17 +1222,6 @@ export function DieExportDialog({
                       </div>
                     </div>
                   </div>
-                </>
-              ) : (
-                <div className="rounded-md border-2 border-dashed bg-muted/20 p-4 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Chế độ <span className="font-bold text-foreground">Chọn khuôn có sẵn</span>.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Vui lòng chọn khuôn bên trái và điền thông tin bên dưới.
-                  </p>
-                </div>
-              )}
 
               {/* Vendor selection / creation */}
               <div className="space-y-3 pt-4 border-t">
@@ -1609,16 +1582,74 @@ export function DieExportDialog({
                       </div>
                     </div>
                   </div>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  {selectedDieIds.length > 0 ? (
+                    selectedDieIds.map((dieId) => {
+                      const die = allDies.find((d) => d.id === dieId);
+                      return (
+                        <div key={dieId} className="flex gap-3 p-3 rounded-md border bg-muted/10 shadow-sm">
+                          {/* Image */}
+                          <div className="relative flex-shrink-0 w-16 h-16 bg-muted/50 rounded-md overflow-hidden border">
+                            {die?.imageUrl ? (
+                              <img
+                                src={die.imageUrl}
+                                alt={die.code || "Khuôn bế"}
+                                className="w-full h-full object-contain cursor-zoom-in bg-white"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewImageUrl(die.imageUrl || null);
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="flex-1 flex flex-col min-w-0">
+                            <div className="text-sm font-semibold text-primary truncate mb-1" title={die?.code || `Khuôn #${dieId}`}>
+                              {die?.code || `Khuôn #${dieId}`}
+                            </div>
+                            <Textarea
+                              value={dieNotes[dieId] || ""}
+                              onChange={(e) =>
+                                setDieNotes((prev) => ({
+                                  ...prev,
+                                  [dieId]: e.target.value,
+                                }))
+                              }
+                              placeholder="Nhập ghi chú xuất khuôn này..."
+                              className="text-xs resize-none"
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+                      <p className="max-w-xs">
+                        Chưa chọn khuôn nào. Hãy chọn ít nhất 1 khuôn bên trái để thêm ghi chú.
+                      </p>
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Footer: always visible */}
-        <DialogFooter className="border-t px-4 py-3 flex items-center justify-between gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="border-t px-4 py-3 flex items-center justify-between gap-3 bg-muted/20">
+          <Button variant="outline" className="rounded-full px-6 font-medium" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
           <Button
+            className="rounded-full px-6 font-semibold shadow-sm"
             onClick={handleSubmit}
             disabled={
               isSubmitting ||

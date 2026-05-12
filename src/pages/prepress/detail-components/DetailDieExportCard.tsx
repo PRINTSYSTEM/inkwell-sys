@@ -64,16 +64,28 @@ export function DetailDieExportCard({
               <Box className="h-3.5 w-3.5" />
               Xuất khuôn bế ({dieExports.length})
             </CardTitle>
-            <Dialog open={showDebug} onOpenChange={setShowDebug}>
-              <DialogTrigger asChild>
+            <div className="flex items-center gap-1.5">
+              {isDieExported && (
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground/40 hover:text-primary"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 gap-1 text-[10px] font-semibold px-2 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
+                  onClick={() => setIsDieListDialogOpen(true)}
                 >
-                  <Bug className="h-3 w-3" />
+                  <Search className="h-2.5 w-2.5" />
+                  Duyệt khuôn
                 </Button>
-              </DialogTrigger>
+              )}
+              <Dialog open={showDebug} onOpenChange={setShowDebug}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground/40 hover:text-primary"
+                  >
+                    <Bug className="h-3 w-3" />
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
@@ -101,6 +113,7 @@ export function DetailDieExportCard({
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </CardHeader>
 
@@ -263,21 +276,12 @@ export function DetailDieExportCard({
               ))}
 
               {/* Centered Action Buttons at bottom */}
-              <div className="flex items-center justify-center gap-2 pt-3 border-t border-muted-foreground/5 mt-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
-                  onClick={() => setIsDieListDialogOpen(true)}
-                >
-                  <Search className="h-3 w-3" />
-                  Duyệt khuôn
-                </Button>
+              <div className="flex items-center justify-center gap-2 pt-3 border-t border-muted-foreground/5 mt-auto flex-wrap">
                 {order.status !== "completed" && (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
+                    className="h-7 gap-1.5 text-[11px] font-semibold px-3 flex-1 border-primary/20 hover:bg-primary/5 text-primary rounded-full whitespace-nowrap"
                     onClick={() => setIsDieExportDialogOpen(true)}
                   >
                     <Plus className="h-3 w-3" />
@@ -287,11 +291,11 @@ export function DetailDieExportCard({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-amber-200 hover:bg-amber-50 text-amber-600 rounded-full"
+                  className="h-7 gap-1.5 text-[11px] font-semibold px-3 flex-1 border-amber-200 hover:bg-amber-50 text-amber-600 rounded-full whitespace-nowrap"
                   onClick={() => {}}
                 >
                   <RefreshCcw className="h-3 w-3" />
-                  Xuất lại khuôn
+                  Xuất lại
                 </Button>
               </div>
             </div>
