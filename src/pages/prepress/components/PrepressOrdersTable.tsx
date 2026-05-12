@@ -60,6 +60,9 @@ export function PrepressOrdersTable({
                       <TableHead className="h-10 text-sm font-bold">
                         Mã bài
                       </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Mã hàng
+                      </TableHead>
 
                       <TableHead className="h-10 text-sm font-bold">
                         Chất liệu
@@ -84,14 +87,14 @@ export function PrepressOrdersTable({
                   <TableBody>
                     {loading ? (
                       <TableSkeleton
-                        cols={shouldShowExpand ? 9 : 8}
+                        cols={shouldShowExpand ? 10 : 9}
                         rows={5}
                         rowHeight="h-14"
                       />
                     ) : orders.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={shouldShowExpand ? 9 : 8}
+                          colSpan={shouldShowExpand ? 10 : 9}
                           className="py-10"
                         >
                           <div className="flex flex-col items-center justify-center gap-2 text-center">

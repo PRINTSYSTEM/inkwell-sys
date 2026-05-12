@@ -837,6 +837,17 @@ function ProductionTableRow({
                     )}{" "}
                     tờ
                   </span>
+                  
+                  {(prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes) && (
+                    <>
+                      <span className="text-muted-foreground font-medium">
+                        Ghi chú:
+                      </span>
+                      <span className="font-medium text-amber-700 break-words whitespace-pre-wrap italic">
+                        {prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 {isDraft && (
@@ -896,6 +907,15 @@ function ProductionTableRow({
                                     : "—"}
                                 </span>
                               </div>
+                              
+                              {(pod.notes || pod.design?.notes) && (
+                                <div className="flex flex-col gap-0.5 mt-1 pt-1 border-t border-muted/30">
+                                  <span className="text-muted-foreground font-medium text-[10px]">Ghi chú:</span>
+                                  <span className="font-medium text-amber-700 break-words whitespace-pre-wrap italic">
+                                    {pod.notes || pod.design?.notes}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ),
@@ -965,13 +985,14 @@ function ProductionTableRow({
                                 Đã nhận
                               </span>
                             </div>
-                            {plateExport.notes && (
-                              <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
-                                <span className="text-muted-foreground font-medium">
+                            {/* Ghi chú Kẽm */}
+                            {(plateExport.notes || plateExport.plate?.notes) && (
+                              <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30 mt-0.5">
+                                <span className="text-muted-foreground font-medium text-[10px]">
                                   Ghi chú:
                                 </span>
-                                <span className="italic text-muted-foreground break-words">
-                                  {plateExport.notes}
+                                <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
+                                  {plateExport.notes || plateExport.plate?.notes}
                                 </span>
                               </div>
                             )}
@@ -1085,6 +1106,18 @@ function ProductionTableRow({
                               {formatDate(dieExport.createdAt)}
                             </span>
                           </div>
+                          
+                          {/* Ghi chú Khuôn */}
+                          {(dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes) && (
+                            <div className="flex flex-col pt-0.5 border-t border-slate-200 dark:border-slate-700 mt-0.5">
+                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                Ghi chú:
+                              </span>
+                              <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
+                                {dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
