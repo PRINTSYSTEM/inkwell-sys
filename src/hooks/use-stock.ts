@@ -503,6 +503,101 @@ export const useProcessDeliveryReturn = () => {
   });
 };
 
+// ========== MATERIAL CUTS ==========
+
+const materialCutKeys = {
+  all: ["material-cuts"] as const,
+  lists: () => [...materialCutKeys.all, "list"] as const,
+  list: (params?: any) =>
+    [...materialCutKeys.lists(), normalizeParams(params || {})] as const,
+  details: () => [...materialCutKeys.all, "detail"] as const,
+  detail: (id: number) => [...materialCutKeys.details(), id] as const,
+};
+
+export const useMaterialCuts = (params?: any) => {
+  return useQuery({
+    queryKey: materialCutKeys.list(params),
+    queryFn: async () => {
+      const response = await apiRequest.get(API_SUFFIX.MATERIAL_CUTS, {
+        params: normalizeParams(params || {}),
+      });
+      return response.data;
+    },
+  });
+};
+
+export const useMaterialCut = (id: number | null, enabled = true) => {
+  return useQuery({
+    queryKey: materialCutKeys.detail(id!),
+    queryFn: async () => {
+      const response = await apiRequest.get(API_SUFFIX.MATERIAL_CUT_BY_ID(id!));
+      return response.data;
+    },
+    enabled: enabled && id !== null,
+  });
+};
+
+export const useCreateMaterialCut = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest.post(API_SUFFIX.MATERIAL_CUTS, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: materialCutKeys.all });
+      toast.success("Tạo phiếu cắt nguyên liệu thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu cắt thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useCompleteMaterialCut = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest.post(API_SUFFIX.MATERIAL_CUT_COMPLETE(id));
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: materialCutKeys.all });
+      queryClient.invalidateQueries({ queryKey: materialCutKeys.detail(id) });
+      toast.success("Hoàn thành phiếu cắt nguyên liệu thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Hoàn thành phiếu cắt nguyên liệu thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useCancelMaterialCut = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest.post(API_SUFFIX.MATERIAL_CUT_CANCEL(id));
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: materialCutKeys.all });
+      queryClient.invalidateQueries({ queryKey: materialCutKeys.detail(id) });
+      toast.success("Hủy phiếu cắt nguyên liệu thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Hủy phiếu cắt nguyên liệu thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+
 export const useStockOutsByDeliveryNote = (
   deliveryNoteId: number | null,
   enabled = true

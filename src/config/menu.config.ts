@@ -41,6 +41,7 @@ import {
   Activity,
   FileSpreadsheet,
   MapPin,
+  Scissors,
 } from "lucide-react";
 import type { UserRole } from "@/Schema";
 import { ROLE, ROUTE_PATHS } from "@/constants";
@@ -274,6 +275,18 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Phiếu nhập kho",
         icon: ArrowDownToLine,
         path: ROUTE_PATHS.STOCK.STOCK_INS,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION_LEAD,
+          ROLE.PRODUCTION,
+        ],
+      },
+      {
+        id: "material-cuts",
+        title: "Cắt nguyên liệu",
+        icon: Scissors,
+        path: ROUTE_PATHS.STOCK.MATERIAL_CUTS,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,
