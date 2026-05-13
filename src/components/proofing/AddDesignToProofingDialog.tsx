@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   Loader2,
   Sparkles,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -58,6 +59,7 @@ export function AddDesignToProofingDialog({
   const [selectedDesignIds, setSelectedDesignIds] = useState<Set<number>>(
     new Set()
   );
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Helper functions to check design type
   const isNhanDesignType = (designTypeName: string): boolean => {
@@ -78,28 +80,23 @@ export function AddDesignToProofingDialog({
       return availableDesigns;
     }
 
-    const isCurrentDesignNhanOrDecal =
-      isNhanDesignType(currentDesign.designTypeName || "") ||
-      isDecalDesignType(currentDesign.designTypeName || "");
-
-    // Filter designs that have the same materialTypeId and designTypeId as current design
-    // EXCEPTION: Nếu current design là nhãn giấy hoặc decal, không bắt buộc phải có laminationType giống nhau
     return availableDesigns.filter((design) => {
-      const hasSameMaterialAndDesignType =
-        design.materialTypeId === currentDesign.materialTypeId &&
-        design.designTypeId === currentDesign.designTypeId;
+      // Chỉ ràng buộc cùng loại thiết kế (designTypeId), bỏ ràng buộc chất liệu (materialTypeId)
+      const hasSameDesignType = design.designTypeId === currentDesign.designTypeId;
+      if (!hasSameDesignType) return false;
 
-      if (!hasSameMaterialAndDesignType) return false;
+      // Tìm kiếm theo mã hàng hoặc tên hàng
+      if (searchTerm.trim()) {
+        const lowerSearch = searchTerm.toLowerCase().trim();
+        return (
+          design.code?.toLowerCase().includes(lowerSearch) ||
+          design.name?.toLowerCase().includes(lowerSearch)
+        );
+      }
 
-      // Nếu current design là nhãn giấy hoặc decal, chỉ cần cùng materialTypeId và designTypeId
-      if (isCurrentDesignNhanOrDecal) return true;
-
-      // Các loại khác: phải có cùng laminationType (handle null/undefined)
-      const currentLaminationType = currentDesign.laminationType ?? null;
-      const designLaminationType = design.laminationType ?? null;
-      return currentLaminationType === designLaminationType;
+      return true;
     });
-  }, [availableDesigns, currentDesign]);
+  }, [availableDesigns, currentDesign, searchTerm]);
 
   // Set default quantities when modal opens
   useEffect(() => {
@@ -241,20 +238,30 @@ export function AddDesignToProofingDialog({
                 <DialogDescription className="text-xs mt-0.5">
                   {filteredDesigns.length} mã hàng có sẵn
                   {currentDesign &&
-                    ` (cùng quy cách: ${currentDesign.materialTypeName} - ${currentDesign.designTypeName})`}
+                    ` (loại: ${currentDesign.designTypeName})`}
                   {" • "}
                   {selectedCount} đã chọn
                 </DialogDescription>
               </div>
             </div>
-            {materialTypeName && (
-              <Badge variant="secondary" className="text-xs">
-                <Package className="h-3 w-3 mr-1" />
-                {materialTypeName}
+          <div className="flex items-center gap-3 w-full max-w-sm ml-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Tìm mã hàng, tên hàng..."
+                className="h-8 pl-8 text-xs bg-muted/30 focus-visible:ring-primary/30"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            {selectedCount > 0 && (
+              <Badge variant="default" className="text-[10px] h-5 bg-primary/90">
+                {selectedCount} đã chọn
               </Badge>
             )}
           </div>
-        </DialogHeader>
+        </div>
+      </DialogHeader>
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-4 space-y-4">

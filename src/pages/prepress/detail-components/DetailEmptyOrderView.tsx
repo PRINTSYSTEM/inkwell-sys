@@ -350,7 +350,7 @@ export function DetailEmptyOrderView({
                 </Button>
                 <p className="text-[10px] text-center text-muted-foreground px-4 uppercase tracking-tighter font-medium italic">
                   <AlertTriangle className="inline h-3 w-3 mr-1" />
-                  Lưu ý: Các mã hàng phải có cùng loại chất liệu và quy cách cán màng
+                  Lưu ý: Các mã hàng nên có quy cách tương đồng để tối ưu bài bình
                 </p>
               </div>
             )}

@@ -838,6 +838,15 @@ function ProductionTableRow({
                     </span>
                   </div>
 
+                  <div className="flex flex-col border-t border-dashed border-muted/50 pt-1 mt-0">
+                    <span className="text-muted-foreground font-bold uppercase text-[9px] mb-0.5">
+                      Khổ giấy:
+                    </span>
+                    <span className="font-bold text-foreground leading-tight text-[11px]">
+                      {proofingOrder?.paperSize?.name || proofingOrder?.customPaperSize || "—"}
+                    </span>
+                  </div>
+
                   <div className="flex justify-between items-center border-t border-dashed border-muted/50 pt-1.5 mt-0.5">
                     <span className="text-muted-foreground font-medium">
                       Số lượng in:

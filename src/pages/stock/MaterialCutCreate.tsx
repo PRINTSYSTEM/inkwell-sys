@@ -72,7 +72,7 @@ function MaterialSelector({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "h-10 w-full justify-between text-sm bg-slate-50/50 font-normal border-slate-200",
+            "h-10 w-full justify-between text-sm font-normal",
             className
           )}
         >
@@ -94,7 +94,7 @@ function MaterialSelector({
             />
           </div>
           <CommandList className="max-h-[300px]">
-            <CommandEmpty>Không tìm thấy chất liệu nào.</CommandEmpty>
+            <CommandEmpty>Không tìm thấy.</CommandEmpty>
             <CommandGroup>
               {materials.map((m) => (
                 <CommandItem
@@ -169,27 +169,14 @@ export default function MaterialCutCreatePage() {
     }
 
     if (formData.quantityUsed + formData.quantityWasted <= 0) {
-      toast.error("Tổng số lượng sử dụng và hao hụt phải lớn hơn 0");
+      toast.error("Số lượng phải lớn hơn 0");
       return;
     }
 
     const validOutputs = outputs.filter(o => o.outputMaterialId !== null && o.quantityProduced >= 1);
     
     if (validOutputs.length === 0) {
-      toast.error("Vui lòng thêm ít nhất một sản phẩm đầu ra hợp lệ (số lượng >= 1)");
-      return;
-    }
-
-    // Check for duplicate outputs
-    const outputIds = validOutputs.map(o => o.outputMaterialId);
-    if (new Set(outputIds).size !== outputIds.length) {
-      toast.error("Không được chọn trùng sản phẩm đầu ra");
-      return;
-    }
-
-    // Check if input is same as any output
-    if (outputIds.includes(formData.inputMaterialId)) {
-      toast.error("Sản phẩm đầu ra không được trùng với nguyên liệu đầu vào");
+      toast.error("Vui lòng thêm sản phẩm đầu ra");
       return;
     }
 
@@ -205,11 +192,7 @@ export default function MaterialCutCreatePage() {
       }))
     }, {
       onSuccess: (data: any) => {
-        if (data?.id) {
-          navigate(`/stock/material-cuts/${data.id}`);
-        } else {
-          navigate("/stock/material-cuts");
-        }
+        navigate(data?.id ? `/stock/material-cuts/${data.id}` : "/stock/material-cuts");
       }
     });
   };
@@ -219,151 +202,93 @@ export default function MaterialCutCreatePage() {
   return (
     <>
       <Helmet>
-        <title>Tạo phiếu cắt nguyên liệu | Print Production ERP</title>
+        <title>Tạo phiếu cắt | Inkwell System</title>
       </Helmet>
 
-      <div className="min-h-screen bg-background">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="min-h-screen bg-slate-50">
+        <div className="max-w-screen-xl mx-auto px-4 py-8 space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
-                <ArrowLeft className="h-5 w-5" />
+              <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+                <ArrowLeft className="h-4 w-4 mr-2" /> Quay lại
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Tạo phiếu cắt nguyên liệu</h1>
-                <p className="text-sm text-muted-foreground">Lập phiếu chia nhỏ vật tư, cập nhật tồn kho</p>
-              </div>
+              <h1 className="text-xl font-bold text-slate-900">Tạo phiếu cắt nguyên liệu</h1>
             </div>
             
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => navigate(-1)}
-                disabled={isPending}
-              >
-                Hủy
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200"
-              >
+              <Button variant="outline" onClick={() => navigate(-1)} disabled={isPending}>Hủy</Button>
+              <Button onClick={handleSubmit} disabled={isPending} className="bg-primary hover:bg-primary/90">
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                Lưu phiếu nháp
+                Lưu phiếu
               </Button>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column: Header Information */}
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
-              <Card className="border-slate-200 shadow-sm overflow-hidden">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <Scissors className="h-4 w-4 text-blue-600" />
-                    <CardTitle className="text-base">Thông tin nguyên liệu</CardTitle>
-                  </div>
+              <Card className="shadow-sm border-slate-200">
+                <CardHeader className="py-4 border-b border-slate-100">
+                  <CardTitle className="text-base font-semibold">Thông tin chung</CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 space-y-4">
+                <CardContent className="p-4 space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Nguyên liệu cần cắt *</Label>
+                    <Label className="text-sm">Nguyên liệu đầu vào *</Label>
                     <MaterialSelector
                       value={formData.inputMaterialId || undefined}
                       onSelect={(id) => setFormData({ ...formData, inputMaterialId: id })}
                       materials={materials}
                     />
                     {selectedInputMaterial && (
-                      <div className="text-xs bg-blue-50 text-blue-700 p-2 rounded border border-blue-100 flex justify-between">
-                        <span>Tồn kho hiện tại:</span>
-                        <span className="font-bold">{selectedInputMaterial.quantity?.toLocaleString() || 0} {selectedInputMaterial.unit || ""}</span>
-                      </div>
+                      <p className="text-xs text-blue-600 font-medium">Tồn hiện tại: {selectedInputMaterial.quantity?.toLocaleString()} {selectedInputMaterial.unit}</p>
                     )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="quantityUsed" className="text-sm font-semibold">Số lượng sử dụng *</Label>
-                      <Input
-                        id="quantityUsed"
-                        type="number"
-                        min="0"
-                        value={formData.quantityUsed}
-                        onChange={(e) => setFormData({ ...formData, quantityUsed: Number(e.target.value) })}
-                      />
+                      <Label className="text-sm">Sử dụng *</Label>
+                      <Input type="number" min="0" value={formData.quantityUsed} onChange={(e) => setFormData({ ...formData, quantityUsed: Number(e.target.value) })} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="quantityWasted" className="text-sm font-semibold">Hao hụt</Label>
-                      <Input
-                        id="quantityWasted"
-                        type="number"
-                        min="0"
-                        value={formData.quantityWasted}
-                        onChange={(e) => setFormData({ ...formData, quantityWasted: Number(e.target.value) })}
-                      />
+                      <Label className="text-sm">Hao hụt</Label>
+                      <Input type="number" min="0" value={formData.quantityWasted} onChange={(e) => setFormData({ ...formData, quantityWasted: Number(e.target.value) })} />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="cutAt" className="text-sm font-semibold">Ngày thực hiện</Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="cutAt"
-                        type="datetime-local"
-                        className="pl-10"
-                        value={formData.cutAt}
-                        onChange={(e) => setFormData({ ...formData, cutAt: e.target.value })}
-                      />
-                    </div>
+                    <Label className="text-sm">Ngày thực hiện</Label>
+                    <Input type="datetime-local" value={formData.cutAt} onChange={(e) => setFormData({ ...formData, cutAt: e.target.value })} />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="notes" className="text-sm font-semibold">Ghi chú</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Ghi chú thêm về việc cắt nguyên liệu..."
-                      className="min-h-[100px] resize-none"
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    />
+                    <Label className="text-sm">Ghi chú</Label>
+                    <Textarea className="min-h-[80px]" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Right Column: Outputs List */}
             <div className="lg:col-span-2 space-y-6">
-              <Card className="border-slate-200 shadow-sm h-full">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-200 flex flex-row items-center justify-between py-4">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-blue-600" />
-                    <CardTitle className="text-base">Sản phẩm đầu ra</CardTitle>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddOutput}
-                    className="h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    Thêm sản phẩm
+              <Card className="shadow-sm border-slate-200">
+                <CardHeader className="py-4 border-b border-slate-100 flex flex-row items-center justify-between">
+                  <CardTitle className="text-base font-semibold">Sản phẩm đầu ra</CardTitle>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddOutput} className="h-8 text-blue-600 border-blue-200">
+                    <Plus className="h-4 w-4 mr-1" /> Thêm dòng
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50/30">
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
                         <TableHead className="w-[50px] text-center">STT</TableHead>
-                        <TableHead>Sản phẩm đầu ra (Chất liệu mới) *</TableHead>
-                        <TableHead className="w-[200px] text-right">Số lượng sản xuất *</TableHead>
+                        <TableHead>Vật liệu đầu ra *</TableHead>
+                        <TableHead className="w-[150px] text-right">Số lượng *</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {outputs.map((output, index) => (
                         <TableRow key={index}>
-                          <TableCell className="text-center font-medium text-slate-400">{index + 1}</TableCell>
+                          <TableCell className="text-center text-slate-400">{index + 1}</TableCell>
                           <TableCell>
                             <MaterialSelector
                               value={output.outputMaterialId || undefined}
@@ -372,23 +297,10 @@ export default function MaterialCutCreatePage() {
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              min="1"
-                              className="text-right h-10"
-                              value={output.quantityProduced}
-                              onChange={(e) => handleOutputChange(index, "quantityProduced", Number(e.target.value))}
-                            />
+                            <Input type="number" min="1" className="text-right" value={output.quantityProduced} onChange={(e) => handleOutputChange(index, "quantityProduced", Number(e.target.value))} />
                           </TableCell>
                           <TableCell>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveOutput(index)}
-                              disabled={outputs.length === 1}
-                              className="text-slate-400 hover:text-red-500"
-                            >
+                            <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveOutput(index)} disabled={outputs.length === 1} className="text-slate-400 hover:text-red-500">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -396,25 +308,11 @@ export default function MaterialCutCreatePage() {
                       ))}
                     </TableBody>
                   </Table>
-                  
-                  {outputs.length === 0 && (
-                    <div className="py-12 text-center text-slate-500">
-                      Chưa có sản phẩm đầu ra nào. Nhấn "Thêm sản phẩm" để bắt đầu.
-                    </div>
-                  )}
-                  
-                  <div className="p-6 border-t border-slate-100 bg-slate-50/30">
-                    <div className="flex justify-between items-center text-sm font-medium text-slate-600">
-                      <span>Tổng sản lượng dự kiến:</span>
-                      <span className="text-lg font-bold text-blue-600">
-                        {outputs.reduce((sum, o) => sum + (o.quantityProduced || 0), 0).toLocaleString()}
-                      </span>
-                    </div>
-                    {selectedInputMaterial && (
-                      <div className="mt-2 flex justify-between items-center text-xs text-slate-500 italic">
-                        <span>Lưu ý: Hiệu suất cắt = {(outputs.reduce((sum, o) => sum + (o.quantityProduced || 0), 0) / (formData.quantityUsed || 1) * 100).toFixed(1)}%</span>
-                      </div>
-                    )}
+                  <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center text-sm">
+                    <span className="font-medium text-slate-600">Tổng sản lượng:</span>
+                    <span className="font-bold text-blue-600 text-lg">
+                      {outputs.reduce((sum, o) => sum + (o.quantityProduced || 0), 0).toLocaleString()}
+                    </span>
                   </div>
                 </CardContent>
               </Card>

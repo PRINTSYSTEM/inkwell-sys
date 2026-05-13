@@ -847,67 +847,13 @@ export default function ProofingOrderDetailPage() {
     return designTypeName.toLowerCase().includes("decal");
   };
 
-  // Check if all selected designs are nhãn giấy or decal (these can have different laminationType)
-  const areAllSelectedDesignsNhanOrDecal = useMemo(() => {
-    if (selectedDesigns.length === 0) return false;
-    return selectedDesigns.every(
-      (design) =>
-        isNhanDesignType(design.designTypeName || "") ||
-        isDecalDesignType(design.designTypeName || ""),
-    );
-  }, [selectedDesigns]);
-
-  // Get laminationType from selected designs (if any)
-  const selectedLaminationType = useMemo(() => {
-    if (selectedDesigns.length === 0) return null;
-    // Get laminationType from first selected design
-    return selectedDesigns[0]?.laminationType || null;
-  }, [selectedDesigns]);
-
   // Apply client-side filters (for empty order)
   // Note: designTypeId and designCode are now filtered by API
   // Only apply material type and lamination type filters client-side if needed
   const filteredAndSortedDesigns = useMemo(() => {
     if (!availableDesignsData || !availableDesignsData.designs) return [];
-
-    let result = [...availableDesignsData.designs];
-
-    // Filter by material type (only when no design is selected and not filtered by API)
-    if (!currentMaterialTypeId && selectedMaterialTypes.length > 0) {
-      result = result.filter((d) =>
-        selectedMaterialTypes.includes(d.materialTypeId),
-      );
-    }
-
-    // Filter by laminationType (when designs are selected)
-    // EXCEPTION: Nhãn giấy và Decal không bắt buộc phải có laminationType giống nhau
-    // Chỉ áp dụng filter laminationType nếu KHÔNG phải tất cả selected designs đều là nhãn giấy hoặc decal
-    if (
-      selectedLaminationType !== null &&
-      selectedDesigns.length > 0 &&
-      !areAllSelectedDesignsNhanOrDecal
-    ) {
-      result = result.filter((d) => {
-        // Match designs with same laminationType (including both null/undefined)
-        if (
-          selectedLaminationType === null ||
-          selectedLaminationType === undefined
-        ) {
-          return d.laminationType === null || d.laminationType === undefined;
-        }
-        return d.laminationType === selectedLaminationType;
-      });
-    }
-
-    return result;
-  }, [
-    availableDesignsData,
-    selectedMaterialTypes,
-    currentMaterialTypeId,
-    selectedLaminationType,
-    selectedDesigns.length,
-    areAllSelectedDesignsNhanOrDecal,
-  ]);
+    return [...availableDesignsData.designs];
+  }, [availableDesignsData]);
 
   // Group by order if enabled
   const groupedByOrder = useMemo(() => {
