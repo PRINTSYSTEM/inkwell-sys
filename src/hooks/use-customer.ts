@@ -38,6 +38,7 @@ const {
   useDetail: useCustomerDetailBase,
   useCreate: useCreateCustomerBase,
   useUpdate: useUpdateCustomerBase,
+  useDelete: useDeleteCustomerBase,
 } = createCrudHooks<
   CustomerResponse,
   CreateCustomerRequest,
@@ -67,6 +68,7 @@ export const useCustomer = (id: number | null, enabled = true) =>
 
 export const useCreateCustomer = () => useCreateCustomerBase();
 export const useUpdateCustomer = () => useUpdateCustomerBase();
+export const useDeleteCustomer = () => useDeleteCustomerBase();
 
 // Nếu cần crudApi cho custom endpoint sau này
 export const customerApi = customerCrudApi;

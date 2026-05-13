@@ -13,7 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useCustomers, useExportDebtComparison } from "@/hooks/use-customer";
+import { useCustomers, useExportDebtComparison, useDeleteCustomer } from "@/hooks/use-customer";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -71,6 +71,8 @@ export default function Customers() {
 
   const { mutate: exportDebtComparison, loading: exporting } =
     useExportDebtComparison();
+
+  const { mutate: deleteCustomer, isPending: deleting } = useDeleteCustomer();
 
   const handleExportDebtComparison = async (customerId: number) => {
     setExportingId(customerId);
@@ -196,8 +198,11 @@ export default function Customers() {
       return;
     }
 
-    // TODO: Implement useDeleteCustomer hook when delete API is available
-    toast.info(`Tính năng xóa khách hàng ${customerId} đang được phát triển`);
+    try {
+      await deleteCustomer(customerId);
+    } catch {
+      // Error is handled by the hook (toast)
+    }
   };
 
   const handleDuplicateCustomer = (customerId: number) => {
@@ -435,6 +440,7 @@ export default function Customers() {
                               size="sm"
                               className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                               onClick={() => handleDeleteCustomer(customer.id)}
+                              disabled={deleting}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
