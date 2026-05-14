@@ -4,8 +4,10 @@ import { ENTITY_CONFIG } from "@/config/entities.config";
 // ===== LABEL MAPPING CHO CÁC STATUS (từ ENTITY_CONFIG) =====
 
 // Trạng thái đơn hàng
-export const orderStatusLabels: Record<string, string> =
-  ENTITY_CONFIG.orderStatuses.values;
+export const orderStatusLabels: Record<string, string> = {
+  ...ENTITY_CONFIG.orderStatuses.values,
+  ...ENTITY_CONFIG.designStatuses.values,
+};
 
 // Mô tả chi tiết cho từng trạng thái đơn hàng (đồng bộ với ENTITY_CONFIG)
 export const orderStatusDescription: Record<string, string> = {

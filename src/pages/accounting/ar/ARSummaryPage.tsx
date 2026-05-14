@@ -368,6 +368,9 @@ export default function ARSummaryPage() {
                               Hạn trả
                             </TableHead>
                             <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
+                              VAT
+                            </TableHead>
+                            <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
                               Phải thu
                             </TableHead>
                             <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
@@ -461,7 +464,7 @@ function CustomerDetailRow({
   if (isLoadingDetail) {
     return (
       <TableRow className="bg-muted/10">
-        <TableCell colSpan={8}>
+        <TableCell colSpan={9}>
           <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-xs">Đang tải chi tiết giao dịch...</span>
@@ -474,7 +477,7 @@ function CustomerDetailRow({
   if (!detailData?.items || detailData.items.length === 0) {
     return (
       <TableRow className="bg-muted/10">
-        <TableCell colSpan={8} className="text-center py-4 text-xs text-muted-foreground italic">
+        <TableCell colSpan={9} className="text-center py-4 text-xs text-muted-foreground italic">
           Không có giao dịch chi tiết trong kỳ
         </TableCell>
       </TableRow>
@@ -511,6 +514,9 @@ function CustomerDetailRow({
           </TableCell>
           <TableCell className="text-center text-xs font-medium">
             {detail.dueDate ? formatDate(detail.dueDate) : "—"}
+          </TableCell>
+          <TableCell className="text-right font-medium tabular-nums text-[10px] text-muted-foreground">
+            {(detail as any).vatAmount !== undefined && (detail as any).vatAmount > 0 ? formatCurrency((detail as any).vatAmount) : "—"}
           </TableCell>
           <TableCell className="text-right font-medium tabular-nums text-xs">
             {detail.amountDue !== undefined ? formatCurrency(detail.amountDue) : "—"}

@@ -144,6 +144,7 @@ export const CustomerOrdersResponseSchema = z
           designCode: z.string().nullable().optional(),
           designName: z.string().nullable().optional(),
           quantity: z.number().int().optional(),
+          netQtyTotal: z.number().int().optional(),
           unitPrice: z.number().optional(),
           totalPrice: z.number().optional(),
           status: z.string().nullable().optional(),

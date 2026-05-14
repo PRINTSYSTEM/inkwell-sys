@@ -45,6 +45,7 @@ import { useCreateMaterialCut } from "@/hooks/use-stock";
 import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 import type { MaterialResponse } from "@/Schema/material.schema";
+import { CreateMaterialDialog } from "./components/CreateMaterialDialog";
 
 interface MaterialSelectorProps {
   value?: number;
@@ -144,6 +145,19 @@ export default function MaterialCutCreatePage() {
   const [outputs, setOutputs] = useState<{ outputMaterialId: number | null; quantityProduced: number }[]>([
     { outputMaterialId: null, quantityProduced: 0 },
   ]);
+
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [activeOutputIndex, setActiveOutputIndex] = useState<number | null>(null);
+
+  const handleCreateSuccess = (newMaterialId: number) => {
+    if (activeOutputIndex !== null) {
+      handleOutputChange(activeOutputIndex, "outputMaterialId", newMaterialId);
+    } else {
+      // If activeOutputIndex is null, it was for the input material
+      setFormData({ ...formData, inputMaterialId: newMaterialId });
+    }
+    setActiveOutputIndex(null);
+  };
 
   const handleAddOutput = () => {
     setOutputs([...outputs, { outputMaterialId: null, quantityProduced: 0 }]);
@@ -290,11 +304,26 @@ export default function MaterialCutCreatePage() {
                         <TableRow key={index}>
                           <TableCell className="text-center text-slate-400">{index + 1}</TableCell>
                           <TableCell>
-                            <MaterialSelector
-                              value={output.outputMaterialId || undefined}
-                              onSelect={(id) => handleOutputChange(index, "outputMaterialId", id)}
-                              materials={materials}
-                            />
+                            <div className="flex gap-2">
+                              <MaterialSelector
+                                value={output.outputMaterialId || undefined}
+                                onSelect={(id) => handleOutputChange(index, "outputMaterialId", id)}
+                                materials={materials}
+                                className="flex-1"
+                              />
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-10 w-10 shrink-0"
+                                onClick={() => {
+                                  setActiveOutputIndex(index);
+                                  setCreateDialogOpen(true);
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Input type="number" min="1" className="text-right" value={output.quantityProduced} onChange={(e) => handleOutputChange(index, "quantityProduced", Number(e.target.value))} />
@@ -320,6 +349,13 @@ export default function MaterialCutCreatePage() {
           </form>
         </div>
       </div>
+
+      <CreateMaterialDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={handleCreateSuccess}
+        defaultMaterialTypeId={selectedInputMaterial?.materialTypeId}
+      />
     </>
   );
 }

@@ -242,6 +242,9 @@ export default function AccountingOrderDetail() {
         orderDetail: order?.orderDetails?.find(
           (od) => od.id === item.orderDetailId,
         ),
+        taxRate: invoice.taxRate,
+        vatAmount: (item as any).vatAmount,
+        grandTotal: (item as any).grandTotal,
       })),
     );
   }, [invoicesData, order?.orderDetails]);
@@ -1716,6 +1719,7 @@ export default function AccountingOrderDetail() {
                             <TableHead className="text-right">Đơn giá</TableHead>
                             <TableHead className="text-right">Thành tiền</TableHead>
                             <TableHead className="text-right">Chiết khấu</TableHead>
+                            <TableHead className="text-right">VAT</TableHead>
                             <TableHead className="text-right">Tổng cộng</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1763,8 +1767,23 @@ export default function AccountingOrderDetail() {
                                     ? `-${formatCurrency(item.discountAmount)}`
                                     : "—"}
                                 </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  {(() => {
+                                    const vatAmount = (item as any).vatAmount ?? (item.amountAfterDiscount || 0) * (item.taxRate || 0);
+                                    return vatAmount > 0 ? (
+                                      <div className="flex flex-col items-end">
+                                        <span className="font-medium">{formatCurrency(vatAmount)}</span>
+                                        <span className="text-[10px] text-muted-foreground">({(item.taxRate || 0) * 100}%)</span>
+                                      </div>
+                                    ) : "—";
+                                  })()}
+                                </TableCell>
                                 <TableCell className="text-right font-bold tabular-nums">
-                                  {formatCurrency(item.amountAfterDiscount || 0)}
+                                  {(() => {
+                                    const vatAmount = (item as any).vatAmount ?? (item.amountAfterDiscount || 0) * (item.taxRate || 0);
+                                    const grandTotal = (item as any).grandTotal ?? (item.amountAfterDiscount || 0) + vatAmount;
+                                    return formatCurrency(grandTotal);
+                                  })()}
                                 </TableCell>
                               </TableRow>
                             ))

@@ -36,6 +36,7 @@ import {
   formatCurrency,
   formatDate,
 } from "@/lib/status-utils";
+import { cn } from "@/lib/utils";
 
 interface OrdersTabProps {
   customerId: number;
@@ -198,7 +199,13 @@ export function OrdersTab({ customerId }: OrdersTabProps) {
                           className="text-xs text-right font-medium tabular-nums cursor-pointer"
                           onClick={() => navigate(`/orders/${orderId}`)}
                         >
-                          {formatCurrency(order.totalAmount || 0)}
+                          {(() => {
+                            const billableTotal = order.details?.reduce((sum, d) => {
+                              const qty = d.netQtyTotal ?? d.quantity ?? 0;
+                              return sum + (qty * (d.unitPrice ?? 0));
+                            }, 0);
+                            return formatCurrency(billableTotal ?? order.totalAmount ?? 0);
+                          })()}
                         </TableCell>
                         <TableCell 
                           className="text-xs text-right tabular-nums text-green-600 cursor-pointer"
@@ -332,6 +339,7 @@ function OrderDetailsSection({
     designCode?: string | null;
     designName?: string | null;
     quantity?: number;
+    netQtyTotal?: number;
     unitPrice?: number;
     totalPrice?: number;
     status?: string | null;
@@ -359,6 +367,9 @@ function OrderDetailsSection({
       </div>
       <div className="space-y-2">
         {orderDetails.map((detail, index) => {
+          const actualQty = detail.netQtyTotal ?? detail.quantity ?? 0;
+          const billableAmount = actualQty * (detail.unitPrice ?? 0);
+
           return (
             <div
               key={detail.id || index}
@@ -392,9 +403,16 @@ function OrderDetailsSection({
                 </div>
                 <div className="flex items-center gap-4 text-xs">
                   <div className="text-right">
-                    <p className="text-muted-foreground">Số lượng</p>
+                    <p className="text-muted-foreground">SL đặt</p>
                     <p className="font-semibold">
                       {detail.quantity?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                  <Separator orientation="vertical" className="h-8" />
+                  <div className="text-right">
+                    <p className="text-muted-foreground">SL thực</p>
+                    <p className={cn("font-semibold", detail.netQtyTotal !== undefined && "text-primary")}>
+                      {actualQty.toLocaleString()}
                     </p>
                   </div>
                   <Separator orientation="vertical" className="h-8" />
@@ -408,7 +426,7 @@ function OrderDetailsSection({
                   <div className="text-right">
                     <p className="text-muted-foreground">Thành tiền</p>
                     <p className="font-semibold text-primary">
-                      {formatCurrency(detail.totalPrice || 0)}
+                      {formatCurrency(billableAmount)}
                     </p>
                   </div>
                 </div>

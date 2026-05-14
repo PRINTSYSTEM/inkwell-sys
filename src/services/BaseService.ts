@@ -120,6 +120,8 @@ class ServiceCache {
 ====================================================== */
 type BackendErrorPayload = {
   message?: string;
+  error?: string;
+  Error?: string; // Handle capital E from backend
   code?: string;
   errors?: Record<string, string[]>;
 };
@@ -127,7 +129,7 @@ type BackendErrorPayload = {
 const isBackendErrorPayload = (data: unknown): data is BackendErrorPayload =>
   typeof data === "object" &&
   data !== null &&
-  ("message" in data || "code" in data || "errors" in data);
+  ("message" in data || "error" in data || "Error" in data || "code" in data || "errors" in data);
 
 export class ServiceError extends Error {
   readonly code?: string;
@@ -262,7 +264,7 @@ export abstract class BaseService {
       const backend = isBackendErrorPayload(payload) ? payload : undefined;
 
       return new ServiceError(
-        backend?.message ?? error.message ?? "Request failed",
+        backend?.message ?? backend?.error ?? backend?.Error ?? error.message ?? "Request failed",
         {
           code: backend?.code ?? error.code,
           status: error.response?.status,

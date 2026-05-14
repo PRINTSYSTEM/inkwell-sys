@@ -30,6 +30,16 @@ import { useAuth } from "@/hooks";
 import { ROLE } from "@/constants";
 import { CustomerResponse } from "@/Schema";
 import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Customers() {
   const { user } = useAuth();
@@ -66,6 +76,8 @@ export default function Customers() {
       : {}),
   });
   const [exportingId, setExportingId] = useState<number | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<CustomerResponse | null>(null);
   const customers: CustomerResponse[] = customersResponse?.items || [];
   const totalCount = customersResponse?.total || 0;
 
@@ -193,13 +205,18 @@ export default function Customers() {
     // navigate(`/customers/${customerId}/edit`);
   };
 
-  const handleDeleteCustomer = async (customerId: number) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa khách hàng này?")) {
-      return;
-    }
+  const handleDeleteCustomer = (customer: CustomerResponse) => {
+    setCustomerToDelete(customer);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!customerToDelete) return;
 
     try {
-      await deleteCustomer(customerId);
+      await deleteCustomer(customerToDelete.id);
+      setIsDeleteDialogOpen(false);
+      setCustomerToDelete(null);
     } catch {
       // Error is handled by the hook (toast)
     }
@@ -439,7 +456,7 @@ export default function Customers() {
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteCustomer(customer.id)}
+                              onClick={() => handleDeleteCustomer(customer)}
                               disabled={deleting}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -530,6 +547,34 @@ export default function Customers() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa khách hàng</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa khách hàng{" "}
+              <span className="font-semibold text-foreground">
+                {customerToDelete?.name}
+              </span>{" "}
+              ({customerToDelete?.code})? Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+            >
+              {deleting ? "Đang xóa..." : "Xác nhận xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
