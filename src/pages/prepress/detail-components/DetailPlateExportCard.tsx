@@ -59,7 +59,7 @@ export function DetailPlateExportCard({
                 variant="outline"
                 size="sm"
                 onClick={() => setIsPlateExportDialogOpen(true)}
-                className="h-8 px-4 text-xs font-bold rounded-full"
+                className="h-8 px-4 text-xs font-bold rounded-md"
               >
                 Ghi nhận ngay
               </Button>
@@ -74,15 +74,6 @@ export function DetailPlateExportCard({
                   Đã xuất kẽm
                 </span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 gap-1.5 text-orange-600 border-orange-200 hover:bg-orange-50 text-[10px] px-2.5 font-bold rounded-md"
-                onClick={() => setIsPlateExportDialogOpen(true)}
-              >
-                <History className="h-3 w-3" />
-                Xuất kẽm lại
-              </Button>
             </div>
 
             {/* Scrollable list of exports */}
@@ -178,13 +169,12 @@ export function DetailPlateExportCard({
                     </div>
                   )}
 
-                  {(exportItem.isActive ||
-                    index === plateExportsList.length - 1) && (
-                    <div className="pt-2 flex items-center justify-center gap-2">
+                  {(exportItem.isActive || index === plateExportsList.length - 1) && (
+                    <div className="pt-2 flex flex-wrap items-center justify-center gap-2 mt-2 border-t border-muted-foreground/10">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 gap-1.5 text-primary bg-primary/10 hover:bg-primary/20 text-[10px] px-3 font-bold rounded-md border border-primary/20"
+                        className="h-7 gap-1.5 text-primary bg-primary/5 hover:bg-primary/10 text-[11px] px-3 font-semibold rounded-md border border-primary/20 flex-1"
                         onClick={() => {
                           setEditingPlateExport(exportItem);
                           setIsPlateExportDialogOpen(true);
@@ -193,6 +183,18 @@ export function DetailPlateExportCard({
                         <Edit className="h-3 w-3" />
                         Chỉnh sửa
                       </Button>
+
+                      {order.status !== "completed" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100/50 text-[11px] px-3 font-semibold rounded-md border border-amber-200 flex-1"
+                          onClick={() => setIsPlateExportDialogOpen(true)}
+                        >
+                          <History className="h-3 w-3" />
+                          Xuất kẽm lại
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

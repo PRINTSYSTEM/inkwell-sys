@@ -128,7 +128,7 @@ const uiActionToBEStatus: Record<UIStatus, string> = {
 const UI_STATUS_CONFIG: Record<UIStatus, { label: string; color?: string }> = {
   ok: { label: "OK", color: "gray" },
   shipping: { label: "Đang giao", color: "blue" },
-  success: { label: "Giao hàng thành công", color: "green" },
+  success: { label: "Đã giao hàng", color: "green" },
   failed: { label: "Hủy phiếu", color: "red" },
 };
 
@@ -474,7 +474,7 @@ export default function DeliveryNoteDetailPage() {
                   const actionsByStatus: Record<UIStatus, UIStatus[]> = {
                     ok: ["shipping"],
                     // once shipping, only allow success (failed handled per line)
-                    shipping: ["success"],
+                    shipping: [],
                     success: [],
                     failed: [],
                   };

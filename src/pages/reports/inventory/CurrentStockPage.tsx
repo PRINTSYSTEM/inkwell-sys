@@ -5,6 +5,8 @@ import {
   Download,
   Loader2,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
@@ -256,7 +258,7 @@ export default function CurrentStockPage() {
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1 || isLoading}
               >
-                <RefreshCw className="h-4 w-4 rotate-180" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="text-sm font-medium px-2">
                 {currentPage} / {materialsData.totalPages}
@@ -269,7 +271,7 @@ export default function CurrentStockPage() {
                 }
                 disabled={currentPage === materialsData.totalPages || isLoading}
               >
-                <RefreshCw className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>

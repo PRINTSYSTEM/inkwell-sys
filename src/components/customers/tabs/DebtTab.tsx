@@ -13,6 +13,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "lucide-react";
+import {
   useCustomerMonthlyDebt,
   useCustomerDebtHistory,
   useCustomerStatistics,
@@ -26,12 +34,22 @@ interface DebtTabProps {
 }
 
 export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [dateRange, setDateRange] = useState<"3m" | "6m" | "12m" | "custom">(
     "6m"
   );
 
   const getDateRange = () => {
     const now = new Date();
+    if (dateRange === "custom") {
+      const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+      const endDate = new Date(selectedYear, selectedMonth, 0);
+      return {
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: endDate.toISOString().split("T")[0],
+      };
+    }
     const months = dateRange === "3m" ? 3 : dateRange === "6m" ? 6 : 12;
     const startDate = new Date(now.getFullYear(), now.getMonth() - months, 1);
     return {
@@ -69,6 +87,15 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
       currency: "VND",
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const Amount = ({ value, className = "" }: { value: number | null | undefined, className?: string }) => {
+    const val = value ?? 0;
+    return (
+      <span className={`${val < 0 ? "text-destructive" : ""} ${className}`}>
+        {formatCurrency(val)}
+      </span>
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -128,18 +155,60 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
           <h3 className="text-sm font-medium">Lịch sử thanh toán</h3>
         </div>
 
-        <div className="flex items-center gap-1">
-          {(["3m", "6m", "12m"] as const).map((range) => (
-            <Button
-              key={range}
-              variant={dateRange === range ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 text-xs px-2"
-              onClick={() => setDateRange(range)}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 mr-2">
+            <Select
+              value={selectedYear.toString()}
+              onValueChange={(val) => {
+                setSelectedYear(parseInt(val));
+                setDateRange("custom");
+              }}
             >
-              {range}
-            </Button>
-          ))}
+              <SelectTrigger className="h-7 w-[80px] text-xs">
+                <SelectValue placeholder="Năm" />
+              </SelectTrigger>
+              <SelectContent>
+                {[2024, 2025, 2026].map((y) => (
+                  <SelectItem key={y} value={y.toString()}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={selectedMonth.toString()}
+              onValueChange={(val) => {
+                setSelectedMonth(parseInt(val));
+                setDateRange("custom");
+              }}
+            >
+              <SelectTrigger className="h-7 w-[90px] text-xs">
+                <SelectValue placeholder="Tháng" />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <SelectItem key={m} value={m.toString()}>
+                    Tháng {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {(["3m", "6m", "12m"] as const).map((range) => (
+              <Button
+                key={range}
+                variant={dateRange === range ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 text-xs px-2"
+                onClick={() => setDateRange(range)}
+              >
+                {range}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -152,7 +221,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
               <Skeleton className="h-7 w-24 mt-1" />
             ) : (
               <p className="text-lg font-semibold">
-                {formatCurrency(closingBalance)}
+                <Amount value={closingBalance} />
               </p>
             )}
           </CardContent>
@@ -241,9 +310,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                               : "-"}
                           </TableCell>
                           <TableCell className="text-xs py-2 text-right">
-                            {formatCurrency(
-                              Number(item.openingDebt ?? item.openingBalance ?? 0)
-                            )}
+                            <Amount value={Number(item.openingDebt ?? item.openingBalance ?? 0)} />
                           </TableCell>
                           <TableCell className="text-xs py-2 text-right text-success">
                             +{formatCurrency(increase)}
@@ -252,9 +319,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                             -{formatCurrency(decrease)}
                           </TableCell>
                           <TableCell className="text-xs py-2 text-right font-medium">
-                            {formatCurrency(
-                              Number(item.closingDebt ?? item.closingBalance ?? 0)
-                            )}
+                            <Amount value={Number(item.closingDebt ?? item.closingBalance ?? 0)} />
                           </TableCell>
                         </TableRow>
                       );
@@ -338,7 +403,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                           {formatCurrency(item.changeAmount ?? 0)}
                         </TableCell>
                         <TableCell className="text-xs py-2 text-right font-medium">
-                          {formatCurrency(item.newDebt ?? 0)}
+                          <Amount value={item.newDebt ?? 0} />
                         </TableCell>
                       </TableRow>
                     ))}

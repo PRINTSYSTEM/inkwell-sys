@@ -63,6 +63,8 @@ export function PlateExportDialog({
   const [notes, setNotes] = useState<string>("");
   const [productionMethod, setProductionMethod] = useState<"in_house" | "outsource">("in_house");
   const [printingVendorId, setPrintingVendorId] = useState<number | null>(null);
+  const [printingVendorName, setPrintingVendorName] = useState("");
+  const [isCreatingPrintingVendor, setIsCreatingPrintingVendor] = useState(false);
 
 
   const { data: vendors, isLoading: loadingVendors } = useActivePlateVendors();
@@ -140,6 +142,8 @@ export function PlateExportDialog({
         setNotes(plateExport.notes ?? "");
         setProductionMethod((plateExport as any).productionMethod ?? "in_house");
         setPrintingVendorId((plateExport as any).printingVendorId ?? null);
+        setPrintingVendorName("");
+        setIsCreatingPrintingVendor(false);
       } else {
         // Reset to default when creating new
         setPlateCount(1);
@@ -151,6 +155,8 @@ export function PlateExportDialog({
         setNotes("");
         setProductionMethod("in_house");
         setPrintingVendorId(null);
+        setPrintingVendorName("");
+        setIsCreatingPrintingVendor(false);
       }
     }
   }, [open, plateExport, convertISOToLocalDateTime]);
@@ -186,6 +192,41 @@ export function PlateExportDialog({
         },
         onError: (error: any) => {
           toast.error("Không thể tạo nhà cung cấp", {
+            description:
+              error?.response?.data?.message ||
+              error?.message ||
+              "Có lỗi xảy ra",
+          });
+        },
+      }
+    );
+  };
+
+  const handleCreatePrintingVendor = async () => {
+    if (!printingVendorName.trim()) {
+      toast.error("Vui lòng nhập tên nhà in");
+      return;
+    }
+
+    createVendor(
+      {
+        name: printingVendorName.trim(),
+        phone: null,
+        email: null,
+        address: null,
+        note: null,
+        vendorType: "printing", // Specify vendor type as printing
+      },
+      {
+        onSuccess: (newVendor) => {
+          setPrintingVendorId(newVendor.id);
+          setProductionMethod("outsource");
+          setIsCreatingPrintingVendor(false);
+          setPrintingVendorName("");
+          toast.success("Đã tạo nhà in mới");
+        },
+        onError: (error: any) => {
+          toast.error("Không thể tạo nhà in", {
             description:
               error?.response?.data?.message ||
               error?.message ||
@@ -430,37 +471,80 @@ export function PlateExportDialog({
           {/* Hình thức sản xuất */}
           <div className="space-y-2">
             <Label htmlFor="productionMethod">Hình thức sản xuất</Label>
-            <Select
-              value={productionMethod === "in_house" ? "in_house" : printingVendorId ? `vendor_${printingVendorId}` : "in_house"}
-              onValueChange={(value: string) => {
-                if (value === "in_house") {
-                  setProductionMethod("in_house");
-                  setPrintingVendorId(null);
-                } else if (value.startsWith("vendor_")) {
-                  const vid = Number(value.replace("vendor_", ""));
-                  setProductionMethod("outsource");
-                  setPrintingVendorId(vid);
-                }
-              }}
-            >
-              <SelectTrigger id="productionMethod">
-                <SelectValue placeholder="Chọn hình thức sản xuất" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="in_house">In tại xưởng</SelectItem>
-                {loadingPrintingVendors ? (
-                  <SelectItem value="__loading" disabled>
-                    Đang tải nhà in...
-                  </SelectItem>
-                ) : (
-                  printingVendors?.map((vendor) => (
-                    <SelectItem key={vendor.id} value={`vendor_${vendor.id}`}>
-                      {vendor.name}
+            {!isCreatingPrintingVendor ? (
+              <Select
+                value={productionMethod === "in_house" ? "in_house" : printingVendorId ? `vendor_${printingVendorId}` : "in_house"}
+                onValueChange={(value: string) => {
+                  if (value === "in_house") {
+                    setProductionMethod("in_house");
+                    setPrintingVendorId(null);
+                  } else if (value === "create_new") {
+                    setIsCreatingPrintingVendor(true);
+                  } else if (value.startsWith("vendor_")) {
+                    const vid = Number(value.replace("vendor_", ""));
+                    setProductionMethod("outsource");
+                    setPrintingVendorId(vid);
+                  }
+                }}
+              >
+                <SelectTrigger id="productionMethod">
+                  <SelectValue placeholder="Chọn hình thức sản xuất" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in_house">In tại xưởng</SelectItem>
+                  {loadingPrintingVendors ? (
+                    <SelectItem value="__loading" disabled>
+                      Đang tải nhà in...
                     </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+                  ) : (
+                    printingVendors?.map((vendor) => (
+                      <SelectItem key={vendor.id} value={`vendor_${vendor.id}`}>
+                        {vendor.name}
+                      </SelectItem>
+                    ))
+                  )}
+                  <SelectItem value="create_new" className="text-primary focus:text-primary">
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Tạo nhà cung cấp mới
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nhập tên nhà in mới..."
+                    value={printingVendorName}
+                    onChange={(e) => setPrintingVendorName(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsCreatingPrintingVendor(false);
+                      setPrintingVendorName("");
+                    }}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    onClick={handleCreatePrintingVendor}
+                    disabled={!printingVendorName.trim() || creatingVendor}
+                  >
+                    {creatingVendor ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Lưu"
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Nhập tên nhà in và nhấn "Lưu" để tạo mới
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Thời gian có kẽm */}

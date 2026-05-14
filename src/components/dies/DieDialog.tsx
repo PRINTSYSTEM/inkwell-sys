@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -192,6 +193,9 @@ export function DieDialog({
             location: location.trim() || null,
             isUsable,
             notes: notes.trim() || null,
+            vendorId: vendorId ?? null,
+            estimatedReceiveAt: estimatedReceiveAt ? new Date(estimatedReceiveAt).toISOString() : null,
+            isReusable,
           },
         },
         {
@@ -225,31 +229,14 @@ export function DieDialog({
         return;
       }
 
-      // Convert estimatedReceiveAt to ISO format if provided
-      const estimatedReceiveAtISO = estimatedReceiveAt
-        ? (() => {
-            const date = new Date(estimatedReceiveAt);
-            const pad = (n: number) => String(n).padStart(2, "0");
-            const year = date.getFullYear();
-            const month = pad(date.getMonth() + 1);
-            const day = pad(date.getDate());
-            const hours = pad(date.getHours());
-            const minutes = pad(date.getMinutes());
-            const seconds = pad(date.getSeconds());
-            const offsetMinutes = date.getTimezoneOffset();
-            const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
-            const offsetMins = Math.abs(offsetMinutes) % 60;
-            const offsetSign = offsetMinutes <= 0 ? "+" : "-";
-            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${pad(offsetHours)}:${pad(offsetMins)}`;
-          })()
-        : undefined;
-
       createDie(
         {
+          code: code.trim() || undefined,
           price: price ?? undefined,
           vendorId,
           size: size.trim() || undefined,
-          estimatedReceiveAt: estimatedReceiveAtISO,
+          notes: notes.trim() || undefined,
+          estimatedReceiveAt: estimatedReceiveAt ? new Date(estimatedReceiveAt).toISOString() : undefined,
           isReusable: isReusable,
           image: image,
         },
@@ -281,12 +268,11 @@ export function DieDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Nhà cung cấp - chỉ hiển thị khi tạo mới */}
-          {!isEdit && (
-            <div className="space-y-2">
-              <Label>
-                Nhà cung cấp <span className="text-destructive">*</span>
-              </Label>
+          {/* Nhà cung cấp */}
+          <div className="space-y-2">
+            <Label>
+              Nhà cung cấp <span className="text-destructive">*</span>
+            </Label>
               {!isCreatingVendor ? (
                 <div className="flex gap-2">
                   <Popover
@@ -382,8 +368,7 @@ export function DieDialog({
                 </div>
               )}
             </div>
-          )}
-
+          
           {/* Kích thước và Giá - chỉ hiển thị khi edit */}
           {isEdit && (
             <div className="grid grid-cols-2 gap-4">
@@ -572,53 +557,61 @@ export function DieDialog({
             )}
           </div>
 
-          {/* Dự kiến nhận khuôn và Khuôn tái sử dụng - chỉ hiển thị khi tạo mới */}
-          {!isEdit && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="estimatedReceiveAt">Dự kiến nhận khuôn</Label>
-                <Input
-                  id="estimatedReceiveAt"
-                  type="datetime-local"
-                  value={estimatedReceiveAt}
-                  onChange={(e) => setEstimatedReceiveAt(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center justify-between gap-3 py-2 rounded-md border bg-muted/30 px-3">
-                <div className="space-y-0.5">
-                  <Label htmlFor="isReusable" className="text-sm font-medium">
-                    {isReusable
-                      ? dieUsageTypeLabels.reusable
-                      : dieUsageTypeLabels.one_time}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {isReusable
-                      ? "Khuôn này có thể tái sử dụng cho các đơn hàng khác"
-                      : "Khuôn này chỉ dùng 1 lần"}
-                  </p>
-                </div>
-                <Switch
-                  id="isReusable"
-                  checked={isReusable}
-                  onCheckedChange={setIsReusable}
-                />
-              </div>
-            </>
-          )}
-
-          {/* Ghi chú - chỉ hiển thị khi edit */}
-          {isEdit && (
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="notes">Ghi chú</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Nhập ghi chú..."
-                rows={3}
+              <Label htmlFor="estimatedReceiveAt">Dự kiến nhận khuôn</Label>
+              <Input
+                id="estimatedReceiveAt"
+                type="datetime-local"
+                value={estimatedReceiveAt}
+                onChange={(e) => setEstimatedReceiveAt(e.target.value)}
               />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="receivedAt">Ngày nhận khuôn</Label>
+              <Input
+                id="receivedAt"
+                type="datetime-local"
+                value={die?.receivedAt ? format(new Date(die.receivedAt), "yyyy-MM-dd'T'HH:mm") : ""}
+                onChange={(e) => {
+                  // If we need to support updating receivedAt directly
+                }}
+                disabled
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 py-2 rounded-md border bg-muted/30 px-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="isReusable" className="text-sm font-medium">
+                {isReusable
+                  ? dieUsageTypeLabels.reusable
+                  : dieUsageTypeLabels.one_time}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {isReusable
+                  ? "Khuôn này có thể tái sử dụng cho các đơn hàng khác"
+                  : "Khuôn này chỉ dùng 1 lần"}
+              </p>
+            </div>
+            <Switch
+              id="isReusable"
+              checked={isReusable}
+              onCheckedChange={setIsReusable}
+            />
+          </div>
+
+          {/* Ghi chú */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Ghi chú</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Nhập ghi chú..."
+              rows={3}
+            />
+          </div>
         </div>
 
         <DialogFooter>

@@ -113,7 +113,7 @@ export default function DeliveryPage() {
                   <Clock className="h-4 w-4 text-success" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Đã giao</p>
+                  <p className="text-xs text-muted-foreground">Đã giao hàng</p>
                   <p className="text-xl font-bold">{summaryStats.delivered}</p>
                 </div>
               </div>

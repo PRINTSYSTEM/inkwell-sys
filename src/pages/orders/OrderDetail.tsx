@@ -2021,8 +2021,10 @@ export default function OrderDetailPage() {
                       </p>
                       <p className="text-xs text-red-700 dark:text-red-300 mt-1">
                         Khách hàng đang nợ{" "}
-                        {formatCurrency(order.customer?.currentDebt || 0)}, vượt
-                        quá hạn mức cho phép{" "}
+                        <span className="font-bold text-destructive">
+                          {formatCurrency(-(Math.abs(order.customer?.currentDebt || 0)))}
+                        </span>
+                        , vượt quá hạn mức cho phép{" "}
                         {formatCurrency(order.customer?.maxDebt || 0)}
                       </p>
                     </div>

@@ -25,6 +25,8 @@ import {
   AlertTriangle,
   Check,
   ChevronsUpDown,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -82,7 +84,7 @@ import { useState } from "react";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useMaterialTypeList } from "@/hooks/use-material-type";
+import { useMaterials } from "@/hooks/use-material";
 import { formatDieSize } from "@/utils/format-die-size";
 
 interface ProductionListTableProps {
@@ -1529,24 +1531,68 @@ export function MaterialExportDialog({
   defaultPrintQty: number;
   onExportSuccess?: () => void;
 }) {
-  const { data: materialsData, isLoading: isMaterialsLoading } = useMaterialTypeList(
+  const { data: materialsData, isLoading: isMaterialsLoading } = useMaterials(
     { pageSize: 100 }
   );
   const materials = (materialsData as any)?.items || [];
   
   const { mutateAsync: createStockOutForProduction, isPending } = useCreateStockOutForProduction();
-  const [quantity, setQuantity] = useState(defaultPrintQty?.toString() || "1");
-  const [selectedMaterialId, setSelectedMaterialId] = useState<string>(
-    proofingOrder?.materialTypeId?.toString() || ""
-  );
+  // State for selected export items
+  const [selectedItems, setSelectedItems] = useState<{materialId: string, quantity: string}[]>([]);
   const [materialSearchOpen, setMaterialSearchOpen] = useState(false);
 
+  // Reset state when dialog opens
+  React.useEffect(() => {
+    if (isOpen) {
+      if (proofingOrder?.materialTypeId) {
+        setSelectedItems([{
+          materialId: proofingOrder.materialTypeId.toString(),
+          quantity: defaultPrintQty?.toString() || "1"
+        }]);
+      } else {
+        setSelectedItems([]);
+      }
+    }
+  }, [isOpen, proofingOrder, defaultPrintQty]);
+
+  const handleSelectMaterial = (matId: string) => {
+    if (!selectedItems.find(i => i.materialId === matId)) {
+      setSelectedItems([...selectedItems, { 
+        materialId: matId, 
+        quantity: defaultPrintQty?.toString() || "1" 
+      }]);
+    }
+    setMaterialSearchOpen(false);
+  };
+
+  const handleRemoveItem = (matId: string) => {
+    setSelectedItems(selectedItems.filter(item => item.materialId !== matId));
+  };
+
+  const handleQuantityChange = (matId: string, qty: string) => {
+    setSelectedItems(selectedItems.map(item => 
+      item.materialId === matId ? { ...item, quantity: qty } : item
+    ));
+  };
+
   const handleConfirm = async () => {
-    if (!selectedMaterialId) {
-      toast.error("Vui lòng chọn loại giấy");
+    if (selectedItems.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một nguyên vật liệu");
       return;
     }
-    const mat = materials.find((m: any) => m.id?.toString() === selectedMaterialId);
+    
+    const payloadItems = selectedItems.map(item => {
+      const mat = materials.find((m: any) => m.id?.toString() === item.materialId);
+      return {
+        itemName: mat?.name || proofingOrder?.materialType?.name || "Nguyên liệu",
+        itemCode: mat?.code || proofingOrder?.materialType?.code || "NL",
+        unit: mat?.unit || "Tờ",
+        quantity: Number(item.quantity) || 1,
+        notes: "",
+        materialId: Number(item.materialId) || proofingOrder?.materialTypeId || null,
+        orderDetailId: proofingOrder?.orderDetailId || null
+      };
+    });
     
     try {
       await createStockOutForProduction({
@@ -1554,17 +1600,7 @@ export function MaterialExportDialog({
         itemType: "material",
         notes: "Xuất NL cho lệnh sản xuất",
         stockOutDate: new Date().toISOString(),
-        items: [
-          {
-            itemName: mat?.name || proofingOrder?.materialType?.name || "Nguyên liệu",
-            itemCode: mat?.code || proofingOrder?.materialType?.code || "NL",
-            unit: "Tờ",
-            quantity: Number(quantity) || 1,
-            notes: "",
-            materialId: Number(selectedMaterialId) || proofingOrder?.materialTypeId || null,
-            orderDetailId: proofingOrder?.orderDetailId || null
-          }
-        ]
+        items: payloadItems
       });
       onOpenChange(false);
       onExportSuccess?.();
@@ -1575,64 +1611,80 @@ export function MaterialExportDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[450px] max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Xuất Nguyên Liệu</DialogTitle>
-          <DialogDescription>Chọn số lượng và loại giấy cần xuất</DialogDescription>
+          <DialogDescription>
+            Tìm và chọn các loại vật tư cần xuất cho đơn này
+          </DialogDescription>
         </DialogHeader>
+        
         {isMaterialsLoading ? (
-          <div className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <div className="py-8 flex justify-center shrink-0">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
         ) : (
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 flex-1 overflow-y-auto pr-1">
             <div className="space-y-2">
-              <Label>Loại giấy</Label>
+              <Label>Tìm chọn nguyên vật liệu</Label>
               <Popover open={materialSearchOpen} onOpenChange={setMaterialSearchOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={materialSearchOpen}
-                    className="w-full justify-between font-normal"
+                    className="w-full justify-between font-normal text-muted-foreground"
                   >
-                    {selectedMaterialId
-                      ? materials.find((m: any) => m.id?.toString() === selectedMaterialId)?.name || "Chọn loại giấy"
-                      : "Chọn loại giấy"}
+                    <span className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Nhấn để tìm và thêm vật tư...
+                    </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[350px] p-0" align="start">
+                <PopoverContent className="w-[400px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Tìm kiếm loại giấy..." />
-                    <CommandList>
-                      <CommandEmpty>Không tìm thấy loại giấy nào.</CommandEmpty>
+                    <CommandInput placeholder="Tìm kiếm loại giấy, màng..." className="h-9" />
+                    <CommandList className="max-h-[250px]">
+                      <CommandEmpty>Không tìm thấy NVL nào.</CommandEmpty>
                       <CommandGroup>
-                        {materials.map((m: any) => (
-                          <CommandItem
-                            key={m.id}
-                            value={m.name || m.code || ""}
-                            onSelect={() => {
-                              setSelectedMaterialId(m.id!.toString());
-                              setMaterialSearchOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedMaterialId === m.id!.toString() ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {m.name}
-                          </CommandItem>
-                        ))}
+                        {materials.map((m: any) => {
+                          const isSelected = selectedItems.some(i => i.materialId === m.id!.toString());
+                          return (
+                            <CommandItem
+                              key={m.id}
+                              value={m.name || m.code || ""}
+                              onSelect={() => handleSelectMaterial(m.id!.toString())}
+                              className={cn("py-2", isSelected && "opacity-50 pointer-events-none")}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4 text-primary",
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{m.name}</span>
+                                <span className="text-[11px] text-muted-foreground flex gap-2">
+                                  {m.code && <span>Mã: {m.code}</span>}
+                                  {m.stockQuantity !== undefined && (
+                                    <span className="text-blue-600">Tồn: {m.stockQuantity} {m.unit || 'Tờ'}</span>
+                                  )}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
                       </CommandGroup>
                     </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
             </div>
+
             <div className="space-y-2">
-              <Label>Kích thước giấy</Label>
-              <div className="h-9 px-3 py-2 bg-muted/50 rounded-md text-sm border flex items-center text-muted-foreground">
+              <Label className="text-muted-foreground text-xs">Kích thước tham khảo từ thiết kế:</Label>
+              <div className="h-8 px-3 py-1 bg-muted/30 rounded-md text-sm border flex items-center text-muted-foreground">
                 {proofingOrder?.paperSize
                   ? [
                       proofingOrder.paperSize.name,
@@ -1645,17 +1697,59 @@ export function MaterialExportDialog({
                   : proofingOrder?.customPaperSize || "Không xác định"}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Số lượng (tờ)</Label>
-              <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} />
-            </div>
+
+            {selectedItems.length > 0 && (
+              <div className="space-y-3 mt-6 pt-4 border-t">
+                <Label>Các vật tư đã chọn xuất</Label>
+                <div className="space-y-2">
+                  {selectedItems.map((item) => {
+                    const mat = materials.find((m: any) => m.id?.toString() === item.materialId);
+                    return (
+                      <div key={item.materialId} className="flex items-center gap-3 bg-muted/20 p-2.5 rounded-lg border border-border/50">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate" title={mat?.name}>
+                            {mat?.name || "Nguyên liệu"}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {mat?.stockQuantity !== undefined ? `Tồn kho: ${mat.stockQuantity} ${mat?.unit || 'Tờ'}` : "Không rõ tồn kho"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            <Input 
+                              type="number" 
+                              min="1"
+                              value={item.quantity} 
+                              onChange={e => handleQuantityChange(item.materialId, e.target.value)} 
+                              className="h-8 w-20 text-right font-bold tabular-nums"
+                            />
+                            <span className="text-xs font-medium text-muted-foreground w-6">
+                              {mat?.unit || "Tờ"}
+                            </span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleRemoveItem(item.materialId)}
+                            disabled={isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
-        <DialogFooter>
+        <DialogFooter className="shrink-0 mt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Hủy</Button>
-          <Button onClick={handleConfirm} disabled={isPending}>
+          <Button onClick={handleConfirm} disabled={isPending || isMaterialsLoading || selectedItems.length === 0}>
             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Xác nhận xuất
+            Xác nhận xuất ({selectedItems.length})
           </Button>
         </DialogFooter>
       </DialogContent>

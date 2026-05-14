@@ -177,7 +177,7 @@ export const ENTITY_CONFIG = {
     values: {
       pending: "Chờ giao hàng",
       in_transit: "Đang giao",
-      completed: "Giao thành công",
+      completed: "Đã giao hàng",
       partial: "Hẹn giao lại một phần",
       cancelled: "Giao thất bại/Đã hủy",
       failed: "Thất bại",
@@ -191,7 +191,7 @@ export const ENTITY_CONFIG = {
     values: {
       pending: "Chưa có kết quả",
       in_transit: "Đang giao",
-      delivered: "Giao thành công",
+      delivered: "Đã giao hàng",
       failed_reschedule: "Thất bại - hẹn giao lại",
       returned: "Trả hàng",
       cancelled: "Hủy không giao được",

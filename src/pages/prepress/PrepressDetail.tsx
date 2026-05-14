@@ -351,6 +351,10 @@ export default function ProofingOrderDetailPage() {
   const [editingPlateExport, setEditingPlateExport] =
     useState<PlateExportResponse | null>(null);
   const [isDieExportDialogOpen, setIsDieExportDialogOpen] = useState(false);
+  const [isRemoveDieConfirmOpen, setIsRemoveDieConfirmOpen] = useState(false);
+  const [removeTargetDieId, setRemoveTargetDieId] = useState<number | null>(null);
+  const [isEditDieDialogOpen, setIsEditDieDialogOpen] = useState(false);
+  const [editingDie, setEditingDie] = useState<any>(null);
   const [isConfirmStatusDialogOpen, setIsConfirmStatusDialogOpen] =
     useState(false);
   const [isConfirmStatusChangeDialogOpen, setIsConfirmStatusChangeDialogOpen] =
@@ -370,20 +374,12 @@ export default function ProofingOrderDetailPage() {
   const [isReplaceDieDialogOpen, setIsReplaceDieDialogOpen] = useState(false);
   const [replacingDieExport, setReplacingDieExport] =
     useState<DieExportResponse | null>(null);
-  const [selectedNewDieId, setSelectedNewDieId] = useState<number | null>(null);
-  const [replaceDieNotes, setReplaceDieNotes] = useState<string>("");
-  const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
   const [dieListInitialSize, setDieListInitialSize] = useState<
     string | undefined
   >(undefined);
 
   // Add die dialog state
   const [isAddDieDialogOpen, setIsAddDieDialogOpen] = useState(false);
-  const [selectedDieIdForAdd, setSelectedDieIdForAdd] = useState<number | null>(
-    null,
-  );
-  const [addDieNotes, setAddDieNotes] = useState<string>("");
-  const [addDieSearchTerm, setAddDieSearchTerm] = useState<string>("");
 
   // Form state cho từng card
   const [isQuantityEditOpen, setIsQuantityEditOpen] = useState(false);
@@ -606,45 +602,8 @@ export default function ProofingOrderDetailPage() {
   const { mutateAsync: rejectDesignMutate, isPending: isRejecting } =
     useRejectDesignFromProofingOrder();
 
-  // Replace die hooks
-  const { mutate: replaceDieMutate, isPending: isReplacingDie } =
-    useReplaceDie();
-
-  // Assign and remove die hooks
-  const { mutate: assignDieMutate, isPending: isAssigningDie } =
-    useAssignDieToProofingOrder();
-  const { mutate: removeDieMutate, isPending: isRemovingDie } =
+  const { mutateAsync: removeDieMutate, isPending: isRemovingDie } =
     useRemoveDieFromProofingOrder();
-
-  // Search dies for replacement
-  const [debouncedDieSearch] = useDebounce(dieSearchTerm, 300);
-  const dieSearchParams = useMemo(() => {
-    if (!isReplaceDieDialogOpen) return undefined;
-    return {
-      dieName: debouncedDieSearch.trim() || "",
-      isUsable: true,
-      pageSize: 50,
-    };
-  }, [isReplaceDieDialogOpen, debouncedDieSearch]);
-
-  // Search dies for adding
-  const [debouncedAddDieSearch] = useDebounce(addDieSearchTerm, 300);
-  const addDieSearchParams = useMemo(() => {
-    if (!isAddDieDialogOpen) return undefined;
-    return {
-      dieName: debouncedAddDieSearch.trim() || "",
-      isUsable: true,
-      pageSize: 50,
-    };
-  }, [isAddDieDialogOpen, debouncedAddDieSearch]);
-
-  const { data: searchDiesData, isLoading: isLoadingDies } =
-    useSearchDies(dieSearchParams);
-  const availableDies = searchDiesData?.items || [];
-
-  const { data: addDieSearchData, isLoading: isLoadingAddDies } =
-    useSearchDies(addDieSearchParams);
-  const availableDiesForAdd = addDieSearchData?.items || [];
 
   const closeRejectDialog = () => {
     setIsRejectDialogOpen(false);
@@ -1856,98 +1815,33 @@ export default function ProofingOrderDetailPage() {
 
   const handleOpenReplaceDieDialog = (dieExport: DieExportResponse) => {
     setReplacingDieExport(dieExport);
-    setSelectedNewDieId(null);
-    setReplaceDieNotes("");
-    setDieSearchTerm("");
     setIsReplaceDieDialogOpen(true);
   };
 
-  const handleReplaceDie = async () => {
-    if (!order?.id || !replacingDieExport?.dieId || !selectedNewDieId) {
-      toast.error("Lỗi", {
-        description: "Vui lòng chọn khuôn mới để thay thế",
-      });
-      return;
-    }
 
-    try {
-      const replaceData: ReplaceDieRequest = {
-        newDieId: selectedNewDieId,
-        notes: replaceDieNotes.trim() || null,
-      };
-
-      await replaceDieMutate({
-        proofingOrderId: order.id,
-        currentDieId: replacingDieExport.dieId,
-        data: replaceData,
-      });
-
-      setIsReplaceDieDialogOpen(false);
-      setReplacingDieExport(null);
-      setSelectedNewDieId(null);
-      setReplaceDieNotes("");
-      setDieSearchTerm("");
-    } catch (error) {
-      // Error is handled by the hook
-    }
+  const handleRemoveDie = (dieId: number) => {
+    setRemoveTargetDieId(dieId);
+    setIsRemoveDieConfirmOpen(true);
   };
 
-  const handleRemoveDie = async (dieId: number) => {
-    if (!order?.id) return;
-
-    if (
-      !confirm(
-        "Bạn có chắc chắn muốn gỡ khuôn bế này khỏi bình bài? Hành động này không thể hoàn tác.",
-      )
-    ) {
-      return;
-    }
+  const handleConfirmRemoveDie = async () => {
+    if (!order?.id || removeTargetDieId === null) return;
 
     try {
       await removeDieMutate({
         proofingOrderId: order.id,
-        dieId,
+        dieId: removeTargetDieId,
       });
+      setIsRemoveDieConfirmOpen(false);
+        setRemoveTargetDieId(null);
     } catch (error) {
       // Error is handled by the hook
     }
   };
 
   const handleOpenAddDieDialog = () => {
-    setSelectedDieIdForAdd(null);
-    setAddDieNotes("");
-    setAddDieSearchTerm("");
     setIsAddDieDialogOpen(true);
   };
-
-  const handleAddDie = async () => {
-    if (!order?.id || !selectedDieIdForAdd) {
-      toast.error("Lỗi", {
-        description: "Vui lòng chọn khuôn bế để thêm",
-      });
-      return;
-    }
-
-    try {
-      const assignData: AssignDieToProofingOrderRequest = {
-        dieId: selectedDieIdForAdd,
-        notes: addDieNotes.trim() || undefined,
-      };
-
-      await assignDieMutate({
-        proofingOrderId: order.id,
-        data: assignData,
-      });
-
-      setIsAddDieDialogOpen(false);
-      setSelectedDieIdForAdd(null);
-      setAddDieNotes("");
-      setAddDieSearchTerm("");
-    } catch (error) {
-      // Error is handled by the hook
-    }
-  };
-
   const handleRemoveDesignClick = (pod: any) => {
     setRemoveDesignTarget({
       proofingOrderDesignId: pod.id!,
@@ -2311,6 +2205,10 @@ export default function ProofingOrderDetailPage() {
                   handleOpenReplaceDieDialog={handleOpenReplaceDieDialog}
                   handleRemoveDie={handleRemoveDie}
                   isRemovingDie={isRemovingDie}
+                  onEditDie={(die) => {
+                    setEditingDie(die);
+                    setIsEditDieDialogOpen(true);
+                  }}
                   setIsDieListDialogOpen={setIsDieListDialogOpen}
                   setImageViewerOpen={setImageViewerOpen}
                   setViewingImageUrl={setViewingImageUrl}
@@ -2365,6 +2263,17 @@ export default function ProofingOrderDetailPage() {
         pendingStatus={pendingStatus}
         setPendingStatus={setPendingStatus}
         handleConfirmStatusChange={handleConfirmStatusChange}
+        isDieListDialogOpen={isDieListDialogOpen}
+        setIsDieListDialogOpen={setIsDieListDialogOpen}
+        dieListInitialSize={dieListInitialSize}
+        isRemoveDieConfirmOpen={isRemoveDieConfirmOpen}
+        setIsRemoveDieConfirmOpen={setIsRemoveDieConfirmOpen}
+        handleConfirmRemoveDie={handleConfirmRemoveDie}
+        isRemovingDie={isRemovingDie}
+        isEditDieDialogOpen={isEditDieDialogOpen}
+        setIsEditDieDialogOpen={setIsEditDieDialogOpen}
+        editingDie={editingDie}
+        setEditingDie={setEditingDie}
         isHandToProductionDialogOpen={isHandToProductionDialogOpen}
         setIsHandToProductionDialogOpen={setIsHandToProductionDialogOpen}
         hasDieCutDesigns={hasDieCutDesigns}
@@ -2381,33 +2290,8 @@ export default function ProofingOrderDetailPage() {
         setIsReplaceDieDialogOpen={setIsReplaceDieDialogOpen}
         replacingDieExport={replacingDieExport}
         setReplacingDieExport={setReplacingDieExport}
-        selectedNewDieId={selectedNewDieId}
-        setSelectedNewDieId={setSelectedNewDieId}
-        replaceDieNotes={replaceDieNotes}
-        setReplaceDieNotes={setReplaceDieNotes}
-        dieSearchTerm={dieSearchTerm}
-        setDieSearchTerm={setDieSearchTerm}
-        handleReplaceDie={handleReplaceDie}
-        isReplacingDie={isReplacingDie}
-        availableDies={availableDies}
-        isLoadingDies={isLoadingDies}
         isAddDieDialogOpen={isAddDieDialogOpen}
         setIsAddDieDialogOpen={setIsAddDieDialogOpen}
-        selectedDieIdForAdd={selectedDieIdForAdd}
-        setSelectedDieIdForAdd={setSelectedDieIdForAdd}
-        addDieNotes={addDieNotes}
-        setAddDieNotes={setAddDieNotes}
-        addDieSearchTerm={addDieSearchTerm}
-        setAddDieSearchTerm={setAddDieSearchTerm}
-        handleAddDie={handleAddDie}
-        isAssigningDie={isAssigningDie}
-        availableDiesForAdd={availableDiesForAdd}
-        isLoadingAddDies={isLoadingAddDies}
-        dieListInitialSize={dieListInitialSize}
-        isDieListDialogOpen={isDieListDialogOpen}
-        setIsDieListDialogOpen={setIsDieListDialogOpen}
-        isRelatedDiesDialogOpen={isRelatedDiesDialogOpen}
-        setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
         selectedDesignForRelatedDies={selectedDesignForRelatedDies}
         setSelectedDesignForRelatedDies={setSelectedDesignForRelatedDies}
         isRejectDialogOpen={isRejectDialogOpen}

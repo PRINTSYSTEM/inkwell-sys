@@ -318,6 +318,7 @@ export default function AccountingOrderDetail() {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
@@ -2071,9 +2072,9 @@ export default function AccountingOrderDetail() {
                               </p>
                               <p className="text-xs text-red-700 dark:text-red-300 mt-1">
                                 Khách hàng đang nợ{" "}
-                                {formatCurrency(
-                                  order.customer?.currentDebt || 0,
-                                )}
+                                <span className="font-bold">
+                                  {formatCurrency(-(Math.abs(order.customer?.currentDebt || 0)))}
+                                </span>
                                 , vượt quá hạn mức cho phép{" "}
                                 {formatCurrency(order.customer?.maxDebt || 0)}
                               </p>
@@ -2103,13 +2104,9 @@ export default function AccountingOrderDetail() {
                             Nợ hiện tại
                           </span>
                           <span
-                            className={`font-medium tabular-nums ${
-                              isDebtOverLimit
-                                ? "text-red-700 dark:text-red-400 font-bold"
-                                : ""
-                            }`}
+                            className="font-bold tabular-nums text-destructive"
                           >
-                            {formatCurrency(order.customer?.currentDebt || 0)}
+                            {formatCurrency(-(Math.abs(order.customer?.currentDebt || 0)))}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">

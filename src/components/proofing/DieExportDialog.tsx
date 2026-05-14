@@ -54,6 +54,7 @@ import {
   useAssignDieToProofingOrder,
   useDiesByProofingOrder,
   useDies,
+  useRemoveDieFromProofingOrder,
 } from "@/hooks/use-die";
 import type { ProofingOrderResponse } from "@/Schema/proofing-order.schema";
 import type { DieResponse } from "@/Schema";
@@ -80,6 +81,8 @@ interface DieExportDialogProps {
   proofingOrderId: number;
   proofingOrder?: ProofingOrderResponse | null;
   onSuccess?: () => void;
+  mode?: "export" | "replace" | "add";
+  replacingDieId?: number;
 }
 
 export function DieExportDialog({
@@ -88,6 +91,8 @@ export function DieExportDialog({
   proofingOrderId,
   proofingOrder,
   onSuccess,
+  mode = "export",
+  replacingDieId,
 }: DieExportDialogProps) {
   const [dieCount, setDieCount] = useState<number>(1);
   const [vendorId, setVendorId] = useState<number | null>(null);
@@ -132,6 +137,8 @@ export function DieExportDialog({
   const { mutate: createDie, isPending: creatingDie } = useCreateDie();
   const { mutate: assignDie, isPending: assigningDie } =
     useAssignDieToProofingOrder();
+  const { mutate: removeDie, isPending: removingDie } =
+    useRemoveDieFromProofingOrder();
 
   // Get dies - use search when there's a search term, otherwise use list
   const searchParams =
@@ -302,37 +309,36 @@ export function DieExportDialog({
 
   // Filter out already assigned dies only (design type/dimensions are used for sorting/prioritization, not filtering)
   const availableDies = useMemo(() => {
-    // Only filter out assigned dies - allow users to select any available die
-    let filtered = allDies.filter(
-      (die) => die.id && !assignedDieIds.has(die.id),
-    );
+    // Include all dies, but prioritize those already assigned to this order
+    let filtered = allDies.filter((die) => !!die.id);
 
-    // Sort dies: prioritize dies that match design dimensions
-    if (designDimensions.length > 0) {
-      filtered = filtered.sort((a, b) => {
-        const aMatchesDim =
-          designDimensions.length > 0
-            ? matchesDimensions(a.size, designDimensions)
-            : false;
-        const bMatchesDim =
-          designDimensions.length > 0
-            ? matchesDimensions(b.size, designDimensions)
-            : false;
+    // Sort dies
+    filtered = filtered.sort((a, b) => {
+      // Priority 1: Already assigned to this order (for re-exporting)
+      const aAssigned = assignedDieIds.has(a.id!);
+      const bAssigned = assignedDieIds.has(b.id!);
+      if (aAssigned !== bAssigned) return aAssigned ? -1 : 1;
 
-        // Prioritize: matches dim > no match
-        const aScore = aMatchesDim ? 1 : 0;
-        const bScore = bMatchesDim ? 1 : 0;
-        return bScore - aScore;
-      });
-    }
+      // Priority 2: Matches design dimensions
+      const aMatchesDim =
+        designDimensions.length > 0
+          ? matchesDimensions(a.size, designDimensions)
+          : false;
+      const bMatchesDim =
+        designDimensions.length > 0
+          ? matchesDimensions(b.size, designDimensions)
+          : false;
+
+      if (aMatchesDim !== bMatchesDim) return aMatchesDim ? -1 : 1;
+
+      return 0;
+    });
 
     return filtered;
   }, [
     allDies,
     assignedDieIds,
-    designTypes,
     designDimensions,
-    matchesDesignType,
     matchesDimensions,
   ]);
 
@@ -709,6 +715,27 @@ export function DieExportDialog({
         return;
       }
 
+      // If replacing, remove the old die first
+      if (mode === "replace" && replacingDieId) {
+        await new Promise<void>((resolve, reject) => {
+          removeDie(
+            {
+              proofingOrderId,
+              dieId: replacingDieId,
+            },
+            {
+              onSuccess: () => resolve(),
+              onError: (error) => {
+                toast.error("Không thể gỡ khuôn cũ", {
+                  description: getErrorMessage(error),
+                });
+                reject(error);
+              },
+            }
+          );
+        });
+      }
+
       for (const dieId of selectedDieIds) {
         await new Promise<void>((resolve, reject) => {
           assignDie(
@@ -733,7 +760,12 @@ export function DieExportDialog({
         });
       }
 
-      toast.success("Đã ghi nhận xuất khuôn bế thành công");
+      const successMessage = 
+        mode === "replace" ? "Thay thế khuôn thành công" : 
+        mode === "add" ? "Thêm khuôn thành công" : 
+        "Đã ghi nhận xuất khuôn bế thành công";
+        
+      toast.success(successMessage);
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
@@ -754,7 +786,9 @@ export function DieExportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[88vh] flex flex-col overflow-hidden">
         <DialogHeader className="pb-2">
-          <DialogTitle>Xuất khuôn bế</DialogTitle>
+          <DialogTitle>
+            {mode === "replace" ? "Thay thế khuôn bế" : mode === "add" ? "Thêm khuôn bế" : "Xuất khuôn bế"}
+          </DialogTitle>
         </DialogHeader>
 
         {/* MAIN SPLIT LAYOUT */}
@@ -765,7 +799,7 @@ export function DieExportDialog({
               <div className="space-y-1">
                 <p className="text-sm font-medium">Chọn khuôn bế</p>
                 <p className="text-xs text-muted-foreground">
-                  Chọn đúng số lượng khuôn cần xuất theo mã bài.
+                  {mode === "replace" ? "Chọn một khuôn bế mới để thay thế." : mode === "add" ? "Chọn một khuôn bế để thêm vào." : "Chọn đúng số lượng khuôn cần xuất theo mã bài."}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -774,7 +808,7 @@ export function DieExportDialog({
                     Số lượng khuôn
                   </Label>
                   <Select
-                    value={dieCount.toString()}
+                    value={mode !== "export" ? "1" : dieCount.toString()}
                     onValueChange={(value) => {
                       const newCount = Number(value);
                       setDieCount(newCount);
@@ -782,6 +816,7 @@ export function DieExportDialog({
                         setSelectedDieIds((prev) => prev.slice(0, newCount));
                       }
                     }}
+                    disabled={mode !== "export"}
                   >
                     <SelectTrigger id="dieCount" className="h-8 w-32 text-xs">
                       <SelectValue placeholder="Số lượng" />
@@ -1655,7 +1690,7 @@ export function DieExportDialog({
               isSubmitting ||
               (dieAction === "create" && !vendorId && !vendorName.trim()) ||
               (dieAction === "create" && dieFiles.length === 0 && !existingImageUrl) ||
-              (dieAction === "select" && (selectedDieIds.length === 0 || selectedDieIds.length !== dieCount))
+              (dieAction === "select" && selectedDieIds.length === 0)
             }
           >
             {isSubmitting ? (

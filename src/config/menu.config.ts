@@ -230,6 +230,13 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
       },
+      {
+        id: "outside-printing-orders",
+        title: "Danh sách lệnh in ( in ngoài)",
+        icon: Package,
+        path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
     ],
   },
 
