@@ -21,7 +21,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCurrentStock } from "@/hooks/use-inventory-report";
+import { useMaterials } from "@/hooks/use-material";
+import { useMaterialTypeList } from "@/hooks/use-material-type";
 import { formatCurrency } from "@/lib/status-utils";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -41,20 +42,23 @@ export default function CurrentStockPage() {
   const itemsPerPage = 10;
 
   const {
-    data: stockData,
+    data: materialsData,
     isLoading,
     isError,
     error,
     refetch,
-  } = useCurrentStock({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
+  } = useMaterials({
+    page: currentPage,
+    size: itemsPerPage,
     search: searchQuery || "",
+    materialTypeId: selectedMaterialType === "all" ? undefined : Number(selectedMaterialType),
   });
 
-  const totalItems = stockData?.total || 0;
-  const totalQuantity = stockData?.items?.reduce((sum, item) => sum + (item.currentQuantity || 0), 0) || 0;
-  const totalValue = stockData?.items?.reduce((sum, item) => sum + (item.stockValue || 0), 0) || 0;
+  const { data: materialTypes } = useMaterialTypeList();
+
+  const totalItems = materialsData?.total || 0;
+  const totalQuantity = materialsData?.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+  const totalValue = 0; // MaterialResponse doesn't have stockValue
 
   return (
     <>
@@ -156,11 +160,11 @@ export default function CurrentStockPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả vật liệu</SelectItem>
-              <SelectItem value="paper">Giấy</SelectItem>
-              <SelectItem value="decal">Decal</SelectItem>
-              <SelectItem value="ink">Mực</SelectItem>
-              <SelectItem value="plate">Kẽm</SelectItem>
-              <SelectItem value="other">Khác</SelectItem>
+              {materialTypes?.items?.map((type) => (
+                <SelectItem key={type.id} value={type.id.toString()}>
+                  {type.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -170,121 +174,80 @@ export default function CurrentStockPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[120px]">Mã vật tư</TableHead>
+                <TableHead className="w-[120px]">ID</TableHead>
                 <TableHead className="min-w-[180px]">Tên vật tư</TableHead>
                 <TableHead>Loại vật liệu</TableHead>
-                <TableHead>Kích thước</TableHead>
+                <TableHead>Kích thước (LxWxH)</TableHead>
                 <TableHead className="text-right">Số lượng</TableHead>
-                <TableHead className="text-right">Đơn vị</TableHead>
-                <TableHead className="text-right">Định mức</TableHead>
-                <TableHead className="text-right">Giá trị tồn</TableHead>
-                <TableHead className="text-right">Trạng thái</TableHead>
+                <TableHead className="text-right">Ngày tạo</TableHead>
+                <TableHead className="text-right">Người tạo</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 9 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
-              ) : !stockData?.items || stockData.items.length === 0 ? (
+              ) : !materialsData?.items || materialsData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={7}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu tồn kho nào.
                   </TableCell>
                 </TableRow>
-              ) : (() => {
-                const filteredItems = stockData.items.filter((item) => {
-                  if (selectedMaterialType === "all") return true;
-                  const name = item.itemName?.toLowerCase() || "";
-                  const code = item.itemCode?.toLowerCase() || "";
-                  if (selectedMaterialType === "paper") return name.includes("giấy") || name.includes("ivory") || name.includes("duplex") || name.includes("couche");
-                  if (selectedMaterialType === "decal") return name.includes("decal");
-                  if (selectedMaterialType === "ink") return code.includes("ink") || name.includes("mực");
-                  if (selectedMaterialType === "plate") return code.includes("plate") || name.includes("kẽm");
-                  if (selectedMaterialType === "other") return !name.includes("decal") && !name.includes("giấy") && !code.includes("ink") && !code.includes("plate");
-                  return true;
-                });
-
-                if (filteredItems.length === 0) {
-                  return (
-                    <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                        Không tìm thấy vật tư nào khớp với bộ lọc.
-                      </TableCell>
-                    </TableRow>
-                  );
-                }
-
-                return filteredItems.map((item) => (
+              ) : (
+                materialsData.items.map((item) => (
                   <TableRow 
-                    key={item.itemCode || item.itemName}
+                    key={item.id}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/reports/inventory/stock-card/${item.itemCode}`)}
+                    onClick={() => navigate(`/reports/inventory/stock-card/${item.id}`)}
                   >
                     <TableCell className="font-medium font-mono text-sm">
-                      {item.itemCode || "—"}
+                      #{item.id}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {item.itemName || "—"}
+                      {item.name || "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-normal">
-                        {item.itemName?.toLowerCase().includes("decal") ? "Decal" : 
-                         item.itemName?.toLowerCase().includes("ivory") ? "Giấy Ivory" : 
-                         item.itemName?.toLowerCase().includes("duplex") ? "Giấy Duplex" : 
-                         item.itemName?.toLowerCase().includes("couche") ? "Giấy Couche" : 
-                         item.itemCode?.includes("INK") ? "Mực" : 
-                         item.itemCode?.includes("PLATE") ? "Kẽm" : "Giấy"}
+                        {item.materialTypeName || "—"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {item.itemName?.match(/\d+x\d+/)?.[0] || "—"}
+                      {item.length}x{item.width}x{item.height}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.currentQuantity !== undefined
-                        ? item.currentQuantity.toLocaleString()
+                    <TableCell className="text-right font-bold tabular-nums text-blue-600">
+                      {item.quantity !== undefined
+                        ? item.quantity.toLocaleString()
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.unit || "—"}
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString("vi-VN") : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {item.minStock !== undefined
-                        ? item.minStock.toLocaleString()
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-bold tabular-nums">
-                      {item.stockValue !== undefined
-                        ? formatCurrency(item.stockValue)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant={item.status === "Active" ? "default" : "secondary"}>
-                        {item.status === "Active" ? "Hoạt động" : item.status === "Inactive" ? "Ngừng hoạt động" : (item.status || "—")}
-                      </Badge>
+                    <TableCell className="text-right text-sm">
+                      {item.createdBy || "—"}
                     </TableCell>
                   </TableRow>
                 ))
-              })()}
+              )}
             </TableBody>
           </Table>
         </div>
 
         {/* Pagination */}
-        {stockData && stockData.totalPages > 1 && (
+        {materialsData && materialsData.totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Trang {currentPage} / {stockData.totalPages} (
-              {stockData.total} mặt hàng)
+              Trang {currentPage} / {materialsData.totalPages} (
+              {materialsData.total} mặt hàng)
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -296,15 +259,15 @@ export default function CurrentStockPage() {
                 <RefreshCw className="h-4 w-4 rotate-180" />
               </Button>
               <span className="text-sm font-medium px-2">
-                {currentPage} / {stockData.totalPages}
+                {currentPage} / {materialsData.totalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setCurrentPage((p) => Math.min(stockData.totalPages, p + 1))
+                  setCurrentPage((p) => Math.min(materialsData.totalPages, p + 1))
                 }
-                disabled={currentPage === stockData.totalPages || isLoading}
+                disabled={currentPage === materialsData.totalPages || isLoading}
               >
                 <RefreshCw className="h-4 w-4" />
               </Button>
