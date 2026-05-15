@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { useState, useRef, useEffect } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { customerTypeLabels } from "@/lib/status-utils";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks";
 import { ROLE } from "@/constants";
@@ -421,9 +423,17 @@ export default function Customers() {
                             {customer.name ?? ""}
                           </TableCell>
                           <TableCell className="py-2">
-                            {customer.companyName && customer.type === "company"
-                              ? customer.companyName
-                              : "Cá nhân"}
+                            <div className="flex flex-col gap-1 items-start">
+                              <StatusBadge
+                                status={customer.type || "retail"}
+                                label={customerTypeLabels[customer.type || "retail"]}
+                              />
+                              {customer.type === "company" && customer.companyName && (
+                                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                  {customer.companyName}
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
                           {canViewFinancialInfo && (
                             <TableCell className="py-2">
