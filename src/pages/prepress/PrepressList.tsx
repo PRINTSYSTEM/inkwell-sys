@@ -270,7 +270,7 @@ export default function PrepressList() {
   const [designsPage, setDesignsPage] = useState(1);
   const [designsPageInput, setDesignsPageInput] = useState<string>("");
   const designsTableRef = useRef<HTMLDivElement>(null);
-  const designsPageSize = 10;
+  const designsPageSize = 20;
 
   const materialTypeIdForApi = currentMaterialTypeId
     ? currentMaterialTypeId
