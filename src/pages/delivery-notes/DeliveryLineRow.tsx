@@ -234,8 +234,8 @@ export default function DeliveryLineRow({
         <TableCell className="text-right">
           <div className="flex flex-col items-end">
             <span className="font-bold text-sm text-primary">
-              {typeof line.actualDeliveredQty === "number"
-                ? line.actualDeliveredQty.toLocaleString("vi-VN")
+              {typeof line.netQtyTotal === "number"
+                ? line.netQtyTotal.toLocaleString("vi-VN")
                 : "—"}
             </span>
           </div>
