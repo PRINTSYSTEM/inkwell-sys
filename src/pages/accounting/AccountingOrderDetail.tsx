@@ -185,7 +185,7 @@ export default function AccountingOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentTab = searchParams.get("tab") || "order";
+  const currentTab = searchParams.get("tab") === "invoice" ? "invoice" : "order";
 
   const handleTabChange = (value: string) => {
     const newParams = new URLSearchParams(searchParams);
