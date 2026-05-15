@@ -794,6 +794,7 @@ export default function PrepressList() {
                         setDesignsPageInput={setDesignsPageInput}
                         handleDesignsPageInputBlur={handleDesignsPageInputBlur}
                         designsTotalCount={designsTotalCount}
+                        designsPageSize={designsPageSize}
                       />
 
                       {(selectedMaterialTypeId || designCode.trim()) && (

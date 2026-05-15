@@ -92,6 +92,7 @@ interface PrepressOrdersHeaderProps {
   setDesignsPageInput?: (val: string) => void;
   handleDesignsPageInputBlur?: () => void;
   designsTotalCount?: number;
+  designsPageSize?: number;
   expandedOrderIds?: Set<number>;
   isSelectionEnabled?: boolean;
 }
@@ -150,6 +151,7 @@ export function PrepressOrdersHeader({
   setDesignsPageInput,
   handleDesignsPageInputBlur,
   designsTotalCount = 0,
+  designsPageSize = 20,
   // Actions
   onReject,
   isRejecting,
@@ -301,19 +303,19 @@ export function PrepressOrdersHeader({
                 searchTerm={searchTerm}
               />
               {/* Designs Pagination */}
-              {designsTotalCount > itemsPerPage &&
+              {designsTotalCount > designsPageSize &&
                 setDesignsPage &&
                 setDesignsPageInput && (
                   <div className="flex items-center justify-between gap-3 bg-background px-1 py-1 border rounded-lg shadow-sm">
                     <div className="text-xs text-muted-foreground ml-2">
                       Hiển thị{" "}
                       <span className="font-semibold text-foreground">
-                        {(designsPage - 1) * itemsPerPage + 1}
+                        {(designsPage - 1) * designsPageSize + 1}
                       </span>
                       {" - "}
                       <span className="font-semibold text-foreground">
                         {Math.min(
-                          designsPage * itemsPerPage,
+                          designsPage * designsPageSize,
                           designsTotalCount,
                         )}
                       </span>{" "}
