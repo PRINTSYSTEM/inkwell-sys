@@ -1903,8 +1903,8 @@ export default function OrderDetailPage() {
           {/* Customer Info */}
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <CardTitle className="text-base flex items-center gap-2 shrink-0">
                   {customerType === "company" ? (
                     <Building2 className="w-4 h-4 text-primary" />
                   ) : (
@@ -1913,7 +1913,7 @@ export default function OrderDetailPage() {
                   Khách hàng
                 </CardTitle>
                 {editingCard === "customerInfo" ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     <Button
                       size="sm"
                       variant="default"
@@ -1945,7 +1945,7 @@ export default function OrderDetailPage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -2228,9 +2228,11 @@ export default function OrderDetailPage() {
                           </p>
                         </div>
                       )}
-                      <Badge variant="secondary" className="mt-1 text-xs">
-                        {customerTypeLabels[customerType]}
-                      </Badge>
+                      <StatusBadge
+                        status={customerType}
+                        label={customerTypeLabels[customerType] || customerType}
+                        className="mt-1"
+                      />
                     </div>
                   </div>
 
