@@ -1410,7 +1410,7 @@ export default function AccountingOrderDetail() {
                                   </div>
                                   <div className="flex flex-col items-end">
                                     <span className="text-sm font-semibold">
-                                      {formatCurrency(receipt.totalAmount || 0)}
+                                      {formatCurrency(receipt.amount || 0)}
                                     </span>
                                     <Badge 
                                       variant={receipt.status === "posted" ? "success" : "secondary"}
@@ -1717,11 +1717,9 @@ export default function AccountingOrderDetail() {
                             <TableHead>Mô tả</TableHead>
                             <TableHead className="text-center">ĐVT</TableHead>
                             <TableHead className="text-center">Số lượng</TableHead>
+                            <TableHead className="text-center">SL thực tính</TableHead>
                             <TableHead className="text-right">Đơn giá</TableHead>
                             <TableHead className="text-right">Thành tiền</TableHead>
-                            <TableHead className="text-right">Chiết khấu</TableHead>
-                            <TableHead className="text-right">VAT</TableHead>
-                            <TableHead className="text-right">Tổng cộng</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1757,41 +1755,21 @@ export default function AccountingOrderDetail() {
                                 <TableCell className="text-center font-medium tabular-nums">
                                   {item.quantity?.toLocaleString("vi-VN")}
                                 </TableCell>
+                                <TableCell className="text-center font-medium tabular-nums text-primary">
+                                  {item.orderDetail?.netQtyTotal?.toLocaleString("vi-VN") || "—"}
+                                </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                   {formatCurrency(item.unitPrice || 0)}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                   {formatCurrency(item.amount || 0)}
                                 </TableCell>
-                                <TableCell className="text-right tabular-nums text-destructive">
-                                  {item.discountAmount && item.discountAmount > 0
-                                    ? `-${formatCurrency(item.discountAmount)}`
-                                    : "—"}
-                                </TableCell>
-                                <TableCell className="text-right tabular-nums">
-                                  {(() => {
-                                    const vatAmount = (item as any).vatAmount ?? (item.amountAfterDiscount || 0) * (item.taxRate || 0);
-                                    return vatAmount > 0 ? (
-                                      <div className="flex flex-col items-end">
-                                        <span className="font-medium">{formatCurrency(vatAmount)}</span>
-                                        <span className="text-[10px] text-muted-foreground">({(item.taxRate || 0) * 100}%)</span>
-                                      </div>
-                                    ) : "—";
-                                  })()}
-                                </TableCell>
-                                <TableCell className="text-right font-bold tabular-nums">
-                                  {(() => {
-                                    const vatAmount = (item as any).vatAmount ?? (item.amountAfterDiscount || 0) * (item.taxRate || 0);
-                                    const grandTotal = (item as any).grandTotal ?? (item.amountAfterDiscount || 0) + vatAmount;
-                                    return formatCurrency(grandTotal);
-                                  })()}
-                                </TableCell>
                               </TableRow>
                             ))
                           ) : (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={7}
                                 className="text-center text-muted-foreground py-8"
                               >
                                 Không có sản phẩm nào trong hóa đơn
