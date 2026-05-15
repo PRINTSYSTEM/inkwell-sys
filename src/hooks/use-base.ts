@@ -60,9 +60,19 @@ export const getErrorMessage = (
   error: unknown,
   fallback = "Đã xảy ra lỗi không xác định"
 ): string => {
-  if (error instanceof AxiosError) {
-    const data = error.response?.data;
-    return data.error;
+  if (error instanceof ServiceError) {
+    if (error.errors) {
+      return Object.values(error.errors).flat().join(", ");
+    }
+    return error.message;
+  }
+
+  if (error && typeof error === "object" && "response" in error) {
+    const axiosError = error as any;
+    const data = axiosError.response?.data;
+    if (data && typeof data === "object") {
+      return data.Error || data.error || data.message || axiosError.message;
+    }
   }
 
   if (error instanceof Error) {

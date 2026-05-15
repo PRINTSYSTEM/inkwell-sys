@@ -247,6 +247,9 @@ export default function InvoiceDetailPage() {
                       <TableHead className="text-right w-32">
                         Thành tiền
                       </TableHead>
+                      <TableHead className="text-right w-32">
+                        Tổng cộng
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -307,6 +310,31 @@ export default function InvoiceDetailPage() {
                               : item.amount
                                 ? formatCurrency(item.amount)
                                 : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            <div className="font-bold">
+                              {item.grandTotal
+                                ? formatCurrency(item.grandTotal)
+                                : (item.amountAfterDiscount || item.amount)
+                                  ? formatCurrency(
+                                      (item.amountAfterDiscount || item.amount || 0) *
+                                        (1 + (invoice.taxRate || 0))
+                                    )
+                                  : "—"}
+                            </div>
+                            {(item.vatAmount !== undefined && item.vatAmount !== null) ||
+                            ((item.amountAfterDiscount || item.amount) &&
+                              invoice.taxRate && invoice.taxRate > 0) ? (
+                              <div className="text-[10px] text-muted-foreground">
+                                VAT:{" "}
+                                {item.vatAmount !== undefined && item.vatAmount !== null
+                                  ? formatCurrency(item.vatAmount)
+                                  : formatCurrency(
+                                      (item.amountAfterDiscount || item.amount || 0) *
+                                        (invoice.taxRate || 0)
+                                    )}
+                              </div>
+                            ) : null}
                           </TableCell>
                         </TableRow>
                       );

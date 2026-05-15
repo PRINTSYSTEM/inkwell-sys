@@ -72,6 +72,9 @@ export const ROUTE_PATHS = {
     STOCK_INS_CREATE: "/stock/stock-ins/create" as const,
     STOCK_OUTS: "/stock/stock-outs" as const,
     STOCK_OUTS_CREATE: "/stock/stock-outs/create" as const,
+    MATERIAL_CUTS: "/stock/material-cuts" as const,
+    MATERIAL_CUTS_CREATE: "/stock/material-cuts/create" as const,
+    MATERIAL_CUTS_DETAIL: (id: string | number) => `/stock/material-cuts/${id}` as const,
   },
 
   VENDORS: {

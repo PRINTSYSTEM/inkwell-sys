@@ -30,6 +30,7 @@ interface DesignTableProps {
   isRejecting?: boolean;
   onFindDie?: (design: DesignItem, dimensions: string) => void;
   isSelectionEnabled?: boolean;
+  searchTerm?: string;
 }
 
 export function DesignTable({
@@ -41,11 +42,33 @@ export function DesignTable({
   isRejecting,
   onFindDie,
   isSelectionEnabled = true,
+  searchTerm = "",
 }: DesignTableProps) {
   const [viewingImage, setViewingImage] = useState<{
     url: string;
     title: string;
   } | null>(null);
+
+  const highlightText = (text: string, search: string) => {
+    if (!search || !text) return text;
+    const regex = new RegExp(
+      `(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi",
+    );
+    const parts = text.split(regex);
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <span
+          key={index}
+          className="bg-emerald-500 text-white font-semibold px-0.5 rounded"
+        >
+          {part}
+        </span>
+      ) : (
+        part
+      ),
+    );
+  };
 
   return (
     <>
@@ -96,13 +119,13 @@ export function DesignTable({
                   <div className="space-y-3">
                     <div className="border-b pb-2">
                       <h4 className="font-bold text-base text-foreground leading-tight">
-                        {design.name}
+                        {highlightText(design.name, searchTerm)}
                       </h4>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">
                           Mã hàng:{" "}
                           <span className="font-mono font-bold text-foreground">
-                            {design.code}
+                            {highlightText(design.code, searchTerm)}
                           </span>
                         </span>
                       </div>
@@ -275,7 +298,7 @@ export function DesignTable({
                       )}
                     </TableCell>
                     <TableCell className="py-3 font-mono text-sm font-semibold">
-                      {design.code}
+                      {highlightText(design.code, searchTerm)}
                     </TableCell>
                     <TableCell className="py-3">
                       <div className="text-sm text-muted-foreground">

@@ -25,6 +25,8 @@ import {
   AlertTriangle,
   Check,
   ChevronsUpDown,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -82,7 +84,7 @@ import { useState } from "react";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useMaterialTypeList } from "@/hooks/use-material-type";
+import { useMaterials } from "@/hooks/use-material";
 import { formatDieSize } from "@/utils/format-die-size";
 
 interface ProductionListTableProps {
@@ -277,9 +279,11 @@ function ProductionTableRow({
   const InlineStepStatus = ({
     step,
     isEnabled = true,
+    isStatusLocked = false,
   }: {
     step: ProductionStepResponse;
     isEnabled?: boolean;
+    isStatusLocked?: boolean;
   }) => {
     const handleStatusChange = (newStatus: string) => {
       updateStep({
@@ -296,7 +300,7 @@ function ProductionTableRow({
 
     return (
       <div
-        className={`flex items-center gap-1.5 h-7 transition-all duration-300 ${!isEnabled ? "opacity-30 grayscale pointer-events-none select-none" : ""}`}
+        className={`flex items-center gap-1.5 h-7 transition-all duration-300 ${!isEnabled ? "opacity-30 grayscale pointer-events-none select-none" : ""} ${isStatusLocked ? "pointer-events-none" : ""}`}
         onClick={(e) => e.stopPropagation()}
       >
         <Select
@@ -304,11 +308,12 @@ function ProductionTableRow({
             !step.status || step.status === "pending" ? "ready" : step.status
           }
           onValueChange={handleStatusChange}
+          disabled={!isEnabled}
         >
           <SelectTrigger
             className={`h-7 min-w-[105px] text-[10px] px-2 font-bold border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(
               !step.status || step.status === "pending" ? "ready" : step.status,
-            )}`}
+            )} ${isStatusLocked ? "opacity-100 select-none" : ""}`}
           >
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
@@ -355,6 +360,7 @@ function ProductionTableRow({
     productionOrderId = null,
     initialOutputQtyOverride = null,
     initialDefectQtyOverride = null,
+    isStatusLocked = false,
   }: {
     step: ProductionStepResponse;
     isCheckStep?: boolean;
@@ -367,6 +373,7 @@ function ProductionTableRow({
     productionOrderId?: number | null;
     initialOutputQtyOverride?: number | null;
     initialDefectQtyOverride?: number | null;
+    isStatusLocked?: boolean;
   }) => {
     // Auto-fill with proofing order qty if step qty not yet set (or zero)
     const initialInputQty = step.inputQty
@@ -526,7 +533,7 @@ function ProductionTableRow({
               disabled={!isEnabled}
             >
               <SelectTrigger
-                className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""}`}
+                className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""} ${isStatusLocked ? "opacity-100 pointer-events-none select-none" : ""}`}
               >
                 <SelectValue placeholder="Trạng thái" />
               </SelectTrigger>
@@ -583,18 +590,18 @@ function ProductionTableRow({
               </span>
             </div>
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
                 Ra
               </span>
-              <span className="text-[10px] tabular-nums font-medium text-emerald-700">
+              <span className="text-[13px] tabular-nums font-bold text-emerald-700">
                 {outputQty || 0}
               </span>
             </div>
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tighter">
+              <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tighter">
                 Lỗi
               </span>
-              <span className="text-[10px] tabular-nums font-medium text-red-600">
+              <span className="text-[13px] tabular-nums font-bold text-red-600">
                 {defectQty || 0}
               </span>
             </div>
@@ -643,26 +650,22 @@ function ProductionTableRow({
                 onChange={(e) => setInputQty(e.target.value)}
               />
             </div>
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
-                Ra
-              </span>
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] font-bold text-emerald-600 uppercase w-5 shrink-0 text-center">Ra</span>
               <Input
                 type="number"
-                className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-emerald-700 bg-background"
                 value={outputQty}
                 onChange={(e) => setOutputQty(e.target.value)}
+                className="h-7 text-[13px] px-1.5 py-0 focus-visible:ring-emerald-500 font-bold tabular-nums"
               />
             </div>
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter text-red-600 dark:text-red-400">
-                Lỗi
-              </span>
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] font-bold text-red-600 uppercase w-5 shrink-0 text-center">Lỗi</span>
               <Input
                 type="number"
-                className="h-5 w-14 text-[10px] px-1 py-0 text-right font-medium text-red-600 bg-background"
                 value={defectQty}
                 onChange={(e) => setDefectQty(e.target.value)}
+                className="h-7 text-[13px] px-1.5 py-0 focus-visible:ring-red-500 font-bold text-red-600 tabular-nums"
               />
             </div>
             <Button
@@ -701,12 +704,14 @@ function ProductionTableRow({
     isEnabled = true,
     showName = false,
     info,
+    isStatusLocked = false,
   }: {
     step: ProductionStepResponse | null;
     isCheckStep?: boolean;
     isEnabled?: boolean;
     showName?: boolean;
     info?: React.ReactNode;
+    isStatusLocked?: boolean;
   }) => {
     // If no step AND no info, show empty
     if (!step && !info)
@@ -728,6 +733,7 @@ function ProductionTableRow({
               isCheckStep={isCheckStep}
               isEnabled={isEnabled}
               showName={showName}
+              isStatusLocked={isStatusLocked}
             />
           )}
           {info && <div className="w-full text-center">{info}</div>}
@@ -798,8 +804,9 @@ function ProductionTableRow({
         <StepCell
           step={materialExportStep}
           isEnabled={isMaterialExportEnabled}
+          isStatusLocked={true}
         />
-        <TableCell className="py-3 align-top min-w-[190px]">
+        <TableCell className="py-3 align-top min-w-[140px]">
           {isProofingLoading ? (
             <div className="space-y-4 animate-pulse">
               <div className="h-4 bg-muted rounded w-3/4"></div>
@@ -808,35 +815,64 @@ function ProductionTableRow({
             </div>
           ) : proofingOrder ? (
             <div className="flex flex-col gap-2.5 text-sm">
-              {/* 1. Header & General Info */}
+              {/* 1. Trạng thái IN (Đưa lên đầu cho đồng bộ) */}
+              {printStep && (
+                <div className="pb-3 border-b border-dashed">
+                  {/* <div className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5">Trạng thái In:</div> */}
+                  <InlineStepStatus step={printStep} isEnabled={isPrintEnabled} />
+                </div>
+              )}
+
+              {/* 2. Header & General Info */}
               <div className="space-y-2">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Trạng thái công đoạn In nằm ở cột riêng */}
+                    {/* Trạng thái công đoạn In đã chuyển lên đầu */}
                   </div>
-                  {/* <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full font-semibold border text-muted-foreground">
-                  {String(prod.code || `PROD-${prod.id}`)}
-                </span> */}
                 </div>
-                <div className="grid grid-cols-[90px_1fr] gap-x-2 gap-y-1 text-xs">
-                  <span className="text-muted-foreground font-medium">
-                    Chất liệu:
-                  </span>
-                  <span className="font-semibold text-foreground truncate">
-                    {proofingOrder?.materialType?.name || "—"}
-                  </span>
+                <div className="flex flex-col gap-2 text-xs">
+                  <div className="flex flex-col">
+                    <span className="text-muted-foreground font-bold uppercase text-[9px] mb-0.5">
+                      Chất liệu:
+                    </span>
+                    <span className="font-bold text-foreground leading-tight text-[11px]">
+                      {proofingOrder?.materialType?.name || "—"}
+                    </span>
+                  </div>
 
-                  <span className="text-muted-foreground font-medium">
-                    Số lượng in:
-                  </span>
-                  <span className="font-bold text-blue-600">
-                    {String(
-                      proofingOrder?.totalProcessedQty ||
-                        proofingOrder?.totalQuantity ||
-                        "0",
-                    )}{" "}
-                    tờ
-                  </span>
+                  <div className="flex flex-col border-t border-dashed border-muted/50 pt-1 mt-0">
+                    <span className="text-muted-foreground font-bold uppercase text-[9px] mb-0.5">
+                      Khổ giấy:
+                    </span>
+                    <span className="font-bold text-foreground leading-tight text-[11px]">
+                      {proofingOrder?.paperSize?.name || proofingOrder?.customPaperSize || "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center border-t border-dashed border-muted/50 pt-1.5 mt-0.5">
+                    <span className="text-muted-foreground font-medium">
+                      Số lượng in:
+                    </span>
+                    <span className="font-bold text-blue-600">
+                      {String(
+                        proofingOrder?.totalProcessedQty ||
+                          proofingOrder?.totalQuantity ||
+                          "0",
+                      )}{" "}
+                      tờ
+                    </span>
+                  </div>
+                  
+                  {(prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes) && (
+                    <div className="flex flex-col border-t border-dashed border-muted/50 pt-1.5 mt-0.5">
+                      <span className="text-muted-foreground font-medium mb-0.5">
+                        Ghi chú:
+                      </span>
+                      <span className="font-medium text-amber-700 break-words whitespace-pre-wrap italic leading-snug">
+                        {prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {isDraft && (
@@ -847,64 +883,7 @@ function ProductionTableRow({
                 )}
               </div>
 
-              {/* 2. Thiết kế */}
-              {(proofingOrder as any).proofingOrderDesigns &&
-                (proofingOrder as any).proofingOrderDesigns.length > 0 && (
-                  <div className="space-y-1.5">
-                    <span className="font-bold text-[13px] text-foreground flex items-center gap-1.5 uppercase">
-                      <Layers className="w-3.5 h-3.5" /> Thiết kế (
-                      {(proofingOrder as any).proofingOrderDesigns.length})
-                    </span>
-                    <div className="space-y-2">
-                      {(proofingOrder as any).proofingOrderDesigns.map(
-                        (pod: any) => (
-                          <div
-                            key={pod.id}
-                            className="bg-muted/20 p-2.5 rounded-md text-xs"
-                          >
-                            <p className="font-bold text-[13px] text-foreground mb-2 break-all">
-                              {pod.design?.designName ||
-                                pod.design?.code ||
-                                "—"}
-                            </p>
-                            <div className="flex flex-col gap-1 text-[11px]">
-                              <div className="flex justify-between items-center gap-1 border-b border-muted/50 pb-1">
-                                <span className="text-muted-foreground font-medium whitespace-nowrap">
-                                  Số lượng:
-                                </span>
-                                <span className="font-bold text-foreground text-amber-700 text-right">
-                                  {pod.quantity} SP
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between items-center gap-1 border-b border-muted/50 pb-1">
-                                <span className="text-muted-foreground font-medium whitespace-nowrap">
-                                  Mã thiết kế:
-                                </span>
-                                <span className="font-bold text-foreground text-right truncate">
-                                  {pod.design?.code || "—"}
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between items-center gap-1">
-                                <span className="text-muted-foreground font-medium whitespace-nowrap">
-                                  Kích thước:
-                                </span>
-                                <span className="font-bold text-foreground text-right truncate">
-                                  {pod.design?.dimensions
-                                    ? String(pod.design.dimensions)
-                                    : "—"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              {/* 3. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
+              {/* 4. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
               <div className="flex flex-row gap-2 mt-1">
                 {(proofingOrder as any).plateExport && (
                   <HoverCard>
@@ -965,13 +944,14 @@ function ProductionTableRow({
                                 Đã nhận
                               </span>
                             </div>
-                            {plateExport.notes && (
-                              <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
-                                <span className="text-muted-foreground font-medium">
+                            {/* Ghi chú Kẽm */}
+                            {(plateExport.notes || plateExport.plate?.notes) && (
+                              <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30 mt-0.5">
+                                <span className="text-muted-foreground font-medium text-[10px]">
                                   Ghi chú:
                                 </span>
-                                <span className="italic text-muted-foreground break-words">
-                                  {plateExport.notes}
+                                <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
+                                  {plateExport.notes || plateExport.plate?.notes}
                                 </span>
                               </div>
                             )}
@@ -989,7 +969,6 @@ function ProductionTableRow({
             </div>
           )}
         </TableCell>
-        <StepCell step={printStep} isEnabled={isPrintEnabled} />
         <StepCell
           step={specialProcessStep}
           isEnabled={isSpecialProcessEnabled}
@@ -1085,6 +1064,18 @@ function ProductionTableRow({
                               {formatDate(dieExport.createdAt)}
                             </span>
                           </div>
+                          
+                          {/* Ghi chú Khuôn */}
+                          {(dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes) && (
+                            <div className="flex flex-col pt-0.5 border-t border-slate-200 dark:border-slate-700 mt-0.5">
+                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                Ghi chú:
+                              </span>
+                              <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
+                                {dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1099,7 +1090,7 @@ function ProductionTableRow({
         <StepCell step={cutStep} isEnabled={isCutEnabled} />
         <StepCell step={glueStep} isEnabled={isGlueEnabled} />
         <TableCell
-          className="align-top py-3 px-1.5"
+          className="align-top py-3 px-1.5 min-w-[260px]"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex flex-col gap-2">
@@ -1120,6 +1111,7 @@ function ProductionTableRow({
                           steps.find((s) => s.stepType === "packaging"))!
                       }
                       isEnabled={isPackagingEnabled}
+                      isStatusLocked={true}
                     />
                   </div>
                 )}
@@ -1157,30 +1149,78 @@ function ProductionTableRow({
                       );
 
                       return (
-                        <StepItem
-                          key={`${pod.id}-${matchingStep.id}`}
-                          step={matchingStep}
-                          isCheckStep={true}
-                          isEnabled={isPackagingEnabled}
-                          showName={true}
-                          label={pod.design?.designName || pod.design?.code}
-                          hideStatus={true}
-                          isPackagingItem={true}
-                          productionItemId={prodItem ? prodItem.id : null}
-                          productionOrderId={prod.id}
-                          initialOutputQtyOverride={
-                            prodItem?.outputQty != null
-                              ? prodItem.outputQty
-                              : prodItem?.producedQty != null
-                                ? prodItem.producedQty
-                                : null
-                          }
-                          initialDefectQtyOverride={
-                            prodItem?.defectQty != null
-                              ? prodItem.defectQty
-                              : null
-                          }
-                        />
+                        <div key={`${pod.id}-${matchingStep.id}`} className="grid grid-cols-[1fr_auto] gap-3 py-2 first:pt-0 border-b border-dashed last:border-0">
+                          <div className="bg-muted/20 p-2.5 rounded-md text-xs">
+                            <p className="font-bold text-[13px] text-foreground mb-1.5 break-all">
+                              {pod.design?.designName ||
+                                pod.design?.code ||
+                                "—"}
+                            </p>
+                            <div className="flex flex-col gap-1 text-[11px]">
+                              <div className="flex justify-between items-center gap-1 border-b border-muted/50 pb-1">
+                                <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                  Số lượng:
+                                </span>
+                                <span className="font-bold text-foreground text-amber-700 text-right">
+                                  {pod.quantity} SP
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-center gap-1 border-b border-muted/50 pb-1">
+                                <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                  Mã:
+                                </span>
+                                <span className="font-bold text-foreground text-right truncate">
+                                  {pod.design?.code || "—"}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between items-center gap-1">
+                                <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                  Kích thước:
+                                </span>
+                                <span className="font-bold text-foreground text-right truncate">
+                                  {pod.design?.dimensions
+                                    ? String(pod.design.dimensions)
+                                    : "—"}
+                                </span>
+                              </div>
+                              
+                              {(pod.notes || pod.design?.notes) && (
+                                <div className="flex flex-col gap-0.5 mt-1 pt-1 border-t border-muted/30">
+                                  <span className="font-bold text-amber-700 break-words whitespace-pre-wrap italic leading-tight text-[11px]">
+                                    {pod.notes || pod.design?.notes}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col justify-center min-w-[80px]">
+                            <StepItem
+                              step={matchingStep}
+                              isCheckStep={true}
+                              isEnabled={isPackagingEnabled}
+                              showName={false}
+                              hideStatus={true}
+                              isPackagingItem={true}
+                              productionItemId={prodItem ? prodItem.id : null}
+                              productionOrderId={prod.id}
+                              initialOutputQtyOverride={
+                                prodItem?.outputQty != null
+                                  ? prodItem.outputQty
+                                  : prodItem?.producedQty != null
+                                    ? prodItem.producedQty
+                                    : null
+                              }
+                              initialDefectQtyOverride={
+                                prodItem?.defectQty != null
+                                  ? prodItem.defectQty
+                                  : null
+                              }
+                            />
+                          </div>
+                        </div>
                       );
                     })
                     .filter(Boolean)}
@@ -1317,34 +1357,31 @@ export function ProductionListTable({
                 <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
                   XUẤT NL
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[190px]">
+                <TableHead className="h-10 font-bold text-sm w-[140px]">
                   LỆNH IN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
-                  IN
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center">
                   QUY TRÌNH ĐB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center">
                   CÁN MÀNG
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center">
                   BẾ
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center">
                   CẮT
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center">
                   DÁN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center min-w-[260px]">
                   KIỂM HÀNG
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableSkeleton cols={10} rows={5} rowHeight="h-32" />
+              <TableSkeleton cols={9} rows={5} rowHeight="h-32" />
             </TableBody>
           </Table>
         ) : productions.length === 0 ? (
@@ -1364,28 +1401,25 @@ export function ProductionListTable({
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
                   XUẤT NL
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[190px]">
+                <TableHead className="h-10 font-bold text-sm w-[140px]">
                   LỆNH IN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
-                  IN
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
                   QUY TRÌNH ĐB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
                   CÁN MÀNG
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
                   BẾ
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
                   CẮT
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
                   DÁN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap min-w-[260px]">
                   KIỂM HÀNG
                 </TableHead>
               </TableRow>
@@ -1497,24 +1531,68 @@ export function MaterialExportDialog({
   defaultPrintQty: number;
   onExportSuccess?: () => void;
 }) {
-  const { data: materialsData, isLoading: isMaterialsLoading } = useMaterialTypeList(
+  const { data: materialsData, isLoading: isMaterialsLoading } = useMaterials(
     { pageSize: 100 }
   );
   const materials = (materialsData as any)?.items || [];
   
   const { mutateAsync: createStockOutForProduction, isPending } = useCreateStockOutForProduction();
-  const [quantity, setQuantity] = useState(defaultPrintQty?.toString() || "1");
-  const [selectedMaterialId, setSelectedMaterialId] = useState<string>(
-    proofingOrder?.materialTypeId?.toString() || ""
-  );
+  // State for selected export items
+  const [selectedItems, setSelectedItems] = useState<{materialId: string, quantity: string}[]>([]);
   const [materialSearchOpen, setMaterialSearchOpen] = useState(false);
 
+  // Reset state when dialog opens
+  React.useEffect(() => {
+    if (isOpen) {
+      if (proofingOrder?.materialTypeId) {
+        setSelectedItems([{
+          materialId: proofingOrder.materialTypeId.toString(),
+          quantity: defaultPrintQty?.toString() || "1"
+        }]);
+      } else {
+        setSelectedItems([]);
+      }
+    }
+  }, [isOpen, proofingOrder, defaultPrintQty]);
+
+  const handleSelectMaterial = (matId: string) => {
+    if (!selectedItems.find(i => i.materialId === matId)) {
+      setSelectedItems([...selectedItems, { 
+        materialId: matId, 
+        quantity: defaultPrintQty?.toString() || "1" 
+      }]);
+    }
+    setMaterialSearchOpen(false);
+  };
+
+  const handleRemoveItem = (matId: string) => {
+    setSelectedItems(selectedItems.filter(item => item.materialId !== matId));
+  };
+
+  const handleQuantityChange = (matId: string, qty: string) => {
+    setSelectedItems(selectedItems.map(item => 
+      item.materialId === matId ? { ...item, quantity: qty } : item
+    ));
+  };
+
   const handleConfirm = async () => {
-    if (!selectedMaterialId) {
-      toast.error("Vui lòng chọn loại giấy");
+    if (selectedItems.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một nguyên vật liệu");
       return;
     }
-    const mat = materials.find((m: any) => m.id?.toString() === selectedMaterialId);
+    
+    const payloadItems = selectedItems.map(item => {
+      const mat = materials.find((m: any) => m.id?.toString() === item.materialId);
+      return {
+        itemName: mat?.name || proofingOrder?.materialType?.name || "Nguyên liệu",
+        itemCode: mat?.code || proofingOrder?.materialType?.code || "NL",
+        unit: mat?.unit || "Tờ",
+        quantity: Number(item.quantity) || 1,
+        notes: "",
+        materialId: Number(item.materialId) || proofingOrder?.materialTypeId || null,
+        orderDetailId: proofingOrder?.orderDetailId || null
+      };
+    });
     
     try {
       await createStockOutForProduction({
@@ -1522,17 +1600,7 @@ export function MaterialExportDialog({
         itemType: "material",
         notes: "Xuất NL cho lệnh sản xuất",
         stockOutDate: new Date().toISOString(),
-        items: [
-          {
-            itemName: mat?.name || proofingOrder?.materialType?.name || "Nguyên liệu",
-            itemCode: mat?.code || proofingOrder?.materialType?.code || "NL",
-            unit: "Tờ",
-            quantity: Number(quantity) || 1,
-            notes: "",
-            materialId: Number(selectedMaterialId) || proofingOrder?.materialTypeId || null,
-            orderDetailId: proofingOrder?.orderDetailId || null
-          }
-        ]
+        items: payloadItems
       });
       onOpenChange(false);
       onExportSuccess?.();
@@ -1543,64 +1611,80 @@ export function MaterialExportDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[450px] max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Xuất Nguyên Liệu</DialogTitle>
-          <DialogDescription>Chọn số lượng và loại giấy cần xuất</DialogDescription>
+          <DialogDescription>
+            Tìm và chọn các loại vật tư cần xuất cho đơn này
+          </DialogDescription>
         </DialogHeader>
+        
         {isMaterialsLoading ? (
-          <div className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <div className="py-8 flex justify-center shrink-0">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
         ) : (
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 flex-1 overflow-y-auto pr-1">
             <div className="space-y-2">
-              <Label>Loại giấy</Label>
+              <Label>Tìm chọn nguyên vật liệu</Label>
               <Popover open={materialSearchOpen} onOpenChange={setMaterialSearchOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={materialSearchOpen}
-                    className="w-full justify-between font-normal"
+                    className="w-full justify-between font-normal text-muted-foreground"
                   >
-                    {selectedMaterialId
-                      ? materials.find((m: any) => m.id?.toString() === selectedMaterialId)?.name || "Chọn loại giấy"
-                      : "Chọn loại giấy"}
+                    <span className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Nhấn để tìm và thêm vật tư...
+                    </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[350px] p-0" align="start">
+                <PopoverContent className="w-[400px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Tìm kiếm loại giấy..." />
-                    <CommandList>
-                      <CommandEmpty>Không tìm thấy loại giấy nào.</CommandEmpty>
+                    <CommandInput placeholder="Tìm kiếm loại giấy, màng..." className="h-9" />
+                    <CommandList className="max-h-[250px]">
+                      <CommandEmpty>Không tìm thấy NVL nào.</CommandEmpty>
                       <CommandGroup>
-                        {materials.map((m: any) => (
-                          <CommandItem
-                            key={m.id}
-                            value={m.name || m.code || ""}
-                            onSelect={() => {
-                              setSelectedMaterialId(m.id!.toString());
-                              setMaterialSearchOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedMaterialId === m.id!.toString() ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {m.name}
-                          </CommandItem>
-                        ))}
+                        {materials.map((m: any) => {
+                          const isSelected = selectedItems.some(i => i.materialId === m.id!.toString());
+                          return (
+                            <CommandItem
+                              key={m.id}
+                              value={m.name || m.code || ""}
+                              onSelect={() => handleSelectMaterial(m.id!.toString())}
+                              className={cn("py-2", isSelected && "opacity-50 pointer-events-none")}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4 text-primary",
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{m.name}</span>
+                                <span className="text-[11px] text-muted-foreground flex gap-2">
+                                  {m.code && <span>Mã: {m.code}</span>}
+                                  {m.stockQuantity !== undefined && (
+                                    <span className="text-blue-600">Tồn: {m.stockQuantity} {m.unit || 'Tờ'}</span>
+                                  )}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
                       </CommandGroup>
                     </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
             </div>
+
             <div className="space-y-2">
-              <Label>Kích thước giấy</Label>
-              <div className="h-9 px-3 py-2 bg-muted/50 rounded-md text-sm border flex items-center text-muted-foreground">
+              <Label className="text-muted-foreground text-xs">Kích thước tham khảo từ thiết kế:</Label>
+              <div className="h-8 px-3 py-1 bg-muted/30 rounded-md text-sm border flex items-center text-muted-foreground">
                 {proofingOrder?.paperSize
                   ? [
                       proofingOrder.paperSize.name,
@@ -1613,17 +1697,59 @@ export function MaterialExportDialog({
                   : proofingOrder?.customPaperSize || "Không xác định"}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Số lượng (tờ)</Label>
-              <Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} />
-            </div>
+
+            {selectedItems.length > 0 && (
+              <div className="space-y-3 mt-6 pt-4 border-t">
+                <Label>Các vật tư đã chọn xuất</Label>
+                <div className="space-y-2">
+                  {selectedItems.map((item) => {
+                    const mat = materials.find((m: any) => m.id?.toString() === item.materialId);
+                    return (
+                      <div key={item.materialId} className="flex items-center gap-3 bg-muted/20 p-2.5 rounded-lg border border-border/50">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate" title={mat?.name}>
+                            {mat?.name || "Nguyên liệu"}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {mat?.stockQuantity !== undefined ? `Tồn kho: ${mat.stockQuantity} ${mat?.unit || 'Tờ'}` : "Không rõ tồn kho"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            <Input 
+                              type="number" 
+                              min="1"
+                              value={item.quantity} 
+                              onChange={e => handleQuantityChange(item.materialId, e.target.value)} 
+                              className="h-8 w-20 text-right font-bold tabular-nums"
+                            />
+                            <span className="text-xs font-medium text-muted-foreground w-6">
+                              {mat?.unit || "Tờ"}
+                            </span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleRemoveItem(item.materialId)}
+                            disabled={isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
-        <DialogFooter>
+        <DialogFooter className="shrink-0 mt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Hủy</Button>
-          <Button onClick={handleConfirm} disabled={isPending}>
+          <Button onClick={handleConfirm} disabled={isPending || isMaterialsLoading || selectedItems.length === 0}>
             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Xác nhận xuất
+            Xác nhận xuất ({selectedItems.length})
           </Button>
         </DialogFooter>
       </DialogContent>

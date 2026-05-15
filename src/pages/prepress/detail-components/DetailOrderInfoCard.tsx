@@ -469,17 +469,17 @@ export function DetailOrderInfoCard({
             )}
           </div>
 
-          <div className="mt-auto pt-1.5 space-y-1.5">
+          <div className="pt-1.5 space-y-1.5 flex-none mb-auto">
             {order.proofingFileUrl ? (
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full h-7 text-[11px] font-bold gap-2 border-primary/20 hover:bg-primary/5 text-primary"
+                className="w-full h-7 min-h-[28px] max-h-7 text-[11px] font-bold gap-2 border-primary/20 hover:bg-primary/5 text-primary flex-none"
                 onClick={() =>
                   downloadFile(order.proofingFileUrl, order.code || "file")
                 }
               >
-                <Download className="h-3 w-3" />
+                <Download className="h-3 w-3 shrink-0" />
                 Tải hình ảnh bình bài
               </Button>
             ) : (
@@ -487,10 +487,10 @@ export function DetailOrderInfoCard({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full h-7 text-[11px] font-bold gap-2 border-dashed border-primary/40 hover:border-primary text-primary"
+                  className="w-full h-7 min-h-[28px] max-h-7 text-[11px] font-bold gap-2 border-dashed border-primary/40 hover:border-primary text-primary flex-none"
                   onClick={() => setIsUploadDialogOpen(true)}
                 >
-                  <Upload className="h-3 w-3" />
+                  <Upload className="h-3 w-3 shrink-0" />
                   Tải lên hình ảnh bình bài
                 </Button>
               )

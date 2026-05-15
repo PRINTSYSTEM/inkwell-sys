@@ -72,11 +72,6 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
   // IMPORTANT: All string params use empty string ("") instead of undefined per rule
   const searchParams = useMemo((): DieListParams | undefined => {
     if (!open) return undefined;
-    const hasSearch =
-      debouncedDesignCode.trim() ||
-      debouncedCustomerName.trim() ||
-      debouncedSize.trim();
-    if (!hasSearch) return undefined;
 
     // Always set string fields to empty string, never undefined
     const params: DieListParams = {
@@ -485,20 +480,7 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
 
           {/* Results Section with Tabs */}
           <div className="flex-1 min-h-0 flex flex-col">
-            {!designCode.trim() && !customerName.trim() && !size.trim() ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
-                  <Search className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <p className="text-sm font-semibold text-foreground mb-1">
-                  Nhập thông tin để tìm kiếm
-                </p>
-                <p className="text-xs text-muted-foreground max-w-sm">
-                  Vui lòng nhập mã thiết kế hoặc tên khách hàng để tìm kiếm
-                  khuôn bế
-                </p>
-              </div>
-            ) : isLoadingDies ? (
+            {isLoadingDies ? (
               <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
                 <p className="text-sm font-medium text-foreground">
@@ -545,15 +527,13 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="list" className="flex-1 min-h-0 mt-0">
-                  <ScrollArea className="flex-1">
-                    <div className="space-y-3 pr-4">
-                      {dies.map((die: DieResponse) => renderDieItem(die))}
-                    </div>
-                  </ScrollArea>
+                <TabsContent value="list" className="mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-2 pb-4 space-y-3">
+                    {dies.map((die: DieResponse) => renderDieItem(die))}
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="related" className="flex-1 min-h-0 mt-0">
+                <TabsContent value="related" className="mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
                   {!firstProofingOrderId ? (
                     <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
                       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
@@ -602,13 +582,11 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
                       </p>
                     </div>
                   ) : (
-                    <ScrollArea className="flex-1">
-                      <div className="space-y-3 pr-4">
-                        {relatedDies.map((die: DieResponse) =>
-                          renderDieItem(die)
-                        )}
-                      </div>
-                    </ScrollArea>
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-2 pb-4 space-y-3">
+                      {relatedDies.map((die: DieResponse) =>
+                        renderDieItem(die)
+                      )}
+                    </div>
                   )}
                 </TabsContent>
               </Tabs>

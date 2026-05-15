@@ -52,6 +52,7 @@ import {
 } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
 import { formatDieSize } from "@/utils/format-die-size";
+import { DieDialog } from "@/components/dies/DieDialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useRelatedDies } from "@/hooks/use-die";
@@ -112,33 +113,22 @@ interface PrepressDetailDialogsProps {
   setIsReplaceDieDialogOpen: (val: boolean) => void;
   replacingDieExport: any;
   setReplacingDieExport: (val: any) => void;
-  selectedNewDieId: number | null;
-  setSelectedNewDieId: (val: number | null) => void;
-  replaceDieNotes: string;
-  setReplaceDieNotes: (val: string) => void;
-  dieSearchTerm: string;
-  setDieSearchTerm: (val: string) => void;
-  isLoadingDies: boolean;
-  availableDies: any[];
-  handleReplaceDie: () => void;
-  isReplacingDie: boolean;
   // Add die
   isAddDieDialogOpen: boolean;
   setIsAddDieDialogOpen: (val: boolean) => void;
-  selectedDieIdForAdd: number | null;
-  setSelectedDieIdForAdd: (val: number | null) => void;
-  addDieNotes: string;
-  setAddDieNotes: (val: string) => void;
-  addDieSearchTerm: string;
-  setAddDieSearchTerm: (val: string) => void;
-  isLoadingAddDies: boolean;
-  availableDiesForAdd: any[];
-  handleAddDie: () => void;
-  isAssigningDie: boolean;
-  // Die list
   isDieListDialogOpen: boolean;
   setIsDieListDialogOpen: (val: boolean) => void;
   dieListInitialSize?: string;
+  // Die removal confirmation
+  isRemoveDieConfirmOpen: boolean;
+  setIsRemoveDieConfirmOpen: (val: boolean) => void;
+  handleConfirmRemoveDie: () => void;
+  isRemovingDie: boolean;
+  // Die edit
+  isEditDieDialogOpen: boolean;
+  setIsEditDieDialogOpen: (val: boolean) => void;
+  editingDie: any;
+  setEditingDie: (val: any) => void;
   // Related dies
   isRelatedDiesDialogOpen: boolean;
   setIsRelatedDiesDialogOpen: (val: boolean) => void;
@@ -215,31 +205,19 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
     setIsReplaceDieDialogOpen,
     replacingDieExport,
     setReplacingDieExport,
-    selectedNewDieId,
-    setSelectedNewDieId,
-    replaceDieNotes,
-    setReplaceDieNotes,
-    dieSearchTerm,
-    setDieSearchTerm,
-    isLoadingDies,
-    availableDies,
-    handleReplaceDie,
-    isReplacingDie,
     isAddDieDialogOpen,
     setIsAddDieDialogOpen,
-    selectedDieIdForAdd,
-    setSelectedDieIdForAdd,
-    addDieNotes,
-    setAddDieNotes,
-    addDieSearchTerm,
-    setAddDieSearchTerm,
-    isLoadingAddDies,
-    availableDiesForAdd,
-    handleAddDie,
-    isAssigningDie,
     isDieListDialogOpen,
     setIsDieListDialogOpen,
     dieListInitialSize,
+    isRemoveDieConfirmOpen,
+    setIsRemoveDieConfirmOpen,
+    handleConfirmRemoveDie,
+    isRemovingDie,
+    isEditDieDialogOpen,
+    setIsEditDieDialogOpen,
+    editingDie,
+    setEditingDie,
     isRelatedDiesDialogOpen,
     setIsRelatedDiesDialogOpen,
     selectedDesignForRelatedDies,
@@ -534,19 +512,62 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         onSuccess={handleDieExportSuccess}
       />
 
-      {/* Confirm Status Change Dialog */}
-      <Dialog
+      {/* Die Dialog (for editing die info) */}
+      <DieDialog
+        open={isEditDieDialogOpen}
+        onOpenChange={setIsEditDieDialogOpen}
+        die={editingDie}
+        onSuccess={() => {
+          // Success is handled by the hook and invalidation
+        }}
+      />
+
+      {/* Confirmation Dialogs */}
+      <AlertDialog
+        open={isRemoveDieConfirmOpen}
+        onOpenChange={setIsRemoveDieConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận gỡ khuôn bế</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn gỡ khuôn bế này khỏi bình bài? Hành động này
+              không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemovingDie}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmRemoveDie();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isRemovingDie}
+            >
+              {isRemovingDie ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Xác nhận gỡ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
         open={isConfirmStatusChangeDialogOpen}
         onOpenChange={setIsConfirmStatusChangeDialogOpen}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận thay đổi trạng thái</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận thay đổi trạng thái</AlertDialogTitle>
+            <AlertDialogDescription>
               {nextStatusInfo?.confirmMessage ||
                 "Bạn có chắc chắn muốn thay đổi trạng thái?"}
-            </DialogDescription>
-          </DialogHeader>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -571,20 +592,21 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             )}
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
+          <AlertDialogFooter>
+            <AlertDialogCancel
               onClick={() => {
                 setIsConfirmStatusChangeDialogOpen(false);
                 setPendingStatus(null);
               }}
             >
               Hủy
-            </Button>
-            <Button onClick={handleConfirmStatusChange}>Xác nhận</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmStatusChange}>
+              Xác nhận
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Hand to Production Dialog */}
       <Dialog
@@ -724,335 +746,33 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
       />
 
       {/* Replace Die Dialog */}
-      <Dialog
+      <DieExportDialog
         open={isReplaceDieDialogOpen}
         onOpenChange={(open) => {
           setIsReplaceDieDialogOpen(open);
-          if (!open) {
-            setReplacingDieExport(null);
-            setSelectedNewDieId(null);
-            setReplaceDieNotes("");
-            setDieSearchTerm("");
-          }
+          if (!open) setReplacingDieExport(null);
         }}
-      >
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
-          <DialogHeader className="shrink-0">
-            <DialogTitle>Thay thế khuôn bế</DialogTitle>
-            <DialogDescription>
-              Chọn khuôn mới để thay thế cho khuôn hiện tại
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
-            {replacingDieExport && (
-              <div className="bg-muted/50 rounded-lg p-3 border shrink-0">
-                <Label className="text-xs font-semibold mb-2 block">
-                  Khuôn hiện tại:
-                </Label>
-                <div className="flex items-center gap-3">
-                  {replacingDieExport.die?.imageUrl && (
-                    <img
-                      src={replacingDieExport.die.imageUrl}
-                      alt={replacingDieExport.die?.code}
-                      className="w-12 h-12 rounded border object-contain bg-background"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm">
-                      {replacingDieExport.die?.code ||
-                        `Khuôn #${replacingDieExport.dieId}`}
-                    </div>
-                    {replacingDieExport.die && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        KT: {formatDieSize(replacingDieExport.die)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2 shrink-0">
-              <Label htmlFor="die-search">Tìm khuôn thay thế</Label>
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="die-search"
-                  placeholder="Nhập mã hoặc tên khuôn..."
-                  value={dieSearchTerm}
-                  onChange={(e) => setDieSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 min-h-0 flex flex-col space-y-2">
-              <Label className="text-xs font-semibold shrink-0">
-                Chọn khuôn mới:
-              </Label>
-              <ScrollArea className="h-[300px] border rounded-lg">
-                {isLoadingDies ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                    Đang tải...
-                  </div>
-                ) : availableDies.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    {dieSearchTerm.trim()
-                      ? "Không tìm thấy khuôn phù hợp"
-                      : "Nhập từ khóa để tìm khuôn"}
-                  </div>
-                ) : (
-                  <div className="p-2 space-y-2">
-                    {availableDies.map((die: any) => {
-                      const isSelected = selectedNewDieId === die.id;
-                      const isCurrentDie = die.id === replacingDieExport?.dieId;
-                      return (
-                        <div
-                          key={die.id}
-                          className={cn(
-                            "p-3 rounded-lg border cursor-pointer transition-colors",
-                            isSelected
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:bg-muted/50",
-                            isCurrentDie && "opacity-50 cursor-not-allowed",
-                          )}
-                          onClick={() => {
-                            if (!isCurrentDie)
-                              setSelectedNewDieId(die.id || null);
-                          }}
-                        >
-                          <div className="flex items-center gap-3">
-                            {die.imageUrl ? (
-                              <img
-                                src={die.imageUrl}
-                                alt={die.code || ""}
-                                className="w-12 h-12 rounded border object-contain bg-background shrink-0"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded border bg-muted/50 flex items-center justify-center shrink-0">
-                                <Package className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm truncate">
-                                {die.code || `Khuôn #${die.id}`}
-                              </div>
-                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                <span>KT: {formatDieSize(die)}</span>
-                                {die.vendorName && (
-                                  <span>• NCC: {die.vendorName}</span>
-                                )}
-                              </div>
-                            </div>
-                            {isSelected && (
-                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                            )}
-                            {isCurrentDie && (
-                              <Badge
-                                variant="secondary"
-                                className="text-xs shrink-0"
-                              >
-                                Đang dùng
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </ScrollArea>
-            </div>
-
-            <div className="space-y-2 shrink-0">
-              <Label htmlFor="replace-die-notes">Ghi chú (tùy chọn)</Label>
-              <Textarea
-                id="replace-die-notes"
-                placeholder="Nhập ghi chú cho việc thay thế khuôn..."
-                value={replaceDieNotes}
-                onChange={(e) => setReplaceDieNotes(e.target.value)}
-                rows={2}
-                className="text-sm"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="shrink-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsReplaceDieDialogOpen(false)}
-              disabled={isReplacingDie}
-            >
-              Hủy
-            </Button>
-            <Button
-              onClick={handleReplaceDie}
-              disabled={!selectedNewDieId || isReplacingDie}
-            >
-              {isReplacingDie ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                "Thay thế"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        proofingOrderId={order?.id}
+        proofingOrder={order}
+        mode="replace"
+        replacingDieId={replacingDieExport?.dieId}
+        onSuccess={() => {
+          setIsReplaceDieDialogOpen(false);
+          setReplacingDieExport(null);
+        }}
+      />
 
       {/* Add Die Dialog */}
-      <Dialog
+      <DieExportDialog
         open={isAddDieDialogOpen}
-        onOpenChange={(open) => {
-          setIsAddDieDialogOpen(open);
-          if (!open) {
-            setSelectedDieIdForAdd(null);
-            setAddDieNotes("");
-            setAddDieSearchTerm("");
-          }
+        onOpenChange={setIsAddDieDialogOpen}
+        proofingOrderId={order?.id}
+        proofingOrder={order}
+        mode="add"
+        onSuccess={() => {
+          setIsAddDieDialogOpen(false);
         }}
-      >
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
-          <DialogHeader className="shrink-0">
-            <DialogTitle>Thêm khuôn bế</DialogTitle>
-            <DialogDescription>
-              Chọn khuôn bế để thêm vào bình bài
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
-            <div className="space-y-2 shrink-0">
-              <Label htmlFor="add-die-search">Tìm khuôn bế</Label>
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="add-die-search"
-                  placeholder="Nhập mã hoặc tên khuôn..."
-                  value={addDieSearchTerm}
-                  onChange={(e) => setAddDieSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-
-            <div className="flex-1 min-h-0 flex flex-col space-y-2">
-              <Label className="text-xs font-semibold shrink-0">
-                Chọn khuôn:
-              </Label>
-              <ScrollArea className="h-[300px] border rounded-lg">
-                {isLoadingAddDies ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                    Đang tải...
-                  </div>
-                ) : availableDiesForAdd.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    {addDieSearchTerm.trim()
-                      ? "Không tìm thấy khuôn phù hợp"
-                      : "Nhập từ khóa để tìm khuôn"}
-                  </div>
-                ) : (
-                  <div className="p-2 space-y-2">
-                    {availableDiesForAdd.map((die: any) => {
-                      const isSelected = selectedDieIdForAdd === die.id;
-                      const isAlreadyAssigned =
-                        order?.dieExports?.some(
-                          (de: any) => de.dieId === die.id,
-                        ) ?? false;
-                      return (
-                        <div
-                          key={die.id}
-                          className={cn(
-                            "p-3 rounded-lg border cursor-pointer transition-colors",
-                            isSelected
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:bg-muted/50",
-                            isAlreadyAssigned &&
-                              "opacity-50 cursor-not-allowed",
-                          )}
-                          onClick={() => {
-                            if (!isAlreadyAssigned)
-                              setSelectedDieIdForAdd(die.id || null);
-                          }}
-                        >
-                          <div className="flex items-center gap-3">
-                            {die.imageUrl ? (
-                              <img
-                                src={die.imageUrl}
-                                alt={die.code || ""}
-                                className="w-12 h-12 rounded border object-contain bg-background shrink-0"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded border bg-muted/50 flex items-center justify-center shrink-0">
-                                <Package className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm truncate">
-                                {die.code || `Khuôn #${die.id}`}
-                              </div>
-                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                <span>KT: {formatDieSize(die)}</span>
-                                {die.vendorName && (
-                                  <span>• NCC: {die.vendorName}</span>
-                                )}
-                              </div>
-                            </div>
-                            {isSelected && (
-                              <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                            )}
-                            {isAlreadyAssigned && (
-                              <Badge
-                                variant="secondary"
-                                className="text-xs shrink-0"
-                              >
-                                Đã có
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </ScrollArea>
-            </div>
-
-            <div className="space-y-2 shrink-0">
-              <Label htmlFor="add-die-notes">Ghi chú (tùy chọn)</Label>
-              <Textarea
-                id="add-die-notes"
-                placeholder="Nhập ghi chú cho khuôn bế..."
-                value={addDieNotes}
-                onChange={(e) => setAddDieNotes(e.target.value)}
-                rows={2}
-                className="text-sm"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="shrink-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsAddDieDialogOpen(false)}
-              disabled={isAssigningDie}
-            >
-              Hủy
-            </Button>
-            <Button
-              onClick={handleAddDie}
-              disabled={!selectedDieIdForAdd || isAssigningDie}
-            >
-              {isAssigningDie ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                "Thêm khuôn bế"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      />
 
       <DieListDialog
         open={isDieListDialogOpen}

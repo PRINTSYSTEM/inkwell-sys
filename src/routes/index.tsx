@@ -89,6 +89,9 @@ const StockInDetail = lazy(() => import("@/pages/stock/StockInDetail"));
 const StockOutList = lazy(() => import("@/pages/stock/StockOutList"));
 const StockOutCreate = lazy(() => import("@/pages/stock/StockOutCreate"));
 const StockOutDetail = lazy(() => import("@/pages/stock/StockOutDetail"));
+const MaterialCutList = lazy(() => import("@/pages/stock/MaterialCutList"));
+const MaterialCutCreate = lazy(() => import("@/pages/stock/MaterialCutCreate"));
+const MaterialCutDetail = lazy(() => import("@/pages/stock/MaterialCutDetail"));
 
 // Vendors
 const VendorList = lazy(() => import("@/pages/vendors/VendorList"));
@@ -658,6 +661,35 @@ export const router = createBrowserRouter([
                 element: (
                   <Suspense fallback={<PageLoadingFallback />}>
                     <StockOutDetail />
+                  </Suspense>
+                ),
+              },
+            ],
+          },
+          {
+            path: "material-cuts",
+            children: [
+              {
+                index: true,
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <MaterialCutList />
+                  </Suspense>
+                ),
+              },
+              {
+                path: "create",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <MaterialCutCreate />
+                  </Suspense>
+                ),
+              },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <MaterialCutDetail />
                   </Suspense>
                 ),
               },

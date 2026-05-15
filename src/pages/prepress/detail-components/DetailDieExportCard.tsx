@@ -34,6 +34,7 @@ interface DetailDieExportCardProps {
   handleOpenReplaceDieDialog: (dieExport: any) => void;
   handleRemoveDie: (dieId: number) => void;
   isRemovingDie: boolean;
+  onEditDie: (die: any) => void;
   setIsDieListDialogOpen: (val: boolean) => void;
   setImageViewerOpen: (val: boolean) => void;
   setViewingImageUrl: (val: string | null) => void;
@@ -64,43 +65,20 @@ export function DetailDieExportCard({
               <Box className="h-3.5 w-3.5" />
               Xuất khuôn bế ({dieExports.length})
             </CardTitle>
-            <Dialog open={showDebug} onOpenChange={setShowDebug}>
-              <DialogTrigger asChild>
+            <div className="flex items-center gap-1.5">
+              {isDieExported && (
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground/40 hover:text-primary"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 gap-1 text-[10px] font-semibold px-2 border-primary/20 hover:bg-primary/5 text-primary rounded-md"
+                  onClick={() => setIsDieListDialogOpen(true)}
                 >
-                  <Bug className="h-3 w-3" />
+                  <Search className="h-2.5 w-2.5" />
+                  {/* Duyệt khuôn */}
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Bug className="h-4 w-4" />
-                    Debug: Thông tin khuôn bế (Order #{order.id})
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="flex-1 overflow-auto p-4 space-y-4 font-mono text-xs">
-                  <div className="p-3 bg-muted rounded-md select-all">
-                    <p className="font-bold text-primary mb-1 uppercase tracking-wider text-[10px]">
-                      API Endpoint
-                    </p>
-                    <code className="text-[11px]">
-                      GET /proofing-orders/{order.id}
-                    </code>
-                  </div>
-                  <div className="bg-[#1e1e1e] p-4 rounded-md text-white overflow-auto max-h-[500px]">
-                    <p className="text-[#888] mb-2">// JSON DATA (dieExports)</p>
-                    <pre>{JSON.stringify(dieExports, null, 2)}</pre>
-                  </div>
-                  <div className="bg-[#1e1e1e] p-4 rounded-md text-white overflow-auto max-h-[500px]">
-                    <p className="text-[#888] mb-2">// FULL ORDER OBJECT</p>
-                    <pre>{JSON.stringify(order, null, 2)}</pre>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+              )}
+
+            </div>
           </div>
         </CardHeader>
 
@@ -120,7 +98,7 @@ export function DetailDieExportCard({
                   variant="outline"
                   size="sm"
                   onClick={() => setIsDieExportDialogOpen(true)}
-                  className="h-8 px-4 text-xs font-bold rounded-full"
+                  className="h-8 px-4 text-xs font-bold rounded-md"
                 >
                   Ghi nhận ngay
                 </Button>
@@ -143,25 +121,21 @@ export function DetailDieExportCard({
                 >
                   {/* Die Code Header - Clean, no inner card border */}
                   <div className="flex items-center justify-between border-b border-muted-foreground/5 pb-1.5">
-                    <p className="font-bold text-[14px] text-foreground uppercase tracking-tight">
-                      {dieExport.die?.code || "Khuôn bế"}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-[14px] text-foreground uppercase tracking-tight">
+                        {dieExport.die?.code || `Khuôn #${dieExport.dieId}`}
+                      </p>
+                    </div>
+
                     {order.status !== "completed" && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-primary hover:bg-primary/5"
-                          onClick={() => handleOpenReplaceDieDialog(dieExport)}
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6 text-destructive hover:bg-destructive/5"
                           onClick={() => handleRemoveDie(dieExport.dieId!)}
                           disabled={isRemovingDie}
+                          title="Gỡ khuôn khỏi bài"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -256,6 +230,20 @@ export function DetailDieExportCard({
                     </div>
                   )}
 
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2 mt-2 border-t border-muted-foreground/10">
+                    {order.status !== "completed" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100/50 text-[11px] px-3 font-semibold rounded-md border border-amber-200 flex-1"
+                        onClick={() => handleOpenReplaceDieDialog(dieExport)}
+                      >
+                        <RefreshCcw className="h-3 w-3" />
+                        Xuất lại
+                      </Button>
+                    )}
+                  </div>
+
                   {index < dieExports.length - 1 && (
                     <div className="h-px bg-muted-foreground/10 my-4" />
                   )}
@@ -263,36 +251,18 @@ export function DetailDieExportCard({
               ))}
 
               {/* Centered Action Buttons at bottom */}
-              <div className="flex items-center justify-center gap-2 pt-3 border-t border-muted-foreground/5 mt-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
-                  onClick={() => setIsDieListDialogOpen(true)}
-                >
-                  <Search className="h-3 w-3" />
-                  Duyệt khuôn
-                </Button>
+              <div className="flex items-center justify-center gap-2 pt-3 border-t border-muted-foreground/5 mt-auto flex-wrap">
                 {order.status !== "completed" && (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-primary/20 hover:bg-primary/5 text-primary rounded-full"
+                    className="h-7 gap-1.5 text-[11px] font-semibold px-3 flex-1 border-primary/20 hover:bg-primary/5 text-primary rounded-md whitespace-nowrap"
                     onClick={() => setIsDieExportDialogOpen(true)}
                   >
                     <Plus className="h-3 w-3" />
                     Thêm khuôn
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 gap-1.5 text-[11px] font-semibold px-3 border-amber-200 hover:bg-amber-50 text-amber-600 rounded-full"
-                  onClick={() => {}}
-                >
-                  <RefreshCcw className="h-3 w-3" />
-                  Xuất lại khuôn
-                </Button>
               </div>
             </div>
           )}

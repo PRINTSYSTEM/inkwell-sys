@@ -266,6 +266,7 @@ export default function StockInCreatePage() {
       notes: "",
       materialId: undefined,
       orderDetailId: undefined,
+      lineKind: undefined,
     },
   ]);
 
@@ -285,6 +286,7 @@ export default function StockInCreatePage() {
         notes: "",
         materialId: undefined,
         orderDetailId: undefined,
+        lineKind: undefined,
       },
     ]);
   };
@@ -368,6 +370,7 @@ export default function StockInCreatePage() {
         length: material.length,
         width: material.width,
         height: material.height,
+        lineKind: material.width !== undefined && material.width > 0 ? "sheet" : "roll",
       };
       setItems(newItems);
       // Clear errors when material is selected
@@ -447,6 +450,7 @@ export default function StockInCreatePage() {
           notes: (item.notes || "").trim() || undefined,
           materialId: item.materialId ?? undefined,
           orderDetailId: item.orderDetailId ?? undefined,
+          lineKind: item.lineKind ?? undefined,
           length: item.length ?? undefined,
           width: item.width ?? undefined,
           height: item.height ?? undefined,
@@ -532,7 +536,7 @@ export default function StockInCreatePage() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
               <div className="md:col-span-3 space-y-1.5">
                 <Label htmlFor="vendorId" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                  <Building2 className="h-3 w-3" /> Nhà cung cấp *
+                  <Building2 className="h-3 w-3" /> Nhà cung cấp vật tư *
                 </Label>
                 <div className="flex gap-1">
                   <Select
@@ -698,7 +702,25 @@ export default function StockInCreatePage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] uppercase font-bold text-slate-400">Loại hàng</Label>
+                          <Select
+                            value={item.lineKind || "none"}
+                            onValueChange={(v) => handleItemChange(index, "lineKind", v === "none" ? undefined : v)}
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Loại hàng" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Mặc định</SelectItem>
+                              <SelectItem value="sheet">Tờ (Sheet)</SelectItem>
+                              <SelectItem value="roll">Cuộn (Roll)</SelectItem>
+                              <SelectItem value="custom">Tùy chỉnh</SelectItem>
+                              <SelectItem value="service">Công cắt (Service)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="space-y-1">
                           <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
                           <Input
@@ -709,6 +731,9 @@ export default function StockInCreatePage() {
                             className="h-8 text-sm"
                           />
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2">
                         <Input
                           value={item.notes || ""}
                           onChange={(e) => handleItemChange(index, "notes", e.target.value)}
@@ -742,6 +767,7 @@ export default function StockInCreatePage() {
                         <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
                         <TableHead className="w-[100px] text-right">Số lượng</TableHead>
                         <TableHead className="w-[80px]">ĐVT</TableHead>
+                        <TableHead className="w-[130px]">Loại hàng</TableHead>
                         <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
                         <TableHead>Ghi chú</TableHead>
                         <TableHead className="w-10"></TableHead>
@@ -796,6 +822,23 @@ export default function StockInCreatePage() {
                               placeholder="vị"
                               className="h-8 text-sm"
                             />
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={item.lineKind || "none"}
+                              onValueChange={(v) => handleItemChange(index, "lineKind", v === "none" ? undefined : v)}
+                            >
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue placeholder="Loại" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Mặc định</SelectItem>
+                                <SelectItem value="sheet">Tờ (Sheet)</SelectItem>
+                                <SelectItem value="roll">Cuộn (Roll)</SelectItem>
+                                <SelectItem value="custom">Tùy chỉnh</SelectItem>
+                                <SelectItem value="service">Công cắt (Service)</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </TableCell>
                           <TableCell>
                             <Input
@@ -1019,9 +1062,9 @@ export default function StockInCreatePage() {
               <Input
                 id="materialName"
                 value={newMaterialData.name}
-                readOnly
-                className="bg-slate-50 font-medium"
-                placeholder="Tên sẽ được tự động tạo từ loại và kích thước"
+                onChange={(e) => setNewMaterialData({ ...newMaterialData, name: e.target.value })}
+                className="bg-slate-50/50 font-medium"
+                placeholder="Nhập tên chất liệu hoặc để tự động tạo"
               />
               {newMaterialData.name &&
                 generateMaterialCode(newMaterialData.name) && (

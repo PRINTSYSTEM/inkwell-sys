@@ -49,7 +49,7 @@ export function PrepressOrderRow({
       regex.test(part) ? (
         <span
           key={index}
-          className="bg-red-500 text-white font-semibold px-0.5 rounded"
+          className="bg-emerald-500 text-white font-semibold px-0.5 rounded"
         >
           {part}
         </span>
@@ -231,6 +231,16 @@ export function PrepressOrderRow({
           {shouldShowExpand && orderCodeMatches
             ? highlightText(order.code || "", debouncedSearchTerm.trim())
             : order.code}
+        </TableCell>
+
+        <TableCell className="py-3 font-bold text-xs align-top text-slate-800 dark:text-slate-200">
+          <div className="flex flex-col gap-1">
+            {designs.map((pod: any, idx: number) => (
+              <span key={pod.id || idx}>
+                {highlightText(pod.design?.code || "—", debouncedSearchTerm.trim())}
+              </span>
+            ))}
+          </div>
         </TableCell>
 
         <TableCell className="py-3 font-semibold text-xs align-top">

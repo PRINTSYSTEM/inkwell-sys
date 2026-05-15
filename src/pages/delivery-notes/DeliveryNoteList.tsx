@@ -569,12 +569,26 @@ export default function DeliveryNoteListPage() {
 
   const handleSelectAllVisible = () => {
     const items = (deliveryNotesData as any)?.items || [];
-    const visibleIds = items.map((i) => i.id ?? undefined).filter((id): id is number => typeof id === "number");
-    const allSelected = visibleIds.every((id) => selectedNoteIds.has(id));
+    // Only select items that are not completed
+    const selectableIds = items
+      .filter((i: any) => getDisplayStatus(i) !== "completed")
+      .map((i: any) => i.id ?? undefined)
+      .filter((id: any): id is number => typeof id === "number");
+      
+    const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedNoteIds.has(id));
+    
     if (allSelected) {
-      setSelectedNoteIds(new Set());
+      setSelectedNoteIds((prev) => {
+        const next = new Set(prev);
+        selectableIds.forEach(id => next.delete(id));
+        return next;
+      });
     } else {
-      setSelectedNoteIds(new Set(visibleIds));
+      setSelectedNoteIds((prev) => {
+        const next = new Set(prev);
+        selectableIds.forEach(id => next.add(id));
+        return next;
+      });
     }
   };
 
@@ -1442,7 +1456,11 @@ function DeliveryNotesView({
                   <TableHead className="w-10 font-semibold text-slate-700 dark:text-slate-300">
                     <Checkbox
                       checked={
-                        !!deliveryNotesDataTyped?.items && deliveryNotesDataTyped.items.length > 0 && deliveryNotesDataTyped.items.every(i => selectedNoteIds.has(i.id as number))
+                        (() => {
+                          const items = deliveryNotesDataTyped?.items || [];
+                          const selectableItems = items.filter(i => getDisplayStatus(i) !== "completed");
+                          return selectableItems.length > 0 && selectableItems.every(i => selectedNoteIds.has(i.id as number));
+                        })()
                       }
                       onCheckedChange={() => handleSelectAllVisible()}
                       onClick={(e) => e.stopPropagation()}
@@ -1518,11 +1536,17 @@ function DeliveryNotesView({
                       onClick={() => handleViewDeliveryNote(deliveryNote.id)}
                     >
                       <TableCell>
-                        <Checkbox
-                          checked={selectedNoteIds.has(deliveryNote.id as number)}
-                          onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                        {getDisplayStatus(deliveryNote) !== "completed" ? (
+                          <Checkbox
+                            checked={selectedNoteIds.has(deliveryNote.id as number)}
+                            onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <div className="w-4 h-4 flex items-center justify-center">
+                            <Check className="h-3 w-3 text-green-500" />
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">

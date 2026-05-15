@@ -128,8 +128,8 @@ const uiActionToBEStatus: Record<UIStatus, string> = {
 const UI_STATUS_CONFIG: Record<UIStatus, { label: string; color?: string }> = {
   ok: { label: "OK", color: "gray" },
   shipping: { label: "Đang giao", color: "blue" },
-  success: { label: "Thành công", color: "green" },
-  failed: { label: "Thất bại", color: "red" },
+  success: { label: "Đã giao hàng", color: "green" },
+  failed: { label: "Hủy phiếu", color: "red" },
 };
 
 // NOTE: Line row and status badge are extracted into separate components
@@ -473,7 +473,7 @@ export default function DeliveryNoteDetailPage() {
                   const uiStatus = mapDeliveryNoteStatus(currentStatus);
                   const actionsByStatus: Record<UIStatus, UIStatus[]> = {
                     ok: ["shipping"],
-                    // once shipping, per-line actions handle success/failed via line API
+                    // once shipping, only allow success (failed handled per line)
                     shipping: [],
                     success: [],
                     failed: [],
@@ -758,7 +758,7 @@ export default function DeliveryNoteDetailPage() {
                         {orderCode || "—"}
                       </span>
                       <Badge variant="secondary" className="text-xs">
-                        {count} dòng
+                        {count} đơn
                       </Badge>
                     </div>
                   ))}

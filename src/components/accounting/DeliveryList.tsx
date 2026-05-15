@@ -450,7 +450,7 @@ export function DeliveryList() {
                   <SelectItem value="all">Tất cả</SelectItem>
                   <SelectItem value="ready">Sẵn sàng giao</SelectItem>
                   <SelectItem value="delivering">Đang giao</SelectItem>
-                  <SelectItem value="delivered">Đã giao</SelectItem>
+                  <SelectItem value="delivered">Đã giao hàng</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -646,7 +646,7 @@ export function DeliveryList() {
                             >
                               {order.status === "delivering"
                                 ? "Đang giao"
-                                : "Đã giao"}
+                                : "Đã giao hàng"}
                             </Badge>
                           ) : (
                             <Badge
