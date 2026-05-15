@@ -195,7 +195,7 @@ export function InvoiceList() {
     useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const previousTotalPagesRef = useRef<number | null>(null);
-
+  const [billToCustomerId, setBillToCustomerId] = useState<number | null>(null);
   const itemsPerPage = 10;
 
   // Build params for API
@@ -221,9 +221,11 @@ export function InvoiceList() {
   const createAccountingMutation = useCreateAccountingForOrder();
   const createInvoiceMutation = useCreateInvoice();
 
-  // Orders are already filtered by API, no need for client-side filtering
+  // Filter orders to only show those that are delivered/delivering
   const filteredOrders = useMemo(() => {
-    return data?.items ?? [];
+    // We only show orders that have been delivered or are in delivery
+    // but we STILL show them even if customer info is incomplete (as per user request)
+    return (data?.items ?? []).filter((order) => canIssueInvoice(order));
   }, [data?.items]);
 
   const totalPages = data?.totalPages || 1;
@@ -359,7 +361,7 @@ export function InvoiceList() {
     refetch();
   };
 
-  // Handle checkbox selection - only allow selecting orders from the same customer
+  // Handle checkbox selection - allows selecting orders from multiple customers
   const handleToggleOrder = (orderId: number) => {
     const orderToToggle = filteredOrders.find((o) => o.id === orderId);
     if (!orderToToggle) return;
@@ -371,39 +373,8 @@ export function InvoiceList() {
         // Deselecting - always allowed
         newSet.delete(orderId);
       } else {
-        // Selecting - check if same customer
-        if (prev.size === 0) {
-          // First selection - always allowed
-          newSet.add(orderId);
-        } else {
-          // Check if all selected orders have the same customer
-          const firstSelectedOrder = filteredOrders.find(
-            (o) => o.id && prev.has(o.id)
-          );
-
-          if (!firstSelectedOrder) {
-            newSet.add(orderId);
-            return newSet;
-          }
-
-          // Compare customer IDs
-          const firstCustomerId = firstSelectedOrder.customer?.id;
-          const newCustomerId = orderToToggle.customer?.id;
-
-          if (
-            firstCustomerId &&
-            newCustomerId &&
-            firstCustomerId === newCustomerId
-          ) {
-            // Same customer - allow selection
-            newSet.add(orderId);
-          } else {
-            // Different customer - show error
-            toast.error(
-              "Chỉ có thể chọn các hóa đơn cùng một khách hàng. Vui lòng bỏ chọn các hóa đơn hiện tại trước."
-            );
-          }
-        }
+        // Selecting - always allowed (multiple customers allowed)
+        newSet.add(orderId);
       }
       return newSet;
     });
@@ -425,17 +396,7 @@ export function InvoiceList() {
       return;
     }
 
-    const firstCustomerId = selectedOrders[0].customer?.id;
-    const allSameCustomer = selectedOrders.every(
-      (o) => o.customer?.id === firstCustomerId
-    );
 
-    if (!allSameCustomer) {
-      toast.error(
-        "Chỉ có thể xuất hóa đơn cho các đơn hàng cùng một khách hàng"
-      );
-      return;
-    }
 
     // Check if all selected orders have complete customer info
     const incompleteOrders = selectedOrders.filter(
@@ -464,6 +425,7 @@ export function InvoiceList() {
 
       const result = await createInvoiceMutation.mutateAsync({
         orderIds: Array.from(selectedOrderIds),
+        billToCustomerId: billToCustomerId || undefined,
         invoiceNumber: invoiceNumber,
         taxRate: 0.08,
         notes: "",
@@ -486,6 +448,30 @@ export function InvoiceList() {
   const selectedOrders = useMemo(() => {
     return filteredOrders.filter((o) => o.id && selectedOrderIds.has(o.id));
   }, [filteredOrders, selectedOrderIds]);
+
+  // Extract unique customers from selected orders
+  const uniqueCustomers = useMemo(() => {
+    const customers = new Map<number, { id: number; name: string; companyName: string | null }>();
+    selectedOrders.forEach((order) => {
+      if (order.customer?.id) {
+        customers.set(order.customer.id, {
+          id: order.customer.id,
+          name: order.customerName || "",
+          companyName: order.customerCompanyName || null,
+        });
+      }
+    });
+    return Array.from(customers.values());
+  }, [selectedOrders]);
+
+  // Set default billToCustomerId when dialog opens
+  useEffect(() => {
+    if (isCreateInvoiceDialogOpen && uniqueCustomers.length > 0) {
+      if (!billToCustomerId || !uniqueCustomers.find(c => c.id === billToCustomerId)) {
+        setBillToCustomerId(uniqueCustomers[0].id);
+      }
+    }
+  }, [isCreateInvoiceDialogOpen, uniqueCustomers, billToCustomerId]);
 
   const totalSelectedAmount = useMemo(() => {
     return selectedOrders.reduce(
@@ -869,33 +855,67 @@ export function InvoiceList() {
                 Xuất hóa đơn cho {selectedOrderIds.size} đơn hàng
               </DialogTitle>
               <DialogDescription>
-                Xác nhận xuất hóa đơn cho các đơn hàng đã chọn. Tất cả đơn hàng
-                sẽ được gộp vào một hóa đơn.
+                Xác nhận xuất hóa đơn cho các đơn hàng đã chọn.
               </DialogDescription>
             </DialogHeader>
 
-            <ScrollArea className="max-h-[50vh] pr-4">
-              <div className="space-y-3">
-                {selectedOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+            <div className="space-y-4 py-2">
+              {uniqueCustomers.length > 1 && (
+                <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                  <label className="text-sm font-bold flex items-center gap-2 text-primary">
+                    <FileText className="h-4 w-4" />
+                    Chọn khách hàng nhận hóa đơn (BillTo)
+                  </label>
+                  <Select
+                    value={billToCustomerId?.toString()}
+                    onValueChange={(val) => setBillToCustomerId(Number(val))}
                   >
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{order.code}</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {order.customerCompanyName || order.customerName || "—"}
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Chọn khách hàng" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueCustomers.map((customer) => (
+                        <SelectItem
+                          key={customer.id}
+                          value={customer.id.toString()}
+                        >
+                          {customer.companyName || customer.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground italic">
+                    * Do bạn chọn đơn hàng từ nhiều khách hàng, cần chỉ định một đơn vị chịu VAT và nhận hóa đơn.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold">Danh sách đơn hàng gộp</label>
+                <ScrollArea className="max-h-[30vh] pr-4 rounded-md border p-1">
+                  <div className="space-y-2">
+                    {selectedOrders.map((order) => (
+                      <div
+                        key={order.id}
+                        className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="font-bold text-xs">{order.code}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {order.customerCompanyName || order.customerName || "—"}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-xs">
+                            {formatCurrency(order.totalAmount || 0)}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium text-sm">
-                        {formatCurrency(order.totalAmount || 0)}
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </ScrollArea>
               </div>
-            </ScrollArea>
+            </div>
 
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border-t">
               <span className="font-medium">Tổng cộng:</span>

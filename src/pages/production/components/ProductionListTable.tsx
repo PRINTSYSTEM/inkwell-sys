@@ -10,6 +10,7 @@ import {
 import { TableSkeleton } from "@/components/ui/skeleton-components";
 import {
   Factory,
+  ExternalLink,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -724,7 +725,6 @@ function ProductionTableRow({
     return (
       <TableCell
         className="align-top py-3 px-1.5"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center gap-1.5">
           {step && (
@@ -762,8 +762,7 @@ function ProductionTableRow({
   return (
     <>
       <TableRow
-        className={`cursor-pointer hover:bg-muted/50 border-b ${isDraft ? "bg-blue-50/20 dark:bg-blue-900/10" : ""}`}
-        onClick={() => !isDraft && onProductionClick(prod.id!)}
+        className={`border-b ${isDraft ? "bg-blue-50/20 dark:bg-blue-900/10" : ""}`}
       >
         <TableCell className="py-3 align-top font-bold text-base text-primary bg-muted/20 border-r border-border/50 text-center w-[150px]">
           {isProofingLoading ? (
@@ -772,12 +771,22 @@ function ProductionTableRow({
             </div>
           ) : proofingOrder ? (
             <div className="flex flex-col items-center justify-center mt-2 gap-1 px-1">
-              <span className="whitespace-nowrap">
-                {(proofingOrder as any).code ||
-                  `BB${(proofingOrder as any).id}`}
-              </span>
+              <div 
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded transition-colors",
+                  !isDraft ? "cursor-pointer text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20" : "text-muted-foreground"
+                )}
+                onClick={() => !isDraft && onProductionClick(prod.id!)}
+                title={!isDraft ? "Xem chi tiết lệnh sản xuất" : ""}
+              >
+                <span className="font-bold underline decoration-blue-400/30 underline-offset-4">
+                  {(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}
+                </span>
+                {!isDraft && <ExternalLink className="w-3 h-3" />}
+              </div>
+
               {prod.customerName && (
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-300 whitespace-normal break-words text-center leading-tight line-clamp-3">
+                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 whitespace-normal break-words text-center leading-tight line-clamp-3 px-1">
                   {prod.customerName}
                 </span>
               )}
@@ -1091,7 +1100,6 @@ function ProductionTableRow({
         <StepCell step={glueStep} isEnabled={isGlueEnabled} />
         <TableCell
           className="align-top py-3 px-1.5 min-w-[260px]"
-          onClick={(e) => e.stopPropagation()}
         >
           <div className="flex flex-col gap-2">
             {isProofingLoading || isProdDetailLoading ? (

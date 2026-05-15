@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -69,13 +69,7 @@ const addCompanyNameValidation = <T extends z.ZodTypeAny>(schema: T) => {
 // Schema cơ bản (không có công nợ)
 const basicFormSchema = addCompanyNameValidation(baseFormSchema);
 
-// Schema đầy đủ (có công nợ) - extend trước, refine sau
-const fullFormSchema = addCompanyNameValidation(
-  baseFormSchema.extend({
-    currentDebt: z.number(),
-    maxDebt: z.number().min(0, "Hạn mức không được âm"),
-  }),
-);
+
 
 interface EditCustomerModalProps {
   open: boolean;
@@ -95,8 +89,22 @@ export function EditCustomerModal({
   // Cho phép tất cả các role chỉnh sửa công nợ
   const canEditDebt = true;
 
-  // Sử dụng schema phù hợp
-  const formSchema = fullFormSchema;
+  // Sử dụng schema phù hợp, cho phép số âm nếu nó là số cũ chưa sửa
+  const formSchema = useMemo(() => {
+    return addCompanyNameValidation(
+      baseFormSchema.extend({
+        currentDebt: z.number().refine(
+          (val) => val >= 0 || val === customer.currentDebt,
+          {
+            message:
+              "Dữ liệu nợ mới không được phép âm. Vui lòng đưa về 0 hoặc số dương.",
+          },
+        ),
+        maxDebt: z.number().min(0, "Hạn mức không được âm"),
+      }),
+    );
+  }, [customer.currentDebt]);
+
   type FormValues = z.infer<typeof formSchema>;
 
   const defaultValues: Partial<FormValues> = {
@@ -130,14 +138,24 @@ export function EditCustomerModal({
   }, [customerType, form]);
 
   const onSubmit = async (values: FormValues) => {
-    const data = {
+    const data: any = {
       ...values,
       phone: values.phone?.trim() === "" ? null : values.phone,
       email: values.email?.trim() === "" ? null : values.email,
     };
+
+    // TỐI ƯU: Nếu công nợ hoặc hạn mức không thay đổi, KHÔNG gửi lên backend
+    // Điều này giúp tránh lỗi validation 400 của backend đối với các số âm cũ
+    if (values.currentDebt === customer.currentDebt) {
+      delete data.currentDebt;
+    }
+    if (values.maxDebt === customer.maxDebt) {
+      delete data.maxDebt;
+    }
+
     await updateCustomer.mutateAsync({
       id: customer.id,
-      data: data as FormValues,
+      data: data,
     });
     onOpenChange(false);
   };
@@ -330,14 +348,38 @@ export function EditCustomerModal({
                       Công nợ hiện tại
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(Number(e.target.value))
-                        }
-                        className="h-9"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="number"
+                          {...field}
+                          value={field.value ?? ""}
+                          disabled // Khóa không cho phép sửa trực tiếp tại đây
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? "" : Number(val));
+                          }}
+                          className="h-9 bg-muted cursor-not-allowed"
+                        />
+                        <div className="text-[11px] font-medium text-primary/80 italic flex items-center flex-wrap gap-x-2">
+                          <span>
+                            {field.value !== "" ? new Intl.NumberFormat("vi-VN", {
+                              style: "currency",
+                              currency: "VND",
+                            }).format(Number(field.value) || 0) : "0 ₫"}
+                          </span>
+                          {customer.currentDebt !== undefined &&
+                            customer.currentDebt !== Number(field.value) && (
+                              <span className="text-destructive font-bold not-italic">
+                                (Số dư thực tế:{" "}
+                                {new Intl.NumberFormat("vi-VN", {
+                                  style: "currency",
+                                  currency: "VND",
+                                }).format(customer.currentDebt)}
+                                )
+                              </span>
+                            )}
+                        </div>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -351,14 +393,24 @@ export function EditCustomerModal({
                   <FormItem>
                     <FormLabel className="text-xs">Hạn mức công nợ</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        {...field}
-                        onChange={(e) =>
-                          field.onChange(Number(e.target.value))
-                        }
-                        className="h-9"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="number"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            field.onChange(val === "" ? "" : Number(val));
+                          }}
+                          className="h-9"
+                        />
+                        <div className="text-[11px] font-medium text-primary/80 italic">
+                          {field.value !== "" ? new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                          }).format(Number(field.value) || 0) : "0 ₫"}
+                        </div>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
