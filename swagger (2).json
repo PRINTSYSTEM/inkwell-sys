@@ -19932,6 +19932,14 @@
           "overdueDays": {
             "type": "integer",
             "format": "int32"
+          },
+          "vatRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "vatAmount": {
+            "type": "number",
+            "format": "double"
           }
         },
         "additionalProperties": false
@@ -25248,6 +25256,11 @@
             "maxLength": 50,
             "minLength": 0,
             "type": "string"
+          },
+          "parentCompanyId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           },
           "issuedAt": {
             "type": "string",
