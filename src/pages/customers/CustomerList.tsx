@@ -439,10 +439,13 @@ export default function Customers() {
                             <TableCell className="py-2">
                               <span
                                 className={`font-medium text-sm ${
-                                  (customer.currentDebt ?? 0) >
-                                  (customer.maxDebt ?? 0)
-                                    ? "text-red-600"
-                                    : "text-green-600"
+                                  (customer.currentDebt ?? 0) < 0
+                                    ? Math.abs(customer.currentDebt ?? 0) > (customer.maxDebt ?? 0)
+                                      ? "text-red-700 font-bold"
+                                      : "text-red-600"
+                                    : (customer.currentDebt ?? 0) > 0
+                                    ? "text-green-600"
+                                    : "text-muted-foreground"
                                 }`}
                               >
                                 {(customer.currentDebt ?? 0).toLocaleString(
