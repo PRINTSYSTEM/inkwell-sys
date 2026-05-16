@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -42,12 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+
 
 import {
   PaymentStatusBadge,
@@ -184,14 +179,6 @@ function isCustomerInfoComplete(order: {
 export default function AccountingOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const currentTab = searchParams.get("tab") === "invoice" ? "invoice" : "order";
-
-  const handleTabChange = (value: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("tab", value);
-    setSearchParams(newParams);
-  };
 
   // Fetch order from API
   // Pass `null` when `id` is not yet available to avoid an initial fetch for id=0
@@ -1430,33 +1417,17 @@ export default function AccountingOrderDetail() {
               </Card>
 
               {/* Order / Invoice Items */}
-              <Tabs value={currentTab} onValueChange={handleTabChange}>
-                <div className="flex items-center justify-between mb-2">
-                  <TabsList>
-                    <TabsTrigger value="order">Sản phẩm trong đơn</TabsTrigger>
-                    <TabsTrigger value="invoice" disabled={!invoicesData?.items?.length}>
-                      Sản phẩm trong hóa đơn
-                      {invoicesData?.items?.length ? (
-                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 min-w-[20px]">
-                          {invoiceItems.length}
-                        </Badge>
-                      ) : null}
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-
-                <TabsContent value="order" className="mt-0">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Package className="h-4 w-4 text-primary" />
-                        Sản phẩm trong đơn
-                        <Badge variant="secondary" className="ml-2">
-                          {order.orderDetails?.length || 0} sản phẩm
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    Sản phẩm trong đơn
+                    <Badge variant="secondary" className="ml-2">
+                      {order.orderDetails?.length || 0} sản phẩm
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/30">
@@ -1694,25 +1665,18 @@ export default function AccountingOrderDetail() {
                           )}
                         </TableBody>
                       </Table>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
 
-                <TabsContent value="invoice" className="mt-0">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Receipt className="h-4 w-4 text-primary" />
-                        Sản phẩm trong hóa đơn
-                        <Badge variant="secondary" className="ml-2">
-                          {invoiceItems.length} dòng hàng
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-muted/30">
+                      {invoiceItems.length > 0 && (
+                        <>
+                          <div className="bg-muted/50 px-4 py-2 border-y flex items-center gap-2">
+                            <Receipt className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                              Sản phẩm xuất hóa đơn ({invoiceItems.length})
+                            </span>
+                          </div>
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/30">
                             <TableHead className="w-[60px]">Ảnh</TableHead>
                             <TableHead>Mô tả</TableHead>
                             <TableHead className="text-center">ĐVT</TableHead>
@@ -1778,10 +1742,10 @@ export default function AccountingOrderDetail() {
                           )}
                         </TableBody>
                       </Table>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Notes */}
               {order.note && (
