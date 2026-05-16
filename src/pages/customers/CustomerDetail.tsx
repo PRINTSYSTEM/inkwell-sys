@@ -176,12 +176,12 @@ export default function CustomerDetail() {
         <div
           className={cn(
             "flex-1 overflow-hidden",
-            canViewFinancialInfo ? "p-6" : "p-6 overflow-y-auto"
+            canViewFinancialInfo ? "p-3" : "p-3 overflow-y-auto"
           )}
         >
           {canViewFinancialInfo ? (
             /* Layout 2 cột cho accounting và admin */
-            <div className="grid grid-cols-[380px_1fr] gap-6 h-full">
+            <div className="grid grid-cols-[380px_1fr] gap-3 h-full">
               {/* Left Column: Profile */}
               <CustomerProfile customer={customer} />
 

@@ -106,12 +106,12 @@ export function CustomerProfile({
 
   return (
     <Card className={cn("h-fit", isDesignRole && "shadow-lg")}>
-      <CardHeader className={cn("pb-4", isDesignRole && "pb-6")}>
+      <CardHeader className={cn("pb-2", isDesignRole && "pb-4")}>
         <div className="flex items-center justify-between">
           <CardTitle
             className={cn(
               "font-semibold",
-              isDesignRole ? "text-2xl font-bold" : "text-base",
+              isDesignRole ? "text-2xl font-bold" : "text-sm",
             )}
           >
             Thông tin khách hàng
@@ -157,19 +157,19 @@ export function CustomerProfile({
           )}
         </div>
       </CardHeader>
-      <CardContent className={cn("space-y-6", isDesignRole && "space-y-8")}>
+      <CardContent className={cn("space-y-3", isDesignRole && "space-y-6")}>
         {/* Thông tin cơ bản */}
-        <div className={cn("space-y-4", isDesignRole && "space-y-6")}>
+        <div className={cn("space-y-2", isDesignRole && "space-y-6")}>
           <p
             className={cn(
               "font-semibold text-foreground uppercase tracking-wide",
-              isDesignRole ? "text-base font-bold" : "text-sm",
+              isDesignRole ? "text-sm font-bold" : "text-sm",
             )}
           >
             Thông tin cơ bản
           </p>
 
-          <div className={cn("space-y-3", isDesignRole && "space-y-5")}>
+          <div className={cn("space-y-1.5", isDesignRole && "space-y-3")}>
             {/* Tên khách hàng */}
             <div
               className={cn("flex items-center gap-3", isDesignRole && "gap-4")}
@@ -183,7 +183,7 @@ export function CustomerProfile({
               <div className="flex-1">
                 <p
                   className={cn(
-                    "text-muted-foreground mb-0.5",
+                    "text-muted-foreground",
                     isDesignRole ? "text-sm font-medium" : "text-xs",
                   )}
                 >
@@ -202,7 +202,7 @@ export function CustomerProfile({
                   <p
                     className={cn(
                       "font-semibold text-foreground",
-                      isDesignRole ? "text-xl font-bold" : "text-base",
+                      isDesignRole ? "text-xl font-bold" : "text-sm",
                     )}
                   >
                     {customer.name || "Chưa có tên"}
@@ -233,7 +233,7 @@ export function CustomerProfile({
                 <div className="flex-1">
                   <p
                     className={cn(
-                      "text-muted-foreground mb-0.5",
+                      "text-muted-foreground ",
                       isDesignRole ? "text-sm font-medium" : "text-xs",
                     )}
                   >
@@ -252,7 +252,7 @@ export function CustomerProfile({
                     <p
                       className={cn(
                         "font-semibold text-foreground",
-                        isDesignRole ? "text-xl font-bold" : "text-base",
+                        isDesignRole ? "text-xl font-bold" : "text-sm",
                       )}
                     >
                       {customer.taxCode || "Chưa có mã số thuế"}
@@ -294,7 +294,7 @@ export function CustomerProfile({
                 <div className="flex-1">
                   <p
                     className={cn(
-                      "text-muted-foreground mb-0.5",
+                      "text-muted-foreground ",
                       isDesignRole ? "text-sm font-medium" : "text-xs",
                     )}
                   >
@@ -316,7 +316,7 @@ export function CustomerProfile({
                     <p
                       className={cn(
                         "font-semibold text-foreground",
-                        isDesignRole ? "text-xl font-bold" : "text-base",
+                        isDesignRole ? "text-xl font-bold" : "text-sm",
                       )}
                     >
                       {customer.companyName || "—"}
@@ -343,7 +343,7 @@ export function CustomerProfile({
                 <div className="flex-1">
                   <p
                     className={cn(
-                      "text-muted-foreground mb-0.5",
+                      "text-muted-foreground ",
                       isDesignRole ? "text-sm font-medium" : "text-xs",
                     )}
                   >
@@ -365,7 +365,7 @@ export function CustomerProfile({
                     <p
                       className={cn(
                         "font-semibold text-foreground",
-                        isDesignRole ? "text-xl font-bold" : "text-base",
+                        isDesignRole ? "text-xl font-bold" : "text-sm",
                       )}
                     >
                       {customer.representativeName || "—"}
@@ -388,7 +388,7 @@ export function CustomerProfile({
               <div className="flex-1">
                 <p
                   className={cn(
-                    "text-muted-foreground mb-0.5",
+                    "text-muted-foreground",
                     isDesignRole ? "text-sm font-medium" : "text-xs",
                   )}
                 >
@@ -416,7 +416,7 @@ export function CustomerProfile({
                   <p
                     className={cn(
                       "font-semibold text-foreground",
-                      isDesignRole ? "text-xl font-bold" : "text-base",
+                      isDesignRole ? "text-xl font-bold" : "text-sm",
                     )}
                   >
                     {customer.scrapRate
@@ -444,7 +444,7 @@ export function CustomerProfile({
                 <div className="flex-1">
                   <p
                     className={cn(
-                      "text-muted-foreground mb-0.5",
+                      "text-muted-foreground ",
                       isDesignRole ? "text-sm font-medium" : "text-xs",
                     )}
                   >
@@ -467,7 +467,7 @@ export function CustomerProfile({
                     <p
                       className={cn(
                         "font-semibold text-foreground",
-                        isDesignRole ? "text-xl font-bold" : "text-base",
+                        isDesignRole ? "text-xl font-bold" : "text-sm",
                       )}
                     >
                       {(customer.currentDebt ?? 0).toLocaleString("vi-VN")} ₫
@@ -494,7 +494,7 @@ export function CustomerProfile({
                 <div className="flex-1">
                   <p
                     className={cn(
-                      "text-muted-foreground mb-0.5",
+                      "text-muted-foreground ",
                       isDesignRole ? "text-sm font-medium" : "text-xs",
                     )}
                   >
@@ -517,7 +517,7 @@ export function CustomerProfile({
                     <p
                       className={cn(
                         "font-semibold text-foreground",
-                        isDesignRole ? "text-xl font-bold" : "text-base",
+                        isDesignRole ? "text-xl font-bold" : "text-sm",
                       )}
                     >
                       {(customer.maxDebt ?? 0).toLocaleString("vi-VN")} ₫
@@ -532,17 +532,17 @@ export function CustomerProfile({
         <Separator />
 
         {/* Thông tin liên hệ */}
-        <div className={cn("space-y-4", isDesignRole && "space-y-6")}>
+        <div className={cn("space-y-2", isDesignRole && "space-y-6")}>
           <p
             className={cn(
               "font-semibold text-foreground uppercase tracking-wide",
-              isDesignRole ? "text-base font-bold" : "text-sm",
+              isDesignRole ? "text-sm font-bold" : "text-sm",
             )}
           >
             Thông tin liên hệ
           </p>
 
-          <div className={cn("space-y-3", isDesignRole && "space-y-5")}>
+          <div className={cn("space-y-1.5", isDesignRole && "space-y-3")}>
             {/* Số điện thoại */}
             <div
               className={cn(
@@ -565,7 +565,7 @@ export function CustomerProfile({
                 <div className="flex-1">
                   <p
                     className={cn(
-                      "text-muted-foreground mb-0.5",
+                      "text-muted-foreground ",
                       isDesignRole ? "text-sm font-medium" : "text-xs",
                     )}
                   >
@@ -584,7 +584,7 @@ export function CustomerProfile({
                     <p
                       className={cn(
                         "font-semibold text-foreground",
-                        isDesignRole ? "text-xl font-bold" : "text-base",
+                        isDesignRole ? "text-xl font-bold" : "text-sm",
                       )}
                     >
                       {customer.phone || "Chưa có số điện thoại"}
@@ -631,7 +631,7 @@ export function CustomerProfile({
                 <div className="flex-1">
                   <p
                     className={cn(
-                      "text-muted-foreground mb-0.5",
+                      "text-muted-foreground ",
                       isDesignRole ? "text-sm font-medium" : "text-xs",
                     )}
                   >
@@ -650,7 +650,7 @@ export function CustomerProfile({
                     <p
                       className={cn(
                         "font-semibold text-foreground",
-                        isDesignRole ? "text-xl font-bold" : "text-base",
+                        isDesignRole ? "text-xl font-bold" : "text-sm",
                       )}
                     >
                       {customer.email || "Chưa có email"}
@@ -699,7 +699,7 @@ export function CustomerProfile({
                 <div className="flex-1">
                   <p
                     className={cn(
-                      "text-muted-foreground mb-0.5",
+                      "text-muted-foreground ",
                       isDesignRole ? "text-sm font-medium" : "text-xs",
                     )}
                   >
@@ -718,7 +718,7 @@ export function CustomerProfile({
                     <p
                       className={cn(
                         "font-semibold text-foreground",
-                        isDesignRole ? "text-xl font-bold" : "text-base",
+                        isDesignRole ? "text-xl font-bold" : "text-sm",
                       )}
                     >
                       {customer.address || "Chưa có địa chỉ"}

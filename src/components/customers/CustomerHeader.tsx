@@ -36,9 +36,8 @@ export function CustomerHeader({
 
   return (
     <div className="sticky top-0 z-10 bg-background border-b shrink-0">
-      <div className="px-6 py-3">
+      <div className="px-6 py-1.5">
         {/* Breadcrumb */}
-
         {/* Header Row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -52,11 +51,11 @@ export function CustomerHeader({
             </Button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold">
+                <h1 className="text-base font-semibold">
                   {customer.name ?? customer.companyName ?? "Chưa có tên"}
                 </h1>
                 {customer.code && (
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     ({customer.code})
                   </span>
                 )}

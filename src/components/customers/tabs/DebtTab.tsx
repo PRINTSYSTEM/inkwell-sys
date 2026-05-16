@@ -259,92 +259,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
       </div>
 
       {/* Tables Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Monthly Debt Table */}
-        <Card>
-          <CardHeader className="py-3 px-4">
-            <CardTitle className="text-sm font-medium">
-              Công nợ theo tháng
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[280px] overflow-auto">
-              {isLoadingMonthly ? (
-                <div className="p-4 space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-8 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs h-8">Tháng</TableHead>
-                      <TableHead className="text-xs h-8 text-right">
-                        Đầu kỳ
-                      </TableHead>
-                      <TableHead className="text-xs h-8 text-right">
-                        Tăng
-                      </TableHead>
-                      <TableHead className="text-xs h-8 text-right">
-                        Giảm
-                      </TableHead>
-                      <TableHead className="text-xs h-8 text-right">
-                        Cuối kỳ
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {monthlyDebtArray.map((item: CustomerMonthlyDebtResponse) => {
-                      const changeInMonth = Number(item.changeInMonth ?? 0);
-                      const increase = changeInMonth > 0 ? changeInMonth : 0;
-                      const decrease =
-                        changeInMonth < 0 ? Math.abs(changeInMonth) : 0;
-                      return (
-                        <TableRow key={item.month || item.id}>
-                          <TableCell className="text-xs py-2 font-medium">
-                            {item.month && item.year
-                              ? `Tháng ${item.month}/${item.year}`
-                              : item.month
-                              ? `Tháng ${item.month}`
-                              : "-"}
-                          </TableCell>
-                          <TableCell className="text-xs py-2 text-right">
-                            <Amount value={Number(item.openingDebt ?? item.openingBalance ?? 0)} />
-                          </TableCell>
-                          <TableCell className="text-xs py-2 text-right text-success">
-                            +{formatCurrency(increase)}
-                          </TableCell>
-                          <TableCell className="text-xs py-2 text-right text-destructive">
-                            -{formatCurrency(decrease)}
-                          </TableCell>
-                          <TableCell className="text-xs py-2 text-right font-medium">
-                            <Amount value={Number(item.closingDebt ?? item.closingBalance ?? 0)} />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {!monthlyDebtArray.length && !isLoadingMonthly && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12">
-                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <p className="text-sm">
-                              Chưa có dữ liệu công nợ theo tháng
-                            </p>
-                            <p className="text-xs">
-                              Dữ liệu sẽ hiển thị khi có giao dịch trong năm
-                            </p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-4">
         {/* Debt History Table */}
         <Card>
           <CardHeader className="py-3 px-4">
@@ -353,7 +268,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="max-h-[280px] overflow-auto">
+            <div className="max-h-[400px] overflow-auto">
               {isLoadingHistory ? (
                 <div className="p-4 space-y-2">
                   {[...Array(5)].map((_, i) => (

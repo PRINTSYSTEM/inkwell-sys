@@ -117,18 +117,18 @@ export function CustomerSummary({
   ];
 
   return (
-    <div className="px-6 py-3 border-b bg-muted/30">
-      <div className="grid grid-cols-6 gap-3">
+    <div className="px-6 py-1.5 border-b bg-muted/30">
+      <div className="grid grid-cols-6 gap-2">
         {kpis.map((kpi, index) => (
           <Card
             key={index}
             className="cursor-pointer hover:shadow-sm transition-shadow border-0 bg-background"
             onClick={() => onTabChange?.(kpi.tab)}
           >
-            <CardContent className="p-3">
-              <div className="flex items-start gap-2">
-                <div className="p-1.5 rounded-md bg-muted">
-                  <kpi.icon className="h-3.5 w-3.5 text-muted-foreground" />
+            <CardContent className="p-2">
+              <div className="flex items-start gap-1.5">
+                <div className="p-1 rounded-md bg-muted">
+                  <kpi.icon className="h-3 w-3 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] text-muted-foreground truncate">
