@@ -19932,6 +19932,14 @@
           "overdueDays": {
             "type": "integer",
             "format": "int32"
+          },
+          "vatRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "vatAmount": {
+            "type": "number",
+            "format": "double"
           }
         },
         "additionalProperties": false

@@ -11,9 +11,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useIssueInvoice } from "@/hooks/use-invoice";
-import { Loader2, FileCheck } from "lucide-react";
+import { Loader2, FileCheck, Building2 } from "lucide-react";
 import { format } from "date-fns";
+import { useCustomers } from "@/hooks/use-customer";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface IssueInvoiceDialogProps {
   open: boolean;
@@ -32,14 +40,18 @@ export function IssueInvoiceDialog({
   const [issuedAt, setIssuedAt] = useState<string>(
     format(new Date(), "yyyy-MM-dd'T'HH:mm")
   );
+  const [parentCompanyId, setParentCompanyId] = useState<string>("none");
 
   const issueInvoiceMutation = useIssueInvoice();
+  const { data: customersData } = useCustomers({ pageSize: 100 });
+  const customers = (customersData?.items || []).filter(c => c.companyName);
 
   // Reset form when dialog opens/closes
   useEffect(() => {
     if (open) {
       setInvoiceNumber(currentInvoiceNumber || "");
       setIssuedAt(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+      setParentCompanyId("none");
     }
   }, [open, currentInvoiceNumber]);
 
@@ -54,6 +66,7 @@ export function IssueInvoiceDialog({
         data: {
           invoiceNumber: invoiceNumber.trim(),
           issuedAt: issuedAt || undefined,
+          parentCompanyId: parentCompanyId === "none" ? undefined : Number(parentCompanyId),
         },
       });
       onOpenChange(false);
@@ -66,6 +79,7 @@ export function IssueInvoiceDialog({
     if (!newOpen && !issueInvoiceMutation.isPending) {
       setInvoiceNumber("");
       setIssuedAt(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+      setParentCompanyId("none");
     }
     onOpenChange(newOpen);
   };
@@ -111,6 +125,37 @@ export function IssueInvoiceDialog({
             />
             <p className="text-xs text-muted-foreground">
               Để trống sẽ sử dụng thời gian hiện tại
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="parentCompany">Công ty mẹ (Nếu có)</Label>
+            <Select
+              value={parentCompanyId}
+              onValueChange={setParentCompanyId}
+            >
+              <SelectTrigger id="parentCompany" className="w-full">
+                <SelectValue placeholder="Chọn công ty mẹ" />
+              </SelectTrigger>
+              <SelectContent>
+                <ScrollArea className="h-[200px]">
+                  <SelectItem value="none">Không có</SelectItem>
+                  {customers.map((customer) => (
+                    <SelectItem
+                      key={customer.id}
+                      value={customer.id?.toString() || ""}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span>{customer.companyName || customer.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </ScrollArea>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Sử dụng khi hóa đơn cần được hạch toán cho công ty mẹ
             </p>
           </div>
         </div>

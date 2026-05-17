@@ -1825,6 +1825,7 @@ const CreateInvoiceFromLinesRequest = z.object({
 });
 const IssueInvoiceRequest = z.object({
   invoiceNumber: z.string().min(0).max(50),
+  parentCompanyId: z.number().int().nullish(),
   issuedAt: z.string().datetime({ offset: true }).nullish(),
 });
 const UpdateEInvoiceInfoRequest = z
