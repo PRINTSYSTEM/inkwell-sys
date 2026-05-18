@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, FileCheck, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { useCustomers } from "@/hooks/use-customer";
+import { useIssueInvoice } from "@/hooks/use-invoice";
 import {
   Select,
   SelectContent,

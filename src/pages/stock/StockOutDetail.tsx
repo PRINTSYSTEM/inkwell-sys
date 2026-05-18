@@ -331,7 +331,13 @@ export default function StockOutDetailPage() {
                 {stockOut.status && (
                   <StatusBadge
                     status={stockOut.status}
-                    label={stockOut.statusName || stockOut.status}
+                    label={
+                      stockOut.statusName && stockOut.statusName.toLowerCase() !== "pending"
+                        ? stockOut.statusName
+                        : stockOut.status.toLowerCase() === "pending"
+                        ? "Chờ xử lý"
+                        : stockOut.statusName || stockOut.status
+                    }
                   />
                 )}
               </CardContent>

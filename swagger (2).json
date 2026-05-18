@@ -8684,6 +8684,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "itemType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -8766,6 +8773,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "itemType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -8807,6 +8821,13 @@
           },
           {
             "name": "warehouse",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemType",
             "in": "query",
             "schema": {
               "type": "string"
@@ -8869,6 +8890,13 @@
           },
           {
             "name": "warehouse",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemType",
             "in": "query",
             "schema": {
               "type": "string"
@@ -8980,6 +9008,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "itemType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -9053,6 +9088,13 @@
           },
           {
             "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemType",
             "in": "query",
             "schema": {
               "type": "string"
@@ -9132,6 +9174,13 @@
           },
           {
             "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemType",
             "in": "query",
             "schema": {
               "type": "string"

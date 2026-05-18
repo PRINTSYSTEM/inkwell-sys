@@ -23,7 +23,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useInventorySummary } from "@/hooks/use-inventory-report";
+import { useInventorySummary, useExportInventorySummary } from "@/hooks/use-inventory-report";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -54,11 +54,15 @@ export default function InventorySummaryPage() {
     asOfDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
   });
 
+  const exportMutation = useExportInventorySummary();
+
   const totalValue = summaryData?.items?.reduce((sum, item) => sum + (item.totalValue || 0), 0) || 0;
 
   const handleExportExcel = async () => {
-    // TODO: Implement export Excel when API endpoint is available
-    toast.info("Chức năng xuất Excel đang được phát triển");
+    exportMutation.mutate({
+      search: searchQuery || undefined,
+      asOfDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    });
   };
 
   const handleItemClick = (itemCode: string | null | undefined) => {
@@ -93,8 +97,16 @@ export default function InventorySummaryPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
               Làm mới
             </Button>
-            <Button variant="outline" onClick={handleExportExcel}>
-              <Download className="h-4 w-4 mr-2" />
+            <Button 
+              variant="outline" 
+              onClick={handleExportExcel}
+              disabled={exportMutation.isPending}
+            >
+              {exportMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
               Xuất Excel
             </Button>
           </div>

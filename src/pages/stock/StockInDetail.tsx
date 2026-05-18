@@ -444,7 +444,13 @@ export default function StockInDetailPage() {
                   {stockIn.status && (
                     <StatusBadge
                       status={stockIn.status}
-                      label={stockIn.statusName || stockIn.status}
+                      label={
+                        stockIn.statusName && stockIn.statusName.toLowerCase() !== "pending"
+                          ? stockIn.statusName
+                          : stockIn.status.toLowerCase() === "pending"
+                          ? "Chờ xử lý"
+                          : stockIn.statusName || stockIn.status
+                      }
                     />
                   )}
                 </CardContent>

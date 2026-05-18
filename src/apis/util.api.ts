@@ -350,9 +350,11 @@ export const API_SUFFIX = {
   // ========== INVENTORY REPORTS ==========
   CURRENT_STOCK: "/inventory-reports/current-stock",
   INVENTORY_SUMMARY: "/inventory-reports/summary", // Fixed: was "/inventory-reports/inventory-summary"
+  INVENTORY_SUMMARY_EXCEL: "/inventory-reports/summary/excel",
   LOW_STOCK: "/inventory-reports/low-stock",
   SLOW_MOVING: "/inventory-reports/slow-moving",
   STOCK_CARD: (itemCode: string) => `/inventory-reports/stock-card/${itemCode}`,
+  STOCK_CARD_EXCEL: (itemCode: string) => `/inventory-reports/stock-card/${itemCode}/excel`,
 
   // ========== SALES REPORTS ==========
   SALES_BY_PERIOD: "/sales-reports/by-period",

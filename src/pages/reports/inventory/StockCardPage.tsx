@@ -26,7 +26,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useStockCard } from "@/hooks/use-inventory-report";
+import { useStockCard, useExportStockCard } from "@/hooks/use-inventory-report";
 import { formatCurrency } from "@/lib/status-utils";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -66,9 +66,17 @@ export default function StockCardPage() {
     }
   );
 
+  const exportMutation = useExportStockCard();
+
   const handleExportExcel = async () => {
-    // TODO: Implement export Excel when API endpoint is available
-    toast.info("Chức năng xuất Excel đang được phát triển");
+    if (!itemCode) return;
+    exportMutation.mutate({
+      itemCode,
+      params: {
+        fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+        toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+      },
+    });
   };
 
   const handleVoucherClick = (
@@ -129,8 +137,16 @@ export default function StockCardPage() {
             <Button variant="outline" size="icon" onClick={() => refetch()}>
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Button variant="outline" onClick={handleExportExcel}>
-              <Download className="h-4 w-4 mr-2" />
+            <Button 
+              variant="outline" 
+              onClick={handleExportExcel}
+              disabled={exportMutation.isPending || !itemCode}
+            >
+              {exportMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
               Xuất Excel
             </Button>
           </div>
