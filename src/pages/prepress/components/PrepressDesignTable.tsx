@@ -372,15 +372,3 @@ export function PrepressDesignTable({
     </div>
   );
 }
-                      })}
-                    </TooltipProvider>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-      </ScrollArea>
-    </div>
-  );
-}

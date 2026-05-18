@@ -328,7 +328,7 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
                   {paymentLabel}
                 </TableHead>
                 <TableHead className="text-center font-bold text-sm">
-                  Ngày giao
+                  Ngày tạo
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -417,7 +417,7 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
                         <PaymentStatusBadge status={paymentStatus} />
                       </TableCell>
                       <TableCell className="text-center text-sm font-bold text-muted-foreground">
-                        {formatDate(order.deliveryDate)}
+                        {formatDate(order.createdAt)}
                       </TableCell>
                     </TableRow>
                   );

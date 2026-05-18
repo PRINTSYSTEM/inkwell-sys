@@ -75,10 +75,9 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
 
     // Always set string fields to empty string, never undefined
     const params: DieListParams = {
-      designCode: debouncedDesignCode.trim() || "",
+      q: debouncedDesignCode.trim() || "",
       size: debouncedSize.trim() || "",
       customerName: debouncedCustomerName.trim() || "",
-      isUsable: true,
       pageSize: 100,
       pageNumber: 1,
     };
@@ -389,13 +388,13 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
                   htmlFor="design-code-search"
                   className="text-sm font-medium"
                 >
-                  Mã hàng
+                  Mã hàng / Mã bài
                 </Label>
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="design-code-search"
-                    placeholder="Nhập mã hàng..."
+                    placeholder="Nhập mã hàng hoặc mã bài..."
                     value={designCode}
                     onChange={(e) => setDesignCode(e.target.value)}
                     className="pl-9 h-10 text-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/20"
