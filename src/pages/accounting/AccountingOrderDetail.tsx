@@ -63,6 +63,7 @@ import {
   useExportOrderPDF,
   useUpdateOrderForAccounting,
   useUpdateOrderForSale,
+  useCancelOrder,
 } from "@/hooks/use-order";
 import { useAuth } from "@/hooks/use-auth";
 import { ROLE } from "@/constants/role.constant";
@@ -298,6 +299,11 @@ export default function AccountingOrderDetail() {
   const [depositAmount, setDepositAmount] = useState<string>("");
   const [isConfirmingDeposit, setIsConfirmingDeposit] = useState(false);
 
+  // Cancel order dialog state
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
   // Mutations
   const exportInvoiceMutation = useExportOrderInvoice();
   const exportDeliveryNoteMutation = useExportOrderDeliveryNote();
@@ -306,6 +312,7 @@ export default function AccountingOrderDetail() {
   const approveDebtMutation = useApproveDebt();
   const createDebtNotificationMutation = useCreateDebtNotification();
   const createAccountingMutation = useCreateAccountingForOrder();
+  const cancelOrderMutation = useCancelOrder();
   const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const { mutate: updateOrderForSale, loading: isUpdatingForSale } =
@@ -799,6 +806,11 @@ export default function AccountingOrderDetail() {
       toast.success("Thành công", {
         description: "Đã xác nhận nhận cọc thành công",
       });
+      setDepositAmount("");
+      
+      toast.success("Thành công", {
+        description: "Đã xác nhận nhận cọc thành công",
+      });
     } catch (error) {
       console.error("❌ [Deposit Flow Error]:", error);
     } finally {
@@ -827,6 +839,25 @@ export default function AccountingOrderDetail() {
       } as UpdateOrderForAccountingRequest);
     } catch (error) {
       // Error is already handled by the mutation hook
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!order) return;
+
+    setIsConfirmingCancel(true);
+
+    try {
+      await cancelOrderMutation.mutate(order.id, { reason: cancelReason.trim() });
+      setIsCancelDialogOpen(false);
+      setCancelReason("");
+      
+      // Refetch order to update status
+      await refetchOrder();
+    } catch (error) {
+      // Error is handled by the mutation hook
+    } finally {
+      setIsConfirmingCancel(false);
     }
   };
 
@@ -997,6 +1028,28 @@ export default function AccountingOrderDetail() {
                         <CreditCard className="h-4 w-4 mr-2" />
                       )}
                       Duyệt đơn hàng
+                    </Button>
+                  )}
+                {(user?.role === ROLE.ADMIN ||
+                  user?.role === ROLE.SALE ||
+                  user?.role === ROLE.ACCOUNTING ||
+                  user?.role === ROLE.ACCOUNTING_LEAD) &&
+                  order?.status !== "cancelled" && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        setCancelReason("");
+                        setIsCancelDialogOpen(true);
+                      }}
+                      disabled={isConfirmingCancel}
+                    >
+                      {isConfirmingCancel ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                      )}
+                      Hủy đơn
                     </Button>
                   )}
               </div>
@@ -2183,6 +2236,81 @@ export default function AccountingOrderDetail() {
                 </>
               ) : (
                 "Xác nhận nhận cọc"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Order Dialog */}
+      <Dialog
+        open={isCancelDialogOpen}
+        onOpenChange={(open) => {
+          setIsCancelDialogOpen(open);
+          if (!open) setCancelReason("");
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
+            <DialogDescription>
+              Bạn chắc chắn muốn hủy đơn hàng {order?.code}? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+
+          {order && (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Mã đơn</span>
+                  <span className="font-mono">{order.code}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Khách hàng</span>
+                  <span className="font-medium">{order.customerName || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tổng tiền</span>
+                  <span className="font-semibold">{formatCurrency(order.totalAmount)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cancelReason">Lý do hủy đơn (không bắt buộc)</Label>
+                <Textarea
+                  id="cancelReason"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Nhập lý do hủy đơn"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCancelDialogOpen(false);
+                setCancelReason("");
+              }}
+              disabled={isConfirmingCancel}
+            >
+              Không hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelOrder}
+              disabled={isConfirmingCancel}
+            >
+              {isConfirmingCancel ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Xác nhận hủy đơn"
               )}
             </Button>
           </DialogFooter>

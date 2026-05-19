@@ -26,7 +26,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMaterials } from "@/hooks/use-material";
 import { useMaterialTypeList } from "@/hooks/use-material-type";
 import { formatCurrency } from "@/lib/status-utils";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -39,7 +38,8 @@ import {
 export default function CurrentStockPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMaterialType, setSelectedMaterialType] = useState<string>("all");
+  const [selectedMaterialType, setSelectedMaterialType] =
+    useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -53,13 +53,18 @@ export default function CurrentStockPage() {
     page: currentPage,
     size: itemsPerPage,
     search: searchQuery || "",
-    materialTypeId: selectedMaterialType === "all" ? undefined : Number(selectedMaterialType),
+    materialTypeId:
+      selectedMaterialType === "all" ? undefined : Number(selectedMaterialType),
   });
 
   const { data: materialTypes } = useMaterialTypeList();
 
   const totalItems = materialsData?.total || 0;
-  const totalQuantity = materialsData?.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+  const totalQuantity =
+    materialsData?.items?.reduce(
+      (sum, item) => sum + (item.quantity || 0),
+      0,
+    ) || 0;
   const totalValue = 0; // MaterialResponse doesn't have stockValue
 
   return (
@@ -127,7 +132,9 @@ export default function CurrentStockPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 pt-1">
-              <div className="text-xl font-bold">{totalQuantity.toLocaleString()}</div>
+              <div className="text-xl font-bold">
+                {totalQuantity.toLocaleString()}
+              </div>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
@@ -155,8 +162,11 @@ export default function CurrentStockPage() {
               className="pl-9 rounded-md"
             />
           </div>
-          
-          <Select value={selectedMaterialType} onValueChange={setSelectedMaterialType}>
+
+          <Select
+            value={selectedMaterialType}
+            onValueChange={setSelectedMaterialType}
+          >
             <SelectTrigger className="w-full sm:w-[200px] rounded-md">
               <SelectValue placeholder="Loại vật liệu" />
             </SelectTrigger>
@@ -178,8 +188,7 @@ export default function CurrentStockPage() {
               <TableRow className="bg-muted/50">
                 <TableHead className="w-[120px]">ID</TableHead>
                 <TableHead className="min-w-[180px]">Tên vật tư</TableHead>
-                <TableHead>Loại vật liệu</TableHead>
-                <TableHead>Kích thước (LxWxH)</TableHead>
+                <TableHead className="min-w-[140px]">Kích thước</TableHead>
                 <TableHead className="text-right">Số lượng</TableHead>
                 <TableHead className="text-right">Ngày tạo</TableHead>
                 <TableHead className="text-right">Người tạo</TableHead>
@@ -189,7 +198,7 @@ export default function CurrentStockPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -199,7 +208,7 @@ export default function CurrentStockPage() {
               ) : !materialsData?.items || materialsData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={6}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu tồn kho nào.
@@ -207,21 +216,18 @@ export default function CurrentStockPage() {
                 </TableRow>
               ) : (
                 materialsData.items.map((item) => (
-                  <TableRow 
+                  <TableRow
                     key={item.id}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/reports/inventory/stock-card/${item.id}`)}
+                    onClick={() =>
+                      navigate(`/reports/inventory/stock-card/${item.id}`)
+                    }
                   >
                     <TableCell className="font-medium font-mono text-sm">
                       #{item.id}
                     </TableCell>
                     <TableCell className="font-medium">
                       {item.name || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-normal">
-                        {item.materialTypeName || "—"}
-                      </Badge>
                     </TableCell>
                     <TableCell className="text-sm">
                       {item.length || "—"}
@@ -234,7 +240,9 @@ export default function CurrentStockPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
-                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString("vi-VN") : "—"}
+                      {item.createdAt
+                        ? new Date(item.createdAt).toLocaleDateString("vi-VN")
+                        : "—"}
                     </TableCell>
                     <TableCell className="text-right text-sm">
                       {item.createdBy || "—"}
@@ -269,7 +277,9 @@ export default function CurrentStockPage() {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setCurrentPage((p) => Math.min(materialsData.totalPages, p + 1))
+                  setCurrentPage((p) =>
+                    Math.min(materialsData.totalPages, p + 1),
+                  )
                 }
                 disabled={currentPage === materialsData.totalPages || isLoading}
               >
@@ -282,4 +292,3 @@ export default function CurrentStockPage() {
     </>
   );
 }
-
