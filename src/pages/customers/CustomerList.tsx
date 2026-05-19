@@ -43,6 +43,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { useListState } from "@/hooks/use-list-state";
+
 export default function Customers() {
   const { user } = useAuth();
   const userRole = user?.role;
@@ -54,13 +56,20 @@ export default function Customers() {
     userRole === ROLE.SALE ||
     userRole === ROLE.ADMIN;
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortColumn, setSortColumn] = useState<string>("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const {
+    currentPage,
+    setCurrentPage,
+    searchTerm,
+    setSearchTerm,
+    debouncedSearchTerm: debouncedSearch,
+    sortColumn,
+    setSortColumn,
+    sortOrder,
+    setSortOrder,
+    resetPage,
+  } = useListState({ defaultSortOrder: "asc" });
+
   const itemsPerPage = 10;
-  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -120,13 +129,7 @@ export default function Customers() {
   // Pagination calculations
   const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
-  // Auto-adjust currentPage if it exceeds totalPages (e.g., after search/filter)
-  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
-  useEffect(() => {
-    if (customersResponse && totalPages > 0 && currentPage > totalPages) {
-      setCurrentPage(1);
-    }
-  }, [totalPages, currentPage, customersResponse]);
+  // Removed aggressive auto-adjust to prevent resetting on back navigation
 
   // Scroll to top of table when page changes
   useEffect(() => {
@@ -143,18 +146,9 @@ export default function Customers() {
     );
   }
 
-  // Reset to page 1 when search changes
+  // Search change
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1);
-    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
-    debounceTimeout.current = setTimeout(() => {
-      setDebouncedSearch(value);
-      // Giữ focus lại input search sau khi debounce
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
-    }, 1000);
   };
 
   // Pagination handlers

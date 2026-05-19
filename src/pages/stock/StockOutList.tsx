@@ -66,13 +66,22 @@ import {
 } from "@/components/ui/dialog";
 import { AlertTriangle, AlertCircle } from "lucide-react";
 
+import { useListState } from "@/hooks/use-list-state";
+
 export default function StockOutListPage() {
   const navigate = useNavigate();
-  const [page, setPage] = useState(1);
+  const {
+    currentPage: page,
+    setCurrentPage: setPage,
+    searchTerm: search,
+    setSearchTerm: setSearch,
+    debouncedSearchTerm,
+    statusFilter,
+    setStatusFilter,
+  } = useListState();
+  
   const [pageSize] = useState(10);
-  const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
@@ -81,9 +90,9 @@ export default function StockOutListPage() {
   const { data, isLoading, refetch } = useStockOuts({
     pageNumber: page,
     pageSize,
-    search: search || undefined,
+    search: debouncedSearchTerm || undefined,
     type: typeFilter || undefined,
-    status: statusFilter || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter || undefined,
   });
 
   const { mutate: deleteStockOut } = useDeleteStockOut();
@@ -256,10 +265,19 @@ export default function StockOutListPage() {
                     className="pl-9 h-11 transition-colors duration-200"
                   />
                 </div>
-                <DateRangePicker value={dateRange} onValueChange={setDateRange} />
+                <DateRangePicker 
+                  value={dateRange} 
+                  onValueChange={(r) => {
+                    setDateRange(r);
+                    setPage(1);
+                  }} 
+                />
                 <Select
                   value={typeFilter || "all"}
-                  onValueChange={(v) => setTypeFilter(v === "all" ? "" : v)}
+                  onValueChange={(v) => {
+                    setTypeFilter(v === "all" ? "" : v);
+                    setPage(1);
+                  }}
                 >
                   <SelectTrigger className="h-11 cursor-pointer transition-colors duration-200">
                     <SelectValue placeholder="Lý do xuất" />

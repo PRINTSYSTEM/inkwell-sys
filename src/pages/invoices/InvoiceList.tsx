@@ -59,13 +59,23 @@ const formatDateTime = (dateStr: string | null | undefined) => {
   return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
 };
 
+import { useListState } from "@/hooks/use-list-state";
+
 export default function InvoiceListPage() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortColumn, setSortColumn] = useState<string>("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const {
+    currentPage,
+    setCurrentPage,
+    searchTerm: searchQuery,
+    setSearchTerm: setSearchQuery,
+    debouncedSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    sortColumn,
+    setSortColumn,
+    sortOrder,
+    setSortOrder,
+  } = useListState();
   const [isCreateFromLinesDialogOpen, setIsCreateFromLinesDialogOpen] =
     useState(false);
   const itemsPerPage = 10;
@@ -81,7 +91,7 @@ export default function InvoiceListPage() {
     PageNumber: currentPage,
     PageSize: itemsPerPage,
     Status: statusFilter === "all" ? undefined : statusFilter,
-    Search: searchQuery || undefined,
+    Search: debouncedSearchTerm || undefined,
     ...(sortColumn.trim()
       ? { SortColumn: sortColumn.trim(), SortOrder: sortOrder }
       : {}),
@@ -89,22 +99,21 @@ export default function InvoiceListPage() {
 
   const exportInvoiceMutation = useExportInvoice();
 
-  // Filter invoices client-side for search
   const filteredInvoices = useMemo(() => {
     if (!invoicesData?.items) return [];
-    if (!searchQuery) {
-      return invoicesData.items.filter((invoice) => {
-        const searchLower = searchQuery.toLowerCase();
-        return (
-          invoice.invoiceNumber?.toLowerCase().includes(searchLower) ||
-          invoice.buyerName?.toLowerCase().includes(searchLower) ||
-          invoice.buyerCompanyName?.toLowerCase().includes(searchLower) ||
-          invoice.buyerTaxCode?.toLowerCase().includes(searchLower)
-        );
-      });
+    if (!debouncedSearchTerm) {
+      return invoicesData.items;
     }
-    return invoicesData.items;
-  }, [invoicesData?.items, searchQuery]);
+    return invoicesData.items.filter((invoice) => {
+      const searchLower = debouncedSearchTerm.toLowerCase();
+      return (
+        invoice.invoiceNumber?.toLowerCase().includes(searchLower) ||
+        invoice.buyerName?.toLowerCase().includes(searchLower) ||
+        invoice.buyerCompanyName?.toLowerCase().includes(searchLower) ||
+        invoice.buyerTaxCode?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [invoicesData?.items, debouncedSearchTerm]);
 
   const handleViewDetails = (invoiceId: number | undefined) => {
     if (invoiceId) {
