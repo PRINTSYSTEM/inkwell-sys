@@ -39,6 +39,7 @@ export default function LowStockPage() {
     pageNumber: currentPage,
     pageSize: itemsPerPage,
     search: searchQuery || undefined,
+    itemType: "material",
   });
 
   return (

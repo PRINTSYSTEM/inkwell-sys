@@ -45,6 +45,8 @@ export interface InventorySummaryParams {
   designTypeId?: number;
   asOfDate?: string;
   search?: string;
+  itemType?: string;
+  itemGroup?: string;
 }
 
 export const useInventorySummary = (params?: InventorySummaryParams) => {
@@ -96,6 +98,9 @@ export interface LowStockParams {
   designTypeId?: number;
   threshold?: number;
   search?: string;
+  itemType?: string;
+  itemGroup?: string;
+  warehouse?: string;
 }
 
 export const useLowStock = (params?: LowStockParams) => {

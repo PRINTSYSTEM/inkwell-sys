@@ -8,8 +8,15 @@ import {
   ArrowLeft,
   Loader2,
   AlertCircle,
+  Maximize2,
+  Layers,
+  Boxes,
+  Tag,
+  User,
+  Calendar,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { useMaterial } from "@/hooks/use-material";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { addDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -49,6 +56,13 @@ export default function StockCardPage() {
     from: addDays(new Date(), -30),
     to: new Date(),
   });
+
+  const materialId = itemCode ? parseInt(itemCode, 10) : null;
+  const isNumericId = materialId !== null && !isNaN(materialId);
+  const { data: materialDetail, isLoading: isLoadingMaterial } = useMaterial(
+    isNumericId ? materialId : null,
+    isNumericId
+  );
 
   const {
     data: stockCardData,
@@ -151,6 +165,59 @@ export default function StockCardPage() {
             </Button>
           </div>
         </div>
+
+        {/* Material Detail Specifications Card */}
+        {materialDetail && (
+          <Card className="shadow-sm border border-muted bg-gradient-to-r from-blue-600/[0.02] to-indigo-600/[0.02]">
+            <CardHeader className="p-4 pb-2 border-b">
+              <div className="flex items-center gap-2">
+                <Boxes className="h-5 w-5 text-blue-600" />
+                <CardTitle className="text-sm font-semibold text-foreground">
+                  Thông số kỹ thuật & Chi tiết vật tư
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Tag className="h-3 w-3" /> Tên vật tư
+                </span>
+                <p className="text-sm font-semibold text-foreground">{materialDetail.name || "—"}</p>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Layers className="h-3 w-3" /> Loại chất liệu
+                </span>
+                <div>
+                  <Badge variant="secondary" className="font-medium mt-0.5 text-xs py-0">
+                    {materialDetail.materialTypeName || "—"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Maximize2 className="h-3 w-3" /> Kích thước (LxWxH)
+                </span>
+                <p className="text-sm font-semibold font-mono text-foreground">
+                  {materialDetail.length || "—"}
+                  {materialDetail.width ? `x${materialDetail.width}` : ""}
+                  {materialDetail.height ? `x${materialDetail.height}` : ""}
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <User className="h-3 w-3" /> Người tạo / Ngày tạo
+                </span>
+                <p className="text-xs font-medium text-foreground">
+                  {materialDetail.createdBy || "—"} - {materialDetail.createdAt ? new Date(materialDetail.createdAt).toLocaleDateString("vi-VN") : "—"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Error Alert */}
         {isError && (

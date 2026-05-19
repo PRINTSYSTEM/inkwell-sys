@@ -233,7 +233,6 @@ export default function StockInCreatePage() {
       materialTypeId: 0,
       length: 0,
       width: undefined,
-      height: 0,
       quantity: undefined,
     }
   );
@@ -386,7 +385,6 @@ export default function StockInCreatePage() {
         materialId: material.id,
         length: material.length,
         width: material.width,
-        height: material.height,
         lineKind: material.width !== undefined && material.width > 0 ? "sheet" : "roll",
       };
       setItems(newItems);
@@ -470,7 +468,6 @@ export default function StockInCreatePage() {
           lineKind: item.lineKind ?? undefined,
           length: item.length ?? undefined,
           width: item.width ?? undefined,
-          height: item.height ?? undefined,
         })),
       },
       {
@@ -693,7 +690,7 @@ export default function StockInCreatePage() {
                             className="h-8 w-8 shrink-0 hover:bg-[#93631F]/10 text-[#93631F] border-[#93631F]/20"
                             onClick={() => {
                               setCreatingMaterialIndex(index);
-                              setNewMaterialData({ name: "", materialTypeId: materialTypes[0]?.id || 1, length: 0, width: undefined, height: 0, quantity: undefined });
+                              setNewMaterialData({ name: "", materialTypeId: materialTypes[0]?.id || 1, length: 0, width: undefined, quantity: undefined });
                               setDialogUnitPrice(undefined);
                               setIsCreateMaterialDialogOpen(true);
                             }}
@@ -819,7 +816,7 @@ export default function StockInCreatePage() {
                                 className="h-8 w-8 shrink-0 text-[#93631F] hover:bg-[#93631F]/10"
                                 onClick={() => {
                                   setCreatingMaterialIndex(index);
-                                  setNewMaterialData({ name: "", materialTypeId: materialTypes[0]?.id || 1, length: 0, width: undefined, height: 0, quantity: undefined });
+                                  setNewMaterialData({ name: "", materialTypeId: materialTypes[0]?.id || 1, length: 0, width: undefined, quantity: undefined });
                                   setDialogUnitPrice(undefined);
                                   setIsCreateMaterialDialogOpen(true);
                                 }}
@@ -1201,7 +1198,6 @@ export default function StockInCreatePage() {
                   materialTypeId: materialTypes[0]?.id || 1,
                   length: 0,
                   width: undefined,
-                  height: 0,
                   quantity: undefined,
                 });
                 setDialogUnitPrice(undefined);
@@ -1228,7 +1224,6 @@ export default function StockInCreatePage() {
                     materialTypeId: finalMaterialTypeId,
                     length: newMaterialData.length,
                     width: newMaterialData.width,
-                    height: newMaterialData.height,
                     quantity: newMaterialData.quantity,
                   },
                   {
@@ -1249,7 +1244,6 @@ export default function StockInCreatePage() {
                         materialTypeId: finalMaterialTypeId,
                         length: 0,
                         width: undefined,
-                        height: 0,
                         quantity: undefined,
                       });
                       setDialogUnitPrice(undefined);

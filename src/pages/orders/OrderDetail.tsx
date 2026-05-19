@@ -138,6 +138,7 @@ import {
   useOrders,
   orderCrudApi,
   useProductionOrdersByOrder,
+  useCancelOrder,
 } from "@/hooks";
 import { useExportOrderPDF } from "@/hooks/use-order";
 import { useSharedAddresses } from "@/hooks/use-shared-address";
@@ -167,6 +168,8 @@ export default function OrderDetailPage() {
   const [addDesignDialogOpen, setAddDesignDialogOpen] = useState(false);
   const [assignDesignerDialogOpen, setAssignDesignerDialogOpen] =
     useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [cardEditValues, setCardEditValues] = useState<any>({});
@@ -200,7 +203,10 @@ export default function OrderDetailPage() {
     data: order,
     isLoading: orderLoading,
     isError: orderError,
+    refetch,
   } = useOrder(orderId || null, !!orderId);
+
+  const { mutate: cancelOrder, loading: isCancellingOrder } = useCancelOrder();
 
   const canViewPrice = role !== ROLE.DESIGN && role !== ROLE.DESIGN_LEAD;
   const canViewDesigner =
@@ -842,6 +848,19 @@ export default function OrderDetailPage() {
                 In đơn
               </Button>
             )}
+            {order.status !== "cancelled" &&
+              (role === ROLE.SALE ||
+                role === ROLE.ADMIN ||
+                role === ROLE.MANAGER) && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setCancelDialogOpen(true)}
+                >
+                  Hủy đơn
+                </Button>
+              )}
           </div>
         </div>
       </div>
@@ -2391,6 +2410,74 @@ export default function OrderDetailPage() {
               onClick={() => setAssignDesignerDialogOpen(false)}
             >
               Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Order Dialog */}
+      <Dialog
+        open={cancelDialogOpen}
+        onOpenChange={(open) => {
+          setCancelDialogOpen(open);
+          if (!open) setCancelReason("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hủy đơn hàng</DialogTitle>
+            <DialogDescription>
+              Nhập lý do để xác nhận hủy đơn hàng này. Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Lý do hủy</Label>
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Nhập lý do hủy đơn hàng..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelDialogOpen(false);
+                setCancelReason("");
+              }}
+              disabled={isCancellingOrder}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!cancelReason.trim()) {
+                  toast.error("Vui lòng nhập lý do hủy đơn");
+                  return;
+                }
+                try {
+                  await cancelOrder(order.id, { reason: cancelReason });
+                  setCancelDialogOpen(false);
+                  setCancelReason("");
+                  await refetch();
+                } catch {
+                  // error is handled by hook
+                }
+              }}
+              disabled={isCancellingOrder || !cancelReason.trim()}
+            >
+              {isCancellingOrder ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang hủy...
+                </>
+              ) : (
+                "Xác nhận hủy"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

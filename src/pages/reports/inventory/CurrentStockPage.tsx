@@ -224,7 +224,9 @@ export default function CurrentStockPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {item.length}x{item.width}x{item.height}
+                      {item.length || "—"}
+                      {item.width ? `x${item.width}` : ""}
+                      {item.height ? `x${item.height}` : ""}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums text-blue-600">
                       {item.quantity !== undefined

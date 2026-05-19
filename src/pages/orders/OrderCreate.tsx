@@ -87,6 +87,9 @@ export default function OrderCreatePage() {
     ? parseInt(customerIdFromUrl, 10)
     : null;
 
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [debouncedCustomerSearch] = useDebounce(customerSearch, 300);
+
   // API Hooks
   const {
     data: customersData,
@@ -94,7 +97,8 @@ export default function OrderCreatePage() {
     refetch: refetchCustomers,
   } = useCustomers({
     pageNumber: 1,
-    pageSize: 1000, // Get all customers
+    pageSize: 100, // Get 100 customers matching search
+    search: debouncedCustomerSearch || undefined,
   });
   const customers = customersData?.items || [];
 
@@ -222,7 +226,6 @@ export default function OrderCreatePage() {
     useState(4); // Show 4 initially, load 4 more each time
   const LOAD_MORE_INCREMENT = 4; // Load 4 more items each time
 
-  // Handlers
   const handleCustomerSelect = (customer: CustomerSummaryResponse) => {
     setSelectedCustomer(customer);
     setFormData((prev) => ({
@@ -231,6 +234,7 @@ export default function OrderCreatePage() {
     }));
     setDesigns([]);
     setDesignSearchQuery(""); // Reset search when customer changes
+    setCustomerSearch(""); // Reset customer search query when selected
     setCustomerComboOpen(false);
     setExistingDesignsDisplayLimit(4); // Reset to initial limit
   };
@@ -611,10 +615,12 @@ export default function OrderCreatePage() {
                         className="w-full p-0 bg-popover"
                         align="start"
                       >
-                        <Command>
+                        <Command shouldFilter={false}>
                           <CommandInput
                             placeholder="Tìm theo tên, mã KH..."
                             className="h-9 text-sm"
+                            value={customerSearch}
+                            onValueChange={setCustomerSearch}
                           />
                           <CommandList>
                             <CommandEmpty>

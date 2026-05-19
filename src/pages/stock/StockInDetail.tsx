@@ -50,7 +50,13 @@ import {
   useCancelStockIn,
   useDeleteStockIn,
 } from "@/hooks/use-stock";
-import { formatDate, formatDateTime, formatCurrency } from "@/lib/status-utils";
+import {
+  formatDate,
+  formatDateTime,
+  formatCurrency,
+  stockInSourceLabels,
+  stockInItemTypeLabels,
+} from "@/lib/status-utils";
 import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 
@@ -544,7 +550,9 @@ export default function StockInDetailPage() {
                           Nguồn nhập
                         </p>
                         <p className="text-xs font-semibold text-slate-900 truncate">
-                          {stockIn.source || "Không có"}
+                          {stockIn.source
+                            ? stockInSourceLabels[stockIn.source.toLowerCase()] || stockIn.source
+                            : "Không có"}
                         </p>
                       </div>
                     </div>
@@ -595,7 +603,9 @@ export default function StockInDetailPage() {
                           Loại vật phẩm
                         </p>
                         <p className="text-xs font-semibold text-slate-900 truncate">
-                          {stockIn.itemType || "Không có"}
+                          {stockIn.itemType
+                            ? stockInItemTypeLabels[stockIn.itemType.toLowerCase()] || stockIn.itemType
+                            : "Không có"}
                         </p>
                       </div>
                     </div>

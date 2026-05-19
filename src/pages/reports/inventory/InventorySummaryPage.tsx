@@ -52,6 +52,7 @@ export default function InventorySummaryPage() {
     pageSize: itemsPerPage,
     search: searchQuery || undefined,
     asOfDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    itemType: "product",
   });
 
   const exportMutation = useExportInventorySummary();
@@ -62,6 +63,7 @@ export default function InventorySummaryPage() {
     exportMutation.mutate({
       search: searchQuery || undefined,
       asOfDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+      itemType: "product",
     });
   };
 
