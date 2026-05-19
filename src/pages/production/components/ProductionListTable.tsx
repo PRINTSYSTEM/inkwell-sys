@@ -1552,16 +1552,9 @@ export function MaterialExportDialog({
   // Reset state when dialog opens
   React.useEffect(() => {
     if (isOpen) {
-      if (proofingOrder?.materialTypeId) {
-        setSelectedItems([{
-          materialId: proofingOrder.materialTypeId.toString(),
-          quantity: defaultPrintQty?.toString() || "1"
-        }]);
-      } else {
-        setSelectedItems([]);
-      }
+      setSelectedItems([]);
     }
-  }, [isOpen, proofingOrder, defaultPrintQty]);
+  }, [isOpen]);
 
   const handleSelectMaterial = (matId: string) => {
     if (!selectedItems.find(i => i.materialId === matId)) {

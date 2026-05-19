@@ -131,16 +131,7 @@ export default function StockInListPage() {
   };
 
   const handleComplete = (id: number) => {
-    setConfirmDialog({
-      open: true,
-      id,
-      type: "complete",
-      title: "Xác nhận hoàn thành phiếu nhập kho",
-      description:
-        "Bạn có chắc chắn muốn hoàn thành phiếu nhập kho này? Hành động này không thể hoàn tác.",
-      confirmText: "Hoàn thành",
-      confirmVariant: "default",
-    });
+    completeStockIn(id);
   };
 
   const handleCancel = (id: number) => {
@@ -160,18 +151,9 @@ export default function StockInListPage() {
     if (!confirmDialog.id || !confirmDialog.type) return;
 
     switch (confirmDialog.type) {
-      case "complete":
-        completeStockIn(confirmDialog.id, {
-          onSuccess: () => {
-            toast.success("Đã hoàn thành phiếu nhập kho");
-            setConfirmDialog({ ...confirmDialog, open: false });
-          },
-        });
-        break;
       case "cancel":
         cancelStockIn(confirmDialog.id, {
           onSuccess: () => {
-            toast.success("Đã hủy phiếu nhập kho");
             setConfirmDialog({ ...confirmDialog, open: false });
           },
         });
@@ -179,7 +161,6 @@ export default function StockInListPage() {
       case "delete":
         deleteStockIn(confirmDialog.id, {
           onSuccess: () => {
-            toast.success("Đã xóa phiếu nhập kho");
             setConfirmDialog({ ...confirmDialog, open: false });
           },
         });
@@ -388,7 +369,7 @@ export default function StockInListPage() {
                           <TableHead className="text-center font-semibold text-slate-700">
                             Trạng thái
                           </TableHead>
-                          <TableHead className="w-[60px]"></TableHead>
+                           <TableHead className="w-[220px] text-right font-semibold text-slate-700">Thao tác</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -435,82 +416,41 @@ export default function StockInListPage() {
                             </TableCell>
                             <TableCell className="text-center">
                               {getStatusBadge(stockIn.status)}
-                            </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 cursor-pointer"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleViewDetails(stockIn.id);
-                                    }}
-                                    className="cursor-pointer"
-                                  >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Xem chi tiết
-                                  </DropdownMenuItem>
-                                  {stockIn.status !== "completed" &&
-                                    stockIn.status !== "cancelled" && (
-                                      <>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigate(
-                                              `/stock/stock-ins/${stockIn.id}/edit`
-                                            );
-                                          }}
-                                          className="cursor-pointer"
-                                        >
-                                          <Edit className="h-4 w-4 mr-2" />
-                                          Chỉnh sửa
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleComplete(stockIn.id);
-                                          }}
-                                          className="cursor-pointer"
-                                        >
-                                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                                          Hoàn thành
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleCancel(stockIn.id);
-                                          }}
-                                          className="text-destructive cursor-pointer"
-                                        >
-                                          <XCircle className="h-4 w-4 mr-2" />
-                                          Hủy
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDelete(stockIn.id);
-                                          }}
-                                          className="text-destructive cursor-pointer"
-                                        >
-                                          <Trash2 className="h-4 w-4 mr-2" />
-                                          Xóa
-                                        </DropdownMenuItem>
-                                      </>
-                                    )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
+                             </TableCell>
+                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                               <div className="flex items-center justify-end gap-2">
+                                 {stockIn.status !== "completed" &&
+                                   stockIn.status !== "cancelled" && (
+                                     <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         handleComplete(stockIn.id);
+                                       }}
+                                       className="h-8 border-emerald-500/30 hover:border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200 font-medium text-xs rounded-md shadow-sm cursor-pointer"
+                                     >
+                                       <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-500" />
+                                       Hoàn thành
+                                     </Button>
+                                   )}
+                                 {stockIn.status !== "cancelled" && (
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       handleCancel(stockIn.id);
+                                     }}
+                                     className="h-8 border-red-200 hover:border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 font-medium text-xs rounded-md shadow-sm cursor-pointer"
+                                   >
+                                     <XCircle className="h-3.5 w-3.5 mr-1 text-red-500" />
+                                     Hủy
+                                   </Button>
+                                 )}
+                               </div>
+                             </TableCell>
+                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>

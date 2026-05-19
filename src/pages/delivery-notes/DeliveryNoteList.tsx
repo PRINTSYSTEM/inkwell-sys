@@ -160,6 +160,21 @@ const formatDate = (dateStr: string | null | undefined) => {
   return format(new Date(dateStr), "dd/MM/yyyy", { locale: vi });
 };
 
+const getDefaultLineNote = (designName: string | null | undefined): string => {
+  if (!designName) return "";
+  const lowerName = designName.toLowerCase();
+  if (lowerName.includes("nhãn giấy")) {
+    return "Xấp 500";
+  }
+  if (lowerName.includes("decal")) {
+    return "Xấp 400";
+  }
+  if (lowerName.includes("túi")) {
+    return "Xấp 100";
+  }
+  return "";
+};
+
 // ============================================================================
 // ORDER CARD COMPONENT
 // ============================================================================
@@ -699,14 +714,16 @@ export default function DeliveryNoteListPage() {
       
       const qtys: Record<number, number> = {};
       const addrs: Record<number, number | null> = {};
+      const rNotes: Record<number, string> = {};
       
       failedLines.forEach((l) => {
         qtys[l.orderDetailId] = l.deliveryQty || 0;
         addrs[l.orderDetailId] = l.customerAddressId || null;
+        rNotes[l.orderDetailId] = l.note || getDefaultLineNote(l.designName);
       });
       
       setRecreateQtys(qtys);
-      setRecreateLineNotes({});
+      setRecreateLineNotes(rNotes);
       setRecreateAddressIds(addrs);
       // choose first non-null address as the shared address for recreate
       const firstAddr = Object.values(addrs).find((v) => v != null);
@@ -766,13 +783,15 @@ export default function DeliveryNoteListPage() {
     
     // Initialize default quantities and reset address selections
     const qtys: Record<number, number> = {};
+    const defaultLineNotes: Record<number, string> = {};
     selectedOrders.forEach(od => {
       if (od.orderDetailId != null) {
         qtys[od.orderDetailId] = od.remainingToDeliver || 0;
+        defaultLineNotes[od.orderDetailId] = getDefaultLineNote(od.designName);
       }
     });
     setDeliveryQtys(qtys);
-    setLineNotes({});
+    setLineNotes(defaultLineNotes);
     setSelectedAddressIds({});
     // Default customer/address: take from first selected order detail
     const firstSelected = selectedOrders[0];

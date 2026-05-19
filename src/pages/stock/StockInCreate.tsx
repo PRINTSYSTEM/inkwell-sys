@@ -237,6 +237,7 @@ export default function StockInCreatePage() {
     }
   );
   const [dialogUnitPrice, setDialogUnitPrice] = useState<number | undefined>(undefined);
+  const [dialogUnit, setDialogUnit] = useState<string>("");
 
   // Helper to parse dimensions from material name
   const parseDimensionsFromName = (name: string): { length?: number; width?: number | null } => {
@@ -352,7 +353,7 @@ export default function StockInCreatePage() {
     } else if (field === "itemName") {
       normalizedValue = (value as string) || "";
     } else {
-      normalizedValue = (value as string)?.trim() || "";
+      normalizedValue = (value as string) ?? "";
     }
     newItems[index] = { ...newItems[index], [field]: normalizedValue };
 
@@ -376,12 +377,28 @@ export default function StockInCreatePage() {
     if (material && material.id) {
       const materialName = material.name || material.materialTypeName || "";
       const generatedCode = generateMaterialCode(materialName);
+      
+      // Load unit and unitPrice from localStorage if available
+      let loadedUnit = "";
+      let loadedUnitPrice: number | undefined = undefined;
+      const cached = localStorage.getItem(`material_meta_${material.id}`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          loadedUnit = parsed.unit || "";
+          loadedUnitPrice = parsed.unitPrice;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       const newItems = [...items];
       newItems[index] = {
         ...newItems[index],
         itemName: materialName,
         itemCode: generatedCode,
-        unitPrice: undefined,
+        unit: loadedUnit || newItems[index].unit || "",
+        unitPrice: loadedUnitPrice !== undefined ? loadedUnitPrice : newItems[index].unitPrice,
         materialId: material.id,
         length: material.length,
         width: material.width,
@@ -727,33 +744,16 @@ export default function StockInCreatePage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-400">Loại hàng</Label>
-                          <Select
-                            value={item.lineKind || "none"}
-                            onValueChange={(v) => handleItemChange(index, "lineKind", v === "none" ? undefined : v)}
-                          >
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue placeholder="Loại hàng" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Mặc định</SelectItem>
-                              <SelectItem value="sheet">Tờ (Sheet)</SelectItem>
-                              <SelectItem value="roll">Cuộn (Roll)</SelectItem>
-                              <SelectItem value="custom">Tùy chỉnh</SelectItem>
-                              <SelectItem value="service">Công cắt (Service)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="grid grid-cols-1 gap-2">
                         <div className="space-y-1">
                           <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
                           <Input
                             type="number"
+                            min="0"
                             value={item.unitPrice ?? ""}
-                            onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? parseFloat(e.target.value) : undefined)}
+                            onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
                             placeholder="0.00"
-                            className="h-8 text-sm"
+                            className="h-8 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           />
                         </div>
                       </div>
@@ -792,7 +792,6 @@ export default function StockInCreatePage() {
                         <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
                         <TableHead className="w-[100px] text-right">Số lượng</TableHead>
                         <TableHead className="w-[80px]">ĐVT</TableHead>
-                        <TableHead className="w-[130px]">Loại hàng</TableHead>
                         <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
                         <TableHead>Ghi chú</TableHead>
                         <TableHead className="w-10"></TableHead>
@@ -849,30 +848,15 @@ export default function StockInCreatePage() {
                               className="h-8 text-sm"
                             />
                           </TableCell>
-                          <TableCell>
-                            <Select
-                              value={item.lineKind || "none"}
-                              onValueChange={(v) => handleItemChange(index, "lineKind", v === "none" ? undefined : v)}
-                            >
-                              <SelectTrigger className="h-8 text-sm">
-                                <SelectValue placeholder="Loại" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Mặc định</SelectItem>
-                                <SelectItem value="sheet">Tờ (Sheet)</SelectItem>
-                                <SelectItem value="roll">Cuộn (Roll)</SelectItem>
-                                <SelectItem value="custom">Tùy chỉnh</SelectItem>
-                                <SelectItem value="service">Công cắt (Service)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
+
                           <TableCell>
                             <Input
                               type="number"
+                              min="0"
                               value={item.unitPrice ?? ""}
-                              onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? parseFloat(e.target.value) : undefined)}
+                              onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
                               placeholder="0"
-                              className="h-8 text-sm text-right"
+                              className="h-8 text-sm text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                           </TableCell>
                           <TableCell>
@@ -1166,25 +1150,34 @@ export default function StockInCreatePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="materialQuantity">Số lượng tồn kho có sẵn</Label>
+                <Label htmlFor="materialUnit">Đơn vị tính (ĐVT)</Label>
                 <Input
-                  id="materialQuantity"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={newMaterialData.quantity ?? ""}
-                  onChange={(e) =>
-                    setNewMaterialData({
-                      ...newMaterialData,
-                      quantity:
-                        e.target.value === ""
-                          ? undefined
-                          : parseInt(e.target.value, 10) ?? undefined,
-                    })
-                  }
-                  placeholder="0 (tùy chọn)"
+                  id="materialUnit"
+                  value={dialogUnit}
+                  onChange={(e) => setDialogUnit(e.target.value)}
+                  placeholder="Ví dụ: Tờ, Cuộn, Cái..."
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="materialQuantity">Số lượng tồn kho có sẵn</Label>
+              <Input
+                id="materialQuantity"
+                type="number"
+                min="0"
+                step="1"
+                value={newMaterialData.quantity ?? ""}
+                onChange={(e) =>
+                  setNewMaterialData({
+                    ...newMaterialData,
+                    quantity:
+                      e.target.value === ""
+                        ? undefined
+                        : parseInt(e.target.value, 10) ?? undefined,
+                  })
+                }
+                placeholder="0 (tùy chọn)"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -1201,6 +1194,7 @@ export default function StockInCreatePage() {
                   quantity: undefined,
                 });
                 setDialogUnitPrice(undefined);
+                setDialogUnit("");
               }}
               disabled={isCreatingMaterial}
             >
@@ -1231,12 +1225,21 @@ export default function StockInCreatePage() {
                       toast.success("Đã tạo chất liệu thành công");
                       setIsCreateMaterialDialogOpen(false);
                       if (creatingMaterialIndex !== null && newMaterial.id) {
+                        // Store metadata in localStorage
+                        localStorage.setItem(`material_meta_${newMaterial.id}`, JSON.stringify({
+                          unit: dialogUnit,
+                          unitPrice: dialogUnitPrice || 0
+                        }));
+
                         handleMaterialSelect(
                           creatingMaterialIndex,
                           newMaterial.id.toString()
                         );
                         if (dialogUnitPrice !== undefined) {
                           handleItemChange(creatingMaterialIndex, "unitPrice", dialogUnitPrice);
+                        }
+                        if (dialogUnit) {
+                          handleItemChange(creatingMaterialIndex, "unit", dialogUnit);
                         }
                       }
                       setNewMaterialData({
@@ -1247,6 +1250,7 @@ export default function StockInCreatePage() {
                         quantity: undefined,
                       });
                       setDialogUnitPrice(undefined);
+                      setDialogUnit("");
                       setCreatingMaterialIndex(null);
                     },
                   }
