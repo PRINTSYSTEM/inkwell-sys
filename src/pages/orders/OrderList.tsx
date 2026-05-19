@@ -88,13 +88,7 @@ export default function OrderList() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  // Handle filter changes - reset to page 1
-  const handleFilterChange = () => {
-    setCurrentPage(1);
-    setPageInput("1");
-  };
-
-  // Reset to page 1 when filters change handled by useListState or handlers
+  // Filters reset page via useListState setters automatically
 
   // Build params for API
   const listParams: OrderListParams = useMemo(() => {
@@ -302,10 +296,7 @@ export default function OrderList() {
               <div className="flex items-center gap-3">
                 <Select
                   value={statusFilter}
-                  onValueChange={(value) => {
-                    setStatusFilter(value);
-                    handleFilterChange();
-                  }}
+                  onValueChange={setStatusFilter}
                 >
                   <SelectTrigger className="w-full sm:w-[180px] h-10 sm:h-9 text-sm bg-muted/50 border-0">
                     <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -324,7 +315,7 @@ export default function OrderList() {
                   value={dateRange}
                   onValueChange={(range) => {
                     setDateRange(range);
-                    handleFilterChange();
+                    resetPage();
                   }}
                   placeholder="Chọn khoảng thời gian"
                   showClear
@@ -334,18 +325,11 @@ export default function OrderList() {
                   <SortControls
                     sortColumn={sortColumn}
                     sortOrder={sortOrder}
-                    onSortColumnChange={(v) => {
-                      setSortColumn(v);
-                      handleFilterChange();
-                    }}
-                    onSortOrderChange={(v) => {
-                      setSortOrder(v);
-                      handleFilterChange();
-                    }}
+                    onSortColumnChange={setSortColumn}
+                    onSortOrderChange={setSortOrder}
                     onClear={() => {
                       setSortColumn("");
                       setSortOrder("desc");
-                      handleFilterChange();
                     }}
                     options={[
                       { value: "createdAt", label: "Ngày tạo" },
