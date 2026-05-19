@@ -42,12 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
   PaymentStatusBadge,
@@ -186,7 +181,8 @@ export default function AccountingOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentTab = searchParams.get("tab") === "invoice" ? "invoice" : "order";
+  const currentTab =
+    searchParams.get("tab") === "invoice" ? "invoice" : "order";
 
   const handleTabChange = (value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -537,9 +533,13 @@ export default function AccountingOrderDetail() {
           : Number(cardEditValues.paymentMethodId);
       // Tài khoản/Quỹ
       if (isCash) {
-        (payload as any).financeAccountId = cardEditValues.financeAccountId ? Number(cardEditValues.financeAccountId) : undefined;
+        (payload as any).financeAccountId = cardEditValues.financeAccountId
+          ? Number(cardEditValues.financeAccountId)
+          : undefined;
       } else if (isBankTransfer) {
-        (payload as any).bankAccountId = cardEditValues.bankAccountId ? Number(cardEditValues.bankAccountId) : undefined;
+        (payload as any).bankAccountId = cardEditValues.bankAccountId
+          ? Number(cardEditValues.bankAccountId)
+          : undefined;
       }
     } else if (cardName === "recipientInfo") {
       payload.recipientName =
@@ -656,19 +656,25 @@ export default function AccountingOrderDetail() {
         // TỰ ĐỘNG GỬI THÔNG BÁO NẾU LÀ CARD THANH TOÁN (PAYMENT INFO)
         if (cardName === "paymentInfo") {
           const targetCustomerId = order.customerId || order.customer?.id;
-          const depositAmount = parseFloat(cardEditValues.depositAmount?.toString() || "0");
+          const depositAmount = parseFloat(
+            cardEditValues.depositAmount?.toString() || "0",
+          );
 
           if (targetCustomerId && depositAmount > 0) {
-             const customerName = order.customerName || order.customer?.name || "—";
-             const companyName = order.customerCompanyName || order.customer?.companyName || "Khách hàng lẻ";
-             const today = new Date().toLocaleDateString("vi-VN");
+            const customerName =
+              order.customerName || order.customer?.name || "—";
+            const companyName =
+              order.customerCompanyName ||
+              order.customer?.companyName ||
+              "Khách hàng lẻ";
+            const today = new Date().toLocaleDateString("vi-VN");
 
-             await createDebtNotificationMutation.mutate({
-               type: "string",
-               subject: `Xác nhận nhận cọc #${order.orderCode || order.id}`,
-               body: `Tên: ${customerName}\nCông ty: ${companyName}\n—\nChi tiết gửi\nTrạng thái: Chưa gửi\nNgày gửi: ${today}\n—\nSố tiền cọc: ${new Intl.NumberFormat("vi-VN").format(depositAmount)}đ`,
-               customerIds: [targetCustomerId],
-             });
+            await createDebtNotificationMutation.mutate({
+              type: "string",
+              subject: `Xác nhận nhận cọc #${order.orderCode || order.id}`,
+              body: `Tên: ${customerName}\nCông ty: ${companyName}\n—\nChi tiết gửi\nTrạng thái: Chưa gửi\nNgày gửi: ${today}\n—\nSố tiền cọc: ${new Intl.NumberFormat("vi-VN").format(depositAmount)}đ`,
+              customerIds: [targetCustomerId],
+            });
           }
         }
       }
@@ -738,10 +744,14 @@ export default function AccountingOrderDetail() {
       try {
         // Sau khi duyệt công nợ, tạo thông báo công nợ
         const targetId = order.customerId || order.customer?.id;
-        
+
         if (targetId) {
-          const customerName = order.customerName || order.customer?.name || "—";
-          const companyName = order.customerCompanyName || order.customer?.companyName || "Khách hàng lẻ";
+          const customerName =
+            order.customerName || order.customer?.name || "—";
+          const companyName =
+            order.customerCompanyName ||
+            order.customer?.companyName ||
+            "Khách hàng lẻ";
           const today = new Date().toLocaleDateString("vi-VN");
 
           await createDebtNotificationMutation.mutate({
@@ -784,11 +794,15 @@ export default function AccountingOrderDetail() {
       } as UpdateOrderForAccountingRequest);
 
       // Sau khi nhận cọc thành công, gọi API tạo thông báo công nợ
-      const targetCustomerId = order.customerId || order.customer?.id || (result as any)?.customerId;
-      
+      const targetCustomerId =
+        order.customerId || order.customer?.id || (result as any)?.customerId;
+
       if (targetCustomerId) {
         const customerName = order.customerName || order.customer?.name || "—";
-        const companyName = order.customerCompanyName || order.customer?.companyName || "Khách hàng lẻ";
+        const companyName =
+          order.customerCompanyName ||
+          order.customer?.companyName ||
+          "Khách hàng lẻ";
         const today = new Date().toLocaleDateString("vi-VN");
 
         await createDebtNotificationMutation.mutate({
@@ -802,12 +816,12 @@ export default function AccountingOrderDetail() {
       showRetailDepositThresholdWarning(amount, order.totalAmount);
       setIsDepositDialogOpen(false);
       setDepositAmount("");
-      
+
       toast.success("Thành công", {
         description: "Đã xác nhận nhận cọc thành công",
       });
       setDepositAmount("");
-      
+
       toast.success("Thành công", {
         description: "Đã xác nhận nhận cọc thành công",
       });
@@ -848,10 +862,12 @@ export default function AccountingOrderDetail() {
     setIsConfirmingCancel(true);
 
     try {
-      await cancelOrderMutation.mutate(order.id, { reason: cancelReason.trim() });
+      await cancelOrderMutation.mutate(order.id, {
+        reason: cancelReason.trim(),
+      });
       setIsCancelDialogOpen(false);
       setCancelReason("");
-      
+
       // Refetch order to update status
       await refetchOrder();
     } catch (error) {
@@ -1273,10 +1289,13 @@ export default function AccountingOrderDetail() {
                         <>
                           <div className="space-y-2">
                             <Label>
-                              Tài khoản ngân hàng <span className="text-destructive">*</span>
+                              Tài khoản ngân hàng{" "}
+                              <span className="text-destructive">*</span>
                             </Label>
                             <Select
-                              value={cardEditValues.bankAccountId?.toString() || ""}
+                              value={
+                                cardEditValues.bankAccountId?.toString() || ""
+                              }
                               onValueChange={(val) =>
                                 setCardEditValues({
                                   ...cardEditValues,
@@ -1302,10 +1321,13 @@ export default function AccountingOrderDetail() {
                           </div>
                           <div className="space-y-2">
                             <Label>
-                              Sổ quỹ (112) <span className="text-destructive">*</span>
+                              Sổ quỹ (112){" "}
+                              <span className="text-destructive">*</span>
                             </Label>
                             <Select
-                              value={cardEditValues.bankAccountId?.toString() || ""}
+                              value={
+                                cardEditValues.bankAccountId?.toString() || ""
+                              }
                               onValueChange={(val) =>
                                 setCardEditValues({
                                   ...cardEditValues,
@@ -1336,10 +1358,13 @@ export default function AccountingOrderDetail() {
                       {isCash && (
                         <div className="space-y-2">
                           <Label>
-                            Sổ quỹ (111) <span className="text-destructive">*</span>
+                            Sổ quỹ (111){" "}
+                            <span className="text-destructive">*</span>
                           </Label>
                           <Select
-                            value={cardEditValues.financeAccountId?.toString() || ""}
+                            value={
+                              cardEditValues.financeAccountId?.toString() || ""
+                            }
                             onValueChange={(val) =>
                               setCardEditValues({
                                 ...cardEditValues,
@@ -1438,45 +1463,60 @@ export default function AccountingOrderDetail() {
                         </div>
                       )}
                       {/* Linked Receipts List */}
-                      {cashReceiptsData?.items && cashReceiptsData.items.filter(r => r.orderId === order?.id).length > 0 && (
-                        <div className="pt-4 mt-2 border-t space-y-3">
-                          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                            <Receipt className="h-3 w-3" />
-                            Phiếu thu liên quan
-                          </h4>
-                          <div className="space-y-2">
-                            {cashReceiptsData.items
-                              .filter(r => r.orderId === order?.id)
-                              .map((receipt) => (
-                                <div 
-                                  key={receipt.id}
-                                  className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer group"
-                                  onClick={() => navigate(`/accounting/cash-receipts/${receipt.id}`)}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-primary group-hover:underline">
-                                      {receipt.code}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground">
-                                      {formatDate(receipt.createdAt)}
-                                    </span>
+                      {cashReceiptsData?.items &&
+                        cashReceiptsData.items.filter(
+                          (r) => r.orderId === order?.id,
+                        ).length > 0 && (
+                          <div className="pt-4 mt-2 border-t space-y-3">
+                            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                              <Receipt className="h-3 w-3" />
+                              Phiếu thu liên quan
+                            </h4>
+                            <div className="space-y-2">
+                              {cashReceiptsData.items
+                                .filter((r) => r.orderId === order?.id)
+                                .map((receipt) => (
+                                  <div
+                                    key={receipt.id}
+                                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors cursor-pointer group"
+                                    onClick={() =>
+                                      navigate(
+                                        `/accounting/cash-receipts/${receipt.id}`,
+                                      )
+                                    }
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-bold text-primary group-hover:underline">
+                                        {receipt.code}
+                                      </span>
+                                      <span className="text-[10px] text-muted-foreground">
+                                        {formatDate(receipt.createdAt)}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-sm font-semibold">
+                                        {formatCurrency(receipt.amount || 0)}
+                                      </span>
+                                      <Badge
+                                        variant={
+                                          receipt.status === "posted"
+                                            ? "success"
+                                            : "secondary"
+                                        }
+                                        className="text-[10px] h-4 px-1"
+                                      >
+                                        {receipt.status === "posted"
+                                          ? "Đã ghi sổ"
+                                          : receipt.status === "approved"
+                                            ? "Đã duyệt"
+                                            : "Bản thảo"}
+                                      </Badge>
+                                    </div>
                                   </div>
-                                  <div className="flex flex-col items-end">
-                                    <span className="text-sm font-semibold">
-                                      {formatCurrency(receipt.amount || 0)}
-                                    </span>
-                                    <Badge 
-                                      variant={receipt.status === "posted" ? "success" : "secondary"}
-                                      className="text-[10px] h-4 px-1"
-                                    >
-                                      {receipt.status === "posted" ? "Đã ghi sổ" : receipt.status === "approved" ? "Đã duyệt" : "Bản thảo"}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              ))}
+                                ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </>
                   )}
                 </CardContent>
@@ -1487,10 +1527,16 @@ export default function AccountingOrderDetail() {
                 <div className="flex items-center justify-between mb-2">
                   <TabsList>
                     <TabsTrigger value="order">Sản phẩm trong đơn</TabsTrigger>
-                    <TabsTrigger value="invoice" disabled={!invoicesData?.items?.length}>
+                    <TabsTrigger
+                      value="invoice"
+                      disabled={!invoicesData?.items?.length}
+                    >
                       Sản phẩm trong hóa đơn
                       {invoicesData?.items?.length ? (
-                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 min-w-[20px]">
+                        <Badge
+                          variant="secondary"
+                          className="ml-2 h-5 px-1.5 min-w-[20px]"
+                        >
                           {invoiceItems.length}
                         </Badge>
                       ) : null}
@@ -1522,7 +1568,9 @@ export default function AccountingOrderDetail() {
                               Người thiết kế
                             </TableHead>
                             <TableHead className="text-center">SL</TableHead>
-                            <TableHead className="text-right">Đơn giá</TableHead>
+                            <TableHead className="text-right">
+                              Đơn giá
+                            </TableHead>
                             <TableHead className="text-right">
                               Thành tiền
                             </TableHead>
@@ -1636,9 +1684,7 @@ export default function AccountingOrderDetail() {
                                   <Input
                                     type="number"
                                     min="1"
-                                    value={
-                                      orderDetailEditValues.quantity || ""
-                                    }
+                                    value={orderDetailEditValues.quantity || ""}
                                     onChange={(e) =>
                                       setOrderDetailEditValues({
                                         ...orderDetailEditValues,
@@ -1681,9 +1727,8 @@ export default function AccountingOrderDetail() {
                               <TableCell className="text-right font-medium tabular-nums">
                                 {editingOrderDetailId === item.id
                                   ? formatCurrency(
-                                      (Number(
-                                        orderDetailEditValues.quantity,
-                                      ) || 0) *
+                                      (Number(orderDetailEditValues.quantity) ||
+                                        0) *
                                         (Number(
                                           orderDetailEditValues.unitPrice,
                                         ) || 0),
@@ -1769,10 +1814,18 @@ export default function AccountingOrderDetail() {
                             <TableHead className="w-[60px]">Ảnh</TableHead>
                             <TableHead>Mô tả</TableHead>
                             <TableHead className="text-center">ĐVT</TableHead>
-                            <TableHead className="text-center">Số lượng</TableHead>
-                            <TableHead className="text-center">SL thực tính</TableHead>
-                            <TableHead className="text-right">Đơn giá</TableHead>
-                            <TableHead className="text-right">Thành tiền</TableHead>
+                            <TableHead className="text-center">
+                              Số lượng
+                            </TableHead>
+                            <TableHead className="text-center">
+                              SL thực tính
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Đơn giá
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Thành tiền
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1781,10 +1834,16 @@ export default function AccountingOrderDetail() {
                               <TableRow key={item.id || idx}>
                                 <TableCell>
                                   <div className="w-12 h-12 rounded-md bg-muted overflow-hidden">
-                                    {item.orderDetail?.design?.designImageUrl ? (
+                                    {item.orderDetail?.design
+                                      ?.designImageUrl ? (
                                       <img
-                                        src={item.orderDetail.design.designImageUrl}
-                                        alt={item.orderDetail.design?.designName || ""}
+                                        src={
+                                          item.orderDetail.design.designImageUrl
+                                        }
+                                        alt={
+                                          item.orderDetail.design?.designName ||
+                                          ""
+                                        }
                                         className="w-full h-full object-cover"
                                       />
                                     ) : (
@@ -1796,7 +1855,9 @@ export default function AccountingOrderDetail() {
                                 </TableCell>
                                 <TableCell>
                                   <p className="font-medium">
-                                    {item.description || item.orderDetail?.design?.designName || "—"}
+                                    {item.description ||
+                                      item.orderDetail?.design?.designName ||
+                                      "—"}
                                   </p>
                                   <p className="text-xs text-muted-foreground font-mono">
                                     {item.orderDetail?.design?.code || "—"}
@@ -1809,7 +1870,9 @@ export default function AccountingOrderDetail() {
                                   {item.quantity?.toLocaleString("vi-VN")}
                                 </TableCell>
                                 <TableCell className="text-center font-medium tabular-nums text-primary">
-                                  {item.orderDetail?.netQtyTotal?.toLocaleString("vi-VN") || "—"}
+                                  {item.orderDetail?.netQtyTotal?.toLocaleString(
+                                    "vi-VN",
+                                  ) || "—"}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums">
                                   {formatCurrency(item.unitPrice || 0)}
@@ -2104,7 +2167,9 @@ export default function AccountingOrderDetail() {
                               <p className="text-xs text-red-700 dark:text-red-300 mt-1">
                                 Khách hàng đang nợ{" "}
                                 <span className="font-bold">
-                                  {formatCurrency(-(Math.abs(order.customer?.currentDebt || 0)))}
+                                  {formatCurrency(
+                                    -Math.abs(order.customer?.currentDebt || 0),
+                                  )}
                                 </span>
                                 , vượt quá hạn mức cho phép{" "}
                                 {formatCurrency(order.customer?.maxDebt || 0)}
@@ -2134,10 +2199,10 @@ export default function AccountingOrderDetail() {
                           <span className="text-muted-foreground">
                             Nợ hiện tại
                           </span>
-                          <span
-                            className="font-bold tabular-nums text-destructive"
-                          >
-                            {formatCurrency(-(Math.abs(order.customer?.currentDebt || 0)))}
+                          <span className="font-bold tabular-nums text-destructive">
+                            {formatCurrency(
+                              -Math.abs(order.customer?.currentDebt || 0),
+                            )}
                           </span>
                         </div>
                         <div className="flex justify-between text-sm">
@@ -2153,7 +2218,6 @@ export default function AccountingOrderDetail() {
                   )}
                 </CardContent>
               </Card>
-
             </div>
           </div>
         </div>
@@ -2254,7 +2318,8 @@ export default function AccountingOrderDetail() {
           <DialogHeader>
             <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
             <DialogDescription>
-              Bạn chắc chắn muốn hủy đơn hàng {order?.code}? Hành động này không thể hoàn tác.
+              Bạn chắc chắn muốn hủy đơn hàng {order?.code}? Hành động này không
+              thể hoàn tác.
             </DialogDescription>
           </DialogHeader>
 
@@ -2267,16 +2332,22 @@ export default function AccountingOrderDetail() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Khách hàng</span>
-                  <span className="font-medium">{order.customerName || "—"}</span>
+                  <span className="font-medium">
+                    {order.customerName || "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tổng tiền</span>
-                  <span className="font-semibold">{formatCurrency(order.totalAmount)}</span>
+                  <span className="font-semibold">
+                    {formatCurrency(order.totalAmount)}
+                  </span>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cancelReason">Lý do hủy đơn (không bắt buộc)</Label>
+                <Label htmlFor="cancelReason">
+                  Lý do hủy đơn (không bắt buộc)
+                </Label>
                 <Textarea
                   id="cancelReason"
                   value={cancelReason}
