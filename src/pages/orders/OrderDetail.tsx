@@ -2455,12 +2455,8 @@ export default function OrderDetailPage() {
             <Button
               variant="destructive"
               onClick={async () => {
-                if (!cancelReason.trim()) {
-                  toast.error("Vui lòng nhập lý do hủy đơn");
-                  return;
-                }
                 try {
-                  await cancelOrder(order.id, { reason: cancelReason });
+                  await cancelOrder(order.id, { reason: cancelReason.trim() || "Không" });
                   setCancelDialogOpen(false);
                   setCancelReason("");
                   await refetch();
@@ -2468,7 +2464,7 @@ export default function OrderDetailPage() {
                   // error is handled by hook
                 }
               }}
-              disabled={isCancellingOrder || !cancelReason.trim()}
+              disabled={isCancellingOrder}
             >
               {isCancellingOrder ? (
                 <>

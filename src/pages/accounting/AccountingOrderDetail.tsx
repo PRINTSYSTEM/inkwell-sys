@@ -813,7 +813,7 @@ export default function AccountingOrderDetail() {
         });
       }
 
-      showRetailDepositThresholdWarning(amount, order.totalAmount);
+      validateRetailDepositThreshold(amount, order.totalAmount);
       setIsDepositDialogOpen(false);
       setDepositAmount("");
 
@@ -863,7 +863,7 @@ export default function AccountingOrderDetail() {
 
     try {
       await cancelOrderMutation.mutate(order.id, {
-        reason: cancelReason.trim(),
+        reason: cancelReason.trim() || "Không",
       });
       setIsCancelDialogOpen(false);
       setCancelReason("");
