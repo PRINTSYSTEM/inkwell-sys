@@ -7,6 +7,7 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
@@ -23,7 +24,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useMaterials } from "@/hooks/use-material";
+import { useMaterials, useUpdateMaterial } from "@/hooks/use-material";
 import { useMaterialTypeList } from "@/hooks/use-material-type";
 import { formatCurrency } from "@/lib/status-utils";
 import { useNavigate } from "react-router-dom";
@@ -34,6 +35,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { MaterialResponse } from "@/Schema";
 
 export default function CurrentStockPage() {
   const navigate = useNavigate();
@@ -42,6 +53,10 @@ export default function CurrentStockPage() {
     useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const [editingItem, setEditingItem] = useState<MaterialResponse | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const updateMaterialMutation = useUpdateMaterial();
 
   const {
     data: materialsData,
@@ -65,7 +80,55 @@ export default function CurrentStockPage() {
       (sum, item) => sum + (item.quantity || 0),
       0,
     ) || 0;
-  const totalValue = 0; // MaterialResponse doesn't have stockValue
+  
+  // Calculate total value based on available unitPrice * quantity
+  const totalValue =
+    materialsData?.items?.reduce(
+      (sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0),
+      0,
+    ) || 0;
+
+  const openEdit = (item: MaterialResponse) => {
+    setEditingItem(item);
+    setDialogOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem?.id) return;
+
+    const form = new FormData(e.target as HTMLFormElement);
+    const name = form.get("name") as string;
+    const lengthVal = form.get("length") ? Number(form.get("length")) : null;
+    const widthVal = form.get("width") ? Number(form.get("width")) : null;
+    const heightVal = form.get("height") ? Number(form.get("height")) : null;
+    const quantityVal = form.get("quantity") ? Number(form.get("quantity")) : null;
+    const unit = form.get("unit") as string;
+    const unitPriceVal = form.get("unitPrice") ? Number(form.get("unitPrice")) : null;
+
+    updateMaterialMutation.mutate(
+      {
+        id: editingItem.id,
+        data: {
+          name: name || null,
+          materialTypeId: editingItem.materialTypeId || null,
+          length: lengthVal,
+          width: widthVal,
+          height: heightVal,
+          quantity: quantityVal,
+          unit: unit || null,
+          unitPrice: unitPriceVal,
+        },
+      },
+      {
+        onSuccess: () => {
+          setDialogOpen(false);
+          setEditingItem(null);
+          refetch();
+        },
+      },
+    );
+  };
 
   return (
     <>
@@ -144,7 +207,7 @@ export default function CurrentStockPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 pt-1">
-              <div className="text-xl font-bold">
+              <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                 {formatCurrency(totalValue)}
               </div>
             </CardContent>
@@ -186,19 +249,22 @@ export default function CurrentStockPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[120px]">ID</TableHead>
+                <TableHead className="w-[80px]">ID</TableHead>
                 <TableHead className="min-w-[180px]">Tên vật tư</TableHead>
-                <TableHead className="min-w-[140px]">Kích thước</TableHead>
-                <TableHead className="text-right">Số lượng</TableHead>
-                <TableHead className="text-right">Ngày tạo</TableHead>
-                <TableHead className="text-right">Người tạo</TableHead>
+                <TableHead className="min-w-[120px]">Kích thước</TableHead>
+                <TableHead className="w-[100px]">Đơn vị</TableHead>
+                <TableHead className="text-right w-[120px]">Đơn giá</TableHead>
+                <TableHead className="text-right w-[100px]">Số lượng</TableHead>
+                <TableHead className="text-right w-[120px]">Ngày tạo</TableHead>
+                <TableHead className="text-right w-[120px]">Người tạo</TableHead>
+                <TableHead className="text-right w-[100px]">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -208,7 +274,7 @@ export default function CurrentStockPage() {
               ) : !materialsData?.items || materialsData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={9}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu tồn kho nào.
@@ -234,6 +300,14 @@ export default function CurrentStockPage() {
                       {item.width ? `x${item.width}` : ""}
                       {item.height ? `x${item.height}` : ""}
                     </TableCell>
+                    <TableCell className="text-sm">
+                      {item.unit || "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {item.unitPrice !== undefined && item.unitPrice !== null
+                        ? formatCurrency(item.unitPrice)
+                        : "—"}
+                    </TableCell>
                     <TableCell className="text-right font-bold tabular-nums text-blue-600">
                       {item.quantity !== undefined
                         ? item.quantity.toLocaleString()
@@ -246,6 +320,16 @@ export default function CurrentStockPage() {
                     </TableCell>
                     <TableCell className="text-right text-sm">
                       {item.createdBy || "—"}
+                    </TableCell>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => openEdit(item)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -289,6 +373,113 @@ export default function CurrentStockPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Cập nhật thông tin chất liệu</DialogTitle>
+            <DialogDescription>
+              Thay đổi thông tin chi tiết và đơn giá của chất liệu. Nhấp vào Lưu khi hoàn tất.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-4 pt-2">
+            <div className="space-y-1">
+              <Label htmlFor="name">Tên chất liệu</Label>
+              <Input
+                id="name"
+                name="name"
+                defaultValue={editingItem?.name || ""}
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="quantity">Số lượng</Label>
+                <Input
+                  id="quantity"
+                  name="quantity"
+                  type="number"
+                  defaultValue={editingItem?.quantity ?? ""}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="unit">Đơn vị tính</Label>
+                <Input
+                  id="unit"
+                  name="unit"
+                  defaultValue={editingItem?.unit || ""}
+                  placeholder="tờ, cuộn, cái..."
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="unitPrice">Đơn giá (VND)</Label>
+              <Input
+                id="unitPrice"
+                name="unitPrice"
+                type="number"
+                step="any"
+                defaultValue={editingItem?.unitPrice ?? ""}
+                placeholder="Nhập đơn giá mới..."
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label htmlFor="length">Chiều dài</Label>
+                <Input
+                  id="length"
+                  name="length"
+                  type="number"
+                  step="any"
+                  defaultValue={editingItem?.length ?? ""}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="width">Chiều rộng</Label>
+                <Input
+                  id="width"
+                  name="width"
+                  type="number"
+                  step="any"
+                  defaultValue={editingItem?.width ?? ""}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="height">Chiều cao</Label>
+                <Input
+                  id="height"
+                  name="height"
+                  type="number"
+                  step="any"
+                  defaultValue={editingItem?.height ?? ""}
+                  placeholder="Không có"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                disabled={updateMaterialMutation.isPending}
+              >
+                Hủy
+              </Button>
+              <Button type="submit" disabled={updateMaterialMutation.isPending}>
+                {updateMaterialMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Lưu thay đổi
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

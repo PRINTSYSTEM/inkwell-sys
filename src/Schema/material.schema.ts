@@ -10,7 +10,10 @@ import {
 
 // ===== MaterialResponse =====
 export const MaterialResponseSchema =
-  GenMaterialResponseSchema?.passthrough() || z.any();
+  GenMaterialResponseSchema?.passthrough().extend({
+    unit: z.string().nullable().optional(),
+    unitPrice: z.number().nullable().optional(),
+  }) || z.any();
 export type MaterialResponse = z.infer<typeof MaterialResponseSchema>;
 
 // ===== MaterialResponseIPaginate =====
@@ -29,7 +32,10 @@ export type CreateMaterialRequest = z.infer<
 
 // ===== UpdateMaterialRequest =====
 export const UpdateMaterialRequestSchema =
-  GenUpdateMaterialRequestSchema?.passthrough() || z.any();
+  GenUpdateMaterialRequestSchema?.passthrough().extend({
+    unit: z.string().nullable().optional(),
+    unitPrice: z.number().nullable().optional(),
+  }) || z.any();
 export type UpdateMaterialRequest = z.infer<
   typeof UpdateMaterialRequestSchema
 >;
