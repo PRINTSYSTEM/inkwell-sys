@@ -32,7 +32,9 @@ const GenStockCardResponseSchema = schemas.StockCardResponse;
 
 // ===== StockInItemRequest =====
 export const StockInItemRequestSchema =
-  GenStockInItemRequestSchema?.passthrough() || z.any();
+  GenStockInItemRequestSchema?.passthrough().extend({
+    laborCost: z.number().nullable().optional(),
+  }) || z.any();
 export type StockInItemRequest = z.infer<typeof StockInItemRequestSchema>;
 
 // ===== CreateStockInRequest =====

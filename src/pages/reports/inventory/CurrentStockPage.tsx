@@ -80,7 +80,7 @@ export default function CurrentStockPage() {
       (sum, item) => sum + (item.quantity || 0),
       0,
     ) || 0;
-  
+
   // Calculate total value based on available unitPrice * quantity
   const totalValue =
     materialsData?.items?.reduce(
@@ -392,7 +392,7 @@ export default function CurrentStockPage() {
                 required
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="quantity">Số lượng</Label>
@@ -427,7 +427,7 @@ export default function CurrentStockPage() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="length">Chiều dài</Label>
                 <Input
@@ -446,17 +446,6 @@ export default function CurrentStockPage() {
                   type="number"
                   step="any"
                   defaultValue={editingItem?.width ?? ""}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="height">Chiều cao</Label>
-                <Input
-                  id="height"
-                  name="height"
-                  type="number"
-                  step="any"
-                  defaultValue={editingItem?.height ?? ""}
-                  placeholder="Không có"
                 />
               </div>
             </div>

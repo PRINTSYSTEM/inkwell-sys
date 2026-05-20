@@ -280,6 +280,7 @@ export default function StockInCreatePage() {
       unit: "",
       quantity: 1,
       unitPrice: undefined,
+      laborCost: undefined,
       notes: "",
       materialId: undefined,
       orderDetailId: undefined,
@@ -300,6 +301,7 @@ export default function StockInCreatePage() {
         unit: "",
         quantity: 1,
         unitPrice: undefined,
+        laborCost: undefined,
         notes: "",
         materialId: undefined,
         orderDetailId: undefined,
@@ -377,16 +379,18 @@ export default function StockInCreatePage() {
     if (material && material.id) {
       const materialName = material.name || material.materialTypeName || "";
       const generatedCode = generateMaterialCode(materialName);
-      
-      // Load unit and unitPrice from localStorage if available
+
+      // Load unit, unitPrice, and laborCost from localStorage if available
       let loadedUnit = "";
       let loadedUnitPrice: number | undefined = undefined;
+      let loadedLaborCost: number | undefined = undefined;
       const cached = localStorage.getItem(`material_meta_${material.id}`);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
           loadedUnit = parsed.unit || "";
           loadedUnitPrice = parsed.unitPrice;
+          loadedLaborCost = parsed.laborCost;
         } catch (e) {
           console.error(e);
         }
@@ -399,6 +403,7 @@ export default function StockInCreatePage() {
         itemCode: generatedCode,
         unit: loadedUnit || newItems[index].unit || "",
         unitPrice: loadedUnitPrice !== undefined ? loadedUnitPrice : newItems[index].unitPrice,
+        laborCost: loadedLaborCost !== undefined ? loadedLaborCost : newItems[index].laborCost,
         materialId: material.id,
         length: material.length,
         width: material.width,
@@ -479,6 +484,7 @@ export default function StockInCreatePage() {
           unit: (item.unit || "").trim() || undefined,
           quantity: Math.floor(item.quantity),
           unitPrice: item.unitPrice ?? undefined,
+          laborCost: item.laborCost ?? undefined,
           notes: (item.notes || "").trim() || undefined,
           materialId: item.materialId ?? undefined,
           orderDetailId: item.orderDetailId ?? undefined,
@@ -537,7 +543,7 @@ export default function StockInCreatePage() {
             <h1 className="text-2xl font-bold text-foreground">Tạo phiếu nhập kho</h1>
             <p className="text-sm text-muted-foreground">Thêm vật phẩm mới vào kho một cách nhanh chóng</p>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -744,7 +750,7 @@ export default function StockInCreatePage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
                           <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
                           <Input
@@ -752,6 +758,17 @@ export default function StockInCreatePage() {
                             min="0"
                             value={item.unitPrice ?? ""}
                             onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
+                            placeholder="0.00"
+                            className="h-8 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] uppercase font-bold text-slate-400">Tiền công</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={item.laborCost ?? ""}
+                            onChange={(e) => handleItemChange(index, "laborCost", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
                             placeholder="0.00"
                             className="h-8 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           />
@@ -769,8 +786,8 @@ export default function StockInCreatePage() {
                     </div>
                   </div>
                 ))}
-                
-                <button 
+
+                <button
                   type="button"
                   onClick={handleAddItem}
                   className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 text-slate-400 hover:border-[#93631F]/30 hover:text-[#93631F] hover:bg-[#93631F]/5 transition-all group active:scale-95 min-h-[220px]"
@@ -793,6 +810,7 @@ export default function StockInCreatePage() {
                         <TableHead className="w-[100px] text-right">Số lượng</TableHead>
                         <TableHead className="w-[80px]">ĐVT</TableHead>
                         <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
+                        <TableHead className="w-[120px] text-right">Tiền công</TableHead>
                         <TableHead>Ghi chú</TableHead>
                         <TableHead className="w-10"></TableHead>
                       </TableRow>
@@ -861,6 +879,16 @@ export default function StockInCreatePage() {
                           </TableCell>
                           <TableCell>
                             <Input
+                              type="number"
+                              min="0"
+                              value={item.laborCost ?? ""}
+                              onChange={(e) => handleItemChange(index, "laborCost", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
+                              placeholder="0"
+                              className="h-8 text-sm text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
                               value={item.notes || ""}
                               onChange={(e) => handleItemChange(index, "notes", e.target.value)}
                               placeholder="..."
@@ -883,7 +911,7 @@ export default function StockInCreatePage() {
                         </TableRow>
                       ))}
                       <TableRow className="hover:bg-slate-50/50 cursor-pointer" onClick={handleAddItem}>
-                        <TableCell colSpan={8} className="py-3 text-center text-[#93631F] font-bold text-xs uppercase tracking-wider">
+                        <TableCell colSpan={9} className="py-3 text-center text-[#93631F] font-bold text-xs uppercase tracking-wider">
                           <div className="flex items-center justify-center gap-1.5">
                             <Plus className="h-4 w-4" /> Thêm dòng vật phẩm mới
                           </div>
@@ -1219,6 +1247,8 @@ export default function StockInCreatePage() {
                     length: newMaterialData.length,
                     width: newMaterialData.width,
                     quantity: newMaterialData.quantity,
+                    unit: dialogUnit.trim() || undefined,
+                    unitPrice: dialogUnitPrice ?? undefined,
                   },
                   {
                     onSuccess: (newMaterial) => {
