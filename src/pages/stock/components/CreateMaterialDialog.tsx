@@ -39,12 +39,22 @@ export function CreateMaterialDialog({
 
   const { mutate: createMaterial, isPending } = useCreateMaterial();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    materialTypeId: number;
+    length: number;
+    width: number;
+    height: number;
+    unit: string;
+    unitPrice: number | undefined;
+  }>({
     name: "",
     materialTypeId: defaultMaterialTypeId || 0,
     length: 0,
     width: 0,
     height: 0,
+    unit: "",
+    unitPrice: undefined,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -68,6 +78,8 @@ export function CreateMaterialDialog({
         width: formData.width,
         height: formData.height || undefined,
         quantity: 0,
+        unit: formData.unit.trim() || undefined,
+        unitPrice: formData.unitPrice,
       },
       {
         onSuccess: (data) => {
@@ -80,6 +92,8 @@ export function CreateMaterialDialog({
             length: 0,
             width: 0,
             height: 0,
+            unit: "",
+            unitPrice: undefined,
           });
         },
       }
@@ -162,6 +176,34 @@ export function CreateMaterialDialog({
                 setFormData({ ...formData, height: parseFloat(e.target.value) })
               }
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="unitPrice">Đơn giá (VNĐ)</Label>
+              <Input
+                id="unitPrice"
+                type="number"
+                min="0"
+                value={formData.unitPrice ?? ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    unitPrice: e.target.value === "" ? undefined : parseFloat(e.target.value),
+                  })
+                }
+                placeholder="0 (tùy chọn)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unit">Đơn vị tính (ĐVT)</Label>
+              <Input
+                id="unit"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                placeholder="Ví dụ: Tờ, Cuộn..."
+              />
+            </div>
           </div>
 
           <DialogFooter className="pt-4">

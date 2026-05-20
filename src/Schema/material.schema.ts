@@ -25,7 +25,10 @@ export type MaterialResponseIPaginate = z.infer<
 
 // ===== CreateMaterialRequest =====
 export const CreateMaterialRequestSchema =
-  GenCreateMaterialRequestSchema?.passthrough() || z.any();
+  GenCreateMaterialRequestSchema?.passthrough().extend({
+    unit: z.string().nullable().optional(),
+    unitPrice: z.number().nullable().optional(),
+  }) || z.any();
 export type CreateMaterialRequest = z.infer<
   typeof CreateMaterialRequestSchema
 >;
