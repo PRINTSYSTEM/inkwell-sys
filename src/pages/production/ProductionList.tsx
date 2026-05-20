@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useDebounce } from "use-debounce";
 import {
   useProductionOrders,
   useCreateProductionOrder,
@@ -22,18 +21,29 @@ import { ProductionListFilter } from "./components/ProductionListFilter";
 import { ProductionListTable } from "./components/ProductionListTable";
 import { CreateProductionDialog } from "./components/CreateProductionDialog";
 
+import { useListState } from "@/hooks/use-list-state";
+
 export default function ProductionListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  
+  const {
+    currentPage,
+    setCurrentPage,
+    searchTerm,
+    setSearchTerm,
+    debouncedSearchTerm: debouncedSearch,
+    statusFilter: selectedStatus,
+    setStatusFilter: setSelectedStatus,
+    sortColumn,
+    setSortColumn,
+    sortOrder,
+    setSortOrder,
+  } = useListState();
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [debouncedSearch] = useDebounce(searchTerm, 300);
-  const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("1");
   const [itemsPerPage] = useState(10);
-  const [sortColumn, setSortColumn] = useState<string>("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const queryParams = useMemo<ProductionListParams>(() => {
@@ -129,20 +139,7 @@ export default function ProductionListPage() {
     }
   }, [currentPage]);
 
-  // Auto-adjust currentPage if it exceeds totalPages
-  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
-  useEffect(() => {
-    if (productionsResp && totalPages > 0 && currentPage > totalPages) {
-      setCurrentPage(1);
-      setPageInput("1");
-    }
-  }, [totalPages, currentPage, productionsResp]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-    setPageInput("1");
-  }, [selectedStatus, sortColumn, sortOrder]);
+  // Removed aggressive auto-adjust to prevent resetting on back navigation
 
   const { mutate: createProduction, isPending: creating } =
     useCreateProductionOrder();

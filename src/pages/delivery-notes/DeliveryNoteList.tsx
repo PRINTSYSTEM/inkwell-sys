@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -8,6 +8,7 @@ import {
   Truck,
   ChevronLeft,
   ChevronRight,
+  Check,
   RefreshCw,
   AlertCircle,
   Package,
@@ -63,6 +64,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -108,7 +110,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check } from "lucide-react";
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -157,6 +158,21 @@ const formatCurrency = (value: number) => {
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
   return format(new Date(dateStr), "dd/MM/yyyy", { locale: vi });
+};
+
+const getDefaultLineNote = (designName: string | null | undefined): string => {
+  if (!designName) return "";
+  const lowerName = designName.toLowerCase();
+  if (lowerName.includes("nhãn giấy")) {
+    return "Xấp 500";
+  }
+  if (lowerName.includes("decal")) {
+    return "Xấp 400";
+  }
+  if (lowerName.includes("túi")) {
+    return "Xấp 100";
+  }
+  return "";
 };
 
 // ============================================================================
@@ -698,14 +714,16 @@ export default function DeliveryNoteListPage() {
       
       const qtys: Record<number, number> = {};
       const addrs: Record<number, number | null> = {};
+      const rNotes: Record<number, string> = {};
       
       failedLines.forEach((l) => {
         qtys[l.orderDetailId] = l.deliveryQty || 0;
         addrs[l.orderDetailId] = l.customerAddressId || null;
+        rNotes[l.orderDetailId] = l.note || getDefaultLineNote(l.designName);
       });
       
       setRecreateQtys(qtys);
-      setRecreateLineNotes({});
+      setRecreateLineNotes(rNotes);
       setRecreateAddressIds(addrs);
       // choose first non-null address as the shared address for recreate
       const firstAddr = Object.values(addrs).find((v) => v != null);
@@ -765,13 +783,15 @@ export default function DeliveryNoteListPage() {
     
     // Initialize default quantities and reset address selections
     const qtys: Record<number, number> = {};
+    const defaultLineNotes: Record<number, string> = {};
     selectedOrders.forEach(od => {
       if (od.orderDetailId != null) {
         qtys[od.orderDetailId] = od.remainingToDeliver || 0;
+        defaultLineNotes[od.orderDetailId] = getDefaultLineNote(od.designName);
       }
     });
     setDeliveryQtys(qtys);
-    setLineNotes({});
+    setLineNotes(defaultLineNotes);
     setSelectedAddressIds({});
     // Default customer/address: take from first selected order detail
     const firstSelected = selectedOrders[0];
@@ -877,44 +897,28 @@ export default function DeliveryNoteListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="sticky top-0 z-50 border-b bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-                Phiếu giao hàng
-              </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                Quản lý đơn hàng và phiếu giao hàng
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={viewMode === "orders" ? "default" : "outline"}
-                onClick={() => setViewMode("orders")}
-                className="gap-2"
-              >
-                <Package className="h-4 w-4" />
-                Tạo Phiếu Giao Hàng
-              </Button>
-              <Button
-                variant={viewMode === "delivery-notes" ? "default" : "outline"}
-                onClick={() => setViewMode("delivery-notes")}
-                className="gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Phiếu giao hàng đã tạo
-              </Button>
-            </div>
-          </div>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Phiếu giao hàng
+        </h1>
+        <p className="text-muted-foreground">
+          Quản lý đơn hàng và phiếu giao hàng
+        </p>
       </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-6 py-6">
-        {viewMode === "orders" ? (
+      {/* Tabs */}
+      <Tabs
+        value={viewMode}
+        onValueChange={(value) => setViewMode(value as "orders" | "delivery-notes")}
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="orders">Tạo Phiếu Giao Hàng</TabsTrigger>
+          <TabsTrigger value="delivery-notes">Phiếu giao hàng đã tạo</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="orders" className="mt-6">
           <OrdersView
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -932,7 +936,9 @@ export default function DeliveryNoteListPage() {
             totalSelectedAmount={totalSelectedAmount}
             handleCreateDeliveryNote={handleCreateDeliveryNote}
           />
-        ) : (
+        </TabsContent>
+
+        <TabsContent value="delivery-notes" className="mt-6">
           <DeliveryNotesView
             deliveryNoteStatusFilter={deliveryNoteStatusFilter}
             setDeliveryNoteStatusFilter={setDeliveryNoteStatusFilter}
@@ -953,8 +959,8 @@ export default function DeliveryNoteListPage() {
             handleBulkStartShipping={handleBulkStartShipping}
             updatingIds={updatingIds}
           />
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Create Dialog */}
       <CreateDeliveryNoteDialog
@@ -1037,47 +1043,27 @@ function OrdersView({
   totalSelectedAmount,
   handleCreateDeliveryNote,
 }: OrdersViewProps) {
+  const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+
+  // Auto-expand all orders when the list loads or changes
+  useEffect(() => {
+    if (ordersList.length > 0) {
+      setExpandedOrders(new Set(ordersList.map((o) => o.orderId)));
+    }
+  }, [ordersList]);
+
+  const toggleOrder = (orderId: number) => {
+    const next = new Set(expandedOrders);
+    if (next.has(orderId)) {
+      next.delete(orderId);
+    } else {
+      next.add(orderId);
+    }
+    setExpandedOrders(next);
+  };
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
-      {/* Filter Bar */}
-      <Card className="border-0 shadow-sm shrink-0">
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Tìm theo mã đơn, khách hàng..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 text-sm bg-muted/50 border-0 focus-visible:ring-1"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => refetchOrders()}
-              disabled={ordersLoading}
-              className="h-10 w-10 border-slate-200"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${ordersLoading ? "animate-spin" : ""}`}
-              />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Error Alert */}
-      {ordersError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Lỗi</AlertTitle>
-          <AlertDescription>
-            {ordersErrorObj instanceof Error ? ordersErrorObj.message : "Có lỗi xảy ra khi tải danh sách đơn hàng"}
-          </AlertDescription>
-        </Alert>
-      )}
-
+    <div className="space-y-4">
       {/* Selection Summary */}
       {selectedOrderDetailIds.size > 0 && (
         <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between animate-in fade-in zoom-in-95 duration-200">
@@ -1095,52 +1081,88 @@ function OrdersView({
               Tổng cộng: <span className="font-bold text-primary">{formatCurrency(totalSelectedAmount)}</span>
             </p>
           </div>
-          
           <div className="flex items-center gap-2">
-             <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => handleToggleOrderDetail(-1)}
               className="h-9 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
-             >
-               Hủy
-             </Button>
-             <Button 
+            >
+              Hủy
+            </Button>
+            <Button
               size="sm"
               className="h-9 px-6 font-bold bg-primary hover:bg-primary/90"
               onClick={handleCreateDeliveryNote}
-             >
+            >
               TIẾP TỤC
               <ChevronRight className="h-4 w-4 ml-1" />
-             </Button>
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Orders Table */}
-      <Card className="border-0 shadow-sm overflow-hidden">
-        <div className="overflow-auto border rounded-xl">
+      {/* Main Content Card */}
+      <div className="flex flex-col bg-background rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-muted/5 flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Tìm theo mã đơn, khách hàng..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 text-sm"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchOrders()}
+            disabled={ordersLoading}
+            className="h-9"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${ordersLoading ? "animate-spin" : ""}`} />
+            Làm mới
+          </Button>
+        </div>
+
+        {/* Error Alert */}
+        {ordersError && (
+          <div className="p-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Lỗi</AlertTitle>
+              <AlertDescription>
+                {ordersErrorObj instanceof Error ? ordersErrorObj.message : "Có lỗi xảy ra khi tải danh sách đơn hàng"}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-auto">
           <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="h-11 font-bold text-xs uppercase tracking-wider">Đơn hàng</TableHead>
-                <TableHead className="h-11 font-bold text-xs uppercase tracking-wider">Khách hàng</TableHead>
-                <TableHead className="h-11 font-bold text-xs uppercase tracking-wider text-center">Trạng thái</TableHead>
-                <TableHead className="h-11 font-bold text-xs uppercase tracking-wider text-center">Số lượng bài</TableHead>
-                <TableHead className="h-11 font-bold text-xs uppercase tracking-wider text-right pr-6">Thành tiền</TableHead>
+            <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-800">
+              <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
+                <TableHead className="w-[40px]"></TableHead>
+                <TableHead className="w-[120px] font-semibold text-slate-700 dark:text-slate-300">Đơn hàng</TableHead>
+                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Khách hàng</TableHead>
+                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">Trạng thái</TableHead>
+                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">Số lượng bài</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300">Thành tiền</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {ordersLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5}><Skeleton className="h-12 w-full" /></TableCell>
+                    <TableCell colSpan={6}><Skeleton className="h-12 w-full" /></TableCell>
                   </TableRow>
                 ))
               ) : ordersList.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="h-48 text-center"
                   >
                     <div className="flex flex-col items-center gap-3">
@@ -1150,93 +1172,110 @@ function OrdersView({
                   </TableCell>
                 </TableRow>
               ) : (
-                ordersList.map((order) => (
-                  <React.Fragment key={order.orderId}>
-                    <TableRow className="bg-white hover:bg-white border-t border-slate-100">
-                      <TableCell className="py-4">
-                        <div className="font-bold text-primary text-sm flex flex-col">
-                          <span>{order.orderCode}</span>
-                          <span className="text-[10px] text-slate-400 font-bold mt-0.5">{formatDate(order.createdAt)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                         <div className="flex items-center gap-2">
-                           <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center">
-                             <User className="h-3.5 w-3.5 text-slate-500" />
-                           </div>
-                           <span className="text-sm font-semibold text-slate-700">{order.customerName}</span>
-                         </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <StatusBadge
-                          status={order.status || ""}
-                          label={orderStatusLabels[order.status || ""]}
-                          className="px-3"
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-black">
-                          {order.details?.length || 0}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right pr-6 font-black text-slate-900 text-sm">
-                        {formatCurrency(order.totalAmount || 0)}
-                      </TableCell>
-                    </TableRow>
-                    {/* Detail rows â€” pháº³ng trong cÃ¹ng báº£ng cha, 5 cá»™t khá»›p header */}
-                    {order.details?.map((detail: OrderDetailForDeliveryResponse, detailIdx: number) => {
-                      const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
-                      const isLastDetail = detailIdx === (order.details?.length ?? 0) - 1;
-                      return (
-                        <TableRow
-                          key={detail.orderDetailId}
-                          className={`cursor-pointer transition-colors ${
-                            isLastDetail ? 'border-b-2 border-slate-200' : 'border-b border-slate-100'
-                          } ${isChecked ? 'bg-primary/[0.04] hover:bg-primary/[0.06]' : 'bg-slate-50/60 hover:bg-slate-100/60'}`}
-                          onClick={() => handleToggleOrderDetail(detail.orderDetailId)}
-                        >
-                          {/* Col 1+2: checkbox + áº£nh + tÃªn â€” gá»™p "ÄÆ¡n hÃ ng"+"KhÃ¡ch hÃ ng" */}
-                          <TableCell colSpan={2} className="pl-10 py-2.5">
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={isChecked}
-                                onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="h-4 w-4 rounded flex-shrink-0"
-                              />
-                              <div className="h-8 w-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
-                                <ImageIcon className="h-4 w-4 text-slate-300" />
-                              </div>
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-mono font-black text-xs text-slate-900 uppercase leading-none">{detail.designCode}</span>
-                                <span className="text-[11px] text-slate-500 font-medium mt-0.5 truncate max-w-[280px]">{detail.designName}</span>
-                              </div>
-                            </div>
-                          </TableCell>
-                          {/* Col 3: itemStatus â€” tháº³ng cá»™t TRáº NG THÃI */}
-                          <TableCell className="text-center py-2.5">
-                            <Badge
-                              variant="outline"
-                              className={`h-6 text-[10px] font-bold px-2 ${getStatusColorClass(detail.itemStatus)}`}
-                            >
-                              {orderDetailItemStatusLabels[detail.itemStatus as string] || detail.itemStatus || "â€”"}
-                            </Badge>
-                          </TableCell>
-                          {/* Col 4: sá»‘ lÆ°á»£ng â€” tháº³ng cá»™t Sá» LÆ¯á»¢NG BÃ€I */}
-                          <TableCell className="text-center py-2.5 font-black text-slate-600 text-sm">
-                            x{new Intl.NumberFormat('vi-VN').format(detail.remainingToDeliver || 0)}
-                          </TableCell>
-                          {/* Col 5: trá»‘ng â€” tháº³ng cá»™t THÃ€NH TIá»€N */}
-                          <TableCell className="pr-6" />
+                ordersList.map((order) => {
+                  const isExpanded = expandedOrders.has(order.orderId);
+                  return (
+                    <React.Fragment key={order.orderId}>
+                      <TableRow
+                        className={`cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 ${
+                          isExpanded
+                            ? "bg-slate-50/80 dark:bg-slate-900/50"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                        }`}
+                        onClick={() => toggleOrder(order.orderId)}
+                      >
+                        <TableCell className="text-center py-2">
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4 text-primary" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="font-medium font-mono text-xs">{order.orderCode}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">{formatDate(order.createdAt)}</div>
+                        </TableCell>
+                        <TableCell className="font-semibold text-sm">
+                          {order.customerName}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <StatusBadge
+                            status={order.status || ""}
+                            label={orderStatusLabels[order.status || ""]}
+                            className="px-3"
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold">
+                            {order.details?.length || 0}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-bold tabular-nums text-sm">
+                          {formatCurrency(order.totalAmount || 0)}
+                        </TableCell>
+                      </TableRow>
+
+                      {/* Detail rows and sub-headers under expanded parent */}
+                      {isExpanded && (
+                        <>
+                          {/* Detail Rows */}
+                          {order.details?.map((detail: OrderDetailForDeliveryResponse) => {
+                            const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
+                            return (
+                              <TableRow
+                                key={detail.orderDetailId}
+                                className={`cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 ${
+                                  isChecked
+                                    ? "bg-primary/[0.04] hover:bg-primary/[0.06]"
+                                    : "hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                                }`}
+                                onClick={() => handleToggleOrderDetail(detail.orderDetailId)}
+                              >
+                                <TableCell />
+                                <TableCell colSpan={2} className="pl-12 py-1.5">
+                                  <div className="flex items-center gap-3">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="h-4 w-4 rounded flex-shrink-0"
+                                    />
+                                    <div className="h-8 w-8 rounded-lg bg-muted/50 border flex items-center justify-center flex-shrink-0">
+                                      <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="font-mono font-black text-xs uppercase leading-none">{detail.designCode}</span>
+                                      <span className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate max-w-[280px]">{detail.designName}</span>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center py-1.5">
+                                  <Badge
+                                    variant="outline"
+                                    className={`h-6 text-[10px] font-bold px-2 ${getStatusColorClass(detail.itemStatus)}`}
+                                  >
+                                    {orderDetailItemStatusLabels[detail.itemStatus as string] || detail.itemStatus || "—"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-center py-1.5 font-bold tabular-nums text-sm">
+                                  x{new Intl.NumberFormat('vi-VN').format(detail.remainingToDeliver || 0)}
+                                </TableCell>
+                                <TableCell />
+                              </TableRow>
+                            );
+                          })}
+                        </>
+                      )}
+                      
+                      {/* Spacer between orders if not expanded */}
+                      {!isExpanded && (
+                        <TableRow className="h-2 bg-transparent hover:bg-transparent border-0 pointer-events-none">
+                          <TableCell colSpan={6} className="p-0" />
                         </TableRow>
-                      );
-                    })}
-                    {/* Spacer giá»¯a cÃ¡c Ä‘Æ¡n hÃ ng */}
-                    <TableRow className="h-2 bg-transparent hover:bg-transparent border-0 pointer-events-none">
-                      <TableCell colSpan={5} className="p-0" />
-                    </TableRow>
-                  </React.Fragment>
-                ))
+                      )}
+                    </React.Fragment>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -1244,8 +1283,8 @@ function OrdersView({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-100">
-            <div className="text-sm font-medium text-slate-500 font-semibold">
+          <div className="px-4 py-3 border-t bg-muted/5 flex items-center justify-between flex-wrap gap-4">
+            <div className="text-xs text-muted-foreground">
                Trang {currentPage} / {totalPages}
             </div>
             <div className="flex items-center gap-2">
@@ -1258,18 +1297,8 @@ function OrdersView({
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <Button
-                    key={p}
-                    variant={currentPage === p ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setCurrentPage(p)}
-                    className="h-8 w-8 p-0 font-bold"
-                  >
-                    {p}
-                  </Button>
-                ))}
+              <div className="text-xs font-medium bg-background border px-3 py-1.5 rounded-md min-w-[80px] text-center">
+                Trang {currentPage} / {totalPages}
               </div>
               <Button
                 variant="outline"
@@ -1283,7 +1312,7 @@ function OrdersView({
             </div>
           </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }
@@ -1453,19 +1482,7 @@ function DeliveryNotesView({
           <Table>
             <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-800">
               <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
-                  <TableHead className="w-10 font-semibold text-slate-700 dark:text-slate-300">
-                    <Checkbox
-                      checked={
-                        (() => {
-                          const items = deliveryNotesDataTyped?.items || [];
-                          const selectableItems = items.filter(i => getDisplayStatus(i) !== "completed");
-                          return selectableItems.length > 0 && selectableItems.every(i => selectedNoteIds.has(i.id as number));
-                        })()
-                      }
-                      onCheckedChange={() => handleSelectAllVisible()}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </TableHead>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead className="w-[140px] font-semibold text-slate-700 dark:text-slate-300">
                     Mã phiếu
                   </TableHead>

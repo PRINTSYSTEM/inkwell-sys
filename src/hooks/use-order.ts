@@ -913,3 +913,53 @@ export const useOrdersByRole = (role: UserRole, params?: OrderListParams) => {
   // Default to admin/base for admin roles and others
   return adminResult;
 };
+
+// ================== ORDER: CANCEL ORDER ==================
+// POST /orders/{id}/cancel
+export const useCancelOrder = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderResponse,
+    [number, { reason: string }]
+  >(async (id: number, payload: { reason: string }) => {
+    const res = await apiRequest.post<OrderResponse>(
+      API_SUFFIX.ORDER_CANCEL(id),
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number, payload: { reason: string }) => {
+    try {
+      const result = await execute(id, payload);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: orderKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+
+      toast.success("Thành công", {
+        description: "Đã hủy đơn hàng thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể hủy đơn hàng",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};

@@ -19,7 +19,16 @@ export const DesignSaleParamsSchema = PagedParamsSchema.extend({
 });
 export type DesignSaleParams = z.infer<typeof DesignSaleParamsSchema>;
 
-import { MaterialListParamsSchema as GenMaterialListParamsSchema } from "./generated-params";
+import {
+  MaterialListParamsSchema as GenMaterialListParamsSchema,
+  DesignListParamsSchema as GenDesignListParamsSchema,
+} from "./generated-params";
+
+export const DesignListParamsSchema = GenDesignListParamsSchema.extend({
+  search: z.string().nullable().optional(),
+});
+export type DesignListParams = z.infer<typeof DesignListParamsSchema>;
+
 export const MaterialListParamsSchema = GenMaterialListParamsSchema.extend({
   search: z.string().nullable().optional(),
   quantityMin: z.number().nullable().optional(),

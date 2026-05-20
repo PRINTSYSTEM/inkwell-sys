@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -44,13 +44,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   useStockIn,
   useCompleteStockIn,
   useCancelStockIn,
   useDeleteStockIn,
+  useUpdateStockIn,
 } from "@/hooks/use-stock";
-import { formatDate, formatDateTime, formatCurrency } from "@/lib/status-utils";
+import {
+  formatDate,
+  formatDateTime,
+  formatCurrency,
+  stockInSourceLabels,
+  stockInItemTypeLabels,
+} from "@/lib/status-utils";
 import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 
@@ -97,6 +106,83 @@ export default function StockInDetailPage() {
     confirmText: "",
     confirmVariant: "default",
   });
+
+  // Update Price & Notes Dialog state
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [editItems, setEditItems] = useState<any[]>([]);
+  const { mutate: updateStockIn, isPending: isUpdating } = useUpdateStockIn();
+
+  // Initialize edit items when dialog opens
+  useEffect(() => {
+    if (isUpdateDialogOpen && stockIn?.items) {
+      setEditItems(
+        stockIn.items.map((item: any) => ({
+          ...item,
+          quantity: item.quantity ?? 1,
+          unitPrice: item.unitPrice ?? 0,
+          notes: item.notes ?? "",
+        }))
+      );
+    }
+  }, [isUpdateDialogOpen, stockIn]);
+
+  const handleEditItemChange = (index: number, field: string, value: any) => {
+    const newItems = [...editItems];
+    newItems[index] = {
+      ...newItems[index],
+      [field]: value,
+    };
+    setEditItems(newItems);
+  };
+
+  const handleSaveUpdate = () => {
+    if (!stockIn?.id) return;
+
+    const hasInvalidQuantity = editItems.some(
+      (item) => !item.quantity || item.quantity < 1
+    );
+    if (hasInvalidQuantity) {
+      toast.error("Số lượng của tất cả vật phẩm phải lớn hơn hoặc bằng 1");
+      return;
+    }
+
+    // Calculate new total amount as sum of (quantity * unitPrice) of all items
+    const newTotalAmount = editItems.reduce(
+      (sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0),
+      0
+    );
+
+    // Map items to update request format
+    const updatedItems = editItems.map((item) => ({
+      itemName: item.itemName,
+      itemCode: item.itemCode,
+      unit: item.unit,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      notes: item.notes,
+      materialId: item.materialId,
+      orderDetailId: item.orderDetailId,
+      lineKind: item.lineKind,
+      length: item.length,
+      width: item.width,
+      height: item.height,
+    }));
+
+    updateStockIn(
+      {
+        id: stockIn.id,
+        data: {
+          items: updatedItems,
+          totalAmount: newTotalAmount,
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsUpdateDialogOpen(false);
+        },
+      }
+    );
+  };
 
   const handleComplete = () => {
     if (!stockIn?.id) return;
@@ -292,6 +378,17 @@ export default function StockInDetailPage() {
                     </Button>
                   </>
                 )}
+                {(status === "pending" || status === "completed") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsUpdateDialogOpen(true)}
+                    className="cursor-pointer transition-colors duration-200 border-[#93631F]/30 text-[#93631F] hover:bg-[#93631F]/5 hover:border-[#93631F]/50"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Cập nhật số lượng, đơn giá & ghi chú
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -444,7 +541,13 @@ export default function StockInDetailPage() {
                   {stockIn.status && (
                     <StatusBadge
                       status={stockIn.status}
-                      label={stockIn.statusName || stockIn.status}
+                      label={
+                        stockIn.statusName && stockIn.statusName.toLowerCase() !== "pending"
+                          ? stockIn.statusName
+                          : stockIn.status.toLowerCase() === "pending"
+                          ? "Chờ xử lý"
+                          : stockIn.statusName || stockIn.status
+                      }
                     />
                   )}
                 </CardContent>
@@ -538,7 +641,10 @@ export default function StockInDetailPage() {
                           Nguồn nhập
                         </p>
                         <p className="text-xs font-semibold text-slate-900 truncate">
-                          {stockIn.source || "Không có"}
+                          {stockIn.vendorName ||
+                            (stockIn.source
+                              ? stockInSourceLabels[stockIn.source.toLowerCase()] || stockIn.source
+                              : "Không có")}
                         </p>
                       </div>
                     </div>
@@ -589,7 +695,9 @@ export default function StockInDetailPage() {
                           Loại vật phẩm
                         </p>
                         <p className="text-xs font-semibold text-slate-900 truncate">
-                          {stockIn.itemType || "Không có"}
+                          {stockIn.itemType
+                            ? stockInItemTypeLabels[stockIn.itemType.toLowerCase()] || stockIn.itemType
+                            : "Không có"}
                         </p>
                       </div>
                     </div>
@@ -717,6 +825,152 @@ export default function StockInDetailPage() {
                 </>
               ) : (
                 confirmDialog.confirmText
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Update Dialog */}
+      <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-md border border-slate-200 shadow-2xl rounded-xl">
+          <DialogHeader className="bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5 px-6 py-4 border-b border-slate-200 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Edit className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold text-slate-900">
+                  Cập nhật số lượng, đơn giá & ghi chú
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Chỉnh sửa số lượng, giá nhập và ghi chú của các vật phẩm trong phiếu. Tổng giá trị phiếu sẽ tự động cập nhật.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="border border-slate-200/80 rounded-lg overflow-hidden bg-white">
+              <Table>
+                <TableHeader className="bg-slate-50/95 sticky top-0 z-10">
+                  <TableRow>
+                    <TableHead className="w-12 text-center text-xs font-semibold py-2.5">STT</TableHead>
+                    <TableHead className="text-xs font-semibold py-2.5">Tên vật phẩm</TableHead>
+                    <TableHead className="w-32 text-right text-xs font-semibold py-2.5">Số lượng</TableHead>
+                    <TableHead className="w-32 text-xs font-semibold py-2.5">Đơn giá</TableHead>
+                    <TableHead className="w-36 text-xs font-semibold py-2.5">Thành tiền</TableHead>
+                    <TableHead className="w-48 text-xs font-semibold py-2.5">Ghi chú</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {editItems.map((item, index) => {
+                    const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
+                    return (
+                      <TableRow key={index} className="hover:bg-slate-50/50 transition-colors duration-150">
+                        <TableCell className="text-center text-xs font-medium text-slate-500 py-3">
+                          {index + 1}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <p className="text-sm font-semibold text-slate-900 line-clamp-1">{item.itemName}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{item.itemCode || "Không có mã"}</p>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <Input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={item.quantity ?? ""}
+                              onChange={(e) =>
+                                handleEditItemChange(
+                                  index,
+                                  "quantity",
+                                  e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0
+                                )
+                              }
+                              className="h-8 w-20 text-xs font-medium text-right focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <span className="text-[10px] text-slate-500 whitespace-nowrap min-w-[24px] text-left">
+                              {item.unit || "đv"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.unitPrice ?? ""}
+                            onChange={(e) =>
+                              handleEditItemChange(
+                                index,
+                                "unitPrice",
+                                e.target.value === "" ? 0 : parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="h-8 text-xs font-medium focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-semibold text-slate-900 py-3 font-mono">
+                          {formatCurrency(itemTotal)}
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Input
+                            value={item.notes || ""}
+                            onChange={(e) =>
+                              handleEditItemChange(index, "notes", e.target.value)
+                            }
+                            placeholder="Ghi chú cho vật phẩm..."
+                            className="h-8 text-xs focus-visible:ring-[#93631F]/30"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Total Summary Row */}
+            <div className="bg-slate-50/80 border border-slate-200/60 rounded-lg p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tổng giá trị phiếu mới</p>
+                <p className="text-xs text-slate-500 mt-0.5">Tự động tính từ tổng thành tiền của các mặt hàng.</p>
+              </div>
+              <p className="text-xl font-black text-slate-900">
+                {formatCurrency(
+                  editItems.reduce(
+                    (sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0),
+                    0
+                  )
+                )}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t border-slate-200 bg-slate-50/50 flex-shrink-0 gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsUpdateDialogOpen(false)}
+              className="cursor-pointer transition-all duration-200 hover:bg-slate-100"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveUpdate}
+              disabled={isUpdating}
+              className="cursor-pointer transition-all duration-200 bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-sm hover:shadow active:scale-98"
+            >
+              {isUpdating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang lưu...
+                </>
+              ) : (
+                "Lưu cập nhật"
               )}
             </Button>
           </DialogFooter>

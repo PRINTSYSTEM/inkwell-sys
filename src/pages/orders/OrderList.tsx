@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { DateRange } from "react-day-picker";
-import { useDebounce } from "use-debounce";
 import {
   Plus,
   Search,
@@ -59,6 +58,8 @@ import { useOrdersByRole } from "@/hooks/use-order";
 import { ROLE, ROUTE_PATHS } from "@/constants";
 import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
+import { useListState } from "@/hooks/use-list-state";
+
 export default function OrderList() {
   const { user } = useAuth();
   const role = user?.role as UserRole;
@@ -66,29 +67,28 @@ export default function OrderList() {
   const location = useLocation();
   const isSalePath = location.pathname === ROUTE_PATHS.ORDERS.SALE_ORDERS;
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const {
+    currentPage,
+    setCurrentPage,
+    searchTerm,
+    setSearchTerm,
+    debouncedSearchTerm,
+    statusFilter,
+    setStatusFilter,
+    sortColumn,
+    setSortColumn,
+    sortOrder,
+    setSortOrder,
+    resetPage,
+  } = useListState({ defaultStatus: "all" });
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
-  const [pageInput, setPageInput] = useState<string>("");
-  const [sortColumn, setSortColumn] = useState<string>("");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [pageInput, setPageInput] = useState<string>(currentPage.toString());
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  // Handle filter changes - reset to page 1
-  const handleFilterChange = () => {
-    setCurrentPage(1);
-    setPageInput("1");
-  };
-
-  // Reset to page 1 when filters change (except pagination)
-  useEffect(() => {
-    setCurrentPage(1);
-    setPageInput("1");
-  }, [statusFilter, dateRange, debouncedSearchTerm, sortColumn, sortOrder]);
+  // Filters reset page via useListState setters automatically
 
   // Build params for API
   const listParams: OrderListParams = useMemo(() => {
@@ -157,14 +157,7 @@ export default function OrderList() {
     }
   }, [currentPage]);
 
-  // Auto-adjust currentPage if it exceeds totalPages
-  // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
-  useEffect(() => {
-    if (data && totalPages > 0 && currentPage > totalPages) {
-      setCurrentPage(1);
-      setPageInput("1");
-    }
-  }, [totalPages, currentPage, data]);
+  // Removed auto-adjust currentPage to prevent aggressive resetting on back navigation
 
   // Orders are already filtered by API, no need for client-side filtering
   // Use orders directly from API response
@@ -303,10 +296,7 @@ export default function OrderList() {
               <div className="flex items-center gap-3">
                 <Select
                   value={statusFilter}
-                  onValueChange={(value) => {
-                    setStatusFilter(value);
-                    handleFilterChange();
-                  }}
+                  onValueChange={setStatusFilter}
                 >
                   <SelectTrigger className="w-full sm:w-[180px] h-10 sm:h-9 text-sm bg-muted/50 border-0">
                     <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -325,7 +315,7 @@ export default function OrderList() {
                   value={dateRange}
                   onValueChange={(range) => {
                     setDateRange(range);
-                    handleFilterChange();
+                    resetPage();
                   }}
                   placeholder="Chọn khoảng thời gian"
                   showClear
@@ -335,18 +325,11 @@ export default function OrderList() {
                   <SortControls
                     sortColumn={sortColumn}
                     sortOrder={sortOrder}
-                    onSortColumnChange={(v) => {
-                      setSortColumn(v);
-                      handleFilterChange();
-                    }}
-                    onSortOrderChange={(v) => {
-                      setSortOrder(v);
-                      handleFilterChange();
-                    }}
+                    onSortColumnChange={setSortColumn}
+                    onSortOrderChange={setSortOrder}
                     onClear={() => {
                       setSortColumn("");
                       setSortOrder("desc");
-                      handleFilterChange();
                     }}
                     options={[
                       { value: "createdAt", label: "Ngày tạo" },

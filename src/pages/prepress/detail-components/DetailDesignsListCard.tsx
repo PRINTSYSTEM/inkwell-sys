@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,8 +22,15 @@ import {
   Trash2,
   Loader2,
   RotateCcw,
+  Copy,
+  Check,
 } from "lucide-react";
-import { CursorTooltip } from "@/components/ui/cursor-tooltip";
+import { toast } from "sonner";
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card";
 import {
   processClassificationLabels,
   sidesClassificationLabels,
@@ -31,6 +39,35 @@ import {
 import { formatDesignDimensions } from "@/utils/format-die-size";
 import { downloadFile } from "@/lib/download-utils";
 import { QuantityCell } from "./QuantityCell";
+
+function HoverInfoCopy({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!value || value === "—" || value === "0") return;
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    toast.success(`Đã sao chép ${label.toLowerCase()}: ${value}`);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!value || value === "—" || value === "0") return null;
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center justify-center p-0.5 ml-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors h-4 w-4 shrink-0"
+      title={`Sao chép ${label}`}
+    >
+      {copied ? (
+        <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+      ) : (
+        <Copy className="h-3 w-3" />
+      )}
+    </button>
+  );
+}
 
 interface DetailDesignsListCardProps {
   order: any;
@@ -58,6 +95,7 @@ interface DetailDesignsListCardProps {
   setUpdateDesignQuantities: (val: (prev: any) => any) => void;
   onReject?: (pod: any) => void;
   isRejecting?: boolean;
+  onFindDie?: (design: any, dimensions: string) => void;
 }
 
 export function DetailDesignsListCard({
@@ -86,6 +124,7 @@ export function DetailDesignsListCard({
   setUpdateDesignQuantities,
   onReject,
   isRejecting,
+  onFindDie,
 }: DetailDesignsListCardProps) {
   if (!order) return null;
 
@@ -144,30 +183,39 @@ export function DetailDesignsListCard({
                     </div>
 
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                      <div>
+                      <div className="flex items-center">
                         <span className="text-muted-foreground">Mã hàng:</span>
                         <span className="ml-2 font-mono">
                           {pod.design?.code}
                         </span>
+                        {pod.design?.code && (
+                          <HoverInfoCopy value={pod.design.code} label="Mã hàng" />
+                        )}
                       </div>
 
-                      <div>
+                      <div className="flex items-center">
                         <span className="text-muted-foreground">Loại:</span>
                         <span className="ml-2">
                           {pod.design?.designType?.name || "—"}
                         </span>
+                        {pod.design?.designType?.name && (
+                          <HoverInfoCopy value={pod.design.designType.name} label="Loại" />
+                        )}
                       </div>
 
-                      <div>
+                      <div className="flex items-center">
                         <span className="text-muted-foreground">
                           Chất liệu:
                         </span>
                         <span className="ml-2">
                           {pod.design?.materialType?.name || "—"}
                         </span>
+                        {pod.design?.materialType?.name && (
+                          <HoverInfoCopy value={pod.design.materialType.name} label="Chất liệu" />
+                        )}
                       </div>
 
-                      <div>
+                      <div className="flex items-center">
                         <span className="text-muted-foreground">
                           Kích thước:
                         </span>
@@ -179,6 +227,16 @@ export function DetailDesignsListCard({
                           )}{" "}
                           mm
                         </span>
+                        {pod.design?.length && (
+                          <HoverInfoCopy
+                            value={`${formatDesignDimensions(
+                              pod.design?.length,
+                              pod.design?.width,
+                              pod.design?.height,
+                            )} mm`}
+                            label="Kích thước"
+                          />
+                        )}
                       </div>
 
                       <div>
@@ -308,13 +366,9 @@ export function DetailDesignsListCard({
                 );
 
                 return (
-                  <CursorTooltip
-                    key={pod.id}
-                    content={fullInfo}
-                    delayDuration={300}
-                    className="p-4 max-w-md"
-                  >
-                    <TableRow className="h-14">
+                  <HoverCard key={pod.id} openDelay={300}>
+                    <HoverCardTrigger asChild>
+                      <TableRow className="h-14">
                       <TableCell className="px-6 py-1">
                         <p className="text-xs text-muted-foreground">
                           {index + 1}
@@ -470,12 +524,12 @@ export function DetailDesignsListCard({
                               className="h-7 w-7"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedDesignForRelatedDies({
-                                  designId: pod.design.id!,
-                                  designCode: pod.design?.code,
-                                  designName: pod.design?.designName,
-                                });
-                                setIsRelatedDiesDialogOpen(true);
+                                const dims = formatDesignDimensions(
+                                  pod.design?.length,
+                                  pod.design?.width,
+                                  pod.design?.height,
+                                );
+                                onFindDie?.(pod.design, dims);
                               }}
                               title="Tìm khuôn liên quan"
                             >
@@ -563,7 +617,11 @@ export function DetailDesignsListCard({
                         </div>
                       </TableCell>
                     </TableRow>
-                  </CursorTooltip>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="w-[450px] p-4 max-w-md" side="right" align="start">
+                      {fullInfo}
+                    </HoverCardContent>
+                  </HoverCard>
                 );
               })}
             </TableBody>

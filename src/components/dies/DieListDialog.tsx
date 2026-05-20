@@ -47,6 +47,7 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
   const [designCode, setDesignCode] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [size, setSize] = useState("");
+  const [proofingOrderCode, setProofingOrderCode] = useState("");
   const [activeTab, setActiveTab] = useState("list");
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -58,6 +59,7 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
   const [debouncedDesignCode] = useDebounce(designCode, 300);
   const [debouncedCustomerName] = useDebounce(customerName, 300);
   const [debouncedSize] = useDebounce(size, 300);
+  const [debouncedProofingOrderCode] = useDebounce(proofingOrderCode, 300);
 
   // When dialog opens and parent provides initial values, prefill fields
   useEffect(() => {
@@ -75,16 +77,16 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
 
     // Always set string fields to empty string, never undefined
     const params: DieListParams = {
-      designCode: debouncedDesignCode.trim() || "",
+      q: debouncedDesignCode.trim() || "",
       size: debouncedSize.trim() || "",
       customerName: debouncedCustomerName.trim() || "",
-      isUsable: true,
+      proofingOrderCode: debouncedProofingOrderCode.trim() || "",
       pageSize: 100,
       pageNumber: 1,
     };
 
     return params;
-  }, [open, debouncedDesignCode, debouncedCustomerName, debouncedSize]);
+  }, [open, debouncedDesignCode, debouncedCustomerName, debouncedSize, debouncedProofingOrderCode]);
 
   const {
     data: searchData,
@@ -120,6 +122,7 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
     setDesignCode("");
     setCustomerName("");
     setSize("");
+    setProofingOrderCode("");
   };
 
   const handleCopyDieCode = async (dieCode: string, dieId: number) => {
@@ -382,7 +385,7 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
 
           {/* Search Section */}
           <div className="shrink-0 space-y-4 pb-4 border-b">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {/* Design Code Search */}
               <div className="space-y-2">
                 <Label
@@ -398,6 +401,26 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
                     placeholder="Nhập mã hàng..."
                     value={designCode}
                     onChange={(e) => setDesignCode(e.target.value)}
+                    className="pl-9 h-10 text-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/20"
+                  />
+                </div>
+              </div>
+
+              {/* Proofing Order Code Search */}
+              <div className="space-y-2">
+                <Label
+                  htmlFor="proofing-order-code-search"
+                  className="text-sm font-medium"
+                >
+                  Mã bình bài
+                </Label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="proofing-order-code-search"
+                    placeholder="Nhập mã bình bài..."
+                    value={proofingOrderCode}
+                    onChange={(e) => setProofingOrderCode(e.target.value)}
                     className="pl-9 h-10 text-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/20"
                   />
                 </div>
@@ -442,7 +465,7 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
             </div>
 
             {/* Search Actions */}
-            {(designCode.trim() || customerName.trim() || size.trim()) && (
+            {(designCode.trim() || customerName.trim() || size.trim() || proofingOrderCode.trim()) && (
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
                   {isLoadingDies ? (

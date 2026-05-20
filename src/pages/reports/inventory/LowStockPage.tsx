@@ -3,8 +3,9 @@ import {
   Search,
   RefreshCw,
   Download,
-  Loader2,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
@@ -22,7 +23,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useLowStock } from "@/hooks/use-inventory-report";
-import { formatCurrency } from "@/lib/status-utils";
 
 export default function LowStockPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -107,10 +107,11 @@ export default function LowStockPage() {
               <TableRow className="bg-muted/50">
                 <TableHead className="w-[140px]">Mã vật tư</TableHead>
                 <TableHead>Tên vật tư</TableHead>
+                <TableHead className="w-[100px]">Đơn vị</TableHead>
                 <TableHead className="text-right">Số lượng tồn</TableHead>
                 <TableHead className="text-right">Số lượng tối thiểu</TableHead>
                 <TableHead className="text-right">Thiếu</TableHead>
-                <TableHead className="text-right">Đơn giá</TableHead>
+                <TableHead className="text-right">Gợi ý nhập</TableHead>
                 <TableHead className="text-center">Trạng thái</TableHead>
               </TableRow>
             </TableHeader>
@@ -118,7 +119,7 @@ export default function LowStockPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -128,7 +129,7 @@ export default function LowStockPage() {
               ) : !lowStockData?.items || lowStockData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không có hàng tồn kho thấp nào.
@@ -136,14 +137,16 @@ export default function LowStockPage() {
                 </TableRow>
               ) : (
                 lowStockData.items.map((item) => {
-                  const shortage = (item.minimumQuantity || 0) - (item.currentQuantity || 0);
                   return (
-                    <TableRow key={item.materialTypeCode || item.materialTypeId}>
+                    <TableRow key={item.itemCode || item.itemName || ""}>
                       <TableCell className="font-medium font-mono text-sm">
-                        {item.materialTypeCode || "—"}
+                        {item.itemCode || "—"}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {item.materialTypeName || "—"}
+                        {item.itemName || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {item.unit || "—"}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
                         {item.currentQuantity !== undefined
@@ -151,20 +154,22 @@ export default function LowStockPage() {
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {item.minimumQuantity !== undefined
-                          ? item.minimumQuantity.toLocaleString()
+                        {item.minStock !== undefined
+                          ? item.minStock.toLocaleString()
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-bold tabular-nums text-destructive">
-                        {shortage > 0 ? shortage.toLocaleString() : "—"}
+                        {item.shortage !== undefined && item.shortage > 0
+                          ? item.shortage.toLocaleString()
+                          : "—"}
                       </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {item.unitPrice !== undefined
-                          ? formatCurrency(item.unitPrice)
+                      <TableCell className="text-right font-medium tabular-nums text-blue-600">
+                        {item.suggestedOrder !== undefined && item.suggestedOrder > 0
+                          ? item.suggestedOrder.toLocaleString()
                           : "—"}
                       </TableCell>
                       <TableCell className="text-center">
-                        {shortage > 0 ? (
+                        {item.shortage !== undefined && item.shortage > 0 ? (
                           <Badge variant="destructive">Cần nhập</Badge>
                         ) : (
                           <Badge variant="default">Đủ</Badge>
@@ -192,7 +197,7 @@ export default function LowStockPage() {
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1 || isLoading}
               >
-                <RefreshCw className="h-4 w-4 rotate-180" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="text-sm font-medium px-2">
                 {currentPage} / {lowStockData.totalPages}
@@ -205,7 +210,7 @@ export default function LowStockPage() {
                 }
                 disabled={currentPage === lowStockData.totalPages || isLoading}
               >
-                <RefreshCw className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>

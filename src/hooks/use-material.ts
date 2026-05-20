@@ -31,14 +31,30 @@ const materialKeys = {
 
 // ========== QUERIES ==========
 
-export const useMaterials = (params?: MaterialListParams) => {
+export const useMaterials = (
+  params?: MaterialListParams & { page?: number; size?: number; search?: string }
+) => {
+  const mappedParams = { ...params };
+  if (mappedParams.page !== undefined) {
+    mappedParams.pageNumber = mappedParams.page;
+    delete mappedParams.page;
+  }
+  if (mappedParams.size !== undefined) {
+    mappedParams.pageSize = mappedParams.size;
+    delete mappedParams.size;
+  }
+  if (mappedParams.search !== undefined) {
+    mappedParams.name = mappedParams.search;
+    delete mappedParams.search;
+  }
+
   return useQuery<MaterialResponseIPaginate>({
-    queryKey: materialKeys.list(params),
+    queryKey: materialKeys.list(mappedParams),
     queryFn: async () => {
       const response = await apiRequest.get<MaterialResponseIPaginate>(
         API_SUFFIX.MATERIALS,
         {
-          params: normalizeParams(params || {}),
+          params: normalizeParams(mappedParams || {}),
         }
       );
       return response.data;

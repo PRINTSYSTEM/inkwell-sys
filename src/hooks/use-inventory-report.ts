@@ -1,8 +1,10 @@
 // src/hooks/use-inventory-report.ts
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
+import { downloadBlob } from "@/lib/download-utils";
+import { toast } from "sonner";
 import type {
   CurrentStockResponse,
   CurrentStockResponseIPaginate,
@@ -43,6 +45,8 @@ export interface InventorySummaryParams {
   designTypeId?: number;
   asOfDate?: string;
   search?: string;
+  itemType?: string;
+  itemGroup?: string;
 }
 
 export const useInventorySummary = (params?: InventorySummaryParams) => {
@@ -61,6 +65,30 @@ export const useInventorySummary = (params?: InventorySummaryParams) => {
   });
 };
 
+export const useExportInventorySummary = () => {
+  return useMutation({
+    mutationFn: async (params?: InventorySummaryParams) => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get(API_SUFFIX.INVENTORY_SUMMARY_EXCEL, {
+        params: normalizedParams,
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      downloadBlob(blob, `inventory-summary-${new Date().getTime()}.xlsx`);
+    },
+    onSuccess: () => {
+      toast.success("Xuất báo cáo thành công");
+    },
+    onError: () => {
+      toast.error("Lỗi khi xuất báo cáo");
+    },
+  });
+};
+
 // ================== LOW STOCK ==================
 
 export interface LowStockParams {
@@ -70,6 +98,9 @@ export interface LowStockParams {
   designTypeId?: number;
   threshold?: number;
   search?: string;
+  itemType?: string;
+  itemGroup?: string;
+  warehouse?: string;
 }
 
 export const useLowStock = (params?: LowStockParams) => {
@@ -135,6 +166,36 @@ export const useStockCard = (itemCode: string, params?: StockCardParams) => {
         { params: normalizedParams }
       );
       return res.data;
+    },
+  });
+};
+
+export const useExportStockCard = () => {
+  return useMutation({
+    mutationFn: async ({
+      itemCode,
+      params,
+    }: {
+      itemCode: string;
+      params?: StockCardParams;
+    }) => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get(API_SUFFIX.STOCK_CARD_EXCEL(itemCode), {
+        params: normalizedParams,
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      downloadBlob(blob, `stock-card-${itemCode}-${new Date().getTime()}.xlsx`);
+    },
+    onSuccess: () => {
+      toast.success("Xuất báo cáo thành công");
+    },
+    onError: () => {
+      toast.error("Lỗi khi xuất báo cáo");
     },
   });
 };

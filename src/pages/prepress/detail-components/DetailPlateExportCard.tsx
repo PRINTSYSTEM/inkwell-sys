@@ -103,16 +103,16 @@ export function DetailPlateExportCard({
                   </div>
 
                   <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 col-span-2">
                       <span className="text-muted-foreground">NCC:</span>
-                      <span className="font-semibold text-foreground truncate">
+                      <span className="font-semibold text-foreground">
                         {exportItem?.vendorName ||
                           exportItem?.plateVendor?.name ||
                           "—"}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 col-span-2">
                       <span className="text-muted-foreground">Số lượng:</span>
                       <span className="font-semibold text-foreground">
                         {exportItem?.plateCount || 0} bản

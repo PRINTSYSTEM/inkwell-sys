@@ -51,7 +51,13 @@ import {
   useCancelStockOut,
   useDeleteStockOut,
 } from "@/hooks/use-stock";
-import { formatDate, formatDateTime, formatCurrency } from "@/lib/status-utils";
+import {
+  formatDate,
+  formatDateTime,
+  formatCurrency,
+  stockOutPurposeLabels,
+  stockOutItemTypeLabels,
+} from "@/lib/status-utils";
 import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 
@@ -331,7 +337,13 @@ export default function StockOutDetailPage() {
                 {stockOut.status && (
                   <StatusBadge
                     status={stockOut.status}
-                    label={stockOut.statusName || stockOut.status}
+                    label={
+                      stockOut.statusName && stockOut.statusName.toLowerCase() !== "pending"
+                        ? stockOut.statusName
+                        : stockOut.status.toLowerCase() === "pending"
+                        ? "Chờ xử lý"
+                        : stockOut.statusName || stockOut.status
+                    }
                   />
                 )}
               </CardContent>
@@ -395,7 +407,9 @@ export default function StockOutDetailPage() {
                         Lý do xuất
                       </p>
                       <p className="text-sm font-semibold text-slate-900 truncate">
-                        {stockOut.purpose || "Không có"}
+                        {stockOut.purpose
+                          ? stockOutPurposeLabels[stockOut.purpose.toLowerCase()] || stockOut.purpose
+                          : "Không có"}
                       </p>
                     </div>
                   </div>
@@ -409,7 +423,9 @@ export default function StockOutDetailPage() {
                         Loại vật phẩm
                       </p>
                       <p className="text-sm font-semibold text-slate-900 truncate">
-                        {stockOut.itemType || "Không có"}
+                        {stockOut.itemType
+                          ? stockOutItemTypeLabels[stockOut.itemType.toLowerCase()] || stockOut.itemType
+                          : "Không có"}
                       </p>
                     </div>
                   </div>

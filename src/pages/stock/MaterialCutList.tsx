@@ -87,20 +87,29 @@ interface MaterialCutRecord {
   outputs: MaterialCutOutput[];
 }
 
+import { useListState } from "@/hooks/use-list-state";
+
 export default function MaterialCutListPage() {
   const navigate = useNavigate();
-  const [page, setPage] = useState(1);
+  const {
+    currentPage: page,
+    setCurrentPage: setPage,
+    searchTerm: search,
+    setSearchTerm: setSearch,
+    debouncedSearchTerm,
+    statusFilter,
+    setStatusFilter,
+  } = useListState();
+  
   const [pageSize] = useState(10);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   const { data, isLoading, refetch } = useMaterialCuts({
     pageNumber: page,
     pageSize,
-    search: search || undefined,
-    status: statusFilter || undefined,
+    search: debouncedSearchTerm || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter || undefined,
   });
 
   const { mutateAsync: completeMaterialCut } = useCompleteMaterialCut();

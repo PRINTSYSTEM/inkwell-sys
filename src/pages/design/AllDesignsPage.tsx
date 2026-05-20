@@ -78,6 +78,9 @@ export default function AllDesignsPage() {
             sortOrder: filterState.sortOrder,
           }
         : {}),
+      ...(filterState.searchQuery.trim()
+        ? { search: filterState.searchQuery.trim() }
+        : {}),
     }),
     [
       currentPage,
@@ -87,6 +90,7 @@ export default function AllDesignsPage() {
       filterState.sortOrder,
       selectedMonth,
       selectedYear,
+      filterState.searchQuery,
     ]
   );
   const { data, isLoading } = useDesigns(useDesignsParams);
@@ -120,13 +124,14 @@ export default function AllDesignsPage() {
     [designs]
   );
 
-  // Filter by search query (client-side, vì API có thể không hỗ trợ search)
+  // Filter by search query (hybrid strategy: filters client-side on the loaded page, supporting design name)
   const filteredDesigns = useMemo(() => {
     if (!filterState.searchQuery.trim()) return designsWithSearch;
     const query = filterState.searchQuery.toLowerCase();
     return designsWithSearch.filter(
       (d) =>
         d.code?.toLowerCase().includes(query) ||
+        d.designName?.toLowerCase().includes(query) ||
         d.designerFullName?.toLowerCase().includes(query) ||
         d.latestOrderCode?.toLowerCase().includes(query) ||
         d.customerName?.toLowerCase().includes(query) ||
@@ -249,19 +254,6 @@ export default function AllDesignsPage() {
     (
       filterState.filters["designTypeId"]?.value as number | undefined
     )?.toString() ?? "all";
-
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            Đang tải dữ liệu...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">

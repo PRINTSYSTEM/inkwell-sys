@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
 import { useDesignsSale } from "@/hooks/use-design";
+import { toast } from "sonner";
 import { formatCurrency } from "@/lib/status-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
@@ -35,6 +36,20 @@ export default function SaleDesignSearch() {
   const [dimensionsFilter, setDimensionsFilter] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [copiedDesignId, setCopiedDesignId] = useState<number | null>(null);
+
+  const handleCopyDesignName = async (name: string, id: number) => {
+    try {
+      await navigator.clipboard.writeText(name);
+      setCopiedDesignId(id);
+      toast.success("Đã sao chép tên thiết kế");
+      setTimeout(() => {
+        setCopiedDesignId(null);
+      }, 2000);
+    } catch (err) {
+      toast.error("Không thể sao chép");
+    }
+  };
 
   // Debounce search term
   useEffect(() => {
@@ -307,11 +322,26 @@ export default function SaleDesignSearch() {
                         {design.code || `DES-${design.id}`}
                       </td>
                       <td className="px-4 py-3 align-top">
-                        <div
-                          className="truncate max-w-[260px]"
-                          title={design.designName || "Không tên"}
-                        >
-                          {design.designName || "Không tên"}
+                        <div className="flex items-center gap-2 group max-w-[260px]">
+                          <div
+                            className="whitespace-normal break-words flex-1 text-slate-700 dark:text-slate-300 font-medium"
+                            title={design.designName || "Không tên"}
+                          >
+                            {design.designName || "Không tên"}
+                          </div>
+                          {design.designName && (
+                            <button
+                              onClick={() => handleCopyDesignName(design.designName, design.id)}
+                              className="inline-flex items-center justify-center p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors h-6 w-6 shrink-0"
+                              title="Sao chép tên thiết kế"
+                            >
+                              {copiedDesignId === design.id ? (
+                                <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 align-top">

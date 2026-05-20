@@ -1,4 +1,4 @@
-# Danh sách API cho tính năng Xuất Kẽm (Plate Export)
+# Danh sách API cho tính năng Xuất Kẽm (Plate Export).
 
 Tính năng quản lý "Xuất kẽm" trong Giao diện Chế bản (thuộc file [DetailPlateExportCard.tsx](file:///w:/DevPool/PrintSytem/inkwell-sys/src/pages/prepress/detail-components/DetailPlateExportCard.tsx)) không trực tiếp gọi API mà ủy quyền cho component [PlateExportDialog.tsx](file:///w:/DevPool/PrintSytem/inkwell-sys/src/components/proofing/PlateExportDialog.tsx) và [PrepressDetail.tsx](file:///w:/DevPool/PrintSytem/inkwell-sys/src/pages/prepress/PrepressDetail.tsx). Dưới đây là 5 API chính được sử dụng để duy trì tính năng này, thông qua các custom React Query Hooks:
 

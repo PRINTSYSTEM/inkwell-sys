@@ -2186,6 +2186,7 @@ export default function ProofingOrderDetailPage() {
                 setUpdateDesignQuantities={setUpdateDesignQuantities}
                 onReject={handleOpenRejectDialog}
                 isRejecting={isRejecting}
+                onFindDie={handleFindDie}
               />
 
               <DetailPlateExportCard

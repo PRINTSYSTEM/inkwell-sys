@@ -107,6 +107,7 @@ export function DieExportDialog({
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [receivedAtManual, setReceivedAtManual] = useState<string>("");
   const [dieNotes, setDieNotes] = useState<Record<number, string>>({});
+  const [newDieNote, setNewDieNote] = useState<string>("");
   const [dieAction, setDieAction] = useState<"select" | "create">("select");
 
   // For selecting existing dies
@@ -396,6 +397,7 @@ export function DieExportDialog({
       setImagePreviews([]);
       setReceivedAtManual("");
       setDieNotes({});
+      setNewDieNote("");
       setDieAction("select");
       setSelectedDieIds([]);
       setDieSearchTerm("");
@@ -556,10 +558,6 @@ export function DieExportDialog({
       if (prev.includes(dieId)) {
         return prev.filter((id) => id !== dieId);
       } else {
-        if (prev.length >= dieCount) {
-          toast.error(`Chỉ có thể chọn tối đa ${dieCount} khuôn`);
-          return prev;
-        }
         return [...prev, dieId];
       }
     });
@@ -606,12 +604,6 @@ export function DieExportDialog({
     if (dieAction === "select") {
       if (selectedDieIds.length === 0) {
         toast.error("Vui lòng chọn ít nhất một khuôn bế từ danh sách");
-        return;
-      }
-      if (selectedDieIds.length !== dieCount) {
-        toast.error(
-          `Số lượng khuôn đã chọn (${selectedDieIds.length}) không khớp với số lượng khuôn (${dieCount})`,
-        );
         return;
       }
     }
@@ -675,7 +667,7 @@ export function DieExportDialog({
               height: dieHeight,
             } as any,
             {
-              onSuccess: (newDie) => {
+              onSuccess: async (newDie) => {
                 if (newDie.id) {
                   // Invalidate and refetch dies list to show newly created die
                   queryClient.invalidateQueries({ queryKey: ["dies"] });
@@ -683,15 +675,62 @@ export function DieExportDialog({
                     queryKey: ["dies", "search"],
                   });
 
-                  // Auto-select the newly created die
-                  setSelectedDieIds([newDie.id]);
+                  try {
+                    // If replacing, remove the old die first
+                    if (mode === "replace" && replacingDieId) {
+                      await new Promise<void>((resSelect, rejSelect) => {
+                        removeDie(
+                          {
+                            proofingOrderId,
+                            dieId: replacingDieId,
+                          },
+                          {
+                            onSuccess: () => resSelect(),
+                            onError: (error) => {
+                              toast.error("Không thể gỡ khuôn cũ", {
+                                description: getErrorMessage(error),
+                              });
+                              rejSelect(error);
+                            },
+                          }
+                        );
+                      });
+                    }
 
-                  // Switch back to select mode so user can see and confirm the new die
-                  setDieAction("select");
+                    // Assign the newly created die to the proofing order immediately with notes
+                    await new Promise<void>((resSelect, rejSelect) => {
+                      assignDie(
+                        {
+                          proofingOrderId,
+                          data: {
+                            dieId: newDie.id!,
+                            isNewDie: false,
+                            notes: newDieNote?.trim() || undefined,
+                          },
+                        },
+                        {
+                          onSuccess: () => resSelect(),
+                          onError: (error) => {
+                            toast.error("Không thể gán khuôn bế vào bình bài", {
+                              description: getErrorMessage(error),
+                            });
+                            rejSelect(error);
+                          },
+                        }
+                      );
+                    });
 
-                  toast.success(
-                    "Đã tạo khuôn bế thành công. Vui lòng chọn khuôn và bấm 'Lưu thông tin' để xuất khuôn.",
-                  );
+                    const successMessage =
+                      mode === "replace" ? "Thay thế khuôn thành công" :
+                      mode === "add" ? "Thêm khuôn thành công" :
+                      "Đã tạo và xuất khuôn bế thành công";
+
+                    toast.success(successMessage);
+                    onSuccess?.();
+                    onOpenChange(false);
+                  } catch (assignError) {
+                    console.error("Error in automatic die assignment:", assignError);
+                  }
                 }
                 resolve();
               },
@@ -705,7 +744,7 @@ export function DieExportDialog({
           );
         });
 
-        // After creating die, return early - user needs to select and submit
+        // After creating die, return early
         return;
       }
 
@@ -803,38 +842,10 @@ export function DieExportDialog({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <div className="space-y-1">
-                  <Label htmlFor="dieCount" className="text-xs">
-                    Số lượng khuôn
-                  </Label>
-                  <Select
-                    value={mode !== "export" ? "1" : dieCount.toString()}
-                    onValueChange={(value) => {
-                      const newCount = Number(value);
-                      setDieCount(newCount);
-                      if (selectedDieIds.length > newCount) {
-                        setSelectedDieIds((prev) => prev.slice(0, newCount));
-                      }
-                    }}
-                    disabled={mode !== "export"}
-                  >
-                    <SelectTrigger id="dieCount" className="h-8 w-32 text-xs">
-                      <SelectValue placeholder="Số lượng" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6].map((count) => (
-                        <SelectItem key={count} value={count.toString()}>
-                          {count} khuôn
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs text-muted-foreground bg-muted/20">
                   <span>Đã chọn</span>
                   <span className="font-semibold text-foreground">
-                    {selectedDieIds.length}/{dieCount}
+                    {selectedDieIds.length}
                   </span>
                   <span>khuôn</span>
                 </div>
@@ -917,8 +928,7 @@ export function DieExportDialog({
                             const isSelected = die.id
                               ? selectedDieIds.includes(die.id)
                               : false;
-                            const canSelect =
-                              !isSelected && selectedDieIds.length < dieCount;
+                            const canSelect = !isSelected;
                             const selectionIndex = isSelected
                               ? selectedDieIds.indexOf(die.id!) + 1
                               : null;
@@ -1614,6 +1624,18 @@ export function DieExportDialog({
                             ? "✓ Lưu vào kho để tái sử dụng." 
                             : "⚠ Khuôn dùng một lần."}
                         </p>
+                      </div>
+
+                      <div className="space-y-1.5 py-2">
+                        <Label htmlFor="newDieNote" className="text-xs font-medium">Ghi chú xuất khuôn mới</Label>
+                        <Textarea
+                          id="newDieNote"
+                          rows={2}
+                          placeholder="Nhập ghi chú xuất cho khuôn mới này..."
+                          value={newDieNote}
+                          onChange={(e) => setNewDieNote(e.target.value)}
+                          className="text-sm min-h-[56px]"
+                        />
                       </div>
                     </div>
                   </div>

@@ -186,7 +186,12 @@ export default function StockInCreatePage() {
     isSuccess,
   } = useCreateStockInFromVendor();
   const { data: vendorsData } = useVendors({ pageNumber: 1, pageSize: 100 });
-  const allVendors = vendorsData?.items || [];
+  const allVendors = (vendorsData?.items || []).filter(
+    (v) =>
+      v.vendorType !== "die" &&
+      v.vendorType !== "plate" &&
+      v.vendorType !== "printing"
+  );
   const { mutate: createVendor, isPending: isCreatingVendor } =
     useCreateVendor();
   const { data: materialsData } = useMaterials({ page: 1, size: 1000 });
@@ -210,7 +215,7 @@ export default function StockInCreatePage() {
     useState(false);
   const [newVendorData, setNewVendorData] = useState<CreateVendorRequest>({
     name: "",
-    vendorType: "",
+    vendorType: "material",
     phone: "",
     email: "",
     address: "",
@@ -228,23 +233,35 @@ export default function StockInCreatePage() {
       materialTypeId: 0,
       length: 0,
       width: undefined,
-      height: 0,
       quantity: undefined,
     }
   );
+  const [dialogUnitPrice, setDialogUnitPrice] = useState<number | undefined>(undefined);
+  const [dialogUnit, setDialogUnit] = useState<string>("");
 
-  // Helper to update generated name
-  const updateMaterialName = (typeId: number, length: number, width: number | undefined) => {
-    const type = materialTypes.find(t => t.id === typeId);
-    const typeName = type ? (type.name || type.code) : "";
-    
-    let dims = "";
-    if (length > 0) {
-      dims = width !== undefined && width > 0 ? `${length}x${width}` : `${length}`;
+  // Helper to parse dimensions from material name
+  const parseDimensionsFromName = (name: string): { length?: number; width?: number | null } => {
+    if (!name) return {};
+
+    // Pattern 1: "Màng PE 64x53" -> length = 64, width = 53
+    const crossMatch = name.match(/(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/);
+    if (crossMatch) {
+      return {
+        length: parseFloat(crossMatch[1]),
+        width: parseFloat(crossMatch[2]),
+      };
     }
-    
-    if (typeName && dims) return `${typeName} - ${dims}`;
-    return typeName || dims || "";
+
+    // Pattern 2: "Cuộn PE khổ 64" -> length = 64, width = null
+    const widthMatch = name.match(/(?:khổ|kho)\s*:?\s*(\d+(?:\.\d+)?)/i);
+    if (widthMatch) {
+      return {
+        length: parseFloat(widthMatch[1]),
+        width: null,
+      };
+    }
+
+    return {};
   };
 
   const [layoutMode, setLayoutMode] = useState<"grid" | "table">(() => {
@@ -336,7 +353,7 @@ export default function StockInCreatePage() {
     } else if (field === "itemName") {
       normalizedValue = (value as string) || "";
     } else {
-      normalizedValue = (value as string)?.trim() || "";
+      normalizedValue = (value as string) ?? "";
     }
     newItems[index] = { ...newItems[index], [field]: normalizedValue };
 
@@ -360,16 +377,31 @@ export default function StockInCreatePage() {
     if (material && material.id) {
       const materialName = material.name || material.materialTypeName || "";
       const generatedCode = generateMaterialCode(materialName);
+      
+      // Load unit and unitPrice from localStorage if available
+      let loadedUnit = "";
+      let loadedUnitPrice: number | undefined = undefined;
+      const cached = localStorage.getItem(`material_meta_${material.id}`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          loadedUnit = parsed.unit || "";
+          loadedUnitPrice = parsed.unitPrice;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       const newItems = [...items];
       newItems[index] = {
         ...newItems[index],
         itemName: materialName,
         itemCode: generatedCode,
-        unitPrice: undefined,
+        unit: loadedUnit || newItems[index].unit || "",
+        unitPrice: loadedUnitPrice !== undefined ? loadedUnitPrice : newItems[index].unitPrice,
         materialId: material.id,
         length: material.length,
         width: material.width,
-        height: material.height,
         lineKind: material.width !== undefined && material.width > 0 ? "sheet" : "roll",
       };
       setItems(newItems);
@@ -453,7 +485,6 @@ export default function StockInCreatePage() {
           lineKind: item.lineKind ?? undefined,
           length: item.length ?? undefined,
           width: item.width ?? undefined,
-          height: item.height ?? undefined,
         })),
       },
       {
@@ -557,7 +588,17 @@ export default function StockInCreatePage() {
                     variant="outline"
                     size="icon"
                     className="h-9 w-9 shrink-0"
-                    onClick={() => setIsCreateVendorDialogOpen(true)}
+                    onClick={() => {
+                      setNewVendorData({
+                        name: "",
+                        vendorType: "material",
+                        phone: "",
+                        email: "",
+                        address: "",
+                        note: "",
+                      });
+                      setIsCreateVendorDialogOpen(true);
+                    }}
                   >
                     <UserPlus className="h-4 w-4" />
                   </Button>
@@ -666,7 +707,8 @@ export default function StockInCreatePage() {
                             className="h-8 w-8 shrink-0 hover:bg-[#93631F]/10 text-[#93631F] border-[#93631F]/20"
                             onClick={() => {
                               setCreatingMaterialIndex(index);
-                              setNewMaterialData({ name: "", materialTypeId: 0, length: 0, width: undefined, height: 0, quantity: undefined });
+                              setNewMaterialData({ name: "", materialTypeId: materialTypes[0]?.id || 1, length: 0, width: undefined, quantity: undefined });
+                              setDialogUnitPrice(undefined);
                               setIsCreateMaterialDialogOpen(true);
                             }}
                           >
@@ -702,33 +744,16 @@ export default function StockInCreatePage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-400">Loại hàng</Label>
-                          <Select
-                            value={item.lineKind || "none"}
-                            onValueChange={(v) => handleItemChange(index, "lineKind", v === "none" ? undefined : v)}
-                          >
-                            <SelectTrigger className="h-8 text-sm">
-                              <SelectValue placeholder="Loại hàng" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Mặc định</SelectItem>
-                              <SelectItem value="sheet">Tờ (Sheet)</SelectItem>
-                              <SelectItem value="roll">Cuộn (Roll)</SelectItem>
-                              <SelectItem value="custom">Tùy chỉnh</SelectItem>
-                              <SelectItem value="service">Công cắt (Service)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="grid grid-cols-1 gap-2">
                         <div className="space-y-1">
                           <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
                           <Input
                             type="number"
+                            min="0"
                             value={item.unitPrice ?? ""}
-                            onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? parseFloat(e.target.value) : undefined)}
+                            onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
                             placeholder="0.00"
-                            className="h-8 text-sm"
+                            className="h-8 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           />
                         </div>
                       </div>
@@ -767,7 +792,6 @@ export default function StockInCreatePage() {
                         <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
                         <TableHead className="w-[100px] text-right">Số lượng</TableHead>
                         <TableHead className="w-[80px]">ĐVT</TableHead>
-                        <TableHead className="w-[130px]">Loại hàng</TableHead>
                         <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
                         <TableHead>Ghi chú</TableHead>
                         <TableHead className="w-10"></TableHead>
@@ -791,7 +815,8 @@ export default function StockInCreatePage() {
                                 className="h-8 w-8 shrink-0 text-[#93631F] hover:bg-[#93631F]/10"
                                 onClick={() => {
                                   setCreatingMaterialIndex(index);
-                                  setNewMaterialData({ name: "", materialTypeId: 0, length: 0, width: undefined, height: 0, quantity: undefined });
+                                  setNewMaterialData({ name: "", materialTypeId: materialTypes[0]?.id || 1, length: 0, width: undefined, quantity: undefined });
+                                  setDialogUnitPrice(undefined);
                                   setIsCreateMaterialDialogOpen(true);
                                 }}
                               >
@@ -823,30 +848,15 @@ export default function StockInCreatePage() {
                               className="h-8 text-sm"
                             />
                           </TableCell>
-                          <TableCell>
-                            <Select
-                              value={item.lineKind || "none"}
-                              onValueChange={(v) => handleItemChange(index, "lineKind", v === "none" ? undefined : v)}
-                            >
-                              <SelectTrigger className="h-8 text-sm">
-                                <SelectValue placeholder="Loại" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Mặc định</SelectItem>
-                                <SelectItem value="sheet">Tờ (Sheet)</SelectItem>
-                                <SelectItem value="roll">Cuộn (Roll)</SelectItem>
-                                <SelectItem value="custom">Tùy chỉnh</SelectItem>
-                                <SelectItem value="service">Công cắt (Service)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
+
                           <TableCell>
                             <Input
                               type="number"
+                              min="0"
                               value={item.unitPrice ?? ""}
-                              onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? parseFloat(e.target.value) : undefined)}
+                              onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
                               placeholder="0"
-                              className="h-8 text-sm text-right"
+                              className="h-8 text-sm text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                           </TableCell>
                           <TableCell>
@@ -982,7 +992,7 @@ export default function StockInCreatePage() {
                 setIsCreateVendorDialogOpen(false);
                 setNewVendorData({
                   name: "",
-                  vendorType: "",
+                  vendorType: "material",
                   phone: "",
                   email: "",
                   address: "",
@@ -1023,7 +1033,7 @@ export default function StockInCreatePage() {
                       });
                       setNewVendorData({
                         name: "",
-                        vendorType: "",
+                        vendorType: "material",
                         phone: "",
                         email: "",
                         address: "",
@@ -1062,59 +1072,23 @@ export default function StockInCreatePage() {
               <Input
                 id="materialName"
                 value={newMaterialData.name}
-                onChange={(e) => setNewMaterialData({ ...newMaterialData, name: e.target.value })}
-                className="bg-slate-50/50 font-medium"
-                placeholder="Nhập tên chất liệu hoặc để tự động tạo"
-              />
-              {newMaterialData.name &&
-                generateMaterialCode(newMaterialData.name) && (
-                  <div className="mt-1.5 p-2 bg-slate-50 rounded-md border border-slate-200">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-slate-600">
-                        Mã tự động:
-                      </span>
-                      <code className="text-xs font-mono text-[#93631F] bg-[#93631F]/5 px-2 py-0.5 rounded">
-                        {generateMaterialCode(newMaterialData.name)}
-                      </code>
-                    </div>
-                  </div>
-                )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="materialTypeId">
-                Loại chất liệu <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={newMaterialData.materialTypeId?.toString() || ""}
-                onValueChange={(value) => {
-                  const typeId = Number(value);
-                  setNewMaterialData({
-                    ...newMaterialData,
-                    materialTypeId: typeId,
-                    name: updateMaterialName(typeId, newMaterialData.length, newMaterialData.width)
+                onChange={(e) => {
+                  const name = e.target.value;
+                  const parsed = parseDimensionsFromName(name);
+                  setNewMaterialData((prev) => {
+                    const updated = { ...prev, name };
+                    if (parsed.length !== undefined) {
+                      updated.length = parsed.length;
+                    }
+                    if (parsed.width !== undefined) {
+                      updated.width = parsed.width === null ? undefined : parsed.width;
+                    }
+                    return updated;
                   });
                 }}
-              >
-                <SelectTrigger id="materialTypeId">
-                  <SelectValue placeholder="Chọn loại chất liệu" />
-                </SelectTrigger>
-                <SelectContent>
-                  {materialTypes.length === 0 ? (
-                    <div className="px-2 py-1.5 text-sm text-slate-500">
-                      Không có loại chất liệu nào
-                    </div>
-                  ) : (
-                    materialTypes.map((materialType) => (
-                      <SelectItem
-                        key={materialType.id}
-                        value={materialType.id?.toString() || "0"}
-                      >
-                        {materialType.name || materialType.code}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                className="bg-slate-50/50 font-medium"
+                placeholder="Nhập tên chất liệu"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -1132,7 +1106,6 @@ export default function StockInCreatePage() {
                     setNewMaterialData({
                       ...newMaterialData,
                       length,
-                      name: updateMaterialName(newMaterialData.materialTypeId, length, newMaterialData.width)
                     });
                   }}
                   placeholder="0"
@@ -1145,34 +1118,62 @@ export default function StockInCreatePage() {
                   type="number"
                   min="0"
                   step="0.01"
-                  value={newMaterialData.width || ""}
+                  value={newMaterialData.width ?? ""}
                   onChange={(e) => {
                     const width = e.target.value === "" ? undefined : parseFloat(e.target.value) || 0;
                     setNewMaterialData({
                       ...newMaterialData,
                       width,
-                      name: updateMaterialName(newMaterialData.materialTypeId, newMaterialData.length, width)
                     });
                   }}
                   placeholder="0 (tùy chọn)"
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="materialUnitPrice">Đơn giá</Label>
+                <Input
+                  id="materialUnitPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={dialogUnitPrice ?? ""}
+                  onChange={(e) =>
+                    setDialogUnitPrice(
+                      e.target.value === ""
+                        ? undefined
+                        : parseFloat(e.target.value) || undefined
+                    )
+                  }
+                  placeholder="0 (tùy chọn)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="materialUnit">Đơn vị tính (ĐVT)</Label>
+                <Input
+                  id="materialUnit"
+                  value={dialogUnit}
+                  onChange={(e) => setDialogUnit(e.target.value)}
+                  placeholder="Ví dụ: Tờ, Cuộn, Cái..."
+                />
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label htmlFor="materialQuantity">Số lượng</Label>
+              <Label htmlFor="materialQuantity">Số lượng tồn kho có sẵn</Label>
               <Input
                 id="materialQuantity"
                 type="number"
                 min="0"
                 step="1"
-                value={newMaterialData.quantity || ""}
+                value={newMaterialData.quantity ?? ""}
                 onChange={(e) =>
                   setNewMaterialData({
                     ...newMaterialData,
                     quantity:
                       e.target.value === ""
                         ? undefined
-                        : parseInt(e.target.value, 10) || undefined,
+                        : parseInt(e.target.value, 10) ?? undefined,
                   })
                 }
                 placeholder="0 (tùy chọn)"
@@ -1187,12 +1188,13 @@ export default function StockInCreatePage() {
                 setIsCreateMaterialDialogOpen(false);
                 setNewMaterialData({
                   name: "",
-                  materialTypeId: 0,
+                  materialTypeId: materialTypes[0]?.id || 1,
                   length: 0,
                   width: undefined,
-                  height: 0,
                   quantity: undefined,
                 });
+                setDialogUnitPrice(undefined);
+                setDialogUnit("");
               }}
               disabled={isCreatingMaterial}
             >
@@ -1205,24 +1207,17 @@ export default function StockInCreatePage() {
                   toast.error("Vui lòng nhập tên chất liệu");
                   return;
                 }
-                if (
-                  !newMaterialData.materialTypeId ||
-                  newMaterialData.materialTypeId === 0
-                ) {
-                  toast.error("Vui lòng chọn loại chất liệu");
-                  return;
-                }
                 if (newMaterialData.length <= 0) {
                   toast.error("Vui lòng nhập chiều dài lớn hơn 0");
                   return;
                 }
+                const finalMaterialTypeId = newMaterialData.materialTypeId || materialTypes[0]?.id || 1;
                 createMaterial(
                   {
                     name: newMaterialData.name.trim(),
-                    materialTypeId: newMaterialData.materialTypeId,
+                    materialTypeId: finalMaterialTypeId,
                     length: newMaterialData.length,
                     width: newMaterialData.width,
-                    height: newMaterialData.height,
                     quantity: newMaterialData.quantity,
                   },
                   {
@@ -1230,26 +1225,39 @@ export default function StockInCreatePage() {
                       toast.success("Đã tạo chất liệu thành công");
                       setIsCreateMaterialDialogOpen(false);
                       if (creatingMaterialIndex !== null && newMaterial.id) {
+                        // Store metadata in localStorage
+                        localStorage.setItem(`material_meta_${newMaterial.id}`, JSON.stringify({
+                          unit: dialogUnit,
+                          unitPrice: dialogUnitPrice || 0
+                        }));
+
                         handleMaterialSelect(
                           creatingMaterialIndex,
                           newMaterial.id.toString()
                         );
+                        if (dialogUnitPrice !== undefined) {
+                          handleItemChange(creatingMaterialIndex, "unitPrice", dialogUnitPrice);
+                        }
+                        if (dialogUnit) {
+                          handleItemChange(creatingMaterialIndex, "unit", dialogUnit);
+                        }
                       }
                       setNewMaterialData({
                         name: "",
-                        materialTypeId: 0,
+                        materialTypeId: finalMaterialTypeId,
                         length: 0,
                         width: undefined,
-                        height: 0,
                         quantity: undefined,
                       });
+                      setDialogUnitPrice(undefined);
+                      setDialogUnit("");
                       setCreatingMaterialIndex(null);
                     },
                   }
                 );
               }}
               disabled={isCreatingMaterial}
-              className="cursor-pointer transition-colors duration-200"
+              className="cursor-pointer transition-colors duration-200 bg-[#93631F] hover:bg-[#7a521a]"
             >
               {isCreatingMaterial ? "Đang tạo..." : "Tạo chất liệu"}
             </Button>
