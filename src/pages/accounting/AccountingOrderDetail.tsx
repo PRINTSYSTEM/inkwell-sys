@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -211,10 +211,10 @@ export default function AccountingOrderDetail() {
   const { data: cashReceiptsData } = useCashReceipts(
     order?.customerId
       ? {
-        pageNumber: 1,
-        pageSize: 100,
-        customerId: order.customerId,
-      }
+          pageNumber: 1,
+          pageSize: 100,
+          customerId: order.customerId,
+        }
       : undefined,
   );
 
@@ -420,12 +420,12 @@ export default function AccountingOrderDetail() {
         orderDetailId: orderDetail.id,
         quantity:
           orderDetailEditValues.quantity === "" ||
-            orderDetailEditValues.quantity === null
+          orderDetailEditValues.quantity === null
             ? null
             : Number(orderDetailEditValues.quantity),
         unitPrice:
           orderDetailEditValues.unitPrice === "" ||
-            orderDetailEditValues.unitPrice === null
+          orderDetailEditValues.unitPrice === null
             ? null
             : Number(orderDetailEditValues.unitPrice),
       },
@@ -467,43 +467,43 @@ export default function AccountingOrderDetail() {
     if (cardName === "customerInfo") {
       payload.customerName =
         cardEditValues.customerName === "" ||
-          cardEditValues.customerName === null
+        cardEditValues.customerName === null
           ? null
           : String(cardEditValues.customerName).trim();
       payload.customerCompanyName =
         cardEditValues.customerCompanyName === "" ||
-          cardEditValues.customerCompanyName === null
+        cardEditValues.customerCompanyName === null
           ? null
           : String(cardEditValues.customerCompanyName).trim();
       payload.customerPhone =
         cardEditValues.customerPhone === "" ||
-          cardEditValues.customerPhone === null
+        cardEditValues.customerPhone === null
           ? null
           : String(cardEditValues.customerPhone).trim();
       payload.customerEmail =
         cardEditValues.customerEmail === "" ||
-          cardEditValues.customerEmail === null
+        cardEditValues.customerEmail === null
           ? null
           : String(cardEditValues.customerEmail).trim();
       payload.customerTaxCode =
         cardEditValues.customerTaxCode === "" ||
-          cardEditValues.customerTaxCode === null
+        cardEditValues.customerTaxCode === null
           ? null
           : String(cardEditValues.customerTaxCode).trim();
       payload.customerAddress =
         cardEditValues.customerAddress === "" ||
-          cardEditValues.customerAddress === null
+        cardEditValues.customerAddress === null
           ? null
           : String(cardEditValues.customerAddress).trim();
     } else if (cardName === "orderInfo") {
       payload.deliveryDate =
         cardEditValues.deliveryDate === "" ||
-          cardEditValues.deliveryDate === null
+        cardEditValues.deliveryDate === null
           ? null
           : new Date(cardEditValues.deliveryDate).toISOString();
       payload.deliveryAddress =
         cardEditValues.deliveryAddress === "" ||
-          cardEditValues.deliveryAddress === null
+        cardEditValues.deliveryAddress === null
           ? null
           : String(cardEditValues.deliveryAddress).trim();
       payload.note =
@@ -517,18 +517,18 @@ export default function AccountingOrderDetail() {
           : Number(cardEditValues.totalAmount);
       payload.depositAmount =
         cardEditValues.depositAmount === "" ||
-          cardEditValues.depositAmount === null
+        cardEditValues.depositAmount === null
           ? null
           : Number(cardEditValues.depositAmount);
       payload.paymentDueDate =
         cardEditValues.paymentDueDate === "" ||
-          cardEditValues.paymentDueDate === null
+        cardEditValues.paymentDueDate === null
           ? null
           : new Date(cardEditValues.paymentDueDate).toISOString();
       // Phương thức thanh toán
       payload.paymentMethodId =
         cardEditValues.paymentMethodId === "" ||
-          cardEditValues.paymentMethodId === null
+        cardEditValues.paymentMethodId === null
           ? null
           : Number(cardEditValues.paymentMethodId);
       // Tài khoản/Quỹ
@@ -544,17 +544,17 @@ export default function AccountingOrderDetail() {
     } else if (cardName === "recipientInfo") {
       payload.recipientName =
         cardEditValues.recipientName === "" ||
-          cardEditValues.recipientName === null
+        cardEditValues.recipientName === null
           ? null
           : String(cardEditValues.recipientName).trim();
       payload.recipientPhone =
         cardEditValues.recipientPhone === "" ||
-          cardEditValues.recipientPhone === null
+        cardEditValues.recipientPhone === null
           ? null
           : String(cardEditValues.recipientPhone).trim();
       payload.recipientAddress =
         cardEditValues.recipientAddress === "" ||
-          cardEditValues.recipientAddress === null
+        cardEditValues.recipientAddress === null
           ? null
           : String(cardEditValues.recipientAddress).trim();
     }
@@ -956,8 +956,8 @@ export default function AccountingOrderDetail() {
     : false;
   const isDeliveryDatePassed =
     order.deliveryDate &&
-      order.status !== "completed" &&
-      order.status !== "delivered"
+    order.status !== "completed" &&
+    order.status !== "delivered"
       ? new Date(order.deliveryDate) < now
       : false;
   const isDebtOverLimit =
@@ -994,7 +994,7 @@ export default function AccountingOrderDetail() {
                       }
                       label={
                         ENTITY_CONFIG.orderStatuses.values[
-                        order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                          order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
                         ]
                       }
                     />
@@ -1158,18 +1158,20 @@ export default function AccountingOrderDetail() {
                       </p>
                     </div>
                     <div
-                      className={`text-center p-4 rounded-lg ${remainingAmount > 0 && isPaymentDueOverdue
+                      className={`text-center p-4 rounded-lg ${
+                        remainingAmount > 0 && isPaymentDueOverdue
                           ? "bg-red-100 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700"
                           : remainingAmount > 0
                             ? "bg-destructive/10"
                             : "bg-success/10"
-                        }`}
+                      }`}
                     >
                       <p
-                        className={`text-sm mb-1 ${remainingAmount > 0 && isPaymentDueOverdue
+                        className={`text-sm mb-1 ${
+                          remainingAmount > 0 && isPaymentDueOverdue
                             ? "text-red-700 dark:text-red-300 font-semibold"
                             : "text-muted-foreground"
-                          }`}
+                        }`}
                       >
                         Còn lại
                         {remainingAmount > 0 &&
@@ -1177,12 +1179,13 @@ export default function AccountingOrderDetail() {
                           " (Quá hạn)"}
                       </p>
                       <p
-                        className={`text-xl font-bold tabular-nums ${remainingAmount > 0 && isPaymentDueOverdue
+                        className={`text-xl font-bold tabular-nums ${
+                          remainingAmount > 0 && isPaymentDueOverdue
                             ? "text-red-700 dark:text-red-400"
                             : remainingAmount > 0
                               ? "text-destructive"
                               : "text-success"
-                          }`}
+                        }`}
                       >
                         {formatCurrency(remainingAmount)}
                         {remainingAmount > 0 && isPaymentDueOverdue && (
@@ -1407,25 +1410,28 @@ export default function AccountingOrderDetail() {
                         >
                           <div className="flex items-center gap-2">
                             <Calendar
-                              className={`h-4 w-4 flex-shrink-0 ${isPaymentDueOverdue
+                              className={`h-4 w-4 flex-shrink-0 ${
+                                isPaymentDueOverdue
                                   ? "text-red-600 dark:text-red-400"
                                   : "text-muted-foreground"
-                                }`}
+                              }`}
                             />
                             <div className="flex-1">
                               <span
-                                className={`text-xs ${isPaymentDueOverdue
+                                className={`text-xs ${
+                                  isPaymentDueOverdue
                                     ? "text-red-700 dark:text-red-300 font-semibold"
                                     : "text-muted-foreground"
-                                  }`}
+                                }`}
                               >
                                 Hạn thanh toán:{" "}
                               </span>
                               <span
-                                className={`text-sm font-medium ${isPaymentDueOverdue
+                                className={`text-sm font-medium ${
+                                  isPaymentDueOverdue
                                     ? "text-red-900 dark:text-red-100"
                                     : ""
-                                  }`}
+                                }`}
                               >
                                 {formatDateTime(order.paymentDueDate)}
                                 {isPaymentDueOverdue && (
@@ -1635,7 +1641,7 @@ export default function AccountingOrderDetail() {
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground max-w-[280px]">
                                 {item.deliveryAddress ||
-                                  item.deliveryAddressLabel ? (
+                                item.deliveryAddressLabel ? (
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger>
@@ -1721,12 +1727,12 @@ export default function AccountingOrderDetail() {
                               <TableCell className="text-right font-medium tabular-nums">
                                 {editingOrderDetailId === item.id
                                   ? formatCurrency(
-                                    (Number(orderDetailEditValues.quantity) ||
-                                      0) *
-                                    (Number(
-                                      orderDetailEditValues.unitPrice,
-                                    ) || 0),
-                                  )
+                                      (Number(orderDetailEditValues.quantity) ||
+                                        0) *
+                                        (Number(
+                                          orderDetailEditValues.unitPrice,
+                                        ) || 0),
+                                    )
                                   : formatCurrency(item.totalPrice || 0)}
                               </TableCell>
                               <TableCell>
@@ -1775,604 +1781,612 @@ export default function AccountingOrderDetail() {
                               </TableCell>
                             </TableRow>
                           )) || (
-                              <TableRow>
-                                <TableCell
-                                  colSpan={8}
-                                  className="text-center text-muted-foreground py-8"
-                                >
-                                  Không có sản phẩm nào
-                                </TableCell>
-                              </TableRow>
-                            )}
+                            <TableRow>
+                              <TableCell
+                                colSpan={8}
+                                className="text-center text-muted-foreground py-8"
+                              >
+                                Không có sản phẩm nào
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </TableBody>
                       </Table>
-
-                      {invoiceItems.length > 0 && (
-                        <>
-                          <div className="bg-muted/50 px-4 py-2 border-y flex items-center gap-2">
-                            <Receipt className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                              Sản phẩm xuất hóa đơn ({invoiceItems.length})
-                            </span>
-                          </div>
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-muted/30">
-                                <TableHead className="w-[60px]">Ảnh</TableHead>
-                                <TableHead>Mô tả</TableHead>
-                                <TableHead className="text-center">ĐVT</TableHead>
-                                <TableHead className="text-center">
-                                  Số lượng
-                                </TableHead>
-                                <TableHead className="text-center">
-                                  SL thực tính
-                                </TableHead>
-                                <TableHead className="text-right">
-                                  Đơn giá
-                                </TableHead>
-                                <TableHead className="text-right">
-                                  Thành tiền
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {invoiceItems.length > 0 ? (
-                                invoiceItems.map((item, idx) => (
-                                  <TableRow key={item.id || idx}>
-                                    <TableCell>
-                                      <div className="w-12 h-12 rounded-md bg-muted overflow-hidden">
-                                        {item.orderDetail?.design
-                                          ?.designImageUrl ? (
-                                          <img
-                                            src={
-                                              item.orderDetail.design.designImageUrl
-                                            }
-                                            alt={
-                                              item.orderDetail.design?.designName ||
-                                              ""
-                                            }
-                                            className="w-full h-full object-cover"
-                                          />
-                                        ) : (
-                                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                                            <Package className="h-5 w-5" />
-                                          </div>
-                                        )}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <p className="font-medium">
-                                        {item.description ||
-                                          item.orderDetail?.design?.designName ||
-                                          "—"}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground font-mono">
-                                        {item.orderDetail?.design?.code || "—"}
-                                      </p>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                      {item.unit || "—"}
-                                    </TableCell>
-                                    <TableCell className="text-center font-medium tabular-nums">
-                                      {item.quantity?.toLocaleString("vi-VN")}
-                                    </TableCell>
-                                    <TableCell className="text-center font-medium tabular-nums text-primary">
-                                      {item.orderDetail?.netQtyTotal?.toLocaleString(
-                                        "vi-VN",
-                                      ) || "—"}
-                                    </TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                      {formatCurrency(item.unitPrice || 0)}
-                                    </TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                      {formatCurrency(item.amount || 0)}
-                                    </TableCell>
-                                  </TableRow>
-                                ))
-                              ) : (
-                                <TableRow>
-                                  <TableCell
-                                    colSpan={7}
-                                    className="text-center text-muted-foreground py-8"
-                                  >
-                                    Không có sản phẩm nào trong hóa đơn
-                                  </TableCell>
-                                </TableRow>
-                              )}
-                            </TableBody>
-                          </Table>
-                        </>
-                      )}
                     </CardContent>
                   </Card>
+                </TabsContent>
 
-                  {/* Notes */}
-                  {order.note && (
-                    <Card className="border-amber-200 dark:border-amber-800">
-                      <CardHeader className="pb-3 bg-amber-50/50 dark:bg-amber-950/20">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                          Ghi chú đơn hàng
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-4">
-                        <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap leading-relaxed">
-                          {order.note}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-
-                {/* Right Column - Sidebar */}
-                <div className="lg:col-span-1 space-y-6">
-                  {/* Customer Info */}
+                <TabsContent value="invoice" className="mt-0">
                   <Card>
                     <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <User className="h-4 w-4 text-primary" />
-                          Thông tin khách hàng
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          <CustomerTypeBadge type={customerType} />
-                          {editingCard === "customerInfo" ? (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => handleSaveCard("customerInfo")}
-                                disabled={isUpdatingForAccounting}
-                              >
-                                {isUpdatingForAccounting ? (
-                                  <>
-                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    Đang lưu...
-                                  </>
-                                ) : (
-                                  "Lưu"
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={cancelEditingCard}
-                                disabled={isUpdatingForAccounting}
-                              >
-                                Hủy
-                              </Button>
-                            </div>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                startEditingCard("customerInfo", {
-                                  customerName: order.customerName || "",
-                                  customerCompanyName:
-                                    order.customerCompanyName || "",
-                                  customerPhone: order.customerPhone || "",
-                                  customerEmail: order.customerEmail || "",
-                                  customerTaxCode: order.customerTaxCode || "",
-                                  customerAddress: order.customerAddress || "",
-                                })
-                              }
-                            >
-                              <Edit className="h-3 w-3 mr-1" />
-                              Sửa
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Receipt className="h-4 w-4 text-primary" />
+                        Sản phẩm trong hóa đơn
+                        <Badge variant="secondary" className="ml-2">
+                          {invoiceItems.length} dòng hàng
+                        </Badge>
+                      </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      {editingCard === "customerInfo" ? (
-                        /* Edit Mode */
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label>Tên khách hàng *</Label>
-                            <Input
-                              value={cardEditValues.customerName || ""}
-                              onChange={(e) =>
-                                setCardEditValues({
-                                  ...cardEditValues,
-                                  customerName: e.target.value,
-                                })
-                              }
-                              placeholder="Nhập tên khách hàng"
-                            />
-                          </div>
-                          {customerType === "company" && (
-                            <div className="space-y-2">
-                              <Label>Tên công ty</Label>
-                              <Input
-                                value={cardEditValues.customerCompanyName || ""}
-                                onChange={(e) =>
-                                  setCardEditValues({
-                                    ...cardEditValues,
-                                    customerCompanyName: e.target.value,
-                                  })
-                                }
-                                placeholder="Nhập tên công ty"
-                              />
-                            </div>
-                          )}
-                          <div className="space-y-2">
-                            <Label>Số điện thoại *</Label>
-                            <Input
-                              value={cardEditValues.customerPhone || ""}
-                              onChange={(e) =>
-                                setCardEditValues({
-                                  ...cardEditValues,
-                                  customerPhone: e.target.value,
-                                })
-                              }
-                              placeholder="Nhập số điện thoại"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Email {customerType === "company" && "*"}</Label>
-                            <Input
-                              type="email"
-                              value={cardEditValues.customerEmail || ""}
-                              onChange={(e) =>
-                                setCardEditValues({
-                                  ...cardEditValues,
-                                  customerEmail: e.target.value,
-                                })
-                              }
-                              placeholder="Nhập email"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Mã số thuế</Label>
-                            <Input
-                              value={cardEditValues.customerTaxCode || ""}
-                              onChange={(e) =>
-                                setCardEditValues({
-                                  ...cardEditValues,
-                                  customerTaxCode: e.target.value,
-                                })
-                              }
-                              placeholder="Nhập mã số thuế"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Địa chỉ *</Label>
-                            <Textarea
-                              value={cardEditValues.customerAddress || ""}
-                              onChange={(e) =>
-                                setCardEditValues({
-                                  ...cardEditValues,
-                                  customerAddress: e.target.value,
-                                })
-                              }
-                              placeholder="Nhập địa chỉ"
-                              rows={3}
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        /* View Mode */
-                        <>
-                          {order.customerCompanyName && (
-                            <div className="flex items-start gap-3">
-                              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Công ty
-                                </p>
-                                <p className="font-medium">
-                                  {order.customerCompanyName}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex items-start gap-3">
-                            <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">
-                                Liên hệ
-                              </p>
-                              <p className="font-medium">
-                                {order.customerName || "—"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">
-                                Điện thoại
-                              </p>
-                              <p className="font-medium font-mono">
-                                {order.customerPhone || "—"}
-                              </p>
-                            </div>
-                          </div>
-                          {order.customerEmail && (
-                            <div className="flex items-start gap-3">
-                              <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Email
-                                </p>
-                                <p className="font-medium">{order.customerEmail}</p>
-                              </div>
-                            </div>
-                          )}
-                          {order.customer?.code && (
-                            <div className="flex items-start gap-3">
-                              <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Mã khách hàng
-                                </p>
-                                <p className="font-medium font-mono">
-                                  {order.customer.code ?? ""}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                          {/* Hiển thị mã số thuế cho khách hàng */}
-                          <div className="flex items-start gap-3">
-                            <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">
-                                Mã số thuế
-                              </p>
-                              <p className="font-medium font-mono">
-                                {order.customerTaxCode || "—"}
-                              </p>
-                            </div>
-                          </div>
-                          {order.customerAddress && (
-                            <div className="flex items-start gap-3">
-                              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Địa chỉ
-                                </p>
-                                <p className="font-medium">
-                                  {order.customerAddress}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          <Separator />
-
-                          {/* Critical warning if debt over limit */}
-                          {isDebtOverLimit && (
-                            <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-400 dark:border-red-700 rounded-lg p-3 mb-3">
-                              <div className="flex items-start gap-2">
-                                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <p className="text-sm font-semibold text-red-900 dark:text-red-100">
-                                    🚨 Công nợ vượt hạn mức
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/30">
+                            <TableHead className="w-[60px]">Ảnh</TableHead>
+                            <TableHead>Mô tả</TableHead>
+                            <TableHead className="text-center">ĐVT</TableHead>
+                            <TableHead className="text-center">
+                              Số lượng
+                            </TableHead>
+                            <TableHead className="text-center">
+                              SL thực tính
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Đơn giá
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Thành tiền
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {invoiceItems.length > 0 ? (
+                            invoiceItems.map((item, idx) => (
+                              <TableRow key={item.id || idx}>
+                                <TableCell>
+                                  <div className="w-12 h-12 rounded-md bg-muted overflow-hidden">
+                                    {item.orderDetail?.design
+                                      ?.designImageUrl ? (
+                                      <img
+                                        src={
+                                          item.orderDetail.design.designImageUrl
+                                        }
+                                        alt={
+                                          item.orderDetail.design?.designName ||
+                                          ""
+                                        }
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                        <Package className="h-5 w-5" />
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <p className="font-medium">
+                                    {item.description ||
+                                      item.orderDetail?.design?.designName ||
+                                      "—"}
                                   </p>
-                                  <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                                    Khách hàng đang nợ{" "}
-                                    <span className="font-bold">
-                                      {formatCurrency(
-                                        -Math.abs(order.customer?.currentDebt || 0),
-                                      )}
-                                    </span>
-                                    , vượt quá hạn mức cho phép{" "}
-                                    {formatCurrency(order.customer?.maxDebt || 0)}
+                                  <p className="text-xs text-muted-foreground font-mono">
+                                    {item.orderDetail?.design?.code || "—"}
                                   </p>
-                                </div>
-                              </div>
-                            </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {item.unit || "—"}
+                                </TableCell>
+                                <TableCell className="text-center font-medium tabular-nums">
+                                  {item.quantity?.toLocaleString("vi-VN")}
+                                </TableCell>
+                                <TableCell className="text-center font-medium tabular-nums text-primary">
+                                  {item.orderDetail?.netQtyTotal?.toLocaleString(
+                                    "vi-VN",
+                                  ) || "—"}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  {formatCurrency(item.unitPrice || 0)}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  {formatCurrency(item.amount || 0)}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell
+                                colSpan={7}
+                                className="text-center text-muted-foreground py-8"
+                              >
+                                Không có sản phẩm nào trong hóa đơn
+                              </TableCell>
+                            </TableRow>
                           )}
-
-                          <div
-                            className={`p-3 rounded-lg space-y-2 ${isDebtOverLimit
-                                ? "bg-red-50/50 dark:bg-red-950/10 border-2 border-red-200 dark:border-red-900"
-                                : "bg-muted/50"
-                              }`}
-                          >
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">
-                                Trạng thái nợ
-                              </span>
-                              <DebtStatusBadge
-                                status={order.customer?.debtStatus || null}
-                                className="text-xs"
-                              />
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                Nợ hiện tại
-                              </span>
-                              <span className="font-bold tabular-nums text-destructive">
-                                {formatCurrency(
-                                  -Math.abs(order.customer?.currentDebt || 0),
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                Hạn mức nợ
-                              </span>
-                              <span className="font-medium tabular-nums">
-                                {formatCurrency(order.customer?.maxDebt || 0)}
-                              </span>
-                            </div>
-                          </div>
-                        </>
-                      )}
+                        </TableBody>
+                      </Table>
                     </CardContent>
                   </Card>
-                </div>
+                </TabsContent>
+              </Tabs>
+
+              {/* Notes */}
+              {order.note && (
+                <Card className="border-amber-200 dark:border-amber-800">
+                  <CardHeader className="pb-3 bg-amber-50/50 dark:bg-amber-950/20">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      Ghi chú đơn hàng
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap leading-relaxed">
+                      {order.note}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Right Column - Sidebar */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Customer Info */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <User className="h-4 w-4 text-primary" />
+                      Thông tin khách hàng
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CustomerTypeBadge type={customerType} />
+                      {editingCard === "customerInfo" ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleSaveCard("customerInfo")}
+                            disabled={isUpdatingForAccounting}
+                          >
+                            {isUpdatingForAccounting ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Đang lưu...
+                              </>
+                            ) : (
+                              "Lưu"
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEditingCard}
+                            disabled={isUpdatingForAccounting}
+                          >
+                            Hủy
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            startEditingCard("customerInfo", {
+                              customerName: order.customerName || "",
+                              customerCompanyName:
+                                order.customerCompanyName || "",
+                              customerPhone: order.customerPhone || "",
+                              customerEmail: order.customerEmail || "",
+                              customerTaxCode: order.customerTaxCode || "",
+                              customerAddress: order.customerAddress || "",
+                            })
+                          }
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Sửa
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {editingCard === "customerInfo" ? (
+                    /* Edit Mode */
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Tên khách hàng *</Label>
+                        <Input
+                          value={cardEditValues.customerName || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerName: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập tên khách hàng"
+                        />
+                      </div>
+                      {customerType === "company" && (
+                        <div className="space-y-2">
+                          <Label>Tên công ty</Label>
+                          <Input
+                            value={cardEditValues.customerCompanyName || ""}
+                            onChange={(e) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                customerCompanyName: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập tên công ty"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label>Số điện thoại *</Label>
+                        <Input
+                          value={cardEditValues.customerPhone || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerPhone: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập số điện thoại"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email {customerType === "company" && "*"}</Label>
+                        <Input
+                          type="email"
+                          value={cardEditValues.customerEmail || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerEmail: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập email"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Mã số thuế</Label>
+                        <Input
+                          value={cardEditValues.customerTaxCode || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerTaxCode: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập mã số thuế"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Địa chỉ *</Label>
+                        <Textarea
+                          value={cardEditValues.customerAddress || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerAddress: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập địa chỉ"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    /* View Mode */
+                    <>
+                      {order.customerCompanyName && (
+                        <div className="flex items-start gap-3">
+                          <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Công ty
+                            </p>
+                            <p className="font-medium">
+                              {order.customerCompanyName}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-start gap-3">
+                        <User className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Liên hệ
+                          </p>
+                          <p className="font-medium">
+                            {order.customerName || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Điện thoại
+                          </p>
+                          <p className="font-medium font-mono">
+                            {order.customerPhone || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      {order.customerEmail && (
+                        <div className="flex items-start gap-3">
+                          <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Email
+                            </p>
+                            <p className="font-medium">{order.customerEmail}</p>
+                          </div>
+                        </div>
+                      )}
+                      {order.customer?.code && (
+                        <div className="flex items-start gap-3">
+                          <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Mã khách hàng
+                            </p>
+                            <p className="font-medium font-mono">
+                              {order.customer.code ?? ""}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Hiển thị mã số thuế cho khách hàng */}
+                      <div className="flex items-start gap-3">
+                        <Hash className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Mã số thuế
+                          </p>
+                          <p className="font-medium font-mono">
+                            {order.customerTaxCode || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      {order.customerAddress && (
+                        <div className="flex items-start gap-3">
+                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Địa chỉ
+                            </p>
+                            <p className="font-medium">
+                              {order.customerAddress}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <Separator />
+
+                      {/* Critical warning if debt over limit */}
+                      {isDebtOverLimit && (
+                        <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-400 dark:border-red-700 rounded-lg p-3 mb-3">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-red-900 dark:text-red-100">
+                                🚨 Công nợ vượt hạn mức
+                              </p>
+                              <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                                Khách hàng đang nợ{" "}
+                                <span className="font-bold">
+                                  {formatCurrency(
+                                    -Math.abs(order.customer?.currentDebt || 0),
+                                  )}
+                                </span>
+                                , vượt quá hạn mức cho phép{" "}
+                                {formatCurrency(order.customer?.maxDebt || 0)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div
+                        className={`p-3 rounded-lg space-y-2 ${
+                          isDebtOverLimit
+                            ? "bg-red-50/50 dark:bg-red-950/10 border-2 border-red-200 dark:border-red-900"
+                            : "bg-muted/50"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">
+                            Trạng thái nợ
+                          </span>
+                          <DebtStatusBadge
+                            status={order.customer?.debtStatus || null}
+                            className="text-xs"
+                          />
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Nợ hiện tại
+                          </span>
+                          <span className="font-bold tabular-nums text-destructive">
+                            {formatCurrency(
+                              -Math.abs(order.customer?.currentDebt || 0),
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Hạn mức nợ
+                          </span>
+                          <span className="font-medium tabular-nums">
+                            {formatCurrency(order.customer?.maxDebt || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Deposit Dialog */}
-        <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Nhận cọc đơn hàng</DialogTitle>
-              <DialogDescription>
-                Nhập số tiền cọc cho đơn hàng {order?.code}
-              </DialogDescription>
-            </DialogHeader>
+      {/* Deposit Dialog */}
+      <Dialog open={isDepositDialogOpen} onOpenChange={setIsDepositDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nhận cọc đơn hàng</DialogTitle>
+            <DialogDescription>
+              Nhập số tiền cọc cho đơn hàng {order?.code}
+            </DialogDescription>
+          </DialogHeader>
 
-            {order && (
-              <div className="space-y-4">
-                <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Tổng tiền</span>
-                    <span className="font-semibold">
-                      {formatCurrency(order.totalAmount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Đã cọc</span>
-                    <span className="font-medium text-emerald-600">
-                      {formatCurrency(order.depositAmount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between border-t pt-1 mt-1">
-                    <span className="text-muted-foreground">Còn lại</span>
-                    <span className="font-medium text-orange-600">
-                      {formatCurrency(order.totalAmount - order.depositAmount)}
-                    </span>
-                  </div>
+          {order && (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Tổng tiền</span>
+                  <span className="font-semibold">
+                    {formatCurrency(order.totalAmount)}
+                  </span>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="depositAmount">
-                    Số tiền cọc <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="depositAmount"
-                    type="number"
-                    min={0}
-                    step={1000}
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    placeholder="Nhập số tiền cọc"
-                    className="text-lg font-medium"
-                  />
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Đã cọc</span>
+                  <span className="font-medium text-emerald-600">
+                    {formatCurrency(order.depositAmount)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t pt-1 mt-1">
+                  <span className="text-muted-foreground">Còn lại</span>
+                  <span className="font-medium text-orange-600">
+                    {formatCurrency(order.totalAmount - order.depositAmount)}
+                  </span>
                 </div>
               </div>
-            )}
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsDepositDialogOpen(false);
-                  setDepositAmount("");
-                }}
-                disabled={isConfirmingDeposit}
-              >
-                Hủy
-              </Button>
-              <Button
-                onClick={handleConfirmDeposit}
-                disabled={
-                  isConfirmingDeposit ||
-                  !depositAmount ||
-                  parseFloat(depositAmount) <= 0
-                }
-              >
-                {isConfirmingDeposit ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang xử lý...
-                  </>
-                ) : (
-                  "Xác nhận nhận cọc"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <div className="space-y-2">
+                <Label htmlFor="depositAmount">
+                  Số tiền cọc <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="depositAmount"
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  placeholder="Nhập số tiền cọc"
+                  className="text-lg font-medium"
+                />
+              </div>
+            </div>
+          )}
 
-        {/* Cancel Order Dialog */}
-        <Dialog
-          open={isCancelDialogOpen}
-          onOpenChange={(open) => {
-            setIsCancelDialogOpen(open);
-            if (!open) setCancelReason("");
-          }}
-        >
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
-              <DialogDescription>
-                Bạn chắc chắn muốn hủy đơn hàng {order?.code}? Hành động này không
-                thể hoàn tác.
-              </DialogDescription>
-            </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDepositDialogOpen(false);
+                setDepositAmount("");
+              }}
+              disabled={isConfirmingDeposit}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleConfirmDeposit}
+              disabled={
+                isConfirmingDeposit ||
+                !depositAmount ||
+                parseFloat(depositAmount) <= 0
+              }
+            >
+              {isConfirmingDeposit ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Xác nhận nhận cọc"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-            {order && (
-              <div className="space-y-4">
-                <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Mã đơn</span>
-                    <span className="font-mono">{order.code}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Khách hàng</span>
-                    <span className="font-medium">
-                      {order.customerName || "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tổng tiền</span>
-                    <span className="font-semibold">
-                      {formatCurrency(order.totalAmount)}
-                    </span>
-                  </div>
+      {/* Cancel Order Dialog */}
+      <Dialog
+        open={isCancelDialogOpen}
+        onOpenChange={(open) => {
+          setIsCancelDialogOpen(open);
+          if (!open) setCancelReason("");
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
+            <DialogDescription>
+              Bạn chắc chắn muốn hủy đơn hàng {order?.code}? Hành động này không
+              thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+
+          {order && (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Mã đơn</span>
+                  <span className="font-mono">{order.code}</span>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cancelReason">
-                    Lý do hủy đơn (không bắt buộc)
-                  </Label>
-                  <Textarea
-                    id="cancelReason"
-                    value={cancelReason}
-                    onChange={(e) => setCancelReason(e.target.value)}
-                    placeholder="Nhập lý do hủy đơn"
-                    rows={3}
-                  />
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Khách hàng</span>
+                  <span className="font-medium">
+                    {order.customerName || "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tổng tiền</span>
+                  <span className="font-semibold">
+                    {formatCurrency(order.totalAmount)}
+                  </span>
                 </div>
               </div>
-            )}
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsCancelDialogOpen(false);
-                  setCancelReason("");
-                }}
-                disabled={isConfirmingCancel}
-              >
-                Không hủy
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleCancelOrder}
-                disabled={isConfirmingCancel}
-              >
-                {isConfirmingCancel ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang xử lý...
-                  </>
-                ) : (
-                  "Xác nhận hủy đơn"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </>
-      );
+              <div className="space-y-2">
+                <Label htmlFor="cancelReason">
+                  Lý do hủy đơn (không bắt buộc)
+                </Label>
+                <Textarea
+                  id="cancelReason"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Nhập lý do hủy đơn"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCancelDialogOpen(false);
+                setCancelReason("");
+              }}
+              disabled={isConfirmingCancel}
+            >
+              Không hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelOrder}
+              disabled={isConfirmingCancel}
+            >
+              {isConfirmingCancel ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Xác nhận hủy đơn"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
