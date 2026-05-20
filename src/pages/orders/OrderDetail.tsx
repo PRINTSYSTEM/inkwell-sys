@@ -208,6 +208,27 @@ export default function OrderDetailPage() {
 
   const { mutate: cancelOrder, loading: isCancellingOrder } = useCancelOrder();
 
+  const [hasInitiatedCancel, setHasInitiatedCancel] = useState(false);
+
+  // Reset cancellation state when navigating to a different order
+  useEffect(() => {
+    setHasInitiatedCancel(false);
+  }, [orderId]);
+
+  // Automatically cancel order if product details count becomes 0
+  useEffect(() => {
+    if (
+      order &&
+      order.status !== "cancelled" &&
+      (!order.orderDetails || order.orderDetails.length === 0) &&
+      !isCancellingOrder &&
+      !hasInitiatedCancel
+    ) {
+      setHasInitiatedCancel(true);
+      cancelOrder(order.id, { reason: "Không có sản phẩm" });
+    }
+  }, [order, cancelOrder, isCancellingOrder, hasInitiatedCancel]);
+
   const canViewPrice = role !== ROLE.DESIGN && role !== ROLE.DESIGN_LEAD;
   const canViewDesigner =
     role === ROLE.DESIGN ||
