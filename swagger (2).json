@@ -2937,6 +2937,24 @@
             }
           },
           {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
             "name": "month",
             "in": "query",
             "schema": {
@@ -8185,13 +8203,13 @@
             "description": "OK",
             "content": {
               "text/plain": {
-                "schema": { }
+                "schema": {}
               },
               "application/json": {
-                "schema": { }
+                "schema": {}
               },
               "text/json": {
-                "schema": { }
+                "schema": {}
               }
             }
           }
@@ -8689,7 +8707,8 @@
             "name": "itemType",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "default": "finished_product"
             }
           }
         ],
@@ -8778,7 +8797,8 @@
             "name": "itemType",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "default": "finished_product"
             }
           }
         ],
@@ -9955,14 +9975,6 @@
             "in": "query",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "materialTypeId",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
             }
           },
           {
@@ -11761,6 +11773,65 @@
         }
       }
     },
+    "/api/orders/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Order"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/orders/{id}/export-data": {
       "get": {
         "tags": [
@@ -11865,13 +11936,13 @@
             "description": "OK",
             "content": {
               "text/plain": {
-                "schema": { }
+                "schema": {}
               },
               "application/json": {
-                "schema": { }
+                "schema": {}
               },
               "text/json": {
-                "schema": { }
+                "schema": {}
               }
             }
           }
@@ -14224,13 +14295,13 @@
             "description": "OK",
             "content": {
               "text/plain": {
-                "schema": { }
+                "schema": {}
               },
               "application/json": {
-                "schema": { }
+                "schema": {}
               },
               "text/json": {
-                "schema": { }
+                "schema": {}
               }
             }
           }
@@ -19202,6 +19273,41 @@
           }
         }
       }
+    },
+    "/api/vendors/{id}/recalculate-debt": {
+      "post": {
+        "tags": [
+          "Vendor"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/vendors/recalculate-all-debts": {
+      "post": {
+        "tags": [
+          "Vendor"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -20808,6 +20914,20 @@
         },
         "additionalProperties": false
       },
+      "CancelOrderRequest": {
+        "required": [
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "CancelProofingOrderRequest": {
         "required": [
           "reason"
@@ -21507,6 +21627,12 @@
             "$ref": "#/components/schemas/ConstantGroup"
           },
           "dieLocations": {
+            "$ref": "#/components/schemas/ConstantGroup"
+          },
+          "stockItemTypes": {
+            "$ref": "#/components/schemas/ConstantGroup"
+          },
+          "materialUnits": {
             "$ref": "#/components/schemas/ConstantGroup"
           }
         },
@@ -22231,19 +22357,14 @@
       "CreateMaterialRequest": {
         "required": [
           "length",
-          "materialTypeId",
           "name",
-          "width"
+          "unitPrice"
         ],
         "type": "object",
         "properties": {
           "name": {
             "minLength": 1,
             "type": "string"
-          },
-          "materialTypeId": {
-            "type": "integer",
-            "format": "int32"
           },
           "length": {
             "minimum": 0,
@@ -22253,9 +22374,15 @@
           "width": {
             "minimum": 0,
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "nullable": true
           },
-          "height": {
+          "unit": {
+            "maxLength": 50,
+            "type": "string",
+            "nullable": true
+          },
+          "unitPrice": {
             "minimum": 0,
             "type": "number",
             "format": "double"
@@ -24649,7 +24776,7 @@
           },
           "details": {
             "type": "object",
-            "additionalProperties": { },
+            "additionalProperties": {},
             "nullable": true
           }
         },
@@ -25536,23 +25663,20 @@
             "type": "string",
             "nullable": true
           },
-          "materialTypeId": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "materialTypeName": {
-            "type": "string",
-            "nullable": true
-          },
           "length": {
             "type": "number",
             "format": "double"
           },
           "width": {
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "nullable": true
           },
-          "height": {
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "unitPrice": {
             "type": "number",
             "format": "double"
           },
@@ -26482,17 +26606,8 @@
           "customer": {
             "$ref": "#/components/schemas/CustomerSummaryResponse"
           },
-          "createdBy": {
-            "type": "integer",
-            "format": "int32"
-          },
           "creator": {
             "$ref": "#/components/schemas/UserInfo"
-          },
-          "assignedTo": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
           },
           "assignedUser": {
             "$ref": "#/components/schemas/UserInfo"
@@ -27175,7 +27290,7 @@
             "nullable": true
           }
         },
-        "additionalProperties": { }
+        "additionalProperties": {}
       },
       "ProcessDeliveryReturnRequest": {
         "required": [
@@ -29849,11 +29964,6 @@
             "type": "string",
             "nullable": true
           },
-          "materialTypeId": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
           "length": {
             "minimum": 0,
             "type": "number",
@@ -29866,7 +29976,12 @@
             "format": "double",
             "nullable": true
           },
-          "height": {
+          "unit": {
+            "maxLength": 50,
+            "type": "string",
+            "nullable": true
+          },
+          "unitPrice": {
             "minimum": 0,
             "type": "number",
             "format": "double",
@@ -31035,7 +31150,7 @@
   },
   "security": [
     {
-      "Bearer": [ ]
+      "Bearer": []
     }
   ]
 }

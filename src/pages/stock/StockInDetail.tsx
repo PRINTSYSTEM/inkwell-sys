@@ -118,6 +118,7 @@ export default function StockInDetailPage() {
       setEditItems(
         stockIn.items.map((item: any) => ({
           ...item,
+          quantity: item.quantity ?? 1,
           unitPrice: item.unitPrice ?? 0,
           notes: item.notes ?? "",
         }))
@@ -136,6 +137,14 @@ export default function StockInDetailPage() {
 
   const handleSaveUpdate = () => {
     if (!stockIn?.id) return;
+
+    const hasInvalidQuantity = editItems.some(
+      (item) => !item.quantity || item.quantity < 1
+    );
+    if (hasInvalidQuantity) {
+      toast.error("Số lượng của tất cả vật phẩm phải lớn hơn hoặc bằng 1");
+      return;
+    }
 
     // Calculate new total amount as sum of (quantity * unitPrice) of all items
     const newTotalAmount = editItems.reduce(
@@ -377,7 +386,7 @@ export default function StockInDetailPage() {
                     className="cursor-pointer transition-colors duration-200 border-[#93631F]/30 text-[#93631F] hover:bg-[#93631F]/5 hover:border-[#93631F]/50"
                   >
                     <Edit className="h-4 w-4 mr-2" />
-                    Cập nhật đơn giá & ghi chú
+                    Cập nhật số lượng, đơn giá & ghi chú
                   </Button>
                 )}
                 <Button
@@ -632,9 +641,10 @@ export default function StockInDetailPage() {
                           Nguồn nhập
                         </p>
                         <p className="text-xs font-semibold text-slate-900 truncate">
-                          {stockIn.source
-                            ? stockInSourceLabels[stockIn.source.toLowerCase()] || stockIn.source
-                            : "Không có"}
+                          {stockIn.vendorName ||
+                            (stockIn.source
+                              ? stockInSourceLabels[stockIn.source.toLowerCase()] || stockIn.source
+                              : "Không có")}
                         </p>
                       </div>
                     </div>
@@ -831,10 +841,10 @@ export default function StockInDetailPage() {
               </div>
               <div>
                 <DialogTitle className="text-lg font-bold text-slate-900">
-                  Cập nhật đơn giá & ghi chú
+                  Cập nhật số lượng, đơn giá & ghi chú
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  Chỉnh sửa giá nhập và ghi chú của các vật phẩm trong phiếu. Tổng giá trị phiếu sẽ tự động cập nhật.
+                  Chỉnh sửa số lượng, giá nhập và ghi chú của các vật phẩm trong phiếu. Tổng giá trị phiếu sẽ tự động cập nhật.
                 </DialogDescription>
               </div>
             </div>
@@ -847,7 +857,7 @@ export default function StockInDetailPage() {
                   <TableRow>
                     <TableHead className="w-12 text-center text-xs font-semibold py-2.5">STT</TableHead>
                     <TableHead className="text-xs font-semibold py-2.5">Tên vật phẩm</TableHead>
-                    <TableHead className="w-24 text-right text-xs font-semibold py-2.5">Số lượng</TableHead>
+                    <TableHead className="w-32 text-right text-xs font-semibold py-2.5">Số lượng</TableHead>
                     <TableHead className="w-32 text-xs font-semibold py-2.5">Đơn giá</TableHead>
                     <TableHead className="w-36 text-xs font-semibold py-2.5">Thành tiền</TableHead>
                     <TableHead className="w-48 text-xs font-semibold py-2.5">Ghi chú</TableHead>
@@ -865,8 +875,26 @@ export default function StockInDetailPage() {
                           <p className="text-sm font-semibold text-slate-900 line-clamp-1">{item.itemName}</p>
                           <p className="text-[10px] text-slate-400 mt-0.5">{item.itemCode || "Không có mã"}</p>
                         </TableCell>
-                        <TableCell className="text-right text-xs font-medium text-slate-600 py-3">
-                          {item.quantity?.toLocaleString("vi-VN")} {item.unit || "đv"}
+                        <TableCell className="py-2">
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <Input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={item.quantity ?? ""}
+                              onChange={(e) =>
+                                handleEditItemChange(
+                                  index,
+                                  "quantity",
+                                  e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0
+                                )
+                              }
+                              className="h-8 w-20 text-xs font-medium text-right focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <span className="text-[10px] text-slate-500 whitespace-nowrap min-w-[24px] text-left">
+                              {item.unit || "đv"}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell className="py-2">
                           <Input
@@ -881,7 +909,7 @@ export default function StockInDetailPage() {
                                 e.target.value === "" ? 0 : parseFloat(e.target.value) || 0
                               )
                             }
-                            className="h-8 text-xs font-medium focus-visible:ring-[#93631F]/30"
+                            className="h-8 text-xs font-medium focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </TableCell>
                         <TableCell className="text-right text-xs font-semibold text-slate-900 py-3 font-mono">
