@@ -354,6 +354,7 @@ export default function MaterialCutCreatePage() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSuccess={handleCreateSuccess}
+        showQuantity={false}
         defaultMaterialTypeId={selectedInputMaterial?.materialTypeId}
       />
     </>

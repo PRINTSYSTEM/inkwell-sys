@@ -63,12 +63,13 @@ import {
 import { useCreateStockInFromVendor } from "@/hooks/use-stock";
 import type { StockInItemRequest } from "@/Schema/stock.schema";
 import { useVendors, useCreateVendor } from "@/hooks/use-vendor";
-import { useMaterials, useCreateMaterial } from "@/hooks/use-material";
+import { useMaterials } from "@/hooks/use-material";
 import { useMaterialTypeList } from "@/hooks/use-material-type";
 import { toast } from "sonner";
 import type { CreateVendorRequest } from "@/Schema/vendor.schema";
 import type { MaterialResponse } from "@/Schema/material.schema";
-import type { CreateMaterialRequest } from "@/Schema/material.schema";
+import { CreateMaterialDialog } from "./components/CreateMaterialDialog";
+
 
 // Utility function to generate material code from name
 // Example: "Hộp Duplex 350 - 20x15x10cm" -> "HOP-DUPLEX-350-20x15x10"
@@ -196,8 +197,6 @@ export default function StockInCreatePage() {
     useCreateVendor();
   const { data: materialsData } = useMaterials({ page: 1, size: 1000 });
   const materials = materialsData?.items || [];
-  const { mutate: createMaterial, isPending: isCreatingMaterial } =
-    useCreateMaterial();
   const { data: materialTypesData } = useMaterialTypeList({
     pageNumber: 1,
     pageSize: 100,
@@ -227,42 +226,8 @@ export default function StockInCreatePage() {
   const [creatingMaterialIndex, setCreatingMaterialIndex] = useState<
     number | null
   >(null);
-  const [newMaterialData, setNewMaterialData] = useState<CreateMaterialRequest>(
-    {
-      name: "",
-      materialTypeId: 0,
-      length: 0,
-      width: undefined,
-      quantity: undefined,
-    }
-  );
-  const [dialogUnitPrice, setDialogUnitPrice] = useState<number | undefined>(undefined);
-  const [dialogUnit, setDialogUnit] = useState<string>("");
 
-  // Helper to parse dimensions from material name
-  const parseDimensionsFromName = (name: string): { length?: number; width?: number | null } => {
-    if (!name) return {};
 
-    // Pattern 1: "Màng PE 64x53" -> length = 64, width = 53
-    const crossMatch = name.match(/(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/);
-    if (crossMatch) {
-      return {
-        length: parseFloat(crossMatch[1]),
-        width: parseFloat(crossMatch[2]),
-      };
-    }
-
-    // Pattern 2: "Cuộn PE khổ 64" -> length = 64, width = null
-    const widthMatch = name.match(/(?:khổ|kho)\s*:?\s*(\d+(?:\.\d+)?)/i);
-    if (widthMatch) {
-      return {
-        length: parseFloat(widthMatch[1]),
-        width: null,
-      };
-    }
-
-    return {};
-  };
 
   const [layoutMode, setLayoutMode] = useState<"grid" | "table">(() => {
     const saved = localStorage.getItem("stockInLayoutMode");
@@ -713,8 +678,6 @@ export default function StockInCreatePage() {
                             className="h-8 w-8 shrink-0 hover:bg-[#93631F]/10 text-[#93631F] border-[#93631F]/20"
                             onClick={() => {
                               setCreatingMaterialIndex(index);
-                              setNewMaterialData({ name: "", materialTypeId: materialTypes[0]?.id || 1, length: 0, width: undefined, quantity: undefined });
-                              setDialogUnitPrice(undefined);
                               setIsCreateMaterialDialogOpen(true);
                             }}
                           >
@@ -833,8 +796,6 @@ export default function StockInCreatePage() {
                                 className="h-8 w-8 shrink-0 text-[#93631F] hover:bg-[#93631F]/10"
                                 onClick={() => {
                                   setCreatingMaterialIndex(index);
-                                  setNewMaterialData({ name: "", materialTypeId: materialTypes[0]?.id || 1, length: 0, width: undefined, quantity: undefined });
-                                  setDialogUnitPrice(undefined);
                                   setIsCreateMaterialDialogOpen(true);
                                 }}
                               >
@@ -1081,219 +1042,34 @@ export default function StockInCreatePage() {
       </Dialog>
 
       {/* Create Material Dialog */}
-      <Dialog
+      <CreateMaterialDialog
         open={isCreateMaterialDialogOpen}
         onOpenChange={setIsCreateMaterialDialogOpen}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Tạo chất liệu mới</DialogTitle>
-            <DialogDescription>
-              Tạo chất liệu mới để sử dụng trong phiếu nhập kho
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="materialName">
-                Tên chất liệu <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="materialName"
-                value={newMaterialData.name}
-                onChange={(e) => {
-                  const name = e.target.value;
-                  const parsed = parseDimensionsFromName(name);
-                  setNewMaterialData((prev) => {
-                    const updated = { ...prev, name };
-                    if (parsed.length !== undefined) {
-                      updated.length = parsed.length;
-                    }
-                    if (parsed.width !== undefined) {
-                      updated.width = parsed.width === null ? undefined : parsed.width;
-                    }
-                    return updated;
-                  });
-                }}
-                className="bg-slate-50/50 font-medium"
-                placeholder="Nhập tên chất liệu"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="materialLength">
-                  Chiều dài (m) <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="materialLength"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={newMaterialData.length || ""}
-                  onChange={(e) => {
-                    const length = parseFloat(e.target.value) || 0;
-                    setNewMaterialData({
-                      ...newMaterialData,
-                      length,
-                    });
-                  }}
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="materialWidth">Chiều rộng (m)</Label>
-                <Input
-                  id="materialWidth"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={newMaterialData.width ?? ""}
-                  onChange={(e) => {
-                    const width = e.target.value === "" ? undefined : parseFloat(e.target.value) || 0;
-                    setNewMaterialData({
-                      ...newMaterialData,
-                      width,
-                    });
-                  }}
-                  placeholder="0 (tùy chọn)"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="materialUnitPrice">Đơn giá</Label>
-                <Input
-                  id="materialUnitPrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={dialogUnitPrice ?? ""}
-                  onChange={(e) =>
-                    setDialogUnitPrice(
-                      e.target.value === ""
-                        ? undefined
-                        : parseFloat(e.target.value) || undefined
-                    )
-                  }
-                  placeholder="0 (tùy chọn)"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="materialUnit">Đơn vị tính (ĐVT)</Label>
-                <Input
-                  id="materialUnit"
-                  value={dialogUnit}
-                  onChange={(e) => setDialogUnit(e.target.value)}
-                  placeholder="Ví dụ: Tờ, Cuộn, Cái..."
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="materialQuantity">Số lượng tồn kho có sẵn</Label>
-              <Input
-                id="materialQuantity"
-                type="number"
-                min="0"
-                step="1"
-                value={newMaterialData.quantity ?? ""}
-                onChange={(e) =>
-                  setNewMaterialData({
-                    ...newMaterialData,
-                    quantity:
-                      e.target.value === ""
-                        ? undefined
-                        : parseInt(e.target.value, 10) ?? undefined,
-                  })
-                }
-                placeholder="0 (tùy chọn)"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsCreateMaterialDialogOpen(false);
-                setNewMaterialData({
-                  name: "",
-                  materialTypeId: materialTypes[0]?.id || 1,
-                  length: 0,
-                  width: undefined,
-                  quantity: undefined,
-                });
-                setDialogUnitPrice(undefined);
-                setDialogUnit("");
-              }}
-              disabled={isCreatingMaterial}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                if (!newMaterialData.name.trim()) {
-                  toast.error("Vui lòng nhập tên chất liệu");
-                  return;
-                }
-                if (newMaterialData.length <= 0) {
-                  toast.error("Vui lòng nhập chiều dài lớn hơn 0");
-                  return;
-                }
-                const finalMaterialTypeId = newMaterialData.materialTypeId || materialTypes[0]?.id || 1;
-                createMaterial(
-                  {
-                    name: newMaterialData.name.trim(),
-                    materialTypeId: finalMaterialTypeId,
-                    length: newMaterialData.length,
-                    width: newMaterialData.width,
-                    quantity: newMaterialData.quantity,
-                    unit: dialogUnit.trim() || undefined,
-                    unitPrice: dialogUnitPrice ?? undefined,
-                  },
-                  {
-                    onSuccess: (newMaterial) => {
-                      toast.success("Đã tạo chất liệu thành công");
-                      setIsCreateMaterialDialogOpen(false);
-                      if (creatingMaterialIndex !== null && newMaterial.id) {
-                        // Store metadata in localStorage
-                        localStorage.setItem(`material_meta_${newMaterial.id}`, JSON.stringify({
-                          unit: dialogUnit,
-                          unitPrice: dialogUnitPrice || 0
-                        }));
+        showQuantity={true}
+        dimensionUnit="m"
+        submitButtonClassName="bg-[#93631F] hover:bg-[#7a521a]"
+        onSuccess={(id, _newMaterial, unit, unitPrice) => {
+          if (creatingMaterialIndex !== null && id) {
+            // Store metadata in localStorage
+            localStorage.setItem(`material_meta_${id}`, JSON.stringify({
+              unit: unit || "",
+              unitPrice: unitPrice || 0
+            }));
 
-                        handleMaterialSelect(
-                          creatingMaterialIndex,
-                          newMaterial.id.toString()
-                        );
-                        if (dialogUnitPrice !== undefined) {
-                          handleItemChange(creatingMaterialIndex, "unitPrice", dialogUnitPrice);
-                        }
-                        if (dialogUnit) {
-                          handleItemChange(creatingMaterialIndex, "unit", dialogUnit);
-                        }
-                      }
-                      setNewMaterialData({
-                        name: "",
-                        materialTypeId: finalMaterialTypeId,
-                        length: 0,
-                        width: undefined,
-                        quantity: undefined,
-                      });
-                      setDialogUnitPrice(undefined);
-                      setDialogUnit("");
-                      setCreatingMaterialIndex(null);
-                    },
-                  }
-                );
-              }}
-              disabled={isCreatingMaterial}
-              className="cursor-pointer transition-colors duration-200 bg-[#93631F] hover:bg-[#7a521a]"
-            >
-              {isCreatingMaterial ? "Đang tạo..." : "Tạo chất liệu"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            handleMaterialSelect(
+              creatingMaterialIndex,
+              id.toString()
+            );
+            if (unitPrice !== undefined) {
+              handleItemChange(creatingMaterialIndex, "unitPrice", unitPrice);
+            }
+            if (unit) {
+              handleItemChange(creatingMaterialIndex, "unit", unit);
+            }
+          }
+          setCreatingMaterialIndex(null);
+        }}
+      />
     </div>
   );
 }
