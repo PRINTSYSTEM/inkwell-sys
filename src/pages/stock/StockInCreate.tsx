@@ -50,6 +50,7 @@ import {
   Check,
   ChevronsUpDown,
   Search,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -208,6 +209,7 @@ export default function StockInCreatePage() {
     vendorId: null as number | null,
     notes: "",
     stockInDate: new Date().toISOString().slice(0, 16),
+    laborCost: undefined as number | undefined,
   });
 
   const [isCreateVendorDialogOpen, setIsCreateVendorDialogOpen] =
@@ -245,11 +247,11 @@ export default function StockInCreatePage() {
       unit: "",
       quantity: 1,
       unitPrice: undefined,
-      laborCost: undefined,
       notes: "",
       materialId: undefined,
       orderDetailId: undefined,
       lineKind: undefined,
+      proofingOrderId: undefined,
     },
   ]);
 
@@ -266,11 +268,11 @@ export default function StockInCreatePage() {
         unit: "",
         quantity: 1,
         unitPrice: undefined,
-        laborCost: undefined,
         notes: "",
         materialId: undefined,
         orderDetailId: undefined,
         lineKind: undefined,
+        proofingOrderId: undefined,
       },
     ]);
   };
@@ -345,17 +347,15 @@ export default function StockInCreatePage() {
       const materialName = material.name || material.materialTypeName || "";
       const generatedCode = generateMaterialCode(materialName);
 
-      // Load unit, unitPrice, and laborCost from localStorage if available
+      // Load unit and unitPrice from localStorage if available
       let loadedUnit = "";
       let loadedUnitPrice: number | undefined = undefined;
-      let loadedLaborCost: number | undefined = undefined;
       const cached = localStorage.getItem(`material_meta_${material.id}`);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
           loadedUnit = parsed.unit || "";
           loadedUnitPrice = parsed.unitPrice;
-          loadedLaborCost = parsed.laborCost;
         } catch (e) {
           console.error(e);
         }
@@ -368,7 +368,6 @@ export default function StockInCreatePage() {
         itemCode: generatedCode,
         unit: loadedUnit || newItems[index].unit || "",
         unitPrice: loadedUnitPrice !== undefined ? loadedUnitPrice : newItems[index].unitPrice,
-        laborCost: loadedLaborCost !== undefined ? loadedLaborCost : newItems[index].laborCost,
         materialId: material.id,
         length: material.length,
         width: material.width,
@@ -440,6 +439,7 @@ export default function StockInCreatePage() {
         vendorId: formData.vendorId,
         itemType: "material",
         notes: formData.notes?.trim() || undefined,
+        laborCost: formData.laborCost ?? undefined,
         stockInDate: formData.stockInDate
           ? formatDateWithOffset(formData.stockInDate)
           : undefined,
@@ -449,13 +449,13 @@ export default function StockInCreatePage() {
           unit: (item.unit || "").trim() || undefined,
           quantity: Math.floor(item.quantity),
           unitPrice: item.unitPrice ?? undefined,
-          laborCost: item.laborCost ?? undefined,
           notes: (item.notes || "").trim() || undefined,
           materialId: item.materialId ?? undefined,
           orderDetailId: item.orderDetailId ?? undefined,
           lineKind: item.lineKind ?? undefined,
           length: item.length ?? undefined,
           width: item.width ?? undefined,
+          proofingOrderId: typeof item.proofingOrderId === 'string' ? (item.proofingOrderId.trim() || undefined) : (item.proofingOrderId ?? undefined),
         })),
       },
       {
@@ -589,7 +589,22 @@ export default function StockInCreatePage() {
                 />
               </div>
 
-              <div className="md:col-span-5 space-y-1.5">
+              <div className="md:col-span-2 space-y-1.5">
+                <Label htmlFor="laborCost" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
+                  <Coins className="h-3 w-3" /> Tiền công
+                </Label>
+                <Input
+                  id="laborCost"
+                  type="number"
+                  min="0"
+                  value={formData.laborCost ?? ""}
+                  onChange={(e) => setFormData({ ...formData, laborCost: e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined })}
+                  placeholder="0.00"
+                  className="h-9 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+              </div>
+
+              <div className="md:col-span-3 space-y-1.5">
                 <Label htmlFor="notes" className="text-xs font-semibold text-slate-600">Ghi chú phiếu</Label>
                 <Input
                   id="notes"
@@ -726,14 +741,13 @@ export default function StockInCreatePage() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-400">Tiền công</Label>
+                          <Label className="text-[10px] uppercase font-bold text-slate-400">Mã bài</Label>
                           <Input
-                            type="number"
-                            min="0"
-                            value={item.laborCost ?? ""}
-                            onChange={(e) => handleItemChange(index, "laborCost", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
-                            placeholder="0.00"
-                            className="h-8 text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            type="text"
+                            value={item.proofingOrderId ?? ""}
+                            onChange={(e) => handleItemChange(index, "proofingOrderId", e.target.value)}
+                            placeholder="Mã bài"
+                            className="h-8 text-sm"
                           />
                         </div>
                       </div>
@@ -773,7 +787,7 @@ export default function StockInCreatePage() {
                         <TableHead className="w-[100px] text-right">Số lượng</TableHead>
                         <TableHead className="w-[80px]">ĐVT</TableHead>
                         <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
-                        <TableHead className="w-[120px] text-right">Tiền công</TableHead>
+                        <TableHead className="w-[100px]">Mã bài</TableHead>
                         <TableHead>Ghi chú</TableHead>
                         <TableHead className="w-10"></TableHead>
                       </TableRow>
@@ -839,14 +853,13 @@ export default function StockInCreatePage() {
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={item.laborCost ?? ""}
-                              onChange={(e) => handleItemChange(index, "laborCost", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
-                              placeholder="0"
-                              className="h-8 text-sm text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            />
+                           <Input
+                             type="text"
+                             value={item.proofingOrderId ?? ""}
+                             onChange={(e) => handleItemChange(index, "proofingOrderId", e.target.value)}
+                             placeholder="Mã bài"
+                             className="h-8 text-sm"
+                           />
                           </TableCell>
                           <TableCell>
                             <Input

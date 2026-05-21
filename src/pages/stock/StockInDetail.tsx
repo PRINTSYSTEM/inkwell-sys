@@ -22,10 +22,10 @@ import {
   Box,
   AlertTriangle,
   RefreshCw,
+  DollarSign,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -120,7 +120,9 @@ export default function StockInDetailPage() {
           ...item,
           quantity: item.quantity ?? 1,
           unitPrice: item.unitPrice ?? 0,
+          laborCost: item.laborCost ?? 0,
           notes: item.notes ?? "",
+          proofingOrderId: item.proofingOrderId ?? null,
         }))
       );
     }
@@ -159,6 +161,7 @@ export default function StockInDetailPage() {
       unit: item.unit,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
+      laborCost: item.laborCost,
       notes: item.notes,
       materialId: item.materialId,
       orderDetailId: item.orderDetailId,
@@ -166,6 +169,7 @@ export default function StockInDetailPage() {
       length: item.length,
       width: item.width,
       height: item.height,
+      proofingOrderId: typeof item.proofingOrderId === 'string' ? (item.proofingOrderId.trim() || null) : (item.proofingOrderId ?? null),
     }));
 
     updateStockIn(
@@ -446,9 +450,6 @@ export default function StockInDetailPage() {
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-24">
                           Đơn vị
                         </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-28">
-                          Loại hàng
-                        </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 text-right w-28">
                           Số lượng
                         </TableHead>
@@ -456,7 +457,10 @@ export default function StockInDetailPage() {
                           Đơn giá
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 text-right w-32">
-                          Thành tiền
+                          Tiền công
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-28">
+                          Mã bài
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-40">
                           Ghi chú
@@ -475,8 +479,6 @@ export default function StockInDetailPage() {
                         </TableRow>
                       ) : (
                         items.map((item, index) => {
-                          const itemTotal =
-                            (item.quantity || 0) * (item.unitPrice || 0);
                           return (
                             <TableRow
                               key={index}
@@ -494,16 +496,6 @@ export default function StockInDetailPage() {
                               <TableCell className="text-slate-600 text-sm py-3 px-4">
                                 {item.unit || "Không có"}
                               </TableCell>
-                              <TableCell className="text-slate-600 text-sm py-3 px-4">
-                                {item.lineKind ? (
-                                  <Badge variant="outline" className="text-[10px] font-normal uppercase">
-                                    {item.lineKind === "sheet" ? "Tờ" : 
-                                     item.lineKind === "roll" ? "Cuộn" : 
-                                     item.lineKind === "service" ? "Dịch vụ" : 
-                                     item.lineKind === "custom" ? "Tùy chỉnh" : item.lineKind}
-                                  </Badge>
-                                ) : "—"}
-                              </TableCell>
                               <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
                                 {(item.quantity || 0).toLocaleString("vi-VN")}
                               </TableCell>
@@ -512,8 +504,13 @@ export default function StockInDetailPage() {
                                   ? formatCurrency(item.unitPrice)
                                   : "Không có"}
                               </TableCell>
-                              <TableCell className="text-right font-medium text-slate-900 text-sm py-3 px-4">
-                                {formatCurrency(itemTotal)}
+                              <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
+                                {item.laborCost !== undefined && item.laborCost !== null
+                                  ? formatCurrency(item.laborCost)
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="text-slate-600 text-sm py-3 px-4">
+                                {item.proofingOrderId || "—"}
                               </TableCell>
                               <TableCell className="text-slate-600 text-sm py-3 px-4 truncate max-w-[160px]">
                                 {item.notes || "Không có"}
@@ -529,7 +526,7 @@ export default function StockInDetailPage() {
             </Card>
 
             {/* Status and Summary Cards - Compact */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
                 <CardHeader className="bg-gradient-to-r from-emerald-500/5 to-teal-500/5 px-3 py-2 border-b border-slate-200/60">
                   <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -577,6 +574,20 @@ export default function StockInDetailPage() {
                 <CardContent className="px-3 py-2.5">
                   <p className="text-base font-bold text-slate-900">
                     {formatCurrency(totalAmount)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-emerald-500/5 to-teal-500/5 px-3 py-2 border-b border-slate-200/60">
+                  <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <DollarSign className="h-3 w-3" />
+                    Chi phí nhân công
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 py-2.5">
+                  <p className="text-base font-bold text-slate-900">
+                    {formatCurrency(stockIn.laborCost ?? 0)}
                   </p>
                 </CardContent>
               </Card>
@@ -859,13 +870,13 @@ export default function StockInDetailPage() {
                     <TableHead className="text-xs font-semibold py-2.5">Tên vật phẩm</TableHead>
                     <TableHead className="w-32 text-right text-xs font-semibold py-2.5">Số lượng</TableHead>
                     <TableHead className="w-32 text-xs font-semibold py-2.5">Đơn giá</TableHead>
-                    <TableHead className="w-36 text-xs font-semibold py-2.5">Thành tiền</TableHead>
+                    <TableHead className="w-32 text-xs font-semibold py-2.5">Tiền công</TableHead>
+                    <TableHead className="w-24 text-xs font-semibold py-2.5">Mã bài</TableHead>
                     <TableHead className="w-48 text-xs font-semibold py-2.5">Ghi chú</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {editItems.map((item, index) => {
-                    const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
                     return (
                       <TableRow key={index} className="hover:bg-slate-50/50 transition-colors duration-150">
                         <TableCell className="text-center text-xs font-medium text-slate-500 py-3">
@@ -912,8 +923,36 @@ export default function StockInDetailPage() {
                             className="h-8 text-xs font-medium focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </TableCell>
-                        <TableCell className="text-right text-xs font-semibold text-slate-900 py-3 font-mono">
-                          {formatCurrency(itemTotal)}
+                        <TableCell className="py-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.laborCost ?? ""}
+                            onChange={(e) =>
+                              handleEditItemChange(
+                                index,
+                                "laborCost",
+                                e.target.value === "" ? 0 : parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="h-8 text-xs font-medium focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Input
+                            type="text"
+                            value={item.proofingOrderId ?? ""}
+                            onChange={(e) =>
+                              handleEditItemChange(
+                                index,
+                                "proofingOrderId",
+                                e.target.value === "" ? null : e.target.value
+                              )
+                            }
+                            placeholder="Mã bài"
+                            className="h-8 text-xs font-medium focus-visible:ring-[#93631F]/30"
+                          />
                         </TableCell>
                         <TableCell className="py-2">
                           <Input

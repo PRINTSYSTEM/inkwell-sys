@@ -372,7 +372,7 @@ export default function StockInListPage() {
                             <TableHead className="w-[120px] font-semibold text-slate-700">
                               Ngày
                             </TableHead>
-                            <TableHead className="font-semibold text-slate-700">
+                            <TableHead className="min-w-[160px] font-semibold text-slate-700">
                               Nhà cung cấp
                             </TableHead>
                             <TableHead className="font-semibold text-slate-700">
@@ -384,6 +384,12 @@ export default function StockInListPage() {
                             <TableHead className="w-[120px] text-right font-semibold text-slate-700">
                               Đơn giá
                             </TableHead>
+                            <TableHead className="w-[100px] font-semibold text-slate-700">
+                              Mã bài
+                            </TableHead>
+                            <TableHead className="w-[120px] text-right font-semibold text-slate-700">
+                              Tiền công
+                            </TableHead>
                             <TableHead className="text-right font-semibold text-slate-700">
                               Tổng SL
                             </TableHead>
@@ -393,7 +399,7 @@ export default function StockInListPage() {
                             <TableHead className="text-center font-semibold text-slate-700">
                               Trạng thái
                             </TableHead>
-                            <TableHead className="w-[220px] text-right font-semibold text-slate-700">Thao tác</TableHead>
+                            <TableHead className="w-[135px] text-right font-semibold text-slate-700">Thao tác</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -453,6 +459,24 @@ export default function StockInListPage() {
                                   )}
                                 </div>
                               </TableCell>
+                              <TableCell className="text-sm text-slate-600">
+                                <div className="space-y-1">
+                                  {stockIn.items && stockIn.items.length > 0 ? (
+                                    stockIn.items.map((item: any, idx: number) => (
+                                      <div key={idx} className="font-mono text-xs">
+                                        {item.proofingOrderId || "—"}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    "—"
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-medium tabular-nums text-slate-600">
+                                {stockIn.laborCost != null
+                                  ? formatCurrency(stockIn.laborCost)
+                                  : "—"}
+                              </TableCell>
                               <TableCell className="text-right font-medium tabular-nums text-slate-700">
                                 {stockIn.totalQuantity
                                   ? stockIn.totalQuantity.toLocaleString("vi-VN")
@@ -467,7 +491,7 @@ export default function StockInListPage() {
                                 {getStatusBadge(stockIn.status)}
                               </TableCell>
                               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-end gap-2">
+                                <div className="flex flex-col items-end gap-1.5">
                                   {stockIn.status !== "completed" &&
                                     stockIn.status !== "cancelled" && (
                                       <Button
@@ -477,9 +501,9 @@ export default function StockInListPage() {
                                           e.stopPropagation();
                                           handleComplete(stockIn.id);
                                         }}
-                                        className="h-8 border-emerald-500/30 hover:border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200 font-medium text-xs rounded-md shadow-sm cursor-pointer"
+                                        className="h-8 w-[115px] border-emerald-500/30 hover:border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200 font-medium text-xs rounded-md shadow-sm cursor-pointer justify-center"
                                       >
-                                        <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-500" />
+                                        <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-500 flex-shrink-0" />
                                         Hoàn thành
                                       </Button>
                                     )}
@@ -491,9 +515,9 @@ export default function StockInListPage() {
                                         e.stopPropagation();
                                         handleCancel(stockIn.id);
                                       }}
-                                      className="h-8 border-red-200 hover:border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 font-medium text-xs rounded-md shadow-sm cursor-pointer"
+                                      className="h-8 w-[115px] border-red-200 hover:border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 font-medium text-xs rounded-md shadow-sm cursor-pointer justify-center"
                                     >
-                                      <XCircle className="h-3.5 w-3.5 mr-1 text-red-500" />
+                                      <XCircle className="h-3.5 w-3.5 mr-1 text-red-500 flex-shrink-0" />
                                       Hủy
                                     </Button>
                                   )}
