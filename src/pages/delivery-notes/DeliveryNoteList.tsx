@@ -584,9 +584,13 @@ export default function DeliveryNoteListPage() {
 
   const handleSelectAllVisible = () => {
     const items = (deliveryNotesData as any)?.items || [];
-    // Only select items that are not completed
+    // Only select items that are not completed and not reschedule failed
     const selectableIds = items
-      .filter((i: any) => getDisplayStatus(i) !== "completed")
+      .filter(
+        (i: any) =>
+          getDisplayStatus(i) !== "completed" &&
+          getDisplayStatus(i) !== "failed_reschedule"
+      )
       .map((i: any) => i.id ?? undefined)
       .filter((id: any): id is number => typeof id === "number");
       
@@ -1552,16 +1556,18 @@ function DeliveryNotesView({
                       onClick={() => handleViewDeliveryNote(deliveryNote.id)}
                     >
                       <TableCell>
-                        {getDisplayStatus(deliveryNote) !== "completed" ? (
+                        {getDisplayStatus(deliveryNote) === "completed" ? (
+                          <div className="w-4 h-4 flex items-center justify-center">
+                            <Check className="h-3 w-3 text-green-500" />
+                          </div>
+                        ) : getDisplayStatus(deliveryNote) === "failed_reschedule" ? (
+                          null
+                        ) : (
                           <Checkbox
                             checked={selectedNoteIds.has(deliveryNote.id as number)}
                             onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
                             onClick={(e) => e.stopPropagation()}
                           />
-                        ) : (
-                          <div className="w-4 h-4 flex items-center justify-center">
-                            <Check className="h-3 w-3 text-green-500" />
-                          </div>
                         )}
                       </TableCell>
                       <TableCell>
@@ -1946,29 +1952,25 @@ function AddressBookManager({
                   {sortedAddresses.map((addr) => (
                     <SelectItem key={addr.id} value={String(addr.id)}>
                       {/* 1. Layout shown inside the Dropdown Popover (when NOT inside a button/trigger) */}
-                      <div className="py-1 text-left max-w-[450px] flex flex-col gap-2 [button_&]:hidden">
-                        {/* Nhãn địa chỉ */}
-                        <div className="flex flex-col gap-0.5 text-[11px]">
-                          <span className="text-slate-400 dark:text-slate-500 font-medium">Nhãn địa chỉ:</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-800 dark:text-slate-200">{addr.label}</span>
-                            {addr.isDefault && <Star className="h-3 w-3 text-amber-500 fill-amber-500 flex-shrink-0" />}
-                          </div>
-                        </div>
-
-                        {/* Tên Khách & SĐT */}
-                        <div className="flex flex-col gap-0.5 text-[11px]">
-                          <span className="text-slate-400 dark:text-slate-500 font-medium">Tên Khách & sđt:</span>
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            {[addr.recipientName, addr.recipientPhone].filter(Boolean).join(" - ") || "Chưa có"}
-                          </span>
-                        </div>
-
-                        {/* Địa chỉ chi tiết */}
-                        <div className="flex flex-col gap-0.5 text-[11px]">
-                          <span className="text-slate-400 dark:text-slate-500 font-medium">Địa chỉ chi tiết:</span>
-                          <span className="text-slate-700 dark:text-slate-300 whitespace-normal break-words leading-normal">{addr.address}</span>
-                        </div>
+                      <div className="py-1 text-left max-w-[450px] flex items-center gap-1.5 flex-wrap text-[11px] [button_&]:hidden">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 flex-shrink-0">
+                          {addr.label}
+                          {addr.isDefault && <Star className="inline h-2.5 w-2.5 ml-0.5 text-amber-500 fill-amber-500" />}
+                        </span>
+                        {(addr.recipientName || addr.recipientPhone) && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-600">·</span>
+                            <span className="text-slate-600 dark:text-slate-400 flex-shrink-0">
+                              {[addr.recipientName, addr.recipientPhone].filter(Boolean).join(" - ")}
+                            </span>
+                          </>
+                        )}
+                        {addr.address && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-600">·</span>
+                            <span className="text-slate-500 dark:text-slate-400 break-words">{addr.address}</span>
+                          </>
+                        )}
                       </div>
 
                       {/* 2. Layout shown inside the SelectTrigger button (when inside a button/trigger) */}
@@ -2022,32 +2024,28 @@ function AddressBookManager({
         {selectedId != null && !showForm && addresses && (() => {
           const sel = addresses.find(a => a.id === selectedId);
           return sel ? (
-            <div className="text-[11px] text-slate-600 dark:text-slate-400 flex items-start gap-2 bg-slate-50 dark:bg-slate-800/50 rounded-md p-2 border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-1">
-              <MapPin className="h-3.5 w-3.5 mt-1.5 text-primary flex-shrink-0" />
-              <div className="flex-1 min-w-0 space-y-2.5">
-                {/* Nhãn địa chỉ */}
-                <div className="flex flex-col gap-0.5 text-[11px]">
-                  <span className="text-slate-400 dark:text-slate-500 font-medium">Nhãn địa chỉ:</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{sel.label}</span>
-                    {sel.isDefault && <Star className="h-3 w-3 text-amber-500 fill-amber-500 flex-shrink-0" />}
-                  </div>
-                </div>
-
-                {/* Tên Khách & SĐT */}
-                <div className="flex flex-col gap-0.5 text-[11px]">
-                  <span className="text-slate-400 dark:text-slate-500 font-medium">Tên Khách & sđt:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {[sel.recipientName, sel.recipientPhone].filter(Boolean).join(" - ") || "Chưa có"}
+            <div className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-md px-2 py-1.5 border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-1 flex-wrap">
+              <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
+              {sel.label && (
+                <span className="font-bold text-slate-800 dark:text-slate-200 flex-shrink-0">
+                  {sel.label}
+                  {sel.isDefault && <Star className="inline h-2.5 w-2.5 ml-0.5 text-amber-500 fill-amber-500" />}
+                </span>
+              )}
+              {(sel.recipientName || sel.recipientPhone) && (
+                <>
+                  <span className="text-slate-300 dark:text-slate-600">·</span>
+                  <span className="text-slate-600 dark:text-slate-400 flex-shrink-0">
+                    {[sel.recipientName, sel.recipientPhone].filter(Boolean).join(" - ")}
                   </span>
-                </div>
-
-                {/* Địa chỉ chi tiết */}
-                <div className="flex flex-col gap-0.5 text-[11px]">
-                  <span className="text-slate-400 dark:text-slate-500 font-medium">Địa chỉ chi tiết:</span>
-                  <span className="text-slate-700 dark:text-slate-300 whitespace-normal break-words leading-normal">{sel.address}</span>
-                </div>
-              </div>
+                </>
+              )}
+              {sel.address && (
+                <>
+                  <span className="text-slate-300 dark:text-slate-600">·</span>
+                  <span className="text-slate-500 dark:text-slate-400 break-words">{sel.address}</span>
+                </>
+              )}
             </div>
           ) : null;
         })()}
@@ -2103,38 +2101,32 @@ function AddressBookManager({
               }`}
               onClick={() => onSelect && onSelect(selectedId === addr.id ? null : addr.id)}
             >
-              <div className="flex-1 min-w-0 space-y-2.5">
-                {/* Nhãn địa chỉ */}
-                <div className="flex flex-col gap-0.5 text-[11px]">
-                  <span className="text-slate-400 dark:text-slate-500 font-medium">Nhãn địa chỉ:</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{addr.label}</span>
-                    {addr.isDefault && (
-                      <span className="text-[9px] bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-1 py-0.25 rounded font-bold border border-amber-200/50 dark:border-amber-800/50">
-                        MẶC ĐỊNH
-                      </span>
-                    )}
-                    {selectedId === addr.id && (
-                      <span className="text-[9px] bg-primary text-primary-foreground px-1 py-0.25 rounded font-bold">
-                        ĐÃ CHỌN
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Tên Khách & SĐT */}
-                <div className="flex flex-col gap-0.5 text-[11px]">
-                  <span className="text-slate-400 dark:text-slate-500 font-medium">Tên Khách & sđt:</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {[addr.recipientName, addr.recipientPhone].filter(Boolean).join(" - ") || "Chưa có"}
+              <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap text-[11px]">
+                <span className="font-bold text-slate-800 dark:text-slate-200 flex-shrink-0">{addr.label}</span>
+                {addr.isDefault && (
+                  <span className="text-[9px] bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-1 rounded font-bold border border-amber-200/50 dark:border-amber-800/50 flex-shrink-0">
+                    MẶC ĐỊNH
                   </span>
-                </div>
-
-                {/* Địa chỉ chi tiết */}
-                <div className="flex flex-col gap-0.5 text-[11px]">
-                  <span className="text-slate-400 dark:text-slate-500 font-medium">Địa chỉ chi tiết:</span>
-                  <span className="text-slate-700 dark:text-slate-300 whitespace-normal break-words leading-normal">{addr.address}</span>
-                </div>
+                )}
+                {selectedId === addr.id && (
+                  <span className="text-[9px] bg-primary text-primary-foreground px-1 rounded font-bold flex-shrink-0">
+                    ĐÃ CHỌN
+                  </span>
+                )}
+                {(addr.recipientName || addr.recipientPhone) && (
+                  <>
+                    <span className="text-slate-300 dark:text-slate-600 flex-shrink-0">·</span>
+                    <span className="text-slate-600 dark:text-slate-400 flex-shrink-0">
+                      {[addr.recipientName, addr.recipientPhone].filter(Boolean).join(" - ")}
+                    </span>
+                  </>
+                )}
+                {addr.address && (
+                  <>
+                    <span className="text-slate-300 dark:text-slate-600 flex-shrink-0">·</span>
+                    <span className="text-slate-500 dark:text-slate-400 break-words">{addr.address}</span>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-1 shrink-0 ml-2">

@@ -24,6 +24,7 @@ import {
   Receipt,
   Loader2,
   Edit,
+  Trash2,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
@@ -59,6 +60,7 @@ import {
   useUpdateOrderForAccounting,
   useUpdateOrderForSale,
   useCancelOrder,
+  useRemoveOrderDetail,
 } from "@/hooks/use-order";
 import { useAuth } from "@/hooks/use-auth";
 import { ROLE } from "@/constants/role.constant";
@@ -300,6 +302,10 @@ export default function AccountingOrderDetail() {
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
+  // Delete order detail dialog state
+  const [deleteDetailId, setDeleteDetailId] = useState<number | null>(null);
+  const [isDeletingDetail, setIsDeletingDetail] = useState(false);
+
   // Mutations
   const exportInvoiceMutation = useExportOrderInvoice();
   const exportDeliveryNoteMutation = useExportOrderDeliveryNote();
@@ -316,6 +322,7 @@ export default function AccountingOrderDetail() {
   const { user } = useAuth();
   const createInvoiceMutation = useCreateInvoice();
   const { mutateAsync: updateCustomer } = useUpdateCustomer();
+  const { mutate: removeOrderDetail } = useRemoveOrderDetail();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -1762,21 +1769,31 @@ export default function AccountingOrderDetail() {
                                     </Button>
                                   </div>
                                 ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      if (item.id && item.quantity) {
-                                        startEditingOrderDetail({
-                                          id: item.id,
-                                          quantity: item.quantity,
-                                          unitPrice: item.unitPrice,
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        if (item.id && item.quantity) {
+                                          startEditingOrderDetail({
+                                            id: item.id,
+                                            quantity: item.quantity,
+                                            unitPrice: item.unitPrice,
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                                      onClick={() => setDeleteDetailId(item.id ?? null)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -2382,6 +2399,55 @@ export default function AccountingOrderDetail() {
                 </>
               ) : (
                 "Xác nhận hủy đơn"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete order detail confirm dialog */}
+      <Dialog
+        open={deleteDetailId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteDetailId(null); }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <DialogTitle className="text-lg font-semibold">Xóa sản phẩm khỏi đơn?</DialogTitle>
+            </div>
+            <DialogDescription className="pt-2">
+              Hành động này không thể hoàn tác. Sản phẩm sẽ bị xóa vĩnh viễn khỏi đơn hàng này.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDetailId(null)}
+              disabled={isDeletingDetail}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isDeletingDetail}
+              onClick={async () => {
+                if (!deleteDetailId || !order?.id) return;
+                setIsDeletingDetail(true);
+                try {
+                  await removeOrderDetail({ orderId: order.id, orderDetailId: deleteDetailId });
+                  setDeleteDetailId(null);
+                } finally {
+                  setIsDeletingDetail(false);
+                }
+              }}
+            >
+              {isDeletingDetail ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang xóa...</>
+              ) : (
+                "Xóa sản phẩm"
               )}
             </Button>
           </DialogFooter>

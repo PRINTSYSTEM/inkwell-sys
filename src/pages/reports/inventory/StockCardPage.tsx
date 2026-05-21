@@ -14,6 +14,9 @@ import {
   Tag,
   User,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useMaterial } from "@/hooks/use-material";
@@ -22,6 +25,14 @@ import { addDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -33,7 +44,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useStockCard, useExportStockCard } from "@/hooks/use-inventory-report";
+import { useStockCard, useExportStockCard, useInventoryHistory } from "@/hooks/use-inventory-report";
 import { formatCurrency } from "@/lib/status-utils";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -64,11 +75,15 @@ export default function StockCardPage() {
     isNumericId
   );
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [transactionType, setTransactionType] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+
   const {
     data: stockCardData,
-    isLoading,
-    isError,
-    error,
+    isLoading: isLoadingStockCard,
+    isError: isErrorStockCard,
+    error: errorStockCard,
     refetch,
   } = useStockCard(
     itemCode || "",
@@ -79,6 +94,27 @@ export default function StockCardPage() {
       toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     }
   );
+
+  const {
+    data: historyData,
+    isLoading: isLoadingHistory,
+    isError: isErrorHistory,
+    error: errorHistory,
+    refetch: refetchHistory,
+  } = useInventoryHistory({
+    pageNumber: currentPage,
+    pageSize: 10,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    itemCode: itemCode,
+    itemType: "material",
+    transactionType: transactionType === "all" ? undefined : transactionType,
+    search: searchQuery || undefined,
+  });
+
+  const isLoading = isLoadingStockCard || isLoadingHistory || isLoadingMaterial;
+  const isError = isErrorStockCard || isErrorHistory;
+  const error = errorStockCard || errorHistory;
 
   const exportMutation = useExportStockCard();
 
@@ -147,8 +183,22 @@ export default function StockCardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <DateRangePicker value={dateRange} onValueChange={setDateRange} className="w-[280px]" />
-            <Button variant="outline" size="icon" onClick={() => refetch()}>
+            <DateRangePicker
+              value={dateRange}
+              onValueChange={(val) => {
+                setDateRange(val);
+                setCurrentPage(1);
+              }}
+              className="w-[280px]"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                refetch();
+                refetchHistory();
+              }}
+            >
               <RefreshCw className="h-4 w-4" />
             </Button>
             <Button 
@@ -262,6 +312,39 @@ export default function StockCardPage() {
           </div>
         )}
 
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Tìm kiếm theo mã chứng từ, diễn giải..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-9 rounded-md"
+            />
+          </div>
+
+          <Select
+            value={transactionType}
+            onValueChange={(val) => {
+              setTransactionType(val);
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[200px] rounded-md">
+              <SelectValue placeholder="Loại giao dịch" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả giao dịch</SelectItem>
+              <SelectItem value="StockIn">Nhập kho</SelectItem>
+              <SelectItem value="StockOut">Xuất kho</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Entries Table */}
         <div className="rounded-lg border">
           <Table>
@@ -287,7 +370,7 @@ export default function StockCardPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : !stockCardData?.entries || stockCardData.entries.length === 0 ? (
+              ) : !historyData?.items || historyData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={7}
@@ -297,7 +380,7 @@ export default function StockCardPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                stockCardData.entries.map((entry, index) => (
+                historyData.items.map((entry, index) => (
                   <TableRow
                     key={index}
                     className="cursor-pointer hover:bg-muted/50"
@@ -349,6 +432,41 @@ export default function StockCardPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {historyData && historyData.totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Trang {currentPage} / {historyData.totalPages} (
+              {historyData.total} giao dịch)
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1 || isLoading}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium px-2">
+                {currentPage} / {historyData.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setCurrentPage((p) =>
+                    Math.min(historyData.totalPages, p + 1)
+                  )
+                }
+                disabled={currentPage === historyData.totalPages || isLoading}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
