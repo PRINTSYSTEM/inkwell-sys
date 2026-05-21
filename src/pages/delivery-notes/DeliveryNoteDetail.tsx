@@ -250,10 +250,10 @@ export default function DeliveryNoteDetailPage() {
     }
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (type: string = "A4") => {
     if (!deliveryNote?.id) return;
     try {
-      await exportPDFMutation.mutateAsync(deliveryNote.id);
+      await exportPDFMutation.mutateAsync({ id: deliveryNote.id, type });
     } catch (error) {
       // Error is handled by the hook
     }
@@ -357,35 +357,35 @@ export default function DeliveryNoteDetailPage() {
 
   // Next steps mapping
   const nextSteps: Record<string, { value: string; label: string; icon: any }> =
-    {
-      draft: { value: "confirmed", label: "Xác nhận", icon: Check },
-      confirmed: {
-        value: "ready_to_ship",
-        label: "Sẵn sàng giao",
-        icon: PackageCheck,
-      },
-      pending: {
-        value: "ready_to_ship",
-        label: "Sẵn sàng giao",
-        icon: PackageCheck,
-      },
-      ready_to_ship: {
-        value: "handed_over",
-        label: "Bàn giao ĐVVC",
-        icon: Send,
-      },
-      handed_over: { value: "in_transit", label: "Giao hàng", icon: Truck },
-      in_transit: {
-        value: "completed",
-        label: "Hoàn tất",
-        icon: ClipboardCheck,
-      },
-      delivering: {
-        value: "completed",
-        label: "Hoàn tất",
-        icon: ClipboardCheck,
-      },
-    };
+  {
+    draft: { value: "confirmed", label: "Xác nhận", icon: Check },
+    confirmed: {
+      value: "ready_to_ship",
+      label: "Sẵn sàng giao",
+      icon: PackageCheck,
+    },
+    pending: {
+      value: "ready_to_ship",
+      label: "Sẵn sàng giao",
+      icon: PackageCheck,
+    },
+    ready_to_ship: {
+      value: "handed_over",
+      label: "Bàn giao ĐVVC",
+      icon: Send,
+    },
+    handed_over: { value: "in_transit", label: "Giao hàng", icon: Truck },
+    in_transit: {
+      value: "completed",
+      label: "Hoàn tất",
+      icon: ClipboardCheck,
+    },
+    delivering: {
+      value: "completed",
+      label: "Hoàn tất",
+      icon: ClipboardCheck,
+    },
+  };
 
   const nextAction = nextSteps[currentStatus];
 
@@ -524,14 +524,26 @@ export default function DeliveryNoteDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleExportPDF}
+              onClick={() => handleExportPDF("A4")}
               disabled={exportPDFMutation.isPending}
               className="gap-2"
             >
               <Download className="w-4 h-4" />
               {exportPDFMutation.isPending
                 ? "Đang xử lý..."
-                : "Xuất Phiếu (PDF)"}
+                : "Xuất Phiếu PDF (A4)"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExportPDF("A5")}
+              disabled={exportPDFMutation.isPending}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              {exportPDFMutation.isPending
+                ? "Đang xử lý..."
+                : "Xuất Phiếu PDF (A5)"}
             </Button>
 
             {canRecreate && (

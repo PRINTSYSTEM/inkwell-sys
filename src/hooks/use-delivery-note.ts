@@ -95,20 +95,22 @@ export const useUpdateDeliveryNoteStatus = (
 // GET /delivery-notes/{id}/export-pdf
 export const useExportDeliveryNotePDF = () => {
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id, type }: { id: number; type?: string }) => {
       const res = await apiRequest.get<Blob>(
         API_SUFFIX.DELIVERY_NOTE_EXPORT_PDF(id),
         {
+          params: type ? { type } : undefined,
           responseType: "blob",
         }
       );
       return res.data;
     },
-    onSuccess: (blob, id) => {
+    onSuccess: (blob, variables) => {
+      const { id, type } = variables;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `delivery-note-${id}.pdf`;
+      link.download = `delivery-note-${id}${type ? `-${type}` : ""}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

@@ -50,7 +50,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -1757,6 +1756,15 @@ function AddressBookManager({
   const deleteMutation = useDeleteCustomerAddress(customerId);
   const setDefaultMutation = useSetDefaultCustomerAddress(customerId);
 
+  const sortedAddresses = useMemo(() => {
+    if (!addresses) return [];
+    return [...addresses].sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1;
+      if (!a.isDefault && b.isDefault) return 1;
+      return 0;
+    });
+  }, [addresses]);
+
   const resetForm = () => {
     setNewLabel("");
     setNewRecipientName("");
@@ -1812,47 +1820,47 @@ function AddressBookManager({
   };
 
   const renderForm = () => (
-    <Card className="border-dashed border-primary/40 bg-primary/5 shadow-inner">
-      <CardContent className="p-3 space-y-3">
+    <Card className="border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm">
+      <CardContent className="p-3 space-y-2.5">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-bold text-primary flex items-center gap-1">
-            {editingAddressId ? <Edit2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+          <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+            {editingAddressId ? <Edit2 className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
             {editingAddressId ? "Cập nhật địa chỉ" : "Thêm địa chỉ mới"}
           </span>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={resetForm}>
-            <X className="h-3 w-3" />
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-600" onClick={resetForm}>
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
         
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <Label className="text-[10px] uppercase text-slate-500 font-bold">Nhãn địa chỉ *</Label>
+            <Label className="text-[10px] text-slate-500 font-bold uppercase">Nhãn địa chỉ *</Label>
             <Input
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="VD: Kho hàng, Văn phòng..."
-              className="h-8 text-xs bg-white dark:bg-slate-900"
+              className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-[10px] uppercase text-slate-500 font-bold">Người nhận</Label>
+            <Label className="text-[10px] text-slate-500 font-bold uppercase">Người nhận</Label>
             <Input
               value={newRecipientName}
               onChange={(e) => setNewRecipientName(e.target.value)}
               placeholder="Họ tên người nhận"
-              className="h-8 text-xs bg-white dark:bg-slate-900"
+              className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <Label className="text-[10px] uppercase text-slate-500 font-bold">Số điện thoại</Label>
+            <Label className="text-[10px] text-slate-500 font-bold uppercase">Số điện thoại</Label>
             <Input
               value={newRecipientPhone}
               onChange={(e) => setNewRecipientPhone(e.target.value)}
               placeholder="09xx xxx xxx"
-              className="h-8 text-xs bg-white dark:bg-slate-900"
+              className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             />
           </div>
           <div className="flex items-end pb-1.5">
@@ -1864,7 +1872,7 @@ function AddressBookManager({
               />
               <Label 
                 htmlFor={`isDefault-${customerId}-${editingAddressId || 'new'}`} 
-                className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer"
+                className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none font-medium"
               >
                 Đặt làm mặc định
               </Label>
@@ -1873,21 +1881,21 @@ function AddressBookManager({
         </div>
 
         <div className="space-y-1">
-          <Label className="text-[10px] uppercase text-slate-500 font-bold">Địa chỉ chi tiết *</Label>
+          <Label className="text-[10px] text-slate-500 font-bold uppercase">Địa chỉ chi tiết *</Label>
           <Input
             value={newAddress}
             onChange={(e) => setNewAddress(e.target.value)}
             placeholder="Số nhà, tên đường, phường/xã..."
-            className="h-8 text-xs bg-white dark:bg-slate-900"
+            className="h-8 text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
           />
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-1">
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/85">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={resetForm}
-            className="h-7 text-xs border border-slate-200 dark:border-slate-700"
+            className="h-8 text-xs border-slate-200"
           >
             Hủy
           </Button>
@@ -1895,14 +1903,14 @@ function AddressBookManager({
             size="sm"
             onClick={handleSave}
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="h-7 text-xs gap-1 font-bold shadow-sm"
+            className="h-8 text-xs font-semibold gap-1"
           >
             {createMutation.isPending || updateMutation.isPending ? (
               <RefreshCw className="h-3 w-3 animate-spin" />
             ) : (
               editingAddressId ? <Edit2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />
             )}
-            {editingAddressId ? "CẬP NHẬT" : "LƯU ĐỊA CHỈ"}
+            {editingAddressId ? "Cập nhật" : "Lưu địa chỉ"}
           </Button>
         </div>
       </CardContent>
@@ -1931,16 +1939,40 @@ function AddressBookManager({
                     <SelectValue placeholder="Chọn địa chỉ giao..." />
                   </div>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-w-[500px]">
                   <SelectItem value="__none__">
                     <span className="text-slate-400 text-xs italic">Không chọn địa chỉ</span>
                   </SelectItem>
-                  {addresses && addresses.map((addr) => (
+                  {sortedAddresses.map((addr) => (
                     <SelectItem key={addr.id} value={String(addr.id)}>
-                      <div className="flex items-center gap-1.5">
-                        {addr.isDefault && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
-                        <span className="text-xs font-semibold">{addr.label}</span>
-                        <span className="text-xs text-slate-400 truncate max-w-[150px]">({addr.address})</span>
+                      {/* 1. Layout shown inside the Dropdown Popover (when NOT inside a button/trigger) */}
+                      <div className="py-0.5 text-left max-w-[450px] flex flex-col gap-0.5 [button_&]:hidden">
+                        {/* Nhãn địa chỉ */}
+                        <div className="flex items-center gap-1.5 text-[11px]">
+                          <span className="text-slate-400 dark:text-slate-500 font-medium">Nhãn địa chỉ:</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{addr.label}</span>
+                          {addr.isDefault && <Star className="h-3 w-3 text-amber-500 fill-amber-500 flex-shrink-0" />}
+                        </div>
+
+                        {/* Tên Khách & SĐT */}
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                          <span className="text-slate-400 dark:text-slate-500 font-medium">Tên Khách & sđt:</span>{" "}
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            {[addr.recipientName, addr.recipientPhone].filter(Boolean).join(" - ") || "Chưa có"}
+                          </span>
+                        </div>
+
+                        {/* Địa chỉ chi tiết */}
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 whitespace-normal break-words leading-tight">
+                          <span className="text-slate-400 dark:text-slate-500 font-medium">Địa chỉ chi tiết:</span>{" "}
+                          <span className="text-slate-700 dark:text-slate-300">{addr.address}</span>
+                        </div>
+                      </div>
+
+                      {/* 2. Layout shown inside the SelectTrigger button (when inside a button/trigger) */}
+                      <div className="hidden [button_&]:inline-flex items-center gap-1 text-xs text-slate-700 dark:text-slate-300 max-w-full truncate">
+                        {addr.isDefault && <Star className="h-3 w-3 text-amber-500 fill-amber-500 flex-shrink-0" />}
+                        <span className="font-bold">{addr.label}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -1988,14 +2020,29 @@ function AddressBookManager({
         {selectedId != null && !showForm && addresses && (() => {
           const sel = addresses.find(a => a.id === selectedId);
           return sel ? (
-            <div className="text-[10px] text-slate-600 dark:text-slate-400 flex items-start gap-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-md px-2 py-1.5 border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-1">
-              <MapPin className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="line-clamp-2">
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{sel.recipientName || "Người nhận"}</span>
-                  {sel.recipientPhone && <span className="ml-1 text-slate-500 dark:text-slate-400">• {sel.recipientPhone}</span>}
-                  {sel.address && <span className="ml-1 italic text-slate-500 dark:text-slate-400">• {sel.address}</span>}
-                </p>
+            <div className="text-[11px] text-slate-600 dark:text-slate-400 flex items-start gap-2 bg-slate-50 dark:bg-slate-800/50 rounded-md p-2 border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-top-1">
+              <MapPin className="h-3.5 w-3.5 mt-0.5 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0 space-y-0.5">
+                {/* Nhãn địa chỉ */}
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <span className="text-slate-400 dark:text-slate-500 font-medium">Nhãn địa chỉ:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{sel.label}</span>
+                  {sel.isDefault && <Star className="h-3 w-3 text-amber-500 fill-amber-500 flex-shrink-0" />}
+                </div>
+
+                {/* Tên Khách & SĐT */}
+                <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                  <span className="text-slate-400 dark:text-slate-500 font-medium">Tên Khách & sđt:</span>{" "}
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {[sel.recipientName, sel.recipientPhone].filter(Boolean).join(" - ") || "Chưa có"}
+                  </span>
+                </div>
+
+                {/* Địa chỉ chi tiết */}
+                <div className="text-[11px] text-slate-600 dark:text-slate-400 whitespace-normal break-words leading-tight">
+                  <span className="text-slate-400 dark:text-slate-500 font-medium">Địa chỉ chi tiết:</span>{" "}
+                  <span className="text-slate-700 dark:text-slate-300">{sel.address}</span>
+                </div>
               </div>
             </div>
           ) : null;
@@ -2006,23 +2053,23 @@ function AddressBookManager({
 
   // Full CRUD mode
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <BookOpen className="h-4 w-4 text-primary" />
-          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+          <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
             Sổ địa chỉ khách hàng
           </h4>
-          <Badge variant="outline" className="px-1.5 h-5 text-[10px] font-bold bg-slate-50 dark:bg-slate-800">
+          <Badge variant="secondary" className="px-1.5 h-4.5 text-[9px] font-bold bg-slate-100 dark:bg-slate-800">
             {addresses?.length || 0}
           </Badge>
         </div>
         {!showForm && (
           <Button
             size="sm"
-            variant="default"
+            variant="outline"
             onClick={() => setShowForm(true)}
-            className="h-8 shadow-md gap-1.5 font-bold"
+            className="h-7 px-2 text-xs border-primary/30 text-primary hover:bg-primary/5 gap-1 font-bold"
           >
             <Plus className="h-3.5 w-3.5" />
             THÊM ĐỊA CHỈ
@@ -2032,86 +2079,79 @@ function AddressBookManager({
 
       {showForm && renderForm()}
 
-      <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+      <div className="grid gap-2">
         {isLoading ? (
-          Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)
+          Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)
         ) : !addresses || addresses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 px-4 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
-            <MapPin className="h-8 w-8 text-slate-300 mb-2" />
-            <p className="text-sm text-slate-500 font-medium">Chưa có địa chỉ nào được lưu</p>
-            <p className="text-xs text-slate-400 mt-1">Bấm nút "Thêm địa chỉ" để bắt đầu</p>
+          <div className="flex flex-col items-center justify-center py-6 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50/50 dark:bg-slate-900/50">
+            <MapPin className="h-6 w-6 text-slate-300 mb-1.5" />
+            <p className="text-xs text-slate-500 font-semibold">Chưa có địa chỉ nào được lưu</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Bấm nút "Thêm địa chỉ" để bắt đầu</p>
           </div>
         ) : (
-          addresses.map((addr) => (
+          sortedAddresses.map((addr) => (
             <div
               key={addr.id}
-              className={`relative flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer group ${
+              className={`relative flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer ${
                 selectedId === addr.id
-                  ? "border-primary bg-primary/5 ring-1 ring-primary shadow-md"
-                  : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm"
+                  ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                  : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
               }`}
-              onClick={() => onSelect && onSelect(addr.id)}
+              onClick={() => onSelect && onSelect(selectedId === addr.id ? null : addr.id)}
             >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-black uppercase text-slate-900 dark:text-slate-50 truncate">
-                    {addr.label}
-                  </span>
+              <div className="flex-1 min-w-0 space-y-0.5">
+                {/* Nhãn địa chỉ */}
+                <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                  <span className="text-slate-400 dark:text-slate-500 font-medium">Nhãn địa chỉ:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">{addr.label}</span>
                   {addr.isDefault && (
-                    <Badge variant="secondary" className="h-4 text-[8px] px-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-100 border-none font-bold">
+                    <span className="text-[9px] bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-1 py-0.25 rounded font-bold border border-amber-200/50 dark:border-amber-800/50">
                       MẶC ĐỊNH
-                    </Badge>
+                    </span>
                   )}
                   {selectedId === addr.id && (
-                    <Badge className="h-4 text-[8px] px-1 bg-primary font-bold">ĐÃ CHỌN</Badge>
+                    <span className="text-[9px] bg-primary text-primary-foreground px-1 py-0.25 rounded font-bold">
+                      ĐÃ CHỌN
+                    </span>
                   )}
                 </div>
                 
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300 font-medium">
-                    <User className="h-3 w-3 text-slate-400" />
-                    {addr.recipientName || "Chưa có tên"}
-                    {addr.recipientPhone && (
-                      <span className="text-slate-400 font-normal">| {addr.recipientPhone}</span>
-                    )}
-                  </div>
-                  <div className="flex items-start gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    <MapPin className="h-3 w-3 mt-0.5 text-slate-400 shrink-0" />
-                    <span className="leading-relaxed">{addr.address}</span>
-                  </div>
+                {/* Tên Khách & SĐT */}
+                <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                  <span className="text-slate-400 dark:text-slate-500 font-medium">Tên Khách & sđt:</span>{" "}
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {[addr.recipientName, addr.recipientPhone].filter(Boolean).join(" - ") || "Chưa có"}
+                  </span>
+                </div>
+
+                {/* Địa chỉ chi tiết */}
+                <div className="text-[11px] text-slate-600 dark:text-slate-400 whitespace-normal break-words leading-tight">
+                  <span className="text-slate-400 dark:text-slate-500 font-medium">Địa chỉ chi tiết:</span>{" "}
+                  <span className="text-slate-700 dark:text-slate-300">{addr.address}</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 shrink-0 ml-2">
                 {!addr.isDefault && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    className="h-7 w-7 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                     title="Đặt làm mặc định"
                     onClick={(e) => { e.stopPropagation(); setDefaultMutation.mutate(addr.id); }}
                   >
-                    <Star className="h-4 w-4" />
+                    <Star className="h-3.5 w-3.5" />
                   </Button>
                 )}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                  className="h-7 w-7 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                   title="Chỉnh sửa"
                   onClick={(e) => { e.stopPropagation(); handleEdit(addr); }}
                 >
-                  <Edit2 className="h-4 w-4" />
+                  <Edit2 className="h-3.5 w-3.5" />
                 </Button>
-                {/* <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
-                  title="Xóa địa chỉ"
-                  onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(addr.id); }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button> */}
               </div>
             </div>
           ))
@@ -2166,24 +2206,28 @@ function CreateDeliveryNoteDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] border-slate-200 dark:border-slate-800 flex flex-col">
+      <DialogContent className="max-w-7xl w-[96vw] h-[85vh] max-h-[900px] overflow-hidden border-slate-200 dark:border-slate-800 flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-50">
             Tạo phiếu giao hàng ({selectedOrders.length} sản phẩm)
           </DialogTitle>
           <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
-            Xác nhận số lượng và chọn địa chỉ giao (áp dụng cho toàn bộ phiếu).
+            Xác nhận số lượng và chọn địa chỉ giao.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-4 pb-2">
-            {/* Per-line items */}
-            <div className="space-y-3">
+        {/* Content area: Horizontal columns */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 min-h-0 overflow-hidden py-2 px-1">
+          {/* Left Column: Products List (7 cols) */}
+          <div className="md:col-span-7 flex flex-col min-h-0">
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex-shrink-0">
+              Danh sách sản phẩm giao hàng
+            </div>
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 min-h-0">
               {selectedOrders.map((od) => (
                 <Card
                   key={od.orderDetailId}
-                  className="border-slate-200 dark:border-slate-800 overflow-hidden"
+                  className="border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm"
                 >
                   <CardContent className="p-3">
                     <div className="flex flex-col gap-3">
@@ -2239,69 +2283,76 @@ function CreateDeliveryNoteDialog({
                           className="h-8 text-xs bg-slate-50/50 dark:bg-slate-900/50"
                         />
                       </div>
-
-                      {/* Address selection moved to global selector below */}
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            {/* Compact selector + expandable Address Book Manager */}
-            {customerId && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <AddressBookManager
-                      customerId={customerId}
-                      compact
-                      selectedId={selectedAddressId ?? null}
-                      onSelect={(id) => setSelectedAddressId(id)}
-                    />
-                  </div>
-                  <div>
-                    <button
-                      type="button"
-                      className="h-8 w-8 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => setShowAddressBook(!showAddressBook)}
-                      title="Quản lý sổ địa chỉ"
-                    >
-                      <Plus className="h-4 w-4 text-primary" />
-                    </button>
-                  </div>
-                </div>
-
-                {showAddressBook && (
-                  <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden p-4 bg-white dark:bg-slate-900">
-                    <AddressBookManager
-                      customerId={customerId}
-                      selectedId={selectedAddressId ?? null}
-                      onSelect={(id) => setSelectedAddressId(id)}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Notes */}
-            <div className="space-y-2">
+            <div className="space-y-1.5 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex-shrink-0">
               <Label
                 htmlFor="delivery-notes"
-                className="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase"
               >
-                Ghi chú chung
+                Ghi chú chung cho toàn bộ phiếu
               </Label>
               <Textarea
                 id="delivery-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Ghi chú (tùy chọn)"
-                rows={2}
-                className="resize-none border-slate-300 dark:border-slate-700"
+                placeholder="Nhập ghi chú giao nhận chung cho toàn bộ phiếu..."
+                rows={3}
+                className="w-full resize-none border-slate-200 dark:border-slate-700 focus:border-primary/50 text-xs bg-white dark:bg-slate-900"
               />
             </div>
           </div>
-        </ScrollArea>
+
+          {/* Right Column: Address Book & Notes (5 cols) */}
+          <div className="md:col-span-5 flex flex-col min-h-0">
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex-shrink-0">
+              Thông tin người nhận & Địa chỉ
+            </div>
+            
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 min-h-0">
+              {customerId && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <AddressBookManager
+                        customerId={customerId}
+                        compact
+                        selectedId={selectedAddressId ?? null}
+                        onSelect={(id) => setSelectedAddressId(id)}
+                      />
+                    </div>
+                    <div>
+                      <button
+                        type="button"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        onClick={() => setShowAddressBook(!showAddressBook)}
+                        title="Quản lý sổ địa chỉ"
+                      >
+                        <Plus className="h-4 w-4 text-primary" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {showAddressBook && (
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden p-3.5 bg-white dark:bg-slate-900 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                      <AddressBookManager
+                        customerId={customerId}
+                        selectedId={selectedAddressId ?? null}
+                        onSelect={(id) => setSelectedAddressId(id)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+        </div>
 
         <DialogFooter className="gap-2 flex-shrink-0 pt-2 border-t border-slate-200 dark:border-slate-800">
           <Button
@@ -2371,7 +2422,7 @@ function RecreateDeliveryNoteDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] border-slate-200 dark:border-slate-800 flex flex-col">
+      <DialogContent className="max-w-7xl w-[96vw] h-[85vh] max-h-[900px] overflow-hidden border-slate-200 dark:border-slate-800 flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             <RefreshCw className="h-5 w-5 text-primary" />
@@ -2382,14 +2433,18 @@ function RecreateDeliveryNoteDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-4 pb-2">
-            {/* Per-line items */}
-            <div className="space-y-3">
+        {/* Content area: Horizontal columns */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 min-h-0 overflow-hidden py-2 px-1">
+          {/* Left Column: Products List (7 cols) */}
+          <div className="md:col-span-7 flex flex-col min-h-0">
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex-shrink-0">
+              Danh sách mặt hàng giao thất bại
+            </div>
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 min-h-0">
               {items.map((item) => (
                 <Card
                   key={item.orderDetailId}
-                  className="border-slate-200 dark:border-slate-800 overflow-hidden"
+                  className="border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm"
                 >
                   <CardContent className="p-3">
                     <div className="flex flex-col gap-3">
@@ -2436,55 +2491,17 @@ function RecreateDeliveryNoteDialog({
                           className="h-8 text-xs bg-slate-50/50 dark:bg-slate-900/50"
                         />
                       </div>
-
-                      {/* Address selection moved to global selector below */}
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            {/* Compact selector + expandable Address Book Manager */}
-            {customerId && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <AddressBookManager
-                      customerId={customerId}
-                      compact
-                      selectedId={selectedAddressId ?? null}
-                      onSelect={(id) => setSelectedAddressId && setSelectedAddressId(id)}
-                    />
-                  </div>
-                  <div>
-                    <button
-                      type="button"
-                      className="h-8 w-8 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => setShowAddressBook(!showAddressBook)}
-                      title="Quản lý sổ địa chỉ"
-                    >
-                      <Plus className="h-4 w-4 text-primary" />
-                    </button>
-                  </div>
-                </div>
-
-                {showAddressBook && (
-                  <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden p-4 bg-white dark:bg-slate-900">
-                    <AddressBookManager
-                      customerId={customerId!}
-                      selectedId={selectedAddressId ?? null}
-                      onSelect={(id) => setSelectedAddressId && setSelectedAddressId(id)}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Notes */}
-            <div className="space-y-2">
+            <div className="space-y-1.5 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex-shrink-0">
               <Label
                 htmlFor="recreate-notes"
-                className="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase"
               >
                 Ghi chú giao lại
               </Label>
@@ -2493,12 +2510,57 @@ function RecreateDeliveryNoteDialog({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="VD: Khách hẹn giao lại vào chiều nay..."
-                rows={2}
-                className="resize-none border-slate-300 dark:border-slate-700"
+                rows={3}
+                className="w-full resize-none border-slate-200 dark:border-slate-700 focus:border-primary/50 text-xs bg-white dark:bg-slate-900"
               />
             </div>
           </div>
-        </ScrollArea>
+
+          {/* Right Column: Address Book & Notes (5 cols) */}
+          <div className="md:col-span-5 flex flex-col min-h-0">
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex-shrink-0">
+              Thông tin người nhận & Địa chỉ
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 min-h-0">
+              {customerId && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <AddressBookManager
+                        customerId={customerId}
+                        compact
+                        selectedId={selectedAddressId ?? null}
+                        onSelect={(id) => setSelectedAddressId && setSelectedAddressId(id)}
+                      />
+                    </div>
+                    <div>
+                      <button
+                        type="button"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        onClick={() => setShowAddressBook(!showAddressBook)}
+                        title="Quản lý sổ địa chỉ"
+                      >
+                        <Plus className="h-4 w-4 text-primary" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {showAddressBook && (
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden p-3.5 bg-white dark:bg-slate-900 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                      <AddressBookManager
+                        customerId={customerId!}
+                        selectedId={selectedAddressId ?? null}
+                        onSelect={(id) => setSelectedAddressId && setSelectedAddressId(id)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+        </div>
 
         <DialogFooter className="gap-2 flex-shrink-0 pt-2 border-t border-slate-200 dark:border-slate-800">
           <Button
