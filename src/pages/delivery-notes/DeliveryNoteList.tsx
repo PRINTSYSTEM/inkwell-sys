@@ -89,6 +89,7 @@ import {
   useSetDefaultCustomerAddress,
 } from "@/hooks/use-customer";
 // import { useOrdersForAccounting } from "@/hooks/use-order";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { 
   orderStatusLabels, 
   deliveryNoteStatusLabels, 
@@ -461,6 +462,13 @@ export default function DeliveryNoteListPage() {
   const [selectedNoteIds, setSelectedNoteIds] = useState<Set<number>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+
+  const handleImageClick = (url: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPreviewImageUrl(url);
+  };
+
   const [viewMode, setViewMode] = useState<"orders" | "delivery-notes">(
     "orders",
   );
@@ -584,12 +592,18 @@ export default function DeliveryNoteListPage() {
 
   const handleSelectAllVisible = () => {
     const items = (deliveryNotesData as any)?.items || [];
-    // Only select items that are not completed and not reschedule failed
+    // Only select items that are not completed, failed, reschedule failed, or cancelled
     const selectableIds = items
       .filter(
-        (i: any) =>
-          getDisplayStatus(i) !== "completed" &&
-          getDisplayStatus(i) !== "failed_reschedule"
+        (i: any) => {
+          const status = getDisplayStatus(i);
+          return (
+            status !== "completed" &&
+            status !== "failed" &&
+            status !== "failed_reschedule" &&
+            status !== "cancelled"
+          );
+        }
       )
       .map((i: any) => i.id ?? undefined)
       .filter((id: any): id is number => typeof id === "number");
@@ -983,6 +997,7 @@ export default function DeliveryNoteListPage() {
         setNotes={setNotes}
         onCreate={handleConfirmCreate}
         isPending={createDeliveryNoteMutation.isPending}
+        onImageClick={handleImageClick}
       />
 
       <RecreateDeliveryNoteDialog
@@ -1002,7 +1017,17 @@ export default function DeliveryNoteListPage() {
         setNotes={setRecreateNotes}
         onConfirm={handleConfirmedRecreate}
         isPending={recreateMutation.isPending}
+        onImageClick={handleImageClick}
       />
+
+      {previewImageUrl && (
+        <ImageViewerDialog
+          open={!!previewImageUrl}
+          onOpenChange={(open) => !open && setPreviewImageUrl(null)}
+          imageUrl={previewImageUrl}
+          title="Xem ảnh thiết kế"
+        />
+      )}
     </div>
   );
 }
@@ -1243,8 +1268,17 @@ function OrdersView({
                                       onClick={(e) => e.stopPropagation()}
                                       className="h-4 w-4 rounded flex-shrink-0"
                                     />
-                                    <div className="h-8 w-8 rounded-lg bg-muted/50 border flex items-center justify-center flex-shrink-0">
-                                      <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+                                    <div className="h-8 w-8 rounded-lg bg-muted/50 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                                      {detail.designImageUrl ? (
+                                        <img
+                                          src={detail.designImageUrl}
+                                          alt={detail.designCode || "Thiết kế"}
+                                          className="h-full w-full object-cover cursor-zoom-in"
+                                          onClick={(e) => handleImageClick(detail.designImageUrl!, e)}
+                                        />
+                                      ) : (
+                                        <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+                                      )}
                                     </div>
                                     <div className="flex flex-col min-w-0">
                                       <span className="font-mono font-black text-xs uppercase leading-none">{detail.designCode}</span>
@@ -1560,8 +1594,10 @@ function DeliveryNotesView({
                           <div className="w-4 h-4 flex items-center justify-center">
                             <Check className="h-3 w-3 text-green-500" />
                           </div>
-                        ) : getDisplayStatus(deliveryNote) === "failed_reschedule" ? (
-                          null
+                        ) : ["failed", "failed_reschedule", "cancelled"].includes(getDisplayStatus(deliveryNote) || "") ? (
+                          <div className="w-4 h-4 flex items-center justify-center">
+                            <X className="h-3.5 w-3.5 text-red-500" />
+                          </div>
                         ) : (
                           <Checkbox
                             checked={selectedNoteIds.has(deliveryNote.id as number)}
@@ -2180,6 +2216,7 @@ interface CreateDeliveryNoteDialogProps {
   setNotes: (notes: string) => void;
   onCreate: () => void;
   isPending: boolean;
+  onImageClick: (url: string, e: React.MouseEvent) => void;
 }
 
 function CreateDeliveryNoteDialog({
@@ -2199,6 +2236,7 @@ function CreateDeliveryNoteDialog({
   setNotes,
   onCreate,
   isPending,
+  onImageClick,
 }: CreateDeliveryNoteDialogProps) {
   const [showAddressBook, setShowAddressBook] = useState(false);
 
@@ -2231,6 +2269,18 @@ function CreateDeliveryNoteDialog({
                     <div className="flex flex-col gap-3">
                       {/* Header row: name + qty input */}
                       <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-md bg-muted/50 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                          {od.designImageUrl ? (
+                            <img
+                              src={od.designImageUrl}
+                              alt={od.designCode || "Thiết kế"}
+                              className="h-full w-full object-cover cursor-zoom-in"
+                              onClick={(e) => onImageClick(od.designImageUrl!, e)}
+                            />
+                          ) : (
+                            <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                          )}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">
                             {od.designCode}{" "}
@@ -2396,6 +2446,7 @@ interface RecreateDeliveryNoteDialogProps {
   setNotes: (notes: string) => void;
   onConfirm: () => void;
   isPending: boolean;
+  onImageClick: (url: string, e: React.MouseEvent) => void;
 }
 
 function RecreateDeliveryNoteDialog({
@@ -2415,6 +2466,7 @@ function RecreateDeliveryNoteDialog({
   setNotes,
   onConfirm,
   isPending,
+  onImageClick,
 }: RecreateDeliveryNoteDialogProps) {
   const [showAddressBook, setShowAddressBook] = useState(false);
 
@@ -2447,6 +2499,18 @@ function RecreateDeliveryNoteDialog({
                   <CardContent className="p-3">
                     <div className="flex flex-col gap-3">
                       <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-md bg-muted/50 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                          {item.designImageUrl ? (
+                            <img
+                              src={item.designImageUrl}
+                              alt={item.designCode || "Thiết kế"}
+                              className="h-full w-full object-cover cursor-zoom-in"
+                              onClick={(e) => onImageClick(item.designImageUrl!, e)}
+                            />
+                          ) : (
+                            <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                          )}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">
                             {item.designCode}{" "}

@@ -2,6 +2,7 @@
 // Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
 import { createPagedResponseSchema } from "./Common";
+import { CustomerAddressSchema } from "./customer.schema";
 import {
   DeliveryNoteOrderResponseSchema as GenDeliveryNoteOrderResponseSchema,
   DeliveryNoteResponseSchema as GenDeliveryNoteResponseSchema,
@@ -110,18 +111,7 @@ export const DeliveryLineRequestSchema =
 export type DeliveryLineRequest = z.infer<typeof DeliveryLineRequestSchema>;
 
 // ===== CustomerAddress =====
-// New type from backend_new_update.md §4 - per-line address object
-export const CustomerAddressSchema = z
-  .object({
-    id: z.number().int(),
-    label: z.string().nullable(),
-    recipientName: z.string().nullable(),
-    recipientPhone: z.string().nullable(),
-    address: z.string().nullable(),
-    isDefault: z.boolean(),
-  })
-  .partial();
-export type CustomerAddress = z.infer<typeof CustomerAddressSchema>;
+// Reused from customer.schema.ts
 
 // ===== DeliveryNoteLineResponse =====
 // Extended with new fields from backend_new_update.md §4:
@@ -132,6 +122,7 @@ export const DeliveryNoteLineResponseSchema =
     customerAddressId: z.number().int().nullable().optional(),
     customerAddress: CustomerAddressSchema.nullable().optional(),
     note: z.string().nullable().optional(),
+    designImageUrl: z.string().nullable().optional(),
   }).passthrough();
 export type DeliveryNoteLineResponse = z.infer<
   typeof DeliveryNoteLineResponseSchema
@@ -153,6 +144,7 @@ export const OrderDetailForDeliveryResponseSchema = z
     designId: z.number().int(),
     designCode: z.string().nullable(),
     designName: z.string().nullable(),
+    designImageUrl: z.string().nullable().optional(),
     itemStatus: z.string().nullable(),
     orderedQty: z.number().int(),
     netQtyTotal: z.number().int(),
