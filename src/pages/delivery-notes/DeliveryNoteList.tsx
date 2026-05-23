@@ -1598,6 +1598,8 @@ function DeliveryNotesView({
                           <div className="w-4 h-4 flex items-center justify-center">
                             <X className="h-3.5 w-3.5 text-red-500" />
                           </div>
+                        ) : getDisplayStatus(deliveryNote) === "in_transit" ? (
+                          <div className="w-4 h-4" />
                         ) : (
                           <Checkbox
                             checked={selectedNoteIds.has(deliveryNote.id as number)}

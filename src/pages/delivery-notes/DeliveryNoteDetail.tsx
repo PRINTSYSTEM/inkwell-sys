@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -26,6 +26,8 @@ import {
   FileEdit,
   ChevronRight,
   MoreHorizontal,
+  RotateCcw,
+  History,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +69,11 @@ import {
   useRecreateDeliveryNote,
   useUpdateDeliveryLineResult,
 } from "@/hooks/use-delivery-note";
+import {
+  useCreateReturnNote,
+  useReturnNotesByDeliveryNote,
+  useReturnableLines,
+} from "@/hooks/use-return-note";
 import { useAuth } from "@/hooks/use-auth";
 import {
   formatCurrency,
@@ -76,7 +83,7 @@ import {
   getStatusColorClass,
 } from "@/lib/status-utils";
 import { StatusBadge } from "@/components/ui/status-badge";
-import DeliveryLineRow from "./DeliveryLineRow";
+import DeliveryLinesCard from "./DeliveryLinesCard";
 import DeliveryInfoSidebar from "./DeliveryInfoSidebar";
 import DeliveryNoteUpdateDialog from "./DeliveryNoteUpdateDialog";
 import { ENTITY_CONFIG } from "@/config/entities.config";
@@ -158,10 +165,95 @@ export default function DeliveryNoteDetailPage() {
     error,
   } = useDeliveryNote(deliveryNoteId || null, !!deliveryNoteId);
 
+  const lines = (deliveryNote as any)?.lines as
+    | DeliveryNoteLineResponse[]
+    | null;
+
   const updateStatusMutation = useUpdateDeliveryNoteStatus();
   const exportPDFMutation = useExportDeliveryNotePDF();
   const recreateMutation = useRecreateDeliveryNote();
   const updateLineResultMutation = useUpdateDeliveryLineResult();
+
+  // Return Notes states and hooks
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
+  const [selectedLineForReturn, setSelectedLineForReturn] = useState<any | null>(null);
+  const [returnForm, setReturnForm] = useState<
+    Record<number, { checked: boolean; returnQty: number; reason: string }>
+  >({});
+
+  const { data: returnNotes } = useReturnNotesByDeliveryNote(
+    deliveryNoteId,
+    !!deliveryNoteId,
+  );
+
+  const { data: returnableLinesData } = useReturnableLines(
+    deliveryNoteId,
+    !!deliveryNoteId,
+  );
+
+  const returnableLinesMap = useMemo(() => {
+    const map: Record<number, any> = {};
+    if (returnableLinesData) {
+      for (const rl of returnableLinesData) {
+        map[rl.deliveryNoteLineId] = rl;
+      }
+    }
+    return map;
+  }, [returnableLinesData]);
+
+  const totalNetQty = useMemo(() => {
+    return (lines || []).reduce((sum, l) => sum + (l.netQtyTotal || 0), 0);
+  }, [lines]);
+
+  const isFormValid = useMemo(() => {
+    if (!selectedLineForReturn) return false;
+    const state = returnForm[selectedLineForReturn.id];
+    if (!state) return false;
+    const maxQty = returnableLinesMap[selectedLineForReturn.id]?.maxReturnableQty ?? 0;
+    return (
+      state.returnQty >= 1 &&
+      state.returnQty <= maxQty &&
+      state.reason.trim().length > 0
+    );
+  }, [returnForm, selectedLineForReturn, returnableLinesMap]);
+
+  const openReturnDialog = (selectedLine: any) => {
+    setSelectedLineForReturn(selectedLine);
+    const maxQty = returnableLinesMap[selectedLine.id]?.maxReturnableQty ?? 0;
+    setReturnForm({
+      [selectedLine.id]: {
+        checked: true,
+        returnQty: maxQty,
+        reason: "",
+      },
+    });
+    setIsReturnDialogOpen(true);
+  };
+
+  const createReturnNoteMutation = useCreateReturnNote();
+
+  const handleReturnSubmit = async () => {
+    if (!isFormValid || !selectedLineForReturn) return;
+    const state = returnForm[selectedLineForReturn.id];
+    if (!state) return;
+
+    try {
+      await createReturnNoteMutation.mutateAsync({
+        deliveryNoteId: deliveryNoteId,
+        lines: [
+          {
+            deliveryNoteLineId: selectedLineForReturn.id,
+            returnQty: state.returnQty,
+            reason: state.reason.trim(),
+          },
+        ],
+      });
+      setIsReturnDialogOpen(false);
+      setSelectedLineForReturn(null);
+    } catch (e) {
+      // Handled by hook
+    }
+  };
 
   const handleOpenUpdateDialog = (newStatus?: string) => {
     // map backend status to simplified UI status
@@ -354,6 +446,7 @@ export default function DeliveryNoteDetailPage() {
   const isFailed = currentStatus === "failed" || currentStatus === "failure";
   const isCancelled = currentStatus === "cancelled";
   const canRecreate = isFailed;
+  const isDelivered = ["completed", "delivered", "partially_completed"].includes(currentStatus);
 
   // Next steps mapping
   const nextSteps: Record<string, { value: string; label: string; icon: any }> =
@@ -390,9 +483,6 @@ export default function DeliveryNoteDetailPage() {
   const nextAction = nextSteps[currentStatus];
 
   // Stats from lines
-  const lines = (deliveryNote as any).lines as
-    | DeliveryNoteLineResponse[]
-    | null;
   const hasLines = lines && lines.length > 0;
   const totalDeliveryQty = (deliveryNote as any).totalDeliveryQty as
     | number
@@ -627,7 +717,7 @@ export default function DeliveryNoteDetailPage() {
               Tổng SL giao
             </div>
             <div className="text-xl font-bold text-primary">
-              {totalDeliveryQty?.toLocaleString("vi-VN") ?? lines.length}
+              {totalNetQty.toLocaleString("vi-VN")}
             </div>
           </Card>
           <Card className="p-4">
@@ -655,60 +745,13 @@ export default function DeliveryNoteDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Lines Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Chi tiết phiếu giao hàng
-                {hasLines && (
-                  <Badge variant="secondary" className="ml-auto">
-                    {lines.length} đơn
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {hasLines ? (
-                <div className="overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30">
-                        <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
-                        <TableHead>Sản phẩm</TableHead>
-                        <TableHead className="text-right">
-                          SL đặt hàng
-                        </TableHead>
-                        <TableHead className="text-right">
-                          SL giao
-                        </TableHead>
-                        <TableHead className="text-right">Phụ hao</TableHead>
-                        <TableHead className="text-right">
-                          SL thực tính
-                        </TableHead>
-                        <TableHead className="text-right">Thành tiền</TableHead>
-                        <TableHead>Trạng thái</TableHead>
-                        <TableHead>Thao tác</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {lines.map((line, idx) => (
-                        <DeliveryLineRow
-                          key={line.id ?? idx}
-                          line={line}
-                          noteStatus={currentStatus}
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="py-10 text-center text-sm text-muted-foreground">
-                  <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                  Không có dòng hàng nào
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <DeliveryLinesCard
+            lines={lines}
+            currentStatus={currentStatus}
+            isDelivered={isDelivered}
+            returnableLinesMap={returnableLinesMap}
+            openReturnDialog={openReturnDialog}
+          />
 
           {/* Notes */}
           {deliveryNote.notes && (
@@ -723,6 +766,100 @@ export default function DeliveryNoteDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Return History - always show, even if empty */}
+          <Card className="border-amber-200/60 bg-amber-50/10">
+            <CardHeader className="pb-3 border-b border-border/40">
+              <CardTitle className="flex items-center gap-2 text-amber-700">
+                <History className="w-5 h-5 text-amber-600" />
+                Lịch sử trả hàng lỗi
+                {returnNotes && returnNotes.length > 0 && (
+                  <Badge variant="secondary" className="ml-auto text-amber-700 bg-amber-100">
+                    {returnNotes.length} phiếu
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {!returnNotes || returnNotes.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  <RotateCcw className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                  Chưa có trả hàng nào
+                </div>
+              ) : (
+                <div className="overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="pl-4">Phiếu trả</TableHead>
+                        <TableHead>Trạng thái</TableHead>
+                        <TableHead>Ngày tạo / Xử lý</TableHead>
+                        <TableHead>Sản phẩm</TableHead>
+                        <TableHead className="text-right">Số lượng trả</TableHead>
+                        <TableHead>Lý do</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {returnNotes.flatMap((note) =>
+                        (note.lines ?? []).map((l, idx) => (
+                          <TableRow key={`${note.id}-${l.id}`} className="hover:bg-muted/30 transition-colors">
+                            {idx === 0 ? (
+                              <>
+                                <TableCell className="pl-4" rowSpan={(note.lines ?? []).length}>
+                                  <div className="font-mono font-semibold text-sm text-amber-800">
+                                    {note.code || `#${note.id}`}
+                                  </div>
+                                </TableCell>
+                                <TableCell rowSpan={(note.lines ?? []).length}>
+                                  {note.statusLabel && (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs whitespace-nowrap">
+                                      {note.statusLabel}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell rowSpan={(note.lines ?? []).length}>
+                                  <div className="text-xs text-muted-foreground space-y-0.5">
+                                    <div>Tạo: {formatDateTime(note.createdAt)}</div>
+                                    {note.createdByName && <div className="text-foreground/60">{note.createdByName}</div>}
+                                    {note.processedAt && (
+                                      <div className="mt-1">
+                                        <div>Xử lý: {formatDateTime(note.processedAt)}</div>
+                                        {note.processedByName && <div className="text-foreground/60">{note.processedByName}</div>}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </>
+                            ) : null}
+                            <TableCell>
+                              <div className="space-y-0.5">
+                                <div className="font-medium text-sm">
+                                  {l.productName || l.productCode || "Sản phẩm"}
+                                </div>
+                                {l.productCode && (
+                                  <div className="font-mono text-xs text-muted-foreground">{l.productCode}</div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className="font-bold text-amber-700">
+                                {l.returnQty.toLocaleString("vi-VN")}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-muted-foreground italic">
+                                {l.reason || "—"}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}
@@ -827,6 +964,127 @@ export default function DeliveryNoteDetailPage() {
               variant="default"
             >
               {recreateMutation.isPending ? "Đang tạo..." : "Xác nhận"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Return Dialog */}
+      <Dialog open={isReturnDialogOpen} onOpenChange={(open) => {
+        setIsReturnDialogOpen(open);
+        if (!open) setSelectedLineForReturn(null);
+      }}>
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-border/60">
+            <DialogTitle className="flex items-center gap-2 text-amber-700">
+              <RotateCcw className="w-5 h-5 text-amber-600" />
+              Tạo phiếu trả hàng lỗi
+            </DialogTitle>
+            <DialogDescription>
+              Nhập số lượng và lý do trả lại hàng hóa bị lỗi cho sản phẩm này.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedLineForReturn && (
+            <div className="p-6 space-y-4">
+              {/* Product Info Block */}
+              <div className="bg-amber-50/30 border border-amber-100 rounded-lg p-3 space-y-1">
+                <div className="font-mono text-xs font-bold text-amber-800">
+                  {selectedLineForReturn.designCode}
+                </div>
+                <div className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                  {selectedLineForReturn.designName}
+                </div>
+              </div>
+
+              {/* Quantities Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Đã giao (thực tính)</span>
+                  <div className="text-sm font-semibold">
+                    {selectedLineForReturn.netQtyTotal?.toLocaleString("vi-VN") || 0}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Đã trả trước đó</span>
+                  <div className="text-sm font-semibold text-amber-600">
+                    {(returnableLinesMap[selectedLineForReturn.id]?.alreadyReturnedQty || 0).toLocaleString("vi-VN")}
+                  </div>
+                </div>
+              </div>
+
+              {/* Input: Return Qty */}
+              {(() => {
+                const lineState = returnForm[selectedLineForReturn.id] || { returnQty: 0, reason: "" };
+                const maxQty = returnableLinesMap[selectedLineForReturn.id]?.maxReturnableQty ?? 0;
+                return (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="return-qty" className="text-sm font-medium">
+                        Số lượng trả lần này <span className="text-destructive">*</span>
+                        <span className="text-xs text-muted-foreground ml-1">
+                          (Tối đa {maxQty.toLocaleString("vi-VN")})
+                        </span>
+                      </Label>
+                      <input
+                        id="return-qty"
+                        type="number"
+                        min={1}
+                        max={maxQty}
+                        value={lineState.returnQty}
+                        onChange={(e) => {
+                          const val = Math.min(maxQty, Math.max(1, Number.parseInt(e.target.value, 10) || 1));
+                          setReturnForm(prev => ({
+                            ...prev,
+                            [selectedLineForReturn.id]: { ...prev[selectedLineForReturn.id], returnQty: val }
+                          }));
+                        }}
+                        className="w-full h-10 border rounded-md px-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      />
+                    </div>
+
+                    {/* Input: Reason */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="return-reason" className="text-sm font-medium">
+                        Lý do trả hàng <span className="text-destructive">*</span>
+                      </Label>
+                      <Textarea
+                        id="return-reason"
+                        placeholder="Nhập lý do chi tiết..."
+                        value={lineState.reason}
+                        onChange={(e) => {
+                          setReturnForm(prev => ({
+                            ...prev,
+                            [selectedLineForReturn.id]: { ...prev[selectedLineForReturn.id], reason: e.target.value }
+                          }));
+                        }}
+                        className="resize-none"
+                        rows={3}
+                      />
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          <DialogFooter className="p-6 pt-4 border-t border-border/60 bg-muted/20">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsReturnDialogOpen(false);
+                setSelectedLineForReturn(null);
+              }}
+              disabled={createReturnNoteMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleReturnSubmit}
+              disabled={!isFormValid || createReturnNoteMutation.isPending}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {createReturnNoteMutation.isPending ? "Đang xử lý..." : "Xác nhận trả hàng"}
             </Button>
           </DialogFooter>
         </DialogContent>

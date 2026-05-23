@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, XCircle, Loader2, Image as ImageIcon } from "lucide-react";
+import { ChevronRight, XCircle, Loader2, Image as ImageIcon, RotateCcw } from "lucide-react";
 import { useUpdateDeliveryLineResult, useFailureReasons } from "@/hooks/use-delivery-note";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
@@ -63,13 +63,19 @@ const NEXT_STATUS: Record<string, string> = {
 export default function DeliveryLineRow({
   line,
   noteStatus,
+  onReturn,
 }: {
   line: DeliveryNoteLineResponse;
   noteStatus?: string | null;
+  onReturn?: (line: DeliveryNoteLineResponse) => void;
 }) {
   const [localStatus, setLocalStatus] = useState<string | null | undefined>(
     line.status,
   );
+
+  React.useEffect(() => {
+    setLocalStatus(line.status);
+  }, [line.status]);
   const [failDialogOpen, setFailDialogOpen] = useState(false);
   const [failureReasonId, setFailureReasonId] = useState<number | null>(null);
   const [failureNotes, setFailureNotes] = useState("");
@@ -304,6 +310,18 @@ export default function DeliveryLineRow({
                 Thất bại
               </Button>
             </div>
+          )}
+
+          {currentStatus === "delivered" && onReturn && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] gap-1 px-2 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+              onClick={() => onReturn(line)}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Trả hàng
+            </Button>
           )}
         </TableCell>
       </TableRow>
