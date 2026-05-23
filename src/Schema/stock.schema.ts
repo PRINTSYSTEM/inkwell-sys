@@ -33,6 +33,7 @@ const GenStockCardResponseSchema = schemas.StockCardResponse;
 // ===== StockInItemRequest =====
 export const StockInItemRequestSchema =
   GenStockInItemRequestSchema?.passthrough().extend({
+    quantity: z.number().int().gte(1).lte(2147483647).optional(),
     laborCost: z.number().nullable().optional(),
     proofingOrderId: z.union([z.string(), z.number()]).nullable().optional(),
     ramQuantity: z.number().nullable().optional(),
