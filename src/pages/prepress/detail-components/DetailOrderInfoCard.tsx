@@ -244,7 +244,7 @@ export function DetailOrderInfoCard({
                         </SelectItem>
                         {paperSizes.map((ps) => (
                           <SelectItem key={ps.id} value={ps.id.toString()}>
-                            {ps.name}
+                            {ps.name} cm
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -293,7 +293,7 @@ export function DetailOrderInfoCard({
                     <p className="font-bold text-[12px]">
                       {order.paperSize?.name ||
                         order.customPaperSize ||
-                        "Chưa chọn"}
+                        "Chưa chọn"} cm
                     </p>
                     {order.status !== "completed" && (
                       <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />

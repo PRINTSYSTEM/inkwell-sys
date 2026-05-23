@@ -540,7 +540,7 @@ export function CreateProofingOrderModal({
                               {ps.name}{" "}
                               {ps.width && ps.height
                                 ? `(${ps.width}×${ps.height})`
-                                : ""}
+                                : ""} cm
                             </SelectItem>
                           ))}
                         </SelectContent>

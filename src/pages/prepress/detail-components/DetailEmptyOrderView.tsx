@@ -230,7 +230,7 @@ export function DetailEmptyOrderView({
                           className="text-sm font-bold flex items-center gap-2"
                         >
                           <Box className="h-4 w-4 text-muted-foreground" />
-                          Khổ giấy in
+                          Khổ giấy in (cm)
                           <span className="text-destructive">*</span>
                         </Label>
                         <div className="flex gap-2">
@@ -256,7 +256,7 @@ export function DetailEmptyOrderView({
                                   {ps.name}
                                   {ps.width && ps.height
                                     ? ` (${ps.width}×${ps.height})`
-                                    : ""}
+                                    : ""} cm
                                 </SelectItem>
                               ))}
                             </SelectContent>
