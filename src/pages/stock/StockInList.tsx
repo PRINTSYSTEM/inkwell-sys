@@ -365,7 +365,7 @@ export default function StockInListPage() {
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-[#93631F]/5 border-b border-slate-200/60">
+                          <TableRow className="bg-[#93631F]/5 border-b border-slate-200/60 whitespace-nowrap">
                             <TableHead className="w-[140px] font-semibold text-slate-700">
                               Số phiếu
                             </TableHead>
@@ -399,7 +399,7 @@ export default function StockInListPage() {
                             <TableHead className="text-center font-semibold text-slate-700">
                               Trạng thái
                             </TableHead>
-                            <TableHead className="w-[135px] text-right font-semibold text-slate-700">Thao tác</TableHead>
+                            <TableHead className="w-[110px] text-right font-semibold text-slate-700">Thao tác</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -504,33 +504,29 @@ export default function StockInListPage() {
                                 {getStatusBadge(stockIn.status)}
                               </TableCell>
                               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex flex-col items-end gap-1.5">
+                                <div className="flex flex-col items-end gap-1">
                                   {stockIn.status !== "completed" &&
                                     stockIn.status !== "cancelled" && (
                                       <Button
-                                        variant="outline"
                                         size="sm"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleComplete(stockIn.id);
                                         }}
-                                        className="h-8 w-[115px] border-emerald-500/30 hover:border-emerald-500 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-all duration-200 font-medium text-xs rounded-md shadow-sm cursor-pointer justify-center"
+                                        className="h-7 w-[90px] bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-[11px] rounded-md shadow-sm cursor-pointer justify-center"
                                       >
-                                        <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-500 flex-shrink-0" />
                                         Hoàn thành
                                       </Button>
                                     )}
                                   {stockIn.status !== "cancelled" && (
                                     <Button
-                                      variant="outline"
                                       size="sm"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleCancel(stockIn.id);
                                       }}
-                                      className="h-8 w-[115px] border-red-200 hover:border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 font-medium text-xs rounded-md shadow-sm cursor-pointer justify-center"
+                                      className="h-7 w-[90px] bg-red-600 hover:bg-red-700 text-white font-medium text-[11px] rounded-md shadow-sm cursor-pointer justify-center"
                                     >
-                                      <XCircle className="h-3.5 w-3.5 mr-1 text-red-500 flex-shrink-0" />
                                       Hủy
                                     </Button>
                                   )}

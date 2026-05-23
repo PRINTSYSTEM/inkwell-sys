@@ -36,6 +36,7 @@ export const StockInItemRequestSchema =
     laborCost: z.number().nullable().optional(),
     proofingOrderId: z.union([z.string(), z.number()]).nullable().optional(),
     ramQuantity: z.number().nullable().optional(),
+    jobCode: z.string().nullable().optional(),
   }) || z.any();
 export type StockInItemRequest = z.infer<typeof StockInItemRequestSchema>;
 
