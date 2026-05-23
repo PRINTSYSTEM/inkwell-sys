@@ -399,12 +399,18 @@ export default function StockInCreatePage() {
 
       const newItems = [...items];
       const isItemRam = newItems[index].calculationMethod === "ram";
+
+      // Priority of unitPrice: unitPrice from backend -> localStorage cached unitPrice -> current item unitPrice
+      const defaultUnitPrice = (material.unitPrice !== undefined && material.unitPrice !== null)
+        ? material.unitPrice
+        : (loadedUnitPrice !== undefined ? loadedUnitPrice : newItems[index].unitPrice);
+
       newItems[index] = {
         ...newItems[index],
         itemName: materialName,
         itemCode: generatedCode,
         unit: isItemRam ? "gram" : (loadedUnit || newItems[index].unit || ""),
-        unitPrice: loadedUnitPrice !== undefined ? loadedUnitPrice : newItems[index].unitPrice,
+        unitPrice: defaultUnitPrice,
         materialId: material.id,
         length: material.length,
         width: material.width,
