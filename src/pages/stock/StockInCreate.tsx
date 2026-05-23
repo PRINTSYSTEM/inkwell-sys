@@ -495,7 +495,7 @@ export default function StockInCreatePage() {
           return {
             itemName: item.itemName.trim(),
             itemCode: (item.itemCode || "").trim() || undefined,
-            unit: (item.unit || "").trim() || undefined,
+            unit: isItemRam ? "tờ" : ((item.unit || "").trim() || undefined),
             quantity: isItemRam ? Math.floor(item.ramQuantity ?? 0) : Math.floor(item.quantity),
             ramQuantity: isItemRam ? Math.floor(item.ramQuantity ?? 0) : undefined,
             unitPrice: item.unitPrice ?? undefined,
