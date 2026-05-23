@@ -162,6 +162,497 @@ function getStatusColorClass(status: string) {
   }
 }
 
+interface InlineStepStatusProps {
+  step: ProductionStepResponse;
+  isEnabled?: boolean;
+  isStatusLocked?: boolean;
+  defaultPrintQty: number;
+}
+
+function InlineStepStatus({
+  step,
+  isEnabled = true,
+  isStatusLocked = false,
+  defaultPrintQty,
+}: InlineStepStatusProps) {
+  const { mutate: updateStep } = useUpdateProductionStep();
+
+  const handleStatusChange = (newStatus: string) => {
+    updateStep({
+      stepId: step.id!,
+      data: {
+        status: newStatus,
+        inputQty: step.inputQty || defaultPrintQty || undefined,
+        outputQty: step.outputQty || defaultPrintQty || undefined,
+        defectQty: step.defectQty || undefined,
+        notes: (step as any).notes || (step as any).defectNotes || undefined,
+      },
+    });
+  };
+
+  return (
+    <div
+      className={`flex items-center gap-1.5 h-7 transition-all duration-300 ${!isEnabled ? "opacity-30 grayscale pointer-events-none select-none" : ""} ${isStatusLocked ? "pointer-events-none" : ""}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <Select
+        value={
+          !step.status || step.status === "pending" ? "ready" : step.status
+        }
+        onValueChange={handleStatusChange}
+        disabled={!isEnabled}
+      >
+        <SelectTrigger
+          className={`h-7 min-w-[105px] text-[10px] px-2 font-bold border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(
+            !step.status || step.status === "pending" ? "ready" : step.status,
+          )} ${isStatusLocked ? "opacity-100 select-none" : ""}`}
+        >
+          <SelectValue placeholder="Trạng thái" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            value="ready"
+            className="text-xs font-semibold cursor-pointer"
+          >
+            Sẵn sàng
+          </SelectItem>
+          <SelectItem
+            value="in_progress"
+            className="text-xs font-semibold cursor-pointer"
+          >
+            Đang thực hiện
+          </SelectItem>
+          <SelectItem
+            value="done"
+            className="text-xs font-semibold cursor-pointer"
+          >
+            Hoàn thành
+          </SelectItem>
+          <SelectItem
+            value="blocked"
+            className="text-xs font-semibold cursor-pointer"
+          >
+            Bị chặn/Lỗi
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+interface StepItemProps {
+  step: ProductionStepResponse;
+  isCheckStep?: boolean;
+  isEnabled?: boolean;
+  showName?: boolean;
+  label?: string;
+  hideStatus?: boolean;
+  isPackagingItem?: boolean;
+  productionItemId?: number | null;
+  productionOrderId?: number | null;
+  initialOutputQtyOverride?: number | null;
+  initialDefectQtyOverride?: number | null;
+  isStatusLocked?: boolean;
+  defaultPrintQty: number;
+  productionItems: any[];
+  onShowMaterialExport?: () => void;
+}
+
+function StepItem({
+  step,
+  isCheckStep = false,
+  isEnabled = true,
+  showName = false,
+  label,
+  hideStatus = false,
+  isPackagingItem = false,
+  productionItemId = null,
+  productionOrderId = null,
+  initialOutputQtyOverride = null,
+  initialDefectQtyOverride = null,
+  isStatusLocked = false,
+  defaultPrintQty,
+  productionItems,
+  onShowMaterialExport,
+}: StepItemProps) {
+  const { mutate: updateStep } = useUpdateProductionStep();
+  const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
+
+  // Auto-fill with proofing order qty if step qty not yet set (or zero)
+  const initialInputQty = step.inputQty
+    ? step.inputQty.toString()
+    : defaultPrintQty
+      ? String(defaultPrintQty)
+      : "";
+  const computedOutputQty =
+    isPackagingItem && initialOutputQtyOverride !== null
+      ? initialOutputQtyOverride.toString()
+      : step.outputQty
+        ? step.outputQty.toString()
+        : defaultPrintQty
+          ? String(defaultPrintQty)
+          : "";
+  const computedDefectQty =
+    isPackagingItem && initialDefectQtyOverride !== null
+      ? initialDefectQtyOverride.toString()
+      : step.defectQty?.toString() || "";
+
+  const hasBeenSaved = isPackagingItem
+    ? initialOutputQtyOverride !== null || initialDefectQtyOverride !== null
+    : step.outputQty != null || step.defectQty != null;
+
+  const [inputQty, setInputQty] = useState(initialInputQty);
+  const [notes, setNotes] = useState(
+    isPackagingItem
+      ? productionItems.find((i: any) => i.id === productionItemId)?.notes || ""
+      : step.notes || (step as any).defectNotes || "",
+  );
+  const [outputQty, setOutputQty] = useState(computedOutputQty);
+  const [defectQty, setDefectQty] = useState(computedDefectQty);
+  const [isEditing, setIsEditing] = useState(!hasBeenSaved);
+
+  React.useEffect(() => {
+    // Don't overwrite local state while user is editing
+    if (isEditing) return;
+
+    setInputQty(
+      step.inputQty
+        ? step.inputQty.toString()
+        : defaultPrintQty
+          ? String(defaultPrintQty)
+          : "",
+    );
+    setOutputQty(
+      isPackagingItem && initialOutputQtyOverride !== null
+        ? initialOutputQtyOverride.toString()
+        : step.outputQty
+          ? step.outputQty.toString()
+          : defaultPrintQty
+            ? String(defaultPrintQty)
+            : "",
+    );
+    setDefectQty(
+      isPackagingItem && initialDefectQtyOverride !== null
+        ? initialDefectQtyOverride.toString()
+        : step.defectQty?.toString() || "",
+    );
+    setNotes(
+      isPackagingItem
+        ? productionItems.find((i: any) => i.id === productionItemId)?.notes || ""
+        : step.notes || (step as any).defectNotes || "",
+    );
+  }, [
+    isEditing,
+    step.inputQty,
+    step.outputQty,
+    step.defectQty,
+    step.notes,
+    defaultPrintQty,
+    isPackagingItem,
+    initialOutputQtyOverride,
+    initialDefectQtyOverride,
+    productionItems,
+    productionItemId,
+  ]);
+
+  const handleUpdate = (
+    updates: Partial<{
+      status: any;
+      inputQty: number;
+      outputQty: number;
+      defectQty: number;
+      notes?: string;
+    }>,
+  ) => {
+    // 1. Update the Item (quantities) if it's a packaging item
+    if (
+      isPackagingItem &&
+      productionItemId !== null &&
+      productionOrderId !== null
+    ) {
+      updateOrderItem({
+        productionOrderId,
+        itemId: productionItemId,
+        data: {
+          outputQty:
+            updates.outputQty !== undefined
+              ? updates.outputQty
+              : Number(outputQty) || 0,
+          defectQty:
+            updates.defectQty !== undefined
+              ? updates.defectQty
+              : Number(defectQty) || 0,
+          notes: updates.notes !== undefined ? updates.notes : notes,
+        },
+      });
+    }
+
+    // 2. Update the Step (status and quantities)
+    // This is always called for non-packaging steps, or for packaging steps when status changes
+    if (step.id && (updates.status !== undefined || !isPackagingItem)) {
+      updateStep({
+        stepId: step.id,
+        data: {
+          status: updates.status || step.status,
+          inputQty:
+            updates.inputQty !== undefined
+              ? updates.inputQty
+              : Number(inputQty) || 0,
+          outputQty:
+            updates.outputQty !== undefined
+              ? updates.outputQty
+              : Number(outputQty) || 0,
+          defectQty:
+            updates.defectQty !== undefined
+              ? updates.defectQty
+              : Number(defectQty) || 0,
+          notes: updates.notes !== undefined ? updates.notes : notes,
+        },
+      }).catch((err) => {
+        console.error("Lỗi cập nhật bước:", err);
+      });
+    }
+
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-1 w-full max-w-[100px] md:max-w-[110px] mx-auto py-2 first:pt-0 last:pb-0">
+      {(showName || label) && (
+        <span
+          className="text-[9px] font-bold text-muted-foreground truncate leading-tight uppercase tracking-tighter"
+          title={label || step.stepTypeName || ""}
+        >
+          {label || step.stepTypeName || "Đóng gói"}
+        </span>
+      )}
+      {!hideStatus && (
+        <>
+          <Select
+            value={
+              !step.status || step.status === "pending" ? "ready" : step.status
+            }
+            onValueChange={(val: any) => handleUpdate({ status: val })}
+            disabled={!isEnabled}
+          >
+            <SelectTrigger
+              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""} ${isStatusLocked ? "opacity-100 pointer-events-none select-none" : ""}`}
+            >
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value="ready"
+                className="text-xs font-semibold cursor-pointer"
+              >
+                Sẵn sàng
+              </SelectItem>
+              <SelectItem
+                value="in_progress"
+                className="text-xs font-semibold cursor-pointer"
+              >
+                Đang thực hiện
+              </SelectItem>
+              <SelectItem
+                value="done"
+                className="text-xs font-semibold cursor-pointer"
+              >
+                Hoàn thành
+              </SelectItem>
+              <SelectItem
+                value="blocked"
+                className="text-xs font-semibold cursor-pointer"
+              >
+                Bị chặn/Lỗi
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          {step.stepType === "material_export" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 mt-1 text-[10px] w-full bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
+              disabled={!isEnabled || step.status === "done"}
+              onClick={() => onShowMaterialExport?.()}
+            >
+              Xuất nguyên liệu
+            </Button>
+          )}
+        </>
+      )}
+
+      {isCheckStep && !isEditing && (
+        <div className="flex flex-col gap-1 mt-1">
+          {/* Ẩn phần Vào theo yêu cầu */}
+          <div className="hidden items-center justify-between gap-1">
+            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
+              Vào
+            </span>
+            <span className="text-[10px] tabular-nums font-medium">
+              {inputQty || 0}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+              Ra
+            </span>
+            <span className="text-[13px] tabular-nums font-bold text-emerald-700">
+              {outputQty || 0}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tighter">
+              Lỗi
+            </span>
+            <span className="text-[13px] tabular-nums font-bold text-red-600">
+              {defectQty || 0}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 mt-1 text-[10px] w-full"
+            disabled={!isEnabled}
+            onClick={() => {
+              setIsEditing(true);
+              // Auto-jump to ready when clicking Edit (requested by user)
+              if (step.status !== "ready" && step.id) {
+                updateStep({
+                  stepId: step.id,
+                  data: {
+                    status: "ready",
+                    inputQty: step.inputQty || undefined,
+                    outputQty: step.outputQty || undefined,
+                    defectQty: step.defectQty || undefined,
+                  },
+                });
+              }
+            }}
+          >
+            <Edit className="w-3 h-3 mr-1" /> Sửa
+          </Button>
+          {notes && (
+            <div className="text-[11px] font-medium text-amber-700 dark:text-amber-500 break-words leading-tight border-l-2 border-amber-500/50 pl-1.5 mt-1.5 bg-amber-50/30 dark:bg-amber-900/10 py-1">
+              {notes}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isCheckStep && isEditing && (
+        <div className="flex flex-col gap-1 mt-1">
+          {/* Ẩn phần Vào theo yêu cầu */}
+          <div className="hidden items-center justify-between gap-1">
+            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
+              Vào
+            </span>
+            <Input
+              type="number"
+              className="h-5 w-14 text-[10px] px-1 py-0 text-right bg-background"
+              value={inputQty}
+              onChange={(e) => setInputQty(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] font-bold text-emerald-600 uppercase w-5 shrink-0 text-center">Ra</span>
+            <Input
+              type="number"
+              value={outputQty}
+              onChange={(e) => setOutputQty(e.target.value)}
+              className="h-7 text-[13px] px-1.5 py-0 focus-visible:ring-emerald-500 font-bold tabular-nums"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] font-bold text-red-600 uppercase w-5 shrink-0 text-center">Lỗi</span>
+            <Input
+              type="number"
+              value={defectQty}
+              onChange={(e) => setDefectQty(e.target.value)}
+              className="h-7 text-[13px] px-1.5 py-0 focus-visible:ring-red-500 font-bold text-red-600 tabular-nums"
+            />
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            className="h-6 mt-1 text-[10px] w-full"
+            disabled={!isEnabled}
+            onClick={() => {
+              handleUpdate({
+                inputQty: Number(inputQty) || 0,
+                outputQty: Number(outputQty) || 0,
+                defectQty: Number(defectQty) || 0,
+                notes: notes,
+              });
+            }}
+          >
+            <Save className="w-3 h-3 mr-1" /> Lưu
+          </Button>
+          <Input
+            placeholder="Ghi chú..."
+            className="h-7 w-full text-[11px] px-1.5 py-0 bg-background mt-1.5 border-amber-200 focus:border-amber-500"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface StepCellProps {
+  step: ProductionStepResponse | null;
+  isCheckStep?: boolean;
+  isEnabled?: boolean;
+  showName?: boolean;
+  info?: React.ReactNode;
+  isStatusLocked?: boolean;
+  defaultPrintQty: number;
+  productionItems: any[];
+  onShowMaterialExport?: () => void;
+}
+
+function StepCell({
+  step,
+  isCheckStep = false,
+  isEnabled = true,
+  showName = false,
+  info,
+  isStatusLocked = false,
+  defaultPrintQty,
+  productionItems,
+  onShowMaterialExport,
+}: StepCellProps) {
+  // If no step AND no info, show empty
+  if (!step && !info)
+    return (
+      <TableCell className="text-center py-3 bg-primary/[0.08] dark:bg-primary/[0.15] text-primary/40 font-black text-lg italic border-r border-border/40">
+        —
+      </TableCell>
+    );
+
+  return (
+    <TableCell
+      className="align-top py-3 px-1.5 w-[85px] max-w-[85px]"
+    >
+      <div className="flex flex-col items-center gap-1.5">
+        {step && (
+          <StepItem
+            step={step}
+            isCheckStep={isCheckStep}
+            isEnabled={isEnabled}
+            showName={showName}
+            isStatusLocked={isStatusLocked}
+            defaultPrintQty={defaultPrintQty}
+            productionItems={productionItems}
+            onShowMaterialExport={onShowMaterialExport}
+          />
+        )}
+        {info && <div className="w-full text-center">{info}</div>}
+      </div>
+    </TableCell>
+  );
+}
+
 // Inner component to render each row and fetch proofing details
 function ProductionTableRow({
   prod,
@@ -277,471 +768,6 @@ function ProductionTableRow({
     return Array.from(lams).join(", ");
   }, [proofingOrder]);
 
-  const InlineStepStatus = ({
-    step,
-    isEnabled = true,
-    isStatusLocked = false,
-  }: {
-    step: ProductionStepResponse;
-    isEnabled?: boolean;
-    isStatusLocked?: boolean;
-  }) => {
-    const handleStatusChange = (newStatus: string) => {
-      updateStep({
-        stepId: step.id!,
-        data: {
-          status: newStatus,
-          inputQty: step.inputQty || defaultPrintQty || undefined,
-          outputQty: step.outputQty || defaultPrintQty || undefined,
-          defectQty: step.defectQty || undefined,
-          notes: (step as any).notes || (step as any).defectNotes || undefined,
-        },
-      });
-    };
-
-    return (
-      <div
-        className={`flex items-center gap-1.5 h-7 transition-all duration-300 ${!isEnabled ? "opacity-30 grayscale pointer-events-none select-none" : ""} ${isStatusLocked ? "pointer-events-none" : ""}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Select
-          value={
-            !step.status || step.status === "pending" ? "ready" : step.status
-          }
-          onValueChange={handleStatusChange}
-          disabled={!isEnabled}
-        >
-          <SelectTrigger
-            className={`h-7 min-w-[105px] text-[10px] px-2 font-bold border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(
-              !step.status || step.status === "pending" ? "ready" : step.status,
-            )} ${isStatusLocked ? "opacity-100 select-none" : ""}`}
-          >
-            <SelectValue placeholder="Trạng thái" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              value="ready"
-              className="text-xs font-semibold cursor-pointer"
-            >
-              Sẵn sàng
-            </SelectItem>
-            <SelectItem
-              value="in_progress"
-              className="text-xs font-semibold cursor-pointer"
-            >
-              Đang thực hiện
-            </SelectItem>
-            <SelectItem
-              value="done"
-              className="text-xs font-semibold cursor-pointer"
-            >
-              Hoàn thành
-            </SelectItem>
-            <SelectItem
-              value="blocked"
-              className="text-xs font-semibold cursor-pointer"
-            >
-              Bị chặn/Lỗi
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    );
-  };
-
-  const StepItem = ({
-    step,
-    isCheckStep = false,
-    isEnabled = true,
-    showName = false,
-    label,
-    hideStatus = false,
-    isPackagingItem = false,
-    productionItemId = null,
-    productionOrderId = null,
-    initialOutputQtyOverride = null,
-    initialDefectQtyOverride = null,
-    isStatusLocked = false,
-  }: {
-    step: ProductionStepResponse;
-    isCheckStep?: boolean;
-    isEnabled?: boolean;
-    showName?: boolean;
-    label?: string;
-    hideStatus?: boolean;
-    isPackagingItem?: boolean;
-    productionItemId?: number | null;
-    productionOrderId?: number | null;
-    initialOutputQtyOverride?: number | null;
-    initialDefectQtyOverride?: number | null;
-    isStatusLocked?: boolean;
-  }) => {
-    // Auto-fill with proofing order qty if step qty not yet set (or zero)
-    const initialInputQty = step.inputQty
-      ? step.inputQty.toString()
-      : defaultPrintQty
-        ? String(defaultPrintQty)
-        : "";
-    const computedOutputQty =
-      isPackagingItem && initialOutputQtyOverride !== null
-        ? initialOutputQtyOverride.toString()
-        : step.outputQty
-          ? step.outputQty.toString()
-          : defaultPrintQty
-            ? String(defaultPrintQty)
-            : "";
-    const computedDefectQty =
-      isPackagingItem && initialDefectQtyOverride !== null
-        ? initialDefectQtyOverride.toString()
-        : step.defectQty?.toString() || "";
-
-    const hasBeenSaved = isPackagingItem
-      ? initialOutputQtyOverride !== null || initialDefectQtyOverride !== null
-      : step.outputQty != null || step.defectQty != null;
-
-    const [inputQty, setInputQty] = useState(initialInputQty);
-    const [notes, setNotes] = useState(
-      isPackagingItem
-        ? productionItems.find((i: any) => i.id === productionItemId)?.notes || ""
-        : step.notes || (step as any).defectNotes || "",
-    );
-    const [outputQty, setOutputQty] = useState(computedOutputQty);
-    const [defectQty, setDefectQty] = useState(computedDefectQty);
-    const [isEditing, setIsEditing] = useState(!hasBeenSaved);
-
-    React.useEffect(() => {
-      // Don't overwrite local state while user is editing
-      if (isEditing) return;
-
-      setInputQty(
-        step.inputQty
-          ? step.inputQty.toString()
-          : defaultPrintQty
-            ? String(defaultPrintQty)
-            : "",
-      );
-      setOutputQty(
-        isPackagingItem && initialOutputQtyOverride !== null
-          ? initialOutputQtyOverride.toString()
-          : step.outputQty
-            ? step.outputQty.toString()
-            : defaultPrintQty
-              ? String(defaultPrintQty)
-              : "",
-      );
-      setDefectQty(
-        isPackagingItem && initialDefectQtyOverride !== null
-          ? initialDefectQtyOverride.toString()
-          : step.defectQty?.toString() || "",
-      );
-      setNotes(
-        isPackagingItem
-          ? productionItems.find((i: any) => i.id === productionItemId)?.notes || ""
-          : step.notes || (step as any).defectNotes || "",
-      );
-    }, [
-      isEditing,
-      step.inputQty,
-      step.outputQty,
-      step.defectQty,
-      step.notes,
-      defaultPrintQty,
-      isPackagingItem,
-      initialOutputQtyOverride,
-      initialDefectQtyOverride,
-      productionItems,
-      productionItemId,
-    ]);
-
-    const handleUpdate = (
-      updates: Partial<{
-        status: any;
-        inputQty: number;
-        outputQty: number;
-        defectQty: number;
-        notes?: string;
-      }>,
-    ) => {
-      // 1. Update the Item (quantities) if it's a packaging item
-      if (
-        isPackagingItem &&
-        productionItemId !== null &&
-        productionOrderId !== null
-      ) {
-        updateOrderItem({
-          productionOrderId,
-          itemId: productionItemId,
-          data: {
-            outputQty:
-              updates.outputQty !== undefined
-                ? updates.outputQty
-                : Number(outputQty) || 0,
-            defectQty:
-              updates.defectQty !== undefined
-                ? updates.defectQty
-                : Number(defectQty) || 0,
-            notes: updates.notes !== undefined ? updates.notes : notes,
-          },
-        });
-      }
-
-      // 2. Update the Step (status and quantities)
-      // This is always called for non-packaging steps, or for packaging steps when status changes
-      if (step.id && (updates.status !== undefined || !isPackagingItem)) {
-        updateStep({
-          stepId: step.id,
-          data: {
-            status: updates.status || step.status,
-            inputQty:
-              updates.inputQty !== undefined
-                ? updates.inputQty
-                : Number(inputQty) || 0,
-            outputQty:
-              updates.outputQty !== undefined
-                ? updates.outputQty
-                : Number(outputQty) || 0,
-            defectQty:
-              updates.defectQty !== undefined
-                ? updates.defectQty
-                : Number(defectQty) || 0,
-            notes: updates.notes !== undefined ? updates.notes : notes,
-          },
-        }).catch(err => {
-          console.error("Lỗi cập nhật bước:", err);
-        });
-      }
-
-      setIsEditing(false);
-    };
-
-    return (
-      <div className="flex flex-col gap-1 w-full max-w-[100px] md:max-w-[110px] mx-auto py-2 first:pt-0 last:pb-0">
-        {(showName || label) && (
-          <span
-            className="text-[9px] font-bold text-muted-foreground truncate leading-tight uppercase tracking-tighter"
-            title={label || step.stepTypeName || ""}
-          >
-            {label || step.stepTypeName || "Đóng gói"}
-          </span>
-        )}
-        {!hideStatus && (
-          <>
-            <Select
-              value={
-                !step.status || step.status === "pending" ? "ready" : step.status
-              }
-              onValueChange={(val: any) => handleUpdate({ status: val })}
-              disabled={!isEnabled}
-            >
-              <SelectTrigger
-                className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""} ${isStatusLocked ? "opacity-100 pointer-events-none select-none" : ""}`}
-              >
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  value="ready"
-                  className="text-xs font-semibold cursor-pointer"
-                >
-                  Sẵn sàng
-                </SelectItem>
-                <SelectItem
-                  value="in_progress"
-                  className="text-xs font-semibold cursor-pointer"
-                >
-                  Đang thực hiện
-                </SelectItem>
-                <SelectItem
-                  value="done"
-                  className="text-xs font-semibold cursor-pointer"
-                >
-                  Hoàn thành
-                </SelectItem>
-                <SelectItem
-                  value="blocked"
-                  className="text-xs font-semibold cursor-pointer"
-                >
-                  Bị chặn/Lỗi
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            {step.stepType === "material_export" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 mt-1 text-[10px] w-full bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
-                disabled={!isEnabled || step.status === "done"}
-                onClick={() => setShowMaterialExportDialog(true)}
-              >
-                Xuất nguyên liệu
-              </Button>
-            )}
-          </>
-        )}
-
-        {isCheckStep && !isEditing && (
-          <div className="flex flex-col gap-1 mt-1">
-            {/* Ẩn phần Vào theo yêu cầu */}
-            <div className="hidden items-center justify-between gap-1">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
-                Vào
-              </span>
-              <span className="text-[10px] tabular-nums font-medium">
-                {inputQty || 0}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
-                Ra
-              </span>
-              <span className="text-[13px] tabular-nums font-bold text-emerald-700">
-                {outputQty || 0}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tighter">
-                Lỗi
-              </span>
-              <span className="text-[13px] tabular-nums font-bold text-red-600">
-                {defectQty || 0}
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 mt-1 text-[10px] w-full"
-              disabled={!isEnabled}
-              onClick={() => {
-                setIsEditing(true);
-                // Auto-jump to ready when clicking Edit (requested by user)
-                if (step.status !== "ready" && step.id) {
-                  updateStep({
-                    stepId: step.id,
-                    data: {
-                      status: "ready",
-                      inputQty: step.inputQty || undefined,
-                      outputQty: step.outputQty || undefined,
-                      defectQty: step.defectQty || undefined,
-                    },
-                  });
-                }
-              }}
-            >
-              <Edit className="w-3 h-3 mr-1" /> Sửa
-            </Button>
-            {notes && (
-              <div className="text-[11px] font-medium text-amber-700 dark:text-amber-500 break-words leading-tight border-l-2 border-amber-500/50 pl-1.5 mt-1.5 bg-amber-50/30 dark:bg-amber-900/10 py-1">
-                {notes}
-              </div>
-            )}
-          </div>
-        )}
-
-        {isCheckStep && isEditing && (
-          <div className="flex flex-col gap-1 mt-1">
-            {/* Ẩn phần Vào theo yêu cầu */}
-            <div className="hidden items-center justify-between gap-1">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">
-                Vào
-              </span>
-              <Input
-                type="number"
-                className="h-5 w-14 text-[10px] px-1 py-0 text-right bg-background"
-                value={inputQty}
-                onChange={(e) => setInputQty(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-bold text-emerald-600 uppercase w-5 shrink-0 text-center">Ra</span>
-              <Input
-                type="number"
-                value={outputQty}
-                onChange={(e) => setOutputQty(e.target.value)}
-                className="h-7 text-[13px] px-1.5 py-0 focus-visible:ring-emerald-500 font-bold tabular-nums"
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-bold text-red-600 uppercase w-5 shrink-0 text-center">Lỗi</span>
-              <Input
-                type="number"
-                value={defectQty}
-                onChange={(e) => setDefectQty(e.target.value)}
-                className="h-7 text-[13px] px-1.5 py-0 focus-visible:ring-red-500 font-bold text-red-600 tabular-nums"
-              />
-            </div>
-            <Button
-              variant="default"
-              size="sm"
-              className="h-6 mt-1 text-[10px] w-full"
-              disabled={!isEnabled}
-              onClick={() => {
-                handleUpdate({
-                  inputQty: Number(inputQty) || 0,
-                  outputQty: Number(outputQty) || 0,
-                  defectQty: Number(defectQty) || 0,
-                  notes: notes,
-                });
-              }}
-            >
-              <Save className="w-3 h-3 mr-1" /> Lưu
-            </Button>
-            <Input
-              placeholder="Ghi chú..."
-              className="h-7 w-full text-[11px] px-1.5 py-0 bg-background mt-1.5 border-amber-200 focus:border-amber-500"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-        )}
-      </div>
-    );
-  };
-
-
-
-  const StepCell = ({
-    step,
-    isCheckStep = false,
-    isEnabled = true,
-    showName = false,
-    info,
-    isStatusLocked = false,
-  }: {
-    step: ProductionStepResponse | null;
-    isCheckStep?: boolean;
-    isEnabled?: boolean;
-    showName?: boolean;
-    info?: React.ReactNode;
-    isStatusLocked?: boolean;
-  }) => {
-    // If no step AND no info, show empty
-    if (!step && !info)
-      return (
-        <TableCell className="text-center py-3 bg-primary/[0.08] dark:bg-primary/[0.15] text-primary/40 font-black text-lg italic border-r border-border/40">
-          —
-        </TableCell>
-      );
-
-    return (
-      <TableCell
-        className="align-top py-3 px-1.5"
-      >
-        <div className="flex flex-col items-center gap-1.5">
-          {step && (
-            <StepItem
-              step={step}
-              isCheckStep={isCheckStep}
-              isEnabled={isEnabled}
-              showName={showName}
-              isStatusLocked={isStatusLocked}
-            />
-          )}
-          {info && <div className="w-full text-center">{info}</div>}
-        </div>
-      </TableCell>
-    );
-  };
-
   // Date formatter helper
   const formatDate = (dateString: string | undefined | null) => {
     if (!dateString) return "—";
@@ -764,7 +790,7 @@ function ProductionTableRow({
       <TableRow
         className={`border-b ${isDraft ? "bg-blue-50/20 dark:bg-blue-900/10" : ""}`}
       >
-        <TableCell className="py-3 align-top font-bold text-base text-primary bg-muted/20 border-r border-border/50 text-center w-[150px]">
+        <TableCell className="py-3 align-top font-bold text-sm text-primary bg-muted/20 border-r border-border/50 text-center w-[90px] max-w-[90px]">
           {isProofingLoading ? (
             <div className="flex justify-center mt-2">
               <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
@@ -814,8 +840,11 @@ function ProductionTableRow({
           step={materialExportStep}
           isEnabled={isMaterialExportEnabled}
           isStatusLocked={true}
+          defaultPrintQty={defaultPrintQty}
+          productionItems={productionItems}
+          onShowMaterialExport={() => setShowMaterialExportDialog(true)}
         />
-        <TableCell className="py-3 align-top min-w-[140px]">
+        <TableCell className="py-3 align-top w-[120px] max-w-[120px]">
           {isProofingLoading ? (
             <div className="space-y-4 animate-pulse">
               <div className="h-4 bg-muted rounded w-3/4"></div>
@@ -828,7 +857,7 @@ function ProductionTableRow({
               {printStep && (
                 <div className="pb-3 border-b border-dashed">
                   {/* <div className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5">Trạng thái In:</div> */}
-                  <InlineStepStatus step={printStep} isEnabled={isPrintEnabled} />
+                  <InlineStepStatus step={printStep} isEnabled={isPrintEnabled} defaultPrintQty={defaultPrintQty} />
                 </div>
               )}
 
@@ -854,7 +883,7 @@ function ProductionTableRow({
                       Khổ giấy:
                     </span>
                     <span className="font-bold text-foreground leading-tight text-[11px]">
-                      {proofingOrder?.paperSize?.name || proofingOrder?.customPaperSize || "—"}
+                      {proofingOrder?.paperSize?.name || proofingOrder?.customPaperSize || "—"} cm
                     </span>
                   </div>
 
@@ -988,6 +1017,8 @@ function ProductionTableRow({
               </div>
             )
           }
+          defaultPrintQty={defaultPrintQty}
+          productionItems={productionItems}
         />
         <StepCell
           step={laminationStep}
@@ -999,10 +1030,14 @@ function ProductionTableRow({
               </div>
             )
           }
+          defaultPrintQty={defaultPrintQty}
+          productionItems={productionItems}
         />
         <StepCell
           step={dieCutStep}
           isEnabled={isDieCutEnabled}
+          defaultPrintQty={defaultPrintQty}
+          productionItems={productionItems}
           info={
             ((proofingOrder as any)?.dieExports?.length > 0 ||
               (proofingOrder as any)?.proofingOrderDies?.length > 0) && (
@@ -1096,10 +1131,10 @@ function ProductionTableRow({
             )
           }
         />
-        <StepCell step={cutStep} isEnabled={isCutEnabled} />
-        <StepCell step={glueStep} isEnabled={isGlueEnabled} />
+        <StepCell step={cutStep} isEnabled={isCutEnabled} defaultPrintQty={defaultPrintQty} productionItems={productionItems} />
+        <StepCell step={glueStep} isEnabled={isGlueEnabled} defaultPrintQty={defaultPrintQty} productionItems={productionItems} />
         <TableCell
-          className="align-top py-3 px-1.5 min-w-[260px]"
+          className="align-top py-3 px-1.5 w-[180px] max-w-[180px]"
         >
           <div className="flex flex-col gap-2">
             {isProofingLoading || isProdDetailLoading ? (
@@ -1120,6 +1155,7 @@ function ProductionTableRow({
                       }
                       isEnabled={isPackagingEnabled}
                       isStatusLocked={true}
+                      defaultPrintQty={defaultPrintQty}
                     />
                   </div>
                 )}
@@ -1226,6 +1262,8 @@ function ProductionTableRow({
                                   ? prodItem.defectQty
                                   : null
                               }
+                              defaultPrintQty={defaultPrintQty}
+                              productionItems={productionItems}
                             />
                           </div>
                         </div>
@@ -1243,6 +1281,8 @@ function ProductionTableRow({
                     isCheckStep={true}
                     isEnabled={isPackagingEnabled}
                     showName={packagingSteps.length > 1}
+                    defaultPrintQty={defaultPrintQty}
+                    productionItems={productionItems}
                   />
                 ))}
               </div>
@@ -1359,31 +1399,31 @@ export function ProductionListTable({
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="h-10 font-bold text-sm text-center w-[120px] bg-muted/50 border-r border-border/50">
+                <TableHead className="h-10 font-bold text-sm text-center w-[90px] max-w-[90px] bg-muted/50 border-r border-border/50">
                   MÃ BB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center w-[85px] max-w-[85px]">
                   XUẤT NL
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[140px]">
+                <TableHead className="h-10 font-bold text-sm w-[120px] max-w-[120px]">
                   LỆNH IN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[85px] max-w-[85px]">
                   QUY TRÌNH ĐB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[85px] max-w-[85px]">
                   CÁN MÀNG
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[85px] max-w-[85px]">
                   BẾ
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[85px] max-w-[85px]">
                   CẮT
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center">
+                <TableHead className="h-10 font-bold text-sm text-center w-[85px] max-w-[85px]">
                   DÁN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center min-w-[260px]">
+                <TableHead className="h-10 font-bold text-sm text-center w-[180px] max-w-[180px]">
                   KIỂM HÀNG
                 </TableHead>
               </TableRow>
@@ -1403,31 +1443,31 @@ export function ProductionListTable({
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[120px] bg-muted/50 border-r border-border/50">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[90px] max-w-[90px] bg-muted/50 border-r border-border/50">
                   MÃ BB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[140px]">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[85px] max-w-[85px]">
                   XUẤT NL
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm w-[140px]">
+                <TableHead className="h-10 font-bold text-sm w-[120px] max-w-[120px]">
                   LỆNH IN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[85px] max-w-[85px]">
                   QUY TRÌNH ĐB
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[85px] max-w-[85px]">
                   CÁN MÀNG
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[85px] max-w-[85px]">
                   BẾ
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[85px] max-w-[85px]">
                   CẮT
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[85px] max-w-[85px]">
                   DÁN
                 </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap min-w-[260px]">
+                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[180px] max-w-[180px]">
                   KIỂM HÀNG
                 </TableHead>
               </TableRow>
