@@ -212,6 +212,12 @@ export default function StockInCreatePage() {
     laborCost: undefined as number | undefined,
   });
 
+  const selectedVendorObj = allVendors.find((v) => v.id === formData.vendorId);
+  const isThuanTien = selectedVendorObj
+    ? selectedVendorObj.name?.toLowerCase().trim() === "thuận tiền" ||
+      selectedVendorObj.name?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() === "thuan tien"
+    : false;
+
   const [isCreateVendorDialogOpen, setIsCreateVendorDialogOpen] =
     useState(false);
   const [newVendorData, setNewVendorData] = useState<CreateVendorRequest>({
@@ -255,6 +261,19 @@ export default function StockInCreatePage() {
     },
   ]);
 
+  // Update items when vendor changes to/from Thuận Tiền
+  useEffect(() => {
+    if (isThuanTien) {
+      setItems((prevItems) =>
+        prevItems.map((item) => ({
+          ...item,
+          ramQuantity: item.ramQuantity !== undefined ? item.ramQuantity : 0,
+          unit: item.unit || "gram",
+        }))
+      );
+    }
+  }, [isThuanTien]);
+
   const [itemErrors, setItemErrors] = useState<
     Record<number, { itemName?: string; quantity?: string }>
   >({});
@@ -265,8 +284,9 @@ export default function StockInCreatePage() {
       {
         itemName: "",
         itemCode: "",
-        unit: "",
+        unit: isThuanTien ? "gram" : "",
         quantity: 1,
+        ramQuantity: isThuanTien ? 0 : undefined,
         unitPrice: undefined,
         notes: "",
         materialId: undefined,
@@ -298,12 +318,24 @@ export default function StockInCreatePage() {
       errors.itemName = "Tên vật phẩm phải có ít nhất 1 ký tự";
     }
 
-    if (!Number.isInteger(item.quantity)) {
-      errors.quantity = "Số lượng phải là số nguyên";
-    } else if (item.quantity < 1) {
-      errors.quantity = "Số lượng phải lớn hơn 0";
-    } else if (item.quantity > 2147483647) {
-      errors.quantity = "Số lượng quá lớn (tối đa 2,147,483,647)";
+    if (isThuanTien) {
+      if (item.ramQuantity === undefined || item.ramQuantity === null) {
+        errors.quantity = "Số ram là bắt buộc";
+      } else if (isNaN(item.ramQuantity)) {
+        errors.quantity = "Số ram phải là số";
+      } else if (item.ramQuantity <= 0) {
+        errors.quantity = "Số ram phải lớn hơn 0";
+      } else if (item.ramQuantity > 2147483647) {
+        errors.quantity = "Số ram quá lớn";
+      }
+    } else {
+      if (!Number.isInteger(item.quantity)) {
+        errors.quantity = "Số lượng phải là số nguyên";
+      } else if (item.quantity < 1) {
+        errors.quantity = "Số lượng phải lớn hơn 0";
+      } else if (item.quantity > 2147483647) {
+        errors.quantity = "Số lượng quá lớn (tối đa 2,147,483,647)";
+      }
     }
 
     setItemErrors((prev) => ({ ...prev, [index]: errors }));
@@ -317,7 +349,7 @@ export default function StockInCreatePage() {
   ) => {
     const newItems = [...items];
     let normalizedValue: string | number | undefined;
-    if (field === "quantity" || field === "unitPrice") {
+    if (field === "quantity" || field === "unitPrice" || field === "ramQuantity") {
       normalizedValue = value as number | undefined;
     } else if (field === "itemName") {
       normalizedValue = (value as string) || "";
@@ -366,7 +398,7 @@ export default function StockInCreatePage() {
         ...newItems[index],
         itemName: materialName,
         itemCode: generatedCode,
-        unit: loadedUnit || newItems[index].unit || "",
+        unit: isThuanTien ? "gram" : (loadedUnit || newItems[index].unit || ""),
         unitPrice: loadedUnitPrice !== undefined ? loadedUnitPrice : newItems[index].unitPrice,
         materialId: material.id,
         length: material.length,
@@ -407,6 +439,16 @@ export default function StockInCreatePage() {
 
     const validItems = items.filter((item) => {
       const trimmedName = item.itemName?.trim() || "";
+      if (isThuanTien) {
+        return (
+          trimmedName.length >= 1 &&
+          item.ramQuantity !== undefined &&
+          item.ramQuantity !== null &&
+          !isNaN(item.ramQuantity) &&
+          item.ramQuantity > 0 &&
+          item.ramQuantity <= 2147483647
+        );
+      }
       return (
         trimmedName.length >= 1 &&
         Number.isInteger(item.quantity) &&
@@ -417,8 +459,9 @@ export default function StockInCreatePage() {
 
     if (validItems.length === 0) {
       toast.error("Vui lòng thêm ít nhất một vật phẩm hợp lệ", {
-        description:
-          "Tên vật phẩm bắt buộc (ít nhất 1 ký tự) và số lượng phải từ 1 trở lên",
+        description: isThuanTien
+          ? "Tên vật phẩm bắt buộc (ít nhất 1 ký tự) và số ram phải từ 1 trở lên"
+          : "Tên vật phẩm bắt buộc (ít nhất 1 ký tự) và số lượng phải từ 1 trở lên",
       });
       return;
     }
@@ -446,16 +489,23 @@ export default function StockInCreatePage() {
         items: validItems.map((item) => ({
           itemName: item.itemName.trim(),
           itemCode: (item.itemCode || "").trim() || undefined,
-          unit: (item.unit || "").trim() || undefined,
-          quantity: Math.floor(item.quantity),
-          unitPrice: item.unitPrice ?? undefined,
+          unit: isThuanTien ? "tờ" : ((item.unit || "").trim() || undefined),
+          quantity: isThuanTien ? Math.floor((item.ramQuantity ?? 0) * 500) : Math.floor(item.quantity),
+          ramQuantity: isThuanTien ? Math.floor(item.ramQuantity ?? 0) : undefined,
+          unitPrice: isThuanTien ? (item.unitPrice ? item.unitPrice / 500 : undefined) : (item.unitPrice ?? undefined),
           notes: (item.notes || "").trim() || undefined,
           materialId: item.materialId ?? undefined,
           orderDetailId: item.orderDetailId ?? undefined,
           lineKind: item.lineKind ?? undefined,
           length: item.length ?? undefined,
           width: item.width ?? undefined,
-          proofingOrderId: typeof item.proofingOrderId === 'string' ? (item.proofingOrderId.trim() || undefined) : (item.proofingOrderId ?? undefined),
+          proofingOrderId: (() => {
+            if (typeof item.proofingOrderId === "string") {
+              const parsed = parseInt(item.proofingOrderId.trim(), 10);
+              return isNaN(parsed) ? undefined : parsed;
+            }
+            return item.proofingOrderId ?? undefined;
+          })(),
         })),
       },
       {
@@ -709,13 +759,28 @@ export default function StockInCreatePage() {
 
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-400">Số lượng</Label>
+                          <Label className="text-[10px] uppercase font-bold text-slate-400">
+                            {isThuanTien ? "Số ram" : "Số lượng"}
+                          </Label>
                           <Input
                             type="number"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
+                            value={isThuanTien ? (item.ramQuantity ?? "") : item.quantity}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (isThuanTien) {
+                                handleItemChange(index, "ramQuantity", isNaN(val) ? undefined : val);
+                              } else {
+                                const intVal = parseInt(e.target.value, 10);
+                                handleItemChange(index, "quantity", isNaN(intVal) ? 1 : intVal);
+                              }
+                            }}
                             className={`h-8 text-sm ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
                           />
+                          {isThuanTien && (
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              Quy đổi: {((item.ramQuantity ?? 0) * 500).toLocaleString()} tờ
+                            </div>
+                          )}
                         </div>
                         <div className="space-y-1">
                           <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn vị</Label>
@@ -784,7 +849,7 @@ export default function StockInCreatePage() {
                         <TableHead className="w-12 text-center">#</TableHead>
                         <TableHead className="w-[200px]">Chất liệu</TableHead>
                         <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
-                        <TableHead className="w-[100px] text-right">Số lượng</TableHead>
+                        <TableHead className="w-[100px] text-right">{isThuanTien ? "Số ram" : "Số lượng"}</TableHead>
                         <TableHead className="w-[80px]">ĐVT</TableHead>
                         <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
                         <TableHead className="w-[100px]">Mã bài</TableHead>
@@ -828,10 +893,23 @@ export default function StockInCreatePage() {
                           <TableCell>
                             <Input
                               type="number"
-                              value={item.quantity}
-                              onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 1)}
+                              value={isThuanTien ? (item.ramQuantity ?? "") : item.quantity}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (isThuanTien) {
+                                  handleItemChange(index, "ramQuantity", isNaN(val) ? undefined : val);
+                                } else {
+                                  const intVal = parseInt(e.target.value, 10);
+                                  handleItemChange(index, "quantity", isNaN(intVal) ? 1 : intVal);
+                                }
+                              }}
                               className={`h-8 text-sm text-right ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
                             />
+                            {isThuanTien && (
+                              <div className="text-[10px] text-right text-slate-400 mt-1">
+                                Quy đổi: {((item.ramQuantity ?? 0) * 500).toLocaleString()} tờ
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Input

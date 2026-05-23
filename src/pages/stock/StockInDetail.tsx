@@ -85,6 +85,11 @@ export default function StockInDetailPage() {
     error,
   } = useStockIn(stockInId || null, !!stockInId);
 
+  const isThuanTienStockIn = stockIn?.vendor
+    ? stockIn.vendor.name?.toLowerCase().trim() === "thuận tiền" ||
+      stockIn.vendor.name?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() === "thuan tien"
+    : false;
+
   const { mutate: completeStockIn, isPending: isCompleting } =
     useCompleteStockIn();
   const { mutate: cancelStockIn, isPending: isCancelling } = useCancelStockIn();
@@ -119,14 +124,15 @@ export default function StockInDetailPage() {
         stockIn.items.map((item: any) => ({
           ...item,
           quantity: item.quantity ?? 1,
-          unitPrice: item.unitPrice ?? 0,
+          ramQuantity: item.ramQuantity ?? 0,
+          unitPrice: isThuanTienStockIn && item.ramQuantity ? (item.unitPrice ?? 0) * 500 : (item.unitPrice ?? 0),
           laborCost: item.laborCost ?? 0,
           notes: item.notes ?? "",
           proofingOrderId: item.proofingOrderId ?? null,
         }))
       );
     }
-  }, [isUpdateDialogOpen, stockIn]);
+  }, [isUpdateDialogOpen, stockIn, isThuanTienStockIn]);
 
   const handleEditItemChange = (index: number, field: string, value: any) => {
     const newItems = [...editItems];
@@ -140,17 +146,27 @@ export default function StockInDetailPage() {
   const handleSaveUpdate = () => {
     if (!stockIn?.id) return;
 
-    const hasInvalidQuantity = editItems.some(
-      (item) => !item.quantity || item.quantity < 1
+    const hasInvalidQuantity = editItems.some((item) =>
+      isThuanTienStockIn
+        ? item.ramQuantity === undefined || item.ramQuantity === null || item.ramQuantity <= 0
+        : !item.quantity || item.quantity < 1
     );
     if (hasInvalidQuantity) {
-      toast.error("Số lượng của tất cả vật phẩm phải lớn hơn hoặc bằng 1");
+      toast.error(
+        isThuanTienStockIn
+          ? "Số ram của tất cả vật phẩm phải lớn hơn 0"
+          : "Số lượng của tất cả vật phẩm phải lớn hơn hoặc bằng 1"
+      );
       return;
     }
 
     // Calculate new total amount as sum of (quantity * unitPrice) of all items
     const newTotalAmount = editItems.reduce(
-      (sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0),
+      (sum, item) => {
+        const itemQty = isThuanTienStockIn ? (item.ramQuantity || 0) : (item.quantity || 0);
+        const itemPrice = item.unitPrice || 0;
+        return sum + itemQty * itemPrice;
+      },
       0
     );
 
@@ -158,9 +174,10 @@ export default function StockInDetailPage() {
     const updatedItems = editItems.map((item) => ({
       itemName: item.itemName,
       itemCode: item.itemCode,
-      unit: item.unit,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
+      unit: isThuanTienStockIn ? "tờ" : item.unit,
+      quantity: isThuanTienStockIn ? Math.floor((item.ramQuantity || 0) * 500) : item.quantity,
+      ramQuantity: isThuanTienStockIn ? item.ramQuantity : undefined,
+      unitPrice: isThuanTienStockIn ? (item.unitPrice ? item.unitPrice / 500 : 0) : item.unitPrice,
       laborCost: item.laborCost,
       notes: item.notes,
       materialId: item.materialId,
@@ -497,7 +514,12 @@ export default function StockInDetailPage() {
                                 {item.unit || "Không có"}
                               </TableCell>
                               <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
-                                {(item.quantity || 0).toLocaleString("vi-VN")}
+                                <div className="font-semibold">{(item.quantity || 0).toLocaleString("vi-VN")}</div>
+                                {item.ramQuantity !== undefined && item.ramQuantity !== null && item.ramQuantity > 0 && (
+                                  <div className="text-[13px] text-slate-400 font-normal">
+                                     {item.ramQuantity.toLocaleString("vi-VN")} gram
+                                  </div>
+                                )}
                               </TableCell>
                               <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
                                 {item.unitPrice
@@ -868,7 +890,9 @@ export default function StockInDetailPage() {
                   <TableRow>
                     <TableHead className="w-12 text-center text-xs font-semibold py-2.5">STT</TableHead>
                     <TableHead className="text-xs font-semibold py-2.5">Tên vật phẩm</TableHead>
-                    <TableHead className="w-32 text-right text-xs font-semibold py-2.5">Số lượng</TableHead>
+                    <TableHead className="w-32 text-right text-xs font-semibold py-2.5">
+                      {isThuanTienStockIn ? "Số ram" : "Số lượng"}
+                    </TableHead>
                     <TableHead className="w-32 text-xs font-semibold py-2.5">Đơn giá</TableHead>
                     <TableHead className="w-32 text-xs font-semibold py-2.5">Tiền công</TableHead>
                     <TableHead className="w-24 text-xs font-semibold py-2.5">Mã bài</TableHead>
@@ -887,24 +911,41 @@ export default function StockInDetailPage() {
                           <p className="text-[10px] text-slate-400 mt-0.5">{item.itemCode || "Không có mã"}</p>
                         </TableCell>
                         <TableCell className="py-2">
-                          <div className="flex items-center gap-1.5 justify-end">
-                            <Input
-                              type="number"
-                              min="1"
-                              step="1"
-                              value={item.quantity ?? ""}
-                              onChange={(e) =>
-                                handleEditItemChange(
-                                  index,
-                                  "quantity",
-                                  e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0
-                                )
-                              }
-                              className="h-8 w-20 text-xs font-medium text-right focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                            <span className="text-[10px] text-slate-500 whitespace-nowrap min-w-[24px] text-left">
-                              {item.unit || "đv"}
-                            </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <Input
+                                type="number"
+                                min={isThuanTienStockIn ? "0" : "1"}
+                                step={isThuanTienStockIn ? "any" : "1"}
+                                value={isThuanTienStockIn ? (item.ramQuantity ?? "") : (item.quantity ?? "")}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (isThuanTienStockIn) {
+                                    handleEditItemChange(
+                                      index,
+                                      "ramQuantity",
+                                      isNaN(val) ? 0 : val
+                                    );
+                                  } else {
+                                    const intVal = parseInt(e.target.value, 10);
+                                    handleEditItemChange(
+                                      index,
+                                      "quantity",
+                                      isNaN(intVal) ? 0 : intVal
+                                    );
+                                  }
+                                }}
+                                className="h-8 w-20 text-xs font-medium text-right focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                              <span className="text-[10px] text-slate-500 whitespace-nowrap min-w-[24px] text-left">
+                                {isThuanTienStockIn ? "gram" : (item.unit || "đv")}
+                              </span>
+                            </div>
+                            {isThuanTienStockIn && (
+                              <span className="text-[10px] text-slate-400">
+                                Quy đổi: {((item.ramQuantity || 0) * 500).toLocaleString("vi-VN")} tờ
+                              </span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="py-2">

@@ -375,13 +375,13 @@ export default function StockInListPage() {
                             <TableHead className="min-w-[160px] font-semibold text-slate-700">
                               Nhà cung cấp
                             </TableHead>
-                            <TableHead className="font-semibold text-slate-700">
+                            <TableHead className="min-w-[220px] font-semibold text-slate-700">
                               Vật phẩm
                             </TableHead>
-                            <TableHead className="w-[80px] font-semibold text-slate-700">
+                            <TableHead className="w-[60px] font-semibold text-slate-700">
                               ĐVT
                             </TableHead>
-                            <TableHead className="w-[120px] text-right font-semibold text-slate-700">
+                            <TableHead className="w-[100px] text-right font-semibold text-slate-700">
                               Đơn giá
                             </TableHead>
                             <TableHead className="w-[100px] font-semibold text-slate-700">
@@ -424,7 +424,7 @@ export default function StockInListPage() {
                                 <div className="space-y-1">
                                   {stockIn.items && stockIn.items.length > 0 ? (
                                     stockIn.items.map((item: any, idx: number) => (
-                                      <div key={idx} className="truncate max-w-[150px]" title={item.itemName || item.materialName || "—"}>
+                                      <div key={idx} className="break-words whitespace-normal" title={item.itemName || item.materialName || "—"}>
                                         {item.itemName || item.materialName || "—"}
                                       </div>
                                     ))
@@ -478,9 +478,22 @@ export default function StockInListPage() {
                                   : "—"}
                               </TableCell>
                               <TableCell className="text-right font-medium tabular-nums text-slate-700">
-                                {stockIn.totalQuantity
-                                  ? stockIn.totalQuantity.toLocaleString("vi-VN")
-                                  : "—"}
+                                <div>
+                                  {stockIn.totalQuantity
+                                    ? stockIn.totalQuantity.toLocaleString("vi-VN")
+                                    : "—"}
+                                </div>
+                                {(() => {
+                                  const totalRam = stockIn.items?.reduce((sum: number, item: any) => sum + (item.ramQuantity || 0), 0) || 0;
+                                  if (totalRam > 0) {
+                                    return (
+                                      <div className="text-[13px] text-slate-400 font-normal">
+                                        {totalRam.toLocaleString("vi-VN")} gram
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </TableCell>
                               <TableCell className="text-right font-medium tabular-nums text-slate-700">
                                 {stockIn.totalAmount != null

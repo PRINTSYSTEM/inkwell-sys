@@ -35,6 +35,7 @@ export const StockInItemRequestSchema =
   GenStockInItemRequestSchema?.passthrough().extend({
     laborCost: z.number().nullable().optional(),
     proofingOrderId: z.union([z.string(), z.number()]).nullable().optional(),
+    ramQuantity: z.number().nullable().optional(),
   }) || z.any();
 export type StockInItemRequest = z.infer<typeof StockInItemRequestSchema>;
 
