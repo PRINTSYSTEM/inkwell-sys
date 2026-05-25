@@ -278,6 +278,18 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     children: [
       {
+        id: "stock-summary",
+        title: "Tồn kho tổng hợp",
+        icon: Package,
+        path: ROUTE_PATHS.STOCK.SUMMARY,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION_LEAD,
+          ROLE.PRODUCTION,
+        ],
+      },
+      {
         id: "stock-ins",
         title: "Phiếu nhập kho",
         icon: ArrowDownToLine,

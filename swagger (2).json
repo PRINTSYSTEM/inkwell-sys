@@ -10440,6 +10440,21 @@
             }
           },
           {
+            "name": "vendorId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "sortColumn",
             "in": "query",
             "schema": {
@@ -10638,6 +10653,87 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/materials/{id}/history": {
+      "get": {
+        "tags": [
+          "Material"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "transactionType",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryTransactionResponseIPaginate"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryTransactionResponseIPaginate"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryTransactionResponseIPaginate"
+                }
+              }
+            }
           }
         }
       }
@@ -23459,12 +23555,18 @@
         "required": [
           "length",
           "name",
+          "type",
           "unitPrice"
         ],
         "type": "object",
         "properties": {
           "name": {
             "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "minLength": 1,
+            "pattern": "^(cuon|to)$",
             "type": "string"
           },
           "length": {
@@ -23493,6 +23595,11 @@
             "minimum": 0,
             "type": "integer",
             "format": "int32"
+          },
+          "vendorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -27076,6 +27183,10 @@
             "type": "string",
             "nullable": true
           },
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
           "length": {
             "type": "number",
             "format": "double"
@@ -27096,6 +27207,15 @@
           "quantity": {
             "type": "integer",
             "format": "int32"
+          },
+          "vendorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "vendorName": {
+            "type": "string",
+            "nullable": true
           },
           "createdById": {
             "type": "integer",
@@ -28850,6 +28970,13 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProductionOrderItemResponse"
+            },
+            "nullable": true
+          },
+          "proofingOrderImages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProofingOrderImageResponse"
             },
             "nullable": true
           },
@@ -31699,6 +31826,11 @@
             "type": "string",
             "nullable": true
           },
+          "type": {
+            "pattern": "^(cuon|to)$",
+            "type": "string",
+            "nullable": true
+          },
           "length": {
             "minimum": 0,
             "type": "number",
@@ -31727,6 +31859,15 @@
             "minimum": 0,
             "type": "integer",
             "format": "int32",
+            "nullable": true
+          },
+          "vendorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "clearVendor": {
+            "type": "boolean",
             "nullable": true
           }
         },

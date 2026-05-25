@@ -1408,7 +1408,7 @@ export function ProductionListTable({
                   LỆNH IN
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center w-[85px] max-w-[85px]">
-                  QUY TRÌNH ĐB
+                  QUY TRÌNH 
                 </TableHead>
                 <TableHead className="h-10 font-bold text-sm text-center w-[85px] max-w-[85px]">
                   CÁN MÀNG

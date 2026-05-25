@@ -22,11 +22,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, "..");
 
-const SWAGGER_URL = process.env.VITE_SWAGGER_URL || process.env.SWAGGER_URL;
-if (!SWAGGER_URL) {
-  console.error("❌ Missing env: VITE_SWAGGER_URL (or SWAGGER_URL)");
-  process.exit(1);
-}
+const SWAGGER_URL = process.env.VITE_SWAGGER_URL || process.env.SWAGGER_URL || "local";
 
 const OUT_DIR = "src/generated";
 const SWAGGER_FILE = "swagger.json";
@@ -320,13 +316,20 @@ function generateParamName(path, httpMethod) {
 async function generateOpenApiZod() {
   await mkdir(OUT_DIR, { recursive: true });
 
-  console.log("📥 Fetch swagger:", SWAGGER_URL);
-  const res = await fetch(SWAGGER_URL);
-  if (!res.ok) {
-    throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
+  let spec;
+  try {
+    const localContent = await readFile(join(rootDir, "swagger (2).json"), "utf8");
+    spec = JSON.parse(localContent);
+    console.log("✓ Loaded from local swagger (2).json");
+  } catch (err) {
+    console.log("📥 Fetch swagger:", SWAGGER_URL);
+    const res = await fetch(SWAGGER_URL);
+    if (!res.ok) {
+      throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
+    }
+    spec = await res.json();
   }
 
-  const spec = await res.json();
   await writeFile(SWAGGER_FILE, JSON.stringify(spec, null, 2), "utf8");
 
   console.log("🧩 Generate zod ->", OUT_FILE);

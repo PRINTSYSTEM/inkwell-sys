@@ -30,6 +30,8 @@ import { useMaterialTypeList } from "@/hooks/use-material-type";
 import { formatCurrency } from "@/lib/status-utils";
 import { useNavigate } from "react-router-dom";
 import { CreateMaterialDialog } from "../../stock/components/CreateMaterialDialog";
+import { useActiveVendors } from "@/hooks/use-vendor";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -60,6 +62,12 @@ export default function CurrentStockPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const updateMaterialMutation = useUpdateMaterial();
+
+  // Active Vendors & edit states
+  const { data: vendorsData } = useActiveVendors();
+  const [editType, setEditType] = useState<"cuon" | "to" | "">("");
+  const [editVendorId, setEditVendorId] = useState<number | undefined>(undefined);
+  const [clearVendor, setClearVendor] = useState<boolean>(false);
 
   const {
     data: materialsData,
@@ -93,6 +101,9 @@ export default function CurrentStockPage() {
 
   const openEdit = (item: MaterialResponse) => {
     setEditingItem(item);
+    setEditType((item.type as "cuon" | "to") || "");
+    setEditVendorId(item.vendorId || undefined);
+    setClearVendor(false);
     setDialogOpen(true);
   };
 
@@ -115,6 +126,9 @@ export default function CurrentStockPage() {
         data: {
           name: name || null,
           materialTypeId: editingItem.materialTypeId || null,
+          type: editType || null,
+          vendorId: clearVendor ? null : (editVendorId || null),
+          clearVendor: clearVendor,
           length: lengthVal,
           width: widthVal,
           height: heightVal,
@@ -432,6 +446,68 @@ export default function CurrentStockPage() {
                 defaultValue={editingItem?.unitPrice ?? ""}
                 placeholder="Nhập đơn giá mới..."
               />
+            </div>
+
+            {/* Thể loại vật tư & Nhà cung cấp */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="editType">Thể loại vật tư</Label>
+                <Select
+                  value={editType}
+                  onValueChange={(val: "cuon" | "to") => setEditType(val)}
+                >
+                  <SelectTrigger id="editType" className="cursor-pointer">
+                    <SelectValue placeholder="Chọn thể loại" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cuon">Dạng cuộn (cuon)</SelectItem>
+                    <SelectItem value="to">Dạng tờ (to)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="editVendorId">Nhà cung cấp</Label>
+                <Select
+                  value={editVendorId ? String(editVendorId) : "none"}
+                  onValueChange={(val) =>
+                    setEditVendorId(val === "none" ? undefined : Number(val))
+                  }
+                  disabled={clearVendor}
+                >
+                  <SelectTrigger id="editVendorId" className="cursor-pointer">
+                    <SelectValue placeholder="Chọn nhà cung cấp" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Không gán (Trống)</SelectItem>
+                    {vendorsData?.map((vendor) => (
+                      <SelectItem key={vendor.id} value={String(vendor.id)}>
+                        {vendor.name || vendor.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Hỗ trợ xóa bỏ nhà cung cấp liên kết */}
+            <div className="flex items-center space-x-2 pt-1">
+              <Checkbox
+                id="clearVendor"
+                checked={clearVendor}
+                onCheckedChange={(checked) => {
+                  setClearVendor(checked === true);
+                  if (checked === true) {
+                    setEditVendorId(undefined);
+                  }
+                }}
+              />
+              <Label
+                htmlFor="clearVendor"
+                className="text-xs font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-75 cursor-pointer text-slate-500 hover:text-slate-800"
+              >
+                Xóa liên kết nhà cung cấp của vật tư này (clearVendor)
+              </Label>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

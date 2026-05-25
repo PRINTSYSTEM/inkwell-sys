@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-30T13:22:30.853Z */
+/* Generated at: 2026-05-25T17:31:36.134Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -45,6 +45,8 @@ export const CashPaymentExportParamsSchema = z.object({
   vendorId: z.number().int().nullable().optional(),
   paymentMethodId: z.number().int().nullable().optional(),
   expenseCategoryId: z.number().int().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type CashPaymentExportParams = z.infer<typeof CashPaymentExportParamsSchema>;
 
@@ -69,6 +71,8 @@ export const CashReceiptExportParamsSchema = z.object({
   status: z.string().nullable().optional(),
   customerId: z.number().int().nullable().optional(),
   paymentMethodId: z.number().int().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type CashReceiptExportParams = z.infer<typeof CashReceiptExportParamsSchema>;
 
@@ -84,6 +88,13 @@ export const CashReceiptListParamsSchema = PagedParamsSchema.extend({
   sortOrder: z.string().nullable().optional(),
 });
 export type CashReceiptListParams = z.infer<typeof CashReceiptListParamsSchema>;
+
+// ==== CustomerAddressesParams (GET /api/customers/:id/addresses) ====
+export const CustomerAddressesParamsSchema = PagedParamsSchema.extend({
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type CustomerAddressesParams = z.infer<typeof CustomerAddressesParamsSchema>;
 
 // ==== CustomerDebtHistoryParams (GET /api/customers/:id/debt-history) ====
 export const CustomerDebtHistoryParamsSchema = PagedParamsSchema.extend({
@@ -111,10 +122,10 @@ export const CustomerListParamsSchema = PagedParamsSchema.extend({
 export type CustomerListParams = z.infer<typeof CustomerListParamsSchema>;
 
 // ==== CustomerMonthlyDebtParams (GET /api/customers/:id/monthly-debt) ====
-export const CustomerMonthlyDebtParamsSchema = z.object({
+export const CustomerMonthlyDebtParamsSchema = PagedParamsSchema.extend({
   year: z.number().int().nullable().optional(),
   month: z.number().int().nullable().optional(),
-}).passthrough();
+});
 export type CustomerMonthlyDebtParams = z.infer<typeof CustomerMonthlyDebtParamsSchema>;
 
 // ==== CustomerOrdersParams (GET /api/customers/:id/order-history) ====
@@ -127,6 +138,8 @@ export type CustomerOrdersParams = z.infer<typeof CustomerOrdersParamsSchema>;
 // ==== DebtNotificationListParams (GET /api/debt-notifications) ====
 export const DebtNotificationListParamsSchema = PagedParamsSchema.extend({
   type: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 });
 export type DebtNotificationListParams = z.infer<typeof DebtNotificationListParamsSchema>;
 
@@ -166,6 +179,8 @@ export type DebtReportApByPurchaseInvoiceParams = z.infer<typeof DebtReportApByP
 export const DebtReportApDetailLedgerExportParamsSchema = z.object({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type DebtReportApDetailLedgerExportParams = z.infer<typeof DebtReportApDetailLedgerExportParamsSchema>;
 
@@ -362,6 +377,8 @@ export const DebtReportsApAgingExportParamsSchema = z.object({
   vendorId: z.number().int().nullable().optional(),
   searchTerm: z.string().nullable().optional(),
   saveHistory: z.boolean().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type DebtReportsApAgingExportParams = z.infer<typeof DebtReportsApAgingExportParamsSchema>;
 
@@ -372,6 +389,8 @@ export const DebtReportsApSummaryExportParamsSchema = z.object({
   vendorId: z.number().int().nullable().optional(),
   searchTerm: z.string().nullable().optional(),
   saveHistory: z.boolean().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type DebtReportsApSummaryExportParams = z.infer<typeof DebtReportsApSummaryExportParamsSchema>;
 
@@ -381,6 +400,8 @@ export const DebtReportsArAgingExportParamsSchema = z.object({
   customerId: z.number().int().nullable().optional(),
   searchTerm: z.string().nullable().optional(),
   saveHistory: z.boolean().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type DebtReportsArAgingExportParams = z.infer<typeof DebtReportsArAgingExportParamsSchema>;
 
@@ -389,6 +410,8 @@ export const DebtReportsArOverdueExportParamsSchema = z.object({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   customerId: z.number().int().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type DebtReportsArOverdueExportParams = z.infer<typeof DebtReportsArOverdueExportParamsSchema>;
 
@@ -400,6 +423,8 @@ export const DebtReportsArSummaryExportParamsSchema = z.object({
   status: z.string().nullable().optional(),
   searchTerm: z.string().nullable().optional(),
   saveHistory: z.boolean().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type DebtReportsArSummaryExportParams = z.infer<typeof DebtReportsArSummaryExportParamsSchema>;
 
@@ -411,7 +436,25 @@ export const DebtReportsCustomerReconciliationExportParamsSchema = z.object({
 }).passthrough();
 export type DebtReportsCustomerReconciliationExportParams = z.infer<typeof DebtReportsCustomerReconciliationExportParamsSchema>;
 
+// ==== DeliveryNoteAvailableOrderDetailsParams (GET /api/delivery-notes/available-order-details) ====
+export const DeliveryNoteAvailableOrderDetailsParamsSchema = z.object({
+  customerId: z.number().int().nullable().optional(),
+}).passthrough();
+export type DeliveryNoteAvailableOrderDetailsParams = z.infer<typeof DeliveryNoteAvailableOrderDetailsParamsSchema>;
 
+// ==== DeliveryNoteAvailableOrdersListParams (GET /api/delivery-notes/available-orders) ====
+export const DeliveryNoteAvailableOrdersListParamsSchema = PagedParamsSchema.extend({
+  searchTerm: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
+  productName: z.string().nullable().optional(),
+});
+export type DeliveryNoteAvailableOrdersListParams = z.infer<typeof DeliveryNoteAvailableOrdersListParamsSchema>;
+
+// ==== DeliveryNoteExportPdfParams (GET /api/delivery-notes/:id/export-pdf) ====
+export const DeliveryNoteExportPdfParamsSchema = z.object({
+  type: z.string().nullable().optional(),
+}).passthrough();
+export type DeliveryNoteExportPdfParams = z.infer<typeof DeliveryNoteExportPdfParamsSchema>;
 
 // ==== DeliveryNoteFailureReasonsListParams (GET /api/delivery-notes/failure-reasons) ====
 export const DeliveryNoteFailureReasonsListParamsSchema = z.object({
@@ -422,6 +465,7 @@ export type DeliveryNoteFailureReasonsListParams = z.infer<typeof DeliveryNoteFa
 // ==== DeliveryNoteListParams (GET /api/delivery-notes) ====
 export const DeliveryNoteListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -455,6 +499,18 @@ export const DesignMaterialsDesignTypeParamsSchema = PagedParamsSchema.extend({
   sortOrder: z.string().nullable().optional(),
 });
 export type DesignMaterialsDesignTypeParams = z.infer<typeof DesignMaterialsDesignTypeParamsSchema>;
+
+// ==== DesignSaleParams (GET /api/designs/sale) ====
+export const DesignSaleParamsSchema = PagedParamsSchema.extend({
+  search: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
+  dimensions: z.string().nullable().optional(),
+  designType: z.string().nullable().optional(),
+  materialType: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type DesignSaleParams = z.infer<typeof DesignSaleParamsSchema>;
 
 // ==== DesignTimelineParams (GET /api/designs/:id/timeline) ====
 export const DesignTimelineParamsSchema = PagedParamsSchema.extend({
@@ -540,6 +596,13 @@ export const FinanceAccountTreeParamsSchema = z.object({
 }).passthrough();
 export type FinanceAccountTreeParams = z.infer<typeof FinanceAccountTreeParamsSchema>;
 
+// ==== InventoryBalanceParams (GET /api/inventory/balance) ====
+export const InventoryBalanceParamsSchema = PagedParamsSchema.extend({
+  search: z.string().nullable().optional(),
+  itemType: z.string().nullable().optional(),
+});
+export type InventoryBalanceParams = z.infer<typeof InventoryBalanceParamsSchema>;
+
 // ==== InventoryReportCurrentStockParams (GET /api/inventory-reports/current-stock) ====
 export const InventoryReportCurrentStockParamsSchema = PagedParamsSchema.extend({
   asOfDate: z.string().datetime({ offset: true }).nullable().optional(),
@@ -552,8 +615,22 @@ export const InventoryReportCurrentStockParamsSchema = PagedParamsSchema.extend(
   width: z.number().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  itemType: z.string().nullable().optional(),
 });
 export type InventoryReportCurrentStockParams = z.infer<typeof InventoryReportCurrentStockParamsSchema>;
+
+// ==== InventoryReportHistoryParams (GET /api/inventory-reports/history) ====
+export const InventoryReportHistoryParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  itemType: z.string().nullable().optional(),
+  itemCode: z.string().nullable().optional(),
+  transactionType: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type InventoryReportHistoryParams = z.infer<typeof InventoryReportHistoryParamsSchema>;
 
 // ==== InventoryReportLowStockParams (GET /api/inventory-reports/low-stock) ====
 export const InventoryReportLowStockParamsSchema = PagedParamsSchema.extend({
@@ -561,6 +638,7 @@ export const InventoryReportLowStockParamsSchema = PagedParamsSchema.extend({
   itemGroup: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  itemType: z.string().nullable().optional(),
 });
 export type InventoryReportLowStockParams = z.infer<typeof InventoryReportLowStockParamsSchema>;
 
@@ -570,16 +648,40 @@ export const InventoryReportSlowMovingParamsSchema = PagedParamsSchema.extend({
   daysThreshold: z.number().int().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  itemType: z.string().nullable().optional(),
 });
 export type InventoryReportSlowMovingParams = z.infer<typeof InventoryReportSlowMovingParamsSchema>;
+
+// ==== InventoryReportStockCardExcelParams (GET /api/inventory-reports/stock-card/:itemCode/excel) ====
+export const InventoryReportStockCardExcelParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  warehouse: z.string().nullable().optional(),
+  itemType: z.string().nullable().optional(),
+}).passthrough();
+export type InventoryReportStockCardExcelParams = z.infer<typeof InventoryReportStockCardExcelParamsSchema>;
 
 // ==== InventoryReportStockCardParams (GET /api/inventory-reports/stock-card/:itemCode) ====
 export const InventoryReportStockCardParamsSchema = z.object({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   warehouse: z.string().nullable().optional(),
+  itemType: z.string().nullable().optional(),
 }).passthrough();
 export type InventoryReportStockCardParams = z.infer<typeof InventoryReportStockCardParamsSchema>;
+
+// ==== InventoryReportSummaryExcelParams (GET /api/inventory-reports/summary/excel) ====
+export const InventoryReportSummaryExcelParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  warehouse: z.string().nullable().optional(),
+  itemGroup: z.string().nullable().optional(),
+  itemCode: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+  itemType: z.string().nullable().optional(),
+}).passthrough();
+export type InventoryReportSummaryExcelParams = z.infer<typeof InventoryReportSummaryExcelParamsSchema>;
 
 // ==== InventoryReportSummaryParams (GET /api/inventory-reports/summary) ====
 export const InventoryReportSummaryParamsSchema = PagedParamsSchema.extend({
@@ -590,8 +692,20 @@ export const InventoryReportSummaryParamsSchema = PagedParamsSchema.extend({
   itemCode: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  itemType: z.string().nullable().optional(),
 });
 export type InventoryReportSummaryParams = z.infer<typeof InventoryReportSummaryParamsSchema>;
+
+// ==== InventoryTransactionsParams (GET /api/inventory/transactions) ====
+export const InventoryTransactionsParamsSchema = PagedParamsSchema.extend({
+  itemCode: z.string().nullable().optional(),
+  itemType: z.string().nullable().optional(),
+  transactionType: z.string().nullable().optional(),
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  search: z.string().nullable().optional(),
+});
+export type InventoryTransactionsParams = z.infer<typeof InventoryTransactionsParamsSchema>;
 
 // ==== InvoicBillableItemsParams (GET /api/invoices/billable-items) ====
 export const InvoicBillableItemsParamsSchema = z.object({
@@ -625,10 +739,32 @@ export const InvoicListParamsSchema = PagedParamsSchema.extend({
 });
 export type InvoicListParams = z.infer<typeof InvoicListParamsSchema>;
 
+// ==== MaterialCutListParams (GET /api/material-cuts) ====
+export const MaterialCutListParamsSchema = PagedParamsSchema.extend({
+  status: z.string().nullable().optional(),
+  inputMaterialId: z.number().int().nullable().optional(),
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type MaterialCutListParams = z.infer<typeof MaterialCutListParamsSchema>;
+
+// ==== MaterialHistoryParams (GET /api/materials/:id/history) ====
+export const MaterialHistoryParamsSchema = PagedParamsSchema.extend({
+  transactionType: z.string().nullable().optional(),
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+});
+export type MaterialHistoryParams = z.infer<typeof MaterialHistoryParamsSchema>;
+
 // ==== MaterialListParams (GET /api/materials) ====
 export const MaterialListParamsSchema = PagedParamsSchema.extend({
   name: z.string().nullable().optional(),
-  materialTypeId: z.number().int().nullable().optional(),
+  search: z.string().nullable().optional(),
+  quantityMin: z.number().int().nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  type: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -654,6 +790,12 @@ export const MyDesignListParamsSchema = PagedParamsSchema.extend({
 });
 export type MyDesignListParams = z.infer<typeof MyDesignListParamsSchema>;
 
+// ==== NotificationListParams (GET /api/notifications) ====
+export const NotificationListParamsSchema = PagedParamsSchema.extend({
+  isRead: z.boolean().nullable().optional(),
+});
+export type NotificationListParams = z.infer<typeof NotificationListParamsSchema>;
+
 // ==== OrderListParams (GET /api/orders) ====
 export const OrderListParamsSchema = PagedParamsSchema.extend({
   customerId: z.number().int().nullable().optional(),
@@ -670,7 +812,9 @@ export type OrderListParams = z.infer<typeof OrderListParamsSchema>;
 export const OrdersForAccountingListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
   filterType: z.string().nullable().optional(),
-  search: z.string().nullable().optional(),
+  orderCode: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -679,16 +823,31 @@ export type OrdersForAccountingListParams = z.infer<typeof OrdersForAccountingLi
 // ==== OrdersForDesignerListParams (GET /api/orders/for-designer) ====
 export const OrdersForDesignerListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
-  search: z.string().nullable().optional(),
+  orderCode: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
 export type OrdersForDesignerListParams = z.infer<typeof OrdersForDesignerListParamsSchema>;
 
+// ==== OrdersForSaleListParams (GET /api/orders/for-sale) ====
+export const OrdersForSaleListParamsSchema = PagedParamsSchema.extend({
+  status: z.string().nullable().optional(),
+  orderCode: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type OrdersForSaleListParams = z.infer<typeof OrdersForSaleListParamsSchema>;
+
 // ==== OrdersMyListParams (GET /api/orders/my) ====
 export const OrdersMyListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
-  search: z.string().nullable().optional(),
+  orderCode: z.string().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  customerName: z.string().nullable().optional(),
   startDate: z.string().datetime({ offset: true }).nullable().optional(),
   endDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),
@@ -738,6 +897,14 @@ export const PlateExportListParamsSchema = PagedParamsSchema.extend({
   sortOrder: z.string().nullable().optional(),
 });
 export type PlateExportListParams = z.infer<typeof PlateExportListParamsSchema>;
+
+// ==== ProductionByOrderParams (GET /api/production-orders/by-order/:orderId) ====
+export const ProductionByOrderParamsSchema = PagedParamsSchema.extend({
+  status: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type ProductionByOrderParams = z.infer<typeof ProductionByOrderParamsSchema>;
 
 // ==== ProductionListParams (GET /api/production-orders) ====
 export const ProductionListParamsSchema = PagedParamsSchema.extend({
@@ -792,6 +959,96 @@ export const ProofingOrdersPauseParamsSchema = z.object({
   reason: z.string().nullable().optional(),
 }).passthrough();
 export type ProofingOrdersPauseParams = z.infer<typeof ProofingOrdersPauseParamsSchema>;
+
+// ==== PurchaseReportByItemListParams (GET /api/purchase-reports/by-item) ====
+export const PurchaseReportByItemListParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  itemCode: z.string().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type PurchaseReportByItemListParams = z.infer<typeof PurchaseReportByItemListParamsSchema>;
+
+// ==== PurchaseReportDetailLedgerParams (GET /api/purchase-reports/detail-ledger) ====
+export const PurchaseReportDetailLedgerParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  itemCode: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type PurchaseReportDetailLedgerParams = z.infer<typeof PurchaseReportDetailLedgerParamsSchema>;
+
+// ==== PurchaseReportJournalParams (GET /api/purchase-reports/journal) ====
+export const PurchaseReportJournalParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  status: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type PurchaseReportJournalParams = z.infer<typeof PurchaseReportJournalParamsSchema>;
+
+// ==== PurchaseReportsDetailLedgerExportParams (GET /api/purchase-reports/detail-ledger/export) ====
+export const PurchaseReportsDetailLedgerExportParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  itemCode: z.string().nullable().optional(),
+  saveHistory: z.boolean().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+}).passthrough();
+export type PurchaseReportsDetailLedgerExportParams = z.infer<typeof PurchaseReportsDetailLedgerExportParamsSchema>;
+
+// ==== PurchaseReportsJournalExportParams (GET /api/purchase-reports/journal/export) ====
+export const PurchaseReportsJournalExportParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  status: z.string().nullable().optional(),
+  saveHistory: z.boolean().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+}).passthrough();
+export type PurchaseReportsJournalExportParams = z.infer<typeof PurchaseReportsJournalExportParamsSchema>;
+
+// ==== PurchaseReportsSummaryExportParams (GET /api/purchase-reports/summary/export) ====
+export const PurchaseReportsSummaryExportParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
+  saveHistory: z.boolean().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+}).passthrough();
+export type PurchaseReportsSummaryExportParams = z.infer<typeof PurchaseReportsSummaryExportParamsSchema>;
+
+// ==== PurchaseReportSummaryParams (GET /api/purchase-reports/summary) ====
+export const PurchaseReportSummaryParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type PurchaseReportSummaryParams = z.infer<typeof PurchaseReportSummaryParamsSchema>;
+
+// ==== PurchaseReportVendorStatisticsParams (GET /api/purchase-reports/vendor-statistics) ====
+export const PurchaseReportVendorStatisticsParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type PurchaseReportVendorStatisticsParams = z.infer<typeof PurchaseReportVendorStatisticsParamsSchema>;
 
 // ==== ReportExportListParams (GET /api/report-exports) ====
 export const ReportExportListParamsSchema = PagedParamsSchema.extend({
@@ -944,6 +1201,8 @@ export const SalesReportsSalesDetailLedgerExportParamsSchema = z.object({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   customerId: z.number().int().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type SalesReportsSalesDetailLedgerExportParams = z.infer<typeof SalesReportsSalesDetailLedgerExportParamsSchema>;
 
@@ -952,6 +1211,8 @@ export const SalesReportsSalesSummaryExportParamsSchema = z.object({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   groupBy: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type SalesReportsSalesSummaryExportParams = z.infer<typeof SalesReportsSalesSummaryExportParamsSchema>;
 
@@ -965,6 +1226,30 @@ export const SalesReportTopProductsParamsSchema = PagedParamsSchema.extend({
   sortOrder: z.string().nullable().optional(),
 });
 export type SalesReportTopProductsParams = z.infer<typeof SalesReportTopProductsParamsSchema>;
+
+// ==== SharedAddresseListParams (GET /api/shared-addresses) ====
+export const SharedAddresseListParamsSchema = PagedParamsSchema.extend({
+  isActive: z.boolean().nullable().optional(),
+  search: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type SharedAddresseListParams = z.infer<typeof SharedAddresseListParamsSchema>;
+
+// ==== StockInByDeliveryNoteParams (GET /api/stock-ins/by-delivery-note/:deliveryNoteId) ====
+export const StockInByDeliveryNoteParamsSchema = PagedParamsSchema.extend({
+});
+export type StockInByDeliveryNoteParams = z.infer<typeof StockInByDeliveryNoteParamsSchema>;
+
+// ==== StockInByProductionOrderParams (GET /api/stock-ins/by-production-order/:productionOrderId) ====
+export const StockInByProductionOrderParamsSchema = PagedParamsSchema.extend({
+});
+export type StockInByProductionOrderParams = z.infer<typeof StockInByProductionOrderParamsSchema>;
+
+// ==== StockInByVendorParams (GET /api/stock-ins/by-vendor/:vendorId) ====
+export const StockInByVendorParamsSchema = PagedParamsSchema.extend({
+});
+export type StockInByVendorParams = z.infer<typeof StockInByVendorParamsSchema>;
 
 // ==== StockInListParams (GET /api/stock-ins) ====
 export const StockInListParamsSchema = PagedParamsSchema.extend({
@@ -1041,7 +1326,6 @@ export type UserListParams = z.infer<typeof UserListParamsSchema>;
 export const VendorListParamsSchema = PagedParamsSchema.extend({
   search: z.string().nullable().optional(),
   isActive: z.boolean().nullable().optional(),
-  vendorType: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });

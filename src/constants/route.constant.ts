@@ -68,6 +68,7 @@ export const ROUTE_PATHS = {
 
   STOCK: {
     ROOT: "/stock" as const,
+    SUMMARY: "/stock/summary" as const,
     STOCK_INS: "/stock/stock-ins" as const,
     STOCK_INS_CREATE: "/stock/stock-ins/create" as const,
     STOCK_OUTS: "/stock/stock-outs" as const,

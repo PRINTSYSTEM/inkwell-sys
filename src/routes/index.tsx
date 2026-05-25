@@ -83,6 +83,7 @@ const ProductTemplates = lazy(
 );
 
 // Stock Management
+const StockSummary = lazy(() => import("@/pages/stock/StockSummary"));
 const StockInList = lazy(() => import("@/pages/stock/StockInList"));
 const StockInCreate = lazy(() => import("@/pages/stock/StockInCreate"));
 const StockInDetail = lazy(() => import("@/pages/stock/StockInDetail"));
@@ -92,6 +93,7 @@ const StockOutDetail = lazy(() => import("@/pages/stock/StockOutDetail"));
 const MaterialCutList = lazy(() => import("@/pages/stock/MaterialCutList"));
 const MaterialCutCreate = lazy(() => import("@/pages/stock/MaterialCutCreate"));
 const MaterialCutDetail = lazy(() => import("@/pages/stock/MaterialCutDetail"));
+const MaterialHistoryPage = lazy(() => import("@/pages/stock/MaterialHistoryPage"));
 
 // Vendors
 const VendorList = lazy(() => import("@/pages/vendors/VendorList"));
@@ -608,6 +610,22 @@ export const router = createBrowserRouter([
       {
         path: "stock",
         children: [
+          {
+            path: "summary",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <StockSummary />
+              </Suspense>
+            ),
+          },
+          {
+            path: "materials/:id/history",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <MaterialHistoryPage />
+              </Suspense>
+            ),
+          },
           {
             path: "stock-ins",
             children: [

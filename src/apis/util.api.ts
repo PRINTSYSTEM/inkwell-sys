@@ -129,6 +129,7 @@ export const API_SUFFIX = {
   MATERIAL_TYPES_BULK: "/designs/materials/bulk",
   MATERIALS: "/materials",
   MATERIAL_BY_ID: (id: number) => `/materials/${id}`,
+  MATERIAL_HISTORY: (id: number) => `/materials/${id}/history`,
 
   // ========== DESIGNS ==========
   DESIGNS: "/designs",

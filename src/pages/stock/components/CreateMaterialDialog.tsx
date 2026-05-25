@@ -10,11 +10,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { useCreateMaterial } from "@/hooks/use-material";
 import { useMaterialTypeList } from "@/hooks/use-material-type";
+import { useActiveVendors } from "@/hooks/use-vendor";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { MaterialResponse } from "@/Schema/material.schema";
 
 interface CreateMaterialDialogProps {
@@ -44,11 +53,16 @@ export function CreateMaterialDialog({
   const { data: materialTypesData } = useMaterialTypeList({ page: 1, size: 1000 });
   const materialTypes = materialTypesData?.items || [];
 
+  // Fetch active vendors
+  const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors();
+
   const { mutate: createMaterial, isPending } = useCreateMaterial();
 
   const [formData, setFormData] = useState<{
     name: string;
     materialTypeId: number;
+    type: "cuon" | "to" | "";
+    vendorId: number | undefined;
     length: number;
     width: number | undefined;
     height: number | undefined;
@@ -58,6 +72,8 @@ export function CreateMaterialDialog({
   }>({
     name: "",
     materialTypeId: defaultMaterialTypeId || 0,
+    type: "",
+    vendorId: undefined,
     length: 0,
     width: undefined,
     height: undefined,
@@ -72,6 +88,8 @@ export function CreateMaterialDialog({
       setFormData({
         name: "",
         materialTypeId: defaultMaterialTypeId || materialTypes[0]?.id || 0,
+        type: "",
+        vendorId: undefined,
         length: 0,
         width: undefined,
         height: undefined,
@@ -120,6 +138,16 @@ export function CreateMaterialDialog({
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
     const parsed = parseDimensionsFromName(name);
+    
+    // Automatically guess type based on name to delight the user
+    let guessedType: "cuon" | "to" | "" = "";
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes("cuộn") || lowerName.includes("cuon")) {
+      guessedType = "cuon";
+    } else if (lowerName.includes("tờ") || lowerName.includes("to")) {
+      guessedType = "to";
+    }
+
     setFormData((prev) => {
       const updated = { ...prev, name };
       if (parsed.length !== undefined) {
@@ -127,6 +155,10 @@ export function CreateMaterialDialog({
       }
       if (parsed.width !== undefined) {
         updated.width = parsed.width === null ? undefined : parsed.width;
+      }
+      if (guessedType) {
+        updated.type = guessedType;
+        updated.unit = guessedType === "cuon" ? "m dài" : "m^2";
       }
       return updated;
     });
@@ -136,28 +168,31 @@ export function CreateMaterialDialog({
     e.preventDefault();
 
     if (!formData.name.trim()) {
+      toast.error("Vui lòng nhập tên chất liệu!");
+      return;
+    }
+
+    if (!formData.type) {
+      toast.error("Vui lòng chọn thể loại vật tư (Cuộn hoặc Tờ)!");
       return;
     }
 
     const finalMaterialTypeId = formData.materialTypeId || defaultMaterialTypeId || materialTypes[0]?.id || 1;
 
-    if (!finalMaterialTypeId) {
-      return;
-    }
-
     createMaterial(
       {
         name: formData.name.trim(),
-        materialTypeId: finalMaterialTypeId,
+        type: formData.type as "cuon" | "to",
         length: formData.length,
         width: formData.width,
-        height: undefined,
-        quantity: showQuantity ? formData.quantity : 0,
         unit: formData.unit.trim() || undefined,
-        unitPrice: formData.unitPrice,
+        unitPrice: formData.unitPrice || 0,
+        quantity: showQuantity ? formData.quantity : 0,
+        vendorId: formData.vendorId || undefined,
       },
       {
         onSuccess: (newMaterial) => {
+          toast.success("Tạo chất liệu mới thành công!");
           onOpenChange(false);
           if (newMaterial.id) {
             onSuccess?.(newMaterial.id, newMaterial, formData.unit, formData.unitPrice);
@@ -166,6 +201,8 @@ export function CreateMaterialDialog({
           setFormData({
             name: "",
             materialTypeId: defaultMaterialTypeId || materialTypes[0]?.id || 0,
+            type: "",
+            vendorId: undefined,
             length: 0,
             width: undefined,
             height: undefined,
@@ -174,6 +211,10 @@ export function CreateMaterialDialog({
             quantity: undefined,
           });
         },
+        onError: (err) => {
+          const errMsg = err.response?.data?.message || err.message || "Không thể tạo vật tư mới.";
+          toast.error(`Lỗi: ${errMsg}`);
+        }
       }
     );
   };
@@ -187,8 +228,9 @@ export function CreateMaterialDialog({
             Tạo chất liệu mới để sử dụng trong hệ thống
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          {/* Tên chất liệu */}
+          <div className="space-y-1.5">
             <Label htmlFor="name">
               Tên chất liệu <span className="text-red-500">*</span>
             </Label>
@@ -196,15 +238,72 @@ export function CreateMaterialDialog({
               id="name"
               value={formData.name}
               onChange={handleNameChange}
-              className="bg-slate-50/50 font-medium"
-              placeholder="Nhập tên chất liệu"
+              className="bg-slate-50/50 font-medium focus-visible:ring-[#93631F]"
+              placeholder="Nhập tên chất liệu (ví dụ: Decal cuộn 65x40)"
             />
           </div>
 
-
-
+          {/* Thể loại (Cuộn/Tờ) & Nhà cung cấp */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="type">
+                Thể loại vật tư <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.type}
+                onValueChange={(val: "cuon" | "to") =>
+                  setFormData({
+                    ...formData,
+                    type: val,
+                    unit: val === "cuon" ? "m dài" : "m^2",
+                  })
+                }
+              >
+                <SelectTrigger id="type" className="bg-slate-50/50 cursor-pointer">
+                  <SelectValue placeholder="Chọn thể loại" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cuon">Dạng cuộn (cuon)</SelectItem>
+                  <SelectItem value="to">Dạng tờ (to)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="vendorId">Nhà cung cấp</Label>
+              <Select
+                value={formData.vendorId ? String(formData.vendorId) : "none"}
+                onValueChange={(val) =>
+                  setFormData({
+                    ...formData,
+                    vendorId: val === "none" ? undefined : Number(val),
+                  })
+                }
+              >
+                <SelectTrigger id="vendorId" className="bg-slate-50/50 cursor-pointer">
+                  <SelectValue placeholder="Chọn nhà cung cấp" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Không gán (Trống)</SelectItem>
+                  {isLoadingVendors ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#93631F]" />
+                    </div>
+                  ) : (
+                    vendorsData?.map((vendor) => (
+                      <SelectItem key={vendor.id} value={String(vendor.id)}>
+                        {vendor.name || vendor.code}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Kích thước */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
               <Label htmlFor="length">
                 Chiều dài ({dimensionUnit}) <span className="text-red-500">*</span>
               </Label>
@@ -218,9 +317,10 @@ export function CreateMaterialDialog({
                   setFormData({ ...formData, length: parseFloat(e.target.value) || 0 })
                 }
                 placeholder="0"
+                className="focus-visible:ring-[#93631F]"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="width">Chiều rộng ({dimensionUnit})</Label>
               <Input
                 id="width"
@@ -235,15 +335,15 @@ export function CreateMaterialDialog({
                   })
                 }
                 placeholder="0 (tùy chọn)"
+                className="focus-visible:ring-[#93631F]"
               />
             </div>
           </div>
 
-
-
+          {/* Đơn giá & Đơn vị tính */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="unitPrice">Đơn giá</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="unitPrice">Đơn giá (VND) <span className="text-red-500">*</span></Label>
               <Input
                 id="unitPrice"
                 type="number"
@@ -256,22 +356,25 @@ export function CreateMaterialDialog({
                     unitPrice: e.target.value === "" ? undefined : parseFloat(e.target.value) || undefined,
                   })
                 }
-                placeholder="0 (tùy chọn)"
+                placeholder="0"
+                className="focus-visible:ring-[#93631F]"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="unit">Đơn vị tính (ĐVT)</Label>
               <Input
                 id="unit"
                 value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                placeholder="Ví dụ: Tờ, Cuộn, Cái..."
+                disabled
+                placeholder="ĐVT tự động gán theo thể loại"
+                className="bg-slate-100 font-semibold cursor-not-allowed text-slate-700"
               />
             </div>
           </div>
 
+          {/* Số lượng tồn kho (nếu bật) */}
           {showQuantity && (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="quantity">Số lượng tồn kho có sẵn</Label>
               <Input
                 id="quantity"
@@ -286,11 +389,12 @@ export function CreateMaterialDialog({
                   })
                 }
                 placeholder="0 (tùy chọn)"
+                className="focus-visible:ring-[#93631F]"
               />
             </div>
           )}
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 gap-2">
             <Button
               type="button"
               variant="outline"
@@ -302,7 +406,7 @@ export function CreateMaterialDialog({
             <Button
               type="submit"
               disabled={isPending}
-              className={cn("cursor-pointer transition-colors duration-200", submitButtonClassName)}
+              className={cn("cursor-pointer transition-colors duration-200 bg-[#93631F] hover:bg-[#7a521a] text-white border-none", submitButtonClassName)}
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isPending ? "Đang tạo..." : "Tạo chất liệu"}

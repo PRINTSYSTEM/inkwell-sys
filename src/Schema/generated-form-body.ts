@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-01-30T13:22:30.957Z */
+/* Generated at: 2026-05-25T17:31:36.168Z */
 
 import { z } from "zod";
 import { schemas } from "./generated";
@@ -13,3 +13,6 @@ export type postApidesignsIdtimeline_Body = z.infer<typeof postApidesignsIdtimel
 
 export const postApidies_BodySchema = schemas.postApidies_Body;
 export type postApidies_Body = z.infer<typeof postApidies_BodySchema>;
+
+export const postApiproofingOrdersIdimages_BodySchema = schemas.postApiproofingOrdersIdimages_Body;
+export type postApiproofingOrdersIdimages_Body = z.infer<typeof postApiproofingOrdersIdimages_BodySchema>;

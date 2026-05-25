@@ -2,15 +2,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
 import { toast } from "sonner";
+import { z } from "zod";
 import type {
   MaterialResponse,
   CreateMaterialRequest,
   UpdateMaterialRequest,
   MaterialResponseIPaginate,
 } from "@/Schema/material.schema";
-import type { MaterialListParams } from "@/Schema";
+import { InventoryTransactionResponseIPaginateSchema } from "@/Schema/generated";
+import type { MaterialListParams, MaterialHistoryParams } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
+
+export type InventoryTransactionResponseIPaginate = z.infer<
+  typeof InventoryTransactionResponseIPaginateSchema
+>;
 
 // Error type for API responses
 type ApiError = {
@@ -27,6 +33,9 @@ const materialKeys = {
     [...materialKeys.lists(), normalizeParams(params || {})] as const,
   details: () => [...materialKeys.all, "detail"] as const,
   detail: (id: number) => [...materialKeys.details(), id] as const,
+  histories: () => [...materialKeys.all, "history"] as const,
+  history: (id: number, params?: MaterialHistoryParams) =>
+    [...materialKeys.histories(), id, normalizeParams(params || {})] as const,
 };
 
 // ========== QUERIES ==========
@@ -68,6 +77,26 @@ export const useMaterial = (id: number | null, enabled = true) => {
     queryFn: async () => {
       const response = await apiRequest.get<MaterialResponse>(
         API_SUFFIX.MATERIAL_BY_ID(id!)
+      );
+      return response.data;
+    },
+    enabled: enabled && id !== null,
+  });
+};
+
+export const useMaterialHistory = (
+  id: number | null,
+  params?: MaterialHistoryParams,
+  enabled = true
+) => {
+  return useQuery<InventoryTransactionResponseIPaginate>({
+    queryKey: materialKeys.history(id!, params || {}),
+    queryFn: async () => {
+      const response = await apiRequest.get<InventoryTransactionResponseIPaginate>(
+        API_SUFFIX.MATERIAL_HISTORY(id!),
+        {
+          params: normalizeParams(params || {}),
+        }
       );
       return response.data;
     },
