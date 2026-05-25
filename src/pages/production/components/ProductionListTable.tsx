@@ -823,9 +823,8 @@ function ProductionTableRow({
                     e.stopPropagation();
                     setShowCancelDialog(true);
                   }}
-                  className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 border border-red-200 hover:border-red-300 rounded-md px-2 py-1 transition-all duration-150 w-full justify-center"
+                  className="mt-1.5 flex items-center text-[9px] font-bold bg-red-600 hover:bg-red-700 text-white rounded px-1.5 py-0.5 transition-all duration-150 w-full justify-center"
                 >
-                  <XCircle className="w-3 h-3 flex-shrink-0" />
                   Hủy SX
                 </button>
               )}

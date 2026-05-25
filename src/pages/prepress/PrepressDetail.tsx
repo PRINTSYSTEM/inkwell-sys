@@ -69,6 +69,8 @@ import {
   useUpdateProofingOrder,
   useUpdateProofingFile,
   useUpdateProofingImage,
+  useUploadProofingImages,
+  useDeleteProofingImage,
   useHandToProduction,
   usePaperSizes,
   useAddDesignsToProofingOrder,
@@ -553,7 +555,8 @@ export default function ProofingOrderDetailPage() {
     const missing: string[] = [];
     if (!order) return missing;
 
-    if (!order.imageUrl) missing.push("Chưa upload ảnh bình bài");
+    const hasImage = !!order.imageUrl || (order.images && order.images.length > 0);
+    if (!hasImage) missing.push("Chưa upload ảnh bình bài");
 
     const totalQty = order.totalQuantity ?? 0;
     if (!Number.isFinite(totalQty) || totalQty < 1)
@@ -586,6 +589,10 @@ export default function ProofingOrderDetailPage() {
     useUploadProofingImage();
   const { mutate: updateImageMutate, loading: isUpdatingImage } =
     useUpdateProofingImage();
+  const { mutate: uploadImagesMutate, loading: isUploadingImages } =
+    useUploadProofingImages();
+  const { mutate: deleteImageMutate, isPending: isDeletingImage } =
+    useDeleteProofingImage();
   const { mutate: handToProductionMutate, isPending: isHandingToProduction } =
     useHandToProduction();
   const {
@@ -1869,11 +1876,7 @@ export default function ProofingOrderDetailPage() {
 
   const handleUploadFiles = async (files: File[]) => {
     if (!order?.id) return;
-    // Only accept images now - upload each image
     const imageFiles = files.filter((f) => isImageFile(f));
-
-    const errors: string[] = [];
-    const successes: string[] = [];
 
     if (imageFiles.length === 0) {
       toast.error("Lỗi", {
@@ -1882,31 +1885,21 @@ export default function ProofingOrderDetailPage() {
       return;
     }
 
-    for (const img of imageFiles) {
-      try {
-        await uploadImageMutate({ proofingOrderId: order.id, file: img });
-        successes.push(img.name);
-      } catch (error) {
-        console.error("Failed to upload image", img.name, error);
-        errors.push(img.name);
-      }
+    try {
+      await uploadImagesMutate({ proofingOrderId: order.id, files: imageFiles });
+      setIsUploadDialogOpen(false);
+      setUploadFiles([]);
+    } catch (error) {
+      console.error("Failed to upload images", error);
     }
+  };
 
-    setIsUploadDialogOpen(false);
-    setUploadFiles([]);
-
-    if (errors.length === 0) {
-      toast.success("Thành công", {
-        description: `Đã tải lên ${successes.length} ảnh`,
-      });
-    } else if (successes.length > 0) {
-      toast.warning("Một phần thành công", {
-        description: `Đã tải: ${successes.join(", ")}. Lỗi: ${errors.join(", ")}`,
-      });
-    } else {
-      toast.error("Lỗi", {
-        description: `Không thể tải lên ảnh: ${errors.join(", ")}`,
-      });
+  const handleDeleteImage = async (imageId: number) => {
+    if (!order?.id) return;
+    try {
+      await deleteImageMutate({ proofingOrderId: order.id, imageId });
+    } catch (error) {
+      console.error("Failed to delete image", error);
     }
   };
 
@@ -2154,6 +2147,7 @@ export default function ProofingOrderDetailPage() {
                 setIsUploadDialogOpen={setIsUploadDialogOpen}
                 setImageViewerOpen={setImageViewerOpen}
                 setViewingImageUrl={setViewingImageUrl}
+                onDeleteImage={handleDeleteImage}
               />
 
               <DetailDesignsListCard

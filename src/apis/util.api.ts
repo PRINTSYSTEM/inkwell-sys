@@ -158,6 +158,7 @@ export const API_SUFFIX = {
   PROOFING_FOR_PRODUCTION: "/proofing-orders/for-production",
   PROOFING_UPLOAD_FILE: (id: number) => `/proofing-orders/${id}/upload-file`,
   PROOFING_UPLOAD_IMAGE: (id: number) => `/proofing-orders/${id}/upload-image`,
+  PROOFING_UPLOAD_IMAGES: (id: number) => `/proofing-orders/${id}/images`,
   PAPER_SIZES: "/paper-sizes",
   PROOFING_RECORD_PLATE: (id: number) => `/proofing-orders/${id}/plate-export`,
   PROOFING_RECORD_DIE: (id: number) => `/proofing-orders/${id}/die-export`,
@@ -168,6 +169,8 @@ export const API_SUFFIX = {
   PLATE_EXPORT_UPDATE: (id: number) => `/plate-exports/${id}`,
   PROOFING_UPDATE_FILE: (id: number) => `/proofing-orders/${id}/update-file`,
   PROOFING_UPDATE_IMAGE: (id: number) => `/proofing-orders/${id}/update-image`,
+  PROOFING_DELETE_IMAGE: (proofingOrderId: number, imageId: number) =>
+    `/proofing-orders/${proofingOrderId}/images/${imageId}`,
   PROOFING_DOWNLOAD_FILE: (id: number) =>
     `/proofing-orders/${id}/download-file`,
   PROOFING_COMPLETE: (id: number) => `/proofing-orders/${id}/complete`,

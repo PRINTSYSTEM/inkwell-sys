@@ -20,6 +20,7 @@ import {
   Layers,
   Image as ImageIcon,
   Maximize2,
+  Trash2,
 } from "lucide-react";
 import {
   processClassificationLabels,
@@ -53,6 +54,7 @@ interface DetailOrderInfoCardProps {
   setIsUploadDialogOpen: (val: boolean) => void;
   setImageViewerOpen: (val: boolean) => void;
   setViewingImageUrl: (val: string | null) => void;
+  onDeleteImage?: (imageId: number) => void;
 }
 
 export function DetailOrderInfoCard({
@@ -77,6 +79,7 @@ export function DetailOrderInfoCard({
   setIsUploadDialogOpen,
   setImageViewerOpen,
   setViewingImageUrl,
+  onDeleteImage,
 }: DetailOrderInfoCardProps) {
   if (!order) return null;
 
@@ -126,21 +129,67 @@ export function DetailOrderInfoCard({
       <CardContent className="px-4 pb-4 pt-0 flex-1 flex flex-col gap-2">
         {/* Image Display - Narrower Aspect */}
         <div className="mt-2">
-          {order.imageUrl ? (
-            <div
-              className="relative aspect-[21/9] w-full overflow-hidden rounded-md border border-muted-foreground/10 bg-muted/5 group cursor-zoom-in"
-              onClick={() => {
-                setViewingImageUrl(order.imageUrl);
-                setImageViewerOpen(true);
-              }}
-            >
-              <img
-                src={order.imageUrl}
-                alt="Bình bài"
-                className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Maximize2 className="h-6 w-6 text-white drop-shadow-md" />
+          {((order.images && order.images.length > 0) || order.imageUrl) ? (
+            <div className="flex flex-col gap-2">
+              <div className={`grid gap-2 w-full ${(order.images && order.images.length > 1) ? "grid-cols-2" : "grid-cols-1"}`}>
+                {/* Legacy single imageUrl fallback */}
+                {order.imageUrl && (!order.images || order.images.length === 0) && (
+                  <div
+                    className="relative aspect-[21/9] w-full overflow-hidden rounded-md border border-muted-foreground/10 bg-muted/5 group cursor-zoom-in"
+                    onClick={() => {
+                      setViewingImageUrl(order.imageUrl);
+                      setImageViewerOpen(true);
+                    }}
+                  >
+                    <img
+                      src={order.imageUrl}
+                      alt="Bình bài"
+                      className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Maximize2 className="h-6 w-6 text-white drop-shadow-md" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Multi-image display */}
+                {order.images && order.images.map((img: any, idx: number) => (
+                  <div
+                    key={img.id || idx}
+                    className="relative aspect-[16/10] w-full overflow-hidden rounded-md border border-muted-foreground/10 bg-muted/5 group cursor-zoom-in"
+                  >
+                    <img
+                      src={img.imageUrl}
+                      alt={`Ảnh bình bài ${idx + 1}`}
+                      className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                      onClick={() => {
+                        setViewingImageUrl(img.imageUrl);
+                        setImageViewerOpen(true);
+                      }}
+                    />
+                    
+                    {/* Maximize Icon */}
+                    <div 
+                      className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none"
+                    >
+                      <Maximize2 className="h-5 w-5 text-white drop-shadow-md" />
+                    </div>
+
+                    {/* Delete Icon (Top-Right, Hoverable) */}
+                    {order.status !== "completed" && onDeleteImage && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteImage(img.id);
+                        }}
+                        className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/60 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 shadow-sm"
+                        title="Xóa ảnh này"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           ) : (
