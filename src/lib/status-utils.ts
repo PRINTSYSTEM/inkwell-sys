@@ -504,6 +504,7 @@ export const statusColorMap: Record<string, string> = {
   // pending đã được định nghĩa ở ORDER STATUSES ở trên
   // delivered đã được định nghĩa ở ORDER STATUSES ở trên (sử dụng màu xanh lá cho thành công)
   failed_reschedule: "bg-orange-50 text-orange-700 border-orange-200",
+  partially_returned: "bg-amber-50 text-amber-700 border-amber-200",
   returned: "bg-rose-50 text-rose-700 border-rose-200",
   // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
 

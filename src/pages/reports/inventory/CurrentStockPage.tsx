@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Pencil,
+  Plus,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
@@ -28,6 +29,7 @@ import { useMaterials, useUpdateMaterial } from "@/hooks/use-material";
 import { useMaterialTypeList } from "@/hooks/use-material-type";
 import { formatCurrency } from "@/lib/status-utils";
 import { useNavigate } from "react-router-dom";
+import { CreateMaterialDialog } from "../../stock/components/CreateMaterialDialog";
 import {
   Select,
   SelectContent,
@@ -56,6 +58,7 @@ export default function CurrentStockPage() {
 
   const [editingItem, setEditingItem] = useState<MaterialResponse | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const updateMaterialMutation = useUpdateMaterial();
 
   const {
@@ -159,6 +162,10 @@ export default function CurrentStockPage() {
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Xuất Excel
+            </Button>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Thêm chất liệu
             </Button>
           </div>
         </div>
@@ -469,6 +476,16 @@ export default function CurrentStockPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <CreateMaterialDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => refetch()}
+        showQuantity={true}
+        defaultMaterialTypeId={
+          selectedMaterialType !== "all" ? Number(selectedMaterialType) : undefined
+        }
+      />
     </>
   );
 }

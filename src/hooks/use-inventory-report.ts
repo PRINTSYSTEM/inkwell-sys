@@ -200,3 +200,54 @@ export const useExportStockCard = () => {
   });
 };
 
+export interface InventoryHistoryParams {
+  pageNumber?: number;
+  pageSize?: number;
+  fromDate?: string;
+  toDate?: string;
+  itemType?: string;
+  itemCode?: string;
+  transactionType?: string;
+  search?: string;
+  sortColumn?: string;
+  sortOrder?: string;
+}
+
+export interface InventoryHistoryResponse {
+  items: Array<{
+    date?: string;
+    voucherCode?: string | null;
+    inQuantity?: number;
+    outQuantity?: number;
+    balance?: number;
+    notes?: string | null;
+    reference?: string | null;
+    voucherType?: string | null;
+    voucherId?: number;
+    itemName?: string | null;
+    itemCode?: string | null;
+    unit?: string | null;
+    warehouse?: string | null;
+  }>;
+  totalPages: number;
+  total: number;
+  size: number;
+  page: number;
+}
+
+export const useInventoryHistory = (params?: InventoryHistoryParams) => {
+  return useQuery({
+    queryKey: ["inventory-history", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<InventoryHistoryResponse>(
+        "/inventory-reports/history",
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+  });
+};
+

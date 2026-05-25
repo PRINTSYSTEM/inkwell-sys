@@ -338,7 +338,8 @@ export default function MaterialCutListPage() {
                         <TableHead className="font-semibold text-slate-700">Mã phiếu</TableHead>
                         <TableHead className="font-semibold text-slate-700">Ngày cắt</TableHead>
                         <TableHead className="font-semibold text-slate-700">Nguyên liệu đầu vào</TableHead>
-                        <TableHead className="text-right font-semibold text-slate-700">Số lượng</TableHead>
+                        <TableHead className="text-right font-semibold text-slate-700 w-28">SL đầu vào</TableHead>
+                        <TableHead className="text-right font-semibold text-slate-700 w-28">SL hao hụt</TableHead>
                         <TableHead className="font-semibold text-slate-700">Thành phẩm</TableHead>
                         <TableHead className="text-center font-semibold text-slate-700">Trạng thái</TableHead>
                         <TableHead className="w-[60px]"></TableHead>
@@ -367,11 +368,19 @@ export default function MaterialCutListPage() {
                               )}
                             </TableCell>
                             <TableCell className="text-right font-medium">{record.quantityUsed?.toLocaleString()}</TableCell>
+                            <TableCell className={cn(
+                              "text-right font-medium",
+                              record.quantityWasted != null && record.quantityWasted > 0 
+                                ? "text-rose-600 font-semibold" 
+                                : "text-slate-400"
+                            )}>
+                              {record.quantityWasted != null ? record.quantityWasted.toLocaleString() : "0"}
+                            </TableCell>
                             <TableCell>
                               <div className="flex flex-wrap gap-1">
                                 {record.outputs?.slice(0, 2).map((output) => (
                                   <Badge key={output.id} variant="secondary" className="text-[10px] font-normal py-0">
-                                    {output.outputMaterialName}: {output.quantityProduced}
+                                    {output.outputMaterialName}: {output.quantityProduced?.toLocaleString()}
                                   </Badge>
                                 ))}
                                 {record.outputs?.length > 2 && <span className="text-[10px] text-slate-400">+{record.outputs.length - 2}</span>}

@@ -191,10 +191,11 @@ export const ENTITY_CONFIG = {
     values: {
       pending: "Chưa có kết quả",
       in_transit: "Đang giao",
-      delivered: "Đã giao hàng",
+      delivered: "Giao thành công",
       failed_reschedule: "Thất bại - hẹn giao lại",
+      partially_returned: "Trả hàng một phần",
       returned: "Trả hàng",
-      cancelled: "Hủy không giao được",
+      cancelled: "Hủy món",
     },
   },
   debtStatuses: {

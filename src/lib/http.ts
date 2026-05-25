@@ -125,6 +125,13 @@ const createApiInstance = (): AxiosInstance => {
       if (error.response) {
         const { status, data } = error.response;
 
+        // If the API returns a string in 'error' but 'message' is empty, map 'error' to 'message'
+        if (data && typeof data === "object") {
+          if (!data.message && data.error && typeof data.error === "string") {
+            data.message = data.error;
+          }
+        }
+
         if (status === 401) {
           authUtils.clearAuthData();
           window.location.href = "/login";

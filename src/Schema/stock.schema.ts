@@ -33,41 +33,61 @@ const GenStockCardResponseSchema = schemas.StockCardResponse;
 // ===== StockInItemRequest =====
 export const StockInItemRequestSchema =
   GenStockInItemRequestSchema?.passthrough().extend({
+    quantity: z.number().int().gte(1).lte(2147483647).optional(),
     laborCost: z.number().nullable().optional(),
+    proofingOrderId: z.union([z.string(), z.number()]).nullable().optional(),
+    ramQuantity: z.number().nullable().optional(),
+    jobCode: z.string().nullable().optional(),
   }) || z.any();
 export type StockInItemRequest = z.infer<typeof StockInItemRequestSchema>;
 
 // ===== CreateStockInRequest =====
-export const CreateStockInRequestSchema =
-  GenCreateStockInRequestSchema?.passthrough() || z.any();
+export const CreateStockInRequestSchema = GenCreateStockInRequestSchema
+  ? GenCreateStockInRequestSchema.passthrough().extend({
+      items: z.array(StockInItemRequestSchema),
+    })
+  : z.any();
 export type CreateStockInRequest = z.infer<
   typeof CreateStockInRequestSchema
 >;
 
 // ===== CreateStockInFromVendorRequest =====
-export const CreateStockInFromVendorRequestSchema =
-  GenCreateStockInFromVendorRequestSchema?.passthrough() || z.any();
+export const CreateStockInFromVendorRequestSchema = GenCreateStockInFromVendorRequestSchema
+  ? GenCreateStockInFromVendorRequestSchema.passthrough().extend({
+      laborCost: z.number().nullable().optional(),
+      items: z.array(StockInItemRequestSchema),
+    })
+  : z.any();
 export type CreateStockInFromVendorRequest = z.infer<
   typeof CreateStockInFromVendorRequestSchema
 >;
 
 // ===== CreateStockInFromProductionRequest =====
-export const CreateStockInFromProductionRequestSchema =
-  GenCreateStockInFromProductionRequestSchema?.passthrough() || z.any();
+export const CreateStockInFromProductionRequestSchema = GenCreateStockInFromProductionRequestSchema
+  ? GenCreateStockInFromProductionRequestSchema.passthrough().extend({
+      items: z.array(StockInItemRequestSchema),
+    })
+  : z.any();
 export type CreateStockInFromProductionRequest = z.infer<
   typeof CreateStockInFromProductionRequestSchema
 >;
 
 // ===== CreateStockInFromDeliveryReturnRequest =====
-export const CreateStockInFromDeliveryReturnRequestSchema =
-  GenCreateStockInFromDeliveryReturnRequestSchema?.passthrough() || z.any();
+export const CreateStockInFromDeliveryReturnRequestSchema = GenCreateStockInFromDeliveryReturnRequestSchema
+  ? GenCreateStockInFromDeliveryReturnRequestSchema.passthrough().extend({
+      items: z.array(StockInItemRequestSchema),
+    })
+  : z.any();
 export type CreateStockInFromDeliveryReturnRequest = z.infer<
   typeof CreateStockInFromDeliveryReturnRequestSchema
 >;
 
 // ===== UpdateStockInRequest =====
-export const UpdateStockInRequestSchema =
-  GenUpdateStockInRequestSchema?.passthrough() || z.any();
+export const UpdateStockInRequestSchema = GenUpdateStockInRequestSchema
+  ? GenUpdateStockInRequestSchema.passthrough().extend({
+      items: z.array(StockInItemRequestSchema).nullable().optional(),
+    })
+  : z.any();
 export type UpdateStockInRequest = z.infer<
   typeof UpdateStockInRequestSchema
 >;

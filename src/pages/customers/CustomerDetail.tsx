@@ -15,6 +15,7 @@ import {
   OrdersTab,
   FavoritesTab,
   InvoicesTab,
+  AddressesTab,
   EditCustomerModal,
   ExportDebtModal,
 } from "@/components/customers";
@@ -29,7 +30,7 @@ export default function CustomerDetail() {
   const customerId =
     id && !isNaN(Number(id)) && Number(id) > 0 ? Number(id) : null;
 
-  const [activeTab, setActiveTab] = useState("debt");
+  const [activeTab, setActiveTab] = useState("addresses");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [cashReceiptModalOpen, setCashReceiptModalOpen] = useState(false);
@@ -193,6 +194,9 @@ export default function CustomerDetail() {
                   className="flex-1 flex flex-col min-w-0 overflow-hidden"
                 >
                   <TabsList className="w-fit mb-3 flex-shrink-0">
+                    <TabsTrigger value="addresses" className="text-sm">
+                      Địa chỉ giao hàng
+                    </TabsTrigger>
                     <TabsTrigger value="debt" className="text-sm">
                       Công nợ
                     </TabsTrigger>
@@ -241,6 +245,16 @@ export default function CustomerDetail() {
                     <FavoritesTab
                       customerId={customerId}
                       isActive={activeTab === "favorites"}
+                    />
+                  </TabsContent>
+
+                  <TabsContent
+                    value="addresses"
+                    className="flex-1 mt-0 overflow-hidden"
+                  >
+                    <AddressesTab
+                      customerId={customerId}
+                      isActive={activeTab === "addresses"}
                     />
                   </TabsContent>
                 </Tabs>

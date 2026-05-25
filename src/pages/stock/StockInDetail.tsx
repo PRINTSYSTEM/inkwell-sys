@@ -22,10 +22,10 @@ import {
   Box,
   AlertTriangle,
   RefreshCw,
+  DollarSign,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -85,6 +85,11 @@ export default function StockInDetailPage() {
     error,
   } = useStockIn(stockInId || null, !!stockInId);
 
+  const isThuanTienStockIn = stockIn?.vendor
+    ? stockIn.vendor.name?.toLowerCase().trim() === "thuận tiền" ||
+      stockIn.vendor.name?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() === "thuan tien"
+    : false;
+
   const { mutate: completeStockIn, isPending: isCompleting } =
     useCompleteStockIn();
   const { mutate: cancelStockIn, isPending: isCancelling } = useCancelStockIn();
@@ -119,12 +124,15 @@ export default function StockInDetailPage() {
         stockIn.items.map((item: any) => ({
           ...item,
           quantity: item.quantity ?? 1,
-          unitPrice: item.unitPrice ?? 0,
+          ramQuantity: item.ramQuantity ?? 0,
+          unitPrice: isThuanTienStockIn && item.ramQuantity ? (item.unitPrice ?? 0) * 500 : (item.unitPrice ?? 0),
+          laborCost: item.laborCost ?? 0,
           notes: item.notes ?? "",
+          proofingOrderId: item.proofingOrderId ?? null,
         }))
       );
     }
-  }, [isUpdateDialogOpen, stockIn]);
+  }, [isUpdateDialogOpen, stockIn, isThuanTienStockIn]);
 
   const handleEditItemChange = (index: number, field: string, value: any) => {
     const newItems = [...editItems];
@@ -138,17 +146,27 @@ export default function StockInDetailPage() {
   const handleSaveUpdate = () => {
     if (!stockIn?.id) return;
 
-    const hasInvalidQuantity = editItems.some(
-      (item) => !item.quantity || item.quantity < 1
+    const hasInvalidQuantity = editItems.some((item) =>
+      isThuanTienStockIn
+        ? item.ramQuantity === undefined || item.ramQuantity === null || item.ramQuantity <= 0
+        : !item.quantity || item.quantity < 1
     );
     if (hasInvalidQuantity) {
-      toast.error("Số lượng của tất cả vật phẩm phải lớn hơn hoặc bằng 1");
+      toast.error(
+        isThuanTienStockIn
+          ? "Số ram của tất cả vật phẩm phải lớn hơn 0"
+          : "Số lượng của tất cả vật phẩm phải lớn hơn hoặc bằng 1"
+      );
       return;
     }
 
     // Calculate new total amount as sum of (quantity * unitPrice) of all items
     const newTotalAmount = editItems.reduce(
-      (sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0),
+      (sum, item) => {
+        const itemQty = isThuanTienStockIn ? (item.ramQuantity || 0) : (item.quantity || 0);
+        const itemPrice = item.unitPrice || 0;
+        return sum + itemQty * itemPrice;
+      },
       0
     );
 
@@ -156,9 +174,11 @@ export default function StockInDetailPage() {
     const updatedItems = editItems.map((item) => ({
       itemName: item.itemName,
       itemCode: item.itemCode,
-      unit: item.unit,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
+      unit: isThuanTienStockIn ? "tờ" : item.unit,
+      quantity: isThuanTienStockIn ? Math.floor((item.ramQuantity || 0) * 500) : item.quantity,
+      ramQuantity: isThuanTienStockIn ? item.ramQuantity : undefined,
+      unitPrice: isThuanTienStockIn ? (item.unitPrice ? item.unitPrice / 500 : 0) : item.unitPrice,
+      laborCost: item.laborCost,
       notes: item.notes,
       materialId: item.materialId,
       orderDetailId: item.orderDetailId,
@@ -166,6 +186,7 @@ export default function StockInDetailPage() {
       length: item.length,
       width: item.width,
       height: item.height,
+      proofingOrderId: typeof item.proofingOrderId === 'string' ? (item.proofingOrderId.trim() || null) : (item.proofingOrderId ?? null),
     }));
 
     updateStockIn(
@@ -446,9 +467,6 @@ export default function StockInDetailPage() {
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-24">
                           Đơn vị
                         </TableHead>
-                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-28">
-                          Loại hàng
-                        </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 text-right w-28">
                           Số lượng
                         </TableHead>
@@ -456,7 +474,10 @@ export default function StockInDetailPage() {
                           Đơn giá
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 text-right w-32">
-                          Thành tiền
+                          Tiền công
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-28">
+                          Mã bài
                         </TableHead>
                         <TableHead className="font-semibold text-slate-700 text-sm py-3 px-4 w-40">
                           Ghi chú
@@ -475,8 +496,6 @@ export default function StockInDetailPage() {
                         </TableRow>
                       ) : (
                         items.map((item, index) => {
-                          const itemTotal =
-                            (item.quantity || 0) * (item.unitPrice || 0);
                           return (
                             <TableRow
                               key={index}
@@ -494,26 +513,26 @@ export default function StockInDetailPage() {
                               <TableCell className="text-slate-600 text-sm py-3 px-4">
                                 {item.unit || "Không có"}
                               </TableCell>
-                              <TableCell className="text-slate-600 text-sm py-3 px-4">
-                                {item.lineKind ? (
-                                  <Badge variant="outline" className="text-[10px] font-normal uppercase">
-                                    {item.lineKind === "sheet" ? "Tờ" : 
-                                     item.lineKind === "roll" ? "Cuộn" : 
-                                     item.lineKind === "service" ? "Dịch vụ" : 
-                                     item.lineKind === "custom" ? "Tùy chỉnh" : item.lineKind}
-                                  </Badge>
-                                ) : "—"}
-                              </TableCell>
                               <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
-                                {(item.quantity || 0).toLocaleString("vi-VN")}
+                                <div className="font-semibold">{(item.quantity || 0).toLocaleString("vi-VN")}</div>
+                                {item.ramQuantity !== undefined && item.ramQuantity !== null && item.ramQuantity > 0 && (
+                                  <div className="text-[13px] text-slate-400 font-normal">
+                                     {item.ramQuantity.toLocaleString("vi-VN")} gram
+                                  </div>
+                                )}
                               </TableCell>
                               <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
                                 {item.unitPrice
                                   ? formatCurrency(item.unitPrice)
                                   : "Không có"}
                               </TableCell>
-                              <TableCell className="text-right font-medium text-slate-900 text-sm py-3 px-4">
-                                {formatCurrency(itemTotal)}
+                              <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
+                                {item.laborCost !== undefined && item.laborCost !== null
+                                  ? formatCurrency(item.laborCost)
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="text-slate-600 text-sm py-3 px-4">
+                                {item.proofingOrderId || "—"}
                               </TableCell>
                               <TableCell className="text-slate-600 text-sm py-3 px-4 truncate max-w-[160px]">
                                 {item.notes || "Không có"}
@@ -529,7 +548,7 @@ export default function StockInDetailPage() {
             </Card>
 
             {/* Status and Summary Cards - Compact */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
                 <CardHeader className="bg-gradient-to-r from-emerald-500/5 to-teal-500/5 px-3 py-2 border-b border-slate-200/60">
                   <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -577,6 +596,20 @@ export default function StockInDetailPage() {
                 <CardContent className="px-3 py-2.5">
                   <p className="text-base font-bold text-slate-900">
                     {formatCurrency(totalAmount)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white rounded-lg shadow-sm border border-slate-200/60 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-emerald-500/5 to-teal-500/5 px-3 py-2 border-b border-slate-200/60">
+                  <CardTitle className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <DollarSign className="h-3 w-3" />
+                    Chi phí nhân công
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 py-2.5">
+                  <p className="text-base font-bold text-slate-900">
+                    {formatCurrency(stockIn.laborCost ?? 0)}
                   </p>
                 </CardContent>
               </Card>
@@ -857,15 +890,17 @@ export default function StockInDetailPage() {
                   <TableRow>
                     <TableHead className="w-12 text-center text-xs font-semibold py-2.5">STT</TableHead>
                     <TableHead className="text-xs font-semibold py-2.5">Tên vật phẩm</TableHead>
-                    <TableHead className="w-32 text-right text-xs font-semibold py-2.5">Số lượng</TableHead>
+                    <TableHead className="w-32 text-right text-xs font-semibold py-2.5">
+                      {isThuanTienStockIn ? "Số ram" : "Số lượng"}
+                    </TableHead>
                     <TableHead className="w-32 text-xs font-semibold py-2.5">Đơn giá</TableHead>
-                    <TableHead className="w-36 text-xs font-semibold py-2.5">Thành tiền</TableHead>
+                    <TableHead className="w-32 text-xs font-semibold py-2.5">Tiền công</TableHead>
+                    <TableHead className="w-24 text-xs font-semibold py-2.5">Mã bài</TableHead>
                     <TableHead className="w-48 text-xs font-semibold py-2.5">Ghi chú</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {editItems.map((item, index) => {
-                    const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
                     return (
                       <TableRow key={index} className="hover:bg-slate-50/50 transition-colors duration-150">
                         <TableCell className="text-center text-xs font-medium text-slate-500 py-3">
@@ -876,24 +911,41 @@ export default function StockInDetailPage() {
                           <p className="text-[10px] text-slate-400 mt-0.5">{item.itemCode || "Không có mã"}</p>
                         </TableCell>
                         <TableCell className="py-2">
-                          <div className="flex items-center gap-1.5 justify-end">
-                            <Input
-                              type="number"
-                              min="1"
-                              step="1"
-                              value={item.quantity ?? ""}
-                              onChange={(e) =>
-                                handleEditItemChange(
-                                  index,
-                                  "quantity",
-                                  e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0
-                                )
-                              }
-                              className="h-8 w-20 text-xs font-medium text-right focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                            <span className="text-[10px] text-slate-500 whitespace-nowrap min-w-[24px] text-left">
-                              {item.unit || "đv"}
-                            </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <Input
+                                type="number"
+                                min={isThuanTienStockIn ? "0" : "1"}
+                                step={isThuanTienStockIn ? "any" : "1"}
+                                value={isThuanTienStockIn ? (item.ramQuantity ?? "") : (item.quantity ?? "")}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (isThuanTienStockIn) {
+                                    handleEditItemChange(
+                                      index,
+                                      "ramQuantity",
+                                      isNaN(val) ? 0 : val
+                                    );
+                                  } else {
+                                    const intVal = parseInt(e.target.value, 10);
+                                    handleEditItemChange(
+                                      index,
+                                      "quantity",
+                                      isNaN(intVal) ? 0 : intVal
+                                    );
+                                  }
+                                }}
+                                className="h-8 w-20 text-xs font-medium text-right focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                              <span className="text-[10px] text-slate-500 whitespace-nowrap min-w-[24px] text-left">
+                                {isThuanTienStockIn ? "gram" : (item.unit || "đv")}
+                              </span>
+                            </div>
+                            {isThuanTienStockIn && (
+                              <span className="text-[10px] text-slate-400">
+                                Quy đổi: {((item.ramQuantity || 0) * 500).toLocaleString("vi-VN")} tờ
+                              </span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="py-2">
@@ -912,8 +964,36 @@ export default function StockInDetailPage() {
                             className="h-8 text-xs font-medium focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </TableCell>
-                        <TableCell className="text-right text-xs font-semibold text-slate-900 py-3 font-mono">
-                          {formatCurrency(itemTotal)}
+                        <TableCell className="py-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.laborCost ?? ""}
+                            onChange={(e) =>
+                              handleEditItemChange(
+                                index,
+                                "laborCost",
+                                e.target.value === "" ? 0 : parseFloat(e.target.value) || 0
+                              )
+                            }
+                            className="h-8 text-xs font-medium focus-visible:ring-[#93631F]/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Input
+                            type="text"
+                            value={item.proofingOrderId ?? ""}
+                            onChange={(e) =>
+                              handleEditItemChange(
+                                index,
+                                "proofingOrderId",
+                                e.target.value === "" ? null : e.target.value
+                              )
+                            }
+                            placeholder="Mã bài"
+                            className="h-8 text-xs font-medium focus-visible:ring-[#93631F]/30"
+                          />
                         </TableCell>
                         <TableCell className="py-2">
                           <Input

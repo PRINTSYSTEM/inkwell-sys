@@ -426,6 +426,105 @@ export const useUploadProofingImage = () => {
   return { data, loading, error, mutate, reset };
 };
 
+export const useUploadProofingImages = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProofingOrderResponse,
+    [{ proofingOrderId: number; files: File[] }]
+  >(async ({ proofingOrderId, files }) => {
+    const form = new FormData();
+    files.forEach((file) => {
+      form.append("files", file);
+    });
+
+    const res = await apiRequest.post<ProofingOrderResponse>(
+      API_SUFFIX.PROOFING_UPLOAD_IMAGES(proofingOrderId),
+      form,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+    return res.data;
+  });
+
+  const mutate = async (args: { proofingOrderId: number; files: File[] }) => {
+    try {
+      const result = await execute(args);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: proofingKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+
+      toast.success("Thành công", {
+        description: `Đã tải lên ${args.files.length} ảnh bình bài`,
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể tải lên ảnh bình bài",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
+export const useDeleteProofingImage = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProofingOrderResponse,
+    [{ proofingOrderId: number; imageId: number }]
+  >(async ({ proofingOrderId, imageId }) => {
+    const res = await apiRequest.delete<ProofingOrderResponse>(
+      API_SUFFIX.PROOFING_DELETE_IMAGE(proofingOrderId, imageId),
+    );
+    return res.data;
+  });
+
+  const mutate = async (args: { proofingOrderId: number; imageId: number }) => {
+    try {
+      const result = await execute(args);
+
+      if (result.id != null) {
+        queryClient.invalidateQueries({
+          queryKey: proofingKeys.detail(result.id),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+
+      toast.success("Thành công", {
+        description: "Đã xóa ảnh bình bài",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể xóa ảnh bình bài",
+      });
+      throw err;
+    }
+  };
+
+  return { data, loading, error, mutate, reset };
+};
+
 // PUT /proofing-orders/{id}/update-file
 export const useUpdateProofingFile = () => {
   const queryClient = useQueryClient();

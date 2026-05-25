@@ -1,6 +1,7 @@
 export { CustomerHeader } from './CustomerHeader';
 export { CustomerSummary } from './CustomerSummary';
 export { CustomerProfile } from './CustomerProfile';
+export { AddressesTab } from './tabs/AddressesTab';
 export { DebtTab } from './tabs/DebtTab';
 export { OrdersTab } from './tabs/OrdersTab';
 export { FavoritesTab } from './tabs/FavoritesTab';

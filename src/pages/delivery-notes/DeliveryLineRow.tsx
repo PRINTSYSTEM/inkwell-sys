@@ -22,8 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, XCircle, Loader2 } from "lucide-react";
+import { ChevronRight, XCircle, Loader2, Image as ImageIcon, RotateCcw } from "lucide-react";
 import { useUpdateDeliveryLineResult, useFailureReasons } from "@/hooks/use-delivery-note";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
 // ── Status display ──────────────────────────────────────────────────────────
 
@@ -62,16 +63,23 @@ const NEXT_STATUS: Record<string, string> = {
 export default function DeliveryLineRow({
   line,
   noteStatus,
+  onReturn,
 }: {
   line: DeliveryNoteLineResponse;
   noteStatus?: string | null;
+  onReturn?: (line: DeliveryNoteLineResponse) => void;
 }) {
   const [localStatus, setLocalStatus] = useState<string | null | undefined>(
     line.status,
   );
+
+  React.useEffect(() => {
+    setLocalStatus(line.status);
+  }, [line.status]);
   const [failDialogOpen, setFailDialogOpen] = useState(false);
   const [failureReasonId, setFailureReasonId] = useState<number | null>(null);
   const [failureNotes, setFailureNotes] = useState("");
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const updateLineResultMutation = useUpdateDeliveryLineResult();
   const { data: failureReasonsApi } = useFailureReasons();
@@ -168,15 +176,32 @@ export default function DeliveryLineRow({
       <TableRow className="hover:bg-muted/30 transition-colors">
         {/* Mã hàng / Đơn */}
         <TableCell>
-          <div className="space-y-0.5">
-            <div className="font-mono font-semibold text-sm">
-              {line.designCode || "—"}
+          <div className="flex items-center gap-3">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted/60 flex items-center justify-center border border-border">
+              {line.designImageUrl ? (
+                <img
+                  src={line.designImageUrl}
+                  alt={line.designCode || "Thiết kế"}
+                  className="h-full w-full object-cover cursor-zoom-in"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewImageUrl(line.designImageUrl || null);
+                  }}
+                />
+              ) : (
+                <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+              )}
             </div>
-            {line.orderCode && (
-              <div className="text-xs text-muted-foreground font-mono">
-                {line.orderCode}
+            <div className="space-y-0.5 min-w-0">
+              <div className="font-mono font-semibold text-sm truncate">
+                {line.designCode || "—"}
               </div>
-            )}
+              {line.orderCode && (
+                <div className="text-xs text-muted-foreground font-mono truncate">
+                  {line.orderCode}
+                </div>
+              )}
+            </div>
           </div>
         </TableCell>
 
@@ -286,6 +311,18 @@ export default function DeliveryLineRow({
               </Button>
             </div>
           )}
+
+          {currentStatus === "delivered" && onReturn && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] gap-1 px-2 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+              onClick={() => onReturn(line)}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Trả hàng
+            </Button>
+          )}
         </TableCell>
       </TableRow>
 
@@ -361,6 +398,15 @@ export default function DeliveryLineRow({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {previewImageUrl && (
+        <ImageViewerDialog
+          open={!!previewImageUrl}
+          onOpenChange={(open) => !open && setPreviewImageUrl(null)}
+          imageUrl={previewImageUrl}
+          title="Xem ảnh thiết kế"
+        />
+      )}
     </>
   );
 }
