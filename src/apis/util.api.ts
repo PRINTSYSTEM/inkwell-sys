@@ -225,6 +225,7 @@ export const API_SUFFIX = {
   STOCK_IN_FROM_VENDOR: "/stock-ins/from-vendor",
   STOCK_IN_FROM_PRODUCTION: "/stock-ins/from-production",
   STOCK_IN_FROM_DELIVERY_RETURN: "/stock-ins/from-delivery-return",
+  STOCK_IN_FROM_CUT: "/stock-ins/from-cut",
   STOCK_IN_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>
     `/stock-ins/by-delivery-note/${deliveryNoteId}`,
   STOCK_IN_BY_PRODUCTION_ORDER: (productionOrderId: number) =>

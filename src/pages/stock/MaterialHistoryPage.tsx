@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { format, addDays } from "date-fns";
+import { format, addDays, startOfMonth } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
   RefreshCw,
@@ -20,11 +20,31 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Calendar,
+  Scissors,
+  Plus,
+  Minus,
+  Pencil,
+  Check,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
-import { useMaterial, useMaterialHistory } from "@/hooks/use-material";
+import { useMaterial, useMaterialHistory, useMaterials } from "@/hooks/use-material";
+import {
+  useCompleteMaterialCut,
+  useCancelMaterialCut,
+  useCompleteStockIn,
+  useCancelStockIn,
+  useCompleteStockOut,
+  useCancelStockOut,
+  useStockIns,
+  useStockOuts,
+  useMaterialCuts,
+} from "@/hooks/use-stock";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import type { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,10 +67,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+
+import { MaterialCutDialog } from "./components/MaterialCutDialog";
+import { StockInDialog } from "./components/StockInDialog";
+import { StockOutDialog } from "./components/StockOutDialog";
 
 const formatDateTime = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
   return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
+};
+
+const isImport = (type: string | null | undefined) => {
+  if (!type) return false;
+  const t = type.toLowerCase();
+  return t === "stockin" || t === "stock_in" || t === "cut_in";
+};
+
+const isExport = (type: string | null | undefined) => {
+  if (!type) return false;
+  const t = type.toLowerCase();
+  return t === "stockout" || t === "stock_out" || t === "cut_out" || t === "return_vendor" || t === "transfer";
+};
+
+const isWaste = (type: string | null | undefined) => {
+  if (!type) return false;
+  const t = type.toLowerCase();
+  return t === "waste";
 };
 
 export default function MaterialHistoryPage() {
@@ -61,12 +104,33 @@ export default function MaterialHistoryPage() {
 
   // States
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: addDays(new Date(), -30),
+    from: startOfMonth(new Date()),
     to: new Date(),
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [transactionType, setTransactionType] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Dialog States
+  const [isCutOpen, setIsCutOpen] = useState(false);
+  const [isStockInOpen, setIsStockInOpen] = useState(false);
+  const [isStockOutOpen, setIsStockOutOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+
+  // Form States
+  const [stockInForm, setStockInForm] = useState({
+    quantity: 0,
+    documentCode: "",
+    notes: "",
+  });
+
+  const [stockOutForm, setStockOutForm] = useState({
+    quantity: 0,
+    documentCode: "",
+    notes: "",
+    purpose: "manual",
+  });
 
   // API Queries
   const { 
@@ -97,6 +161,33 @@ export default function MaterialHistoryPage() {
     isNumericId
   );
 
+  // Fetch pending vouchers
+  const { data: pendingCutsData, refetch: refetchPendingCuts } = useMaterialCuts({ status: "pending" });
+  const { data: pendingStockInsData, refetch: refetchPendingStockIns } = useStockIns({ status: "pending" });
+  const { data: pendingStockOutsData, refetch: refetchPendingStockOuts } = useStockOuts({ status: "pending" });
+
+  // Get all materials for vendor matching
+  const { data: allMaterialsData } = useMaterials({ pageSize: 1000 });
+
+  // Mutations
+  const { mutateAsync: completeMaterialCut } = useCompleteMaterialCut();
+  const { mutateAsync: cancelMaterialCut } = useCancelMaterialCut();
+  
+  const { mutateAsync: completeStockIn } = useCompleteStockIn();
+  const { mutateAsync: cancelStockIn } = useCancelStockIn();
+
+  const { mutateAsync: completeStockOut } = useCompleteStockOut();
+  const { mutateAsync: cancelStockOut } = useCancelStockOut();
+
+  const refetchAll = async () => {
+    await Promise.all([
+      refetchHistory(),
+      refetchPendingCuts(),
+      refetchPendingStockIns(),
+      refetchPendingStockOuts(),
+    ]);
+  };
+
   const isLoading = isLoadingMaterial || isLoadingHistory;
   const isError = isErrorMaterial || isErrorHistory;
   const error = errorMaterial || errorHistory;
@@ -117,18 +208,132 @@ export default function MaterialHistoryPage() {
 
   // Total summary statistics computed from returned data
   const summaryStats = useMemo(() => {
-    if (!historyData?.items) return { totalIn: 0, totalOut: 0 };
+    const defaultStats = {
+      openingBalance: materialDetail?.quantity || 0,
+      totalIn: 0,
+      totalOut: 0,
+      totalWaste: 0,
+      closingBalance: materialDetail?.quantity || 0,
+    };
+
+    if (!historyData?.items || historyData.items.length === 0) {
+      return defaultStats;
+    }
+
+    // Sort items chronologically (oldest first) to find opening and closing balances
+    const sortedItems = [...historyData.items].sort((a, b) => {
+      return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    });
+
+    const oldestTxn = sortedItems[0];
+    const newestTxn = sortedItems[sortedItems.length - 1];
+
+    const openingBalance = oldestTxn.previousQuantity !== undefined && oldestTxn.previousQuantity !== null
+      ? oldestTxn.previousQuantity
+      : 0;
+    const closingBalance = newestTxn.newQuantity !== undefined && newestTxn.newQuantity !== null
+      ? newestTxn.newQuantity
+      : 0;
+
     let totalIn = 0;
     let totalOut = 0;
+    let totalWaste = 0;
+
     historyData.items.forEach((item) => {
-      if (item.transactionType === "StockIn") {
-        totalIn += item.quantity || 0;
-      } else if (item.transactionType === "StockOut") {
-        totalOut += item.quantity || 0;
+      const qty = item.quantity || 0;
+      if (isImport(item.transactionType)) {
+        totalIn += qty;
+      } else if (isExport(item.transactionType)) {
+        totalOut += qty;
+      } else if (isWaste(item.transactionType)) {
+        totalWaste += qty;
       }
     });
-    return { totalIn, totalOut };
-  }, [historyData?.items]);
+
+    return {
+      openingBalance,
+      totalIn,
+      totalOut,
+      totalWaste,
+      closingBalance,
+    };
+  }, [historyData?.items, materialDetail?.quantity]);
+
+  // Client-side calculations for Cut Dialog & Actionable Pending List
+  const vendorRolls = useMemo(() => {
+    if (!allMaterialsData?.items || !materialDetail) return [];
+    return allMaterialsData.items.filter(
+      (m: any) => m.vendorId === materialDetail.vendorId && (m.type === "cuon" || m.materialTypeName?.toLowerCase()?.includes("cuộn") || m.materialTypeName?.toLowerCase()?.includes("cuon"))
+    );
+  }, [allMaterialsData?.items, materialDetail]);
+
+  const relevantPendingCuts = useMemo(() => {
+    return (pendingCutsData?.items || []).filter(
+      (cut: any) => cut.inputMaterialId === materialId
+    );
+  }, [pendingCutsData?.items, materialId]);
+
+  const relevantPendingStockIns = useMemo(() => {
+    return (pendingStockInsData?.items || []).filter((stockIn: any) =>
+      (stockIn.items || []).some((item: any) => item.materialId === materialId)
+    );
+  }, [pendingStockInsData?.items, materialId]);
+
+  const relevantPendingStockOuts = useMemo(() => {
+    return (pendingStockOutsData?.items || []).filter((stockOut: any) =>
+      (stockOut.items || []).some((item: any) => item.materialId === materialId)
+    );
+  }, [pendingStockOutsData?.items, materialId]);
+
+  const combinedPendingItems = useMemo(() => {
+    const list: any[] = [];
+    
+    relevantPendingCuts.forEach((cut: any) => {
+      list.push({
+        id: cut.id,
+        type: "cut",
+        code: cut.code || `CUT-${cut.id}`,
+        createdAt: cut.createdAt || cut.cutAt,
+        jobCode: cut.jobCode || "—",
+        notes: cut.notes || "—",
+        quantity: cut.quantityUsed,
+        wasted: cut.quantityWasted,
+        outputs: cut.outputs,
+        raw: cut,
+      });
+    });
+
+    relevantPendingStockIns.forEach((stockIn: any) => {
+      const item = (stockIn.items || []).find((i: any) => i.materialId === materialId);
+      list.push({
+        id: stockIn.id,
+        type: "stock_in",
+        code: stockIn.code || `PNK-${stockIn.id}`,
+        createdAt: stockIn.createdAt || stockIn.stockInDate,
+        jobCode: item?.jobCode || "—",
+        notes: stockIn.notes || "—",
+        quantity: item?.quantity || 0,
+        raw: stockIn,
+      });
+    });
+
+    relevantPendingStockOuts.forEach((stockOut: any) => {
+      const item = (stockOut.items || []).find((i: any) => i.materialId === materialId);
+      list.push({
+        id: stockOut.id,
+        type: "stock_out",
+        code: stockOut.code || `PXK-${stockOut.id}`,
+        createdAt: stockOut.createdAt || stockOut.stockOutDate,
+        jobCode: "—",
+        notes: stockOut.notes || "—",
+        quantity: item?.quantity || 0,
+        raw: stockOut,
+      });
+    });
+
+    // Sort newest first
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [relevantPendingCuts, relevantPendingStockIns, relevantPendingStockOuts, materialId]);
 
   const handleVoucherClick = (
     voucherType: string | null | undefined,
@@ -152,6 +357,8 @@ export default function MaterialHistoryPage() {
     }
   };
 
+
+
   return (
     <>
       <Helmet>
@@ -159,9 +366,9 @@ export default function MaterialHistoryPage() {
         <meta name="description" content="Chi tiết lịch sử nhập xuất nguyên vật liệu" />
       </Helmet>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-2">
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
@@ -208,65 +415,85 @@ export default function MaterialHistoryPage() {
           </div>
         </div>
 
-        {/* Specifications Card */}
+        {/* Action Buttons Bar */}
         {materialDetail && (
-          <Card className="shadow-sm border border-slate-200/60 rounded-2xl overflow-hidden bg-gradient-to-r from-amber-500/[0.015] to-emerald-500/[0.015]">
-            <CardHeader className="p-4 pb-2 border-b border-slate-100 bg-slate-50/30">
-              <div className="flex items-center gap-2">
-                <Boxes className="h-4.5 w-4.5 text-[#93631F]" />
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                  Thông số kỹ thuật & Chi tiết vật tư
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  <Tag className="h-3 w-3" /> Tên vật tư
-                </span>
-                <p className="text-sm font-semibold text-slate-800 leading-tight">{materialDetail.name || "—"}</p>
-              </div>
+          <div className="flex items-center gap-2 flex-wrap justify-end pb-1">
+            {/* 1. Cắt cuộn button (only for rolls) */}
+            {(materialDetail.type === "cuon" || materialDetail.materialTypeName?.toLowerCase()?.includes("cuộn") || materialDetail.materialTypeName?.toLowerCase()?.includes("cuon")) && (
+              <Button
+                onClick={() => {
+                  setIsCutOpen(true);
+                }}
+                className="h-9 px-4 rounded-lg border border-[#93631F] bg-transparent hover:bg-[#93631F]/5 text-[#93631F] hover:text-[#7a521a] font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200"
+              >
+                <Scissors className="h-4 w-4" />
+                Cắt nguyên liệu
+              </Button>
+            )}
 
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  <Layers className="h-3 w-3" /> Phân loại
-                </span>
-                <div>
-                  <Badge variant="secondary" className="font-medium text-xs bg-slate-100 text-slate-700 hover:bg-slate-100 rounded-md border-none px-2 py-0.5">
-                    {materialDetail.materialTypeName || "—"}
-                  </Badge>
-                </div>
-              </div>
+            {/* 2. Nhập kho button */}
+            <Button
+              onClick={() => {
+                setIsEditMode(false);
+                setEditId(null);
+                setStockInForm({
+                  quantity: 0,
+                  documentCode: "",
+                  notes: "",
+                });
+                setIsStockInOpen(true);
+              }}
+              className="h-9 px-4 rounded-lg bg-[#93631F] hover:bg-[#7a521a] text-white font-semibold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-all duration-200 hover:shadow-[#93631F]/20"
+            >
+              <Plus className="h-4 w-4" />
+              Nhập kho
+            </Button>
 
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  <Maximize2 className="h-3 w-3" /> Quy cách khổ (LxWxH)
-                </span>
-                <p className="text-sm font-semibold font-mono text-slate-800">
-                  {materialDetail.length || "—"}
-                  {materialDetail.width ? ` x ${materialDetail.width}` : ""}
-                  {materialDetail.height ? ` x ${materialDetail.height}` : ""}
-                </p>
-              </div>
+            {/* 3. Xuất kho button */}
+            <Button
+              onClick={() => {
+                setIsEditMode(false);
+                setEditId(null);
+                setStockOutForm({
+                  quantity: 0,
+                  documentCode: "",
+                  notes: "",
+                  purpose: "manual",
+                });
+                setIsStockOutOpen(true);
+              }}
+              className="h-9 px-4 rounded-lg border border-rose-200 bg-rose-50/30 hover:bg-rose-50 text-rose-700 font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200 hover:shadow-rose-550/10"
+            >
+              <Minus className="h-4 w-4" />
+              Xuất kho
+            </Button>
+          </div>
+        )}
 
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  <User className="h-3 w-3" /> Người khởi tạo / Ngày tạo
-                </span>
-                <p className="text-xs font-semibold text-slate-700">
-                  {materialDetail.createdBy || "Thủ kho"} - {materialDetail.createdAt ? new Date(materialDetail.createdAt).toLocaleDateString("vi-VN") : "—"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Material Detail Specifications Card (Vertically Compact Strip) */}
+        {materialDetail && (
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50/70 border border-slate-200/50 rounded-2xl text-xs bg-gradient-to-r from-blue-600/[0.015] to-indigo-600/[0.015]">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Boxes className="h-4.5 w-4.5 text-blue-600 shrink-0" />
+              <span className="font-bold text-slate-800">{materialDetail.name || "—"}</span>
+              <Badge variant="secondary" className="font-medium text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-100 rounded-md border-none px-2 py-0.5">
+                {materialDetail.materialTypeName || "—"}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-500 font-medium">
+              <span>Kích thước: <strong className="font-mono text-slate-800">{materialDetail.length || "—"}{materialDetail.width ? `x${materialDetail.width}` : ""}{materialDetail.height ? `x${materialDetail.height}` : ""}</strong></span>
+              <span>Người tạo: <strong className="text-slate-700">{materialDetail.createdBy || "—"}</strong></span>
+              <span>Ngày tạo: <strong className="text-slate-700">{materialDetail.createdAt ? new Date(materialDetail.createdAt).toLocaleDateString("vi-VN") : "—"}</strong></span>
+            </div>
+          </div>
         )}
 
         {/* Error Alert */}
         {isError && (
-          <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-955 rounded-2xl">
+          <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-955 rounded-2xl py-2">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle className="font-bold">Lỗi tải dữ liệu</AlertTitle>
-            <AlertDescription className="text-xs mt-1">
+            <AlertDescription className="text-xs mt-0.5">
               {error instanceof Error
                 ? error.message
                 : "Không thể lấy thông tin lịch sử từ máy chủ. Vui lòng kiểm tra lại kết nối mạng."}
@@ -274,41 +501,227 @@ export default function MaterialHistoryPage() {
           </Alert>
         )}
 
-        {/* Summary Stats Overview */}
+        {/* Summary Stats Overview (Vertically Compact & Premium 5-Column Ledger Indicators) */}
         {historyData && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-200/50 shadow-sm flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-                <History className="h-5 w-5" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {/* 1. Số dư đầu kỳ */}
+            <div className="bg-slate-50/60 p-2.5 rounded-2xl border border-slate-200/50 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-slate-50">
+              <div className="p-1.5 rounded-xl bg-slate-100 text-slate-600">
+                <History className="h-4.5 w-4.5 shrink-0" />
               </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Số lượt giao dịch</p>
-                <p className="text-lg font-bold text-slate-800 mt-0.5">{historyData.total || "0"}</p>
-              </div>
-            </div>
-
-            <div className="bg-emerald-500/[0.03] p-4 rounded-2xl border border-emerald-500/10 shadow-sm flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
-                <ArrowUpRight className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80">Tổng nhập trong kỳ</p>
-                <p className="text-lg font-bold text-emerald-700 mt-0.5">
-                  {summaryStats.totalIn.toLocaleString()} <span className="text-xs text-emerald-600/80 font-normal">{(materialDetail?.unit || "").toLowerCase()}</span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">Số dư đầu kỳ</p>
+                <p className="text-sm font-bold text-slate-700 mt-0.5 truncate tabular-nums">
+                  {summaryStats.openingBalance.toLocaleString()}{" "}
+                  <span className="text-[10px] text-slate-400 font-normal">{(materialDetail?.unit || "").toLowerCase()}</span>
                 </p>
               </div>
             </div>
 
-            <div className="bg-rose-500/[0.03] p-4 rounded-2xl border border-rose-500/10 shadow-sm flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600">
-                <ArrowDownRight className="h-5 w-5" />
+            {/* 2. Tổng nhập */}
+            <div className="bg-emerald-50/[0.3] p-2.5 rounded-2xl border border-emerald-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-emerald-50/50">
+              <div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-600">
+                <ArrowUpRight className="h-4.5 w-4.5 shrink-0" />
               </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600/80">Tổng xuất trong kỳ</p>
-                <p className="text-lg font-bold text-rose-700 mt-0.5">
-                  {summaryStats.totalOut.toLocaleString()} <span className="text-xs text-rose-600/80 font-normal">{(materialDetail?.unit || "").toLowerCase()}</span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80 truncate">Tổng nhập</p>
+                <p className="text-sm font-bold text-emerald-700 mt-0.5 truncate tabular-nums">
+                  {summaryStats.totalIn.toLocaleString()}{" "}
+                  <span className="text-[10px] text-emerald-600/70 font-normal">{(materialDetail?.unit || "").toLowerCase()}</span>
                 </p>
               </div>
+            </div>
+
+            {/* 3. Tổng xuất */}
+            <div className="bg-rose-50/[0.3] p-2.5 rounded-2xl border border-rose-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-rose-50/50">
+              <div className="p-1.5 rounded-xl bg-rose-50 text-rose-600">
+                <ArrowDownRight className="h-4.5 w-4.5 shrink-0" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600/80 truncate">Tổng xuất</p>
+                <p className="text-sm font-bold text-rose-700 mt-0.5 truncate tabular-nums">
+                  {summaryStats.totalOut.toLocaleString()}{" "}
+                  <span className="text-[10px] text-rose-600/70 font-normal">{(materialDetail?.unit || "").toLowerCase()}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* 4. Tổng hao hụt */}
+            <div className="bg-amber-50/[0.3] p-2.5 rounded-2xl border border-amber-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-amber-50/50">
+              <div className="p-1.5 rounded-xl bg-amber-50 text-amber-600">
+                <AlertCircle className="h-4.5 w-4.5 shrink-0" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600/80 truncate">Hao hụt</p>
+                <p className="text-sm font-bold text-amber-700 mt-0.5 truncate tabular-nums">
+                  {summaryStats.totalWaste.toLocaleString()}{" "}
+                  <span className="text-[10px] text-amber-600/70 font-normal">{(materialDetail?.unit || "").toLowerCase()}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* 5. Tồn */}
+            <div className="bg-blue-50/[0.3] p-2.5 rounded-2xl border border-blue-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-blue-50/50">
+              <div className="p-1.5 rounded-xl bg-blue-50 text-blue-600">
+                <Boxes className="h-4.5 w-4.5 shrink-0" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600/80 truncate">Tồn</p>
+                <p className="text-sm font-bold text-blue-700 mt-0.5 truncate tabular-nums">
+                  {summaryStats.closingBalance.toLocaleString()}{" "}
+                  <span className="text-[10px] text-blue-600/70 font-normal">{(materialDetail?.unit || "").toLowerCase()}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pending Transactions Section */}
+        {combinedPendingItems.length > 0 && (
+          <div className="space-y-2 bg-[#93631F]/5 border border-[#93631F]/20 p-4 rounded-xl">
+            <div className="flex items-center gap-2 pb-2 border-b border-[#93631F]/20">
+              <AlertTriangle className="h-4.5 w-4.5 text-[#93631F] shrink-0" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#93631F]">
+                Giao dịch chờ xử lý ({combinedPendingItems.length})
+              </h3>
+            </div>
+            <div className="space-y-2.5">
+              {combinedPendingItems.map((item) => (
+                <div
+                  key={`${item.type}-${item.id}`}
+                  className="bg-white p-3 rounded-lg border border-slate-200/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-start sm:items-center gap-3">
+                    {/* Badge */}
+                    {item.type === "cut" ? (
+                      <Badge className="bg-[#93631F]/10 text-[#93631F] hover:bg-[#93631F]/10 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
+                        Phiếu cắt
+                      </Badge>
+                    ) : item.type === "stock_in" ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
+                        Phiếu nhập
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
+                        Phiếu xuất
+                      </Badge>
+                    )}
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-slate-800 text-[11px]">{item.code}</span>
+                        <span className="text-[10px] text-slate-400 font-normal">
+                          {formatDateTime(item.createdAt)}
+                        </span>
+                      </div>
+                      <div className="text-slate-600 mt-1 flex flex-wrap gap-x-4 gap-y-0.5 leading-normal">
+                        <span>Số lượng: <strong className="text-slate-800 font-bold tabular-nums">{item.quantity.toLocaleString()}</strong> {(materialDetail?.unit || "").toLowerCase()}</span>
+                        {item.type === "cut" && (
+                          <>
+                            <span>Hao hụt: <strong className="text-slate-800 font-bold tabular-nums">{item.wasted.toLocaleString()}</strong> {(materialDetail?.unit || "").toLowerCase()}</span>
+                            <span>Kích thước ra: <strong className="text-slate-800 font-bold font-mono">
+                              {item.outputs?.[0]?.outputMaterialName || (item.outputs?.[0] ? `${item.outputs[0].cutLength}x${item.outputs[0].cutWidth}` : "—")}
+                            </strong></span>
+                          </>
+                        )}
+                        <span>Mã bài: <strong className="text-slate-700">{item.jobCode}</strong></span>
+                      </div>
+                      <div className="text-slate-500 italic mt-0.5 truncate max-w-[500px]" title={item.notes}>
+                        Ghi chú: {item.notes}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions buttons for pending voucher */}
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                    {/* Pencil Edit button */}
+                    {(item.type === "stock_in" || item.type === "stock_out") && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-md border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
+                        onClick={() => {
+                          setIsEditMode(true);
+                          setEditId(item.id);
+                          if (item.type === "stock_in") {
+                            setStockInForm({
+                              quantity: item.quantity,
+                              documentCode: item.raw.code || "",
+                              notes: item.notes || ""
+                            });
+                            setIsStockInOpen(true);
+                          } else {
+                            setStockOutForm({
+                              quantity: item.quantity,
+                              documentCode: item.raw.code || "",
+                              notes: item.notes || "",
+                              purpose: item.raw.purpose || "manual"
+                            });
+                            setIsStockOutOpen(true);
+                          }
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+
+                    {/* Complete Button */}
+                    <Button
+                      className="h-8 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-sm flex items-center gap-1 cursor-pointer border-none"
+                      onClick={async () => {
+                        try {
+                          const actionPromise = 
+                            item.type === "cut" ? completeMaterialCut(item.id) :
+                            item.type === "stock_in" ? completeStockIn(item.id) :
+                            completeStockOut(item.id);
+                          
+                          toast.promise(actionPromise, {
+                            loading: "Đang hoàn thành giao dịch...",
+                            success: "Hoàn thành giao dịch thành công!",
+                            error: (err) => err?.response?.data?.message || err?.message || "Hoàn thành giao dịch thất bại!"
+                          });
+                          
+                          await actionPromise;
+                          refetchAll();
+                        } catch (error) {
+                          console.error(error);
+                        }
+                      }}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Hoàn thành
+                    </Button>
+
+                    {/* Cancel Button */}
+                    <Button
+                      variant="outline"
+                      className="h-8 px-3 rounded-md border-rose-200 bg-rose-50/50 hover:bg-rose-50 text-rose-600 font-medium text-xs flex items-center gap-1 cursor-pointer"
+                      onClick={async () => {
+                        try {
+                          const actionPromise = 
+                            item.type === "cut" ? cancelMaterialCut(item.id) :
+                            item.type === "stock_in" ? cancelStockIn(item.id) :
+                            cancelStockOut(item.id);
+                          
+                          toast.promise(actionPromise, {
+                            loading: "Đang hủy giao dịch...",
+                            success: "Hủy giao dịch thành công!",
+                            error: (err) => err?.response?.data?.message || err?.message || "Hủy giao dịch thất bại!"
+                          });
+                          
+                          await actionPromise;
+                          refetchAll();
+                        } catch (error) {
+                          console.error(error);
+                        }
+                      }}
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      Hủy
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -348,23 +761,27 @@ export default function MaterialHistoryPage() {
 
         {/* Transaction History Ledger Table */}
         <Card className="border-slate-200/60 shadow-sm rounded-2xl overflow-hidden">
-          <Table>
+          <div className="overflow-x-auto w-full">
+            <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/60 text-xs">
-                <TableHead className="font-bold py-3 pl-4">Ngày giờ</TableHead>
-                <TableHead className="font-bold py-3">Số chứng từ</TableHead>
-                <TableHead className="font-bold py-3">Diễn giải giao dịch</TableHead>
-                <TableHead className="text-right font-bold py-3">Số lượng Nhập</TableHead>
-                <TableHead className="text-right font-bold py-3">Số lượng Xuất</TableHead>
-                <TableHead className="text-right font-bold py-3">Tồn cuối</TableHead>
-                <TableHead className="font-bold py-3 pr-4">Loại giao dịch</TableHead>
+              <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/60 text-xs font-bold uppercase tracking-wider">
+                <TableHead className="font-bold py-2 pl-4 text-left">Thời gian</TableHead>
+                <TableHead className="font-bold py-2 text-left">Mã bài</TableHead>
+                <TableHead className="font-bold py-2 text-left">Kích thước</TableHead>
+                <TableHead className="text-right font-bold py-2">Số lượng tờ ra</TableHead>
+                <TableHead className="text-right font-bold py-2">Số dư đầu</TableHead>
+                <TableHead className="text-right font-bold py-2">Nhập(m)</TableHead>
+                <TableHead className="text-right font-bold py-2">Xuất(m)</TableHead>
+                <TableHead className="text-right font-bold py-2">Hao hụt(m)</TableHead>
+                <TableHead className="text-right font-bold py-2">Tồn</TableHead>
+                <TableHead className="font-bold py-2 pr-4 text-left">Ghi chú</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="border-b border-slate-100">
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 10 }).map((_, j) => (
                       <TableCell key={j} className="py-4">
                         <Skeleton className="h-5 w-full rounded-md" />
                       </TableCell>
@@ -374,7 +791,7 @@ export default function MaterialHistoryPage() {
               ) : filteredItems.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={10}
                     className="h-32 text-center text-slate-400 text-xs font-semibold py-8"
                   >
                     <div className="flex flex-col items-center justify-center space-y-2">
@@ -384,67 +801,131 @@ export default function MaterialHistoryPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredItems.map((entry, index) => (
-                  <TableRow
-                    key={entry.id || index}
-                    className="cursor-pointer hover:bg-emerald-100/50 border-b border-slate-100 text-xs transition-colors duration-150"
-                    onClick={() =>
-                      handleVoucherClick(entry.referenceType, entry.referenceId)
-                    }
-                  >
-                    <TableCell className="py-3.5 pl-4 font-medium text-slate-600">
-                      {entry.createdAt ? formatDateTime(entry.createdAt) : "—"}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs font-bold text-blue-600">
-                      {entry.referenceCode || `Giao dịch #${entry.id}`}
-                    </TableCell>
-                    <TableCell className="max-w-[280px]">
-                      <div className="space-y-1">
-                        <div className="font-semibold text-slate-800 leading-normal">{entry.note || "—"}</div>
-                        {entry.createdByName && (
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
-                            <User className="h-2.5 w-2.5 text-slate-400 shrink-0" />
-                            <span>Người làm phiếu: {entry.createdByName}</span>
+                filteredItems.map((entry, index) => {
+                  const txnTypeLower = entry.transactionType?.toLowerCase() || "";
+                  const refTypeLower = entry.referenceType?.toLowerCase() || "";
+                  const anyEntry = entry as any;
+
+                  return (
+                    <TableRow
+                      key={entry.id || index}
+                      className="cursor-pointer hover:bg-emerald-100/50 border-b border-slate-100 text-xs transition-colors duration-150"
+                      onClick={() =>
+                        handleVoucherClick(entry.referenceType, entry.referenceId)
+                      }
+                    >
+                      {/* 1. Thời gian */}
+                      <TableCell className="py-2 pl-4 font-medium text-slate-600">
+                        {entry.createdAt ? formatDateTime(entry.createdAt) : "—"}
+                      </TableCell>
+
+                      {/* 2. Mã bài */}
+                      <TableCell className="py-2 text-slate-700 font-medium">
+                        {anyEntry.jobCode || "—"}
+                      </TableCell>
+
+                      {/* 3. Kích thước */}
+                      <TableCell className="py-2 font-mono text-slate-600">
+                        {anyEntry.dimensions || (anyEntry.cutLength && anyEntry.cutWidth ? `${anyEntry.cutLength}x${anyEntry.cutWidth}` : "—")}
+                      </TableCell>
+
+                      {/* 4. Số lượng tờ ra */}
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800">
+                        {anyEntry.quantityProduced !== undefined && anyEntry.quantityProduced !== null
+                          ? anyEntry.quantityProduced.toLocaleString()
+                          : "—"}
+                      </TableCell>
+
+                      {/* 5. Số dư đầu */}
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-slate-500">
+                        {entry.previousQuantity !== undefined ? entry.previousQuantity.toLocaleString() : "—"}
+                      </TableCell>
+
+                      {/* 6. Nhập(m) */}
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-emerald-600">
+                        {isImport(entry.transactionType) && entry.quantity !== undefined
+                          ? entry.quantity.toLocaleString()
+                          : "—"}
+                      </TableCell>
+
+                      {/* 7. Xuất(m) */}
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-rose-600">
+                        {isExport(entry.transactionType) && entry.quantity !== undefined
+                          ? entry.quantity.toLocaleString()
+                          : "—"}
+                      </TableCell>
+
+                      {/* 8. Hao hụt(m) */}
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-amber-600">
+                        {isWaste(entry.transactionType) && entry.quantity !== undefined
+                          ? entry.quantity.toLocaleString()
+                          : "—"}
+                      </TableCell>
+
+                      {/* 9. Tồn */}
+                      <TableCell className="text-right py-2 font-extrabold tabular-nums text-slate-800">
+                        {entry.newQuantity !== undefined ? entry.newQuantity.toLocaleString() : "—"}
+                      </TableCell>
+
+                      {/* 10. Ghi chú */}
+                      <TableCell className="max-w-[280px] py-2 pr-4">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono text-[10px] font-bold text-blue-600 bg-blue-50/50 px-1 py-0.5 rounded border border-blue-100/50">
+                              {entry.referenceCode || `GD #${entry.id}`}
+                            </span>
+                            {refTypeLower === "stockin" || txnTypeLower === "stockin" || txnTypeLower === "stock_in" ? (
+                              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
+                                Phiếu nhập
+                              </Badge>
+                            ) : refTypeLower === "stockout" || txnTypeLower === "stockout" || txnTypeLower === "stock_out" ? (
+                              <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
+                                Phiếu xuất
+                              </Badge>
+                            ) : txnTypeLower === "cut_out" ? (
+                              <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
+                                Xuất cắt
+                              </Badge>
+                            ) : txnTypeLower === "cut_in" ? (
+                              <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
+                                Nhập cắt
+                              </Badge>
+                            ) : txnTypeLower === "waste" ? (
+                              <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
+                                Hao hụt
+                              </Badge>
+                            ) : txnTypeLower === "return_vendor" ? (
+                              <Badge className="bg-red-100 text-red-700 hover:bg-red-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
+                                Trả NCC
+                              </Badge>
+                            ) : txnTypeLower === "transfer" ? (
+                              <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
+                                Xuất xưởng
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
+                                {entry.referenceType || entry.transactionType || "Điều chỉnh"}
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right py-3.5 font-bold tabular-nums text-emerald-600">
-                      {entry.transactionType === "StockIn" && entry.quantity !== undefined
-                        ? entry.quantity.toLocaleString()
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right py-3.5 font-bold tabular-nums text-rose-600">
-                      {entry.transactionType === "StockOut" && entry.quantity !== undefined
-                        ? entry.quantity.toLocaleString()
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right py-3.5 font-extrabold tabular-nums text-slate-800">
-                      {entry.newQuantity !== undefined
-                        ? entry.newQuantity.toLocaleString()
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="py-3.5 pr-4">
-                      {entry.referenceType === "StockIn" ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 rounded-md border-none px-2 py-0.5 font-semibold text-[10px]">
-                          Phiếu nhập
-                        </Badge>
-                      ) : entry.referenceType === "StockOut" ? (
-                        <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 rounded-md border-none px-2 py-0.5 font-semibold text-[10px]">
-                          Phiếu xuất
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 rounded-md border-none px-2 py-0.5 font-semibold text-[10px]">
-                          {entry.referenceType || "Điều chỉnh"}
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                          <div className="font-semibold text-slate-850 leading-normal text-xs truncate" title={entry.note || ""}>
+                            {entry.note || "—"}
+                            {entry.createdByName && (
+                              <span className="text-[10px] text-slate-400 ml-2 font-normal">
+                                ({entry.createdByName})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
-        </Card>
+        </div>
+      </Card>
 
         {/* Pagination */}
         {historyData && historyData.totalPages > 1 && (
@@ -484,6 +965,42 @@ export default function MaterialHistoryPage() {
           </div>
         )}
       </div>
+
+      {/* 1. Dialog Cắt nguyên liệu */}
+      <MaterialCutDialog
+        open={isCutOpen}
+        onOpenChange={setIsCutOpen}
+        materialId={materialId}
+        materialDetail={materialDetail}
+        vendorRolls={vendorRolls}
+        refetchAll={refetchAll}
+      />
+
+      {/* 2. Dialog Nhập kho */}
+      <StockInDialog
+        open={isStockInOpen}
+        onOpenChange={setIsStockInOpen}
+        materialId={materialId}
+        materialDetail={materialDetail}
+        isEditMode={isEditMode}
+        editId={editId}
+        stockInForm={stockInForm}
+        setStockInForm={setStockInForm}
+        refetchAll={refetchAll}
+      />
+
+      {/* 3. Dialog Xuất kho */}
+      <StockOutDialog
+        open={isStockOutOpen}
+        onOpenChange={setIsStockOutOpen}
+        materialId={materialId}
+        materialDetail={materialDetail}
+        isEditMode={isEditMode}
+        editId={editId}
+        stockOutForm={stockOutForm}
+        setStockOutForm={setStockOutForm}
+        refetchAll={refetchAll}
+      />
     </>
   );
 }

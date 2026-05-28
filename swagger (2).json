@@ -9685,6 +9685,140 @@
         }
       }
     },
+    "/api/inventory-reports/material-history/{materialId}/excel": {
+      "get": {
+        "tags": [
+          "InventoryReport"
+        ],
+        "parameters": [
+          {
+            "name": "materialId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/inventory-reports/vendor-reconciliation/{vendorId}": {
+      "get": {
+        "tags": [
+          "InventoryReport"
+        ],
+        "parameters": [
+          {
+            "name": "vendorId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendorReconciliationResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendorReconciliationResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendorReconciliationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventory-reports/vendor-reconciliation/{vendorId}/excel": {
+      "get": {
+        "tags": [
+          "InventoryReport"
+        ],
+        "parameters": [
+          {
+            "name": "vendorId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/invoices/order/{orderId}": {
       "post": {
         "tags": [
@@ -18363,6 +18497,37 @@
         }
       }
     },
+    "/api/stock-ins/from-cut": {
+      "post": {
+        "tags": [
+          "StockIn"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockInFromCutRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockInFromCutRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockInFromCutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/stock-ins/from-delivery-return": {
       "post": {
         "tags": [
@@ -18858,6 +19023,37 @@
         }
       }
     },
+    "/api/stock-outs/for-special-reason": {
+      "post": {
+        "tags": [
+          "StockOut"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockOutForSpecialReasonRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockOutForSpecialReasonRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStockOutForSpecialReasonRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/stock-outs/process-return": {
       "post": {
         "tags": [
@@ -19114,6 +19310,49 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/stock-outs/{id}/pdf": {
+      "get": {
+        "tags": [
+          "StockOut"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -23533,6 +23772,10 @@
             "type": "integer",
             "format": "int32"
           },
+          "jobCode": {
+            "type": "string",
+            "nullable": true
+          },
           "cutAt": {
             "type": "string",
             "format": "date-time",
@@ -23883,6 +24126,23 @@
         },
         "additionalProperties": false
       },
+      "CreateStockInFromCutRequest": {
+        "required": [
+          "materialCutId"
+        ],
+        "type": "object",
+        "properties": {
+          "materialCutId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateStockInFromDeliveryReturnRequest": {
         "required": [
           "deliveryNoteId",
@@ -24139,6 +24399,40 @@
             "items": {
               "$ref": "#/components/schemas/StockOutItemRequest"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateStockOutForSpecialReasonRequest": {
+        "required": [
+          "materialId",
+          "quantity",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "pattern": "^(return_vendor|transfer)$",
+            "type": "string"
+          },
+          "materialId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantity": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "documentCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -27061,14 +27355,22 @@
         "additionalProperties": false
       },
       "MaterialCutOutputLineRequest": {
-        "required": [
-          "outputMaterialId"
-        ],
         "type": "object",
         "properties": {
           "outputMaterialId": {
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
+          },
+          "cutLength": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "cutWidth": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
           },
           "quantityProduced": {
             "maximum": 2147483647,
@@ -32923,6 +33225,77 @@
             },
             "nullable": true,
             "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "VendorReconciliationItemResponse": {
+        "type": "object",
+        "properties": {
+          "materialId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "materialName": {
+            "type": "string",
+            "nullable": true
+          },
+          "materialType": {
+            "type": "string",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "openingBalance": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalImport": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalExport": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalWaste": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "closingBalance": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "VendorReconciliationResponse": {
+        "type": "object",
+        "properties": {
+          "vendorId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "vendorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "fromDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "toDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VendorReconciliationItemResponse"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false

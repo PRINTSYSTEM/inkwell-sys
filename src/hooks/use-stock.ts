@@ -146,6 +146,25 @@ export const useCreateStockInFromDeliveryReturn = () => {
   });
 };
 
+export const useCreateStockInFromCut = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { materialCutId: number; notes?: string }) => {
+      await apiRequest.post(API_SUFFIX.STOCK_IN_FROM_CUT, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      toast.success("Tạo phiếu nhập kho từ phiếu cắt thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu nhập kho từ phiếu cắt thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
 export const useStockInsByDeliveryNote = (
   deliveryNoteId: number | null,
   enabled = true
@@ -562,11 +581,23 @@ export const useCompleteMaterialCut = () => {
 
   return useMutation({
     mutationFn: async (id: number) => {
+      // 1. Complete the material cut
       await apiRequest.post(API_SUFFIX.MATERIAL_CUT_COMPLETE(id));
+      
+      // 2. Generate stock-in record from cut for audit/tracking
+      try {
+        await apiRequest.post(API_SUFFIX.STOCK_IN_FROM_CUT, {
+          materialCutId: id,
+          notes: `Nhập kho tự động từ phiếu cắt #${id}`,
+        });
+      } catch (err) {
+        console.error("Graceful error: Failed to log stock-in from completed cut:", err);
+      }
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: materialCutKeys.all });
       queryClient.invalidateQueries({ queryKey: materialCutKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
       toast.success("Hoàn thành phiếu cắt nguyên liệu thành công");
     },
     onError: (error: ApiError) => {

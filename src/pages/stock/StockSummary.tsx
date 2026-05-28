@@ -33,11 +33,16 @@ import {
   Info,
   Layers,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Scissors,
+  Boxes
 } from "lucide-react";
 import { useMaterials } from "@/hooks/use-material";
 import { useActiveVendors } from "@/hooks/use-vendor";
 import { formatCurrency } from "@/lib/status-utils";
+import { toast } from "sonner";
+import { CreateMaterialDirectDialog } from "./components/CreateMaterialDirectDialog";
 
 export default function StockSummary() {
   const navigate = useNavigate();
@@ -54,8 +59,8 @@ export default function StockSummary() {
   const [rollPage, setRollPage] = useState(1);
   const [sheetPage, setSheetPage] = useState(1);
 
-  // Fetch Vendors
-  const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors();
+  // Fetch Vendors (Material suppliers only)
+  const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors("material");
 
   // Fetch ALL materials for the selected query (up to 1000 items)
   const { 
@@ -81,6 +86,9 @@ export default function StockSummary() {
     setRollPage(1);
     setSheetPage(1);
   }, [selectedVendorId, materialSearchQuery, typeFilter, pageSize]);
+
+  // Create Material Dialog States
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // Classify materials: Roll (Cuộn) vs Sheet (Tờ / Khác)
   const allRollMaterials = useMemo(() => {
@@ -144,17 +152,31 @@ export default function StockSummary() {
                 Tồn kho tổng hợp
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Danh sách tổng hợp tồn kho vật tư cuộn và tờ từ API /api/materials
+                Danh sách tổng hợp tồn kho vật tư cuộn và tờ
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                onClick={() => {
+                  if (selectedVendorId === "all") {
+                    toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi nhập vật tư mới!");
+                    return;
+                  }
+                  setIsCreateOpen(true);
+                }}
+                size="sm"
+                className="cursor-pointer border border-[#93631F] bg-transparent hover:bg-[#93631F]/5 text-[#93631F] hover:text-[#7a521a] font-semibold text-xs h-9 rounded-lg transition-all duration-200"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Nhập vật tư mới
+              </Button>
               <Button 
                 onClick={() => refetch()}
                 disabled={isLoadingMaterials}
                 variant="outline"
                 size="sm"
-                className="cursor-pointer border-slate-200 text-xs h-9"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg"
               >
                 <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoadingMaterials ? "animate-spin" : ""}`} />
                 Làm mới
@@ -162,7 +184,7 @@ export default function StockSummary() {
               <Button 
                 onClick={() => navigate("/stock/stock-ins")}
                 size="sm"
-                className="cursor-pointer transition-all duration-200 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-sm text-xs h-9 border-none"
+                className="cursor-pointer transition-all duration-200 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-sm text-xs h-9 border-none rounded-lg"
               >
                 Quản lý nhập kho
               </Button>
@@ -219,7 +241,7 @@ export default function StockSummary() {
 
                 {/* Vendor Dropdown Selector */}
                 <div className="space-y-1.5 w-full">
-                  <label className="text-xs font-bold text-slate-600 block">Nhà cung cấp (vendorId)</label>
+                  <label className="text-xs font-bold text-slate-600 block">Nhà cung cấp</label>
                   <Select
                     value={selectedVendorId}
                     onValueChange={(val) => {
@@ -248,7 +270,7 @@ export default function StockSummary() {
 
                 {/* Type Filter */}
                 <div className="space-y-1.5 w-full">
-                  <label className="text-xs font-bold text-slate-600 block">Loại vật tư (type)</label>
+                  <label className="text-xs font-bold text-slate-600 block">Loại vật tư </label>
                   <Select
                     value={typeFilter}
                     onValueChange={(val) => {
@@ -498,6 +520,15 @@ export default function StockSummary() {
 
         </div>
       </div>
+
+      {/* Dialog Nhập vật tư mới */}
+      <CreateMaterialDirectDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        selectedVendorId={selectedVendorId}
+        vendorsData={vendorsData}
+        refetch={refetch}
+      />
     </>
   );
 }

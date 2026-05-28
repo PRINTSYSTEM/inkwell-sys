@@ -196,8 +196,8 @@ export default function MaterialCutCreatePage() {
 
     createMaterialCut({
       inputMaterialId: formData.inputMaterialId,
-      quantityUsed: formData.quantityUsed,
-      quantityWasted: formData.quantityWasted,
+      quantityUsed: Math.round(formData.quantityUsed),
+      quantityWasted: Math.round(formData.quantityWasted),
       cutAt: formData.cutAt ? new Date(formData.cutAt).toISOString() : undefined,
       notes: formData.notes.trim() || undefined,
       outputs: validOutputs.map(o => ({
