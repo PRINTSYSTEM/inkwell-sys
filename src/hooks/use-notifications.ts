@@ -77,15 +77,14 @@ export const useMarkNotificationAsRead = () => {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      // TODO: Replace with actual API endpoint
-      // const res = await apiRequest.patch<Notification>(
-      //   `${NOTIFICATIONS_ENDPOINT}/${id}/read`
-      // );
-      // return res.data;
-      return { id } as Notification;
+      const res = await apiRequest.put<Notification>(
+        `${NOTIFICATIONS_ENDPOINT}/${id}/read`
+      );
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["debt-notifications"] });
     },
   });
 };
@@ -96,13 +95,12 @@ export const useMarkAllNotificationsAsRead = () => {
 
   return useMutation({
     mutationFn: async () => {
-      // TODO: Replace with actual API endpoint
-      // const res = await apiRequest.post(`${NOTIFICATIONS_ENDPOINT}/mark-all-read`);
-      // return res.data;
-      return { success: true };
+      const res = await apiRequest.put(`${NOTIFICATIONS_ENDPOINT}/read-all`);
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["debt-notifications"] });
     },
   });
 };

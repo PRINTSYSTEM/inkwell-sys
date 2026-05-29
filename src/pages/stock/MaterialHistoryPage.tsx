@@ -103,10 +103,7 @@ export default function MaterialHistoryPage() {
   const isNumericId = materialId !== null && !isNaN(materialId);
 
   // States
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfMonth(new Date()),
-    to: new Date(),
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [transactionType, setTransactionType] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -325,8 +322,8 @@ export default function MaterialHistoryPage() {
         type: "stock_out",
         code: stockOut.code || `PXK-${stockOut.id}`,
         createdAt: stockOut.createdAt || stockOut.stockOutDate,
-        jobCode: "—",
-        notes: stockOut.notes || "—",
+        jobCode: item?.jobCode || "",
+        notes: stockOut.notes || "",
         quantity: item?.quantity || 0,
         raw: stockOut,
       });
@@ -382,7 +379,7 @@ export default function MaterialHistoryPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight text-slate-800">
-                  Lịch sử vật tư: {materialDetail?.name || "—"}
+                  {materialDetail?.vendorName ? `${materialDetail.vendorName} : ` : ""}{materialDetail?.name || "—"}
                 </h1>
                 <Badge variant="outline" className="font-mono text-xs rounded-lg border-slate-200 bg-slate-50/50">
                   ID: #{materialId}
@@ -469,24 +466,6 @@ export default function MaterialHistoryPage() {
               <Minus className="h-4 w-4" />
               Xuất kho
             </Button>
-          </div>
-        )}
-
-        {/* Material Detail Specifications Card (Vertically Compact Strip) */}
-        {materialDetail && (
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50/70 border border-slate-200/50 rounded-2xl text-xs bg-gradient-to-r from-blue-600/[0.015] to-indigo-600/[0.015]">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <Boxes className="h-4.5 w-4.5 text-blue-600 shrink-0" />
-              <span className="font-bold text-slate-800">{materialDetail.name || "—"}</span>
-              <Badge variant="secondary" className="font-medium text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-100 rounded-md border-none px-2 py-0.5">
-                {materialDetail.materialTypeName || "—"}
-              </Badge>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-500 font-medium">
-              <span>Kích thước: <strong className="font-mono text-slate-800">{materialDetail.length || "—"}{materialDetail.width ? `x${materialDetail.width}` : ""}{materialDetail.height ? `x${materialDetail.height}` : ""}</strong></span>
-              <span>Người tạo: <strong className="text-slate-700">{materialDetail.createdBy || "—"}</strong></span>
-              <span>Ngày tạo: <strong className="text-slate-700">{materialDetail.createdAt ? new Date(materialDetail.createdAt).toLocaleDateString("vi-VN") : "—"}</strong></span>
-            </div>
           </div>
         )}
 
@@ -580,152 +559,181 @@ export default function MaterialHistoryPage() {
 
         {/* Pending Transactions Section */}
         {combinedPendingItems.length > 0 && (
-          <div className="space-y-2 bg-[#93631F]/5 border border-[#93631F]/20 p-4 rounded-xl">
-            <div className="flex items-center gap-2 pb-2 border-b border-[#93631F]/20">
-              <AlertTriangle className="h-4.5 w-4.5 text-[#93631F] shrink-0" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#93631F]">
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-1.5 px-1">
+              <AlertTriangle className="h-4 w-4 text-[#93631F] shrink-0" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Giao dịch chờ xử lý ({combinedPendingItems.length})
               </h3>
             </div>
-            <div className="space-y-2.5">
-              {combinedPendingItems.map((item) => (
-                <div
-                  key={`${item.type}-${item.id}`}
-                  className="bg-white p-3 rounded-lg border border-slate-200/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                >
-                  <div className="flex items-start sm:items-center gap-3">
-                    {/* Badge */}
-                    {item.type === "cut" ? (
-                      <Badge className="bg-[#93631F]/10 text-[#93631F] hover:bg-[#93631F]/10 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
-                        Phiếu cắt
-                      </Badge>
-                    ) : item.type === "stock_in" ? (
-                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
-                        Phiếu nhập
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
-                        Phiếu xuất
-                      </Badge>
-                    )}
+            <Card className="border border-slate-200/60 shadow-sm rounded-xl overflow-hidden bg-white">
+              <div className="overflow-x-auto w-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/60 text-xs font-bold uppercase tracking-wider">
+                      <TableHead className="font-bold py-2 pl-4 text-left w-[130px]">Thời gian</TableHead>
+                      <TableHead className="font-bold py-2 text-left w-[140px]">Loại phiếu</TableHead>
+                      <TableHead className="font-bold py-2 text-left w-[100px]">Mã bài</TableHead>
+                      <TableHead className="font-bold py-2 text-left w-[100px]">kích thước</TableHead>
+                      <TableHead className="text-right font-bold py-2 w-[130px] whitespace-nowrap">Số lượng tờ ra</TableHead>
+                      <TableHead className="text-right font-bold py-2 w-[110px]">Số lượng</TableHead>
+                      <TableHead className="font-bold py-2 text-left w-[200px]">Ghi chú</TableHead>
+                      <TableHead className="font-bold py-2 pr-4 text-right w-[200px]">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {combinedPendingItems.map((item) => (
+                      <TableRow key={`${item.type}-${item.id}`} className="hover:bg-slate-50 border-b border-slate-100 text-xs transition-colors duration-150">
+                        {/* 1. Thời gian */}
+                        <TableCell className="py-2 pl-4 font-medium text-slate-600 w-[130px]">
+                          {item.createdAt ? formatDateTime(item.createdAt) : ""}
+                        </TableCell>
 
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-slate-800 text-[11px]">{item.code}</span>
-                        <span className="text-[10px] text-slate-400 font-normal">
-                          {formatDateTime(item.createdAt)}
-                        </span>
-                      </div>
-                      <div className="text-slate-600 mt-1 flex flex-wrap gap-x-4 gap-y-0.5 leading-normal">
-                        <span>Số lượng: <strong className="text-slate-800 font-bold tabular-nums">{item.quantity.toLocaleString()}</strong> {(materialDetail?.unit || "").toLowerCase()}</span>
-                        {item.type === "cut" && (
-                          <>
-                            <span>Hao hụt: <strong className="text-slate-800 font-bold tabular-nums">{item.wasted.toLocaleString()}</strong> {(materialDetail?.unit || "").toLowerCase()}</span>
-                            <span>Kích thước ra: <strong className="text-slate-800 font-bold font-mono">
-                              {item.outputs?.[0]?.outputMaterialName || (item.outputs?.[0] ? `${item.outputs[0].cutLength}x${item.outputs[0].cutWidth}` : "—")}
-                            </strong></span>
-                          </>
-                        )}
-                        <span>Mã bài: <strong className="text-slate-700">{item.jobCode}</strong></span>
-                      </div>
-                      <div className="text-slate-500 italic mt-0.5 truncate max-w-[500px]" title={item.notes}>
-                        Ghi chú: {item.notes}
-                      </div>
-                    </div>
-                  </div>
+                        {/* 2. Loại phiếu */}
+                        <TableCell className="py-2 w-[140px]">
+                          <div className="flex items-center gap-1.5">
+                            {item.type === "cut" ? (
+                              <Badge className="bg-[#93631F]/10 text-[#93631F] hover:bg-[#93631F]/10 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
+                                Phiếu cắt
+                              </Badge>
+                            ) : item.type === "stock_in" ? (
+                              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
+                                Phiếu nhập
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
+                                Phiếu xuất
+                              </Badge>
+                            )}
+                            <span className="font-mono font-bold text-slate-800 text-[10px]">{item.code}</span>
+                          </div>
+                        </TableCell>
 
-                  {/* Actions buttons for pending voucher */}
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-                    {/* Pencil Edit button */}
-                    {(item.type === "stock_in" || item.type === "stock_out") && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 rounded-md border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
-                        onClick={() => {
-                          setIsEditMode(true);
-                          setEditId(item.id);
-                          if (item.type === "stock_in") {
-                            setStockInForm({
-                              quantity: item.quantity,
-                              documentCode: item.raw.code || "",
-                              notes: item.notes || "",
-                              laborCost: item.raw.laborCost || 0,
-                            });
-                            setIsStockInOpen(true);
-                          } else {
-                            setStockOutForm({
-                              quantity: item.quantity,
-                              documentCode: item.raw.code || "",
-                              notes: item.notes || "",
-                              purpose: item.raw.purpose || "manual"
-                            });
-                            setIsStockOutOpen(true);
-                          }
-                        }}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                        {/* 3. Mã bài */}
+                        <TableCell className="py-2 text-slate-700 font-medium w-[100px]">
+                          {item.jobCode || ""}
+                        </TableCell>
 
-                    {/* Complete Button */}
-                    <Button
-                      className="h-8 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-sm flex items-center gap-1 cursor-pointer border-none"
-                      onClick={async () => {
-                        try {
-                          const actionPromise = 
-                            item.type === "cut" ? completeMaterialCut(item.id) :
-                            item.type === "stock_in" ? completeStockIn(item.id) :
-                            completeStockOut(item.id);
-                          
-                          toast.promise(actionPromise, {
-                            loading: "Đang hoàn thành giao dịch...",
-                            success: "Hoàn thành giao dịch thành công!",
-                            error: (err) => err?.response?.data?.message || err?.message || "Hoàn thành giao dịch thất bại!"
-                          });
-                          
-                          await actionPromise;
-                          refetchAll();
-                        } catch (error) {
-                          console.error(error);
-                        }
-                      }}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                      Hoàn thành
-                    </Button>
+                        {/* 4. Kích thước */}
+                        <TableCell className="py-2 font-mono text-slate-600 w-[100px]">
+                          {item.type === "cut" && item.outputs?.[0]
+                            ? `${item.outputs[0].cutLength}x${item.outputs[0].cutWidth}`
+                            : ""}
+                        </TableCell>
 
-                    {/* Cancel Button */}
-                    <Button
-                      variant="outline"
-                      className="h-8 px-3 rounded-md border-rose-200 bg-rose-50/50 hover:bg-rose-50 text-rose-600 font-medium text-xs flex items-center gap-1 cursor-pointer"
-                      onClick={async () => {
-                        try {
-                          const actionPromise = 
-                            item.type === "cut" ? cancelMaterialCut(item.id) :
-                            item.type === "stock_in" ? cancelStockIn(item.id) :
-                            cancelStockOut(item.id);
-                          
-                          toast.promise(actionPromise, {
-                            loading: "Đang hủy giao dịch...",
-                            success: "Hủy giao dịch thành công!",
-                            error: (err) => err?.response?.data?.message || err?.message || "Hủy giao dịch thất bại!"
-                          });
-                          
-                          await actionPromise;
-                          refetchAll();
-                        } catch (error) {
-                          console.error(error);
-                        }
-                      }}
-                    >
-                      <XCircle className="h-3.5 w-3.5" />
-                      Hủy
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                        {/* 5. Số lượng tờ ra */}
+                        <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800 w-[130px] whitespace-nowrap">
+                          {item.type === "cut" && item.outputs?.[0]?.quantityProduced !== undefined
+                            ? item.outputs[0].quantityProduced.toLocaleString()
+                            : ""}
+                        </TableCell>
+
+                        {/* 6. Số lượng */}
+                        <TableCell className="text-right py-2 font-bold tabular-nums w-[110px]">
+                          <span className={item.type === "stock_in" ? "text-emerald-600" : item.type === "stock_out" ? "text-rose-600" : "text-[#93631F]"}>
+                            {item.quantity.toLocaleString()}
+                          </span>{" "}
+                          <span className="text-[10px] text-slate-400 font-normal">{(materialDetail?.unit || "").toLowerCase()}</span>
+                        </TableCell>
+
+                        {/* 7. Ghi chú */}
+                        <TableCell className="py-2 text-slate-500 italic max-w-[200px] truncate w-[200px]" title={item.notes || ""}>
+                          {item.notes || ""}
+                        </TableCell>
+
+                        {/* 8. Thao tác */}
+                        <TableCell className="py-2 pr-4 text-right w-[200px]">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Pencil Edit button */}
+                            {(item.type === "stock_in" || item.type === "stock_out") && (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7 rounded-md border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
+                                onClick={() => {
+                                  setIsEditMode(true);
+                                  setEditId(item.id);
+                                  if (item.type === "stock_in") {
+                                    setStockInForm({
+                                      quantity: item.quantity,
+                                      documentCode: item.raw.code || "",
+                                      notes: item.notes || "",
+                                      laborCost: item.raw.laborCost || 0,
+                                    });
+                                    setIsStockInOpen(true);
+                                  } else {
+                                    setStockOutForm({
+                                      quantity: item.quantity,
+                                      documentCode: item.raw.code || "",
+                                      notes: item.notes || "",
+                                      purpose: item.raw.purpose || "manual"
+                                    });
+                                    setIsStockOutOpen(true);
+                                  }
+                                }}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            )}
+
+                            {/* Complete Button */}
+                            <Button
+                              className="h-7 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] shadow-sm flex items-center gap-1 cursor-pointer border-none"
+                              onClick={async () => {
+                                let toastId: string | number | undefined;
+                                try {
+                                  toastId = toast.loading("Đang hoàn thành giao dịch...");
+                                  const actionPromise = 
+                                    item.type === "cut" ? completeMaterialCut(item.id) :
+                                    item.type === "stock_in" ? completeStockIn(item.id) :
+                                    completeStockOut(item.id);
+                                  
+                                  await actionPromise;
+                                  refetchAll();
+                                } catch (error) {
+                                  console.error(error);
+                                } finally {
+                                  if (toastId) toast.dismiss(toastId);
+                                }
+                              }}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              Hoàn thành
+                            </Button>
+
+                            {/* Cancel Button */}
+                            <Button
+                              variant="outline"
+                              className="h-7 px-2.5 rounded-md border-rose-200 bg-rose-50/50 hover:bg-rose-50 text-rose-600 font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
+                              onClick={async () => {
+                                let toastId: string | number | undefined;
+                                try {
+                                  toastId = toast.loading("Đang hủy giao dịch...");
+                                  const actionPromise = 
+                                    item.type === "cut" ? cancelMaterialCut(item.id) :
+                                    item.type === "stock_in" ? cancelStockIn(item.id) :
+                                    cancelStockOut(item.id);
+                                  
+                                  await actionPromise;
+                                  refetchAll();
+                                } catch (error) {
+                                  console.error(error);
+                                } finally {
+                                  if (toastId) toast.dismiss(toastId);
+                                }
+                              }}
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              Hủy
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
           </div>
         )}
 
@@ -768,16 +776,16 @@ export default function MaterialHistoryPage() {
             <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/60 text-xs font-bold uppercase tracking-wider">
-                <TableHead className="font-bold py-2 pl-4 text-left">Thời gian</TableHead>
-                <TableHead className="font-bold py-2 text-left">Mã bài</TableHead>
-                <TableHead className="font-bold py-2 text-left">Kích thước</TableHead>
-                <TableHead className="text-right font-bold py-2">Số lượng tờ ra</TableHead>
-                <TableHead className="text-right font-bold py-2">Số dư đầu</TableHead>
-                <TableHead className="text-right font-bold py-2">Nhập(m)</TableHead>
-                <TableHead className="text-right font-bold py-2">Xuất(m)</TableHead>
-                <TableHead className="text-right font-bold py-2">Hao hụt(m)</TableHead>
-                <TableHead className="text-right font-bold py-2">Tồn</TableHead>
-                <TableHead className="font-bold py-2 pr-4 text-left">Ghi chú</TableHead>
+                <TableHead className="font-bold py-2 pl-4 text-left w-[130px]">Thời gian</TableHead>
+                <TableHead className="font-bold py-2 text-left w-[100px]">Mã bài</TableHead>
+                <TableHead className="font-bold py-2 text-left w-[100px]">kích thước</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[130px] whitespace-nowrap">Số lượng tờ ra</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[100px]">Số dư đầu</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[110px]">Nhập({materialDetail?.unit || "m"})</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[110px]">Xuất({materialDetail?.unit || "m"})</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[110px]">Hao hụt({materialDetail?.unit || "m"})</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[100px]">Tồn</TableHead>
+                <TableHead className="font-bold py-2 pr-4 text-left w-[300px]">Ghi chú</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -809,117 +817,79 @@ export default function MaterialHistoryPage() {
                   const refTypeLower = entry.referenceType?.toLowerCase() || "";
                   const anyEntry = entry as any;
 
+                  const isImp = isImport(entry.transactionType);
+                  const isExp = isExport(entry.transactionType);
+                  let rowBgClass = "hover:bg-slate-50/80";
+                  if (isImp) {
+                    rowBgClass = "bg-emerald-50/60 hover:bg-emerald-100/80";
+                  } else if (isExp) {
+                    rowBgClass = "bg-rose-50/60 hover:bg-rose-100/80";
+                  }
+
                   return (
                     <TableRow
                       key={entry.id || index}
-                      className="cursor-pointer hover:bg-emerald-100/50 border-b border-slate-100 text-xs transition-colors duration-150"
+                      className={`cursor-pointer border-b border-slate-100 text-xs transition-colors duration-150 ${rowBgClass}`}
                       onClick={() =>
                         handleVoucherClick(entry.referenceType, entry.referenceId)
                       }
                     >
                       {/* 1. Thời gian */}
-                      <TableCell className="py-2 pl-4 font-medium text-slate-600">
-                        {entry.createdAt ? formatDateTime(entry.createdAt) : "—"}
+                      <TableCell className="py-2 pl-4 font-medium text-slate-600 w-[130px]">
+                        {entry.createdAt ? formatDateTime(entry.createdAt) : ""}
                       </TableCell>
 
                       {/* 2. Mã bài */}
-                      <TableCell className="py-2 text-slate-700 font-medium">
-                        {anyEntry.jobCode || "—"}
+                      <TableCell className="py-2 text-slate-700 font-medium w-[100px]">
+                        {anyEntry.jobCode || ""}
                       </TableCell>
 
                       {/* 3. Kích thước */}
-                      <TableCell className="py-2 font-mono text-slate-600">
-                        {anyEntry.dimensions || (anyEntry.cutLength && anyEntry.cutWidth ? `${anyEntry.cutLength}x${anyEntry.cutWidth}` : "—")}
+                      <TableCell className="py-2 font-mono text-slate-600 w-[100px]">
+                        {anyEntry.dimensions || (anyEntry.cutLength && anyEntry.cutWidth ? `${anyEntry.cutLength}x${anyEntry.cutWidth}` : "")}
                       </TableCell>
 
                       {/* 4. Số lượng tờ ra */}
-                      <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800">
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800 w-[130px] whitespace-nowrap">
                         {anyEntry.quantityProduced !== undefined && anyEntry.quantityProduced !== null
                           ? anyEntry.quantityProduced.toLocaleString()
-                          : "—"}
+                          : ""}
                       </TableCell>
 
                       {/* 5. Số dư đầu */}
-                      <TableCell className="text-right py-2 font-bold tabular-nums text-slate-500">
-                        {entry.previousQuantity !== undefined ? entry.previousQuantity.toLocaleString() : "—"}
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-slate-500 w-[100px]">
+                        {entry.previousQuantity !== undefined ? entry.previousQuantity.toLocaleString() : ""}
                       </TableCell>
 
-                      {/* 6. Nhập(m) */}
-                      <TableCell className="text-right py-2 font-bold tabular-nums text-emerald-600">
+                      {/* 6. Nhập */}
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-emerald-600 w-[110px]">
                         {isImport(entry.transactionType) && entry.quantity !== undefined
                           ? entry.quantity.toLocaleString()
-                          : "—"}
+                          : ""}
                       </TableCell>
 
-                      {/* 7. Xuất(m) */}
-                      <TableCell className="text-right py-2 font-bold tabular-nums text-rose-600">
+                      {/* 7. Xuất */}
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-rose-600 w-[110px]">
                         {isExport(entry.transactionType) && entry.quantity !== undefined
                           ? entry.quantity.toLocaleString()
-                          : "—"}
+                          : ""}
                       </TableCell>
 
-                      {/* 8. Hao hụt(m) */}
-                      <TableCell className="text-right py-2 font-bold tabular-nums text-amber-600">
+                      {/* 8. Hao hụt */}
+                      <TableCell className="text-right py-2 font-bold tabular-nums text-amber-600 w-[110px]">
                         {isWaste(entry.transactionType) && entry.quantity !== undefined
                           ? entry.quantity.toLocaleString()
-                          : "—"}
+                          : ""}
                       </TableCell>
 
                       {/* 9. Tồn */}
-                      <TableCell className="text-right py-2 font-extrabold tabular-nums text-slate-800">
-                        {entry.newQuantity !== undefined ? entry.newQuantity.toLocaleString() : "—"}
+                      <TableCell className="text-right py-2 font-extrabold tabular-nums text-slate-800 w-[100px]">
+                        {entry.newQuantity !== undefined ? entry.newQuantity.toLocaleString() : ""}
                       </TableCell>
 
                       {/* 10. Ghi chú */}
-                      <TableCell className="max-w-[280px] py-2 pr-4">
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono text-[10px] font-bold text-blue-600 bg-blue-50/50 px-1 py-0.5 rounded border border-blue-100/50">
-                              {entry.referenceCode || `GD #${entry.id}`}
-                            </span>
-                            {refTypeLower === "stockin" || txnTypeLower === "stockin" || txnTypeLower === "stock_in" ? (
-                              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
-                                Phiếu nhập
-                              </Badge>
-                            ) : refTypeLower === "stockout" || txnTypeLower === "stockout" || txnTypeLower === "stock_out" ? (
-                              <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
-                                Phiếu xuất
-                              </Badge>
-                            ) : txnTypeLower === "cut_out" ? (
-                              <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
-                                Xuất cắt
-                              </Badge>
-                            ) : txnTypeLower === "cut_in" ? (
-                              <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
-                                Nhập cắt
-                              </Badge>
-                            ) : txnTypeLower === "waste" ? (
-                              <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
-                                Hao hụt
-                              </Badge>
-                            ) : txnTypeLower === "return_vendor" ? (
-                              <Badge className="bg-red-100 text-red-700 hover:bg-red-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
-                                Trả NCC
-                              </Badge>
-                            ) : txnTypeLower === "transfer" ? (
-                              <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
-                                Xuất xưởng
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 rounded-md border-none px-1.5 py-0 font-semibold text-[10px]">
-                                {entry.referenceType || entry.transactionType || "Điều chỉnh"}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="font-semibold text-slate-850 leading-normal text-xs truncate" title={entry.note || ""}>
-                            {entry.note || "—"}
-                            {entry.createdByName && (
-                              <span className="text-[10px] text-slate-400 ml-2 font-normal">
-                                ({entry.createdByName})
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                      <TableCell className="py-2 pr-4 text-slate-600 leading-normal w-[300px] truncate" title={entry.note || ""}>
+                        {entry.note || ""}
                       </TableCell>
                     </TableRow>
                   );
@@ -927,8 +897,8 @@ export default function MaterialHistoryPage() {
               )}
             </TableBody>
           </Table>
-        </div>
-      </Card>
+          </div>
+        </Card>
 
         {/* Pagination */}
         {historyData && historyData.totalPages > 1 && (

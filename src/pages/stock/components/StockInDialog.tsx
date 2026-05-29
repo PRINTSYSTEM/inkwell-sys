@@ -60,6 +60,7 @@ export function StockInDialog({
       return;
     }
 
+    let toastId: string | number | undefined;
     try {
       const calculatedTotalAmount = (stockInForm.quantity || 0) * (materialDetail?.unitPrice || 0);
       const isRollType = materialDetail?.type === "cuon" || 
@@ -70,7 +71,8 @@ export function StockInDialog({
       const lineKind = isRollType ? "roll" : "sheet";
       
       if (isEditMode && editId) {
-        const promise = updateStockIn({
+        toastId = toast.loading("Đang cập nhật phiếu nhập...");
+        await updateStockIn({
           id: editId,
           data: {
             notes: stockInForm.notes || undefined,
@@ -97,16 +99,9 @@ export function StockInDialog({
             ],
           },
         });
-
-        toast.promise(promise, {
-          loading: "Đang cập nhật phiếu nhập...",
-          success: "Cập nhật phiếu nhập thành công!",
-          error: (err) => err?.response?.data?.message || err?.message || "Cập nhật phiếu nhập thất bại!",
-        });
-
-        await promise;
       } else {
-        const promise = createStockIn({
+        toastId = toast.loading("Đang tạo phiếu nhập...");
+        await createStockIn({
           source: "manual",
           itemType: "material",
           vendorId: materialDetail?.vendorId || undefined,
@@ -138,18 +133,12 @@ export function StockInDialog({
             },
           ],
         });
-
-        toast.promise(promise, {
-          loading: "Đang tạo phiếu nhập...",
-          success: "Tạo phiếu nhập thành công!",
-          error: (err) => err?.response?.data?.message || err?.message || "Tạo phiếu nhập thất bại!",
-        });
-
-        await promise;
       }
+      if (toastId) toast.dismiss(toastId);
       onOpenChange(false);
       refetchAll();
     } catch (error) {
+      if (toastId) toast.dismiss(toastId);
       console.error(error);
     }
   };
@@ -195,19 +184,6 @@ export function StockInDialog({
               />
             </div>
 
-            {/* Tiền công */}
-            <div className="space-y-1.5">
-              <Label className="font-semibold text-slate-700">Tiền công (VND)</Label>
-              <Input
-                type="number"
-                placeholder="Nhập tiền công (tùy chọn)..."
-                value={stockInForm.laborCost || ""}
-                onChange={(e) =>
-                  setStockInForm((prev) => ({ ...prev, laborCost: parseFloat(e.target.value) || 0 }))
-                }
-                className="rounded-md border-slate-200 h-10 text-xs font-mono focus-visible:ring-[#93631F]"
-              />
-            </div>
 
             {/* Số chứng từ / Mã bài */}
             {!isEditMode && (

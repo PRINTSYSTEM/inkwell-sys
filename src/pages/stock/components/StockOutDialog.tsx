@@ -67,9 +67,11 @@ export function StockOutDialog({
       return;
     }
 
+    let toastId: string | number | undefined;
     try {
       if (isEditMode && editId) {
-        const promise = updateStockOut({
+        toastId = toast.loading("Đang cập nhật phiếu xuất...");
+        await updateStockOut({
           id: editId,
           data: {
             notes: stockOutForm.notes || "",
@@ -79,20 +81,14 @@ export function StockOutDialog({
                 quantity: stockOutForm.quantity,
                 materialId: materialId,
                 unit: materialDetail?.unit || "",
-              },
+                jobCode: stockOutForm.documentCode || undefined,
+              } as any,
             ],
           },
         });
-
-        toast.promise(promise, {
-          loading: "Đang cập nhật phiếu xuất...",
-          success: "Cập nhật phiếu xuất thành công!",
-          error: (err) => err?.response?.data?.message || err?.message || "Cập nhật phiếu xuất thất bại!",
-        });
-
-        await promise;
       } else {
-        const promise = createStockOut({
+        toastId = toast.loading("Đang tạo phiếu xuất...");
+        await createStockOut({
           purpose: stockOutForm.purpose,
           itemType: "material",
           notes: stockOutForm.notes || "",
@@ -103,21 +99,16 @@ export function StockOutDialog({
               quantity: stockOutForm.quantity,
               materialId: materialId,
               unit: materialDetail?.unit || "",
-            },
+              jobCode: stockOutForm.documentCode || undefined,
+            } as any,
           ],
         });
-
-        toast.promise(promise, {
-          loading: "Đang tạo phiếu xuất...",
-          success: "Tạo phiếu xuất thành công!",
-          error: (err) => err?.response?.data?.message || err?.message || "Tạo phiếu xuất thất bại!",
-        });
-
-        await promise;
       }
+      if (toastId) toast.dismiss(toastId);
       onOpenChange(false);
       refetchAll();
     } catch (error) {
+      if (toastId) toast.dismiss(toastId);
       console.error(error);
     }
   };
@@ -182,6 +173,23 @@ export function StockOutDialog({
                 className="rounded-md border-slate-200 h-10 text-xs font-mono font-bold focus-visible:ring-rose-500 text-rose-600"
               />
             </div>
+
+            {/* Mã bài sản xuất */}
+            {!isEditMode && (
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-700">
+                  Mã bài sản xuất
+                </Label>
+                <Input
+                  placeholder="Mã bài..."
+                  value={stockOutForm.documentCode}
+                  onChange={(e) =>
+                    setStockOutForm((prev) => ({ ...prev, documentCode: e.target.value }))
+                  }
+                  className="rounded-md border-slate-200 h-10 text-xs font-mono focus-visible:ring-rose-500 text-rose-600"
+                />
+              </div>
+            )}
 
             {/* Ghi chú */}
             <div className="space-y-1.5">

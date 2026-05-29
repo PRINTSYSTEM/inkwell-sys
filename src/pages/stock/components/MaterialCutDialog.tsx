@@ -67,7 +67,7 @@ export function MaterialCutDialog({
       setCutForm({
         inputMaterialId: materialId || 0,
         jobCode: "",
-        width: materialDetail.width || 0,
+        width: materialDetail.length || 0,
         length: 0,
         quantityProduced: 1200,
         quantityUsed: 0,
@@ -78,10 +78,35 @@ export function MaterialCutDialog({
     }
   }, [open, materialId, materialDetail]);
 
+  const dropdownRolls = useMemo(() => {
+    if (!materialDetail) return [];
+    
+    // Filter vendorRolls to strictly match the current material's vendorId
+    const rolls = (vendorRolls || []).filter((r: any) => r.vendorId === materialDetail.vendorId);
+    
+    // Ensure the current material itself is always in the list
+    const hasCurrent = rolls.some((r: any) => r.id === materialDetail.id);
+    if (!hasCurrent) {
+      rolls.unshift(materialDetail);
+    }
+    
+    return rolls;
+  }, [vendorRolls, materialDetail]);
+
   const selectedInputMaterial = useMemo(() => {
     if (cutForm.inputMaterialId === materialId) return materialDetail;
-    return vendorRolls.find((r) => r.id === cutForm.inputMaterialId) || materialDetail;
-  }, [cutForm.inputMaterialId, materialId, materialDetail, vendorRolls]);
+    return dropdownRolls.find((r) => r.id === cutForm.inputMaterialId) || materialDetail;
+  }, [cutForm.inputMaterialId, materialId, materialDetail, dropdownRolls]);
+
+  // Always synchronize cutForm.width with the selected roll's width
+  useEffect(() => {
+    if (selectedInputMaterial) {
+      setCutForm((prev) => ({
+        ...prev,
+        width: selectedInputMaterial.length || 0,
+      }));
+    }
+  }, [selectedInputMaterial]);
 
   // Recalculate quantityUsed
   useEffect(() => {
@@ -107,6 +132,7 @@ export function MaterialCutDialog({
       return;
     }
 
+    let toastId: string | number | undefined;
     try {
       const cutAtStr = new Date().toISOString();
       const payload = {
@@ -126,17 +152,13 @@ export function MaterialCutDialog({
         ],
       };
 
-      const promise = createMaterialCut(payload);
-      toast.promise(promise, {
-        loading: "Đang tạo phiếu cắt...",
-        success: "Tạo phiếu cắt thành công!",
-        error: (err) => err?.response?.data?.message || err?.message || "Tạo phiếu cắt thất bại!",
-      });
-
-      await promise;
+      toastId = toast.loading("Đang tạo phiếu cắt...");
+      await createMaterialCut(payload);
+      if (toastId) toast.dismiss(toastId);
       onOpenChange(false);
       refetchAll();
     } catch (error) {
+      if (toastId) toast.dismiss(toastId);
       console.error(error);
     }
   };
@@ -163,11 +185,11 @@ export function MaterialCutDialog({
                 value={String(cutForm.inputMaterialId)}
                 onValueChange={(val) => {
                   const id = parseInt(val, 10);
-                  const selected = vendorRolls.find((r) => r.id === id) || materialDetail;
+                  const selected = dropdownRolls.find((r) => r.id === id) || materialDetail;
                   setCutForm((prev) => ({
                     ...prev,
                     inputMaterialId: id,
-                    width: selected?.width || 0,
+                    width: selected?.length || 0,
                   }));
                 }}
               >
@@ -175,17 +197,11 @@ export function MaterialCutDialog({
                   <SelectValue placeholder="Chọn cuộn nguyên liệu" />
                 </SelectTrigger>
                 <SelectContent className="rounded-md">
-                  {vendorRolls.length > 0 ? (
-                    vendorRolls.map((roll) => (
-                      <SelectItem key={roll.id} value={String(roll.id)} className="text-xs cursor-pointer">
-                        {roll.name} (Tồn: {roll.quantity} {roll.unit})
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value={String(materialId)} className="text-xs cursor-pointer">
-                      {materialDetail?.name} (Tồn: {materialDetail?.quantity} {materialDetail?.unit})
+                  {dropdownRolls.map((roll) => (
+                    <SelectItem key={roll.id} value={String(roll.id)} className="text-xs cursor-pointer">
+                      {roll.name} {roll.length ? `(Khổ: ${roll.length} cm) ` : ""}(Tồn: {(roll.currentStock ?? roll.quantity ?? 0).toLocaleString()} {roll.unit})
                     </SelectItem>
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -194,7 +210,7 @@ export function MaterialCutDialog({
             <div className="space-y-1.5">
               <Label className="font-semibold text-slate-700">Tồn kho hiện tại (m)</Label>
               <div className="h-10 px-3 flex items-center bg-slate-50 border border-slate-200 rounded-md font-bold font-mono text-slate-700 select-none">
-                {selectedInputMaterial?.quantity?.toLocaleString() || 0} m
+                {(selectedInputMaterial?.currentStock ?? selectedInputMaterial?.quantity ?? 0).toLocaleString()} m
               </div>
             </div>
 
@@ -211,15 +227,18 @@ export function MaterialCutDialog({
 
             {/* Kích thước cắt ra */}
             <div className="space-y-1.5 md:col-span-2">
-              <Label className="font-semibold text-slate-700">Kích thước cắt ra (cm)</Label>
+              <div className="flex items-center justify-between mb-0.5">
+                <Label className="font-semibold text-slate-700">Kích thước cắt ra (cm)</Label>
+
+              </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 space-y-1">
                   <Input
                     type="number"
                     placeholder="Chiều rộng"
-                    value={cutForm.width || ""}
-                    onChange={(e) => setCutForm((prev) => ({ ...prev, width: parseFloat(e.target.value) || 0 }))}
-                    className="rounded-md border-slate-200 h-10 text-xs font-mono focus-visible:ring-[#93631F] text-center"
+                    value={cutForm.width !== undefined && cutForm.width !== null ? cutForm.width : ""}
+                    readOnly
+                    className="rounded-md border-slate-200 h-10 text-xs font-mono text-center bg-slate-50 text-slate-500 cursor-not-allowed select-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                   <span className="text-[10px] text-slate-400 block text-center leading-none mt-1">Khổ cuộn (Chiều rộng)</span>
                 </div>
@@ -282,7 +301,7 @@ export function MaterialCutDialog({
             <div className="space-y-1.5">
               <Label className="font-semibold text-slate-700">Tồn kho sau khi cắt (m)</Label>
               {(() => {
-                const currentQty = selectedInputMaterial?.quantity || 0;
+                const currentQty = selectedInputMaterial?.currentStock ?? selectedInputMaterial?.quantity ?? 0;
                 const used = cutForm.quantityUsed || 0;
                 const wasted = cutForm.quantityWasted || 0;
                 const remaining = parseFloat((currentQty - used - wasted).toFixed(2));

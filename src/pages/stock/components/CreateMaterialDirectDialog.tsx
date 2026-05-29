@@ -110,16 +110,17 @@ export function CreateMaterialDirectDialog({
         vendorId: selectedVendor.id,
       };
 
-      const promise = createMaterial(payload);
-      toast.promise(promise, {
-        loading: "Đang tạo chất liệu mới...",
-        success: "Tạo chất liệu mới thành công!",
-        error: (err) => err?.response?.data?.message || err?.message || "Tạo chất liệu thất bại!",
-      });
-
-      await promise;
-      onOpenChange(false);
-      refetch();
+      let toastId: string | number | undefined;
+      try {
+        toastId = toast.loading("Đang tạo chất liệu mới...");
+        await createMaterial(payload);
+        if (toastId) toast.dismiss(toastId);
+        onOpenChange(false);
+        refetch();
+      } catch (err) {
+        if (toastId) toast.dismiss(toastId);
+        throw err;
+      }
     } catch (error) {
       console.error(error);
     }

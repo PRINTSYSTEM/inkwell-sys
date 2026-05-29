@@ -337,7 +337,7 @@ export default function StockSummary() {
               
               <CardContent className="p-0 flex-1">
                 {isLoadingMaterials ? (
-                  <TableSkeletonRows cols={4} />
+                  <TableSkeletonRows cols={3} />
                 ) : paginatedRollMaterials.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-xs">
                     <Info className="h-6 w-6 mb-2 text-slate-300" />
@@ -350,8 +350,7 @@ export default function StockSummary() {
                         <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
                           <TableHead className="w-[50px] font-bold py-2.5 pl-4">ID</TableHead>
                           <TableHead className="min-w-[120px] font-bold py-2.5">Tên vật tư</TableHead>
-                          <TableHead className="w-[80px] text-right font-bold py-2.5">Tồn kho</TableHead>
-                          <TableHead className="w-[100px] text-right font-bold py-2.5 pr-4">Đơn giá</TableHead>
+                          <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -372,11 +371,8 @@ export default function StockSummary() {
                                 Khổ: {item.length || "—"}{item.width ? `x${item.width}` : ""} ({item.unit || "cuộn"})
                               </div>
                             </TableCell>
-                            <TableCell className="text-right py-3 font-bold tabular-nums text-slate-800">
+                            <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-800">
                               {(item.currentStock || 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-700">
-                              {item.unitPrice != null ? formatCurrency(item.unitPrice) : "—"}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -437,7 +433,7 @@ export default function StockSummary() {
               
               <CardContent className="p-0 flex-1">
                 {isLoadingMaterials ? (
-                  <TableSkeletonRows cols={4} />
+                  <TableSkeletonRows cols={3} />
                 ) : paginatedSheetMaterials.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-xs">
                     <Info className="h-6 w-6 mb-2 text-slate-300" />
@@ -450,8 +446,7 @@ export default function StockSummary() {
                         <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
                           <TableHead className="w-[50px] font-bold py-2.5 pl-4">ID</TableHead>
                           <TableHead className="min-w-[120px] font-bold py-2.5">Tên vật tư</TableHead>
-                          <TableHead className="w-[80px] text-right font-bold py-2.5">Tồn kho</TableHead>
-                          <TableHead className="w-[100px] text-right font-bold py-2.5 pr-4">Đơn giá</TableHead>
+                          <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -472,11 +467,8 @@ export default function StockSummary() {
                                 Khổ: {item.length || "—"}{item.width ? `x${item.width}` : ""} ({item.unit || "tờ"})
                               </div>
                             </TableCell>
-                            <TableCell className="text-right py-3 font-bold tabular-nums text-slate-800">
+                            <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-800">
                               {(item.currentStock || 0).toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-700">
-                              {item.unitPrice != null ? formatCurrency(item.unitPrice) : "—"}
                             </TableCell>
                           </TableRow>
                         ))}
