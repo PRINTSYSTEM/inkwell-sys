@@ -52,7 +52,6 @@ import { useProofingOrder } from "@/hooks/use-proofing-order";
 import {
   useUpdateProductionStep,
   useUpdateProductionOrderItem,
-  useProductionOrder,
 } from "@/hooks/use-production";
 import { useCreateStockOutForProduction } from "@/hooks/use-stock";
 import {
@@ -686,10 +685,7 @@ function ProductionTableRow({
     );
   const proofingOrder = (proofingOrderData || prod.proofingOrder) as any;
 
-  const { data: detailedProd, isLoading: isProdDetailLoading } =
-    useProductionOrder(prod.id || null, !isDraft);
-  const productionItems =
-    (detailedProd as any)?.items || (prod as any).items || [];
+  const productionItems = (prod as any).items || [];
 
   const { mutate: updateStep } = useUpdateProductionStep();
   const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
@@ -1136,7 +1132,7 @@ function ProductionTableRow({
           className="align-top py-3 px-1.5 w-[180px] max-w-[180px]"
         >
           <div className="flex flex-col gap-2">
-            {isProofingLoading || isProdDetailLoading ? (
+            {isProofingLoading ? (
               <div className="flex justify-center p-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>

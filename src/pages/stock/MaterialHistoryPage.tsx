@@ -486,8 +486,8 @@ export default function MaterialHistoryPage() {
         {historyData && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {/* 1. Số dư đầu kỳ */}
-            <div className="bg-slate-50/60 p-2.5 rounded-2xl border border-slate-200/50 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-slate-50">
-              <div className="p-1.5 rounded-xl bg-slate-100 text-slate-600">
+            <div className="bg-slate-50/60 p-2.5 rounded-lg border border-slate-200/50 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-slate-50">
+               <div className="p-1.5 rounded-md bg-slate-100 text-slate-600">
                 <History className="h-4.5 w-4.5 shrink-0" />
               </div>
               <div className="min-w-0">
@@ -500,8 +500,8 @@ export default function MaterialHistoryPage() {
             </div>
 
             {/* 2. Tổng nhập */}
-            <div className="bg-emerald-50/[0.3] p-2.5 rounded-2xl border border-emerald-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-emerald-50/50">
-              <div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-600">
+            <div className="bg-emerald-50/[0.3] p-2.5 rounded-lg border border-emerald-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-emerald-50/50">
+               <div className="p-1.5 rounded-md bg-emerald-50 text-emerald-600">
                 <ArrowUpRight className="h-4.5 w-4.5 shrink-0" />
               </div>
               <div className="min-w-0">
@@ -514,8 +514,8 @@ export default function MaterialHistoryPage() {
             </div>
 
             {/* 3. Tổng xuất */}
-            <div className="bg-rose-50/[0.3] p-2.5 rounded-2xl border border-rose-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-rose-50/50">
-              <div className="p-1.5 rounded-xl bg-rose-50 text-rose-600">
+            <div className="bg-rose-50/[0.3] p-2.5 rounded-lg border border-rose-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-rose-50/50">
+               <div className="p-1.5 rounded-md bg-rose-50 text-rose-600">
                 <ArrowDownRight className="h-4.5 w-4.5 shrink-0" />
               </div>
               <div className="min-w-0">
@@ -528,8 +528,8 @@ export default function MaterialHistoryPage() {
             </div>
 
             {/* 4. Tổng hao hụt */}
-            <div className="bg-amber-50/[0.3] p-2.5 rounded-2xl border border-amber-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-amber-50/50">
-              <div className="p-1.5 rounded-xl bg-amber-50 text-amber-600">
+            <div className="bg-amber-50/[0.3] p-2.5 rounded-lg border border-amber-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-amber-50/50">
+               <div className="p-1.5 rounded-md bg-amber-50 text-amber-600">
                 <AlertCircle className="h-4.5 w-4.5 shrink-0" />
               </div>
               <div className="min-w-0">
@@ -542,8 +542,8 @@ export default function MaterialHistoryPage() {
             </div>
 
             {/* 5. Tồn */}
-            <div className="bg-blue-50/[0.3] p-2.5 rounded-2xl border border-blue-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-blue-50/50">
-              <div className="p-1.5 rounded-xl bg-blue-50 text-blue-600">
+            <div className="bg-blue-50/[0.3] p-2.5 rounded-lg border border-blue-500/10 flex items-center gap-2.5 transition-all duration-300 hover:shadow-sm hover:bg-blue-50/50">
+               <div className="p-1.5 rounded-md bg-blue-50 text-blue-600">
                 <Boxes className="h-4.5 w-4.5 shrink-0" />
               </div>
               <div className="min-w-0">
