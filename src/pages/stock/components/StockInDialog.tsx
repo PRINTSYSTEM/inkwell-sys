@@ -26,12 +26,14 @@ interface StockInDialogProps {
     quantity: number;
     documentCode: string;
     notes: string;
+    laborCost: number;
   };
   setStockInForm: React.Dispatch<
     React.SetStateAction<{
       quantity: number;
       documentCode: string;
       notes: string;
+      laborCost: number;
     }>
   >;
   refetchAll: () => void;
@@ -71,25 +73,26 @@ export function StockInDialog({
         const promise = updateStockIn({
           id: editId,
           data: {
-            notes: stockInForm.notes || "",
-            totalAmount: calculatedTotalAmount,
+            notes: stockInForm.notes || undefined,
+            totalAmount: calculatedTotalAmount || undefined,
+            laborCost: stockInForm.laborCost || undefined,
             items: [
               {
                 lineKind: lineKind,
                 itemName: materialDetail?.name || "",
-                itemCode: materialDetail?.code || "",
-                unit: materialDetail?.unit || "",
+                itemCode: materialDetail?.code || undefined,
+                unit: materialDetail?.unit || undefined,
                 quantity: stockInForm.quantity,
-                unitPrice: materialDetail?.unitPrice || 0,
-                notes: stockInForm.notes || "",
-                materialId: materialId ? Number(materialId) : 0,
-                orderDetailId: 0,
-                length: materialDetail?.length || 0,
-                width: materialDetail?.width || 0,
-                height: materialDetail?.height || 0,
-                ramQuantity: 0,
-                proofingOrderId: 0,
-                jobCode: stockInForm.documentCode || "",
+                unitPrice: materialDetail?.unitPrice || undefined,
+                notes: stockInForm.notes || undefined,
+                materialId: materialId ? Number(materialId) : undefined,
+                orderDetailId: undefined,
+                length: materialDetail?.length || undefined,
+                width: materialDetail?.width || undefined,
+                height: materialDetail?.height || undefined,
+                ramQuantity: undefined,
+                proofingOrderId: undefined,
+                jobCode: stockInForm.documentCode || undefined,
               },
             ],
           },
@@ -106,32 +109,32 @@ export function StockInDialog({
         const promise = createStockIn({
           source: "manual",
           itemType: "material",
-          vendorId: materialDetail?.vendorId || 0,
-          productionOrderId: 0,
-          deliveryNoteId: 0,
-          originalStockOutId: 0,
-          orderId: 0,
-          totalAmount: calculatedTotalAmount,
-          laborCost: 0,
-          notes: stockInForm.notes || "",
+          vendorId: materialDetail?.vendorId || undefined,
+          productionOrderId: undefined,
+          deliveryNoteId: undefined,
+          originalStockOutId: undefined,
+          orderId: undefined,
+          totalAmount: calculatedTotalAmount || undefined,
+          laborCost: stockInForm.laborCost || undefined,
+          notes: stockInForm.notes || undefined,
           stockInDate: new Date().toISOString(),
           items: [
             {
               lineKind: lineKind,
               itemName: materialDetail?.name || "",
-              itemCode: materialDetail?.code || "",
-              unit: materialDetail?.unit || "",
+              itemCode: materialDetail?.code || undefined,
+              unit: materialDetail?.unit || undefined,
               quantity: stockInForm.quantity,
-              unitPrice: materialDetail?.unitPrice || 0,
-              notes: stockInForm.notes || "",
-              materialId: materialId ? Number(materialId) : 0,
-              orderDetailId: 0,
-              length: materialDetail?.length || 0,
-              width: materialDetail?.width || 0,
-              height: materialDetail?.height || 0,
-              ramQuantity: 0,
-              proofingOrderId: 0,
-              jobCode: stockInForm.documentCode || "",
+              unitPrice: materialDetail?.unitPrice || undefined,
+              notes: stockInForm.notes || undefined,
+              materialId: materialId ? Number(materialId) : undefined,
+              orderDetailId: undefined,
+              length: materialDetail?.length || undefined,
+              width: materialDetail?.width || undefined,
+              height: materialDetail?.height || undefined,
+              ramQuantity: undefined,
+              proofingOrderId: undefined,
+              jobCode: stockInForm.documentCode || undefined,
             },
           ],
         });
@@ -192,11 +195,25 @@ export function StockInDialog({
               />
             </div>
 
+            {/* Tiền công */}
+            <div className="space-y-1.5">
+              <Label className="font-semibold text-slate-700">Tiền công (VND)</Label>
+              <Input
+                type="number"
+                placeholder="Nhập tiền công (tùy chọn)..."
+                value={stockInForm.laborCost || ""}
+                onChange={(e) =>
+                  setStockInForm((prev) => ({ ...prev, laborCost: parseFloat(e.target.value) || 0 }))
+                }
+                className="rounded-md border-slate-200 h-10 text-xs font-mono focus-visible:ring-[#93631F]"
+              />
+            </div>
+
             {/* Số chứng từ / Mã bài */}
             {!isEditMode && (
               <div className="space-y-1.5">
                 <Label className="font-semibold text-slate-700">
-                  Mã bài sản xuất / Số chứng từ (Mặc định tự sinh)
+                  Mã bài sản xuất
                 </Label>
                 <Input
                   placeholder="Mã bài..."

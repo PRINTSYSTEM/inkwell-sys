@@ -75,6 +75,10 @@ export function CreateMaterialDirectDialog({
         toast.error("Vui lòng nhập tên vật tư cuộn!");
         return;
       }
+      if (!materialForm.quantity || materialForm.quantity <= 0) {
+        toast.error("Vui lòng nhập số lượng ban đầu (m dài)!");
+        return;
+      }
     } else {
       if (!materialForm.width || materialForm.width <= 0) {
         toast.error("Vui lòng nhập chiều rộng khổ!");
@@ -99,7 +103,7 @@ export function CreateMaterialDirectDialog({
       const payload = {
         name: generatedName,
         type: materialType,
-        length: materialType === "cuon" ? 0 : materialForm.length,
+        length: materialType === "cuon" ? materialForm.quantity : materialForm.length,
         width: materialType === "cuon" ? null : materialForm.width,
         unit: materialType === "cuon" ? "m" : "tờ",
         unitPrice: materialForm.unitPrice || 0,

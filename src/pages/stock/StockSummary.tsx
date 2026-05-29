@@ -355,9 +355,9 @@ export default function StockSummary() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {paginatedRollMaterials.map((item) => (
+                        {paginatedRollMaterials.map((item, idx) => (
                           <TableRow 
-                            key={item.id} 
+                            key={`${item.id}-${idx}`} 
                             className="hover:bg-emerald-100/80 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
                             onClick={() => navigate(`/stock/materials/${item.id}/history`)}
                           >
@@ -455,9 +455,9 @@ export default function StockSummary() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {paginatedSheetMaterials.map((item) => (
+                        {paginatedSheetMaterials.map((item, idx) => (
                           <TableRow 
-                            key={item.id} 
+                            key={`${item.id}-${idx}`} 
                             className="hover:bg-emerald-100/80 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
                             onClick={() => navigate(`/stock/materials/${item.id}/history`)}
                           >

@@ -123,6 +123,7 @@ export default function MaterialHistoryPage() {
     quantity: 0,
     documentCode: "",
     notes: "",
+    laborCost: 0,
   });
 
   const [stockOutForm, setStockOutForm] = useState({
@@ -440,6 +441,7 @@ export default function MaterialHistoryPage() {
                   quantity: 0,
                   documentCode: "",
                   notes: "",
+                  laborCost: 0,
                 });
                 setIsStockInOpen(true);
               }}
@@ -647,7 +649,8 @@ export default function MaterialHistoryPage() {
                             setStockInForm({
                               quantity: item.quantity,
                               documentCode: item.raw.code || "",
-                              notes: item.notes || ""
+                              notes: item.notes || "",
+                              laborCost: item.raw.laborCost || 0,
                             });
                             setIsStockInOpen(true);
                           } else {

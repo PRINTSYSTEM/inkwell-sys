@@ -84,11 +84,15 @@ export async function runValidationTests() {
     designTypeId: 1,
     code: "MT-01",
     name: "Decal",
+    pricePerM2: 50000,
+    status: "active",
   });
   expectFail(CreateMaterialTypeRequestSchema, {
     designTypeId: 1,
     code: "mt@01",
     name: "",
+    pricePerM2: -1,
+    status: "invalid",
   });
 
   // Design
